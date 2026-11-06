@@ -6,7 +6,8 @@ import { useAddInstance, useConnectionNeedsCopy, useInstanceList, isSetupPending
 import type { ModuleKey } from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { useAddInstanceForm } from "@/hooks/rhf"
-import { AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { AGENTS_ROUTE, APP_ROUTES, workspaceHref } from "@/modules/routes"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AgentInstancesBase } from "./component"
 import type { InstanceRowView } from "./component"
@@ -61,6 +62,7 @@ export const AgentInstances = (props: AgentInstancesProps) => {
     const t = useTranslations("modulesCore")
     const ts = useTranslations("shell")
     const member = useMember()
+    const workspaceId = useWorkspaceId()
     const list = useInstanceList(props.module, props.query, props.showList ? "list" : "page")
     const { add, isAdding } = useAddInstance()
     const needs = useConnectionNeedsCopy()
@@ -76,8 +78,8 @@ export const AgentInstances = (props: AgentInstancesProps) => {
             props={{
                 crumbLabel: ts("crumbLabel"),
                 crumbs: [
-                    { id: "home", label: ts("crumbHome"), href: APP_ROUTES.dashboard },
-                    { id: "modules", label: t("catalogTitle"), href: AGENTS_ROUTE },
+                    { id: "home", label: ts("crumbHome"), href: workspaceHref(workspaceId, APP_ROUTES.workspaceHome) },
+                    { id: "modules", label: t("catalogTitle"), href: workspaceHref(workspaceId, AGENTS_ROUTE) },
                     { id: "module", label: list.typeName },
                 ],
                 title: list.typeName,

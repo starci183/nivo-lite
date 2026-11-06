@@ -8,3 +8,4 @@ export {
     DEFAULT_TIME_ZONE,
     presetNeedsTime,
 } from "./agentWork.wire"
+export { agentWorkGridOf } from "./agentWork.layout"

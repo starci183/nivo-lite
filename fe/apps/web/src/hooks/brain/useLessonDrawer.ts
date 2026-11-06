@@ -2,9 +2,10 @@
 
 import { useTranslations } from "next-intl"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { LessonDrawerView } from "@/modules/types"
 import { useLessonDesk } from "./useLessonDesk"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 type Desk = ReturnType<typeof useLessonDesk>
 
@@ -23,9 +24,10 @@ export const useLessonDrawer = (input: LessonDrawerInput): LessonDrawerView | nu
     const t = useTranslations("brain")
     const l = useTranslations("brainLessons")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const { desk } = input
     if (!input.canWrite || !input.isRequested) return null
-    const close = () => router.replace(brainTabHref("lessons"))
+    const close = () => router.replace(workspaceHref(workspaceId, brainTabHref("lessons")))
     return {
         props: {
             isOpen: true,

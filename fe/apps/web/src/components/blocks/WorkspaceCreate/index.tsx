@@ -7,12 +7,11 @@ import {
     BUSINESS_TYPE_KEYS,
     OTHER_BUSINESS_TYPE,
     WORKSPACE_BUSINESS_TYPES,
-    useActiveWorkspace,
     useCreateWorkspace,
 } from "@/hooks/workspaces"
 import type { WorkspaceBusinessType } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
-import { APP_ROUTES, AUTH_ROUTES } from "@/modules/routes"
+import { AUTH_ROUTES, workspaceChannelsPath } from "@/modules/routes"
 import { WorkspaceCreateBase } from "./component"
 
 /** The business types the form offers, for checking a picked option. */
@@ -21,12 +20,11 @@ const OFFERED: ReadonlySet<string> = new Set(WORKSPACE_BUSINESS_TYPES)
 /** True when the picked option is one of the business types the form offers. */
 const isBusinessType = (value: string | null): value is WorkspaceBusinessType => value !== null && OFFERED.has(value)
 
-/** The connected create form: makes a free workspace through the back end GraphQL API (validated by react-hook-form + zod, outcome toasted), makes it the active one and moves on to the channels step. */
+/** The connected create form: makes a free workspace through the back end GraphQL API (validated by react-hook-form + zod, outcome toasted) and moves on to the channels step of that workspace. */
 export const WorkspaceCreate = () => {
     const t = useTranslations("onboarding")
     const router = navigation.useRouter()
     const { create, isCreating } = useCreateWorkspace()
-    const { select } = useActiveWorkspace()
     const form = useWorkspaceCreateForm()
     const [isNavigating, setNavigating] = useState(false)
 
@@ -37,8 +35,7 @@ export const WorkspaceCreate = () => {
         )
         if (id === undefined) return
         setNavigating(true)
-        select(id)
-        router.push(APP_ROUTES.workspaceChannels)
+        router.push(workspaceChannelsPath(id))
     })
 
     const isPending = isCreating || isNavigating

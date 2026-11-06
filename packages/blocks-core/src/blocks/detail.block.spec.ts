@@ -59,4 +59,14 @@ describe("detailFixtures", () => {
         expect(sections.map((section) => section.items.length)).toEqual([2, 3])
         expect(sections[1]?.items[2]?.text).toBe("Lan")
     })
+
+    it("takes a head over the record, a timeline of its steps and a pinned primary, and refuses a bad close param", () => {
+        const base = { label: { key: "word" }, items: [] }
+        const timeline = { title: { key: "word" }, listPath: "origin", textPath: "text", notePath: "by", atPath: "at" }
+        expect(accepts({ ...base, titlePath: "title", kind: { key: "word" }, closeParam: "entry" })).toBe(true)
+        expect(accepts({ ...base, timeline, pinsPrimary: true })).toBe(true)
+        expect(accepts({ ...base, closeParam: "not a name" })).toBe(false)
+        expect(accepts({ ...base, timeline: { ...timeline, textPath: undefined } })).toBe(false)
+        expect(detailBlock.params).toEqual(["closeParam"])
+    })
 })

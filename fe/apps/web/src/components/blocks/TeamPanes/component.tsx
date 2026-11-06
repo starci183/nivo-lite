@@ -82,7 +82,7 @@ const MainPane = (props: Props) => {
                     message={copy.forbiddenTitle}
                     description={copy.forbiddenBody}
                     actionLabel={copy.forbiddenAction}
-                    onAction={props.on.goOffice}
+                    onAction={props.on.goHome}
                 />
             </PaneSection>
         )
@@ -175,8 +175,8 @@ const headerOf = (props: Props) => {
             selectedKey: "members",
             labelVisibility: "always" as const,
             items: [
-                { id: "members", label: copy.membersTab, href: "/team" },
-                { id: "permissions", label: copy.permissionsTab, href: "/permissions" },
+                { id: "members", label: copy.membersTab, href: copy.membersHref },
+                { id: "permissions", label: copy.permissionsTab, href: copy.permissionsHref },
             ],
         },
     }

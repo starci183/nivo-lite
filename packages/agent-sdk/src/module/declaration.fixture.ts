@@ -16,7 +16,7 @@ export interface Lead {
 /** The port the leads list runs on. */
 export const LEADS_PORT: PortDefinition<ListSource<Lead>> = definePort<ListSource<Lead>>("sales.leads-list")
 
-/** A list with search, an enumerated filter, a filter of named cases and two sorts. */
+/** A list with search, an enumerated filter, a filter of named cases, a time-window filter and two sorts. */
 export const LEADS_SHAPE: ListShape = {
     search: { fields: ["name", "phone"] },
     filters: {
@@ -27,6 +27,7 @@ export const LEADS_SHAPE: ListShape = {
                 out: { field: "quantity", op: "eq", value: 0 },
             },
         },
+        added: { field: "createdAt", op: "within", of: ["$today", "$thisWeek", "$thisMonth"] },
     },
     sort: {
         recent: [["updatedAt", "desc"]],
@@ -50,7 +51,12 @@ export const LEADS: ListReadDefinition = listRead({
 export const LEAD_COUNTS: ReadDefinition = countsRead({ id: "sales.lead-counts", of: LEADS, by: "stage" })
 
 /** A request scope for a run. */
-export const CONTEXT: RunContext = { workspaceId: "w1", memberId: "m1", now: new Date("2026-11-05T00:00:00Z"), timeZone: "Asia/Ho_Chi_Minh" }
+export const CONTEXT: RunContext = {
+    workspaceId: "w1",
+    memberId: "m1",
+    now: new Date("2026-11-05T00:00:00Z"),
+    timeZone: "Asia/Ho_Chi_Minh",
+}
 
 /** What a recording source saw. */
 export interface SourceCalls {

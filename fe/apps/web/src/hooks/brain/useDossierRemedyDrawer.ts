@@ -10,8 +10,8 @@ import { useDossierFindings } from "./useDossierFindings"
 import { useDossierRemedyDraft } from "./useDossierRemedyDraft"
 import { useDossierReviewCommands } from "./useDossierReviewCommands"
 import { useFindingRows } from "./useFindingRows"
-import { navigation } from "@/modules/i18n"
 import { brainDossierHref, brainTabHref } from "@/modules/routes"
+import { useWorkspaceRouter } from "@/hooks/workspaces"
 
 /** Props for the connected draft drawer: what the address asks of it. */
 export interface DossierRemedyInput {
@@ -42,7 +42,7 @@ const PLACEHOLDER: DraftView = {
 /** The draft drawer's view: the draft NIVO wrote, which the owner edits and approves into the dossier, or turns down. */
 export const useDossierRemedyDrawer = (props: DossierRemedyInput): DossierRemedyDrawerProps => {
     const t = useTranslations("dossierReview")
-    const router = navigation.useRouter()
+    const router = useWorkspaceRouter()
     const member = useWorkspaceMember()
     const slotLabels = useSlotLabels()
     const commands = useDossierReviewCommands()

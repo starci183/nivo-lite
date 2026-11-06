@@ -93,7 +93,7 @@ describe("triggerScopeOf", () => {
 })
 
 describe("graphNodeStepOf", () => {
-    const node = { key: "record", kind: "output" as const, step: "order.record" }
+    const node = { key: "record", kind: "output" as const, step: "sales.order-from-chat" }
     const input = { versionId: "v-1", nodeKey: "record", trigger: {} }
 
     it("keys the step by its node and gives it the saga kind of its node", async () => {

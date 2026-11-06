@@ -2,10 +2,17 @@ import { defineBlock } from "@nivo-lite/agent-sdk/block"
 import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
-import { PATH_MAX } from "./bounds"
+import { CELL_TONES } from "../rows/table-rows"
+import { CHIPS_MAX, PATH_MAX } from "./bounds"
+import { labelsProp } from "./labels-prop"
+import type { LabelsSchema } from "./labels-prop"
 import { paramName } from "./param-name"
 import type { ParamNameSchema } from "./param-name"
-import type { TextSchema, RequiredRead, OptionalAction } from "./schema-types"
+import type { EnumSchema, TextSchema, RequiredRead, OptionalAction } from "./schema-types"
+
+/** The longest raw value a badge is given a tone for, and the most values one badge gives a tone. */
+const TONE_VALUE_MAX = 64
+const TONES_MAX = 20
 
 const props: z.ZodObject<{
     label: TextSchema
@@ -14,6 +21,11 @@ const props: z.ZodObject<{
     titlePath: z.ZodString
     descriptionPath: z.ZodOptional<z.ZodString>
     badgePath: z.ZodOptional<z.ZodString>
+    metaPath: z.ZodOptional<z.ZodString>
+    chipPaths: z.ZodOptional<z.ZodArray<z.ZodString>>
+    badgeTones: z.ZodOptional<z.ZodRecord<z.ZodString, EnumSchema<(typeof CELL_TONES)[number]>>>
+    avatar: z.ZodOptional<z.ZodBoolean>
+    labels: z.ZodOptional<LabelsSchema>
     emptySearch: z.ZodOptional<TextSchema>
     selectParam: z.ZodOptional<ParamNameSchema>
     searchParam: z.ZodOptional<ParamNameSchema>
@@ -24,6 +36,14 @@ const props: z.ZodObject<{
     titlePath: z.string().max(PATH_MAX),
     descriptionPath: z.string().max(PATH_MAX).optional(),
     badgePath: z.string().max(PATH_MAX).optional(),
+    metaPath: z.string().max(PATH_MAX).optional(),
+    chipPaths: z.array(z.string().max(PATH_MAX)).max(CHIPS_MAX).optional(),
+    badgeTones: z
+        .record(z.string().max(TONE_VALUE_MAX), z.enum(CELL_TONES))
+        .refine((tones) => Object.keys(tones).length <= TONES_MAX)
+        .optional(),
+    avatar: z.boolean().optional(),
+    labels: labelsProp.optional(),
     emptySearch: specText.optional(),
     selectParam: paramName.optional(),
     searchParam: paramName.optional(),

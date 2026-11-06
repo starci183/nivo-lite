@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { mutate } from "@/modules/viewer-cache"
 import { QUERY_HIRING_CANDIDATE_DETAIL_SWR_KEY, QUERY_HIRING_WORKBENCH_SWR_KEY } from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
@@ -80,9 +80,9 @@ const executeHiring = async <T>(
 export const useHiringRun = (owner?: HiringOwner): HiringRun => {
     const t = useTranslations("toast")
     const runGraphQL = useGraphQLWithToast()
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const isActive = owner?.isActive ?? true
-    const scope = owner?.scope ?? JSON.stringify([activeWorkspaceId])
+    const scope = owner?.scope ?? JSON.stringify([workspaceId])
     const lifetime = useFeatureLifetime(isActive, scope)
     const [pending, setPending] = useState<ReadonlyArray<Operation>>([])
     const [error, setError] = useState<string | null>(null)

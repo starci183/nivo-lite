@@ -1,0 +1,49 @@
+{
+  "props": {
+    "label": { "vi": "Thành viên", "en": "Members" },
+    "searchLabel": { "vi": "Tìm theo tên hoặc số điện thoại", "en": "Search by name or phone" },
+    "all": { "vi": "Tất cả", "en": "All" },
+    "atRisk": { "vi": "Có nguy cơ rời đi", "en": "At risk" },
+    "sortLabel": { "vi": "Sắp xếp:", "en": "Sort:" },
+    "empty": { "vi": "Chưa có thành viên", "en": "No members yet" },
+    "searchParam": "q",
+    "tierParam": "tier",
+    "activityParam": "activity",
+    "sortParam": "sort",
+    "selectParam": "member"
+  },
+  "tiers": [
+    { "key": "gold", "name": "Vàng" },
+    { "key": "silver", "name": "Bạc" },
+    { "key": "bronze", "name": "Đồng" }
+  ],
+  "members": [
+    {
+      "id": "m-ngoc",
+      "name": "Chị Ngọc",
+      "contact": "0912345418",
+      "tier": "Vàng",
+      "points": 4250,
+      "lastVisitAt": "2026-11-01T03:00:00.000Z",
+      "activity": "active"
+    },
+    {
+      "id": "m-khoa",
+      "name": "Anh Khoa",
+      "contact": "0987654206",
+      "tier": "Bạc",
+      "points": 2180,
+      "lastVisitAt": "2026-10-28T03:00:00.000Z",
+      "activity": "active"
+    },
+    {
+      "id": "m-vy",
+      "name": "Chị Vy",
+      "contact": "0903123771",
+      "tier": "Bạc",
+      "points": 1940,
+      "lastVisitAt": "2026-08-12T03:00:00.000Z",
+      "activity": "at_risk"
+    }
+  ]
+}

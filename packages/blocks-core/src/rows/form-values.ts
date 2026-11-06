@@ -127,8 +127,12 @@ export const withoutError = (errors: FormErrors, name: string): FormErrors =>
 /** The errors the form shows: the ones found here, and the server's, which win over them. */
 export const mergedErrors = (found: FormErrors, answered: FormErrors): FormErrors => ({ ...found, ...answered })
 
-/** The slot a form draws its values from: a form with no record, or none found, is a form to fill, never an empty notice. */
-export const formRecordSlot = (slot: DataSlot<unknown>): DataSlot<unknown> => ("isEmpty" in slot ? { items: {} } : slot)
+/**
+ * The slot a form draws its values from: a form with no record, or none found, is a form to fill, never an empty notice; a form
+ * that requires a record keeps the empty slot, which the block draws as its idle notice.
+ */
+export const formRecordSlot = (slot: DataSlot<unknown>, requireRecord: boolean): DataSlot<unknown> =>
+    "isEmpty" in slot && !requireRecord ? { items: {} } : slot
 
 /** The id a submit carries: the id of the record being edited, and none for a form that creates. */
 export const recordIdOf = (record: unknown, idPath: string): string => textOf(valueAt(record, idPath))

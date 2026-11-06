@@ -1,29 +1,8 @@
 import type { SWRConfiguration, SWRResponse } from "swr"
 
-/** How often a queued job is asked for its status until it ends. */
-const JOB_POLL_MS = 2000
-
-/** What a queued job reports. */
-interface JobStatus {
-    readonly status: string
-}
-
 /** The failure of a read whose response carried no data. */
 export const noData = (name: string): never => {
     throw new Error(`${name} answered no data`)
-}
-
-/** SWR options for the status of queued work: asked again every few seconds until the job succeeded or failed. */
-export const jobPolling = (options?: SWRConfiguration): SWRConfiguration => ({
-    refreshInterval: (data?: JobStatus) =>
-        data?.status === "succeeded" || data?.status === "failed" ? 0 : JOB_POLL_MS,
-    ...options,
-})
-
-/** Callbacks for a queued operation whose status is polled through its SWR wrapper. */
-export interface StatusPollOptions {
-    readonly onSuccess?: (progress: ProgressInput1) => void
-    readonly onError?: (error: unknown) => void
 }
 
 /** The part of an Apollo answer {@link answeredData} reads. */
@@ -44,8 +23,6 @@ export const answeredData = <T>(result: GraphQLAnswer<T>, operation: string): T 
     if (!result.data) throw new Error(`${operation} answered no data`)
     return result.data
 }
-
-type ProgressInput1 = { readonly status: string }
 
 /** An argument-keyed read waits until the argument is defined. */
 export const argumentKey = <Argument>(
@@ -85,21 +62,6 @@ export const terminalJobOptions = <Callbacks extends object>(
     ...callbacks,
 })
 
-type TerminalStatusOptionsResult<Callbacks extends object> = Callbacks & {
-    refreshInterval: (progress: PolledStatus | undefined) => number
-    revalidateOnFocus: boolean
-}
-
-/** Status polling keeps caller callbacks and disables focus refresh. */
-export const terminalStatusOptions = <Callbacks extends object>(
-    intervalMs: number,
-    callbacks: Callbacks,
-): TerminalStatusOptionsResult<Callbacks> => ({
-    ...callbacks,
-    refreshInterval: terminalInterval(intervalMs),
-    revalidateOnFocus: false,
-})
-
 /** The cache identity of one argument/request read in a workspace. */
 export type WorkspaceReadKey<Argument> = readonly [name: string, workspaceId: string, argument: Argument]
 
@@ -118,13 +80,6 @@ export const readField = async <Request, Data, Field extends keyof Data>(
     field: Field,
     operation: string,
 ): Promise<Data[Field]> => answeredData(await run({ request }), operation)[field]
-
-/** Reads a required field; missing data or a missing field has the same named failure. */
-export const readRequiredField = async <Request, Data, Field extends keyof Data & string>(
-    run: ReadOperation<Request, Data>,
-    request: Request,
-    field: Field,
-): Promise<NonNullable<Data[Field]>> => (await run({ request })).data?.[field] ?? noData(field)
 
 /** The success/error callbacks accepted while a queued job is observed. */
 export type JobStatusCallbacks<Status> = Pick<SWRConfiguration<Status, Error>, "onSuccess" | "onError">

@@ -3,7 +3,8 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { DOSSIER_STATUS_TONE, sizeLabelOf, statusCountsOf } from "@/modules/brain"
 import type { CategoryView, DossierView, MapDetailView, MapSelection, MapStatusOf } from "@/modules/brain"
-import { brainDossierHref, brainTabHref } from "@/modules/routes"
+import { brainDossierHref, brainTabHref, workspaceHref } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The side pane of the map, worded for the selection. */
 export interface MapDetail {
@@ -16,6 +17,7 @@ export interface MapDetail {
 
 /** Words and builders of the map's side pane in the active language. */
 export const useMapDetail = (): MapDetail => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("secondBrain")
     const formatter = useFormatter()
     const statusLabelOf = (dossier: DossierView, statusOf: MapStatusOf): string =>
@@ -42,7 +44,7 @@ export const useMapDetail = (): MapDetail => {
                     id: dossier.id,
                     label: dossier.name,
                     description: dossier.note === null ? null : dossier.note.text,
-                    href: brainTabHref("map", { node: dossier.id }),
+                    href: workspaceHref(workspaceId, brainTabHref("map", { node: dossier.id })),
                     badge: { label: statusLabelOf(dossier, statusOf), tone: DOSSIER_STATUS_TONE[statusOf(dossier)] },
                 })),
                 action: null,
@@ -65,7 +67,7 @@ export const useMapDetail = (): MapDetail => {
                 ],
                 rowsLabel: t("mapCategoryRows"),
                 rows: [],
-                action: { label: t("mapOpenDossier"), href: brainDossierHref(dossier.id) },
+                action: { label: t("mapOpenDossier"), href: workspaceHref(workspaceId, brainDossierHref(dossier.id)) },
             }
         }
         return {

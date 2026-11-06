@@ -2,11 +2,12 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainGap, KnowledgeListView, KnowledgeRowView } from "@/modules/types"
 import { useBrainCommand } from "./useBrainCommand"
 import { useBrainRowAction } from "./useBrainRowAction"
 import type { useBrainBoard } from "./useBrainBoard"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 interface GapOptions {
     readonly answer?: "fact" | "public"
@@ -22,6 +23,7 @@ export interface BrainGapsView {
 
 /** Resolves unanswered questions for the queue or public answers, without sharing either region's display status. */
 export const useBrainGaps = (board: ReturnType<typeof useBrainBoard>, options: GapOptions = {}): BrainGapsView => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("brain")
     const pub = useTranslations("publicBrain")
     const format = useFormatter()
@@ -50,8 +52,11 @@ export const useBrainGaps = (board: ReturnType<typeof useBrainBoard>, options: G
                           label: t("gapAnswer"),
                           href:
                               options.answer === "public"
-                                  ? brainTabHref("publicDocs", { compose: "write", title: gap.question })
-                                  : brainTabHref("todo", { answer: gap.id }),
+                                  ? workspaceHref(
+                                        workspaceId,
+                                        brainTabHref("publicDocs", { compose: "write", title: gap.question }),
+                                    )
+                                  : workspaceHref(workspaceId, brainTabHref("todo", { answer: gap.id })),
                       },
                       {
                           id: "dismiss",

@@ -5,6 +5,7 @@ import type { BookingView, BookingServiceView } from "@/modules/types"
 
 /** Inputs owned by this display/state mapping. */
 interface BookingDeskDisplayInput {
+    readonly workspaceId: string
     readonly board: NonNullable<ReturnType<typeof useBookingRange>["board"]>
     readonly anchorValue: string
     readonly t: ReturnType<typeof useTranslations<"workbenchBooking">>
@@ -23,6 +24,7 @@ export interface BuildBookingDeskDisplayResult {
         say: ReturnType<typeof useTranslations<"workbenchBooking">>
         resourceName: (id: string) => string
         money: (value: number) => string
+        workspaceId: string
     }
     dayText: (date: string) => string
     visible: BookingView[]
@@ -49,6 +51,7 @@ export interface BuildBookingDeskDisplayResult {
 
 /** Derives the visible booking agenda and localized navigation. */
 export const buildBookingDeskDisplay = ({
+    workspaceId,
     board,
     anchorValue,
     t,
@@ -65,6 +68,7 @@ export const buildBookingDeskDisplay = ({
         resourceName: (id: string) => board.resources.find((resource) => resource.id === id)?.name ?? "",
         money: (value: number) =>
             format.number(value, { style: "currency", currency: "VND", maximumFractionDigits: 0 }),
+        workspaceId,
     }
     const dayText = (date: string) =>
         format.dateTime(new Date(`${date}T12:00:00Z`), {

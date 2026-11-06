@@ -3,10 +3,11 @@
 import { DIALOG_OF_ACTION } from "@/modules/brain"
 import type { FindingCardActionView, FindingView, MemberOption } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { brainDossierHref } from "@/modules/routes"
+import { brainDossierHref, workspaceHref } from "@/modules/routes"
 import { useDossierReviewCommands } from "./useDossierReviewCommands"
 import { useFindingDialog } from "./useFindingDialog"
 import type { FindingDialog } from "./useFindingDialog"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The view `useFindingActions` returns. */
 export interface FindingActionsView {
@@ -23,10 +24,13 @@ export const useFindingActions = (
     members: ReadonlyArray<MemberOption>,
 ): FindingActionsView => {
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const commands = useDossierReviewCommands()
     const openDraft = (finding: FindingView, draftId: string) => {
         if (finding.dossierId === null) return
-        router.replace(brainDossierHref(finding.dossierId, { finding: finding.id, draft: draftId }))
+        router.replace(
+            workspaceHref(workspaceId, brainDossierHref(finding.dossierId, { finding: finding.id, draft: draftId })),
+        )
     }
     const dialog = useFindingDialog(commands, members, openDraft)
     const act = (findingId: string, action: FindingCardActionView) => {

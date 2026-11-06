@@ -7,6 +7,8 @@ import { useTranslations } from "next-intl"
 import { useState, useTransition } from "react"
 import { useConnectionRowCommands } from "./useConnectionRowCommands"
 import { useSyncNow } from "./useSyncNow"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** Whether two row notes say the same thing. A finished sync builds a new object on every read. */
 const sameRowNote = (left: RowNote | null, right: RowNote | null): boolean =>
@@ -34,6 +36,7 @@ export interface ConnectionRowActions {
  * SePay keys and the pending confirmation. A failure arrives as the back end message, already in the reader's language.
  */
 export const useConnectionRowActions = (connection: Connection): ConnectionRowActions => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("connections")
     const commands = useConnectionRowCommands(connection.id, connection.provider)
     const syncNow = useSyncNow()
@@ -78,7 +81,7 @@ export const useConnectionRowActions = (connection: Connection): ConnectionRowAc
         else setNote({ tone: "negative", text: `${t("webhookTestFailed")}. ${sent.error ?? ""}`.trim() })
     }
     const reconnectGoogle = async () => {
-        const result = await commands.reconnectGoogle("/connections")
+        const result = await commands.reconnectGoogle(workspaceHref(workspaceId, CONSOLE_ROUTES.connections))
         if (result.kind !== "ok") return setNote({ tone: "negative", text: result.message })
         window.location.assign(result.value)
     }

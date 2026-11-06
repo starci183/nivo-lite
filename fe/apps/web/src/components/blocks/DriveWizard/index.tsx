@@ -10,6 +10,8 @@ import { providerKey } from "@/hooks/connection-providers"
 import { driveFailureKeyOf, DRIVE_WIZARD_PATH, useDriveChooserView, useDrivePage } from "@/hooks/drive"
 import { useDriveGrant } from "@/hooks/knowledge"
 import { DriveWizardBase } from "./component"
+import { workspaceHref } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The step the wizard is on: done once something was added, choosing once Google answered, else asking for the read access. */
 const wizardIndexOf = (added: number, isGranted: boolean): number => {
@@ -30,6 +32,7 @@ interface DriveWizardProps {
  * `?drive=ok|error&reason=`, which opens it on the step the answer leads to.
  */
 export const DriveWizard = (props: DriveWizardProps) => {
+    const workspaceId = useWorkspaceId()
     const slotLabels = useSlotLabels()
     const t = useTranslations("driveWizard")
     const tw = useTranslations("connectionWizard")
@@ -71,7 +74,12 @@ export const DriveWizard = (props: DriveWizardProps) => {
                     failTitle: t("failTitle"),
                 },
             }}
-            on={{ retryRead: reload, ...chooser.on, grant: () => drive.grant(DRIVE_WIZARD_PATH), close: props.onClose }}
+            on={{
+                retryRead: reload,
+                ...chooser.on,
+                grant: () => drive.grant(workspaceHref(workspaceId, DRIVE_WIZARD_PATH)),
+                close: props.onClose,
+            }}
         />
     )
 }

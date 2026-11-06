@@ -2,8 +2,9 @@
 
 import { useCallback } from "react"
 import type { navigation } from "@/modules/i18n"
-import { agentChatConversationHref } from "@/modules/routes"
+import { agentChatConversationHref, workspaceHref } from "@/modules/routes"
 import type { ChatTab, AgentChatAgent, Selection } from "./useAgentChat"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The view `useAgentChatNavigation` returns. */
 export interface AgentChatNavigationView {
@@ -18,12 +19,15 @@ export const useAgentChatNavigation = (
     setSelected: import("react").Dispatch<import("react").SetStateAction<Selection>>,
     setTab: import("react").Dispatch<import("react").SetStateAction<ChatTab>>,
 ): AgentChatNavigationView => {
+    const workspaceId = useWorkspaceId()
     const navigate = useCallback(
         (kind: ChatTab, id: string | null) => {
             if (agent === undefined) return
-            router.replace(agentChatConversationHref(agent.agentId, kind, id), { scroll: false })
+            router.replace(workspaceHref(workspaceId, agentChatConversationHref(agent.agentId, kind, id)), {
+                scroll: false,
+            })
         },
-        [router, agent],
+        [router, agent, workspaceId],
     )
     const opened = useCallback(
         (kind: ChatTab, id: string) => {

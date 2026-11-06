@@ -33,15 +33,6 @@ export const ApiQuickStart = (props: ApiQuickStartProps) => {
         code,
         copyLabel: copiedId === id ? t("copied") : t("copy"),
     })
-    const lead = {
-        name: t("sampleName"),
-        phone: "0901234567",
-        email: "a@example.com",
-        need: t("sampleNeed"),
-        channel: "Zalo",
-        stage: "new",
-    }
-    const message = { lead_id: "<uuid>", text: t("sampleText") }
     const knowledge = {
         title: t("sampleTitle"),
         content: t("sampleContent"),
@@ -60,29 +51,14 @@ export const ApiQuickStart = (props: ApiQuickStartProps) => {
                 intro: t("guideIntro", { base: props.base }),
                 examples: [
                     sample("header", t("header"), "Authorization: Bearer nvk_..."),
-                    sample("leadsPost", t("leadsPost"), post("leads", lead), t("leadsPostNote")),
-                    sample("messagesPost", t("messagesPost"), post("messages", message), t("messagesPostNote")),
                     sample("knowledgePost", t("knowledgePost"), post("knowledge", knowledge), t("knowledgePostNote")),
-                    sample(
-                        "leadsGet",
-                        t("leadsGet"),
-                        `curl "${props.base}/leads?status=new" \\\n  ${AUTH}`,
-                        t("pullNote"),
-                    ),
                     sample(
                         "eventsGet",
                         t("eventsGet"),
                         `curl "${props.base}/events?since=2026-10-01T00:00:00Z" \\\n  ${AUTH}`,
+                        t("pullNote"),
                     ),
                 ],
-                n8n: {
-                    title: t("n8nTitle"),
-                    steps: t("n8nSteps"),
-                    examples: [
-                        sample("n8nUrl", t("n8nUrl"), `${props.base}/leads`),
-                        sample("n8nBody", t("n8nBody"), JSON.stringify(lead, null, 2)),
-                    ],
-                },
             }}
             on={{ copy, toggle: setIsOpen }}
         />

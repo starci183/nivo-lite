@@ -8,9 +8,10 @@ import { useConnectionRefusal } from "@/hooks/connections"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { useZaloChecks, useZaloHead, useZaloPage } from "@/hooks/zaloConnection"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import type { ZaloHeadView } from "@/modules/types"
 import { ZaloConnectionHeadBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** Fake data of the same shape: the skeleton reuses the ready tree. */
 const HEAD_PLACEHOLDER: ZaloHeadView = { name: "-", chipLabel: "-", chipTone: "neutral", facts: "-", banner: "" }
@@ -28,6 +29,7 @@ export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
     const t = useTranslations("zaloConnection")
     const pane = usePaneCopy()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const { head, disconnect, isDisconnecting, isMissing, isOwner } = useZaloHead(props.connectionId)
     const { recheck, isRechecking } = useZaloChecks(props.connectionId)
     const { slot } = useZaloPage(props.connectionId)
@@ -71,7 +73,7 @@ export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
                 askDisconnect: () => setIsAsking(true),
                 confirmDisconnect: () => void disconnect(),
                 dismiss: () => setIsAsking(false),
-                back: () => router.push(CONSOLE_ROUTES.connections),
+                back: () => router.push(workspaceHref(workspaceId, CONSOLE_ROUTES.connections)),
             }}
         />
     )

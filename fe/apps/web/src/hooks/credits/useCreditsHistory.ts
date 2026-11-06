@@ -2,7 +2,7 @@
 
 import type { CreditsHistoryRow, DataSlot } from "@/modules/types"
 import { useFormatter, useLocale, useTranslations } from "next-intl"
-import { useRequireActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useQueryBillingPlansSwr, useQueryPaymentOrdersSwr } from "@/hooks/swr"
 import { slotOfReads } from "@/hooks/slot"
 
@@ -27,8 +27,8 @@ export interface CreditsHistoryView {
 
 /** Resolves the payment-history slot independently from the credits balance. */
 export const useCreditsHistory = (): CreditsHistoryView => {
-    const { activeWorkspaceId } = useRequireActiveWorkspace()
-    const payments = useQueryPaymentOrdersSwr(activeWorkspaceId)
+    const workspaceId = useWorkspaceId()
+    const payments = useQueryPaymentOrdersSwr(workspaceId)
     const plans = useQueryBillingPlansSwr()
     const t = useTranslations("credits")
     const locale = useLocale()
@@ -80,14 +80,7 @@ export const useCreditsHistory = (): CreditsHistoryView => {
             title: t("paymentsTitle"),
             loading: t("loading"),
             rows,
-            slot: slotOfReads(
-                [
-                    payments,
-                    plans,
-                    { data: activeWorkspaceId, isLoading: activeWorkspaceId === undefined, error: undefined },
-                ],
-                () => rows,
-            ),
+            slot: slotOfReads([payments, plans], () => rows),
             labels: {
                 empty: t("paymentsEmpty"),
                 forbidden: t("errForbidden"),

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import type { ReadPage } from "@nivo-lite/agent-sdk/block"
-import { Badge, Button, Cluster, ListBox, Stack, Text } from "@starci/grammar/common"
+import { Avatar, Badge, Button, Cluster, ListBox, Stack, Text } from "@starci/grammar/common"
 import type { ListBoxItem } from "@starci/grammar/common"
 import { chosenRow, moreStateOf, selectionOf } from "../../rows/rows"
 import type { RecordRow } from "../../rows/rows"
@@ -28,18 +28,48 @@ interface SelectableRowsProps {
     /** The paging of the read; null when it is not paged. */
     readonly page: ReadPage | null
     readonly onChoose: (id: string) => void
+    /** Each row starts with the initials of its title. */
+    readonly hasAvatar: boolean
 }
 
-/** The row of the Grammar list for one record: its title, its line and its badge. */
-const itemOf = (row: RecordRow): ListBoxItem => ({
+/** The end of a row: its short fact and its badge, one over the other. */
+const trailingOf = (row: RecordRow): ReactNode => (
+    <Stack gap="inline" align="end">
+        {row.meta === "" ? null : (
+            <Text size="sm" tone="muted">
+                {row.meta}
+            </Text>
+        )}
+        {row.badge === "" ? null : (
+            <Badge tone={row.tone} isDot>
+                {row.badge}
+            </Badge>
+        )}
+        {row.chips.map((chip) => (
+            <Badge key={chip} tone="neutral">
+                {chip}
+            </Badge>
+        ))}
+    </Stack>
+)
+
+/** The row of the Grammar list for one record: its mark, its title, its line, its short fact and its badge. */
+const itemOf = (row: RecordRow, hasAvatar: boolean): ListBoxItem => ({
     id: row.id,
     label: row.title,
+    ...(hasAvatar ? { leading: <Avatar name={row.title} isDecorative /> } : {}),
     ...(row.description === "" ? {} : { description: row.description }),
-    ...(row.badge === "" ? {} : { trailing: <Badge tone="neutral">{row.badge}</Badge> }),
+    ...(row.meta === "" && row.badge === "" && row.chips.length === 0 ? {} : { trailing: trailingOf(row) }),
 })
 
+/** What the paging control takes. */
+export interface LoadMoreProps {
+    readonly page: ReadPage
+    readonly words: SelectableRowsWords
+}
+
 /** The control under the rows that loads the next page, with the line and the retry of a failed load. */
-const LoadMore = (props: { readonly page: ReadPage; readonly words: SelectableRowsWords }): ReactNode => {
+export const LoadMore = (props: LoadMoreProps): ReactNode => {
     const state = moreStateOf(props.page)
     if (state === "none") return null
     return (
@@ -61,7 +91,7 @@ export const SelectableRows = (props: SelectableRowsProps): ReactNode => (
     <Stack gap="row">
         <ListBox
             label={props.words.label}
-            items={props.rows.map(itemOf)}
+            items={props.rows.map((row) => itemOf(row, props.hasAvatar))}
             selectionMode="single"
             selectionIndicator="none"
             selectedIds={selectionOf(props.selected)}

@@ -1,4 +1,6 @@
 import { useTranslations } from "next-intl"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { APP_ROUTES, workspaceHref } from "@/modules/routes"
 import { InboxErrorPageBase } from "./component"
 
 /** What the route gives the failure view: the segment retry. */
@@ -10,11 +12,12 @@ interface InboxErrorPageProps {
 export const InboxErrorPage = (props: InboxErrorPageProps) => {
     const t = useTranslations("inbox")
     const title = t("title")
+    const workspaceId = useWorkspaceId()
     return (
         <InboxErrorPageBase
             props={{
                 crumbs: [
-                    { id: "home", label: t("crumbHome"), href: "/dashboard" },
+                    { id: "home", label: t("crumbHome"), href: workspaceHref(workspaceId, APP_ROUTES.workspaceHome) },
                     { id: "inbox", label: title },
                 ],
                 title,

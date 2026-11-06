@@ -5,10 +5,12 @@ export { SlotView } from "./SlotView"
 export type { HostAction, HostActionOptions, HostRead, HostReadOptions, WorkbenchHost } from "../host/host.types"
 export type { RegistryCheck, WorkbenchHostProviderProps } from "./host/WorkbenchHostProvider"
 export {
+    ModuleNamespaceProvider,
     WorkbenchHostProvider,
     useBlockHost,
     useEnabledModules,
     useInstalledBlocks,
+    useModuleNamespace,
     useRegistryCheck,
     useWorkbenchHost,
 } from "./host/WorkbenchHostProvider"

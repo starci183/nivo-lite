@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback, useRef } from "react"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useVideoRefresh } from "./useVideoRefresh"
 import { useVideoFailure } from "./useVideoFailure"
@@ -39,12 +39,12 @@ export const useVideoJobReport = ({
     const failure = useVideoFailure()
     const runGraphQL = useGraphQLWithToast()
     const { refresh } = useVideoRefresh()
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const reported = useRef<string | undefined>(undefined)
     const reportedError = useRef<string | undefined>(undefined)
     const reportStatus = useCallback(
         async (status: VideoJobStatus): Promise<void> => {
-            const identity = `${activeWorkspaceId}:${status.id}`
+            const identity = `${workspaceId}:${status.id}`
             if (!doneStates.includes(status.status) || reported.current === identity) return
             reported.current = identity
             await runGraphQL(
@@ -56,17 +56,17 @@ export const useVideoJobReport = ({
             )
             await runGraphQL(refresh, { showSuccessToast: false })
         },
-        [activeWorkspaceId, doneStates, failure, failureFallback, refresh, runGraphQL, successKey, t],
+        [workspaceId, doneStates, failure, failureFallback, refresh, runGraphQL, successKey, t],
     )
     const reportError = useCallback(
         async (error: Error, jobId: string | undefined): Promise<void> => {
             if (jobId === undefined) return
-            const identity = `${activeWorkspaceId}:${jobId}:${error.message}`
+            const identity = `${workspaceId}:${jobId}:${error.message}`
             if (reportedError.current === identity) return
             reportedError.current = identity
             await runGraphQL(() => Promise.reject(error))
         },
-        [activeWorkspaceId, runGraphQL],
+        [workspaceId, runGraphQL],
     )
     return { reportStatus, reportError }
 }

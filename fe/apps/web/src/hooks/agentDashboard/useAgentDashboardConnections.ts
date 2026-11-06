@@ -1,10 +1,11 @@
 "use client"
 
 import { isProvider, providerKey } from "@/hooks/connection-providers"
-import { AUTOMATION_ROUTES } from "@/modules/routes"
+import { AUTOMATION_ROUTES, workspaceHref } from "@/modules/routes"
 import type { BadgeTone } from "@starci/grammar/common"
 import { useTranslations } from "next-intl"
 import { type AgentDashboardView, type ConnectionState } from "./agentDashboard.shared"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 const CONNECTION_TONE: Readonly<Record<ConnectionState, BadgeTone>> = {
     connected: "success",
@@ -16,7 +17,7 @@ const CONNECTION_TONE: Readonly<Record<ConnectionState, BadgeTone>> = {
 export interface AgentDashboardConnectionsView {
     summary: string
     manageLabel: string
-    manageHref: "/connections"
+    manageHref: string
     rows: {
         id: string
         name: string
@@ -31,12 +32,13 @@ export interface AgentDashboardConnectionsView {
 
 /** Resolves connection status, purpose and access copy for the dashboard. */
 export const useAgentDashboardConnections = (dashboard: AgentDashboardView): AgentDashboardConnectionsView => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("agentDashboard")
     const tc = useTranslations("connections")
     return {
         summary: t("connSummary", { n: dashboard.connections.items.filter((c) => c.status === "connected").length }),
         manageLabel: t("connManage"),
-        manageHref: AUTOMATION_ROUTES.connections,
+        manageHref: workspaceHref(workspaceId, AUTOMATION_ROUTES.connections),
         rows: dashboard.connections.items.map((connection) => {
             const purpose = t(`connPurpose_${connection.purpose}`)
             return {

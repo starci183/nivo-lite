@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useState } from "react"
 import type { SlotRead } from "@/modules/types"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import { useVideoJobReport } from "./useVideoJobReport"
 import { useVideoRefresh } from "./useVideoRefresh"
@@ -50,9 +50,9 @@ type UseVideoJobResult<T extends VideoJobStatusView> = {
 export const useVideoJob = <T extends VideoJobStatusView>(options: VideoJobOptions<T>): UseVideoJobResult<T> => {
     const t = useTranslations("video")
     const report = useGraphQLWithToast()
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const isActive = options.owner?.isActive ?? true,
-        scope = options.owner?.scope ?? JSON.stringify([activeWorkspaceId])
+        scope = options.owner?.scope ?? JSON.stringify([workspaceId])
     const { complete, isPending } = useVideoRefresh(options.owner)
     const lifetime = useFeatureLifetime(isActive, scope)
     const { reportStatus, reportError } = useVideoJobReport(options)
@@ -62,8 +62,7 @@ export const useVideoJob = <T extends VideoJobStatusView>(options: VideoJobOptio
         readonly id: string
     }>()
     useFeatureReset({ isActive, isReady: true, scope, onReset: () => setJob(undefined) })
-    const ownJobId =
-        job !== undefined && job.workspaceId === activeWorkspaceId && job.scope === scope ? job.id : options.initialId
+    const ownJobId = job?.workspaceId === workspaceId && job.scope === scope ? job.id : options.initialId
     const jobId = isActive ? ownJobId : undefined
     const read = options.useStatus(jobId, {
         onSuccess: (status) => {
@@ -89,8 +88,7 @@ export const useVideoJob = <T extends VideoJobStatusView>(options: VideoJobOptio
             () => options.trigger({ projectId }),
             t(options.queuedKey),
             (queued) => {
-                if (queued !== undefined && isCurrent())
-                    setJob({ workspaceId: activeWorkspaceId, scope, id: queued.id })
+                if (queued !== undefined && isCurrent()) setJob({ workspaceId, scope, id: queued.id })
             },
         )
     }

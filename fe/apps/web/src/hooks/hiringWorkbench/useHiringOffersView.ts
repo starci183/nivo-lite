@@ -4,10 +4,11 @@ import { OPEN_OFFER_STATUSES, offerStatusTone, useHiringFormat } from "@/hooks/h
 import { useHiringOffers } from "@/hooks/hiringOffers"
 import { useHiringBenchStore } from "@/hooks/zustand/hiringBench"
 import type { OfferView } from "@/hooks/hiringWire"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import type { HiringViewInput } from "./hiringWorkbench.shared"
 import type { HiringWorkbenchCopy } from "@/modules/types"
 import type { BadgeTone } from "@starci/grammar/common"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 type ResolvedActions = {
     readonly open: (candidateId: string) => void
@@ -26,7 +27,7 @@ export interface HiringOffersViewShape {
     props: {
         copy: HiringWorkbenchCopy
         approveLabel: string | null
-        decisionsHref: "/decisions"
+        decisionsHref: string
         fact: string
         rows: {
             id: string
@@ -48,6 +49,7 @@ export interface HiringOffersViewShape {
 
 /** Owns HiringOffers's resolved data, commands and actual panel activation. */
 export const useHiringOffersView = (input: HiringViewInput): HiringOffersViewShape => {
+    const workspaceId = useWorkspaceId()
     const owner = { isActive: input.isActive && input.isReady, scope: input.scope }
 
     const t = useTranslations("hiring")
@@ -90,7 +92,7 @@ export const useHiringOffersView = (input: HiringViewInput): HiringOffersViewSha
     const props = {
         copy: input.copy,
         approveLabel: data.waitingApprovals > 0 ? t("offersApproveAll", { n: data.waitingApprovals }) : null,
-        decisionsHref: CONSOLE_ROUTES.decisions,
+        decisionsHref: workspaceHref(workspaceId, CONSOLE_ROUTES.inbox),
         fact: t("offersFact", { n: data.offers.length }),
         rows: data.offers.map(rowOf),
         isBusy: view.isPending,

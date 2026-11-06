@@ -1,4 +1,4 @@
-import { AUTOMATION_ROUTES, CONSOLE_ROUTES } from "@/modules/routes"
+import { AUTOMATION_ROUTES, CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 
 /** What the workspace has, for the requirements of a module. */
 interface RequirementFacts {
@@ -54,13 +54,14 @@ interface ModuleRequires {
 export const unmetRequirementsOf = (
     requires: ModuleRequires,
     facts: RequirementFacts,
+    workspaceId: string,
 ): ReadonlyArray<UnmetRequirement> => {
     const providers = new Set(facts.providers)
     const staff = facts.staff + Math.max(0, facts.members - 1)
     const capabilities = requires.capabilities.flatMap((key): Array<UnmetRequirement> => {
         const def = CAPABILITY[key]
         return def !== undefined && !def.met(providers, facts.chatAgents, staff)
-            ? [{ messageKey: `req_${key}`, key, href: def.href }]
+            ? [{ messageKey: `req_${key}`, key, href: workspaceHref(workspaceId, def.href) }]
             : []
     })
     const connections = requires.connections
@@ -68,7 +69,7 @@ export const unmetRequirementsOf = (
         .map((key) => ({
             messageKey: KNOWN_CONNECTIONS.has(key) ? `req_conn_${key}` : "",
             key,
-            href: AUTOMATION_ROUTES.connections,
+            href: workspaceHref(workspaceId, AUTOMATION_ROUTES.connections),
         }))
     return [...capabilities, ...connections]
 }

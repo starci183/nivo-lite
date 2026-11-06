@@ -4,8 +4,9 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useAgentChat, useAgentChatCopy, useAgentChatIsPhone } from "@/hooks/agentChat"
 import { useSlotLabels } from "@/hooks/slot"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
-import { AGENTS_ROUTE, agentChatHref, leadHref } from "@/modules/routes"
+import { AGENTS_ROUTE, agentChatHref, workspaceHref } from "@/modules/routes"
 import { AgentChatBase } from "./component"
 import type { AgentChatTab } from "./component"
 
@@ -25,6 +26,7 @@ export const AgentChat = (props: AgentChatProps) => {
     const t = useTranslations("agentChat")
     const promo = useTranslations("promoAds")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const slotLabels = useSlotLabels()
     const chat = useAgentChat(props)
     const isPhone = useAgentChatIsPhone()
@@ -34,7 +36,7 @@ export const AgentChat = (props: AgentChatProps) => {
     const agentId = agent?.id ?? ""
     const closeWelcome = () => {
         setIsWelcomeOpen(false)
-        router.replace(agentChatHref(agentId), { scroll: false })
+        router.replace(workspaceHref(workspaceId, agentChatHref(agentId)), { scroll: false })
     }
     return (
         <AgentChatBase
@@ -75,7 +77,7 @@ export const AgentChat = (props: AgentChatProps) => {
                 retryRail: chat.retryRail,
                 retryThread: chat.retryThread,
                 toggleTakeover: () => void chat.toggleTakeover(),
-                back: () => router.push(AGENTS_ROUTE),
+                back: () => router.push(workspaceHref(workspaceId, AGENTS_ROUTE)),
                 tab: chat.changeTab,
                 draft: chat.setDraft,
                 file: chat.chooseFile,
@@ -84,7 +86,6 @@ export const AgentChat = (props: AgentChatProps) => {
                 send: (prompt) => void chat.send(prompt),
                 start: () => void chat.start(),
                 select: chat.select,
-                openLead: () => router.push(leadHref(chat.leadId ?? "")),
                 closeWelcome,
             }}
         />

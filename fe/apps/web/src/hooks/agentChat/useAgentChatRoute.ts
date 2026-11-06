@@ -1,7 +1,7 @@
 "use client"
 
 import { useQueryAgentChatPageSwr } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useMemo, useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import type { AgentChatAgent, AgentChatRoute, ChatTab, Selection } from "./useAgentChat"
@@ -32,10 +32,9 @@ export interface AgentChatRouteState {
 
 /** Loads the agent of the address and holds the open tab and conversation, which start over when the address changes. */
 export const useAgentChatRoute = (route: AgentChatRoute): AgentChatRouteState => {
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const page = useQueryAgentChatPageSwr(activeWorkspaceId, route.agentId, route.welcome)
-    const loaded =
-        page.data?.workspaceId === activeWorkspaceId && page.data?.id === route.agentId ? page.data : undefined
+    const workspaceId = useWorkspaceId()
+    const page = useQueryAgentChatPageSwr(workspaceId, route.agentId, route.welcome)
+    const loaded = page.data?.workspaceId === workspaceId && page.data?.id === route.agentId ? page.data : undefined
     const agent = useMemo(
         (): AgentChatAgent | undefined =>
             loaded === undefined

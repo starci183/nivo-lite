@@ -1,10 +1,8 @@
-"use client"
-
 import { useEffect, useLayoutEffect, useState } from "react"
 import type { ReactNode } from "react"
 import type { ParamHandle, ReadDefinition, ReadHandle, ReadVariables } from "../../block/block.types"
 import type { SpecReadBinding } from "../../spec/spec.types"
-import { resolveVariables } from "../../spec/spec-value"
+import { optionalVariable, resolveVariables } from "../../spec/spec-value"
 import type { HostRead } from "../../host/host.types"
 import { useWorkbenchHost } from "../host/WorkbenchHostProvider"
 import type { FoldedRead } from "./host-slot"
@@ -41,7 +39,9 @@ export const BoundRead = (props: BoundReadProps): ReactNode => {
     const host = useWorkbenchHost()
     const [chosen, setChosen] = useState<ReadVariables>({})
     const allowed = host.useCan(props.read.permission)
-    const resolved = resolveVariables(props.binding.variables, props.installationId, props.params.value)
+    const resolved = resolveVariables(props.binding.variables, props.installationId, props.params.value, (name) =>
+        optionalVariable(props.read, name),
+    )
     const variables = { ...resolved.variables, ...chosen }
     const isWaiting = resolved.pending.some((name) => !Object.keys(chosen).includes(name))
     const isPaged = props.read.listing?.kind === "list"

@@ -36,6 +36,16 @@ describe("detailSectionsOf", () => {
         ])
     })
 
+    it("draws a fact in the words its path is given", () => {
+        const label = (path: string, raw: string): string => (path === "status" ? `status:${raw}` : raw)
+        const sections = detailSectionsOf(
+            RECORD,
+            { items: [{ term: { key: "status" }, path: "status", format: "badge" }] },
+            { ...CONTEXT, label },
+        )
+        expect(sections[0]?.items[0]?.text).toBe("status:open")
+    })
+
     it("draws no first group without facts, and an empty value where the record holds none", () => {
         expect(detailSectionsOf(RECORD, { items: [] }, CONTEXT)).toEqual([])
         const [only] = detailSectionsOf(RECORD, { items: [{ term: { key: "x" }, path: "missing" }] }, CONTEXT)

@@ -14,7 +14,7 @@ import {
     headerWithAdd,
     needsMaintenance,
 } from "@/modules/brain"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainPageHeaderView, BrainPageHeading, FactDrawerView, FactEntryView, FactsView } from "@/modules/types"
 import { useBrainBoard } from "./useBrainBoard"
 import { useBrainCommand } from "./useBrainCommand"
@@ -23,6 +23,7 @@ import { useFactDrawer } from "./useFactDrawer"
 import { useFactRetire } from "./useFactRetire"
 import { useFailureToast } from "./useFailureToast"
 import { usePanePicker } from "./usePanePicker"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the address asks of the facts tab: the heading of the page and the fact drawer it may open. */
 interface BrainFactsInput {
@@ -61,12 +62,28 @@ const matchOf = (entries: ReadonlyArray<FactEntryView>, query: string): Readonly
     return entries.filter((entry) => needle === "" || `${entry.title} ${entry.line}`.toLowerCase().includes(needle))
 }
 
+/** What the fact entries are made of: the board, the fact a stop is being sent for and the words. */
+const factsInputOf = (
+    board: ReturnType<typeof useBrainBoard>,
+    pending: string | undefined,
+    words: ReturnType<typeof factWordsOf>,
+    workspaceId: string,
+): Parameters<typeof factEntriesOf>[0] => ({
+    facts: board.facts,
+    lenses: board.lenses,
+    canWrite: board.canWrite,
+    pending,
+    words,
+    workspaceId,
+})
+
 /**
  * The facts of the Second Brain as the tab of a list beside the opened fact: the facts in force and the scheduled ones, narrowed
  * by type and by a search, with the history of the opened value and the two commands on it (a new value, and stopping its use,
  * which asks first). Each command keeps the permission and the pending identity it had in the old list.
  */
 export const useBrainFacts = (input: BrainFactsInput): BrainFactsPage => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("brain")
     const f = useTranslations("brainFacts")
     const board = useBrainBoard()
@@ -79,8 +96,7 @@ export const useBrainFacts = (input: BrainFactsInput): BrainFactsPage => {
     const retire = useFactRetire(board.canWrite)
     const [query, setQuery] = useState("")
     const words = factWordsOf(t, f)
-    const facts = { facts: board.facts, lenses: board.lenses, canWrite: board.canWrite, pending: retire.pending, words }
-    const entries = factEntriesOf(facts)
+    const entries = factEntriesOf(factsInputOf(board, retire.pending, words, workspaceId))
     const isWaiting = "isLoading" in board.slot
     const tabs = isWaiting
         ? [{ id: "all", label: f("filterAll") }]
@@ -121,7 +137,7 @@ export const useBrainFacts = (input: BrainFactsInput): BrainFactsPage => {
         header: headerWithAdd(header.props, {
             canWrite: board.canWrite,
             label: t("addFact"),
-            href: brainTabHref("facts", { fact: "new" }),
+            href: workspaceHref(workspaceId, brainTabHref("facts", { fact: "new" })),
         }),
         view,
         drawer,

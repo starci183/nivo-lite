@@ -16,7 +16,8 @@ import {
 } from "@/hooks/installations"
 import type { ModuleKey } from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
-import { AGENT_ROLES_HREF, AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { AGENT_ROLES_HREF, AGENTS_ROUTE, APP_ROUTES, workspaceHref } from "@/modules/routes"
 import { AgentInstanceFrameBase } from "./component"
 import type { InstanceHeaderView, InstanceSwitch } from "./component"
 
@@ -43,7 +44,7 @@ interface AgentInstanceFrameProps {
 }
 
 /** The tabs whose body is panes, attached flush under the tab line; the other tabs are card bodies. */
-const PANES_TABS: ReadonlySet<string> = new Set(["setup", "work", "inbox", "workbench"])
+const PANES_TABS: ReadonlySet<string> = new Set(["setup", "work", "workbench"])
 
 /** The agents the header's menu can open: every installed agent, the open one checked, and the way to add one for a person who may. */
 const switcherOf = (
@@ -51,10 +52,11 @@ const switcherOf = (
     items: ReturnType<typeof useInstanceRail>["items"],
     canAdd: boolean,
     currentId: string,
+    workspaceId: string,
 ): InstanceSwitch => ({
     label: t("switchAgent"),
     currentId,
-    add: canAdd ? { label: t("railAdd"), href: AGENT_ROLES_HREF } : null,
+    add: canAdd ? { label: t("railAdd"), href: workspaceHref(workspaceId, AGENT_ROLES_HREF) } : null,
     items: items.map((item) => ({
         id: item.id,
         name: item.name,
@@ -80,6 +82,7 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
     const needs = useConnectionNeedsCopy()
     const rail = useInstanceRail(props.installationId)
     const member = useMember()
+    const workspaceId = useWorkspaceId()
     return (
         <AgentInstanceFrameBase
             children={props.children}
@@ -88,8 +91,8 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                 ariaLabel: header.name === "" ? header.typeName : header.name,
                 crumbLabel: ts("crumbLabel"),
                 crumbs: [
-                    { id: "home", label: ts("crumbHome"), href: APP_ROUTES.dashboard },
-                    { id: "modules", label: t("catalogTitle"), href: AGENTS_ROUTE },
+                    { id: "home", label: ts("crumbHome"), href: workspaceHref(workspaceId, APP_ROUTES.workspaceHome) },
+                    { id: "modules", label: t("catalogTitle"), href: workspaceHref(workspaceId, AGENTS_ROUTE) },
                     isLoading
                         ? { id: "agent", label: "", isLoading: true }
                         : { id: "agent", label: header.name === "" ? header.typeName : header.name },
@@ -110,7 +113,7 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                 isLoading,
                 read: mapSlot(header.slot, () => true),
                 labels: labels(t("catalogTitle")),
-                switcher: switcherOf(t, rail.items, isManager(member), props.installationId),
+                switcher: switcherOf(t, rail.items, isManager(member), props.installationId, workspaceId),
                 view:
                     resolved === undefined
                         ? { ...PLACEHOLDER, name: header.typeName }
@@ -134,7 +137,10 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                               chatHref: resolved.chatHref,
                               profileHref: resolved.profileHref,
                               packageHref: isManager(member)
-                                  ? `${AGENTS_ROUTE}/templates/package/${props.installationId}`
+                                  ? workspaceHref(
+                                        workspaceId,
+                                        `${AGENTS_ROUTE}/templates/package/${props.installationId}`,
+                                    )
                                   : null,
                           },
             }}

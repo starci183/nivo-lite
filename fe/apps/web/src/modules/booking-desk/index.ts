@@ -122,6 +122,8 @@ interface DeskWords {
     readonly say: Say
     readonly resourceName: (id: string) => string
     readonly money: (value: number) => string
+    /** The workspace the links of the desk lead within. */
+    readonly workspaceId: string
 }
 
 const joined = (parts: ReadonlyArray<string>): string => parts.filter((part) => part !== "").join(" · ")
@@ -288,7 +290,6 @@ export const detailOf = (
     statusLabel: words.say(`status_${booking.status}`),
     statusTone: BOOKING_STATUS_TONE[booking.status] ?? ("neutral" as const),
     items: detailItems(booking, words),
-    ...(booking.leadId === null ? {} : { customerHref: `/leads/${booking.leadId}` }),
     customerLabel: words.say("viewCustomer"),
     ...nextOf(booking, words),
     actions: [

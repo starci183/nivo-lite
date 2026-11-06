@@ -1,21 +1,24 @@
-"use client"
-
 import { useMemo } from "react"
 import type { ReactNode } from "react"
-import { Alert, EmptyNotice, Stack } from "@starci/grammar/common"
+import { Alert, EmptyNotice } from "@starci/grammar/common"
 import type { ActionDefinition, ReadDefinition } from "../../block/block.types"
 import type { PlanNode, RenderPlan } from "../../spec/render-plan"
 import { renderPlan, viewOf } from "../../spec/render-plan"
 import { paramHandleOf } from "../../spec/spec-param"
 import type { SpecProblem, StoredSpec } from "../../spec/spec.types"
-import { useInstalledBlocks, useRegistryCheck, useWorkbenchHost } from "../host/WorkbenchHostProvider"
+import {
+    ModuleNamespaceProvider,
+    useInstalledBlocks,
+    useRegistryCheck,
+    useWorkbenchHost,
+} from "../host/WorkbenchHostProvider"
 import { PageFrame } from "./PageFrame"
 import { PrimaryCommand } from "./PrimaryCommand"
 import type { SpecContext } from "./renderer.types"
 import { SpecNode } from "./SpecNode"
 import { chromeOf, paneOf } from "./view-chrome"
 import type { ViewChrome } from "./view-chrome"
-import { ViewGate } from "./ViewGate"
+import { ViewBody } from "./ViewBody"
 
 /** What the route gives the workbench. */
 export interface WorkbenchRoute {
@@ -50,8 +53,14 @@ interface Chosen {
 
 const panelId = (id: string): string => `workbench-panel-${id}`
 
+/** What a region of nodes takes. */
+interface NodesProps {
+    readonly nodes: ReadonlyArray<PlanNode>
+    readonly context: SpecContext
+}
+
 /** The nodes of one region, drawn in order. */
-const Nodes = (props: { readonly nodes: ReadonlyArray<PlanNode>; readonly context: SpecContext }): ReactNode =>
+const Nodes = (props: NodesProps): ReactNode =>
     props.nodes.map((node) => <SpecNode key={node.id} node={node} context={props.context} />)
 
 /** The problems as one line of codes. */
@@ -124,24 +133,30 @@ const DrawnWorkbench = (props: SpecWorkbenchProps): ReactNode => {
                 />
             }
         >
-            <Stack gap="region">
-                {problems.length > 0 && props.canManage ? (
-                    <Alert
-                        tone="cautionary"
-                        title={text({ key: "renderer.problems" })}
-                        description={codesOf(problems)}
-                    />
-                ) : null}
-                <Nodes nodes={plan.head} context={context} />
-                <div role="tabpanel" id={panelId(view?.id ?? "none")}>
-                    {view === undefined ? null : (
-                        <ViewGate key={view.id}>
-                            <SpecNode node={view.root} context={context} />
-                        </ViewGate>
-                    )}
-                </div>
-                <Nodes nodes={plan.foot} context={context} />
-            </Stack>
+            {(tabs) => (
+                <ViewBody
+                    tabs={tabs}
+                    before={
+                        <>
+                            {problems.length > 0 && props.canManage ? (
+                                <Alert
+                                    tone="cautionary"
+                                    title={text({ key: "renderer.problems" })}
+                                    description={codesOf(problems)}
+                                />
+                            ) : null}
+                            <Nodes nodes={plan.head} context={context} />
+                        </>
+                    }
+                    after={<Nodes nodes={plan.foot} context={context} />}
+                    view={view}
+                    aside={plan.aside}
+                    asideSummary={plan.asideSummary}
+                    context={context}
+                    reads={reads}
+                    panelId={panelId}
+                />
+            )}
         </PageFrame>
     )
 }
@@ -156,5 +171,9 @@ export const SpecWorkbench = (props: SpecWorkbenchProps): ReactNode => {
     const registry = useRegistryCheck()
     if (registry !== null && registry.built !== registry.served)
         return <EmptyNotice message={registry.message} actionLabel={registry.reloadLabel} onAction={registry.reload} />
-    return <DrawnWorkbench {...props} />
+    return (
+        <ModuleNamespaceProvider namespace={props.namespace}>
+            <DrawnWorkbench {...props} />
+        </ModuleNamespaceProvider>
+    )
 }

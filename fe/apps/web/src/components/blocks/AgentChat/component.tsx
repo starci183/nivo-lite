@@ -49,10 +49,7 @@ export interface AgentChatViewProps {
     readonly railLabels: SlotLabels
     /** The first read of the agent and its conversations is not in: every region draws its waiting shape together. */
     readonly isWaiting: boolean
-    readonly header: Omit<
-        AgentChatHeaderProps,
-        "glyph" | "module" | "seed" | "onBack" | "onHistory" | "onTakeover" | "onOpenLead"
-    >
+    readonly header: Omit<AgentChatHeaderProps, "glyph" | "module" | "seed" | "onBack" | "onHistory" | "onTakeover">
     readonly channelTabs: ChannelTabsView | null
     /** A conversation is open (or the first read waits): the composer is drawn; with none open the greeting carries the one action. */
     readonly hasConversation: boolean
@@ -79,7 +76,6 @@ export interface AgentChatHandlers {
     readonly send: (prompt?: string) => void
     readonly start: () => void
     readonly select: (conversationId: string, kind: AgentChatTab) => void
-    readonly openLead: () => void
     readonly closeWelcome: () => void
 }
 
@@ -96,7 +92,6 @@ const SKELETON_THREAD: ThreadView = { hasSelection: true }
 const Thread = (props: AgentChatBaseProps) => (
     <AgentChatThread
         scrollKey={props.props.thread.scrollKey}
-        handoff={props.props.thread.handoff}
         takenOverNotice={props.props.thread.takenOverNotice}
         messages={
             <>
@@ -147,7 +142,6 @@ const Head = (props: HeadProps) => (
         onBack={props.on.back}
         onHistory={props.onHistory}
         onTakeover={props.on.toggleTakeover}
-        onOpenLead={props.on.openLead}
     />
 )
 

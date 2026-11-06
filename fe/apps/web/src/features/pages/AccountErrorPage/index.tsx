@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { accountHeadingOf } from "@/modules/page-header"
 import { AccountErrorPageBase } from "./component"
 
@@ -14,11 +15,13 @@ type AccountErrorPageProps = {
 export const AccountErrorPage = (props: AccountErrorPageProps) => {
     const t = useTranslations("account")
     const shell = useTranslations("shell")
+    const workspaceId = useWorkspaceId()
     const isProfile = props.selected === "profile"
     return (
         <AccountErrorPageBase
             props={{
                 header: accountHeadingOf({
+                    workspaceId,
                     title: isProfile ? t("profilePageTitle") : t("title"),
                     description: isProfile ? t("profilePageDescription") : t("description"),
                     tabsLabel: t("tabsLabel"),

@@ -7,11 +7,12 @@ import { usePublicDocumentEditForm } from "@/hooks/rhf"
 import type { PublicDocumentEditValues } from "@/hooks/rhf"
 import { mapSlot } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import { usePublicDocCommands } from "./usePublicDocCommands"
 import { usePublicDocuments } from "./usePublicDocuments"
 import type { DataSlot } from "@/modules/types"
 import type { PublicDocument } from "@/modules/brain"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** Tracks the initiating decision while disabling competing decisions until it settles. */
 const usePendingDecision = () => {
@@ -50,6 +51,7 @@ export interface PublicDocEditorView {
 export const usePublicDocEditor = (docId: string | undefined): PublicDocEditorView => {
     const t = useTranslations("publicBrain")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const member = useWorkspaceMember()
     const commands = usePublicDocCommands()
     const read = usePublicDocuments()
@@ -57,7 +59,7 @@ export const usePublicDocEditor = (docId: string | undefined): PublicDocEditorVi
     const form = usePublicDocumentEditForm({ title: doc?.title ?? "", body: doc?.body ?? "" })
     const [isReviewStale, setReviewStale] = useState(false)
     const decision = usePendingDecision()
-    const close = () => router.replace(brainTabHref("publicDocs"))
+    const close = () => router.replace(workspaceHref(workspaceId, brainTabHref("publicDocs")))
     const saveSnapshot = async (values: PublicDocumentEditValues) => {
         if (doc === undefined || !member.canWrite || doc.status === "drafting") return undefined
         const saved =

@@ -1,5 +1,3 @@
-"use client"
-
 import type { ReactNode } from "react"
 import { Button } from "@starci/grammar/common"
 import type { ActionDefinition } from "../../block/block.types"

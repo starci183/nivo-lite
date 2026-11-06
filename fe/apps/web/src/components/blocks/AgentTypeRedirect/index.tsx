@@ -2,8 +2,9 @@
 
 import { useTranslations } from "next-intl"
 import { useModuleName, useTypeRoute } from "@/hooks/installations"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
-import { AGENTS_ROUTE } from "@/modules/routes"
+import { AGENTS_ROUTE, workspaceHref } from "@/modules/routes"
 import type { AgentTab, ModuleKey } from "@/hooks/installations"
 import { AgentTypeRedirectBase } from "./component"
 
@@ -24,6 +25,7 @@ interface AgentTypeRedirectProps {
 export const AgentTypeRedirect = (props: AgentTypeRedirectProps) => {
     const t = useTranslations("modulesCore")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const route = useTypeRoute(props.module, props.tab, props.query, "redirect")
     const typeName = useModuleName(props.module, "shortName")
     return (
@@ -39,7 +41,7 @@ export const AgentTypeRedirect = (props: AgentTypeRedirectProps) => {
                       }
                     : null,
             }}
-            on={{ backToCatalog: () => router.push(AGENTS_ROUTE) }}
+            on={{ backToCatalog: () => router.push(workspaceHref(workspaceId, AGENTS_ROUTE)) }}
         />
     )
 }

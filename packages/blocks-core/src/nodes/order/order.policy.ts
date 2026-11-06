@@ -92,9 +92,6 @@ export const gapsOf = (
     return { items: priced.items, gaps }
 }
 
-/** True when an order of this total waits for the owner: at the threshold or above. */
-export const needsOwner = (totalVnd: number, thresholdVnd: number): boolean => totalVnd >= thresholdVnd
-
 /** An item as the `order.record` effect carries it. */
 export interface RecordedItem {
     /** The item name. */

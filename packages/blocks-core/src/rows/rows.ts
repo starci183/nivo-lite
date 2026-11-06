@@ -1,6 +1,8 @@
 import type { ReadPage } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { textOf, valueAt } from "../slots/paths"
+import type { CellTone } from "./table-rows"
+import type { Relabel } from "./value-labels"
 
 /** One row of a record list as the block draws it; an empty badge draws no badge. */
 export interface RecordRow {
@@ -12,6 +14,12 @@ export interface RecordRow {
     readonly description: string
     /** The words of the mark beside the headline; empty draws no badge. */
     readonly badge: string
+    /** The tone of the badge, which draws with its status dot. */
+    readonly tone: CellTone
+    /** The short fact at the end of the headline line (a time, an amount); empty draws none. */
+    readonly meta: string
+    /** The words of the further marks after the badge, one chip each; empty ones are left out. */
+    readonly chips: ReadonlyArray<string>
 }
 
 /** The dotted paths of a record that name the parts of its row. */
@@ -24,6 +32,12 @@ export interface RowPaths {
     readonly descriptionPath?: string | undefined
     /** The path of the text of the badge; absent draws none. */
     readonly badgePath?: string | undefined
+    /** The tone of the badge by the raw value at the badge path; a value with no tone draws neutral. */
+    readonly badgeTones?: Readonly<Record<string, CellTone>> | undefined
+    /** The path of the short fact at the end of the headline line; absent draws none. */
+    readonly metaPath?: string | undefined
+    /** The paths of the further chips of the row, after the badge. */
+    readonly chipPaths?: ReadonlyArray<string> | undefined
 }
 
 /** The most records one bound list carries; a longer one is a failed read, never a half list. */
@@ -44,30 +58,41 @@ export const RECORD_ROWS_PLACEHOLDER: ReadonlyArray<RecordRow> = Array.from(
         title: BLANK,
         description: BLANK,
         badge: "",
+        tone: "neutral",
+        meta: "",
+        chips: [],
     }),
 )
 
-/** The text at an optional path of a record; nothing without a path. */
-const textAt = (record: unknown, path: string | undefined): string =>
-    path === undefined ? "" : textOf(valueAt(record, path))
+/** The text at an optional path of a record, in the words the labels give it; nothing without a path. */
+const textAt = (record: unknown, path: string | undefined, relabel: Relabel): string =>
+    path === undefined ? "" : relabel(path, textOf(valueAt(record, path)))
 
 /** The row of one record; a record without a text id draws no row. */
-const rowOf = (record: unknown, paths: RowPaths): ReadonlyArray<RecordRow> => {
+const rowOf = (record: unknown, paths: RowPaths, relabel: Relabel, untitled: string): ReadonlyArray<RecordRow> => {
     const id = textOf(valueAt(record, paths.idPath))
     if (id === "") return []
     return [
         {
             id,
-            title: textOf(valueAt(record, paths.titlePath)),
-            description: textAt(record, paths.descriptionPath),
-            badge: textAt(record, paths.badgePath),
+            title: relabel(paths.titlePath, textOf(valueAt(record, paths.titlePath))) || untitled,
+            description: textAt(record, paths.descriptionPath, relabel),
+            badge: textAt(record, paths.badgePath, relabel),
+            tone: paths.badgeTones?.[textOf(valueAt(record, paths.badgePath))] ?? "neutral",
+            meta: textAt(record, paths.metaPath, relabel),
+            chips: (paths.chipPaths ?? []).map((path) => textAt(record, path, relabel)).filter((text) => text !== ""),
         },
     ]
 }
 
 /** The rows of a bound list, or null when none can be drawn, which the block reads as an empty slot. */
-export const rowsOf = (records: ReadonlyArray<unknown>, paths: RowPaths): ReadonlyArray<RecordRow> | null => {
-    const rows = records.flatMap((record) => rowOf(record, paths))
+export const rowsOf = (
+    records: ReadonlyArray<unknown>,
+    paths: RowPaths,
+    relabel: Relabel,
+    untitled: string,
+): ReadonlyArray<RecordRow> | null => {
+    const rows = records.flatMap((record) => rowOf(record, paths, relabel, untitled))
     return rows.length === 0 ? null : rows
 }
 

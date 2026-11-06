@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation"
 import { useGoogleLedger } from "@/hooks/googleLedger"
 import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { DriveLedgerBase } from "./component"
+import { workspaceHref } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The page that Google sends the owner back to after the consent. */
 const RETURN_TO = "/connections/drive"
@@ -24,6 +26,7 @@ const ledgerNoteOf = (
 
 /** The ledger kept in a Google spreadsheet, read from the workspace Google state: a band of the Drive page. */
 export const DriveLedger = () => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("googleWizard")
     const labels = useSlotLabels()
     const params = useSearchParams()
@@ -73,7 +76,7 @@ export const DriveLedger = () => {
                 },
             }}
             on={{
-                allow: () => ledger.allow("sheets", RETURN_TO),
+                allow: () => ledger.allow("sheets", workspaceHref(workspaceId, RETURN_TO)),
                 sheet: ledger.setSheet,
                 save: () => ledger.save(t("failGeneric")),
                 retry: () => void ledger.read.mutate(),

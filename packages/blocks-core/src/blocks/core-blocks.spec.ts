@@ -1,10 +1,17 @@
 import { asideDetailBlock } from "./aside-detail.block"
-import { conversationBlock } from "./conversation.block"
+import { accountingBlocks } from "./accounting/accounting-blocks"
+import { chatbotBlocks } from "./chatbot/chatbot-blocks"
 import { filterTabsBlock } from "./filter-tabs.block"
 import { formBlock } from "./form.block"
+import { listEditorBlock } from "./list-editor.block"
+import { loyaltyBlocks } from "./loyalty/loyalty-blocks"
+import { salesBlocks } from "./sales/sales-blocks"
 import { listPaneBlock } from "./list-pane.block"
 import { tabbedPanelBlock } from "./tabbed-panel.block"
 import { tableBlock } from "./table.block"
+import { graphBlock } from "./graph.block"
+import { runTimelineBlock } from "./run-timeline.block"
+import { boardBlock } from "./board.block"
 import { cardGridBlock } from "./card-grid.block"
 import { coreBlocks } from "./core-blocks"
 import { dashboardCardsBlock } from "./dashboard-cards.block"
@@ -38,10 +45,12 @@ const EXPLANATION_WORDS = [
 ]
 
 describe("coreBlocks", () => {
-    it("lists every core block once, under an id of the core namespace", () => {
+    it("lists every block once: the core ones under the core namespace, those of each module under its own", () => {
         const ids = coreBlocks.map((block) => block.id)
-        expect(new Set(ids).size).toBe(18)
-        expect(ids.every((id) => id.startsWith("core."))).toBe(true)
+        expect(new Set(ids).size).toBe(ids.length)
+        expect(ids.filter((id) => id.startsWith("core."))).toHaveLength(21)
+        expect(ids.filter((id) => id.startsWith("chatbot."))).toHaveLength(chatbotBlocks.length)
+        expect(ids.filter((id) => id.startsWith("accounting."))).toHaveLength(accountingBlocks.length)
     })
 
     it("carries the JSON Schema of every block's props", () => {
@@ -59,15 +68,22 @@ describe("coreBlocks", () => {
             listPaneBlock,
             filterTabsBlock,
             tableBlock,
+            boardBlock,
             formBlock,
+            listEditorBlock,
             tabbedPanelBlock,
             asideDetailBlock,
-            conversationBlock,
+            ...chatbotBlocks,
             waitingBlock,
             decisionQueueBlock,
             dashboardCardsBlock,
             masterDetailBlock,
             explanationBlock,
+            graphBlock,
+            runTimelineBlock,
+            ...salesBlocks,
+            ...loyaltyBlocks,
+            ...accountingBlocks,
         ])
     })
 })
@@ -116,9 +132,25 @@ describe("the props of the list blocks", () => {
 
     it("take the paths of a record list, the description and badge paths being optional", () => {
         expect(recordListBlock.props.safeParse(LIST).success).toBe(true)
-        expect(recordListBlock.props.safeParse({ ...LIST, descriptionPath: "note", badgePath: "state" }).success).toBe(
-            true,
-        )
+        expect(
+            recordListBlock.props.safeParse({
+                ...LIST,
+                descriptionPath: "note",
+                badgePath: "state",
+                metaPath: "when",
+                chipPaths: ["channel"],
+                avatar: true,
+            }).success,
+        ).toBe(true)
+    })
+
+    it("take the tones of a record list badge and refuse a tone it does not know", () => {
+        expect(recordListBlock.props.safeParse({ ...LIST, badgeTones: { open: "success" } }).success).toBe(true)
+        expect(recordListBlock.props.safeParse({ ...LIST, badgeTones: { open: "purple" } }).success).toBe(false)
+    })
+
+    it("refuse more record list chips than the bound", () => {
+        expect(recordListBlock.props.safeParse({ ...LIST, chipPaths: ["a", "b", "c", "d"] }).success).toBe(false)
     })
 
     it("refuse a record list path past its bound", () => {

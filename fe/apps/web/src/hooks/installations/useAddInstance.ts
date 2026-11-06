@@ -4,9 +4,11 @@ import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { mutate } from "@/modules/viewer-cache"
 import { useMutateInstallModuleSwr, QUERY_MODULE_INSTALLATIONS_SWR_KEY } from "@/hooks/swr"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import type { ModuleKey } from "@/modules/catalog"
 import { navigation } from "@/modules/i18n"
 import { agentHref, cleanInstanceName } from "@/modules/installations"
+import { workspaceHref } from "@/modules/routes"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"
 
@@ -20,6 +22,7 @@ export interface AddInstanceView {
 export const useAddInstance = (): AddInstanceView => {
     const t = useTranslations("modulesCore")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const runGraphQL = useGraphQLWithToast()
     const { trigger, isMutating } = useMutateInstallModuleSwr()
     const add = useCallback(
@@ -31,10 +34,10 @@ export const useAddInstance = (): AddInstanceView => {
             })
             if (added === undefined) return false
             await mutate(matchesSwrKey(QUERY_MODULE_INSTALLATIONS_SWR_KEY))
-            router.push(agentHref(moduleKey, added.installationId))
+            router.push(workspaceHref(workspaceId, agentHref(moduleKey, added.installationId)))
             return true
         },
-        [runGraphQL, trigger, t, router],
+        [runGraphQL, trigger, t, router, workspaceId],
     )
     return { add, isAdding: isMutating }
 }

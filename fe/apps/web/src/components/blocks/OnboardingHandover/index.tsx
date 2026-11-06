@@ -2,7 +2,8 @@
 
 import { useTranslations } from "next-intl"
 import { useOnboardingHandover } from "@/hooks/onboardingHandover"
-import { APP_ROUTES } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { workspaceChannelsPath, workspaceReadyPath } from "@/modules/routes"
 import { OnboardingHandoverBase } from "./component"
 
 /** Who holds new customers as the row reads: "…" while unread, "You" for the signed-in owner, else the owner's name. */
@@ -15,6 +16,7 @@ const ownerLabel = (owner: { readonly name: string; readonly isMe: boolean } | u
 export const OnboardingHandover = () => {
     const t = useTranslations("onboarding")
     const handover = useOnboardingHandover()
+    const workspaceId = useWorkspaceId()
     const ownerValue = ownerLabel(handover.owner, t("ruleOwnerValue"))
     const approvalValue = {
         ask: t("ruleApprovalValue"),
@@ -43,9 +45,9 @@ export const OnboardingHandover = () => {
                 ],
                 emptyRules: t("handoverEmpty"),
                 backLabel: t("back"),
-                backHref: APP_ROUTES.workspaceChannels,
+                backHref: workspaceChannelsPath(workspaceId),
                 finishLabel: t("finish"),
-                finishHref: APP_ROUTES.workspaceReady,
+                finishHref: workspaceReadyPath(workspaceId),
             }}
             on={{ toggle: (_ruleId, on) => handover.setApproval(on) }}
         />

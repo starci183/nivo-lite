@@ -16,6 +16,8 @@ import { navigation } from "@/modules/i18n"
 import type { Connection, ConnectionsListView, DataSlot } from "@/modules/types"
 import { connectionIdOfPath } from "@/hooks/connectionsRoute"
 import { filtersOf, listRowOf, nextStepOf } from "./connectionsPanes.shared"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { pathInWorkspace } from "@/modules/routes"
 
 /** The tab the page shows: the library only when the address asks for it. */
 type ConnectionsTab = "connected" | "library"
@@ -44,13 +46,15 @@ export const useConnectionsList = (): ConnectionsListRead => {
     const t = useTranslations("connections")
     const bankName = useBankName()
     const pathname = navigation.usePathname()
+    const workspaceId = useWorkspaceId()
+    const path = pathInWorkspace(pathname)
     const params = useSearchParams()
     const access = useConnectionsRole()
     const data = useConnectionsData()
     const manager = access.role === "owner" || access.role === "manager"
     const attention = attentionConnections(data.items)
     const running = data.items.filter((connection) => connection.status === "connected")
-    const rows = sortRows(data.items).map((connection) => listRowOf(connection, t, bankName))
+    const rows = sortRows(data.items).map((connection) => listRowOf(connection, t, bankName, workspaceId))
     const first = attention[0]
     const namesOf = (connection: Connection) =>
         connection.agentIds.map((id) => data.agentNames[id]).filter((name): name is string => name !== undefined)
@@ -65,7 +69,7 @@ export const useConnectionsList = (): ConnectionsListRead => {
         attention:
             first === undefined
                 ? null
-                : nextStepOf(first, namesOf(first), access.role === "owner", t, t("continueSetup")),
+                : nextStepOf(first, namesOf(first), access.role === "owner", t, t("continueSetup"), workspaceId),
     }
     const readSlot = slotOfReads([access.read, ...data.reads], () => view)
     const slot =
@@ -73,15 +77,14 @@ export const useConnectionsList = (): ConnectionsListRead => {
             ? boardSlotOf({ isLoading: false, isManager: manager, isFailed: false }, readSlot.items)
             : readSlot
     const asked = params.get(URL_PARAMS.open)
-    const openId =
-        connectionIdOfPath(pathname, data.items) ?? (data.items.some((item) => item.id === asked) ? asked : null)
+    const openId = connectionIdOfPath(path, data.items) ?? (data.items.some((item) => item.id === asked) ? asked : null)
     const open = openId === null ? undefined : data.items.find((item) => item.id === openId)
     return {
         slot,
         tab: params.get(URL_PARAMS.tab) === "library" ? "library" : "connected",
         openId,
         openName: open?.name ?? null,
-        isRoot: pathname === ROOT && openId === null,
+        isRoot: path === ROOT && openId === null,
         retry: () => {
             access.retry()
             data.retry()

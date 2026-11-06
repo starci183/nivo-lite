@@ -1,7 +1,5 @@
-"use client"
-
 import type { ReactNode } from "react"
-import { Cluster, Stack, Tabs } from "@starci/grammar/common"
+import { Cluster, Tabs } from "@starci/grammar/common"
 import type { ParamHandle, ReadDefinition } from "../../block/block.types"
 import { wordsOf } from "../../schema/namespaced"
 import type { PlanView } from "../../spec/render-plan"
@@ -26,8 +24,8 @@ export interface PageFrameProps {
     readonly onSelect: (id: string) => void
     /** The page's commands at the end of the tabs band. */
     readonly actions: ReactNode
-    /** The body of the page. */
-    readonly children: ReactNode
+    /** The page from its tabs band: the body takes the band and places it (above the body, or inside its main pane). */
+    readonly children: (tabs: ReactNode) => ReactNode
 }
 
 /** The chips known so far, by view id. */
@@ -64,7 +62,7 @@ interface CountChainProps extends Omit<PageFrameProps, "selected" | "panelId" | 
 /** Reads the counts of the tabs one after the other, each in a component of its own so every hook list stays stable. */
 const CountChain = (props: CountChainProps): ReactNode => {
     const [view, ...rest] = props.rest
-    if (view === undefined) return props.done(props.chips)
+    if (view === undefined) return <>{props.done(props.chips)}</>
     return (
         <TabCount
             chrome={props.chrome.find((candidate) => candidate.id === view.id)}
@@ -99,9 +97,9 @@ export const PageFrame = (props: PageFrameProps): ReactNode => {
             {...props}
             rest={visible}
             chips={{}}
-            done={(chips) => (
-                <Stack gap="region">
-                    <Cluster gap="row" align="center" justify="between">
+            done={(chips) =>
+                props.children(
+                    <Cluster gap="row" align="center" justify="between" wrap={false}>
                         <Tabs
                             label={text({ key: "renderer.tabs" })}
                             {...(props.selected === undefined ? {} : { selectedKey: props.selected })}
@@ -120,10 +118,9 @@ export const PageFrame = (props: PageFrameProps): ReactNode => {
                             onSelect={props.onSelect}
                         />
                         {props.actions}
-                    </Cluster>
-                    {props.children}
-                </Stack>
-            )}
+                    </Cluster>,
+                )
+            }
         />
     )
 }

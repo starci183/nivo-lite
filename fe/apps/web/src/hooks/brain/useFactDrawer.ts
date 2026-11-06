@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import { SCOPE_KEY, TYPE_KEY } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainTab } from "@/modules/routes"
 import { FACT_SUBJECT_TYPES } from "@/modules/types"
 import type { FactDrawerView, FactScope, FactSubjectType } from "@/modules/types"
@@ -11,6 +11,7 @@ import { useBrainCommand } from "./useBrainCommand"
 import { useBrainForm } from "./useBrainForm"
 import { useFactForm } from "./useFactForm"
 import { useFailureToast } from "./useFailureToast"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the address asks of the fact drawer, and the tab it returns to when it closes. */
 interface FactDrawerAddress {
@@ -97,10 +98,11 @@ export const useFactDrawer = (input: FactDrawerAddress): FactDrawerView | null =
     const f = useTranslations("brainFacts")
     const failed = useFailureToast()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const address = useBrainForm(input)
     const form = useFactForm(address.editing, address.preset, address.formKey)
     const command = useBrainCommand()
-    const close = () => router.replace(brainTabHref(input.tab))
+    const close = () => router.replace(workspaceHref(workspaceId, brainTabHref(input.tab)))
     const submit = () => {
         if (!form.isComplete) return
         command.send("fact.save", form.payload(address.preset?.gapId), { onResult: close }).catch(() => {

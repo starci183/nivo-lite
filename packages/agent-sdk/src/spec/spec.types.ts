@@ -29,6 +29,14 @@ export interface SpecWhen {
     readonly permission: string
 }
 
+/** The param values a node needs for it to be drawn: the node swaps in and out of its place as the param changes. */
+export interface SpecShowWhen {
+    /** The param whose value decides; the spec declares it. */
+    readonly param: string
+    /** The values of the param that show the node; when the param declares its values, each is one of them. */
+    readonly is: ReadonlyArray<string>
+}
+
 /** What a node whose read is forbidden does: say so in place, or draw nothing. */
 export type SpecForbidden = "notice" | "hide"
 
@@ -48,6 +56,8 @@ export interface SpecNode {
     readonly when?: SpecWhen | undefined
     /** What the node does when a read of it is forbidden; absent says so in place. */
     readonly forbidden?: SpecForbidden | undefined
+    /** The param values that show the node; absent draws it whatever the params hold. */
+    readonly showWhen?: SpecShowWhen | undefined
 }
 
 /** The count a view shows as a chip on its tab: a read of the view's size, narrowed by a path to a number. */
@@ -86,6 +96,19 @@ export interface SpecParam {
     readonly default?: string | undefined
 }
 
+/**
+ * What a phone shows of the aside on the main pane: one line that opens the aside pane. A read says how much waits (`path` reaches
+ * the figure) and, optionally, what is first.
+ */
+export interface SpecAsideSummary extends SpecReadBinding {
+    /** The words on the line (what the aside is). */
+    readonly label: SpecText
+    /** A dotted path to the text of the first item, drawn under the label; absent draws the label alone. */
+    readonly previewPath?: string | undefined
+    /** The value of the `pane` param that opens the aside pane. */
+    readonly opens: string
+}
+
 /** A whole spec document, as one version of it is stored. */
 export interface SpecDocument {
     /** The format of the document; another id is refused. */
@@ -98,6 +121,13 @@ export interface SpecDocument {
     readonly head?: ReadonlyArray<SpecNode> | undefined
     /** Blocks drawn below the tabs on every view. */
     readonly foot?: ReadonlyArray<SpecNode> | undefined
+    /**
+     * The region drawn in a pane at the right of the view on every view. On a phone the main pane and this one show one at a time: the
+     * `pane` param, `list` for the main pane, names the one in view.
+     */
+    readonly aside?: SpecNode | undefined
+    /** What the main pane of a phone shows of the aside; absent shows nothing, and the aside is reached through the `pane` param only. */
+    readonly asideSummary?: SpecAsideSummary | undefined
     /** The tabs of the workbench and the block tree each draws. */
     readonly views: ReadonlyArray<SpecView>
 }
@@ -129,6 +159,7 @@ export type SpecProblemCode =
     | "SPEC_PARAM_INVALID"
     | "SPEC_PARAM_UNKNOWN"
     | "SPEC_VAR_UNKNOWN"
+    | "SPEC_ASIDE_MISSING"
 
 /**
  * Why a spec was refused, and where: `<view>/<node id>[.<prop path or slot>[.<variable>]]`, `head/<id>` or `foot/<id>`; for a param

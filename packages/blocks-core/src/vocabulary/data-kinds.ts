@@ -65,9 +65,9 @@ export const bankTransactionKind: DataKindDefinition = defineDataKind({
     fields: z.object({
         id,
         amountVnd: z.number(),
-        content: longText,
-        counterpartName: nullableText,
-        receivedAt: moment,
+        reference: longText,
+        payer: nullableText,
+        occurredAt: moment,
         orderId: id.nullable(),
         status: text,
     }),

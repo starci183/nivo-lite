@@ -1,12 +1,13 @@
 import { useTranslations } from "next-intl"
 import { BRAIN_PANEL_PREFIX } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { BRAIN_STRIP_TABS, brainStripTabOf, brainTabHref } from "@/modules/routes"
+import { BRAIN_STRIP_TABS, brainStripTabOf, brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainStripTab, BrainTab } from "@/modules/routes"
 import type { BrainPageHeading, BrainPageHeaderView } from "@/modules/types"
 import { useBrain } from "./useBrain"
 import { useBrainTodoCount } from "./useBrainTodoCount"
 import { useBrainPageActions } from "./useBrainPageActions"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The view `useBrainPageHeader` returns. */
 export interface BrainPageHeaderViewShape {
@@ -26,6 +27,7 @@ export interface BrainPageHeaderViewShape {
 export const useBrainPageHeader = (selected: BrainTab, heading: BrainPageHeading): BrainPageHeaderViewShape => {
     const t = useTranslations("secondBrain")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const todo = useBrainTodoCount()
     const asks = useBrain().brain?.gapsOpen ?? 0
     const actions = useBrainPageActions(selected)
@@ -50,7 +52,7 @@ export const useBrainPageHeader = (selected: BrainTab, heading: BrainPageHeading
             ...actions.on,
             selectTab: (id: string) => {
                 const next = BRAIN_STRIP_TABS.find((tab) => tab === id)
-                if (next !== undefined) router.replace(brainTabHref(next))
+                if (next !== undefined) router.replace(workspaceHref(workspaceId, brainTabHref(next)))
             },
         },
     }

@@ -65,6 +65,20 @@ describe("formBlock", () => {
     })
 })
 
+describe("the requireRecord and idle props of the form", () => {
+    it("stay optional, so a form that fills a blank record still parses", () => {
+        expect(formBlock.props.safeParse(formFixtureProps).success).toBe(true)
+        expect(formFixtureProps.requireRecord).toBeUndefined()
+    })
+
+    it("take requireRecord as a boolean and the words of the idle notice", () => {
+        const props = { ...formFixtureProps, requireRecord: true, idle: { key: "pick_one" } }
+        expect(formBlock.props.safeParse(props).success).toBe(true)
+        expect(formBlock.props.safeParse({ ...formFixtureProps, requireRecord: "yes" }).success).toBe(false)
+        expect(formBlock.props.safeParse({ ...formFixtureProps, idle: "Pick one" }).success).toBe(false)
+    })
+})
+
 describe("formFixtures", () => {
     it("holds every status of the record read, and the answers a submit may give", () => {
         expect(Object.keys(formFixtures)).toEqual(["ready", "empty", "error", "loading", "forbidden"])

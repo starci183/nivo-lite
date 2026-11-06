@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import { useTranslations } from "next-intl"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { IdeaDecision, DocIdeaView, DocIdeasView } from "@/modules/types"
 import { useKnowledgeIdeas } from "./useKnowledgeIdeas"
 import { useLibraryCommands } from "./useLibraryCommands"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** How many ideas show before "see more". */
 const VISIBLE_IDEAS = 5
@@ -35,6 +36,7 @@ interface DocIdeas {
  * with the way to bring them back.
  */
 export const useKnowledgeDocIdeas = (onFailed: () => void): DocIdeas => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("knowledge")
     const commands = useLibraryCommands()
     const ideas = useKnowledgeIdeas()
@@ -44,7 +46,7 @@ export const useKnowledgeDocIdeas = (onFailed: () => void): DocIdeas => {
         id: key,
         title: t(`suggest_${key}_topic`),
         line: oneLineOf(t(`suggest_${key}_hint`)),
-        addHref: brainTabHref("sources", { add: key }),
+        addHref: workspaceHref(workspaceId, brainTabHref("sources", { add: key })),
         isPending: pendingOf(key) !== undefined,
         menu: [
             { id: "na", label: t("suggestNotApplicable") },

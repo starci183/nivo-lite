@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { FORM_FIELDS_MAX, FORM_NAME_MAX } from "../blocks/form.block"
 import type {
     ApproverView,
     BadgeView,
@@ -102,6 +103,7 @@ const commandView: z.ZodType<CommandView> = z.object({
     isDisabled: z.boolean().optional(),
     disabledReason: text.optional(),
     isDanger: z.boolean().optional(),
+    intent: z.enum(["commit", "alternative", "dismiss", "neutral"]).optional(),
 })
 
 const badgeView: z.ZodType<BadgeView> = z.object({ label: text, tone: badgeTone })
@@ -110,6 +112,7 @@ const decisionRowView: z.ZodType<DecisionRowView> = z.object({
     id,
     title: text,
     description: text,
+    leading: text.optional(),
     badges: list(badgeView),
     reason: nullableText,
     amount: nullableText,
@@ -119,6 +122,10 @@ const decisionRowView: z.ZodType<DecisionRowView> = z.object({
     primary: commandView.nullable(),
     edit: commandView.nullable(),
     menu: list(commandView),
+    draft: z
+        .record(z.string().max(FORM_NAME_MAX), z.union([text, z.number(), z.boolean(), z.null()]))
+        .refine((draft) => Object.keys(draft).length <= FORM_FIELDS_MAX)
+        .optional(),
     waitingFor: nullableText,
 })
 

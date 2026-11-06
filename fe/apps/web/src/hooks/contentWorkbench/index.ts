@@ -1,1 +1,0 @@
-export { useContentWorkbenchView } from "./useContentWorkbenchView"

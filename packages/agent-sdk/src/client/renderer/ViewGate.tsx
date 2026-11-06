@@ -1,5 +1,3 @@
-"use client"
-
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from "react"
 import type { ReactNode } from "react"
 import { INITIAL_GATE, gateReducer, isGated, isSettled } from "./view-gate"

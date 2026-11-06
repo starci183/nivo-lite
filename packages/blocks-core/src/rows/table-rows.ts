@@ -1,6 +1,12 @@
 import { textOf, valueAt } from "../slots/paths"
-import { formatValue } from "./cell-format"
+import { cellTextOf } from "./cell-format"
 import type { CellContext, CellFormat } from "./cell-format"
+
+/** The tones a badge cell may take. */
+export const CELL_TONES = ["neutral", "accent", "info", "success", "warning", "danger", "muted"] as const
+
+/** One tone of a badge cell. */
+export type CellTone = (typeof CELL_TONES)[number]
 
 /** The paths and format that make one column of a table. */
 export interface TableColumnPaths {
@@ -8,6 +14,10 @@ export interface TableColumnPaths {
     readonly path: string
     /** How the value is drawn; absent draws it as text. */
     readonly format?: CellFormat | undefined
+    /** The path of the line of text under the cell's value; absent draws none. */
+    readonly subPath?: string | undefined
+    /** The tone of a badge cell by the raw value of the cell; a value with no tone draws neutral. */
+    readonly tones?: Readonly<Record<string, CellTone>> | undefined
 }
 
 /** What decides where a column's cells line up. */
@@ -24,6 +34,10 @@ export interface TableRow {
     readonly id: string
     /** The text of each cell, by the id of its column. */
     readonly cells: Readonly<Record<string, string>>
+    /** The line of text under each cell's value, by the id of its column; a column with none has no entry. */
+    readonly notes: Readonly<Record<string, string>>
+    /** The tone of each badge cell, by the id of its column; a cell with none draws neutral. */
+    readonly tones: Readonly<Record<string, CellTone>>
 }
 
 /** What a table needs to turn records into rows. */
@@ -48,6 +62,8 @@ export const tablePlaceholder = (columnCount: number): ReadonlyArray<TableRow> =
     Array.from({ length: PLACEHOLDER_COUNT }, (_, row) => ({
         id: `placeholder-${row}`,
         cells: Object.fromEntries(Array.from({ length: columnCount }, (__, column) => [columnIdOf(column), BLANK])),
+        notes: {},
+        tones: {},
     }))
 
 /** The row of one record; a record without a text id draws no row. */
@@ -56,9 +72,19 @@ const rowOf = (record: unknown, spec: TableRowsSpec): ReadonlyArray<TableRow> =>
     if (id === "") return []
     const cells = spec.columns.map((column, index): [string, string] => [
         columnIdOf(index),
-        formatValue(valueAt(record, column.path), column.format, spec.context),
+        cellTextOf(valueAt(record, column.path), column.format, column.path, spec.context),
     ])
-    return [{ id, cells: Object.fromEntries(cells) }]
+    const notes = spec.columns.flatMap((column, index): Array<[string, string]> => {
+        const note = textOf(valueAt(record, column.subPath))
+        return column.subPath === undefined || note === "" ? [] : [[columnIdOf(index), note]]
+    })
+    const tones = spec.columns.flatMap((column, index): Array<[string, CellTone]> => {
+        const tone = column.tones?.[textOf(valueAt(record, column.path))]
+        return tone === undefined ? [] : [[columnIdOf(index), tone]]
+    })
+    return [
+        { id, cells: Object.fromEntries(cells), notes: Object.fromEntries(notes), tones: Object.fromEntries(tones) },
+    ]
 }
 
 /** The rows of a bound list, or null when none can be drawn, which the block reads as an empty slot. */
@@ -77,12 +103,21 @@ export interface CellView {
     readonly text: string
     /** Whether the text is drawn as a badge; an empty cell draws none. */
     readonly isBadge: boolean
+    /** The line of text under the value; empty draws none. */
+    readonly note: string
+    /** The tone of the badge. */
+    readonly tone: CellTone
 }
 
 /** The cell of a row under a column id. */
 export const cellOf = (columns: ReadonlyArray<TableColumnPaths>, row: TableRow, columnId: string): CellView => {
     const text = row.cells[columnId] ?? ""
-    return { text, isBadge: text !== "" && columnOfId(columns, columnId)?.format === "badge" }
+    return {
+        text,
+        isBadge: text !== "" && columnOfId(columns, columnId)?.format === "badge",
+        note: row.notes[columnId] ?? "",
+        tone: row.tones[columnId] ?? "neutral",
+    }
 }
 
 /** Where a column's cells line up: numbers and money at the end, unless the column says otherwise. */

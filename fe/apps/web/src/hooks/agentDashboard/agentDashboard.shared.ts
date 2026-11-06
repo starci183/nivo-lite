@@ -1,9 +1,8 @@
-import { decisionsHref } from "@/hooks/decisions"
 import { operatingModeOf } from "@/hooks/installations"
 import type { ModuleKey } from "@/modules/catalog"
 import { agentHref } from "@/modules/installations"
 import type { OperatingMode } from "@/modules/installations"
-import { leadHref } from "@/modules/routes"
+import { workspaceHref } from "@/modules/routes"
 
 /** The wire line of a waiting or done region. */
 interface ItemWire {
@@ -142,6 +141,7 @@ export const toAgentDashboard = (
     data: DashboardWire,
     module: ModuleKey,
     installationId: string | null,
+    workspaceId: string,
 ): AgentDashboardView => {
     const waitingRow = (item: ItemWire): DashboardRow => ({
         id: item.id,
@@ -149,11 +149,14 @@ export const toAgentDashboard = (
         customer: item.customer,
         action: item.action,
         at: item.at === "" ? null : item.at,
-        href: agentHref(module, installationId, "workbench", `focus=${encodeURIComponent(item.id)}`),
+        href: workspaceHref(
+            workspaceId,
+            agentHref(module, installationId, "workbench", `focus=${encodeURIComponent(item.id)}`),
+        ),
     })
     const doneRow = (item: ItemWire): DashboardRow => ({
         ...waitingRow(item),
-        href: item.resultHref ?? (item.leadId ? leadHref(item.leadId) : decisionsHref("policy", module)),
+        ...(item.resultHref ? { href: workspaceHref(workspaceId, item.resultHref) } : {}),
     })
     const waiting = data.waiting.data
     const done = data.done.data

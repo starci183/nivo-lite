@@ -20,14 +20,15 @@ const props: z.ZodObject<{
 const slots: Record<never, never> = {}
 
 /**
- * The pane of a list: a search field over its two children, a filter-tabs block and a list. The text typed waits 300 ms and is
- * written to the `searchParam`; Escape clears it. The blocks inside read the param through their own bindings.
+ * The pane of a list: a search field over its two children, a filter-tabs block and a list (a record list, a table or a board). The text
+ * typed waits 300 ms and is written to the `searchParam`; Escape clears it. The blocks inside read the param through their own
+ * bindings.
  */
 export const listPaneBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "core.list-pane",
     title: { key: "blockListPane" },
     props,
     slots,
-    children: { max: 2, accepts: ["core.filter-tabs", "core.record-list"] },
+    children: { max: 2, accepts: ["core.filter-tabs", "core.record-list", "core.table", "core.board"] },
     params: ["searchParam"],
 })

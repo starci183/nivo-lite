@@ -7,6 +7,7 @@ import {
     TIME_OF_DAY,
     WORK_PLACEHOLDER,
     WORK_PRESETS,
+    agentWorkGridOf,
     presetNeedsTime,
     useAgentWork,
     useAgentWorkActions,
@@ -86,6 +87,7 @@ export const AgentWorkPanes = (props: AgentWorkPanesProps) => {
                 slot,
                 placeholder: WORK_PLACEHOLDER,
                 slotLabels: slotLabels(t("emptyWork")),
+                grid: agentWorkGridOf(phoneView),
                 draft: {
                     goalTitle,
                     canAddGoal: title !== "" && title.length <= GOAL_TITLE_MAX,

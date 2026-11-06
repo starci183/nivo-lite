@@ -146,7 +146,9 @@ interface TeamPanesCopy {
     readonly description: string
     readonly tabsLabel: string
     readonly membersTab: string
+    readonly membersHref: string
     readonly permissionsTab: string
+    readonly permissionsHref: string
     readonly inviteAction: string
     readonly listTitle: string
     readonly listLabel: string
@@ -217,7 +219,7 @@ export interface TeamPanesBaseProps {
         readonly inviteCopied: () => void
         readonly linkCopied: () => void
         readonly goTeamPlan: () => void
-        readonly goOffice: () => void
+        readonly goHome: () => void
         readonly setRole: (id: string, role: string) => void
         readonly enable: (id: string) => void
         readonly askDisable: (id: string) => void

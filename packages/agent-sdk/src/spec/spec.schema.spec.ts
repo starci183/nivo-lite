@@ -41,6 +41,38 @@ describe("specDocumentSchema", () => {
         expect(specDocumentSchema.parse(document)).toEqual(document)
     })
 
+    it("parses an aside with its summary and a node shown for param values", () => {
+        const document = {
+            schema: "nivo/workbench-spec@1",
+            module: "hiring",
+            params: { pane: { type: "enum", of: ["list", "queue"], url: "pane" } },
+            aside: { ...node, showWhen: { param: "pane", is: ["queue"] } },
+            asideSummary: {
+                read: "h.decisions",
+                path: "count",
+                previewPath: "rows.0.title",
+                label: { key: "q" },
+                opens: "queue",
+            },
+            views: [],
+        }
+        expect(specDocumentSchema.parse(document)).toEqual(document)
+    })
+
+    it("refuses an aside summary or a showWhen that is not well formed", () => {
+        const base = { schema: "nivo/workbench-spec@1", module: "m", views: [] }
+        const summary = { read: "a.b", label: { key: "k" }, opens: "queue" }
+        const refused = (extra: object): boolean =>
+            specDocumentSchema.safeParse({ ...base, ...extra }).success === false
+        expect(refused({ asideSummary: { ...summary, opens: "" } })).toBe(true)
+        expect(refused({ asideSummary: { read: "a.b", label: { key: "k" } } })).toBe(true)
+        expect(refused({ asideSummary: { ...summary, previewPath: "" } })).toBe(true)
+        expect(refused({ aside: { ...node, showWhen: { param: "p", is: [] } } })).toBe(true)
+        expect(refused({ aside: { ...node, showWhen: { param: "", is: ["a"] } } })).toBe(true)
+        expect(refused({ aside: { ...node, showWhen: { param: "p", is: ["a"], extra: 1 } } })).toBe(true)
+        expect(refused({ aside: node, asideSummary: summary })).toBe(false)
+    })
+
     it("refuses another schema id, an unknown member and a block that is not namespaced", () => {
         const base = { schema: "nivo/workbench-spec@1", module: "m", views: [] }
         expect(specDocumentSchema.safeParse({ ...base, schema: "nivo/workbench-spec@9" }).success).toBe(false)

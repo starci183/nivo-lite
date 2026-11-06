@@ -12,11 +12,11 @@ export type TransactionRow = {
     /** The amount in VND. */
     readonly amountVnd: number
     /** The transfer content the bank recorded. */
-    readonly content: string
+    readonly reference: string
     /** The name of the sender the bank recorded, or null. */
-    readonly counterpartName: string | null
+    readonly payer: string | null
     /** When the money arrived, as ISO text. */
-    readonly receivedAt: string
+    readonly occurredAt: string
     /** The order the transaction is linked to, or null. */
     readonly orderId: string | null
     /** The status of the transaction. */

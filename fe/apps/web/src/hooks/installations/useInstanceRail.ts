@@ -3,6 +3,7 @@
 import { useLocale } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { slotOfReads } from "@/hooks/slot"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { pickCopy } from "@/modules/catalog"
 import {
     installationPersonName,
@@ -11,6 +12,7 @@ import {
     agentLifecycleTone,
     type AgentLifecycle,
 } from "@/modules/installations"
+import { workspaceHref } from "@/modules/routes"
 import { useInstallations } from "./useInstallations"
 import type { DataSlot } from "@/modules/types"
 
@@ -46,13 +48,14 @@ export interface InstanceRailView {
 export const useInstanceRail = (installationId: string): InstanceRailView => {
     const locale = useLocale() === "en" ? "en" : "vi"
     const installed = useInstallations()
+    const workspaceId = useWorkspaceId()
     const catalog = useModuleCatalog()
     const items = (installed.installations ?? []).map((other) => {
         const lifecycle = agentLifecycleOf(other)
         const copy = catalog.modules[other.moduleKey]
         return {
             id: other.id,
-            href: agentHref(other.moduleKey, other.id),
+            href: workspaceHref(workspaceId, agentHref(other.moduleKey, other.id)),
             name: installationPersonName(other),
             seed: other.agentId ?? other.id,
             avatarUrl: other.agentAvatarUrl,

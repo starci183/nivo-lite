@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useConsoleNav, useConsoleShell, useCurrentConsoleSession } from "@/hooks/console"
+import { useConsoleNav, useCurrentConsoleSession } from "@/hooks/console"
 import { useLocaleSwitch } from "@/hooks/locale"
 import { useThemeSwitch } from "@/hooks/theme"
 import { navigation } from "@/modules/i18n"
@@ -12,8 +12,7 @@ export const ConsoleDrawerContent = () => {
     const session = useCurrentConsoleSession()
     const t = useTranslations("shell")
     const router = navigation.useRouter()
-    const { pendingCount } = useConsoleShell(session.currentWorkspaceId)
-    const items = useConsoleNav(session.member.role, pendingCount)
+    const items = useConsoleNav(session.member.role)
     const language = useLocaleSwitch()
     const theme = useThemeSwitch()
     return (

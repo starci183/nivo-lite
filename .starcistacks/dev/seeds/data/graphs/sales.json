@@ -21,7 +21,7 @@
     {
       "key": "record",
       "kind": "output",
-      "step": "order.record",
+      "step": "sales.order-from-chat",
       "input": {
         "leadId": { "$ref": "trigger.leadId" },
         "items": { "$ref": "trigger.context.items" },
@@ -65,7 +65,7 @@
     {
       "key": "request-payment",
       "kind": "output",
-      "step": "payment.request",
+      "step": "payment.request-sepay",
       "input": {
         "orderId": { "$ref": "record.orderId" },
         "conversationId": { "$ref": "trigger.conversationId" },

@@ -4,10 +4,11 @@ import { useEffect } from "react"
 import type { ModuleKey } from "@/modules/catalog"
 import { navigation } from "@/modules/i18n"
 import { agentListHref, instancesOf } from "@/modules/installations"
-import { AGENTS_ROUTE } from "@/modules/routes"
+import { AGENTS_ROUTE, workspaceHref } from "@/modules/routes"
 import type { AgentTab, Installation } from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"
 import { loadingSlot, slotOfReads } from "@/hooks/slot"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { typeTargetOf } from "./installations.shared"
 import type { TypeRouteMode } from "./installations.shared"
 import { useInstallations } from "./useInstallations"
@@ -31,6 +32,7 @@ interface TypeRoute {
  */
 export const useTypeRoute = (module: ModuleKey, tab: AgentTab, query: string, mode: TypeRouteMode): TypeRoute => {
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const installed = useInstallations()
     const target =
         installed.installations === undefined ? null : typeTargetOf(installed.installations, module, tab, query)
@@ -42,8 +44,8 @@ export const useTypeRoute = (module: ModuleKey, tab: AgentTab, query: string, mo
     const listed = target ?? (mode === "redirect" && !hasNone ? agentListHref(module) : null)
     const leaveTo = mode === "list" && listed !== AGENTS_ROUTE ? null : listed
     useEffect(() => {
-        if (leaveTo !== null) router.replace(leaveTo)
-    }, [leaveTo, router])
+        if (leaveTo !== null) router.replace(workspaceHref(workspaceId, leaveTo))
+    }, [leaveTo, router, workspaceId])
     const instances = instancesOf(installed.installations ?? [], module)
     return {
         slot:

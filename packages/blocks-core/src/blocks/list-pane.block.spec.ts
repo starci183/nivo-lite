@@ -5,7 +5,10 @@ describe("listPaneBlock", () => {
     it("is the core list pane, with no slots of its own and two children at most", () => {
         expect(listPaneBlock.id).toBe("core.list-pane")
         expect(listPaneBlock.slots).toEqual({})
-        expect(listPaneBlock.children).toEqual({ max: 2, accepts: ["core.filter-tabs", "core.record-list"] })
+        expect(listPaneBlock.children).toEqual({
+            max: 2,
+            accepts: ["core.filter-tabs", "core.record-list", "core.table", "core.board"],
+        })
     })
 
     it("takes a search that names the param it writes, with an optional label", () => {

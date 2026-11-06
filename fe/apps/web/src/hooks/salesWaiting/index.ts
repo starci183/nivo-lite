@@ -1,1 +1,0 @@
-export { useSalesWaiting } from "./useSalesWaiting"

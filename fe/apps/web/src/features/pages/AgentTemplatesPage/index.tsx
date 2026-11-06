@@ -7,6 +7,7 @@ import type { AgentTemplatesView } from "./component"
 
 /** What the route hands the page: the view, and for the packaging view the installation. */
 interface AgentTemplatesPageProps {
+    readonly workspaceId: string
     readonly view: AgentTemplatesView
     readonly installationId?: string | undefined
 }
@@ -46,11 +47,17 @@ export const AgentTemplatesPage = async (props: AgentTemplatesPageProps): Promis
                 view: props.view,
                 installationId: props.installationId ?? "",
                 crumbLabel: ts("crumbLabel"),
-                crumbs: agentsSubpageCrumbsOf({ home: ts("crumbHome"), agents: t("crumbAgents"), current: title }),
+                crumbs: agentsSubpageCrumbsOf({
+                    workspaceId: props.workspaceId,
+                    home: ts("crumbHome"),
+                    agents: t("crumbAgents"),
+                    current: title,
+                }),
                 title,
                 description: tabbed ? tt("pageDescription") : t("description"),
                 tabs: tabbed
                     ? agentPageTabsOf({
+                          workspaceId: props.workspaceId,
                           label: tt("tabsLabel"),
                           selected: props.view === "marketplace" ? "marketplace" : "templates",
                           runningLabel: tt("tabRunning"),

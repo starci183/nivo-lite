@@ -52,7 +52,7 @@ export const LocalStorage: TypedStorage = storageOf("localStorage")
 
 const YEAR_SECONDS = 60 * 60 * 24 * 365
 
-/** Remembers the active workspace in the cookie the server-rendered pages read; the server still checks the membership. */
+/** Remembers the last workspace the person opened in the cookie the front address reads; the workspace page still checks the membership. */
 export const rememberWorkspaceCookie = (workspaceId: string): void => {
     document.cookie = `${WORKSPACE_COOKIE}=${encodeURIComponent(workspaceId)}; path=/; max-age=${YEAR_SECONDS}; samesite=lax`
 }

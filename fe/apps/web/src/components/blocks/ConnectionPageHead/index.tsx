@@ -7,8 +7,9 @@ import { useDrivePageHead } from "@/hooks/drive"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { useTelegramPageHead } from "@/hooks/telegramConnection"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { ConnectionPageHeadBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** Which provider the band serves: the Telegram bot of the url, or the workspace Google Drive grant (one per workspace, so no id). */
 type ConnectionPageHeadProps = { readonly kind: "telegram"; readonly connectionId: string } | { readonly kind: "drive" }
@@ -21,6 +22,7 @@ type ConnectionPageHeadProps = { readonly kind: "telegram"; readonly connectionI
 export const ConnectionPageHead = (props: ConnectionPageHeadProps) => {
     const pane = usePaneCopy()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const telegram = useTelegramPageHead(props.kind === "telegram" ? props.connectionId : undefined)
     const drive = useDrivePageHead(props.kind === "drive")
     const refusal = useConnectionRefusal()
@@ -46,7 +48,7 @@ export const ConnectionPageHead = (props: ConnectionPageHeadProps) => {
                 askDisconnect: on.askDisconnect,
                 confirmDisconnect: on.confirmDisconnect,
                 dismiss: on.dismiss,
-                back: () => router.push(CONSOLE_ROUTES.connections),
+                back: () => router.push(workspaceHref(workspaceId, CONSOLE_ROUTES.connections)),
             }}
         />
     )

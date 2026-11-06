@@ -5,9 +5,10 @@ import { useKnowledgeSources, useWorkspaceMember } from "@/hooks/knowledge"
 import { usePublicDraftForm } from "@/hooks/rhf"
 import { mapSlot } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref } from "@/modules/routes"
+import { brainTabHref, workspaceHref } from "@/modules/routes"
 import { usePublicDocCommands } from "./usePublicDocCommands"
 import type { DataSlot } from "@/modules/types"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The view `usePublicDraftController` returns. */
 export interface PublicDraftControllerView {
@@ -36,13 +37,14 @@ export interface PublicDraftControllerView {
 export const usePublicDraftController = (): PublicDraftControllerView => {
     const t = useTranslations("publicBrain")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const member = useWorkspaceMember()
     const read = useKnowledgeSources()
     const commands = usePublicDocCommands()
     const { form, maxSources } = usePublicDraftForm()
     const close = () => {
         form.reset()
-        router.replace(brainTabHref("publicDocs"))
+        router.replace(workspaceHref(workspaceId, brainTabHref("publicDocs")))
     }
     const submit = form.handleSubmit(async (values) => {
         const eligible = new Set(

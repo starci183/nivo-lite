@@ -7,8 +7,6 @@ export interface PaneGridLayout {
     readonly rows: Exclude<NonNullable<PaneGridProps["rows"]>, ReadonlyArray<PaneTrack>>
 }
 
-export type { OverviewPaneCopy, OverviewPaneReady } from "./overview"
-
 /** The side pane of a workbench (the decisions waiting for the owner, or the explanation of one) as its connected owner resolves it. */
 export interface WorkbenchAsideView {
     /** The areas and tracks of the workbench grid: the main pane beside the side pane, or one of them alone. */

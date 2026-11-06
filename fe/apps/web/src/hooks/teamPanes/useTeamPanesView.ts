@@ -9,11 +9,12 @@ import { NO_STAFF, useInviteInteraction, useTeamMemberActions } from "@/hooks/te
 import { useTeamInviteDrawer } from "@/hooks/teamInvite"
 import type { TeamInviteDrawerState } from "@/hooks/teamInvite"
 import { navigation } from "@/modules/i18n"
-import { APP_ROUTES, creditsPath } from "@/modules/routes"
+import { APP_ROUTES, creditsPath, workspaceHref } from "@/modules/routes"
 import { useTeamInviteDrawerView } from "./useTeamInviteDrawerView"
 import { useTeamPanesCopy } from "./useTeamPanesCopy"
 import { useTeamPanesData } from "./useTeamPanesData"
 import type { TeamPanesBaseProps } from "@/modules/types"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** Derived from the panes contract. */
 type TeamConfirmView = NonNullable<TeamPanesBaseProps["props"]["confirm"]>
@@ -26,6 +27,7 @@ interface Handling {
     readonly interaction: ReturnType<typeof useInviteInteraction>
     readonly phone: ReturnType<typeof usePanePhone>
     readonly router: ReturnType<typeof navigation.useRouter>
+    readonly workspaceId: string
     readonly moreFilters: string
     /** An invitation waits for its withdrawal to be confirmed, not a person's access. */
     readonly isRevoking: boolean
@@ -33,7 +35,7 @@ interface Handling {
 
 /** The commands of the panes: narrow, open, invite, change a person, act on an invitation, answer the question asked. */
 const onOf = (input: Handling): TeamPanesBaseProps["on"] => {
-    const { data, actions, drawer, interaction, phone, router } = input
+    const { data, actions, drawer, interaction, phone, router, workspaceId } = input
     return {
         retry: data.team.reload,
         setQuery: data.setQuery,
@@ -55,8 +57,8 @@ const onOf = (input: Handling): TeamPanesBaseProps["on"] => {
         submitInvite: drawer.submit,
         inviteCopied: drawer.markCopied,
         linkCopied: interaction.linkCopied,
-        goTeamPlan: () => router.push(creditsPath()),
-        goOffice: () => router.push(APP_ROUTES.chat),
+        goTeamPlan: () => router.push(workspaceHref(workspaceId, creditsPath())),
+        goHome: () => router.push(workspaceHref(workspaceId, APP_ROUTES.workspaceHome)),
         setRole: (id, role) => {
             if (role === "owner" || role === "manager" || role === "staff") actions.changeRole(id, role)
         },
@@ -97,6 +99,7 @@ export const useTeamPanesView = (): TeamPanesBaseProps => {
     const t = useTranslations("team")
     const pane = usePaneCopy()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const slotLabels = useSlotLabels()
     const phone = usePanePhone()
     const member = useMember()
@@ -128,6 +131,7 @@ export const useTeamPanesView = (): TeamPanesBaseProps => {
             interaction,
             phone,
             router,
+            workspaceId,
             moreFilters: pane.moreFilters,
             isRevoking: revoking !== undefined,
         }),

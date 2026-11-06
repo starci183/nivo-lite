@@ -1,4 +1,5 @@
 import type { ReadPage } from "@nivo-lite/agent-sdk/block"
+import { keepRaw, relabeller } from "./value-labels"
 import { chosenRow, moreStateOf, RECORD_ROWS_PLACEHOLDER, recordsView, rowsOf, selectionOf } from "./rows"
 
 const PATHS = { idPath: "id", titlePath: "title", descriptionPath: "note", badgePath: "state" }
@@ -9,27 +10,69 @@ describe("rowsOf", () => {
             { id: "a", title: "First", note: "n1", state: "open" },
             { id: 2, title: "Second" },
         ]
-        expect(rowsOf(records, PATHS)).toEqual([
-            { id: "a", title: "First", description: "n1", badge: "open" },
-            { id: "2", title: "Second", description: "", badge: "" },
+        expect(rowsOf(records, PATHS, keepRaw, "?")).toEqual([
+            { id: "a", title: "First", description: "n1", badge: "open", tone: "neutral", meta: "", chips: [] },
+            { id: "2", title: "Second", description: "", badge: "", tone: "neutral", meta: "", chips: [] },
         ])
     })
 
     it("draws no description or badge when their paths are absent", () => {
-        expect(rowsOf([{ id: "a", title: "T", note: "n" }], { idPath: "id", titlePath: "title" })).toEqual([
-            { id: "a", title: "T", description: "", badge: "" },
+        expect(
+            rowsOf([{ id: "a", title: "T", note: "n" }], { idPath: "id", titlePath: "title" }, keepRaw, "?"),
+        ).toEqual([{ id: "a", title: "T", description: "", badge: "", tone: "neutral", meta: "", chips: [] }])
+    })
+
+    it("draws the short fact its path names", () => {
+        const paths = { idPath: "id", titlePath: "title", metaPath: "when" }
+        expect(rowsOf([{ id: "a", title: "T", when: "2 min" }], paths, keepRaw, "?")?.map((row) => row.meta)).toEqual([
+            "2 min",
+        ])
+    })
+
+    it("draws the further chips their paths name and leaves out the empty ones", () => {
+        const paths = { idPath: "id", titlePath: "title", chipPaths: ["channel", "owner"] }
+        expect(
+            rowsOf([{ id: "a", title: "T", channel: "Zalo" }], paths, keepRaw, "?")?.map((row) => row.chips),
+        ).toEqual([["Zalo"]])
+    })
+
+    it("gives a row with no title the words for an untitled row, and a badge the tone its value is given", () => {
+        const paths = { ...PATHS, badgeTones: { open: "success" as const } }
+        const rows = rowsOf(
+            [
+                { id: "a", state: "open" },
+                { id: "b", title: "B", state: "other" },
+            ],
+            paths,
+            keepRaw,
+            "No name",
+        )
+        expect(rows?.map((row) => [row.title, row.tone])).toEqual([
+            ["No name", "success"],
+            ["B", "neutral"],
         ])
     })
 
     it("skips a record without a text id", () => {
-        expect(rowsOf([{ title: "No id" }, { id: "b", title: "B" }], PATHS)).toEqual([
-            { id: "b", title: "B", description: "", badge: "" },
+        expect(rowsOf([{ title: "No id" }, { id: "b", title: "B" }], PATHS, keepRaw, "?")).toEqual([
+            { id: "b", title: "B", description: "", badge: "", tone: "neutral", meta: "", chips: [] },
         ])
     })
 
+    it("draws the badge in the words the labels give its value, and a value with none as it is", () => {
+        const relabel = relabeller({ state: { open: { key: "Dang mo" } } }, (text) =>
+            "key" in text ? text.key : text.en,
+        )
+        const records = [
+            { id: "a", title: "First", state: "open" },
+            { id: "b", title: "Second", state: "closed" },
+        ]
+        expect(rowsOf(records, PATHS, relabel, "?")?.map((row) => row.badge)).toEqual(["Dang mo", "closed"])
+    })
+
     it("is null when no row can be drawn", () => {
-        expect(rowsOf([], PATHS)).toBeNull()
-        expect(rowsOf([{ title: "No id" }], PATHS)).toBeNull()
+        expect(rowsOf([], PATHS, keepRaw, "?")).toBeNull()
+        expect(rowsOf([{ title: "No id" }], PATHS, keepRaw, "?")).toBeNull()
     })
 })
 
@@ -52,7 +95,9 @@ describe("RECORD_ROWS_PLACEHOLDER", () => {
             "placeholder-1",
             "placeholder-2",
         ])
-        expect(RECORD_ROWS_PLACEHOLDER.every((row) => row.badge === "")).toBe(true)
+        expect(
+            RECORD_ROWS_PLACEHOLDER.every((row) => row.badge === "" && row.meta === "" && row.chips.length === 0),
+        ).toBe(true)
     })
 })
 

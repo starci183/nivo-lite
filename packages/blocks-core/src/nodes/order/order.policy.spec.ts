@@ -3,7 +3,6 @@ import {
     gapsOf,
     mergedItems,
     nameKey,
-    needsOwner,
     pricedFrom,
     recordedItemsOf,
     resolvedItems,
@@ -84,12 +83,6 @@ describe("order policy", () => {
             { reason: "no_items", item: null },
             { reason: "no_address", item: null },
         ])
-    })
-
-    it("waits for the owner at the threshold and above, not below", () => {
-        expect(needsOwner(4_999_999, 5_000_000)).toBe(false)
-        expect(needsOwner(5_000_000, 5_000_000)).toBe(true)
-        expect(needsOwner(6_000_000, 5_000_000)).toBe(true)
     })
 
     it("resolves an item to the catalogue and keeps the price asked when the catalogue has none", () => {

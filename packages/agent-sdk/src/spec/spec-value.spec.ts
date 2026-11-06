@@ -1,4 +1,13 @@
-import { INSTALLATION_VARIABLE, paramNameOf, resolveVariables, textOf, valueAt, variablesOf } from "./spec-value"
+import { z } from "zod"
+import {
+    INSTALLATION_VARIABLE,
+    optionalVariable,
+    paramNameOf,
+    resolveVariables,
+    textOf,
+    valueAt,
+    variablesOf,
+} from "./spec-value"
 
 describe("valueAt", () => {
     it("is the value itself for an absent or empty path", () => {
@@ -11,8 +20,19 @@ describe("valueAt", () => {
         const value = { stats: { members: 3 }, list: [1] }
         expect(valueAt(value, "stats.members")).toBe(3)
         expect(valueAt(value, "stats.gone.deeper")).toBeUndefined()
-        expect(valueAt(value, "list.0")).toBeUndefined()
+        expect(valueAt(value, "list.1")).toBeUndefined()
+        expect(valueAt(null, "a.b")).toBeUndefined()
         expect(valueAt(null, "a")).toBeUndefined()
+    })
+})
+
+describe("valueAt through lists", () => {
+    it("steps into a list by index and is undefined for a name or a missing index", () => {
+        const value = { rows: [{ title: "a" }, { title: "b" }] }
+        expect(valueAt(value, "rows.1.title")).toBe("b")
+        expect(valueAt(value, "rows.0")).toEqual({ title: "a" })
+        expect(valueAt(value, "rows.title")).toBeUndefined()
+        expect(valueAt(value, "rows.5.title")).toBeUndefined()
     })
 })
 
@@ -41,6 +61,10 @@ describe("paramNameOf", () => {
         expect(paramNameOf("$q")).toBe("q")
         expect(paramNameOf("$")).toBe("")
         expect(paramNameOf(INSTALLATION_VARIABLE)).toBeNull()
+        expect(paramNameOf("$today")).toBeNull()
+        expect(paramNameOf("$thisWeek")).toBeNull()
+        expect(paramNameOf("$thisMonth")).toBeNull()
+        expect(paramNameOf("$thisYear")).toBe("thisYear")
         expect(paramNameOf("plain")).toBeNull()
         expect(paramNameOf(4)).toBeNull()
         expect(paramNameOf(null)).toBeNull()
@@ -61,6 +85,13 @@ describe("resolveVariables", () => {
         ).toEqual({ variables: { id: "inst-1", q: "an", stage: "won", n: 3, flag: true }, pending: [] })
     })
 
+    it("passes a time token through as the literal it is, for the server to resolve", () => {
+        expect(resolveVariables({ due: "$today", from: "$thisMonth" }, "inst-1", paramValue)).toEqual({
+            variables: { due: "$today", from: "$thisMonth" },
+            pending: [],
+        })
+    })
+
     it("leaves a variable null and names it pending when its param has no value", () => {
         expect(resolveVariables({ id: "$selected", q: "$q" }, "inst-1", paramValue)).toEqual({
             variables: { id: null, q: "an" },
@@ -68,7 +99,23 @@ describe("resolveVariables", () => {
         })
     })
 
+    it("leaves out a variable the read takes as optional when its param has no value", () => {
+        expect(resolveVariables({ q: "$sort", id: "$selected" }, "inst-1", paramValue, (name) => name === "q")).toEqual(
+            { variables: { id: null }, pending: ["id"] },
+        )
+    })
+
     it("is empty for a binding without variables", () => {
         expect(resolveVariables(undefined, "inst-1", paramValue)).toEqual({ variables: {}, pending: [] })
+    })
+})
+
+describe("optionalVariable", () => {
+    const read = { variables: z.object({ q: z.string().max(100).optional(), id: z.string().max(100) }) }
+
+    it("is true for an optional variable and false for a required or unknown one", () => {
+        expect(optionalVariable(read, "q")).toBe(true)
+        expect(optionalVariable(read, "id")).toBe(false)
+        expect(optionalVariable(read, "nope")).toBe(false)
     })
 })

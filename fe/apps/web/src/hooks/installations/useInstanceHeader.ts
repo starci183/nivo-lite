@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { loadingSlot, slotOfReads } from "@/hooks/slot"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { MODULE_REGISTRY, pickCopy } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
 import {
@@ -13,7 +14,7 @@ import {
     type AgentLifecycle,
     type InstallationConnectionNeed,
 } from "@/modules/installations"
-import { agentChatHref, agentProfileHref } from "@/modules/routes"
+import { agentChatHref, agentProfileHref, workspaceHref } from "@/modules/routes"
 import { useInstanceChannels } from "./useInstanceChannels"
 import { useInstanceGuard } from "./useInstanceGuard"
 import { useInstallations } from "./useInstallations"
@@ -60,6 +61,7 @@ export const useInstanceHeader = (module: ModuleKey, installationId: string): In
     const t = useTranslations("modulesCore")
     const locale = useLocale() === "en" ? "en" : "vi"
     const guard = useInstanceGuard(module, installationId)
+    const workspaceId = useWorkspaceId()
     const { read } = useInstallations()
     const isFailed = read.data === undefined && read.error !== undefined
     const installation = guard.installation
@@ -88,8 +90,10 @@ export const useInstanceHeader = (module: ModuleKey, installationId: string): In
         statusTone: agentLifecycleTone(lifecycle),
         channels,
         connectionNeeds: installation?.connectionNeeds ?? [],
-        chatHref: installation?.agentId == null ? null : agentChatHref(installation.agentId),
-        profileHref: installation?.agentId == null ? null : agentProfileHref(installation.agentId),
+        chatHref:
+            installation?.agentId == null ? null : workspaceHref(workspaceId, agentChatHref(installation.agentId)),
+        profileHref:
+            installation?.agentId == null ? null : workspaceHref(workspaceId, agentProfileHref(installation.agentId)),
     }
     return {
         ...view,

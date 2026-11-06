@@ -2,8 +2,11 @@ import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { notFound } from "next/navigation"
 import type { ReactNode, ReactElement } from "react"
+import { SpecWorkbenchFrame } from "@/components/blocks/SpecWorkbenchFrame"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import { agentHref } from "@/modules/installations"
+import { workspaceHref } from "@/modules/routes"
+import { workbenchSpec } from "@/modules/workbench-spec"
 import { AgentWorkbenchPageBase } from "./component"
 
 /** The document title of the workbench tab. */
@@ -14,6 +17,8 @@ export const agentWorkbenchMetadata = async (): Promise<Metadata> => {
 
 /** What the route hands the page: the type and the instance of the url and the deep link of the query. */
 type AgentWorkbenchPageProps = {
+    /** The workspace of the url. */
+    readonly workspaceId: string
     readonly module: string
     readonly installationId: string
     /** The `tab` of the query: the workbench area to open (the agent dashboard frame validates it). */
@@ -32,9 +37,20 @@ type AgentWorkbenchPageProps = {
  */
 export type WorkbenchComponent = (props: Record<string, unknown>) => ReactNode | Promise<ReactNode>
 
-/** The workbench slot of one instance: the working screen of the module scoped to the instance, or the pending state. */
+/** The workbench slot of one instance: the spec of the module drawn on the installation of the url, else the working screen of the module scoped to the instance, or the pending state. */
 export const AgentWorkbenchPage = async (props: AgentWorkbenchPageProps): Promise<ReactElement> => {
     if (!isModuleKey(props.module)) notFound()
+    const resolved = workbenchSpec(props.module)
+    if (resolved !== null)
+        return (
+            <SpecWorkbenchFrame
+                module={props.module}
+                installationId={props.installationId}
+                spec={resolved.spec}
+                fallback={resolved.fallback}
+                tab={props.tab}
+            />
+        )
     const key = MODULE_REGISTRY[props.module].workbench
     const Workbench = key === null ? undefined : props.workbenches[key]
     if (Workbench !== undefined)
@@ -53,7 +69,7 @@ export const AgentWorkbenchPage = async (props: AgentWorkbenchPageProps): Promis
                 title: t("workbenchTitle"),
                 body: t("workbenchBody"),
                 setupLabel: t("workbenchSetup"),
-                setupHref: agentHref(props.module, props.installationId),
+                setupHref: workspaceHref(props.workspaceId, agentHref(props.module, props.installationId)),
             }}
         />
     )

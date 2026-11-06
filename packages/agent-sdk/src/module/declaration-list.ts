@@ -1,7 +1,8 @@
 import { z } from "zod"
 import { defineRead } from "../block/block"
 import { SdkDefinitionError } from "../block/definition-error"
-import type { CountsResult, ListFilter, ListPage, ListQuery, ListShape } from "../block/list.types"
+import type { CountsResult, ListFilter, ListPage, ListQuery, ListShape, TimeWindow } from "../block/list.types"
+import { isTimeToken, timeWindowOf } from "../block/time-token"
 import { KEY_MAX } from "../schema/bounds"
 import type { CountsReadConfig, ListReadConfig, ListReadDefinition } from "./declaration-list.types"
 import type { ReadDefinition } from "../block/block.types"
@@ -19,14 +20,18 @@ type ListVariables = Readonly<Record<string, unknown>>
 const valuesOf = (filter: ListFilter): ReadonlyArray<string> =>
     "cases" in filter ? Object.keys(filter.cases) : filter.of
 
-/** Whether a list shape can be turned into variables and a query: a positive page, filters with values, no clashing names. */
+/** Whether a filter is sound: it has values, and a `within` filter takes only time tokens. */
+const isSoundFilter = (filter: ListFilter): boolean =>
+    valuesOf(filter).length > 0 && ("cases" in filter || filter.op !== "within" || filter.of.every(isTimeToken))
+
+/** Whether a list shape can be turned into variables and a query: a positive page, sound filters, no clashing names. */
 const isSound = (list: ListShape, extra: ReadonlyArray<string>): boolean => {
     const filters = Object.entries(list.filters ?? {})
     const names = new Set(filters.map(([name]) => name))
     return !(
         !Number.isInteger(list.page.size) ||
         list.page.size < 1 ||
-        filters.some(([name, filter]) => DERIVED.has(name) || valuesOf(filter).length === 0) ||
+        filters.some(([name, filter]) => DERIVED.has(name) || !isSoundFilter(filter)) ||
         extra.some((name) => DERIVED.has(name) || names.has(name))
     )
 }
@@ -46,17 +51,24 @@ const derivedShape = (list: ListShape): z.ZodRawShape => ({
     ),
 })
 
-/** The query a list source runs, from the parsed variables of a list read. */
-export const listQueryOf = (list: ListShape, defaultSort: string, variables: ListVariables): ListQuery => {
+/**
+ * The query a list source runs, from the parsed variables of a list read and the clock of the run. A chosen value that is a time
+ * token becomes the window it names at `now` (`windows`); every other chosen value stays a `filters` entry.
+ */
+export const listQueryOf = (list: ListShape, defaultSort: string, variables: ListVariables, now: Date): ListQuery => {
     const q = typeof variables.q === "string" ? variables.q.trim() : ""
     const filters: Record<string, string> = {}
+    const windows: Record<string, TimeWindow> = {}
     for (const name of Object.keys(list.filters ?? {})) {
         const value = variables[name]
-        if (typeof value === "string" && value !== "all") filters[name] = value
+        if (typeof value !== "string" || value === "all") continue
+        if (isTimeToken(value)) windows[name] = timeWindowOf(value, now)
+        else filters[name] = value
     }
     return {
         q: q === "" ? null : q,
         filters,
+        ...(Object.keys(windows).length === 0 ? {} : { windows }),
         sort: typeof variables.sort === "string" ? variables.sort : defaultSort,
         cursor: typeof variables.cursor === "string" ? variables.cursor : null,
         size: list.page.size,
@@ -81,8 +93,8 @@ export const listRead = <T>(config: ListReadConfig<T>): ListReadDefinition => {
         variables: z.object({ ...extra, ...derivedShape(config.list) }),
         permission: config.permission,
         ports: { source: config.source },
-        run: ({ source }, variables): Promise<ListPage<T>> =>
-            source.page(config.list, listQueryOf(config.list, defaultSort, variables)),
+        run: ({ source }, variables, context): Promise<ListPage<T>> =>
+            source.page(config.list, listQueryOf(config.list, defaultSort, variables, context.now)),
     })
     return { ...read, listing: { kind: "list", shape: config.list, defaultSort, source: config.source } }
 }
@@ -108,11 +120,11 @@ export const countsRead = (config: CountsReadConfig): ReadDefinition => {
         variables: z.object(Object.fromEntries(kept)),
         permission: config.permission ?? config.of.permission,
         ports: { source: listing.source },
-        run: async ({ source }, variables): Promise<CountsResult> => {
+        run: async ({ source }, variables, context): Promise<CountsResult> => {
             const counts = await source.counts(
                 listing.shape,
                 config.by,
-                listQueryOf(listing.shape, listing.defaultSort, variables),
+                listQueryOf(listing.shape, listing.defaultSort, variables, context.now),
             )
             return { counts, total: Object.values(counts).reduce((sum, count) => sum + count, 0) }
         },

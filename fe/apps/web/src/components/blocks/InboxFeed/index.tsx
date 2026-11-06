@@ -6,14 +6,16 @@ import { useInboxFeed } from "@/hooks/inbox"
 import { paneGridOf, usePaneCopy, usePanePhone } from "@/hooks/paneFrame"
 import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { InboxFeedBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** Reads the GraphQL feed, localizes its rows and revalidates its SWR cache on demand; the opened input and the phone pane live here. */
 export const InboxFeed = () => {
     const t = useTranslations("inbox")
     const pane = usePaneCopy()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const slotLabels = useSlotLabels()
     const feed = useInboxFeed()
     const phone = usePanePhone()
@@ -37,7 +39,6 @@ export const InboxFeed = () => {
                     errorBody: t("errorBody"),
                     refresh: pane.refresh,
                     back: pane.backToList,
-                    moreActions: pane.moreActions,
                     contentTitle: t("contentTitle"),
                     quoteSource: t("quoteSource"),
                     detailsTitle: t("detailsTitle"),
@@ -48,7 +49,6 @@ export const InboxFeed = () => {
                         channel: t("termChannel"),
                         kind: t("termKind"),
                         received: t("termReceived"),
-                        lead: t("termLead"),
                         duplicates: t("termDuplicates"),
                     },
                 },
@@ -66,8 +66,7 @@ export const InboxFeed = () => {
                     phone.showMain()
                 },
                 back: phone.showList,
-                go: (href) => router.push(href),
-                openConnections: () => router.push(CONSOLE_ROUTES.connections),
+                openConnections: () => router.push(workspaceHref(workspaceId, CONSOLE_ROUTES.connections)),
             }}
         />
     )

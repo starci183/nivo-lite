@@ -2,12 +2,38 @@ import { defineBlock } from "@nivo-lite/agent-sdk/block"
 import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
+import { FIGURE_FORMATS, FIGURE_KINDS } from "../rows/figure-format"
+import type { FigureFormat, FigureKind } from "../rows/figure-format"
 import { ITEMS_MAX, PATH_MAX } from "./bounds"
-import type { TextSchema, TermPathsSchema, RequiredRead } from "./schema-types"
+import { currencyCode } from "./currency-prop"
+import type { EnumSchema, TextSchema, RequiredRead } from "./schema-types"
 
-const props: z.ZodObject<{ label: TextSchema; items: TermPathsSchema }> = z.object({
+type ItemSchema = z.ZodObject<{
+    term: TextSchema
+    path: z.ZodString
+    format: z.ZodOptional<EnumSchema<FigureFormat>>
+    hintPath: z.ZodOptional<z.ZodString>
+}>
+
+const item: ItemSchema = z.object({
+    term: specText,
+    path: z.string().max(PATH_MAX),
+    format: z.enum(FIGURE_FORMATS).optional(),
+    hintPath: z.string().max(PATH_MAX).optional(),
+})
+
+const props: z.ZodObject<{
+    label: TextSchema
+    currency: z.ZodOptional<z.ZodString>
+    kind: z.ZodOptional<EnumSchema<FigureKind>>
+    captionPath: z.ZodOptional<z.ZodString>
+    items: z.ZodArray<ItemSchema>
+}> = z.object({
     label: specText,
-    items: z.array(z.object({ term: specText, path: z.string().max(PATH_MAX) })).max(ITEMS_MAX),
+    currency: currencyCode.optional(),
+    kind: z.enum(FIGURE_KINDS).optional(),
+    captionPath: z.string().max(PATH_MAX).optional(),
+    items: z.array(item).max(ITEMS_MAX),
 })
 /** The slots of the figures block. */
 type Slots = {
@@ -15,7 +41,11 @@ type Slots = {
 }
 const slots: Slots = { data: { kind: "read", shape: "record", required: true } }
 
-/** A ribbon of figures in one card: each item names its term and the path of its value in the bound record. */
+/**
+ * A ribbon of figures in one card (kind `tiles`, the default), bars on one scale (`bars`) or one gauge per item sharing the total
+ * (`proportion`), with the text at `captionPath` under a chart: each item names its term, the path of its value in the bound record and how the value is drawn and, with a `hintPath`, the path of the line of text under it (tiles only). That value is a plain string, or a message `{ key, values }` that the block
+ * translates in the words of the spec's module and fills with its `values` (reads return keys and values, never text).
+ */
 export const figuresBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "core.figures",
     title: { key: "blockFigures" },

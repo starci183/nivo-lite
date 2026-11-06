@@ -1,5 +1,3 @@
-"use client"
-
 import { createContext, useContext, useMemo } from "react"
 import type { ReactNode } from "react"
 import type { BlockHost } from "../../block/block.types"
@@ -76,3 +74,20 @@ export const useEnabledModules = (): ReadonlyArray<string> => useHostContext().e
 
 /** The registry comparison of the live host; null in a prototype. */
 export const useRegistryCheck = (): RegistryCheck | null => useHostContext().registry
+
+/** The message namespace of the module whose workbench is drawn below; empty outside a workbench. */
+const ModuleNamespaceContext = createContext<string>("")
+
+/** What the namespace marker takes. */
+interface ModuleNamespaceProviderProps {
+    readonly namespace: string
+    readonly children: ReactNode
+}
+
+/** Marks the namespace of the module the workbench below draws, so the blocks resolve the keys of its spec in the module's words. */
+export const ModuleNamespaceProvider = (props: ModuleNamespaceProviderProps): ReactNode => (
+    <ModuleNamespaceContext.Provider value={props.namespace}>{props.children}</ModuleNamespaceContext.Provider>
+)
+
+/** The message namespace of the module whose workbench the block is drawn in. */
+export const useModuleNamespace = (): string => useContext(ModuleNamespaceContext)

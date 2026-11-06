@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import { useInstallations } from "@/hooks/installations"
 import { slotOfSwr } from "@/hooks/slot"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import type { Installation } from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"
 import { toAgentInstallationView } from "./agentSettings.shared"
@@ -22,12 +23,13 @@ export const useAgentInstallation = (
     readonly reload: () => void
 } => {
     const { installations, read, reload } = useInstallations()
+    const workspaceId = useWorkspaceId()
     const found = useMemo(() => {
         const one = installations?.find((installation) => installation.id === installationId)
         return one?.moduleKey === moduleKey ? one : undefined
     }, [installations, installationId, moduleKey])
     const slotOfOne = slotOfSwr({
-        data: found === undefined ? undefined : toAgentInstallationView(found),
+        data: found === undefined ? undefined : toAgentInstallationView(found, workspaceId),
         error:
             installations !== undefined && found === undefined
                 ? new Error("Requested agent installation does not exist")

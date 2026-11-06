@@ -3,9 +3,9 @@ import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { HiringApplyPageBase } from "./component"
 
-/** What the route passes through: the workspace slug and the job slug of the public link. */
+/** What the route passes through: the workspace segment (the public slug of the company the link names) and the job slug of the public link. */
 interface HiringApplyPageProps {
-    readonly params: Promise<{ readonly ws: string; readonly job: string }>
+    readonly params: Promise<{ readonly workspaceId: string; readonly job: string }>
 }
 
 /** The document title of the page. */
@@ -19,6 +19,6 @@ export const hiringApplyMetadata = async (): Promise<Metadata> => {
  * anonymous-callable `publicHiringJob` query.
  */
 export const HiringApplyPage = async (props: HiringApplyPageProps): Promise<ReactElement> => {
-    const { ws, job } = await props.params
-    return <HiringApplyPageBase props={{ ws, job }} />
+    const { workspaceId, job } = await props.params
+    return <HiringApplyPageBase props={{ ws: workspaceId, job }} />
 }

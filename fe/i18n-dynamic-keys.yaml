@@ -189,7 +189,7 @@ namespaces:
     - key: "pipeline"
       reason: 'Read as the string "pipeline" in components/blocks/HiringFigures/index.tsx, features/pages/SalesWorkbenchPage/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "source"
-      reason: 'Read as the string "source" in app/[locale]/(console)/knowledge/[id]/error.tsx, components/blocks/CsvImportWizard/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+      reason: 'Read as the string "source" in app/[locale]/workspaces/[workspaceId]/(console)/knowledge/[id]/error.tsx, components/blocks/CsvImportWizard/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   promoAds:
     - suffix: "Title"
       reason: "Key family built at run time as `${kind}Title` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."
@@ -262,22 +262,3 @@ namespaces:
       reason: 'Read as the string "noDraft" in hooks/leadgenComments/leadgenComments.shared.ts; the translator that reaches it is handed in from the comments hook, whose namespace the detector does not bind.'
     - key: "saveApprove"
       reason: 'Read as the string "saveApprove" in hooks/leadgenComments/leadgenComments.shared.ts; the translator that reaches it is handed in from the comments hook, whose namespace the detector does not bind.'
-  workbenchSales:
-    - key: "actionFailed"
-      reason: 'Read as the string "actionFailed" in hooks/chatbotView/useChatbotInbox.ts, hooks/content/useContentCommand.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "metricConversionNone"
-      reason: 'Read as the string "metricConversionNone" in hooks/salesfigures/salesfigures.shared.ts; the translator that reaches it is handed in from the figures hook, whose namespace the detector does not bind.'
-    - key: "metricConversionSources"
-      reason: 'Read as the string "metricConversionSources" in hooks/salesfigures/salesfigures.shared.ts; the translator that reaches it is handed in from the figures hook, whose namespace the detector does not bind.'
-    - key: "metricOpenBasis"
-      reason: 'Read as the string "metricOpenBasis" in hooks/salesfigures/salesfigures.shared.ts; the translator that reaches it is handed in from the figures hook, whose namespace the detector does not bind.'
-    - key: "metricProposalBasis"
-      reason: 'Read as the string "metricProposalBasis" in hooks/salesfigures/salesfigures.shared.ts; the translator that reaches it is handed in from the figures hook, whose namespace the detector does not bind.'
-    - key: "metricWonBasis"
-      reason: 'Read as the string "metricWonBasis" in hooks/salesfigures/salesfigures.shared.ts; the translator that reaches it is handed in from the figures hook, whose namespace the detector does not bind.'
-    - key: "metricWonNoValue"
-      reason: 'Read as the string "metricWonNoValue" in hooks/salesfigures/salesfigures.shared.ts; the translator that reaches it is handed in from the figures hook, whose namespace the detector does not bind.'
-    - key: "shipDone"
-      reason: 'Read as the string "shipDone" in hooks/sales/useShipmentSubmission.ts through a translator the detector does not bind to this namespace.'
-    - prefix: "source_"
-      reason: "Key family built at run time as `source_${source}` in hooks/salesfigures/salesfigures.shared.ts; the lead source comes from data, so the detector cannot enumerate the keys."

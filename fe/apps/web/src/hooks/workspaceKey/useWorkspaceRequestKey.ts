@@ -1,14 +1,9 @@
 import { tenantRequestKey } from "@starci/next-data"
 import type { KeyOrWait } from "@starci/next-data"
-import { useAppSelector } from "@/redux"
+import { useOpenWorkspaceId } from "./useOpenWorkspaceId"
 
-/** Keys a request by the known workspace and request object; a null request waits. */
+/** Keys a request by the workspace of the open address and request object; a null request waits. */
 export const useWorkspaceRequestKey = <Request>(
     name: string,
     request: Request | null,
-): KeyOrWait<readonly [string, string, Request]> =>
-    tenantRequestKey(
-        name,
-        useAppSelector((state) => state.workspace.activeWorkspaceId),
-        request,
-    )
+): KeyOrWait<readonly [string, string, Request]> => tenantRequestKey(name, useOpenWorkspaceId(), request)

@@ -5,14 +5,16 @@ import { useQueryZaloReturnSwr } from "@/hooks/connections"
 import type { ZaloReturnInput } from "@/hooks/connections"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { ZaloReturnBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What Zalo sends the browser back with. */
 type ZaloReturnProps = ZaloReturnInput
 
 /** Hands the Zalo return to the back end once, then lands the browser on the page it reconnected from, or on Connections with the verdict. */
 export const ZaloReturn = (props: ZaloReturnProps) => {
+    const workspaceId = useWorkspaceId()
     const t = useTranslations("connections")
     const shell = useTranslations("shell")
     const slotLabelsOf = useSlotLabels()
@@ -22,8 +24,16 @@ export const ZaloReturn = (props: ZaloReturnProps) => {
             props={{
                 crumbLabel: shell("crumbLabel"),
                 crumbs: [
-                    { id: "home", label: shell("crumbHome"), href: CONSOLE_ROUTES.dashboard },
-                    { id: "connections", label: t("title"), href: CONSOLE_ROUTES.connections },
+                    {
+                        id: "home",
+                        label: shell("crumbHome"),
+                        href: workspaceHref(workspaceId, CONSOLE_ROUTES.workspaceHome),
+                    },
+                    {
+                        id: "connections",
+                        label: t("title"),
+                        href: workspaceHref(workspaceId, CONSOLE_ROUTES.connections),
+                    },
                     { id: "zalo", label: t("zaloReturnTitle") },
                 ],
                 title: t("zaloReturnTitle"),

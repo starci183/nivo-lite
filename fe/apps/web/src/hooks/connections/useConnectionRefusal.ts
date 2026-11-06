@@ -1,6 +1,8 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { workspaceHref } from "@/modules/routes"
 import { CONNECTION_ROUTES } from "./connections.shared"
 import { useConnectionsRole } from "./useConnectionsRole"
 
@@ -13,19 +15,20 @@ export const useConnectionRefusal = ():
           title: string
           crumbLabel: string
           homeLabel: string
-          homeHref: "/dashboard"
+          homeHref: string
           message: string
           description: string
       }
     | undefined => {
     const t = useTranslations("connections")
     const { role, isLoading } = useConnectionsRole()
+    const workspaceId = useWorkspaceId()
     if (isLoading || role === undefined || role === "owner" || role === "manager") return undefined
     return {
         title: t("title"),
         crumbLabel: t("crumbLabel"),
         homeLabel: t("crumbHome"),
-        homeHref: CONNECTION_ROUTES.dashboard,
+        homeHref: workspaceHref(workspaceId, CONNECTION_ROUTES.workspaceHome),
         message: t("forbiddenTitle"),
         description: t("forbiddenBody"),
     }

@@ -7,7 +7,9 @@ export interface TeamErrorPageBaseProps {
         readonly description: string
         readonly tabsLabel: string
         readonly membersTab: string
+        readonly membersHref: string
         readonly permissionsTab: string
+        readonly permissionsHref: string
         /** Which of the two team pages failed. */
         readonly selected: "members" | "permissions"
         readonly alertTitle: string
@@ -28,8 +30,8 @@ export const TeamErrorPageBase = (props: TeamErrorPageBaseProps) => (
                 selectedKey: props.props.selected,
                 labelVisibility: "always",
                 items: [
-                    { id: "members", label: props.props.membersTab, href: "/team" },
-                    { id: "permissions", label: props.props.permissionsTab, href: "/permissions" },
+                    { id: "members", label: props.props.membersTab, href: props.props.membersHref },
+                    { id: "permissions", label: props.props.permissionsTab, href: props.props.permissionsHref },
                 ],
             },
         }}

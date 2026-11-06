@@ -3,11 +3,11 @@ import { authFailure, authOk } from "@starci/auth/client"
 import { authClient, sendEmailDoor } from "@/modules/auth"
 import type { AuthFailure } from "@/modules/auth"
 import { apiUrl } from "@/modules/config"
-import { AUTH_ROUTES, safeNext } from "@/modules/routes"
+import { APP_ROUTES, safeNext } from "@/modules/routes"
 import { parseEmailRequest, parsePassword, parseSignUp } from "./auth.mapper"
 
-/** Where a person lands after signing in when no safe destination was asked for: the workspaces home. */
-const HOME_PATH = AUTH_ROUTES.workspaces
+/** Where a person lands after signing in when no safe destination was asked for: the front address, which continues into the workspace opened last, else the workspaces page. */
+const HOME_PATH = APP_ROUTES.home
 
 const FAILURE_KINDS: ReadonlyArray<AuthFailureKind> = ["refused", "not-found", "invalid", "unavailable"]
 

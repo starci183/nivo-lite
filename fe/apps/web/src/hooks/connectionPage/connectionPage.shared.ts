@@ -1,7 +1,7 @@
 import type { SWRResponse, KeyedMutator } from "swr"
 import { slotOfSwr } from "@/hooks/slot"
 import { isInvalidFailure, isNotFoundFailure } from "@/modules/failure"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import type {
     ConnectionHeadView,
     ConnectionNotice,
@@ -68,9 +68,10 @@ export const connectionHeadStateOf = (
 
 /** The trail of a provider page: the list of connections, then the connection itself. */
 export const connectionCrumbsOf = (
+    workspaceId: string,
     connectionsLabel: string,
     current: ConnectionPageHeadView["crumbs"][number],
 ): ConnectionPageHeadView["crumbs"] => [
-    { id: "connections", label: connectionsLabel, href: CONSOLE_ROUTES.connections },
+    { id: "connections", label: connectionsLabel, href: workspaceHref(workspaceId, CONSOLE_ROUTES.connections) },
     current,
 ]

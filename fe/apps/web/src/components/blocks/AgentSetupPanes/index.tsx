@@ -17,7 +17,9 @@ import { useModuleName, type ModuleKey } from "@/hooks/installations"
 import { useSetupSide } from "@/hooks/setupSide"
 import { useSetupWriteWords } from "@/hooks/setupCards"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import type { AgentSetupCopy, SetupSideGate } from "@/modules/types"
 import { AgentSetupPanesBase } from "./component"
 import type { AgentSetupChatContent } from "./component"
@@ -127,6 +129,7 @@ export const AgentSetupPanes = (props: AgentSetupPanesProps) => {
     const typeName = useModuleName(props.module, "shortName")
     const format = useFormatter()
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const slotLabels = useSlotLabels()
     const words = useSetupWriteWords()
     const { canEdit } = useAgentRights()
@@ -185,6 +188,7 @@ export const AgentSetupPanes = (props: AgentSetupPanesProps) => {
                 ...brand.on,
                 ...side.on,
                 open: (href) => router.push(href),
+                grants: () => router.push(workspaceHref(workspaceId, CONSOLE_ROUTES.authority)),
                 retryChat: reload,
                 retrySide: side.reload,
                 ...graph.on,

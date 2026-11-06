@@ -1,0 +1,50 @@
+{
+  "props": {
+    "label": { "vi": "Cần chú ý", "en": "Needs attention" },
+    "empty": { "vi": "Không có việc nào cần bạn chú ý", "en": "Nothing needs your attention" },
+    "selectParam": "selected"
+  },
+  "attention": [
+    {
+      "id": "lead-tan-phat",
+      "title": "Công ty Tân Phát",
+      "description": "Quá hạn bước tiếp theo: Gửi báo giá",
+      "reason": "overdue",
+      "at": "2026-11-05T06:00:00.000Z"
+    },
+    {
+      "id": "lead-hanh",
+      "title": "Chị Hạnh",
+      "description": "Còn thiếu: số điện thoại",
+      "reason": "needs_reply",
+      "at": "2026-11-06T07:15:00.000Z"
+    }
+  ],
+  "awaitingReply": [
+    {
+      "id": "lead-hoa-sen",
+      "title": "Hoa Sen Spa",
+      "description": "Khách đang chờ phản hồi",
+      "reason": "awaiting_reply",
+      "at": "2026-11-06T05:00:00.000Z"
+    }
+  ],
+  "failedSteps": [
+    {
+      "id": "order-1092",
+      "title": "Đơn #1092 · Anh Khoa",
+      "description": "Bước xuất hóa đơn bị lỗi",
+      "reason": "failed_step",
+      "at": "2026-11-06T07:55:00.000Z"
+    }
+  ],
+  "owner": [
+    {
+      "id": "order-1093",
+      "title": "DH-1093 · Anh Quang",
+      "description": "26.000.000 ₫",
+      "reason": "owner",
+      "at": "2026-11-06T06:30:00.000Z"
+    }
+  ]
+}

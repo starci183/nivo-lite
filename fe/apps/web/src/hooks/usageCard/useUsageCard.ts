@@ -7,7 +7,7 @@ import { useQueryCreditUsageSummarySwr } from "@/hooks/swr"
 import { MODULE_KEYS, pickCopy } from "@/modules/catalog"
 import { dayjs, productCalendarDay } from "@/modules/dayjs"
 import { navigation } from "@/modules/i18n"
-import { creditsPath } from "@/modules/routes"
+import { creditsPath, workspaceHref } from "@/modules/routes"
 import { alertOf, dailyOf, factsOf, metersOf } from "./usageCard.shared"
 import type { UsageCardData, UsageCardView } from "./usageCard.shared"
 
@@ -60,7 +60,9 @@ export const useUsageCard = (workspaceId: string | undefined): UsageCardView => 
                 void query.mutate()
                 catalog.reload()
             },
-            openCredits: () => router.push(creditsPath()),
+            openCredits: () => {
+                if (workspaceId !== undefined) router.push(workspaceHref(workspaceId, creditsPath()))
+            },
             formatDay: (value) =>
                 format.dateTime(dayjs.utc(String(value)).toDate(), { day: "numeric", month: "short", timeZone: "UTC" }),
             formatCredits: (value) => (typeof value === "number" ? format.number(Math.round(value)) : ""),

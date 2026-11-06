@@ -9,7 +9,7 @@ import {
 } from "@/hooks/swr"
 import { useCatalogWithCurrent } from "@/hooks/billing"
 
-import { useRequireActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { productCalendarDay } from "@/modules/dayjs"
 import { navigation } from "@/modules/i18n"
 import { creditsDataOf } from "./credits.shared"
@@ -29,7 +29,7 @@ export interface CreditsDataView {
 
 /** Connects the credits overview to the catalogue and selected workspace. */
 export const useCreditsData = (contactHref: string): CreditsDataView => {
-    const { activeWorkspaceId: workspaceId } = useRequireActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const router = navigation.useRouter()
     const now = new Date()
     const today = productCalendarDay(now)
@@ -72,7 +72,6 @@ export const useCreditsData = (contactHref: string): CreditsDataView => {
     const recentData = recent.data
     let data: CreditsData | null = null
     if (
-        workspaceId !== undefined &&
         workspaceData &&
         planData &&
         !catalog.isCurrentLoading &&

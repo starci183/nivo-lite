@@ -132,6 +132,8 @@ describe("specProblems params", () => {
         ])
         expect(specProblems(docOf(root, { params: PARAMS }), BLOCKS, BINDINGS)).toEqual([])
         expect(specProblems(docOf(withVariables({ q: "$installationId" })), BLOCKS, BINDINGS)).toEqual([])
+        expect(specProblems(docOf(withVariables({ q: "$today" })), BLOCKS, BINDINGS)).toEqual([])
+        expect(specProblems(docOf(withVariables({ q: "$thisMonth" })), BLOCKS, BINDINGS)).toEqual([])
         const unset: SpecNode = { id: "s", block: "test.search" }
         expect(specProblems(docOf(unset), BLOCKS, BINDINGS)).toEqual([])
     })
@@ -155,6 +157,16 @@ describe("specProblems params", () => {
         ])
     })
 
+    it("follows a dotted prop name into an object prop, and leaves out a prop the spec does not set", () => {
+        const gone: SpecNode = { id: "s", block: "test.sortable", props: { sort: { param: "gone" } } }
+        expect(specProblems(docOf(gone, { params: PARAMS }), BLOCKS, BINDINGS)).toEqual([
+            { code: "SPEC_PARAM_UNKNOWN", at: "main/s.sort.param" },
+        ])
+        const known: SpecNode = { id: "s", block: "test.sortable", props: { sort: { param: "q" } } }
+        expect(specProblems(docOf(known, { params: PARAMS }), BLOCKS, BINDINGS)).toEqual([])
+        expect(specProblems(docOf({ id: "s", block: "test.sortable" }), BLOCKS, BINDINGS)).toEqual([])
+    })
+
     it("refuses a variable the read does not declare, only when the read is known", () => {
         const spec = docOf(withVariables({ nope: "x", q: "y" }))
         expect(specProblems(spec, BLOCKS, BINDINGS)).toEqual([{ code: "SPEC_VAR_UNKNOWN", at: "main/l.rows.nope" }])
@@ -168,5 +180,83 @@ describe("specProblems params", () => {
     it("reports the unsound params of the document", () => {
         const spec = docOf(stack("root", []), { params: { stage: { type: "enum", url: "stage" } } })
         expect(specProblems(spec, BLOCKS, BINDINGS)).toEqual([{ code: "SPEC_PARAM_INVALID", at: "params.stage" }])
+    })
+})
+
+describe("specProblems showWhen", () => {
+    const PANES = { pane: { type: "enum", of: ["list", "detail", "queue"], url: "pane", default: "list" } } as const
+    const shown = (param: string, is: ReadonlyArray<string>): SpecNode => ({
+        ...stack("s", []),
+        showWhen: { param, is },
+    })
+
+    it("accepts a node shown for values its param declares", () => {
+        expect(specProblems(docOf(shown("pane", ["detail", "queue"]), { params: PANES }), BLOCKS)).toEqual([])
+    })
+
+    it("accepts any value of a param that declares none", () => {
+        expect(specProblems(docOf(shown("q", ["anything"]), { params: PARAMS }), BLOCKS)).toEqual([])
+    })
+
+    it("refuses a param the spec does not declare and a value the param does not allow", () => {
+        expect(specProblems(docOf(shown("gone", ["a"]), { params: PANES }), BLOCKS)).toEqual([
+            { code: "SPEC_PARAM_UNKNOWN", at: "main/s.showWhen" },
+        ])
+        expect(specProblems(docOf(shown("pane", ["detail", "why"]), { params: PANES }), BLOCKS)).toEqual([
+            { code: "SPEC_PARAM_INVALID", at: "main/s.showWhen" },
+        ])
+    })
+
+    it("leaves the values of a param that names a read variable to the reads that are known", () => {
+        const named = { stage: { type: "enum", of: "sales.orders.stage", url: "stage" } } as const
+        expect(specProblems(docOf(shown("stage", ["x"]), { params: named }), BLOCKS)).toEqual([])
+    })
+})
+
+describe("specProblems aside", () => {
+    const PANES = { pane: { type: "enum", of: ["list", "queue"], url: "pane", default: "list" } } as const
+    const aside = stack("side", [])
+    const summary = { read: "sales.people", label: { key: "queue" }, opens: "queue" }
+
+    it("accepts an aside with a pane param, and a summary that reads an installed read and opens a pane the param has", () => {
+        const spec = docOf(stack("r", []), { params: PANES, aside, asideSummary: summary })
+        expect(specProblems(spec, BLOCKS, BINDINGS)).toEqual([])
+    })
+
+    it("walks the aside like a view root, its ids shared with the views", () => {
+        const spec = docOf(stack("side", []), { params: PANES, aside: { id: "side", block: "test.nope" } })
+        expect(specProblems(spec, BLOCKS)).toEqual([
+            { code: "SPEC_BLOCK_UNKNOWN", at: "aside/side" },
+            { code: "SPEC_NODE_DUPLICATE", at: "main/side" },
+        ])
+    })
+
+    it("refuses an aside the phone cannot reach: no pane param", () => {
+        expect(specProblems(docOf(stack("r", []), { aside }), BLOCKS)).toEqual([
+            { code: "SPEC_PARAM_UNKNOWN", at: "aside" },
+        ])
+    })
+
+    it("refuses a summary with no aside, an unknown read, an unknown variable and a pane the param lacks", () => {
+        const orphan = docOf(stack("r", []), { params: PANES, asideSummary: summary })
+        expect(specProblems(orphan, BLOCKS, BINDINGS)).toEqual([{ code: "SPEC_ASIDE_MISSING", at: "asideSummary" }])
+        const bad = {
+            ...summary,
+            read: "sales.nope",
+            variables: { q: "$gone" },
+            opens: "detail",
+        }
+        expect(
+            specProblems(docOf(stack("r", []), { params: PANES, aside, asideSummary: bad }), BLOCKS, BINDINGS),
+        ).toEqual([
+            { code: "SPEC_BINDING_UNKNOWN", at: "asideSummary" },
+            { code: "SPEC_PARAM_UNKNOWN", at: "asideSummary.q" },
+            { code: "SPEC_PARAM_INVALID", at: "asideSummary.opens" },
+        ])
+    })
+
+    it("does not look the summary read up when the reads are not known", () => {
+        const spec = docOf(stack("r", []), { params: PANES, aside, asideSummary: summary })
+        expect(specProblems(spec, BLOCKS)).toEqual([])
     })
 })

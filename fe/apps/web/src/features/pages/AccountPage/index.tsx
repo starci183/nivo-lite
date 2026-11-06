@@ -10,13 +10,19 @@ export const accountMetadata = async (): Promise<Metadata> => {
     return { title: t("title") }
 }
 
+/** What the route hands the page: the workspace it is opened in. */
+interface AccountPageProps {
+    readonly workspaceId: string
+}
+
 /** The /account screen body: static copy; the account, its sign-in methods and its device sessions are read in the browser from the back end GraphQL API. */
-export const AccountPage = async (): Promise<ReactElement> => {
+export const AccountPage = async (props: AccountPageProps): Promise<ReactElement> => {
     const t = await getTranslations("account")
     return (
         <AccountPageBase
             props={{
                 header: accountHeadingOf({
+                    workspaceId: props.workspaceId,
                     title: t("title"),
                     description: t("description"),
                     tabsLabel: t("tabsLabel"),

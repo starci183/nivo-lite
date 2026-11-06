@@ -1,7 +1,7 @@
 import type { ActionDefinition, BlockDefinition, BlockReadSlot, BlockSlot, ReadDefinition } from "../block/block.types"
 import type { DataShape } from "../schema/schema.types"
-import { paramProblems } from "./spec-param"
-import { paramNameOf } from "./spec-value"
+import { allowedValuesOf, paramProblems } from "./spec-param"
+import { paramNameOf, valueAt } from "./spec-value"
 import type {
     SpecBinding,
     SpecNode,
@@ -110,11 +110,26 @@ const paramPropProblems = (
     at: string,
 ): ReadonlyArray<SpecProblem> =>
     (block.params ?? []).flatMap((name): ReadonlyArray<SpecProblem> => {
-        const value = node.props?.[name]
+        const value = valueAt(node.props, name)
         return typeof value === "string" && !Object.keys(params).includes(value)
             ? [{ code: "SPEC_PARAM_UNKNOWN", at: `${at}.${name}` }]
             : []
     })
+
+/** The problem of a param value list against the param it names: an undeclared param, or a value the param does not allow. */
+const paramValuesProblems = (
+    bindings: SpecBindings,
+    params: Readonly<Record<string, SpecParam>>,
+    name: string,
+    values: ReadonlyArray<string>,
+    at: string,
+): ReadonlyArray<SpecProblem> => {
+    const param = params[name]
+    if (param === undefined) return [{ code: "SPEC_PARAM_UNKNOWN", at }]
+    const allowed = allowedValuesOf(param, bindings.reads)
+    const outside = allowed === null || allowed === undefined ? [] : values.filter((value) => !allowed.includes(value))
+    return outside.length === 0 ? [] : [{ code: "SPEC_PARAM_INVALID", at }]
+}
 
 /** The problems of a node's bindings against its block's slots. */
 const slotProblems = (
@@ -179,17 +194,49 @@ const walk = (context: WalkContext, node: SpecNode, depth: number): void => {
     context.problems.push(
         ...propProblems(block, node, at),
         ...paramPropProblems(block, node, context.params, at),
+        ...(node.showWhen === undefined
+            ? []
+            : paramValuesProblems(
+                  context.bindings,
+                  context.params,
+                  node.showWhen.param,
+                  node.showWhen.is,
+                  `${at}.showWhen`,
+              )),
         ...slotProblems(context.bindings, context.params, block, node.bind ?? {}, at),
         ...childrenProblems(block, children, context.scope, at),
     )
     for (const child of children) walk(context, child, depth + 1)
 }
 
+/** The name of the param that says which pane a phone shows; an aside needs it. */
+export const PANE_PARAM = "pane"
+
+/** The problems of the aside summary: the read it counts with, and the pane it opens. */
+const summaryProblems = (
+    spec: StoredSpec,
+    bindings: SpecBindings,
+    params: Readonly<Record<string, SpecParam>>,
+): ReadonlyArray<SpecProblem> => {
+    const summary = spec.asideSummary
+    if (summary === undefined) return []
+    const at = "asideSummary"
+    const problems: Array<SpecProblem> = []
+    if (spec.aside === undefined) problems.push({ code: "SPEC_ASIDE_MISSING", at })
+    if (bindings.reads?.some((candidate) => candidate.id === summary.read) === false)
+        problems.push({ code: "SPEC_BINDING_UNKNOWN", at })
+    return [
+        ...problems,
+        ...variableProblems(bindings, params, summary, at),
+        ...paramValuesProblems(bindings, params, PANE_PARAM, [summary.opens], `${at}.opens`),
+    ]
+}
+
 /**
  * What is wrong with a spec document against the installed blocks, empty when the host may store, publish and draw it: the known
  * schema, at least one view, unique view and node ids, a bounded depth, every block installed, props valid against the block zod
  * schema, every required slot bound, bindings of the slot kind, shape and data kind, variables the read declares and params the spec
- * declares, sound params, and children the block accepts.
+ * declares, sound params, children the block accepts, and an aside (with its summary) that its `pane` param can switch to.
  */
 export const specProblems = (
     spec: StoredSpec,
@@ -205,9 +252,13 @@ export const specProblems = (
     const regions: ReadonlyArray<readonly [string, ReadonlyArray<SpecNode>]> = [
         ["head", spec.head ?? []],
         ["foot", spec.foot ?? []],
+        ["aside", spec.aside === undefined ? [] : [spec.aside]],
     ]
     for (const [scope, nodes] of regions)
         for (const node of nodes) walk({ blocks: blocksById, bindings, params, scope, ids: shared, problems }, node, 1)
+    if (spec.aside !== undefined && params[PANE_PARAM] === undefined)
+        problems.push({ code: "SPEC_PARAM_UNKNOWN", at: "aside" })
+    problems.push(...summaryProblems(spec, bindings, params))
     const views = new Set<string>()
     for (const view of spec.views) {
         if (views.has(view.id)) problems.push({ code: "SPEC_VIEW_DUPLICATE", at: view.id })

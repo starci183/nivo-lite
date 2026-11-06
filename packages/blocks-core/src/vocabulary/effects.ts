@@ -3,6 +3,7 @@ import type { EffectDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { MAX_BODY, MAX_ENTRIES, MAX_ID, MAX_LINE } from "../bounds"
 import { boundedRecord } from "../json.schema"
+import { chatMessageProposeEffect } from "../nodes/chatbot/propose.effect"
 
 /** A message to a customer conversation, through the channel it came from. */
 export interface ChannelSendPayload {
@@ -301,6 +302,7 @@ export const workItemWithdrawEffect: EffectDefinition<z.ZodType<UndoPayload>> = 
 /** Every effect the core nodes may run and every undo a compensation runs; the back end registers an executor for each. */
 export const coreEffects: ReadonlyArray<EffectDefinition> = [
     channelSendEffect,
+    chatMessageProposeEffect,
     leadEnsureEffect,
     orderRecordEffect,
     orderVoidEffect,

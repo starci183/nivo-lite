@@ -4,13 +4,15 @@ import { useTranslations } from "next-intl"
 import { useConnectionsHome } from "@/hooks/connectionsPanes"
 import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { ConnectionsHomeBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The overview pane of the Connections page: reads the workspace's connections and agents and hands the owner's level picks to the back end. */
 export const ConnectionsHome = () => {
     const t = useTranslations("connections")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const labels = useSlotLabels()
     const home = useConnectionsHome()
     return (
@@ -40,7 +42,7 @@ export const ConnectionsHome = () => {
             }}
             on={{
                 goTo: (href) => router.push(href),
-                openLibrary: () => router.push(`${CONSOLE_ROUTES.connections}?tab=library`),
+                openLibrary: () => router.push(workspaceHref(workspaceId, `${CONSOLE_ROUTES.connections}?tab=library`)),
                 retry: home.retry,
             }}
         />

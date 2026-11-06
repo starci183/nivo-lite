@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import { mutate } from "@/modules/viewer-cache"
 import { useMutateCreateVideoMediaUploadSwr, QUERY_VIDEO_MEDIA_SWR_KEY, usePutPresignedSwr } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useGraphQLWithToast, useRestWithToast } from "@/modules/toast"
 
 type UseVideoUploadResult = {
@@ -18,7 +18,7 @@ export const useVideoUpload = (): UseVideoUploadResult => {
     const runRest = useRestWithToast()
     const { trigger: putPresigned } = usePutPresignedSwr()
     const { trigger, isMutating } = useMutateCreateVideoMediaUploadSwr()
-    const { activeWorkspaceId: workspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const uploadOne = async (file: File): Promise<string | undefined> => {
         const ticket = await runGraphQL(() => trigger({ name: file.name, type: file.type, size: file.size }), {
             successMessage: t("saved"),

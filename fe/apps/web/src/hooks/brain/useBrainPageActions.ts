@@ -1,11 +1,11 @@
 import { useTranslations } from "next-intl"
 import { useRef, useState } from "react"
 import { useWorkspaceMember } from "@/hooks/knowledge"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useFeatureLifetime } from "@/hooks/reuseables"
 import { brainPartOf, firstTabOf } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { BRAIN_PARTS, brainTabHref } from "@/modules/routes"
+import { BRAIN_PARTS, brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainTab } from "@/modules/routes"
 import type { BrainPageHeaderView } from "@/modules/types"
 import { toast } from "@/modules/toast"
@@ -47,14 +47,14 @@ export const useBrainPageActions = (tab: BrainTab): BrainPageActionsView => {
     const review = useTranslations("dossierReview")
     const feedback = useTranslations("toast")
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const member = useWorkspaceMember()
     const summary = useDossierReviewSummary()
     const commands = useDossierReviewCommands()
-    const { activeWorkspaceId } = useActiveWorkspace()
     const running = useRef(new Set<string>())
     const [pending, setPending] = useState<ReadonlySet<string>>(() => new Set())
     const mounted = useFeatureLifetime(true, "brain-page-review")
-    const feedbackLifetime = useFeatureLifetime(true, activeWorkspaceId ?? "")
+    const feedbackLifetime = useFeatureLifetime(true, workspaceId ?? "")
     const part = brainPartOf(tab)
     const props: BrainPageHeaderView["actions"] = {
         part: {
@@ -67,36 +67,30 @@ export const useBrainPageActions = (tab: BrainTab): BrainPageActionsView => {
                   menuLabel: t("optionsLabel"),
                   label: review("reviewAll"),
                   isRunning: summary.isRunning,
-                  isPending: commands.isPending || pending.has(activeWorkspaceId ?? ""),
+                  isPending: commands.isPending || pending.has(workspaceId ?? ""),
                   runningLabel: review("reviewRunning"),
               }
             : null,
         add:
             member.canWrite && part === "internal" && tab !== "sources"
-                ? { label: t("addDocuments"), href: brainTabHref("sources") }
+                ? { label: t("addDocuments"), href: workspaceHref(workspaceId, brainTabHref("sources")) }
                 : null,
     }
     return {
         props,
         on: {
             reviewAll: () => {
-                if (
-                    !member.canWrite ||
-                    activeWorkspaceId === undefined ||
-                    summary.isRunning ||
-                    running.current.has(activeWorkspaceId)
-                )
-                    return
+                if (!member.canWrite || summary.isRunning || running.current.has(workspaceId)) return
                 const isMounted = mounted.capture()
                 const ownsFeedback = feedbackLifetime.capture()
-                running.current.add(activeWorkspaceId)
-                setPending((previous) => new Set(previous).add(activeWorkspaceId))
+                running.current.add(workspaceId)
+                setPending((previous) => new Set(previous).add(workspaceId))
                 const settle = () => {
-                    running.current.delete(activeWorkspaceId)
+                    running.current.delete(workspaceId)
                     if (isMounted())
                         setPending((previous) => {
                             const next = new Set(previous)
-                            next.delete(activeWorkspaceId)
+                            next.delete(workspaceId)
                             return next
                         })
                 }
@@ -107,7 +101,7 @@ export const useBrainPageActions = (tab: BrainTab): BrainPageActionsView => {
             },
             setPart: (id: string) => {
                 const next = BRAIN_PARTS.find((one) => one === id)
-                if (next !== undefined) router.push(brainTabHref(firstTabOf(next)))
+                if (next !== undefined) router.push(workspaceHref(workspaceId, brainTabHref(firstTabOf(next))))
             },
         },
     }

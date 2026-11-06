@@ -3,6 +3,7 @@ import { EmptyNotice, Link, Section, SurfaceCard } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import type { DecisionQueueView, DecisionRowView } from "../../views/views.types"
 import { DecisionRow } from "./DecisionRow"
+import type { DecisionEdit } from "./DecisionRow"
 
 /** Where a list of waiting rows stands: a card on a card page, or a section in a pane. */
 type DecisionListSurface = "card" | "section"
@@ -19,9 +20,15 @@ interface DecisionListWords {
 /** The decisions waiting for a person and where they stand. */
 interface DecisionListProps {
     readonly surface: DecisionListSurface
+    /** Whether the heading is left to the pane around the queue: the label then only names the list. */
+    readonly isHeadless: boolean
+    /** How large the commands of the rows are. */
+    readonly commandSize: "sm" | "md"
     readonly words: DecisionListWords
     readonly queue: DecisionQueueView
     readonly isLoading: boolean
+    /** The inline edit form the spec declares; null when it declares none. */
+    readonly edit: DecisionEdit | null
     readonly onCommand: (rowId: string, commandId: string) => void
 }
 
@@ -32,12 +39,15 @@ const listRowOf = (row: DecisionRowView, props: DecisionListProps): ListRowData 
         id: row.id,
         title: row.title,
         description: row.description,
+        ...(row.leading === undefined || row.leading === "" ? {} : { leading: { avatar: { name: row.leading } } }),
         ...(first === undefined ? {} : { badges: second === undefined ? [first] : [first, second] }),
         detail: (
             <DecisionRow
                 row={row}
+                commandSize={props.commandSize}
                 seeWhyLabel={props.words.seeWhyLabel}
                 moreLabel={props.words.moreLabel}
+                edit={props.edit}
                 onCommand={props.onCommand}
             />
         ),
@@ -63,14 +73,24 @@ export const DecisionList = (props: DecisionListProps): ReactNode => {
     }
     return (
         <>
-            <Section
-                kind="list"
-                title={props.words.label}
-                headingLevel={3}
-                isLoading={props.isLoading}
-                items={rows}
-                empty={empty}
-            />
+            {props.isHeadless ? (
+                <Section
+                    kind="list"
+                    ariaLabel={props.words.label}
+                    isLoading={props.isLoading}
+                    items={rows}
+                    empty={empty}
+                />
+            ) : (
+                <Section
+                    kind="list"
+                    title={props.words.label}
+                    headingLevel={3}
+                    isLoading={props.isLoading}
+                    items={rows}
+                    empty={empty}
+                />
+            )}
             {more}
         </>
     )

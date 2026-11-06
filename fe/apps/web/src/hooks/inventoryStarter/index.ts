@@ -1,1 +1,0 @@
-export { useInventoryTemplates } from "./useInventoryTemplates"

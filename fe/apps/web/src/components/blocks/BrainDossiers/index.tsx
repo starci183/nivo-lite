@@ -13,9 +13,10 @@ import {
 } from "@/hooks/brain"
 import { useWorkspaceMember } from "@/hooks/knowledge"
 import { navigation } from "@/modules/i18n"
-import { brainTabHref, knowledgeSourceHref } from "@/modules/routes"
+import { brainTabHref, knowledgeSourceHref, workspaceHref } from "@/modules/routes"
 import type { BrainPageHeading } from "@/modules/types"
 import { BrainDossiersBase } from "./component"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the page hands the dossiers tab: the header without its tabs, and what the address has open. */
 interface BrainDossiersProps {
@@ -35,6 +36,7 @@ interface BrainDossiersProps {
  */
 export const BrainDossiers = (props: BrainDossiersProps) => {
     const router = navigation.useRouter()
+    const workspaceId = useWorkspaceId()
     const member = useWorkspaceMember()
     const isMap = props.mode === "map"
     const header = useBrainPageHeader(isMap ? "map" : "dossiers", props.header)
@@ -70,7 +72,8 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
             on={{
                 reviewAll: header.on.reviewAll,
                 selectTab: header.on.selectTab,
-                setMode: (mode) => router.push(brainTabHref(mode === "map" ? "map" : "dossiers")),
+                setMode: (mode) =>
+                    router.push(workspaceHref(workspaceId, brainTabHref(mode === "map" ? "map" : "dossiers"))),
                 selectNode: map.on.select,
                 setMapFilter: map.on.setFilter,
                 openHref: (href) => router.push(href),
@@ -84,10 +87,11 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
                 closeAside: desk.on.closeAside,
                 asideOpenChange: setAsideOpen,
                 openMap: () => {
-                    if (desk.openId !== null) router.push(brainTabHref("map", { node: desk.openId }))
+                    if (desk.openId !== null)
+                        router.push(workspaceHref(workspaceId, brainTabHref("map", { node: desk.openId })))
                 },
-                openSources: () => router.push(brainTabHref("sources")),
-                openDocument: (id) => router.push(knowledgeSourceHref(id)),
+                openSources: () => router.push(workspaceHref(workspaceId, brainTabHref("sources"))),
+                openDocument: (id) => router.push(workspaceHref(workspaceId, knowledgeSourceHref(id))),
                 ...checklist.on,
                 setFilter: findings.on.setFilter,
                 review: findings.on.review,

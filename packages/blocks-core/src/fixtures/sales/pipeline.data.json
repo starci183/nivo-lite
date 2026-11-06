@@ -1,0 +1,65 @@
+{
+  "props": {
+    "label": { "vi": "Tiến trình bán", "en": "Sales pipeline" },
+    "searchLabel": { "vi": "Tìm theo tên, công ty hoặc số điện thoại", "en": "Search by name, company or phone" },
+    "countLabel": { "vi": "{count} cơ hội", "en": "{count} deals" },
+    "emptyColumn": { "vi": "Chưa có khách hàng", "en": "No customers yet" },
+    "selectParam": "selected",
+    "searchParam": "q"
+  },
+  "records": [
+    {
+      "id": "lead-lan",
+      "contactName": "Chị Lan",
+      "company": "Hoa Sen Spa",
+      "need": "Gói chăm sóc 10 buổi",
+      "stage": "new",
+      "channel": "zalo",
+      "updatedAt": "2026-11-06T06:00:00.000Z",
+      "owner": "Minh"
+    },
+    {
+      "id": "lead-tan-phat",
+      "contactName": "Công ty Tân Phát",
+      "company": "",
+      "need": "Thẻ quà tặng cho 40 nhân viên",
+      "stage": "qualified",
+      "channel": "website",
+      "updatedAt": "2026-11-05T06:00:00.000Z",
+      "nextStep": "Gửi báo giá",
+      "nextDueAt": "2026-11-06"
+    },
+    {
+      "id": "lead-hoa-sen",
+      "contactName": "Hoa Sen Spa",
+      "company": "",
+      "need": "Báo giá liệu trình",
+      "stage": "proposal",
+      "channel": "zalo",
+      "updatedAt": "2026-11-06T05:00:00.000Z",
+      "quoteVnd": 12500000,
+      "note": "Chờ bạn duyệt báo giá"
+    },
+    {
+      "id": "lead-ngoc",
+      "contactName": "Chị Ngọc",
+      "company": "",
+      "need": "Combo gội đầu",
+      "stage": "won",
+      "channel": "zalo",
+      "updatedAt": "2026-11-04T06:00:00.000Z",
+      "orderVnd": 4800000,
+      "note": "Đã chuyển Kế toán"
+    },
+    {
+      "id": "lead-tram",
+      "contactName": "Chị Trâm",
+      "company": "",
+      "need": "Gội đầu dưỡng sinh",
+      "stage": "lost",
+      "channel": "website",
+      "updatedAt": "2026-11-02T06:00:00.000Z",
+      "closedReason": "chọn nơi gần nhà hơn"
+    }
+  ]
+}

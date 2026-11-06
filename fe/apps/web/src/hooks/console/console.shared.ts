@@ -1,12 +1,7 @@
 import type { DropdownMenuEntry, DropdownMenuSection } from "@starci/grammar/common"
+import { APP_ROUTES, workspaceHref } from "@/modules/routes"
 import { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
 import type { ConsoleIconName, ConsoleSessionView, ConsoleWorkspace } from "@/modules/types"
-
-/** The console route of the Office, the page people come to first. */
-export const OFFICE_ROUTE = "/chat"
-
-/** The leads list, where search and the New menu land. */
-export const LEADS_ROUTE = "/leads"
 
 /** The catalog key that names each role. */
 export const ROLE_LABELS = { owner: "roleOwner", manager: "roleManager", staff: "roleStaff" } as const
@@ -15,15 +10,8 @@ export const ROLE_LABELS = { owner: "roleOwner", manager: "roleManager", staff: 
 export type ConsoleDestination = {
     readonly key: string
     readonly label:
-        | "navOverview"
-        | "navOffice"
-        | "navThreads"
         | "navAuthority"
         | "navInbox"
-        | "navLeads"
-        | "navResponsibilities"
-        | "navDecisions"
-        | "navAutomations"
         | "navBrain"
         | "navModules"
         | "navTeam"
@@ -40,31 +28,11 @@ export type ConsoleDestination = {
     readonly managerOnly?: boolean
 }
 
-/** Office first: it is the page people come to. The Brain owns the business memory, so its documents are no separate destination. */
+/** The Brain owns the business memory, so its documents are no separate destination. */
 export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
-    { key: "chat", label: "navOffice", route: OFFICE_ROUTE, icon: "community", group: "work" },
-    { key: "overview", label: "navOverview", route: "/dashboard", icon: "overview", group: "work" },
-    { key: "threads", label: "navThreads", route: "/threads", icon: "review", group: "work" },
-    { key: "leads", label: "navLeads", route: LEADS_ROUTE, icon: "account", group: "work" },
-    {
-        key: "responsibilities",
-        label: "navResponsibilities",
-        route: "/responsibilities",
-        icon: "review",
-        group: "work",
-    },
     { key: "inbox", label: "navInbox", route: "/inbox", icon: "email", group: "work" },
     { key: "brain", label: "navBrain", route: "/brain", icon: "brain", group: "operate", also: ["/knowledge"] },
     { key: "authority", label: "navAuthority", route: "/authority", icon: "password", group: "operate" },
-    { key: "decisions", label: "navDecisions", route: "/decisions", icon: "saved", group: "operate" },
-    {
-        key: "automations",
-        label: "navAutomations",
-        route: "/automations",
-        icon: "agentos",
-        group: "operate",
-        managerOnly: true,
-    },
     { key: "modules", label: "navModules", route: "/agents", icon: "apps", group: "setup" },
     { key: "team", label: "navTeam", route: "/team", icon: "talents", group: "setup", managerOnly: true },
     {
@@ -86,10 +54,10 @@ export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
     { key: "credits", label: "navCredits", route: "/billing", icon: "wallet", group: "setup", managerOnly: true },
 ]
 
-/** The destination a path belongs to; an agent chat belongs to Agents, a path outside the rail to none. */
-export const activeDestinationKey = (pathname: string): string | null => {
-    if (pathname.startsWith("/modules/") && pathname.includes("/chat")) return "modules"
-    const found = DESTINATIONS.find((d) => [d.route, ...(d.also ?? [])].some((route) => pathname.startsWith(route)))
+/** The destination a path inside the workspace belongs to; an agent chat belongs to Agents, a path outside the rail to none. */
+export const activeDestinationKey = (path: string): string | null => {
+    if (path.startsWith("/modules/") && path.includes("/chat")) return "modules"
+    const found = DESTINATIONS.find((d) => [d.route, ...(d.also ?? [])].some((route) => path.startsWith(route)))
     return found?.key ?? null
 }
 
@@ -133,6 +101,8 @@ export const sessionRoleOf = (role: string): ConsoleWorkspace["role"] =>
 
 /** The words of the account menu, resolved by the caller. */
 interface AccountEntriesInput {
+    /** The workspace the profile and account pages are opened in. */
+    readonly workspaceId: string
     readonly workspaces: DropdownMenuSection
     /** The profile page item: its label and the line under it. */
     readonly profile: { readonly label: string; readonly description: string }
@@ -149,28 +119,19 @@ export const accountEntriesOf = (input: AccountEntriesInput): ReadonlyArray<Drop
         kind: "section",
         id: "account",
         items: [
-            { id: PROFILE_ITEM, label: input.profile.label, description: input.profile.description, href: "/profile" },
-            { id: ACCOUNT_ITEM, label: input.accountLabel, description: input.accountDescription, href: "/account" },
+            {
+                id: PROFILE_ITEM,
+                label: input.profile.label,
+                description: input.profile.description,
+                href: workspaceHref(input.workspaceId, APP_ROUTES.profile),
+            },
+            {
+                id: ACCOUNT_ITEM,
+                label: input.accountLabel,
+                description: input.accountDescription,
+                href: workspaceHref(input.workspaceId, APP_ROUTES.account),
+            },
             { id: SIGN_OUT_ITEM, label: input.signOutLabel, onAction: input.onSignOut },
         ],
     },
 ]
-
-/** Translates one key of the shell catalog. */
-type ShellWords = (key: string, values?: Record<string, string | number>) => string
-
-/** What `notificationsCopyOf` returns. */
-export interface NotificationsCopyOfResult {
-    bell: string
-    title: string
-    nothingWaiting: string
-    openOffice: string
-}
-
-/** The words of the notifications bell and its panel for a number of waiting approvals. */
-export const notificationsCopyOf = (t: ShellWords, pendingCount: number): NotificationsCopyOfResult => ({
-    bell: t("notifications"),
-    title: pendingCount === 0 ? t("notifications") : t("pendingTitle", { count: pendingCount }),
-    nothingWaiting: t("nothingWaiting"),
-    openOffice: t("openOffice"),
-})

@@ -2,7 +2,8 @@
 
 import { useTranslations } from "next-intl"
 import type { InstallationConnectionNeed } from "@/modules/installations"
-import { CONSOLE_ROUTES } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 
 /** The words of what a `needs_connection` agent waits for, and where it is connected. */
 export interface ConnectionNeedsCopy {
@@ -15,6 +16,7 @@ export interface ConnectionNeedsCopy {
 /** The connection needs of an agent in the reader language, with the link to Settings, Connections. */
 export const useConnectionNeedsCopy = (): ConnectionNeedsCopy => {
     const t = useTranslations("modulesCore")
+    const workspaceId = useWorkspaceId()
     return {
         linesOf: (needs) =>
             needs.map((need) =>
@@ -23,6 +25,6 @@ export const useConnectionNeedsCopy = (): ConnectionNeedsCopy => {
                     : t("needsConnection", { providers: need.providers.join(t("providersOr")) }),
             ),
         linkLabel: t("openConnections"),
-        href: CONSOLE_ROUTES.connections,
+        href: workspaceHref(workspaceId, CONSOLE_ROUTES.connections),
     }
 }

@@ -1,12 +1,9 @@
 import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
-import { needsOwner } from "./order.policy"
+import { DEFAULT_THRESHOLD_VND, needsOwner } from "../../rules/sales/settings"
 import type { NodeSchema } from "../node-schema.types"
 import { bilingualOf } from "../../messages/catalog"
-
-/** The default threshold: an order of 5,000,000 VND or more waits for the owner. */
-export const DEFAULT_THRESHOLD_VND = 5_000_000
 
 /** The setting of the graph: from which amount the owner decides. */
 export interface NeedsApprovalParams {
@@ -46,7 +43,9 @@ export const orderNeedsApprovalNode: NodeDefinition<typeof input, typeof output,
     effects: [],
     run: (given, context) =>
         Promise.resolve({
-            branch: needsOwner(given.amountVnd, context.params.thresholdVnd) ? "awaiting-owner" : "approve-self",
+            branch: needsOwner(given.amountVnd, { approvalThresholdVnd: context.params.thresholdVnd })
+                ? "awaiting-owner"
+                : "approve-self",
         }),
     examples: [
         {

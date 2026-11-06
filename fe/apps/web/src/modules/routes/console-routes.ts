@@ -1,35 +1,23 @@
-/** Console and public destinations the overview, workbench and landing surfaces link to, named once. */
+/** Console and public destinations the workbench and landing surfaces link to, named once. */
 export const CONSOLE_ROUTES = {
     login: "/login",
-    dashboard: "/dashboard",
-    chat: "/chat",
-    leads: "/leads",
-    newLead: "/leads?new=1",
-    responsibilities: "/responsibilities",
+    workspaceHome: "/agents",
+    inbox: "/inbox",
     authority: "/authority",
-    decisions: "/decisions",
     connections: "/connections",
     team: "/team",
     teamInvite: "/team?invite=1",
     permissions: "/permissions",
-    modules: "/modules",
-    newChatbot: "/modules/new?module=chatbot",
 } as const
 
 /** One section of the authority page. */
 export const authoritySectionPath = (section: string): string => `/authority/${section}`
-
-/** The detail page of one lead. */
-export const leadHref = (leadId: string): string => `/leads/${leadId}`
 
 /** The chat page of one module agent. */
 export const agentChatHref = (agentId: string, tab?: string): string => {
     const query = tab === undefined ? "" : `?tab=${tab}`
     return `/modules/${agentId}/chat${query}`
 }
-
-/** The responsibilities board filtered by one query string such as `status=open`. */
-export const responsibilitiesHref = (query: string): string => `${CONSOLE_ROUTES.responsibilities}?${query}`
 
 /** The workbench of one module, opened on one work item. */
 export const workItemHref = (module: string, workItemId: string): string =>
@@ -47,12 +35,6 @@ export const AGENT_ROLES_ANCHOR = "agent-roles"
 /** The roles to add on the agents page, from anywhere. */
 export const AGENT_ROLES_HREF: "/agents#agent-roles" = `${AGENTS_ROUTE}#${AGENT_ROLES_ANCHOR}`
 
-/** The setup page of one module agent. */
-export const agentSetupHref = (agentId: string): string => `${CONSOLE_ROUTES.modules}/${agentId}`
-
-/** The work flow of one lead, where a handed-over customer chat leads. */
-export const leadFlowHref = (leadId: string): string => `${leadHref(leadId)}#flow`
-
 /** The chat page of one module agent opened on one tab and, when given, on one conversation. */
 export const agentChatConversationHref = (agentId: string, tab: string, conversationId: string | null): string => {
     const query = new URLSearchParams({ tab })
@@ -62,6 +44,13 @@ export const agentChatConversationHref = (agentId: string, tab: string, conversa
 
 /** The profile page of one agent: who answers for it, who may give it work, whom it may tag. */
 export const agentProfileHref = (agentId: string): string => `/agents/profile/${agentId}`
+
+/** The page inside a workspace that takes the return of a Zalo OA authorization, with the query Zalo appended. */
+export const zaloReturnPath = (query: Readonly<Record<string, string | undefined>>): string => {
+    const search = new URLSearchParams()
+    for (const [name, value] of Object.entries(query)) if (value !== undefined) search.set(name, value)
+    return search.size === 0 ? "/connections/zalo/callback" : `/connections/zalo/callback?${search.toString()}`
+}
 
 /** The page of one Zalo OA connection, on a tab when one is named. */
 export const zaloConnectionHref = (connectionId: string, tab?: string): string =>

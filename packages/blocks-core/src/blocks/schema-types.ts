@@ -7,9 +7,6 @@ export type TextSchema = z.ZodType<SpecText>
 /** The zod type of an enum prop over the given values. */
 export type EnumSchema<V extends string> = z.ZodEnum<{ readonly [K in V]: K }>
 
-/** The zod type of a list of term and path pairs. */
-export type TermPathsSchema = z.ZodArray<z.ZodObject<{ term: TextSchema; path: z.ZodString }>>
-
 /** A required read slot of the given shape. */
 export interface RequiredRead<S extends "record" | "list"> {
     /** Marks the slot as one a spec binds to a read. */
@@ -18,6 +15,16 @@ export interface RequiredRead<S extends "record" | "list"> {
     readonly shape: S
     /** A spec that leaves the slot unbound is refused. */
     readonly required: true
+}
+
+/** A read slot of the given shape that a spec may leave unbound; the block then draws as if the read had nothing. */
+export interface OptionalRead<S extends "record" | "list"> {
+    /** Marks the slot as one a spec binds to a read. */
+    readonly kind: "read"
+    /** Whether the bound read yields one record or a list of them. */
+    readonly shape: S
+    /** A spec may leave the slot unbound. */
+    readonly required: false
 }
 
 /** An action slot that a spec may leave unbound. */

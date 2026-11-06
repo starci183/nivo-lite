@@ -1,5 +1,6 @@
 import { isProvider } from "@/hooks/connection-providers"
 import type { Connection, ConnectionStatus, DataSlot, Provider } from "@/modules/types"
+import { workspaceHref } from "@/modules/routes"
 
 /** Connection rows: what needs attention first, then what runs, then what was disconnected. */
 const STATUS_RANK: Readonly<Record<ConnectionStatus, number>> = { error: 0, pending: 0, connected: 1, disconnected: 2 }
@@ -39,9 +40,7 @@ export const attentionConnections = (items: ReadonlyArray<Connection>): Readonly
 
 /** The console destinations the Connections page links to. */
 export const CONNECTION_ROUTES = {
-    dashboard: "/dashboard",
-    chat: "/chat",
-    automations: "/automations",
+    workspaceHome: "/agents",
     connections: "/connections",
 } as const
 
@@ -61,14 +60,21 @@ const SINGLE_PAGE: Readonly<Partial<Record<Provider, string>>> = { google_drive:
  * connection that is still pending links to its page too; Google Drive is finished in its wizard first. Google Drive has one grant
  * per workspace, so its page has no id in the address.
  */
-export const connectionPageHref = (connection: Pick<Connection, "id" | "provider" | "status">): string | null => {
+export const connectionPageHref = (
+    workspaceId: string,
+    connection: Pick<Connection, "id" | "provider" | "status">,
+): string | null => {
     if (connection.status === "disconnected") return null
     const single = SINGLE_PAGE[connection.provider]
     if (single !== undefined) {
-        return connection.status === "pending" ? null : `${CONNECTION_ROUTES.connections}/${single}`
+        return connection.status === "pending"
+            ? null
+            : workspaceHref(workspaceId, `${CONNECTION_ROUTES.connections}/${single}`)
     }
     const segment = PAGE_SEGMENT[connection.provider]
-    return segment === undefined ? null : `${CONNECTION_ROUTES.connections}/${segment}/${connection.id}`
+    return segment === undefined
+        ? null
+        : workspaceHref(workspaceId, `${CONNECTION_ROUTES.connections}/${segment}/${connection.id}`)
 }
 
 /** The search params the console uses to remember which overlay is open. */

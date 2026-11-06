@@ -1,7 +1,7 @@
 import type { useTranslations } from "next-intl"
 import { isAgentModule } from "@/modules/documents"
 import type { RetrievedPassage } from "@/modules/documents"
-import { knowledgeSourceHref } from "@/modules/routes"
+import { knowledgeSourceHref, workspaceHref } from "@/modules/routes"
 import type { AskAgentOption, AskPassageView, AskSeesView, PaneGridLayout } from "@/modules/types"
 import { LENS_LANES } from "./lenses"
 import type { AgentLens } from "./lenses"
@@ -39,11 +39,15 @@ const citationOf = (t: KnowledgeTranslate, passage: RetrievedPassage): string =>
 const VISIBILITY_KEY = { public: "vis_public", internal: "vis_internal", restricted: "vis_restricted" } as const
 
 /** One passage the agent would read: its words, its citation, who may read it and (but for a fact) how well it matches. */
-export const askPassageOf = (t: KnowledgeTranslate, passage: RetrievedPassage): AskPassageView => ({
+export const askPassageOf = (
+    t: KnowledgeTranslate,
+    passage: RetrievedPassage,
+    workspaceId: string,
+): AskPassageView => ({
     id: passage.key,
     text: passage.content,
     citation: citationOf(t, passage),
-    href: passage.sourceId === null ? null : knowledgeSourceHref(passage.sourceId),
+    href: passage.sourceId === null ? null : workspaceHref(workspaceId, knowledgeSourceHref(passage.sourceId)),
     chips: [
         { label: t(VISIBILITY_KEY[passage.visibility]), tone: "neutral" },
         ...(passage.layer === "fact"

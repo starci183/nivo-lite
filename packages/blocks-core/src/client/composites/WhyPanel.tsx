@@ -30,6 +30,9 @@ interface WhyPanelProps {
     readonly isLoading: boolean
 }
 
+/** What the bands that never wait for data take. */
+type WhyBodyProps = Pick<WhyPanelProps, "view" | "words">
+
 /** The part of the time the approver has used before the bar warns, then turns to danger. */
 const WARN_AT_PERCENT = 50
 const DANGER_AT_PERCENT = 90
@@ -73,7 +76,7 @@ const WhyHead = (props: WhyPanelProps): ReactNode => (
 )
 
 /** The numbers read and the sources leaned on, each band drawn only when the view holds something. */
-const WhyEvidence = (props: WhyPanelProps): ReactNode => (
+const WhyEvidence = (props: WhyBodyProps): ReactNode => (
     <>
         {props.view.facts.length === 0 ? null : (
             <PaneSection>
@@ -97,7 +100,7 @@ const WhyEvidence = (props: WhyPanelProps): ReactNode => (
 )
 
 /** Who approves, the limit they hold and how much of the time is used. */
-const WhyApprover = (props: WhyPanelProps): ReactNode =>
+const WhyApprover = (props: WhyBodyProps): ReactNode =>
     props.view.approver === null ? null : (
         <PaneSection>
             <Heading level={4}>{props.words.approverLabel}</Heading>
