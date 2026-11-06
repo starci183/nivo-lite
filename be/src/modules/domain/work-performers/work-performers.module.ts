@@ -17,7 +17,6 @@ import { ConversationLeadsService } from "./conversation-leads.service"
 import { HandoffToolService } from "./handoff-tool.service"
 import { LeadHandoverService } from "./lead-handover.service"
 import { InboundStatusService } from "./inbound-status.service"
-import { LeadEnsureExecutorService } from "./lead-ensure-executor.service"
 import { LeadWriterService } from "./lead-writer.service"
 import { OutboundAccessService } from "./outbound-access.service"
 import { CustomerDeliveryService } from "./customer-delivery.service"
@@ -59,7 +58,6 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 PaymentInstructionsService,
                 HandoffLeadPerformerService,
                 LeadHandoverService,
-                LeadEnsureExecutorService,
                 ClassifyLeadPerformerService,
                 FollowUpPerformerService,
                 QuotePerformerService,

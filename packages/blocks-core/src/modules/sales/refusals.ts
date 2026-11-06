@@ -1,4 +1,5 @@
 import type { ActionResult } from "@nivo-lite/agent-sdk/block"
+import type { EngineResult } from "@nivo-lite/agent-sdk/entity/port"
 
 /** Why a Sales action refused, each with a message of the module. */
 export type SalesRefusal =
@@ -26,3 +27,7 @@ export const waitsForOwnerResult = (thresholdVnd: number): ActionResult => ({
     message: { key: "refusal_order_waits_owner" },
     data: { waiting: true, thresholdVnd },
 })
+
+/** A write the engine did not make, as a refusal: the record is gone, or its version moved since it was read. */
+export const writeRefusal = (result: Extract<EngineResult, { readonly ok: false }>): ActionResult =>
+    result.reason === "missing" ? refusedWith("missing") : CONFLICT

@@ -9,6 +9,9 @@ import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
 import { EntityEngineService, EntityPortsService, ListSourceService } from "@modules/domain/entity-engine"
 import type { RunIn, ScopedTx } from "@modules/domain/entity-engine"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
+import { MemberGrantsService } from "@modules/domain/member-grants"
+import type { MemberGrant } from "@modules/domain/member-grants"
+import { MemberLookupService } from "@modules/domain/workspace-members"
 import type { InstallationRecord } from "@modules/domain/module-installations"
 import { DoorPortsService } from "./door-ports.service"
 import type { DoorRun } from "./door-ports.service"
@@ -38,6 +41,8 @@ const build = async () => {
     const lists = mock<ListSourceService>()
     const tx = mock<ScopedTx>()
     const installations = mock<InstallationRecordsService>()
+    const seats = mock<MemberLookupService>()
+    const grants = mock<MemberGrantsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             DoorPortsService,
@@ -46,11 +51,13 @@ const build = async () => {
             { provide: EntityEngineService, useValue: engine },
             { provide: EntityPortsService, useValue: ports },
             { provide: ListSourceService, useValue: lists },
+            { provide: MemberLookupService, useValue: seats },
+            { provide: MemberGrantsService, useValue: grants },
         ],
     }).compile()
     const runIn: RunIn = (use) => use(tx)
     const run: DoorRun = { workspaceId: "ws-1", runIn, name: "sales.leads", dataKind: "lead" }
-    return { service: moduleRef.get(DoorPortsService), ports, lists, tx, runIn, run, installations }
+    return { service: moduleRef.get(DoorPortsService), ports, lists, tx, runIn, run, installations, seats, grants }
 }
 
 type PortId = `${string}.${string}`
@@ -151,6 +158,72 @@ const isListSource = (
     readonly counts: (shape: ListShape, by: string, query: typeof QUERY) => Promise<unknown>
 } => typeof value === "object" && value !== null && "page" in value && "counts" in value
 
+describe("DoorPortsService members", () => {
+    it("gives the members port the active seat of the run's workspace", async () => {
+        const { service, seats, run } = await build()
+        seats.activeSeatById.mockResolvedValue({ displayName: "Lan", isManager: true })
+        const directory = service.providerFor(run).implementationOf(portOf("platform.members"))
+
+        const seat = await (isMemberDirectory(directory)
+            ? directory.get("m-1")
+            : Promise.reject(new Error("no directory")))
+
+        expect(seat).toEqual({ displayName: "Lan", isManager: true })
+        expect(seats.activeSeatById).toHaveBeenCalledWith("ws-1", "m-1")
+    })
+})
+
 /** Narrows the implementation of the installation port to its one method. */
 const isInstallationSource = (value: unknown): value is { readonly current: () => Promise<unknown> } =>
     typeof value === "object" && value !== null && "current" in value
+
+/** Narrows the implementation of the members port to its one method. */
+const isMemberDirectory = (value: unknown): value is { readonly get: (memberId: string) => Promise<unknown> } =>
+    typeof value === "object" && value !== null && "get" in value
+
+describe("DoorPortsService rights", () => {
+    const holds = async (
+        seat: { readonly displayName: string; readonly isManager: boolean } | null,
+        granted: ReadonlyArray<string>,
+        memberId: string | null,
+    ): Promise<unknown> => {
+        const { service, seats, grants, run } = await build()
+        seats.activeSeatById.mockResolvedValue(seat)
+        grants.forAction.mockResolvedValue(granted.map((id) => mock<MemberGrant>({ member_id: id })))
+        const directory = service.providerFor(run).implementationOf(portOf("platform.rights"))
+        return isRightsDirectory(directory)
+            ? directory.holds(memberId, "sales.approve")
+            : Promise.reject(new Error("no directory"))
+    }
+
+    it("holds every permission for an owner or a manager without looking at the grants", async () => {
+        const { service, seats, grants, run } = await build()
+        seats.activeSeatById.mockResolvedValue({ displayName: "Lan", isManager: true })
+        const directory = service.providerFor(run).implementationOf(portOf("platform.rights"))
+
+        const answer = await (isRightsDirectory(directory)
+            ? directory.holds("m-1", "sales.approve")
+            : Promise.reject(new Error("no directory")))
+
+        expect(answer).toBe(true)
+        expect(seats.activeSeatById).toHaveBeenCalledWith("ws-1", "m-1")
+        expect(grants.forAction).not.toHaveBeenCalled()
+    })
+
+    it("holds a permission for a staff member the workspace granted it to, and for no other", async () => {
+        const staff = { displayName: "Ha", isManager: false }
+        expect(await holds(staff, ["m-1"], "m-1")).toBe(true)
+        expect(await holds(staff, ["m-2"], "m-1")).toBe(false)
+    })
+
+    it("holds nothing for a seat the workspace has not, and nothing for the agent", async () => {
+        expect(await holds(null, ["m-1"], "m-1")).toBe(false)
+        expect(await holds({ displayName: "Lan", isManager: true }, [], null)).toBe(false)
+    })
+})
+
+/** Narrows the implementation of the rights port to its one method. */
+const isRightsDirectory = (
+    value: unknown,
+): value is { readonly holds: (memberId: string | null, permission: string) => Promise<unknown> } =>
+    typeof value === "object" && value !== null && "holds" in value

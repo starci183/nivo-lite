@@ -4,8 +4,9 @@ import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { LEAD_STAGES, MAX_REASON_CHARS, planMove } from "../../../rules/sales/stage"
 import { SALES_MANAGE } from "../constants"
-import { salesLeadStore } from "../ports"
-import { CONFLICT, refusedWith } from "../refusals"
+import { salesLeads } from "../ports"
+import { refusedWith, writeRefusal } from "../refusals"
+import { leadRowOf } from "../sales-records"
 
 const input: z.ZodObject<{
     id: z.ZodString
@@ -27,10 +28,11 @@ export const moveStageAction: ActionDefinition = defineAction({
     permission: SALES_MANAGE,
     label: { key: "action_move_stage" },
     input,
-    ports: { leads: salesLeadStore },
+    ports: { leads: salesLeads },
     transactional: true,
     run: async ({ leads }, { id, to, reason }) => {
-        const lead = await leads.get(id)
+        const record = await leads.get(id)
+        const lead = record === null ? null : leadRowOf(record)
         if (lead === null) return refusedWith("missing")
         const plan = planMove(lead.stage, to, reason ?? null)
         if (plan.kind === "refused") return refusedWith(plan.reason)
@@ -38,8 +40,7 @@ export const moveStageAction: ActionDefinition = defineAction({
             stage: plan.stage,
             closedReason: plan.closedReason,
         })
-        if (written.ok) return { ok: true, data: { stage: written.row.stage } }
-        return written.reason === "missing" ? refusedWith("missing") : CONFLICT
+        return written.ok ? { ok: true, data: { stage: plan.stage } } : writeRefusal(written)
     },
     refreshes: ["sales.leads", "sales.lead-counts", "sales.lead"],
     optimistic: true,

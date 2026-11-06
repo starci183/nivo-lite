@@ -1,0 +1,134 @@
+import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
+import { z } from "zod"
+import { MAX_BODY, MAX_ID, MAX_LINE } from "../../bounds"
+import { ORDER_STATUSES } from "../../rules/sales/order-status"
+import type { OrderBrief } from "../../rules/sales/lead-orders"
+import { LEAD_STAGES, MAX_REASON_CHARS } from "../../rules/sales/stage"
+import type { LeadRow, OrderRow } from "./sales.types"
+
+/** The longest ISO 8601 text the engine writes for a time. */
+const MAX_TIME = 40
+
+/** The longest order total, VND. */
+const MAX_VND = 1_000_000_000_000
+
+/** A value or null, read as null when the engine left the key out. */
+const orNull = <T extends z.ZodType>(schema: T) =>
+    schema
+        .nullable()
+        .optional()
+        .transform((value) => value ?? null)
+
+const nullableText = (max: number) => orNull(z.string().max(max))
+
+/** The declared fields of a `sales.lead` record. */
+const leadData = z.object({
+    contactName: z.string().max(MAX_LINE),
+    company: nullableText(MAX_LINE),
+    channel: z.string().max(MAX_ID),
+    need: nullableText(MAX_BODY),
+    stage: z.enum(LEAD_STAGES),
+    phone: nullableText(MAX_LINE),
+    email: nullableText(MAX_LINE),
+    contextSummary: nullableText(MAX_BODY),
+    closedReason: nullableText(MAX_REASON_CHARS),
+})
+
+/** The declared fields of a `sales.order` record. */
+const orderData = z.object({
+    orderNo: z.string().max(MAX_ID),
+    leadId: nullableText(MAX_ID),
+    items: z.string().max(MAX_BODY),
+    note: z.string().max(MAX_BODY),
+    amountVnd: orNull(z.number().int().min(0).max(MAX_VND)),
+    status: z.enum(ORDER_STATUSES),
+    confirmedBy: nullableText(MAX_LINE),
+    confirmedAt: nullableText(MAX_TIME),
+    shippedAt: nullableText(MAX_TIME),
+    carrier: nullableText(MAX_LINE),
+    trackingCode: nullableText(MAX_LINE),
+})
+
+/** The fields of an order a customer's detail adds up. */
+const orderBriefData = z.object({
+    orderNo: z.string().max(MAX_ID),
+    status: z.enum(ORDER_STATUSES),
+    amountVnd: orNull(z.number().int().min(0).max(MAX_VND)),
+})
+
+/** The name a customer is shown under. */
+const leadNameData = z.object({ contactName: z.string().max(MAX_LINE) })
+
+/** The fields a query for lead rows selects. */
+export const LEAD_FIELDS: ReadonlyArray<string> = [
+    "contactName",
+    "company",
+    "channel",
+    "need",
+    "stage",
+    "phone",
+    "email",
+    "contextSummary",
+    "closedReason",
+]
+
+/** The fields a query for order rows selects. */
+export const ORDER_FIELDS: ReadonlyArray<string> = [
+    "orderNo",
+    "leadId",
+    "items",
+    "note",
+    "amountVnd",
+    "status",
+    "confirmedBy",
+    "confirmedAt",
+    "shippedAt",
+    "carrier",
+    "trackingCode",
+]
+
+/** The fields a query for the orders a customer's detail adds up selects. */
+export const ORDER_BRIEF_FIELDS: ReadonlyArray<string> = ["orderNo", "status", "amountVnd"]
+
+/** The fields a query for a customer's name selects. */
+export const LEAD_NAME_FIELDS: ReadonlyArray<string> = ["contactName"]
+
+/** The lead a record holds; null when its fields are not those of a lead. */
+export const leadRowOf = (record: RecordRow): LeadRow | null => {
+    const parsed = leadData.safeParse(record.data)
+    return parsed.success
+        ? {
+              id: record.id,
+              version: record.version,
+              createdAt: record.createdAt,
+              updatedAt: record.updatedAt,
+              ...parsed.data,
+          }
+        : null
+}
+
+/** The order a record holds; null when its fields are not those of an order. */
+export const orderRowOf = (record: RecordRow): OrderRow | null => {
+    const parsed = orderData.safeParse(record.data)
+    return parsed.success
+        ? {
+              id: record.id,
+              version: record.version,
+              createdAt: record.createdAt,
+              updatedAt: record.updatedAt,
+              ...parsed.data,
+          }
+        : null
+}
+
+/** The order a record holds as far as a customer's detail needs it; null when its fields are not those of an order. */
+export const orderBriefOf = (record: RecordRow): OrderBrief | null => {
+    const parsed = orderBriefData.safeParse(record.data)
+    return parsed.success ? { ...parsed.data, createdAt: record.createdAt } : null
+}
+
+/** The name a lead record is shown under; null when its fields are not those of a lead. */
+export const leadNameOf = (data: Readonly<Record<string, unknown>>): string | null => {
+    const parsed = leadNameData.safeParse(data)
+    return parsed.success ? parsed.data.contactName : null
+}

@@ -155,13 +155,8 @@ describe("flow F entity declarations", () => {
     })
 
     it("parses the declared jsonb shapes", () => {
-        const items = entityNamed("sales.order")?.fields["items"]?.shape
         const names = entityNamed("payment.claim")?.fields["names"]?.shape
         const calls = entityNamed("agent.turn")?.fields["toolCalls"]?.shape
-        expect(items?.parse({ lines: [{ name: "Tea", quantity: 2, unitPriceVnd: 120_000 }] })).toEqual({
-            lines: [{ name: "Tea", quantity: 2, unitPriceVnd: 120_000 }],
-        })
-        expect(items?.safeParse({ lines: [{ name: "x", quantity: -1, unitPriceVnd: 0 }] }).success).toBe(false)
         expect(names?.parse({ values: ["Dinh"] })).toEqual({ values: ["Dinh"] })
         expect(calls?.parse({ calls: [{ name: "chat.send", argsJson: "{}" }] })).toEqual({
             calls: [{ name: "chat.send", argsJson: "{}" }],

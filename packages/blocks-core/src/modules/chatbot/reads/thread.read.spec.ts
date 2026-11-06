@@ -1,8 +1,9 @@
-import { STAFF_CONTEXT, memoryProvider, memoryWorld } from "../fixtures/chatbot.memory"
+import { WAITING_ROW } from "../fixtures/chatbot.fixtures"
+import { STAFF_CONTEXT, memoryProvider, memoryWorld, recordOfThread } from "../fixtures/chatbot.memory"
 import { THREAD } from "./thread.read"
 
 describe("the chatbot.thread read", () => {
-    it("shows the conversation with the facts of its customer", async () => {
+    it("shows the conversation with the facts of the customer it is linked to", async () => {
         const result = await THREAD.execute?.(memoryProvider(memoryWorld()), { id: "c1" }, STAFF_CONTEXT)
         expect(result).toEqual({
             ok: true,
@@ -26,12 +27,21 @@ describe("the chatbot.thread read", () => {
         expect(result).toMatchObject({ ok: true, data: { handledBy: "Thu Ha Le", channelName: "Telegram", stage: "" } })
     })
 
-    it("answers nothing for a conversation the workspace does not have, and for a customer not yet captured", async () => {
+    it("answers nothing for a conversation the workspace does not have, and empty facts for a customer not yet captured", async () => {
         const provider = memoryProvider(memoryWorld())
         expect(await THREAD.execute?.(provider, { id: "missing" }, STAFF_CONTEXT)).toEqual({ ok: true, data: null })
         expect(await THREAD.execute?.(provider, { id: "c3" }, STAFF_CONTEXT)).toMatchObject({
             ok: true,
             data: { stage: "", need: "", phone: "" },
+        })
+    })
+
+    it("answers nothing for a record whose fields are not a conversation's", async () => {
+        const world = memoryWorld()
+        world.conversations.push({ ...recordOfThread(WAITING_ROW), id: "bad", data: { name: 5 } })
+        expect(await THREAD.execute?.(memoryProvider(world), { id: "bad" }, STAFF_CONTEXT)).toEqual({
+            ok: true,
+            data: null,
         })
     })
 

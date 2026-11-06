@@ -1,7 +1,15 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { McpError, McpErrorCode } from "@modules/integrations/mcp"
-import { failureCodeOf, isTimeout, refusalOf, roleIn, usable, toolVisibleTo } from "./connector-call.policy"
+import {
+    domainNameIn,
+    failureCodeOf,
+    isTimeout,
+    refusalOf,
+    roleIn,
+    usable,
+    toolVisibleTo,
+} from "./connector-call.policy"
 import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error"
 import type { GatewayCaller, GatewayToolSpec, WorkspaceConnector } from "./mcp-gateway.contracts"
 
@@ -10,6 +18,7 @@ interface Subject {
     readonly usable: typeof usable
     readonly toolVisibleTo: typeof toolVisibleTo
     readonly roleIn: typeof roleIn
+    readonly domainNameIn: typeof domainNameIn
     readonly isTimeout: typeof isTimeout
     readonly refusalOf: typeof refusalOf
     readonly failureCodeOf: typeof failureCodeOf
@@ -23,7 +32,7 @@ const build = async (): Promise<Subject> => {
         providers: [
             {
                 provide: SUBJECT,
-                useValue: { usable, toolVisibleTo, roleIn, isTimeout, refusalOf, failureCodeOf },
+                useValue: { usable, toolVisibleTo, roleIn, domainNameIn, isTimeout, refusalOf, failureCodeOf },
             },
         ],
     }).compile()
@@ -147,5 +156,32 @@ describe("failureCodeOf", () => {
             McpGatewayErrorCode.UnknownTool,
         )
         expect(policy.failureCodeOf(new Error("down"))).toBe("internal")
+    })
+})
+
+describe("domainNameIn", () => {
+    const sender = (extra: Partial<GatewayToolSpec> = {}): GatewayToolSpec =>
+        specOf({ name: "send", domain: "chat.send", ...extra })
+
+    it("answers the full name of the first usable tool of an enabled connector declaring the domain", async () => {
+        const policy = await build()
+        const chat = connectorOf({
+            manifest: { ...connectorOf().manifest, key: "zalo", name: "Zalo", tools: [sender()] },
+        })
+
+        expect(policy.domainNameIn([connectorOf(), chat], "chat.send")).toBe("zalo.send")
+    })
+
+    it("skips a disabled connector and an unapproved tool, and answers null for the rest", async () => {
+        const policy = await build()
+        const manifest = { ...connectorOf().manifest, key: "zalo", name: "Zalo", tools: [sender()] }
+
+        expect(
+            policy.domainNameIn(
+                [connectorOf({ manifest, status: "disabled" }), connectorOf({ manifest, approvedTools: new Set() })],
+                "chat.send",
+            ),
+        ).toBeNull()
+        expect(policy.domainNameIn([connectorOf()], "chat.send")).toBeNull()
     })
 })

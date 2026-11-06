@@ -1,17 +1,19 @@
 import type { ActionResult } from "@nivo-lite/agent-sdk/block"
+import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import type { RunContext } from "@nivo-lite/agent-sdk/port"
 import type { SpecLocale } from "@nivo-lite/agent-sdk/schema"
 import { handlingChangeOf, mayHandle, noticeOf, patchAfterHandling, patchAfterLine } from "../../../rules/chatbot"
+import type { MemberDirectory } from "../../platform/platform.types"
+import { threadRowOf } from "../chatbot-records"
 import { chatbotCopy } from "../copy"
-import type { ConversationStore, MemberDirectory, MessageStore } from "../ports"
-import { refusal } from "./refusal"
+import { refusal, writeRefusal } from "./refusal"
 
 /** The ports a take-over or a release runs on. */
 export interface HandlingPorts {
-    /** The conversations. */
-    readonly conversations: ConversationStore
-    /** The lines. */
-    readonly messages: MessageStore
+    /** The conversations (`chat.conversation`). */
+    readonly conversations: EntityApi
+    /** The lines (`chat.message`). */
+    readonly messages: EntityApi
     /** The members. */
     readonly members: MemberDirectory
 }
@@ -37,7 +39,8 @@ export const changeHandling = async (
 ): Promise<ActionResult> => {
     const member = context.memberId === null ? null : await ports.members.get(context.memberId)
     if (member === null) return refusal("forbidden", "reply_forbidden")
-    const conversation = await ports.conversations.get(input.id)
+    const record = await ports.conversations.get(input.id)
+    const conversation = record === null ? null : threadRowOf(record)
     if (conversation === null) return refusal("refused", "reply_not_found")
     if (!mayHandle(member, conversation.handledBy)) return refusal("forbidden", "reply_held_by_other")
     const change = handlingChangeOf(conversation.handledBy, takeOver, member)
@@ -54,15 +57,19 @@ export const changeHandling = async (
         ...line,
         handledAt: change.handledBy === null ? null : at,
     })
-    if (!updated.ok) return refusal("conflict", "handling_conflict")
-    await ports.messages.insert({
-        conversationId: conversation.id,
-        role: "system",
-        text: notice,
-        sentAt: at,
-        authorKind: null,
-        authorName: null,
-        authorUserId: null,
-    })
+    if (!updated.ok) return writeRefusal(updated)
+    const stored = await ports.messages.insert(
+        {
+            conversationId: conversation.id,
+            role: "system",
+            text: notice,
+            sentAt: at,
+            authorKind: null,
+            authorName: null,
+            authorUserId: null,
+        },
+        { conversation: conversation.id },
+    )
+    if (!stored.ok) return writeRefusal(stored)
     return { ok: true, data: { handledBy: change.handledBy } }
 }

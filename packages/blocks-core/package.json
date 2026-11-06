@@ -16,6 +16,14 @@
       "types": "./dist/modules/index.d.ts",
       "default": "./dist/modules/index.js"
     },
+    "./modules/sales": {
+      "types": "./dist/modules/sales/index.d.ts",
+      "default": "./dist/modules/sales/index.js"
+    },
+    "./rules/sales": {
+      "types": "./dist/rules/sales/index.d.ts",
+      "default": "./dist/rules/sales/index.js"
+    },
     "./messages/vi.json": "./dist/esm/messages/vi.json",
     "./messages/en.json": "./dist/esm/messages/en.json",
     "./fixtures": {

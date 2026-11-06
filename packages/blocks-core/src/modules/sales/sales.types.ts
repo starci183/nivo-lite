@@ -6,12 +6,12 @@ export interface LeadRow {
     readonly id: string
     /** The customer's name. */
     readonly contactName: string
-    /** The company, empty when unknown. */
-    readonly company: string
+    /** The company, or null when unknown. */
+    readonly company: string | null
     /** The channel the customer came through. */
     readonly channel: string
-    /** What the customer needs. */
-    readonly need: string
+    /** What the customer needs, or null. */
+    readonly need: string | null
     /** Where the deal stands. */
     readonly stage: LeadStage
     /** The normalised phone, or null. */
@@ -62,36 +62,6 @@ export interface OrderRow {
     readonly createdAt: string
     /** When the order last changed, ISO text. */
     readonly updatedAt: string
-}
-
-/** What an update of a lead may change. */
-export interface LeadPatch {
-    /** The new stage. */
-    readonly stage?: LeadStage
-    /** The reason the deal was closed, or null to clear it. */
-    readonly closedReason?: string | null
-}
-
-/** What an update of an order may change. */
-export interface OrderPatch {
-    /** The new status. */
-    readonly status?: OrderStatus
-    /** Who confirmed the order. */
-    readonly confirmedBy?: string | null
-    /** When the order was confirmed, ISO text. */
-    readonly confirmedAt?: string | null
-}
-
-/** How a store answers an update: the row as written, or why nothing was written. */
-export type StoreResult<T> =
-    { readonly ok: true; readonly row: T } | { readonly ok: false; readonly reason: "missing" | "conflict" }
-
-/** A page of the orders that wait for the owner. */
-export interface WaitingPage {
-    /** The oldest waiting orders, at most the limit asked. */
-    readonly rows: ReadonlyArray<OrderRow>
-    /** How many orders wait in all. */
-    readonly total: number
 }
 
 /** The detail of a lead, flat so a detail block can name each fact by a path. */

@@ -16,3 +16,14 @@ export interface OwnerMemberRef {
 
 /** A named member, or null when the lookup finds none. */
 export type OptionalNamedMember = NamedMember | null
+
+/** What a module action needs to know of the seat that acts. */
+export interface SeatFacts {
+    /** The name the member shows. */
+    readonly displayName: string
+    /** Whether the member is an owner or a manager. */
+    readonly isManager: boolean
+}
+
+/** The facts of a seat, or null when the lookup finds none. */
+export type OptionalSeatFacts = SeatFacts | null

@@ -21,7 +21,6 @@ export const WAITING_ROW: ThreadRow = {
     lastAt: "2026-11-04T01:09:00.000Z",
     unanswered: true,
     messageCount: 5,
-    leadId: "l1",
 }
 
 /** The conversation a person holds. */
@@ -40,7 +39,6 @@ export const HANDLED_ROW: ThreadRow = {
     lastAt: "2026-11-04T00:45:00.000Z",
     unanswered: false,
     messageCount: 9,
-    leadId: "l2",
 }
 
 const AI_ROWS: ReadonlyArray<ThreadRow> = [
@@ -59,7 +57,6 @@ const AI_ROWS: ReadonlyArray<ThreadRow> = [
         lastAt: "2026-11-03T14:02:40.000Z",
         unanswered: false,
         messageCount: 4,
-        leadId: null,
     },
     {
         id: "c4",
@@ -76,7 +73,6 @@ const AI_ROWS: ReadonlyArray<ThreadRow> = [
         lastAt: AT,
         unanswered: false,
         messageCount: 1,
-        leadId: null,
     },
 ]
 

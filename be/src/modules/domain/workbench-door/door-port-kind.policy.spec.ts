@@ -28,6 +28,8 @@ describe("portKindOf", () => {
         ["sales.leads-list", "list"],
         ["inventory.items-list", "list"],
         ["platform.installation", "installation"],
+        ["platform.members", "members"],
+        ["platform.rights", "rights"],
         ["engine.door", "door"],
         ["sales.pricing", "none"],
         ["engine.entity.", "none"],

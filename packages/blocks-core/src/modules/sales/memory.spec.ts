@@ -1,8 +1,11 @@
 import type { ListFilter, ListQuery, ListShape, ListSource } from "@nivo-lite/agent-sdk/block"
+import type { EntityApi, EntityQuery } from "@nivo-lite/agent-sdk/entity/port"
 import { definePort, portsOf } from "@nivo-lite/agent-sdk/port"
+import { q } from "@nivo-lite/agent-sdk/query"
+import { rightsPort } from "../platform/ports"
 import { ORDER_WAITING, sampleState, SAMPLE_NOW } from "./fixtures/sales.data"
 import { memoryProvider } from "./memory"
-import { salesLeadStore, salesLeadsList, salesOrderStore, salesOrdersList, salesRights } from "./ports"
+import { salesLeads, salesLeadsList, salesOrders, salesOrdersList } from "./ports"
 import { LEADS_LIST } from "./reads/leads.read"
 import { ORDERS_LIST } from "./reads/orders.read"
 import type { LeadRow, OrderRow } from "./sales.types"
@@ -114,49 +117,170 @@ describe("the in-memory list source", () => {
     })
 })
 
-describe("the in-memory stores", () => {
-    it("reads and updates a lead under its version, and bumps the version", async () => {
-        const state = sampleState([])
-        const { leads } = portsOf(memoryProvider(state), { leads: salesLeadStore })
-        expect((await leads.get("lead-1"))?.contactName).toBe("Nguyen Van An")
+const ORDER_ROWS: EntityQuery = {
+    select: ["orderNo", "status", "amountVnd", "leadId"],
+    order: [
+        ["createdAt", "asc"],
+        ["id", "asc"],
+    ],
+    page: { size: 10 },
+}
+
+const ordersOf = (state = sampleState([])): EntityApi => portsOf(memoryProvider(state), { orders: salesOrders }).orders
+
+describe("the in-memory lead port", () => {
+    it("reads a lead as the record the engine holds", async () => {
+        const { leads } = portsOf(memoryProvider(sampleState([])), { leads: salesLeads })
+        expect(await leads.get("lead-1")).toMatchObject({
+            id: "lead-1",
+            version: "1",
+            updatedAt: "2026-11-04T08:00:00.000Z",
+            data: { contactName: "Nguyen Van An", stage: "new", closedReason: null },
+        })
         expect(await leads.get("lead-404")).toBeNull()
-        const written = await leads.update("lead-1", "1", { stage: "qualified" })
-        expect(written).toMatchObject({ ok: true, row: { stage: "qualified", version: "2", updatedAt: SAMPLE_NOW } })
-        expect(state.leads.find((lead) => lead.id === "lead-1")?.stage).toBe("qualified")
-        expect(await leads.update("lead-1", "1", { stage: "lost" })).toEqual({ ok: false, reason: "conflict" })
+    })
+
+    it("updates a lead under its version, bumps the version and stamps the clock", async () => {
+        const state = sampleState([])
+        const { leads } = portsOf(memoryProvider(state), { leads: salesLeads })
+        expect(await leads.update("lead-1", "1", { stage: "qualified" })).toMatchObject({
+            ok: true,
+            row: { version: "2", updatedAt: SAMPLE_NOW, data: { stage: "qualified" } },
+        })
+        expect(state.leads.find((lead) => lead.id === "lead-1")).toMatchObject({ stage: "qualified", version: "2" })
+        expect(await leads.update("lead-1", "1", { stage: "lost" })).toEqual({ ok: false, reason: "stale" })
         expect(await leads.update("lead-404", "1", { stage: "lost" })).toEqual({ ok: false, reason: "missing" })
     })
 
-    it("names the leads that exist", async () => {
-        const { leads } = portsOf(memoryProvider(sampleState([])), { leads: salesLeadStore })
-        expect(await leads.names(["lead-1", "lead-9"])).toEqual({ "lead-1": "Nguyen Van An" })
+    it("refuses a write that makes the record no lead", async () => {
+        const { leads } = portsOf(memoryProvider(sampleState([])), { leads: salesLeads })
+        expect(await leads.update("lead-1", "1", { stage: "contacted" })).toEqual({ ok: false, reason: "invalid" })
     })
 
-    it("lists the orders of a customer newest first and the orders that wait for the owner oldest first", async () => {
-        const { orders } = portsOf(memoryProvider(sampleState([])), { orders: salesOrderStore })
-        expect((await orders.ofLead("lead-4", 10)).map((order) => order.id)).toEqual(["order-1"])
-        expect(await orders.waiting(5_000_000, 10)).toMatchObject({ total: 1, rows: [{ id: "order-1" }] })
-        expect(await orders.waiting(300_000, 1)).toMatchObject({ total: 2 })
-        expect((await orders.get("order-2"))?.orderNo).toBe("DH-20261104-0002")
+    it("refuses the calls it does not run", async () => {
+        const { leads } = portsOf(memoryProvider(sampleState([])), { leads: salesLeads })
+        await expect(leads.insert({ contactName: "x" })).rejects.toThrow("does not run")
+    })
+
+    it("carries the selected fields only", async () => {
+        const { leads } = portsOf(memoryProvider(sampleState([])), { leads: salesLeads })
+        const page = await leads.list({
+            select: ["contactName"],
+            where: q.eq("stage", "new"),
+            order: [
+                ["updatedAt", "desc"],
+                ["id", "desc"],
+            ],
+            page: { size: 1 },
+        })
+        expect(Object.keys(page.rows[0]?.row.data ?? {})).toEqual(["contactName"])
+        expect(page.rows[0]?.joined).toEqual({})
+    })
+})
+
+describe("the in-memory order port", () => {
+    it("lists the orders of a customer newest first through the index the engine has", async () => {
+        const page = await ordersOf().list({
+            select: ["orderNo", "status", "amountVnd"],
+            where: q.eq("leadId", "lead-4"),
+            order: [
+                ["createdAt", "desc"],
+                ["id", "desc"],
+            ],
+            page: { size: 10 },
+        })
+        expect(page.rows.map((listed) => listed.row.id)).toEqual(["order-1"])
+        expect(page.next).toBeNull()
+    })
+
+    it("lists the orders that wait for the owner, oldest first, with the customer joined", async () => {
+        const page = await ordersOf().list({
+            ...ORDER_ROWS,
+            join: { lead: ["contactName"] },
+            where: q.and(q.eq("status", "draft"), q.or(q.isNull("amountVnd"), q.gte("amountVnd", 5_000_000))),
+        })
+        expect(page.rows.map((listed) => [listed.row.id, listed.joined["lead"]?.data["contactName"]])).toEqual([
+            ["order-1", "Pham Quoc Dung"],
+        ])
+    })
+
+    it("joins none for an order with no customer or whose customer is gone", async () => {
+        const state = sampleState([])
+        state.orders.push(
+            { ...ORDER_WAITING, id: "order-9", leadId: "lead-9", createdAt: "2026-12-01T00:00:00.000Z" },
+            { ...ORDER_WAITING, id: "order-8", leadId: null, createdAt: "2026-12-01T00:00:00.000Z" },
+        )
+        const page = await ordersOf(state).list({
+            ...ORDER_ROWS,
+            join: { lead: ["contactName"] },
+            where: q.eq("status", "draft"),
+        })
+        expect(page.rows.slice(-2).map((listed) => listed.joined["lead"])).toEqual([null, null])
+    })
+
+    it("pages by the cursor it hands out", async () => {
+        const orders = ordersOf()
+        const first = await orders.list({ ...ORDER_ROWS, page: { size: 2 } })
+        expect(first.rows).toHaveLength(2)
+        expect(first.next).toBe("2")
+        const rest = await orders.list({ ...ORDER_ROWS, page: { size: 10, after: first.next ?? "" } })
+        expect(rest.rows).toHaveLength(4)
+        expect(rest.next).toBeNull()
+    })
+
+    it("counts the orders a condition matches", async () => {
+        const waiting = q.and(q.eq("status", "draft"), q.or(q.isNull("amountVnd"), q.gte("amountVnd", 300_000)))
+        expect(
+            await ordersOf().aggregate({ where: waiting, measures: { count: { kind: "count" } }, limit: 1 }),
+        ).toEqual([{ groups: {}, measures: { count: 2 } }])
+    })
+
+    it("refuses a query the planner refuses, as the engine would", async () => {
+        await expect(
+            ordersOf().list({
+                ...ORDER_ROWS,
+                where: q.eq("note", "x"),
+                order: [
+                    ["note", "asc"],
+                    ["id", "asc"],
+                ],
+            }),
+        ).rejects.toThrow("The planner refuses the query")
+    })
+
+    it("refuses a condition it does not run", async () => {
+        await expect(ordersOf().list({ ...ORDER_ROWS, where: q.notNull("amountVnd") })).rejects.toThrow(
+            "does not run the condition",
+        )
+        await expect(
+            ordersOf().aggregate({
+                where: q.in("status", ["draft"]),
+                measures: { count: { kind: "count" } },
+                limit: 1,
+            }),
+        ).rejects.toThrow("does not run the condition")
+        await expect(
+            ordersOf().list({ ...ORDER_ROWS, where: q.and(q.eq("status", "draft"), q.notNull("amountVnd")) }),
+        ).rejects.toThrow("does not run the condition")
+    })
+
+    it("reads an order and updates it under its version", async () => {
+        const orders = ordersOf()
+        expect((await orders.get("order-2"))?.data["orderNo"]).toBe("DH-20261104-0002")
         expect(await orders.get("order-404")).toBeNull()
         expect(await orders.update("order-2", "1", { status: "cancelled" })).toMatchObject({ ok: true })
     })
+})
 
-    it("sorts a customer's orders by their creation", async () => {
-        const state = sampleState([])
-        state.orders.push({ ...ORDER_WAITING, id: "order-9", leadId: "lead-4", createdAt: "2026-11-05T01:00:00.000Z" })
-        const { orders } = portsOf(memoryProvider(state), { orders: salesOrderStore })
-        expect((await orders.ofLead("lead-4", 10)).map((order) => order.id)).toEqual(["order-9", "order-1"])
-    })
-
-    it("grants rights to the listed members only, never to the agent", async () => {
-        const { rights } = portsOf(memoryProvider(sampleState(["owner-1"])), { rights: salesRights })
+describe("the in-memory rights", () => {
+    it("grant rights to the listed members only, never to the agent", async () => {
+        const { rights } = portsOf(memoryProvider(sampleState(["owner-1"])), { rights: rightsPort })
         expect(await rights.holds("owner-1", "sales.approve")).toBe(true)
         expect(await rights.holds("staff-1", "sales.approve")).toBe(false)
         expect(await rights.holds(null, "sales.approve")).toBe(false)
     })
 
-    it("refuses a port it does not serve", () => {
+    it("refuse a port it does not serve", () => {
         const other = definePort<string>("sales.other")
         expect(() => portsOf(memoryProvider(sampleState([])), { other })).toThrow("PORT_UNPROVIDED")
     })
