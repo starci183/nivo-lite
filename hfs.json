@@ -760,6 +760,12 @@
         "objects": ["public.records_sales_order.records_sales_order_status_chk"],
         "reason": "the Sales move widens the status check of sales.order (failed_system joins the statuses): the planner replaces the check in place; nothing reads the constraint by name and no data is carried over (owner 2026-11-05 \"không care prod\")",
         "date": "2026-11-06"
+      },
+      {
+        "migration": "db/migrations/20261112001800_entity-engine-partitions.sql",
+        "objects": ["public.records_payment_transaction.records_payment_transaction_status_chk"],
+        "reason": "the Accounting resolve-unmatched-payment action adds other_income to the statuses of payment.transaction: the planner replaces the status check in place; nothing reads the constraint by name and no data is carried over (owner 2026-11-05 \"không care prod\")",
+        "date": "2026-11-07"
       }
     ]
   }
