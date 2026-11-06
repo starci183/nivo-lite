@@ -2,7 +2,7 @@ import { defineAction } from "@nivo-lite/agent-sdk/block"
 import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
-import { VAT_PERIODS, VOID_MODES } from "../../../rules/accounting/settings"
+import { REMATCH_DAYS_MAX, REMATCH_DAYS_MIN, VAT_PERIODS, VOID_MODES } from "../../../rules/accounting/settings"
 import { textOf } from "../messages/copy"
 import { saveWorkspaceSettings, workspaceSettings } from "../accounting-data"
 import { SETTINGS } from "../ports"
@@ -16,6 +16,7 @@ const input: z.ZodObject<{
     postUnmatched: typeof flag
     voidMode: z.ZodOptional<z.ZodNullable<z.ZodEnum<{ reversal: "reversal"; none: "none" }>>>
     vatPeriod: z.ZodOptional<z.ZodNullable<z.ZodEnum<{ monthly: "monthly"; quarterly: "quarterly" }>>>
+    rematchDays: z.ZodOptional<z.ZodNullable<z.ZodNumber>>
 }> = z.object({
     id: z.string().max(MAX_ID).optional(),
     postExpenses: flag,
@@ -23,6 +24,7 @@ const input: z.ZodObject<{
     postUnmatched: flag,
     voidMode: z.enum(VOID_MODES).nullable().optional(),
     vatPeriod: z.enum(VAT_PERIODS).nullable().optional(),
+    rematchDays: z.number().int().min(REMATCH_DAYS_MIN).max(REMATCH_DAYS_MAX).nullable().optional(),
 })
 
 /**
@@ -53,6 +55,7 @@ export const saveSettingsAction: ActionDefinition = defineAction({
             postUnmatched: given.postUnmatched ?? saved.postUnmatched,
             voidMode: given.voidMode ?? saved.voidMode,
             vatPeriod: given.vatPeriod ?? saved.vatPeriod,
+            rematchDays: given.rematchDays ?? saved.rematchDays,
         })
         return { ok: true }
     },

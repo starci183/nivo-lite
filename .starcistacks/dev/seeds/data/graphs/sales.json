@@ -15,7 +15,7 @@
       { "kind": "payment-account", "access": "read", "scope": "workspace", "fields": ["bankName", "bankCode", "accountNumber", "accountHolder"] }
     ],
     "tools": ["payment.instruction"],
-    "effects": ["order.record", "order.confirm", "channel.send", "work-item.raise"]
+    "effects": ["order.record", "order.confirm", "channel.send", "payment.rematch", "work-item.raise"]
   },
   "nodes": [
     {

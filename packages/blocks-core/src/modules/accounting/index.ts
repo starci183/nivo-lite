@@ -19,6 +19,7 @@ export { weeklyRead } from "./reads/weekly.read"
 export { bookProjectJob } from "./jobs/book-project.job"
 export { confirmNoticeJob } from "./jobs/confirm-notice.job"
 export { ledgerAppendJob } from "./jobs/ledger-append.job"
+export { rematchJob } from "./jobs/rematch.job"
 export { ACCOUNTING_JOBS } from "./accounting-jobs"
 export {
     ADJUSTMENTS,

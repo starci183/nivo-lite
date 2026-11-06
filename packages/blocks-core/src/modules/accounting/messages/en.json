@@ -176,5 +176,10 @@
   "picker_empty": "No order is waiting for payment.",
   "picker_cancel": "Cancel",
   "other_income_title": "Record this as other income?",
-  "other_income_body": "The payment is booked as other income and is not tied to any order."
+  "other_income_body": "The payment is booked as other income and is not tied to any order.",
+  "settings_rematch": "Days to re-match earlier credits",
+  "settings_rematch_hint": "When a payment code is sent to a customer, credits that arrived within this many days and are still unmatched are checked against that code.",
+  "rematch_wrong_amount": "A credit of {amount} VND ({payer}) names order {orderNo} but the order is due {due} VND. A partial or over payment is not matched by itself: please look and decide.",
+  "rematch_ambiguous": "{count} credits name order {orderNo} with the amount of {amount} VND. None is matched by itself: please choose the one that belongs to this order.",
+  "rematch_unknown_payer": "sender unknown"
 }

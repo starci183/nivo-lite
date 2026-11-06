@@ -10,6 +10,7 @@ describe("MODULE_JOBS", () => {
             "accounting.ledger-append",
             "accounting.book-project",
             "payment.confirm-notice",
+            "payment.rematch",
         ])
     })
 

@@ -330,6 +330,16 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "rematchDays",
+              "label": {
+                "key": "settings_rematch"
+              },
+              "hint": {
+                "key": "settings_rematch_hint"
+              },
+              "kind": "number"
             }
           ]
         },
