@@ -10,8 +10,7 @@ interface WorkbenchActionData {
 
 /** The variables of the generic action operation: the action name and its flat input, as JSON text. */
 interface WorkbenchActionVariables {
-    readonly name: string
-    readonly input: string
+    readonly input: { readonly name: string; readonly input: string }
 }
 
 /**
@@ -19,8 +18,8 @@ interface WorkbenchActionVariables {
  * viewer rights. Hand-written and typed here, like `query-workbench-read.ts`; the schema snapshot holds `workbenchAction`.
  */
 const mutation1: TypedDocumentNode<WorkbenchActionData, WorkbenchActionVariables> = gql`
-    mutation WorkbenchAction($name: String!, $input: String!) {
-        workbenchAction(name: $name, input: $input) {
+    mutation WorkbenchAction($input: WorkbenchActionInput!) {
+        workbenchAction(input: $input) {
             data
         }
     }
@@ -41,5 +40,5 @@ export const mutateWorkbenchAction = async ({
     signal,
 }: MutateWorkbenchActionParams): Promise<ApolloClient.MutateResult<WorkbenchActionData>> => {
     const apollo = createAuthApolloClient({ signal })
-    return apollo.mutate({ mutation: mutation1, variables: { name, input: JSON.stringify(input) } })
+    return apollo.mutate({ mutation: mutation1, variables: { input: { name, input: JSON.stringify(input) } } })
 }
