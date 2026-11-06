@@ -19,6 +19,10 @@ describe("sales.figures", () => {
             closedCount: 3,
             closedValueVnd: 6_100_000,
             conversion: 1,
+            openHint: { key: "fig_open_hint" },
+            proposalHint: { key: "fig_proposal_hint", values: { count: 2 } },
+            closedHint: { key: "fig_closed_hint", values: { amount: 6 } },
+            conversionHint: { key: "fig_conversion_hint" },
         })
     })
 

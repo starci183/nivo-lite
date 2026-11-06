@@ -13,6 +13,10 @@ describe("the sales settings", () => {
             draftWithoutTotalNeedsApproval: true,
             closedDealsCanFlip: true,
             reopenNeedsApproval: true,
+            maxDiscountPct: 10,
+            remindAfterDays: 3,
+            autoWon: true,
+            notifyAccounting: true,
         })
         expect(DEFAULT_THRESHOLD_VND).toBe(5_000_000)
     })

@@ -367,7 +367,28 @@ describe("sales.save-settings", () => {
             draftWithoutTotalNeedsApproval: false,
             closedDealsCanFlip: false,
             reopenNeedsApproval: true,
+            maxDiscountPct: 10,
+            remindAfterDays: 3,
+            autoWon: true,
+            notifyAccounting: true,
         })
+    })
+
+    it("saves the new rules of the quote, the reminder, the deal and the hand-over", async () => {
+        const state = sampleState([])
+        await run(
+            saveSettingsAction,
+            { maxDiscountPct: 15, remindAfterDays: 5, autoWon: false, notifyAccounting: false },
+            state,
+        )
+        expect(state.settings).toMatchObject({
+            maxDiscountPct: 15,
+            remindAfterDays: 5,
+            autoWon: false,
+            notifyAccounting: false,
+        })
+        expect(await run(saveSettingsAction, { maxDiscountPct: 101 }, state)).toMatchObject({ reason: "invalid" })
+        expect(await run(saveSettingsAction, { remindAfterDays: 0 }, state)).toMatchObject({ reason: "invalid" })
     })
 
     it("takes effect on the next confirmation", async () => {
