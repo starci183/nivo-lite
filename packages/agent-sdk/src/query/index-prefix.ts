@@ -1,4 +1,4 @@
-import type { EntityDefinition, IndexDef, IndexPart } from "../entity/entity.types"
+import type { ConstraintDef, EntityDefinition, IndexDef, IndexPart } from "../entity/entity.types"
 import type { FilterExpr, OrderBy } from "./query.types"
 
 interface IndexColumn {
@@ -56,13 +56,25 @@ const servesPrefix = (index: IndexDef, equality: ReadonlyArray<string>, order: O
     )
 }
 
+/** The index behind a declared unique constraint: its fields, then the id. A partial unique constraint stands for no index (its predicate may not hold). */
+const uniqueIndexOf = (constraint: ConstraintDef): IndexDef | null =>
+    constraint.kind === "unique" && constraint.where === undefined
+        ? { name: constraint.name, on: [...constraint.on, "id"] }
+        : null
+
+/** The indexes an entity is served by: the declared ones, and the unique index behind each unconditional unique constraint. */
+const servingIndexesOf = (entity: EntityDefinition): ReadonlyArray<IndexDef> => [
+    ...(entity.indexes ?? []),
+    ...(entity.constraints ?? []).flatMap((constraint) => uniqueIndexOf(constraint) ?? []),
+]
+
 /**
- * Whether a list query is served by a declared index: (workspace, the equality-filter fields, the order fields) must be a prefix of
+ * Whether a list query is served by a declared index or by the unique index behind a declared unique constraint: (workspace, the equality-filter fields, the order fields) must be a prefix of
  * the `on` of one declared btree index, the workspace leading every index implicitly (plan 2.11, 11). A field both pinned and
  * ordered counts once, as pinned.
  */
 export const isIndexed = (entity: EntityDefinition, where: FilterExpr | undefined, order: OrderBy): boolean => {
     const equality = [...new Set(equalityFieldsOf(where))]
     const rest = order.filter(([field]) => !equality.includes(field))
-    return (entity.indexes ?? []).some((index) => servesPrefix(index, equality, rest))
+    return servingIndexesOf(entity).some((index) => servesPrefix(index, equality, rest))
 }
