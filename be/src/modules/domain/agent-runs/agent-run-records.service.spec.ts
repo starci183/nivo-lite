@@ -108,7 +108,7 @@ describe("AgentRunRecordsService writes", () => {
         expect(mutations.mutate).toHaveBeenNthCalledWith(
             2,
             tx,
-            { op: "insert", entity: "agent.run-step", values: { ordinal: 1 }, links: { run: "run-1" } },
+            { op: "insert", entity: "agent.run-step", values: { ordinal: 1, runId: "run-1" }, links: { run: "run-1" } },
             "job",
         )
     })

@@ -108,7 +108,7 @@ export const KILL_CASES: ReadonlyArray<FailureCase> = [
         {
             steps: ["turn:done", "door:done", "tool:failed"],
             effects: { door: 1 },
-            runStatus: "dead",
+            runStatus: "parked",
             told: ["tool:tool_outcome_unknown"],
             reached: "node-door",
         },

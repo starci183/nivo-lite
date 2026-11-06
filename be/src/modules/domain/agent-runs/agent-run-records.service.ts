@@ -180,7 +180,11 @@ export class AgentRunRecordsService {
 
     /** Inserts a step of a run; `taken` when the run already holds that step key. */
     insertStep(tx: ScopedTx, runId: string, values: MutationValues): Promise<EngineResult> {
-        return this.mutations.mutate(tx, { op: "insert", entity: STEP, values, links: { run: runId } }, "job")
+        return this.mutations.mutate(
+            tx,
+            { op: "insert", entity: STEP, values: { ...values, runId }, links: { run: runId } },
+            "job",
+        )
     }
 
     /** Writes the run's fields under the version the caller read: the record after, or null when its version had moved on. */

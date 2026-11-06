@@ -34,10 +34,12 @@ describe("agent-runs/park-resume: a run that stopped for a fix runs again from i
         await runs().advance(scene.workspaceId, runId, SIGNAL)
 
         expect(await statuses(runId)).toEqual(["turn:done", "door:done", "reply:done", "tool:failed"])
-        expect((await scene.runRow(runId)).status).toBe("dead")
+        expect(await scene.runRow(runId)).toMatchObject({ status: "parked" })
         expect(script().performed).toEqual([`door:${wakeId}`, `reply:${wakeId}`])
 
-        await expect(resumer().resume({ runId, actor: "member-1", reason: "scope fixed" })).resolves.toMatchObject({
+        await expect(
+            resumer().resume({ workspaceId: scene.workspaceId, runId, actor: "member-1", reason: "scope fixed" }),
+        ).resolves.toMatchObject({
             kind: "resumed",
             stepKey: "tool",
         })
@@ -56,7 +58,9 @@ describe("agent-runs/park-resume: a run that stopped for a fix runs again from i
         const { runId, wakeId } = await scene.newRun("not-parked")
         await em().transaction((tx) => runs().append(scene.workspaceId, tx, runId, [chainFrom("door", wakeId)]))
 
-        await expect(resumer().resume({ runId, actor: "member-1", reason: "x" })).resolves.toEqual({
+        await expect(
+            resumer().resume({ workspaceId: scene.workspaceId, runId, actor: "member-1", reason: "x" }),
+        ).resolves.toEqual({
             kind: "not_parked",
         })
     })

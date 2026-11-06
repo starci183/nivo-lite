@@ -76,7 +76,7 @@ describe("agent-runs/kill-after-tool: the API dies after the tool acted and befo
 
         expect(script().calls.get("tool")).toBe(1)
         expect(script().performed).toEqual([`door:${wakeId}`])
-        expect(await scene.runRow(runId)).toMatchObject({ status: "dead", error: { code: "tool_outcome_unknown" } })
+        expect(await scene.runRow(runId)).toMatchObject({ status: "parked", error: { code: "tool_outcome_unknown" } })
         expect(script().told).toEqual(["tool:tool_outcome_unknown"])
     })
 })

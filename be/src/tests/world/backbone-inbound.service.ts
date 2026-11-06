@@ -158,7 +158,7 @@ const readsOf = (world: World, who: InboundIdentity) => ({
         world.db.primary.findOneByOrFail(MemberEntity, { workspaceId: who.workspaceId, userId: who.userId }),
     async trace(event: InboundEvent): Promise<OptionalRunTrace> {
         const wake = await wakeOfFact(world.db.primary, who.agentId, event.adapter, event.idempotencyKey)
-        return world.resolve(AgentRunTraceService).ofWake(wake.id)
+        return world.resolve(AgentRunTraceService).ofWake(who.workspaceId, wake.id)
     },
     wakes: (event: InboundEvent): Promise<number> => wakesOfFact(world.db.primary, who.agentId, event.idempotencyKey),
     items: (): Promise<Array<WorkItemEntity>> =>

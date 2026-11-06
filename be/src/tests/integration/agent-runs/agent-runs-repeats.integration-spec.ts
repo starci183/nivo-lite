@@ -132,7 +132,7 @@ describe("agent-runs/connector-timeout: the connector does not answer", () => {
         await runs().advance(scene.workspaceId, runId, SIGNAL)
 
         expect(script().performed).toEqual([`door:${runId}`, `reply:${runId}`])
-        expect(await scene.runRow(runId)).toMatchObject({ status: "dead", error: { code: "late_failure" } })
+        expect(await scene.runRow(runId)).toMatchObject({ status: "parked", error: { code: "late_failure" } })
         expect(script().told).toEqual(["late:late_failure"])
         expect(await statuses(runId)).toEqual(["door:done", "reply:done", "late:failed", "tool:pending"])
     })

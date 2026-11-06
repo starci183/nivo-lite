@@ -95,7 +95,7 @@ describe("agent-runs/wait-timeout: an extension wait passes its deadline with no
         expect(await em().findOneByOrFail(GraphDecisionEntity, { workItemId: itemId })).toMatchObject({
             closedAs: "expired",
         })
-        expect(await scene.runRow(runId)).toMatchObject({ status: "dead", error: { code: "wait_timeout" } })
+        expect(await scene.runRow(runId)).toMatchObject({ status: "parked", error: { code: "wait_timeout" } })
         expect(activity().told).toEqual(["ask:wait_timeout"])
         expect(await statuses(runId)).toEqual(["ask:failed"])
         expect((await items().findMany([itemId], 1))[0]?.status).toBe("waiting_decision")
