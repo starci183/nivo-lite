@@ -149,6 +149,8 @@ export interface AgentLine {
     readonly inReplyTo?: string | undefined
     /** Present when a person wrote it, absent for the agent. */
     readonly human?: HumanAuthor | undefined
+    /** The agent that sends it (the agent of the turn): kept on the stored line, so the conversation shows who spoke. */
+    readonly sentBy?: string | undefined
 }
 
 /** When a message happened, if that is not when it was stored: the event's own time, and a tie-break for messages of the same millisecond. */

@@ -20,9 +20,11 @@ export interface StoredLine {
     readonly authorName: string | null
     /** The state of the push to the channel: `sent` or `failed`; null when none was made. */
     readonly deliveryStatus: string | null
+    /** The agent that sent an agent line; null for the other lines and for lines from before it was kept. */
+    readonly sentBy: string | null
 }
 
-/** One line of the thread as the conversation block reads it (its paths: id, text, who, at, side, state, mark). */
+/** One line of the thread as the conversation block reads it (its paths: id, text, who, at, side, state, mark, sentBy). */
 export interface ThreadLine {
     /** The id of the line. */
     readonly id: string
@@ -38,6 +40,8 @@ export interface ThreadLine {
     readonly state: DeliveryWord
     /** The short marker beside the author; empty draws none. */
     readonly mark: string
+    /** The agent that sent the line; empty for a line no agent sent. */
+    readonly sentBy: string
 }
 
 /** Who wrote a line: the customer by the name the inbox shows, a person by their name, the AI by its own name. */
@@ -59,5 +63,6 @@ export const threadLineOf = (line: StoredLine, customer: string): ThreadLine => 
         side: sideOf(role),
         state: deliveryWordOf(role, authorKind, line.deliveryStatus),
         mark: markOf(role, authorKind),
+        sentBy: line.sentBy ?? "",
     }
 }

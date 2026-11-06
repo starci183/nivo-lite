@@ -9,6 +9,7 @@ const LINE: StoredLine = {
     authorKind: null,
     authorName: null,
     deliveryStatus: null,
+    sentBy: null,
 }
 
 describe("threadLineOf", () => {
@@ -21,7 +22,15 @@ describe("threadLineOf", () => {
             side: "incoming",
             state: "",
             mark: "",
+            sentBy: "",
         })
+    })
+
+    it("tells which agent sent an agent line, and nothing for a line no agent sent", () => {
+        const sent: StoredLine = { ...LINE, role: "agent", authorKind: "ai", sentBy: "agent-sales" }
+
+        expect(threadLineOf(sent, "Minh").sentBy).toBe("agent-sales")
+        expect(threadLineOf(LINE, "Minh").sentBy).toBe("")
     })
 
     it("draws the AI's pushed line as outgoing, sent, marked AI, under its own name or the default", () => {

@@ -55,6 +55,7 @@ const messageData = z.object({
         .transform((value) => value ?? "posted"),
     deliveryStatus: orNull(z.enum(["sent", "failed"])),
     deliveryError: nullableText(MAX_BODY),
+    sentBy: nullableText(MAX_ID),
 })
 
 /** The fields of the linked `sales.lead` record the customer pane shows. */
@@ -96,6 +97,7 @@ export const MESSAGE_FIELDS: ReadonlyArray<string> = [
     "status",
     "deliveryStatus",
     "deliveryError",
+    "sentBy",
 ]
 
 /** The fields a query for the customer behind a conversation selects. */

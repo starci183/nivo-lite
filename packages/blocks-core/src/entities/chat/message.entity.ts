@@ -22,6 +22,7 @@ type MessageFields = {
     readonly deliveryError: FieldDef<"text", true>
     readonly channelRef: FieldDef<"text", true>
     readonly inReplyTo: FieldDef<"uuid", true>
+    readonly sentBy: FieldDef<"uuid", true>
 }
 
 const messageFields: MessageFields = {
@@ -37,6 +38,7 @@ const messageFields: MessageFields = {
     deliveryError: field.text({ maxLength: MAX_DELIVERY_ERROR, nullable: true }),
     channelRef: field.text({ maxLength: MAX_ID, nullable: true }),
     inReplyTo: field.uuid({ nullable: true }),
+    sentBy: field.uuid({ nullable: true }),
 }
 
 /** One message of a conversation. Graph node kind `message`. */

@@ -358,6 +358,7 @@
         "records_chat_message_in_reply_to_chk",
         "records_chat_message_role_chk",
         "records_chat_message_sent_at_chk",
+        "records_chat_message_sent_by_chk",
         "records_chat_message_status_chk",
         "records_chat_message_text_chk"
       ],
