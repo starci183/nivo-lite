@@ -16,7 +16,7 @@ export const WaitingRegion = (props: WaitingRegionProps): ReactNode => (
         kind="list"
         isLoading={props.isLoading}
         label={props.view.count === null ? props.label : `${props.label} · ${props.view.count}`}
-        note={
+        footer={
             props.view.more === null ? undefined : (
                 <Text size="sm" tone="muted" isLoading={props.isLoading}>
                     {props.view.more}
