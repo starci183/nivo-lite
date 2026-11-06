@@ -28,7 +28,6 @@ import {
     ContentPublishingModule,
 } from "@modules/domain/content-publishing"
 import { CONTENT_MEDIA_ERROR_KINDS, CONTENT_MEDIA_MESSAGES, ContentMediaModule } from "@modules/domain/content-media"
-import { ContentGraphqlModule } from "@features/api/content"
 import { ContentSettingsGraphqlModule } from "@features/api/content-settings"
 import { ContentAiGraphqlModule } from "@features/api/content-ai"
 import { ContentPublishingGraphqlModule } from "@features/api/content-publishing"
@@ -53,7 +52,6 @@ export const contentModules = (options: ApiOptions): Array<DynamicModule> => [
     ContentPlansModule.register({ isGlobal: true }),
     ContentPublishingModule.register({ isGlobal: true }),
     ContentMediaModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
-    ContentGraphqlModule.register({}),
     ContentSettingsGraphqlModule.register({}),
     ContentAiGraphqlModule.register({}),
     ContentPublishingGraphqlModule.register({}),

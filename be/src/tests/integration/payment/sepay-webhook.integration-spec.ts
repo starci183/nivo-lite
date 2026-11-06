@@ -16,7 +16,7 @@ import {
     cleanFeedReceipts,
     cleanJobKeys,
     feedDeliveries,
-} from "../../world/renewal-to-cash-database.service"
+} from "../../world/payment-feed-database.service"
 import { useTestWorld } from "../../world/use-test-world"
 
 const world = useTestWorld({ modules: API_APP_MODULES })

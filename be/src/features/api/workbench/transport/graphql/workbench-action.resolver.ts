@@ -4,6 +4,8 @@ import { CurrentPrincipal } from "@modules/domain/identity"
 import { WorkspaceId } from "@modules/domain/workspace-members"
 import { InjectCommandBus } from "@modules/platform/cqrs"
 import type { Principal } from "@modules/platform/cqrs"
+import { AcceptedLocale } from "@modules/platform/i18n"
+import type { Locale } from "@modules/platform/i18n"
 import { WorkbenchActionCommand } from "../../application/workbench-action.command"
 import { WorkbenchActionInput } from "./dto/workbench-action.input"
 import { WorkbenchAnswerType } from "./dto/workbench-answer.type"
@@ -19,10 +21,11 @@ export class WorkbenchActionResolver {
     async workbenchAction(
         @CurrentPrincipal() principal: Principal,
         @WorkspaceId() workspaceId: string,
+        @AcceptedLocale() locale: Locale,
         @Args("input") input: WorkbenchActionInput,
     ): Promise<WorkbenchAnswerType> {
         const answer = await this.commandBus.execute(
-            new WorkbenchActionCommand({ request: toWorkbenchActionRequest(workspaceId, input), principal }),
+            new WorkbenchActionCommand({ request: toWorkbenchActionRequest(workspaceId, input, locale), principal }),
         )
         return toWorkbenchAnswerType(answer)
     }

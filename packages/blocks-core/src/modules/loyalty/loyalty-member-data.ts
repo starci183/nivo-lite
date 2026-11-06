@@ -200,6 +200,7 @@ const applyEntry = (member: MemberRow, entry: LedgerPost): Readonly<Record<strin
         lifetimeSpendVnd: member.lifetimeSpendVnd + (earned ? (entry.amountVnd ?? 0) : 0),
         visits: member.visits + (earned ? 1 : 0),
         lastVisitAt,
+        ...(earned ? { lastActivityAt: entry.occurredAt } : {}),
         activity: activityOf({ ...member, lastVisitAt }, Date.parse(entry.occurredAt)),
     }
 }

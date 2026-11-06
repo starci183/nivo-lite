@@ -19,6 +19,7 @@ const contextOf = (memberId: string | null): RunContext => ({
     memberId,
     now: new Date(SAMPLE_NOW),
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 })
 
 /** What running stands in for an action that does not run in the package, which the expectation before it already failed. */
@@ -277,7 +278,12 @@ describe("loyalty.record-purchase", () => {
             points: 200,
             tierKey: "dong",
         })
-        expect(created?.data).toMatchObject({ contact: "84922111000", tier: "\u0110\u1ed3ng", activity: "active" })
+        expect(created?.data).toMatchObject({
+            lastActivityAt: "2026-11-05T05:00:00.000Z",
+            contact: "84922111000",
+            tier: "\u0110\u1ed3ng",
+            activity: "active",
+        })
         expect(lastEntry(world)).toMatchObject({
             kind: "earn",
             points: 200,

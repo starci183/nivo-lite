@@ -2,7 +2,6 @@ import type { EntityManager } from "typeorm"
 import { eventsEntities } from "@modules/domain/events"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
 import { knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
-import { leadsEntities } from "@modules/domain/leads"
 import { publicApiEntities } from "@modules/domain/public-api"
 import { workItemsEntities } from "@modules/domain/work-items"
 import type { Proposal } from "@modules/domain/work-items"
@@ -17,7 +16,6 @@ const [InboxEntity] = inboxEntities
 
 const [EventEntity] = eventsEntities
 const [InboundEventEntity] = inboundEventsEntities
-const [LeadEntity] = leadsEntities
 const [KnowledgeSourceEntity] = knowledgeSourcesEntities
 const [, JobOutboxEntity] = jobsEntities
 
@@ -26,8 +24,6 @@ export interface PublicApiRequestState {
     readonly id: string
     readonly kind: string
     readonly payload: Readonly<Record<string, unknown>>
-    readonly need_supplied: boolean | null
-    readonly lead_id: string | null
     readonly processed_at: Date | null
 }
 
@@ -43,15 +39,6 @@ export interface PublicApiWorkState {
     readonly dedupe_key: string
     readonly proposal: Proposal
     readonly reason: string | null
-}
-
-/** The retained facts of a customer. */
-export interface PublicApiLeadState {
-    readonly id: string
-    readonly need: string
-    readonly company: string
-    readonly channel: string
-    readonly stage: string
 }
 
 /** The original inbound record reused by new and historical API jobs. */
@@ -103,8 +90,6 @@ const requestsOf = (manager: EntityManager) =>
         .select("p.id", "id")
         .addSelect("p.kind", "kind")
         .addSelect("p.payload", "payload")
-        .addSelect("p.need_supplied", "need_supplied")
-        .addSelect("p.lead_id", "lead_id")
         .addSelect("p.processed_at", "processed_at")
 
 /** The admitted request and its consumer completion, observed outside the fenced transaction. */
@@ -115,20 +100,6 @@ export const apiRequest = (
 ): Promise<Array<PublicApiRequestState>> =>
     requestsOf(manager)
         .where("p.workspace_id = :workspaceId AND p.id = :id", { workspaceId, id })
-        .getRawMany<PublicApiRequestState>()
-
-/** The request the lead producer admitted under its caller's external identity. */
-export const apiLeadRequest = (
-    manager: EntityManager,
-    workspaceId: string,
-    externalId: string,
-): Promise<Array<PublicApiRequestState>> =>
-    requestsOf(manager)
-        .where("p.workspace_id = :workspaceId AND p.payload ->> 'externalId' = :externalId", {
-            workspaceId,
-            externalId,
-        })
-        .limit(1)
         .getRawMany<PublicApiRequestState>()
 
 /** The latest message admission for one isolated customer conversation. */
@@ -161,18 +132,6 @@ export const backdateApiRequest = async (
         .where("workspace_id = :workspaceId AND id = :id", { workspaceId, id })
         .execute()
 }
-
-/** The retained facts of an existing customer. */
-export const apiLead = (manager: EntityManager, workspaceId: string, id: string): Promise<Array<PublicApiLeadState>> =>
-    manager
-        .createQueryBuilder(LeadEntity, "l")
-        .select("l.id", "id")
-        .addSelect("l.need", "need")
-        .addSelect("l.company", "company")
-        .addSelect("l.channel", "channel")
-        .addSelect("l.stage", "stage")
-        .where("l.workspace_id = :workspaceId AND l.id = :id", { workspaceId, id })
-        .getRawMany<PublicApiLeadState>()
 
 /** Every durable handoff of this isolated workspace. */
 export const apiWork = (manager: EntityManager, workspaceId: string): Promise<Array<PublicApiWorkState>> =>

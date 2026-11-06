@@ -25,7 +25,7 @@ TypeScript everywhere, NestJS in `be/`, Next.js with next-intl in `fe/`, Postgre
 
 - `be/`: the API and the command line, the shared platform capabilities, verified identity admission, the privileged provider integrations, the queues and the back-end documentation (`be/docs`).
 - `fe/`: the web app; it reads and writes only through the API (`modules/api`: GraphQL queries and mutations behind `hooks/swr` wrappers, REST for uploads); sign-in goes through the API's `/auth` doors.
-- `db/`: forward-only SQL migrations (`db/migrations`, archive in `db/migrations/archive`), the pre-baseline `db/bootstrap.sql`.
+- `db/`: forward-only SQL migrations (`db/migrations`), the pre-baseline `db/bootstrap.sql`.
 - `.starcistacks/`: value-free environment metadata and encrypted-secret custody only.
 - `.starciwork/`: the lite workspace record (`.starciwork/workspace.yaml`) and the brand references.
 - `scripts/`: the contract and type codegen (`scripts/codegen.mjs`).

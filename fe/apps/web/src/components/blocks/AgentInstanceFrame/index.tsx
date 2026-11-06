@@ -31,7 +31,6 @@ const PLACEHOLDER: InstanceHeaderView = {
     subtitle: "-",
     needs: { lines: [], linkLabel: "-", href: "#" },
     setup: null,
-    chatHref: null,
     profileHref: null,
     packageHref: null,
 }
@@ -44,7 +43,7 @@ interface AgentInstanceFrameProps {
 }
 
 /** The tabs whose body is panes, attached flush under the tab line; the other tabs are card bodies. */
-const PANES_TABS: ReadonlySet<string> = new Set(["setup", "work", "workbench"])
+const PANES_TABS: ReadonlySet<string> = new Set(["setup", "work", "workbench", "chat"])
 
 /** The agents the header's menu can open: every installed agent, the open one checked, and the way to add one for a person who may. */
 const switcherOf = (
@@ -105,7 +104,6 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                     href: hrefOf(tab),
                 })),
                 earlyLabel: t("earlyBadge"),
-                chatLabel: t("privateChat"),
                 profileLabel: t("profileShort"),
                 packageLabel: tt("packageTitle"),
                 notice: query.get("notice") === OWNER_SETUP_NOTICE ? t("ownerSetupNotice") : "",
@@ -134,7 +132,6 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                                   isSetupPending(resolved.lifecycle) && selected !== "setup" && tabs.includes("setup")
                                       ? { label: t(setupLabelKey(resolved.lifecycle)), href: hrefOf("setup") }
                                       : null,
-                              chatHref: resolved.chatHref,
                               profileHref: resolved.profileHref,
                               packageHref: isManager(member)
                                   ? workspaceHref(

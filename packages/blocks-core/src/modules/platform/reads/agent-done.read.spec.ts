@@ -8,6 +8,7 @@ const CONTEXT: RunContext = {
     memberId: "m1",
     now: new Date("2026-11-04T11:30:00.000Z"),
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 }
 
 const AGENT = "6f1c3a52-0f0b-4b57-9a2c-1c2f6d7e8a90"

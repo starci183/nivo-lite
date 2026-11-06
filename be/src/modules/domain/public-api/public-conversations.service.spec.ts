@@ -30,20 +30,4 @@ describe("PublicConversationsService", () => {
 
         await expect(service.find("ws-1", "missing")).resolves.toBeUndefined()
     })
-
-    it("finds the latest customer conversation of a customer", async () => {
-        const { service, chats } = await build()
-        chats.ofLeads.mockResolvedValue([humanConversation({ leadId: "lead-1" }), humanConversation({ id: "conv-0" })])
-
-        await expect(service.ofLead("ws-1", "lead-1")).resolves.toEqual(CONVERSATION)
-
-        expect(chats.ofLeads).toHaveBeenCalledWith("ws-1", ["lead-1"])
-    })
-
-    it("answers nothing for a customer without a conversation", async () => {
-        const { service, chats } = await build()
-        chats.ofLeads.mockResolvedValue([])
-
-        await expect(service.ofLead("ws-1", "lead-9")).resolves.toBeUndefined()
-    })
 })

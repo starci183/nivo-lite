@@ -303,7 +303,7 @@ const entityApi = (table: Table): EntityApi => ({
                         spec.kind === "sum"
                             ? counted.reduce((total, record) => {
                                   const value = fieldOf(record, String(spec.field))
-                                  return total + (typeof value === "number" ? value : 0)
+                                  return total + Number(value)
                               }, 0)
                             : counted.length,
                     ]

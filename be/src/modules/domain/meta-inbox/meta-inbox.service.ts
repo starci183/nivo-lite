@@ -15,8 +15,6 @@ import { eachInOrder, isRecord, parseJsonText } from "@modules/platform/primitiv
 import { InjectQueueOutbox } from "@modules/platform/queue"
 import type { QueueOutbox } from "@modules/platform/queue"
 import { isMetaInboundJob, META_INBOUND_QUEUE, META_DELIVERY_QUEUE } from "./meta-inbox.contracts"
-import { InjectMetaEventTaker } from "./meta-inbox.decorators"
-import type { MetaEventTaker } from "./meta-inbox.port"
 import type { DeliverySignature, MetaDeliveryRecorded, MetaInboundJob, RawDelivery } from "./meta-inbox.contracts"
 import { MetaInboxEntity } from "./persistence/entities"
 
@@ -35,7 +33,6 @@ export class MetaInboxService {
         private readonly conversations: ConversationsService,
         private readonly threads: MetaThreadsService,
         private readonly comments: MetaCommentsService,
-        @InjectMetaEventTaker() private readonly taker: MetaEventTaker,
     ) {}
 
     /** Records the signed receipt and its typed handoff atomically without processing business events. */
@@ -77,13 +74,11 @@ export class MetaInboxService {
     }
 
     /**
-     * Delivers the event a claimed job carries: the taker (the lead generation flow) first, else the chatbot front
-     * door; a payload that
-     * is not a queued Meta event is left alone.
+     * Delivers the event a claimed job carries to the chatbot front door; a payload that is not a queued Meta event is left
+     * alone.
      */
     async deliverPayload(payload: object): Promise<void> {
         if (!isMetaInboundJob(payload)) return
-        if (await this.taker.take(payload)) return
         await this.deliver(payload)
     }
 
@@ -91,8 +86,7 @@ export class MetaInboxService {
      * Hands one queued event to the conversation of its customer: a direct message is stored and answered by the
      * front-door agent bound
      * to the connection (in one transaction with its chat-turn job). Postbacks, comments, mentions and lead ads are
-     * the business of the
-     * lead-flow lanes and are left alone here.
+     * left alone here.
      */
     async deliver(job: MetaInboundJob): Promise<void> {
         const { event } = job

@@ -11,6 +11,7 @@ import type { CampaignRowView, ProgramView } from "../views.types"
 const PROGRAM_FIELDS: ReadonlyArray<keyof ProgramView> = [
     "name",
     "enabled",
+    "state",
     "slug",
     "publicPath",
     "perThousandVnd",

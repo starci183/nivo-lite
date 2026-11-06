@@ -18,7 +18,6 @@ import { contentModules } from "./compose/content"
 import { systemModules } from "./compose/system"
 import { knowledgeModules } from "./compose/knowledge"
 import { bookingsModules } from "./compose/bookings"
-import { salesModules } from "./compose/sales"
 import { adminModules } from "./compose/admin"
 import { agentsModules } from "./compose/agents"
 import { agentGraphsModules } from "./compose/agent-graphs"
@@ -28,7 +27,6 @@ import { agentApiModules } from "./compose/agent-api"
 import { modulesModules } from "./compose/modules"
 import { billingModules } from "./compose/billing"
 import { webhooksModules } from "./compose/webhooks"
-import { loyaltyModules } from "./compose/loyalty"
 import { apiModules } from "./compose/api"
 import { realtimeModules } from "./compose/realtime"
 
@@ -54,7 +52,6 @@ export class AppModule {
                 ...systemModules(),
                 ...knowledgeModules(options),
                 ...bookingsModules(),
-                ...salesModules(),
                 ...adminModules(options),
                 ...agentsModules(options),
                 ...agentWorkModules(options),
@@ -64,7 +61,6 @@ export class AppModule {
                 ...modulesModules(),
                 ...billingModules(options),
                 ...webhooksModules(),
-                ...loyaltyModules(options),
                 ...apiModules(),
                 ...realtimeModules(),
             ],

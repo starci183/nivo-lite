@@ -11,7 +11,6 @@ import { parseQueueConfig } from "@modules/platform/queue"
 import { parseRealtimeConfig } from "@modules/platform/realtime"
 import { parseChannelsConfig } from "@modules/domain/channels"
 import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
-import { parseLoyaltyOtpsConfig } from "@modules/domain/loyalty-otps"
 import { parseDataSourcesConfig } from "@modules/integrations/data-sources"
 import { parseTelegramUserConfig } from "@modules/integrations/telegram-user"
 import { parseMailConfig } from "@modules/integrations/mail"
@@ -88,8 +87,6 @@ export interface ApiOptions {
     readonly aiTasks: ReturnType<typeof parseAiTasksConfig>
     /** The key that seals the credentials of the connections. */
     readonly connectionSecrets: ReturnType<typeof parseConnectionSecretsConfig>
-    /** The dedicated secret mixed into loyalty one-time code hashes. */
-    readonly loyaltyOtps: ReturnType<typeof parseLoyaltyOtpsConfig>
     /** The public origin of the web app, for provider return addresses. */
     readonly channels: ReturnType<typeof parseChannelsConfig>
     /** The Telegram Bot API host. */
@@ -164,7 +161,6 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     agentTurns: parseAgentTurnsConfig(env),
     aiTasks: parseAiTasksConfig(env, parseAiConfig(env)),
     connectionSecrets: parseConnectionSecretsConfig(env),
-    loyaltyOtps: parseLoyaltyOtpsConfig(env),
     channels: parseChannelsConfig(env),
     telegram: parseTelegramConfig(env),
     sepay: parseSepayConfig(env),

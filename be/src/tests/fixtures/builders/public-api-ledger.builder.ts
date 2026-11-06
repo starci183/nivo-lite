@@ -22,8 +22,6 @@ export const ledgerRowOf: (overrides?: Partial<PublicApiEntity>) => PublicApiEnt
         visibility: "internal",
         source: "api:CRM",
     },
-    needSupplied: null,
-    leadId: null,
     duplicates: 0,
     processedAt: null,
     createdAt: new Date("2026-10-24T08:00:00Z"),
@@ -33,12 +31,9 @@ export const ledgerRowOf: (overrides?: Partial<PublicApiEntity>) => PublicApiEnt
 /** A ledger row already processed. */
 export const PROCESSED_LEDGER_ROW: PublicApiEntity = ledgerRowOf({ processedAt: new Date("2026-10-25T00:00:00Z") })
 
-/** A ledger row of another kind and payload, optionally with the lead need the caller supplied. */
-export const ledgerRowOfKind = (
-    kind: PublicApiEntity["kind"],
-    payload: PublicApiEntity["payload"],
-    needSupplied: boolean | null = null,
-): PublicApiEntity => ledgerRowOf({ kind, payload, needSupplied })
+/** A ledger row of another kind and payload. */
+export const ledgerRowOfKind = (kind: PublicApiEntity["kind"], payload: PublicApiEntity["payload"]): PublicApiEntity =>
+    ledgerRowOf({ kind, payload })
 
 /** The shape of a ledger insert, with the dedupe expression reduced to its type name. */
 interface LedgerCalls {
@@ -78,12 +73,11 @@ export const ledgerExpected = (expected: LedgerRecord): LedgerCalls => ({
             kind: expected.kind,
             dedupeKey: "function",
             payload: expected.body,
-            needSupplied: expected.needSupplied ?? null,
         },
     ],
     parameters: [[{ prefix: expected.prefix, suffix: expected.suffix }]],
     orIgnore: [[]],
-    returning: [["id, lead_id"]],
+    returning: [["id"]],
 })
 
 type LedgerAnswersResultShape = {

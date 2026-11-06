@@ -9,8 +9,6 @@ import type {
     WaitingReplyRow,
     WaitingSummary,
 } from "./work-items-activity.contracts"
-import { InjectWorkItemsLeads } from "./work-items.decorators"
-import type { WorkItemLeadCard, WorkItemsLeadDirectory } from "./work-items.port"
 import { WorkItemEntity } from "./persistence/entities"
 
 /** The moment a finished item stopped moving. */
@@ -22,7 +20,7 @@ const RESULT_SUMMARY = "COALESCE(NULLIF(w.result->>'summary', ''), w.proposal->>
 /** The most items one dashboard list weighs before test runs are left out and the limit is applied. */
 const CANDIDATE_LIMIT = 500
 
-/** An item as read before the lead's name is folded in. */
+/** An item as read before the lists name its customer. */
 interface BareLine {
     readonly id: string
     readonly action: string
@@ -36,21 +34,15 @@ interface BareLine {
     readonly proposalCustomer: string | null
 }
 
-/** What the lists call the customer: the lead's name, else the one the proposal carries. */
-const customerOf = (row: BareLine, cards: ReadonlyMap<string, WorkItemLeadCard>): string | null => {
-    const card = row.leadId === null ? undefined : cards.get(row.leadId)
-    return card === undefined ? row.proposalCustomer : card.contactName
-}
+/** What the lists call the customer: the one the proposal carries. */
+const customerOf = (row: BareLine): string | null => row.proposalCustomer
 
 @Injectable()
 /** The work item lists other capabilities show beside their own data: recent work, dashboard lists and the state of a customer reply. */
 export class WorkItemsActivityService {
-    constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectWorkItemsLeads() private readonly leads: WorkItemsLeadDirectory,
-    ) {}
+    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
-    /** The department's work most recently touched, newest first, with the lead's name folded in. */
+    /** The department's work most recently touched, newest first. */
     async recentOf(workspaceId: string, department: string, limit: number): Promise<Array<RecentWorkLine>> {
         const rows = await this.entityManager
             .createQueryBuilder(WorkItemEntity, "w")
@@ -67,14 +59,13 @@ export class WorkItemsActivityService {
             .addOrderBy("w.id", "ASC")
             .limit(limit)
             .getRawMany<BareLine>()
-        const names = await this.leadCards(workspaceId, rows)
         return rows.map((row) => ({
             id: row.id,
             action: row.action,
             status: row.status ?? "queued",
             at: row.at,
             summary: row.summary,
-            customer: customerOf(row, names),
+            customer: customerOf(row),
             leadId: row.leadId,
         }))
     }
@@ -112,17 +103,9 @@ export class WorkItemsActivityService {
                   .orderBy("w.completedAt", "DESC")
                   .addOrderBy("w.id", "ASC")
         const rows = await listed.limit(CANDIDATE_LIMIT).getRawMany<BareLine>()
-        const cards = await this.leadCards(query.workspaceId, rows)
         const testRun = new RegExp(query.testRunPattern)
         const kept = rows.filter((row) => {
-            const card = row.leadId === null ? undefined : cards.get(row.leadId)
-            const text = [
-                card?.contactName,
-                card?.company,
-                row.proposalSummary,
-                row.proposalContact,
-                row.proposalCustomer,
-            ]
+            const text = [row.proposalSummary, row.proposalContact, row.proposalCustomer]
                 .filter((part): part is string => part !== undefined && part !== null)
                 .join(" ")
             return !testRun.test(text)
@@ -133,7 +116,7 @@ export class WorkItemsActivityService {
             leadId: row.leadId,
             at: row.at,
             summary: row.summary,
-            customer: customerOf(row, cards),
+            customer: customerOf(row),
             resultHref: row.resultHref ?? null,
             total: String(kept.length),
         }))
@@ -193,15 +176,5 @@ export class WorkItemsActivityService {
             .limit(1)
             .getRawOne<{ id: string }>()
         return row?.id ?? null
-    }
-
-    /** The cards of the leads the rows name, by lead id. */
-    private async leadCards(
-        workspaceId: string,
-        rows: ReadonlyArray<BareLine>,
-    ): Promise<Map<string, WorkItemLeadCard>> {
-        const ids = rows.flatMap((row) => (row.leadId === null ? [] : [row.leadId]))
-        const cards = await this.leads.cardsOf(workspaceId, ids)
-        return new Map(cards.map((card) => [card.id, card]))
     }
 }

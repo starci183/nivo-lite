@@ -11,17 +11,6 @@ namespaces:
       reason: "Key family built at run time as `${prefix}${code}` in hooks/admin/useAdminWorkspaceRows.ts: the plan code comes from data, so the detector cannot enumerate the keys."
     - key: "failTitle"
       reason: 'Read as the string "failTitle" in components/blocks/AccountEmail/index.tsx, components/blocks/AccountPassword/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-  agentChat:
-    - key: "fileTypeRefused"
-      reason: "Read by t(file.problem) in hooks/agentChat/useAgentChatActions.ts; hooks/chatFile/chatFile.shared.ts produces this exact closed ChatFileProblem member for a refused MIME type."
-    - key: "fileTooLarge"
-      reason: "Read by t(file.problem) in hooks/agentChat/useAgentChatActions.ts; hooks/chatFile/chatFile.shared.ts produces this exact closed ChatFileProblem member for an oversized chosen file."
-    - key: "testIntro"
-      reason: 'Read as the string "testIntro" in components/blocks/MetaWizard/component.tsx, components/blocks/MetaWizard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "messageTooLong"
-      reason: "Passed as the tooLongKey argument and read by t(tooLongKey) in hooks/rhf/useAgentChatLimitedTextForm.ts; the key is one of two closed literals of that parameter."
-    - key: "visitorNameTooLong"
-      reason: "Passed as the tooLongKey argument and read by t(tooLongKey) in hooks/rhf/useAgentChatLimitedTextForm.ts; the key is one of two closed literals of that parameter."
   agentWork:
     - prefix: "source_"
       reason: "Key family built at run time as `${prefix}${kind}` in modules/agentWork/agentWork.words.ts: the kind (what woke a turn) comes from data, so the detector cannot enumerate the keys."
@@ -77,7 +66,7 @@ namespaces:
     - key: "more"
       reason: 'Read as the string "more" in components/blocks/ConnectionRow/component.tsx, components/blocks/LeadHeader/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "open"
-      reason: 'Read as the string "open" in components/blocks/AgentChat/component.tsx, components/blocks/BookingDesk/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+      reason: 'Read as the string "open" in components/blocks/BookingDesk/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "updated"
       reason: 'Read as the string "updated" in components/composites/DatabaseTableMapper/index.tsx, hooks/database-wizard/database-wizard.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   connectionWizard:
@@ -141,7 +130,7 @@ namespaces:
     - key: "notFoundTitle"
       reason: 'Read as the string "notFoundTitle" in features/pages/AppNotFoundPage/index.tsx, features/pages/LeadNotFoundPage/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "open"
-      reason: 'Read as the string "open" in components/blocks/AgentChat/component.tsx, components/blocks/BookingDesk/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+      reason: 'Read as the string "open" in components/blocks/BookingDesk/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "urlHint"
       reason: 'Read as the string "urlHint" in components/blocks/WebhookWizard/component.tsx, components/blocks/WebhookWizard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   leads:
@@ -157,8 +146,6 @@ namespaces:
     - key: "pickPick"
       reason: 'Read as the string "pickPick" through the tm translator in hooks/meta-wizard/useMetaWizardActions.ts, a translator the detector does not bind to this namespace.'
   modules:
-    - key: "addAgent"
-      reason: 'Read as the string "addAgent" in components/composites/OfficeInfoPanel/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "catalogDescription"
       reason: 'Read as the string "catalogDescription" in features/pages/AgentsCatalogPage/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "catalogTitle"
@@ -167,12 +154,8 @@ namespaces:
       reason: 'Read as the string "chat" in components/blocks/HiringOffers/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "eyebrow"
       reason: 'Read as the string "eyebrow" in components/blocks/AgentInstances/index.tsx, components/blocks/AuthorityHead/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "kindCustomer"
-      reason: 'Read as the string "kindCustomer" in hooks/agentChat/agentChat.shared.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "open"
-      reason: 'Read as the string "open" in components/blocks/AgentChat/component.tsx, components/blocks/BookingDesk/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "statusPaused"
-      reason: 'Read as the string "statusPaused" in hooks/agentChat/useAgentChatCopy.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+      reason: 'Read as the string "open" in components/blocks/BookingDesk/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "suggestTitle"
       reason: 'Read as the string "suggestTitle" in components/blocks/KnowledgeSuggestions/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   modulesCore:
@@ -184,8 +167,6 @@ namespaces:
     - suffix: "Title"
       reason: "Key family built at run time as `${kind}Title` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."
   overview:
-    - key: "openLeads"
-      reason: 'Read as the string "openLeads" in components/composites/OfficeTasks/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "pipeline"
       reason: 'Read as the string "pipeline" in components/blocks/HiringFigures/index.tsx, features/pages/SalesWorkbenchPage/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "source"
@@ -220,6 +201,9 @@ namespaces:
   team:
     - key: "loadFailTitle"
       reason: 'Read as the string "loadFailTitle" in components/blocks/AuthorityGoals/index.tsx, components/blocks/AuthorityLimits/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+  teamChat:
+    - prefix: "refusal_"
+      reason: "Key family built at run time as `refusal_${code}` in components/blocks/TeamChat/index.tsx: the code is the closed refusal vocabulary of the chat doors (modules/teamChat ChatRefusalCode), so each key is a literal there."
   video:
     - key: "actionFailed"
       reason: 'Read as the string "actionFailed" in hooks/chatbotView/useChatbotInbox.ts, hooks/content/useContentCommand.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'

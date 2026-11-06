@@ -18,7 +18,11 @@ describe("the module registry", () => {
 
 describe("MODULE_DECLARATIONS", () => {
     it("holds declarations whose seed specs draw with the core blocks and their own reads and actions", () => {
-        expect(MODULE_DECLARATIONS.flatMap((declaration) => seedSpecProblems(declaration, coreBlocks))).toEqual([])
+        expect(
+            MODULE_DECLARATIONS.flatMap((declaration) =>
+                seedSpecProblems(declaration, coreBlocks, MODULE_DECLARATIONS),
+            ),
+        ).toEqual([])
     })
 
     it("holds each module key once", () => {

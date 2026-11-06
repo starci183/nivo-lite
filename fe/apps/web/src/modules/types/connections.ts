@@ -202,7 +202,8 @@ export interface ConnectionPageHeadView {
     readonly crumbs: ReadonlyArray<ConnectionCrumb>
     readonly gridLabel: string
     readonly mainLabel: string
-    readonly rail: ConnectionRailView
+    /** The live rail of the page; absent for a provider with none. */
+    readonly rail?: ConnectionRailView
     /** The one command of the header band (check again, grant again); absent when the page has none. */
     readonly action?: { readonly label: string; readonly intent: "commit" | "neutral"; readonly isPending: boolean }
     readonly notices: ReadonlyArray<ConnectionNotice>
@@ -224,7 +225,7 @@ export interface ConnectionPageHeadCommands {
     readonly askDisconnect: () => void
     readonly confirmDisconnect: () => void
     readonly dismiss: () => void
-    readonly openRail: (isOpen: boolean) => void
+    readonly openRail?: (isOpen: boolean) => void
     readonly retry: () => void
 }
 

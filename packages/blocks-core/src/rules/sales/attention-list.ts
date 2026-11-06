@@ -1,5 +1,5 @@
 import { textOf, valueAt } from "../../slots/paths"
-import { AWAITING_REPLY, FAILED_STEP } from "./attention"
+import { AWAITING_REPLY } from "./attention"
 
 /** The message key of the count in the heading of the list: "{count} items". */
 export const ATTENTION_COUNT_KEY = "attention_count"
@@ -17,7 +17,7 @@ export const ATTENTION_KINDS: readonly ["waiting", "overdue", "needs-reply", "ow
 export type AttentionKind = (typeof ATTENTION_KINDS)[number]
 
 /** The row action a kind offers; the block takes one action slot of this name per command. */
-export type AttentionCommand = "respond" | "follow" | "reply" | "review" | "retry"
+export type AttentionCommand = "respond" | "follow" | "reply" | "review" | "resume"
 
 /** The tone of a chip of a kind: the colour pair of a state that needs a look. */
 export type AttentionTone = "warning" | "danger" | "info"
@@ -69,8 +69,8 @@ export const ATTENTION_KIND_VIEWS: Readonly<Record<AttentionKind, AttentionKindV
     failed: {
         chipKey: "attention_kind_failed",
         tone: "danger",
-        command: "retry",
-        commandKey: "attention_command_retry",
+        command: "resume",
+        commandKey: "attention_command_resume",
         opensLead: false,
     },
 }
@@ -95,7 +95,6 @@ const REASON_KINDS: ReadonlyMap<string, AttentionKind> = new Map<string, Attenti
     ["overdue", "overdue"],
     ["needs_reply", "needs-reply"],
     ["owner", "owner"],
-    [FAILED_STEP, "failed"],
 ])
 
 /** The kind a reason code names. */
@@ -125,3 +124,23 @@ export const attentionListOf = (
     ATTENTION_KINDS.filter((kind) => shown.includes(kind)).flatMap((kind) =>
         entries.filter((entry) => entry.kind === kind),
     )
+
+/**
+ * The entries of the runs the engine parked, as `platform.parked-runs` lists them: the id is the run's, which the pill that runs it
+ * again hands to `platform.resume-run`; the step it stopped at heads the row, what the error says is its line and when it was
+ * parked is its time. A record without an id draws no row.
+ */
+export const parkedEntriesOf = (records: ReadonlyArray<unknown>): ReadonlyArray<AttentionEntry> =>
+    records.flatMap((record) => {
+        const id = textOf(valueAt(record, "id"))
+        if (id === "") return []
+        return [
+            {
+                id,
+                kind: "failed" as const,
+                title: textOf(valueAt(record, "step")),
+                description: textOf(valueAt(record, "errorWords")),
+                at: textOf(valueAt(record, "parkedAt")),
+            },
+        ]
+    })

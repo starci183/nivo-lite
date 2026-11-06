@@ -145,9 +145,9 @@ const textField = (item: WorkItem, key: string): string => {
     return typeof value === "string" ? value : ""
 }
 
-/** The customer of a waiting item: the lead's name, else the customer or payer the proposal names. */
-export const waitingCustomerOf = (item: WorkItem, leadName: string): string =>
-    (leadName || textField(item, "customer") || textField(item, "payer")).trim()
+/** The customer of a waiting item: the customer or payer the proposal names. */
+export const waitingCustomerOf = (item: WorkItem): string =>
+    (textField(item, "customer") || textField(item, "payer")).trim()
 
 /** The order, invoice or bank reference of a waiting item, or blank. */
 export const refOf = (item: WorkItem): string =>

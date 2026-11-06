@@ -29,7 +29,6 @@ import type { Judged, OpenedReplyItem, ReplyItemSpec, ReplyScope } from "./reply
 import { findingsOf, humanReasonOf } from "./reply-reading.policy"
 import { StaffEscalationService } from "./staff-escalation.service"
 import { TurnModulesService } from "./turn-modules.service"
-import { TurnPurchasesService } from "./turn-purchases.service"
 import { channelKeyOf } from "./turn-prompt.policy"
 
 /** The language of the lines a turn writes and of its work items. */
@@ -37,9 +36,8 @@ const LOCALE: Locale = "vi"
 /** The name under which the engine acts in evidence and in conversation hand-offs. */
 const ENGINE_ACTOR = "OpenClaw"
 const SUMMARY_QUESTION_MAX = 160
-/** How many queued chain steps a turn drains after it: one more when an order queued its invoice. */
+/** How many queued chain steps a turn drains after it. */
 const DRAIN_STEPS = 2
-const DRAIN_STEPS_AFTER_ORDER = 3
 
 /** What a chat application came to: the reply that leaves, the lines to show, and whether it was stored. */
 interface AppliedApplication {
@@ -53,8 +51,7 @@ interface AppliedApplication {
 
 @Injectable()
 /**
- * Everything a customer turn starts besides the reply, through the owner's authority gate: the lead hand-off to Sales, the order (at a
- * price written in the knowledge only), the payment claim (never evidence: one check per invoice that waits for the owner), the chat
+ * Everything a customer turn starts besides the reply, through the owner's authority gate: the lead hand-off to Sales, the chat
  * application, the waiting answer with a staff member tagged, and the knowledge gap. Every effect is idempotent per channel message.
  */
 export class CustomerOutcomesService implements CustomerOutcomes {
@@ -72,7 +69,6 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         private readonly bindings: AgentBindingsService,
         private readonly rules: AuthorityRulesService,
         private readonly hiring: HiringPublicService,
-        private readonly purchases: TurnPurchasesService,
         private readonly staff: StaffEscalationService,
         private readonly gaps: KnowledgeGapNotesService,
         private readonly modules: TurnModulesService,
@@ -93,23 +89,16 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         const application = await this.applyApplication(turn, reply, judged.reply)
         const channel = this.channelOf(turn.conversation)
         const handoff = await this.handOff(ctx, turn, reply, application.reply, channel)
-        const order = await this.purchases.recordOrder(ctx, turn, {
-            reply,
-            order: judged.order,
-            channel,
-            leadId: handoff.leadId,
-        })
-        const claim = await this.purchases.recordClaim(ctx, turn, judged.claimOpen, channel)
         const extra = judged.needsHuman ? { reply: null, lines: [] } : await this.modules.settle(ctx, turn, reply)
-        const waiting = judged.needsHuman ? await this.askPerson(ctx, turn, reply, judged, order.leadId) : []
+        const waiting = judged.needsHuman ? await this.askPerson(ctx, turn, reply, judged, handoff.leadId) : []
         const leaving = extra.reply ?? application.reply
         const approval =
             turn.finalOwed === true
                 ? []
                 : await this.approvalOf(ctx, turn, leaving, {
                       key: turn.messageId,
-                      leadId: order.leadId,
-                      evidence: evidenceOfTurn(reply, judged, order.orderAmountVnd ?? null),
+                      leadId: handoff.leadId,
+                      evidence: evidenceOfTurn(reply, judged, null),
                   })
         await this.gaps.note({
             view: viewOf({
@@ -132,26 +121,12 @@ export class CustomerOutcomesService implements CustomerOutcomes {
             },
         })
         const changed =
-            handoff.changed ||
-            order.changed ||
-            claim.changed ||
-            application.changed ||
-            waiting.length > 0 ||
-            extra.lines.length > 0 ||
-            judged.needsHuman
-        if (changed) this.drainLater(ctx, order.changed ? DRAIN_STEPS_AFTER_ORDER : DRAIN_STEPS)
+            handoff.changed || application.changed || waiting.length > 0 || extra.lines.length > 0 || judged.needsHuman
+        if (changed) this.drainLater(ctx, DRAIN_STEPS)
         return {
             reply: leaving,
             send: approval.length === 0,
-            lines: [
-                ...approval,
-                ...application.lines,
-                ...handoff.lines,
-                ...order.lines,
-                ...claim.lines,
-                ...extra.lines,
-                ...waiting,
-            ],
+            lines: [...approval, ...application.lines, ...handoff.lines, ...extra.lines, ...waiting],
         }
     }
 

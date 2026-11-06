@@ -118,6 +118,8 @@ export interface ProgramView {
     readonly name: string
     /** Whether the programme is on. */
     readonly enabled: boolean
+    /** `active` while the programme is on, `paused` while it is off: the word the overview draws for it. */
+    readonly state: "active" | "paused"
     /** The slug of the public points page. */
     readonly slug: string
     /** The path of the public points page. */

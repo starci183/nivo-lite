@@ -16,14 +16,11 @@ import { PublicApiError, PublicApiErrorCode } from "./errors/public-api.error"
 import { PublicApiProcessingService } from "./public-api-processing.service"
 import { PublicApiEntity } from "./persistence/entities"
 import { PublicApiLedgerService } from "./public-api-ledger.service"
-import { PublicLeadFulfillmentService } from "./public-lead-fulfillment.service"
 import { PublicMessageFulfillmentService } from "./public-message-fulfillment.service"
 
 const WORKSPACE = "11111111-1111-4111-8111-111111111111"
 const REQUEST = "22222222-2222-4222-8222-222222222222"
-const LEAD = "33333333-3333-4333-8333-333333333333"
 const CONVERSATION = "44444444-4444-4444-8444-444444444444"
-const INBOUND = "55555555-5555-4555-8555-555555555555"
 const source = "api:CRM"
 const ledgerJob = { workspaceId: WORKSPACE, requestId: REQUEST }
 const knowledgeBody = {
@@ -34,20 +31,8 @@ const knowledgeBody = {
     visibility: "internal",
     source,
 }
-const leadBody = {
-    name: "Lan",
-    contact: "lan@example.test",
-    need: "Created through the API",
-    channel: "API",
-    company: "ACME",
-    note: "VIP",
-    stage: null,
-    externalId: "crm-1",
-    source,
-}
 const messageBody = {
     conversationId: CONVERSATION,
-    leadId: LEAD,
     text: "Exact caller draft",
     requireApproval: true,
     source,
@@ -61,16 +46,14 @@ const managerWith = (row: PublicApiEntity | null) => {
     return { tx, complete }
 }
 
-/** Asserts that the request was completed with the given customer, once, under its workspace. */
+/** Asserts that the request was completed once, under its workspace. */
 const expectCompleted = (
     tx: ReturnType<typeof managerWith>["tx"],
     complete: ReturnType<typeof fakeQueryBuilder>,
-    leadId: string | null,
 ): void => {
     expect(tx.createQueryBuilder).toHaveBeenCalledWith(PublicApiEntity, "p")
     expect(complete.callsOf("update")).toEqual([[]])
     expect(complete.argsOf("where")[0]?.[1]).toEqual({ workspaceId: WORKSPACE, requestId: REQUEST })
-    expect(complete.argsOf("setParameter")).toEqual([["leadId", leadId]])
 }
 const deliveryOf = builder<QueueDelivery>({
     id: "outbox-1",
@@ -89,11 +72,7 @@ const build = async (manager: MockEntityManager = mockEntityManager()) => {
         addText: jest.fn().mockResolvedValue(undefined),
         indexExisting: jest.fn().mockResolvedValue(undefined),
     })
-    const leads = mock<PublicLeadFulfillmentService>({
-        fulfill: jest.fn().mockResolvedValue(LEAD),
-        fulfillExistingInbound: jest.fn().mockResolvedValue(undefined),
-    })
-    const messages = mock<PublicMessageFulfillmentService>({ fulfill: jest.fn().mockResolvedValue(LEAD) })
+    const messages = mock<PublicMessageFulfillmentService>({ fulfill: jest.fn().mockResolvedValue(undefined) })
     const events = mock<EventsService>({ record: jest.fn().mockResolvedValue(undefined) })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -101,7 +80,6 @@ const build = async (manager: MockEntityManager = mockEntityManager()) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: manager },
             { provide: INBOX, useValue: inbox },
             { provide: ApiKnowledgeSourcesService, useValue: knowledge },
-            { provide: PublicLeadFulfillmentService, useValue: leads },
             { provide: PublicMessageFulfillmentService, useValue: messages },
             { provide: EventsService, useValue: events },
             PublicApiLedgerService,
@@ -113,7 +91,6 @@ const build = async (manager: MockEntityManager = mockEntityManager()) => {
         inbox,
         claim,
         knowledge,
-        leads,
         messages,
         events,
     }
@@ -143,7 +120,7 @@ describe("PublicApiProcessingService / fenced execution", () => {
         expect(claims.advance).toHaveBeenCalledWith({ jobId: "job-1", expectedFencingToken: 7, step: "public-api" })
         expect(fence.write).toHaveBeenCalledWith(job, expect.any(Function))
         expect(claims.advance.mock.invocationCallOrder[0]).toBeLessThan(fence.write.mock.invocationCallOrder[0] ?? 0)
-        expectCompleted(tx, complete, null)
+        expectCompleted(tx, complete)
     })
 
     it("rejects an unsupported name before advancing or entering the fence", async () => {
@@ -173,7 +150,7 @@ describe("PublicApiProcessingService / ledger admissions", () => {
 
     it("creates the promised knowledge identity and completion inside the caller's transaction", async () => {
         const built = await build()
-        const { tx, complete } = managerWith(ledgerRowOf({ leadId: LEAD }))
+        const { tx, complete } = managerWith(ledgerRowOf())
 
         await built.service.process(ledgerJob, tx)
 
@@ -196,30 +173,19 @@ describe("PublicApiProcessingService / ledger admissions", () => {
             },
             tx,
         )
-        expectCompleted(tx, complete, LEAD)
+        expectCompleted(tx, complete)
         expect(built.manager.createQueryBuilder).not.toHaveBeenCalled()
         expect(built.manager.transaction).not.toHaveBeenCalled()
     })
 
-    it("passes the persisted future need flag to the lead owner and stores its resolved customer", async () => {
-        const built = await build()
-        const { tx, complete } = managerWith(ledgerRowOfKind("lead", leadBody, true))
-
-        await built.service.process(ledgerJob, tx)
-
-        expect(built.leads.fulfill).toHaveBeenCalledWith(WORKSPACE, REQUEST, { ...leadBody, needSupplied: true }, tx)
-        expectCompleted(tx, complete, LEAD)
-    })
-
     it("hands off an admitted message with its admission time without performing a customer send", async () => {
         const built = await build()
-        const body = { ...messageBody, leadId: null }
-        const { tx, complete } = managerWith(ledgerRowOfKind("message", body))
+        const { tx, complete } = managerWith(ledgerRowOfKind("message", messageBody))
 
         await built.service.process(ledgerJob, tx)
 
-        expect(built.messages.fulfill).toHaveBeenCalledWith(WORKSPACE, REQUEST, body, ADMITTED_AT, tx)
-        expectCompleted(tx, complete, LEAD)
+        expect(built.messages.fulfill).toHaveBeenCalledWith(WORKSPACE, REQUEST, messageBody, ADMITTED_AT, tx)
+        expectCompleted(tx, complete)
     })
 })
 
@@ -283,18 +249,6 @@ describe("PublicApiProcessingService / pre-ledger deliveries", () => {
         expect(built.claim).toHaveBeenCalledWith(PUBLIC_API_QUEUE, `${WORKSPACE}:knowledge:${REQUEST}`, tx)
         expect(built.knowledge.indexExisting).toHaveBeenCalledWith(WORKSPACE, REQUEST, tx)
         expect(built.knowledge.addText).not.toHaveBeenCalled()
-    })
-
-    it("hands off the original inbound identity instead of creating a new admission", async () => {
-        const built = await build()
-        const tx = mockEntityManager()
-        const body = { inboundEventId: INBOUND, keyName: "CRM", company: "ACME", stage: null, note: "VIP" }
-
-        await built.service.process({ kind: "lead", workspaceId: WORKSPACE, ...body }, tx)
-
-        expect(built.leads.fulfillExistingInbound).toHaveBeenCalledWith(WORKSPACE, INBOUND, body, tx)
-        expect(built.claim).toHaveBeenCalledWith(PUBLIC_API_QUEUE, `${WORKSPACE}:lead:${INBOUND}`, tx)
-        expect(tx.findOne).not.toHaveBeenCalled()
     })
 
     it("retains the original message work dedupe and approval requirement, with no admission time", async () => {

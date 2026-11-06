@@ -1,4 +1,3 @@
-import { LEAD_FLOWS_ERROR_KINDS, LEAD_FLOWS_MESSAGES, LeadGenIntakeService } from "@modules/domain/lead-flows"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
 import type { DynamicModule } from "@nestjs/common"
 import { CONNECTIONS_ERROR_KINDS, CONNECTIONS_MESSAGES, ConnectionsModule } from "@modules/domain/connections"
@@ -70,7 +69,7 @@ export const connectionsModules = (options: ApiOptions): Array<DynamicModule> =>
     WebhookConnectionsModule.register({ isGlobal: true, ...options.webhookConnections }),
     GoogleConnectionsModule.register({ isGlobal: true }),
     MetaConnectionsModule.register({ isGlobal: true }),
-    MetaInboxModule.register({ isGlobal: true, taker: LeadGenIntakeService }),
+    MetaInboxModule.register({ isGlobal: true }),
     ConnectionLifecycleModule.register({ isGlobal: true }),
     ConnectionCommandsModule.register({ isGlobal: true }),
     GoogleModule.register({ isGlobal: true, ...options.google }),
@@ -95,7 +94,6 @@ export const connectionsErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorK
     CHANNEL_SETUP_ERROR_KINDS,
     WEBHOOK_DELIVERY_ERROR_KINDS,
     DOCUMENTS_ERROR_KINDS,
-    LEAD_FLOWS_ERROR_KINDS,
 ]
 
 /** The message bundles of the capabilities this group registers, in registration order. */
@@ -113,5 +111,4 @@ export const connectionsMessages: ReadonlyArray<MessageBundle> = [
     META_MESSAGES,
     CHANNEL_SETUP_MESSAGES,
     WEBHOOK_DELIVERY_MESSAGES,
-    LEAD_FLOWS_MESSAGES,
 ]

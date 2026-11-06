@@ -1,14 +1,9 @@
-import type { RunContext } from "@nivo-lite/agent-sdk/port"
-import { SAMPLE_NOW, sampleState } from "../fixtures/sales.data"
+import { sampleState } from "../fixtures/sales.data"
+import { salesContextOf } from "../fixtures/sales.context"
 import { memoryProvider } from "../memory"
 import { figuresRead } from "./figures.read"
 
-const CONTEXT: RunContext = {
-    workspaceId: "w1",
-    memberId: "m1",
-    now: new Date(SAMPLE_NOW),
-    timeZone: "Asia/Ho_Chi_Minh",
-}
+const CONTEXT = salesContextOf()
 
 const dataOf = async (state = sampleState([])): Promise<unknown> => {
     const result = await figuresRead.execute?.(memoryProvider(state), {}, CONTEXT)
@@ -24,6 +19,10 @@ describe("sales.figures", () => {
             closedCount: 3,
             closedValueVnd: 6_100_000,
             conversion: 1,
+            openHint: { key: "fig_open_hint" },
+            proposalHint: { key: "fig_proposal_hint", values: { count: 2 } },
+            closedHint: { key: "fig_closed_hint", values: { amount: 6 } },
+            conversionHint: { key: "fig_conversion_hint" },
         })
     })
 

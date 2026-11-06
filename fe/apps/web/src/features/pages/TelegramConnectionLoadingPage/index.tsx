@@ -12,7 +12,6 @@ export const TelegramConnectionLoadingPage = async (): Promise<ReactElement> => 
             props={{
                 title: t("title"),
                 mainLabel: t("mainLabel"),
-                railLabel: t("eventsTitle"),
                 steps: STEPS.map((key) => ({ id: key, title: t(key) })),
             }}
         />

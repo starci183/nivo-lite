@@ -14,7 +14,7 @@ import {
     ENTITY_ENGINE_DOOR_MESSAGES,
     EntityEngineDoorModule,
 } from "@modules/domain/entity-engine-door"
-import { CUSTOMER_TOOL_ADAPTERS, NATIVE_TOOL_ADAPTERS, NativeToolsModule } from "@modules/domain/native-tools"
+import { NATIVE_TOOL_ADAPTERS, NativeToolsModule } from "@modules/domain/native-tools"
 import {
     INBOUND_EVENTS_ERROR_KINDS,
     INBOUND_EVENTS_MESSAGES,
@@ -74,19 +74,13 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
         isGlobal: true,
         outcomes: CustomerOutcomesService,
     }),
-    NativeToolsModule.register({ isGlobal: true, customer: true }),
+    NativeToolsModule.register({ isGlobal: true }),
     McpGatewayModule.register({
         isGlobal: true,
         ...options.mcpGateway,
         console: true,
         keyCheck: true,
-        natives: [
-            ...NATIVE_TOOL_ADAPTERS,
-            ...CUSTOMER_TOOL_ADAPTERS,
-            AgentNativeService,
-            ChatSendNativeService,
-            TeamChatNativeService,
-        ],
+        natives: [...NATIVE_TOOL_ADAPTERS, AgentNativeService, ChatSendNativeService, TeamChatNativeService],
     }),
     EntityEngineDoorModule.register({ isGlobal: true }),
     CustomerTurnsModule.register({ isGlobal: true, ...customerTurnsOptionsOf(options.connections.publicApiUrl) }),

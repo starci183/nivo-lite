@@ -59,10 +59,11 @@ export const mcpKnowledgeModules = (options: McpAppOptions): Array<DynamicModule
         entities: FLOW_F_ENTITIES,
         jobs: [],
         alerts: ReadOnlyEngineAlertsService,
-        ...options.entityEngine,
+        cursorKey: options.entityEngine.cursorKey,
+        buildId: options.entityEngine.buildId,
     }),
     ChatRecordsModule.register({ isGlobal: true }),
-    NativeToolsModule.register({ isGlobal: true, customer: true, leadReader: true }),
+    NativeToolsModule.register({ isGlobal: true }),
 ]
 
 /** The error kinds of the capabilities this group registers. */

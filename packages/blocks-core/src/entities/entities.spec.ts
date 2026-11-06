@@ -8,7 +8,7 @@ const catalog = new Map<string, AnyEntityDefinition>(FLOW_F_ENTITIES.map((entity
 const entityNamed = (name: string): AnyEntityDefinition | undefined => catalog.get(name)
 
 describe("flow F entity declarations", () => {
-    it("declares the twenty-eight entities once each", () => {
+    it("declares the twenty-nine entities once each", () => {
         expect(FLOW_F_ENTITIES.map((entity) => entity.name)).toEqual([
             "sales.lead",
             "sales.order",
@@ -38,6 +38,7 @@ describe("flow F entity declarations", () => {
             "agent.graph-source",
             "agent.graph-proposal",
             "agent.graph-decision",
+            "workspace.settings",
         ])
         expect(catalog.size).toBe(FLOW_F_ENTITIES.length)
         expect(new Set(FLOW_F_ENTITIES.map((entity) => entity.dataKind)).size).toBe(FLOW_F_ENTITIES.length)
@@ -45,6 +46,19 @@ describe("flow F entity declarations", () => {
 
     it("has no entity problem across the whole catalog", () => {
         for (const entity of FLOW_F_ENTITIES) expect(entityProblems(entity, catalog)).toEqual([])
+    })
+
+    it("sorts the loyalty members by the last purchase with those who never bought last", () => {
+        const member = entityNamed("loyalty.member")
+        expect(member?.fields["lastActivityAt"]).toMatchObject({
+            kind: "timestamptz",
+            nullable: false,
+            default: { literal: "1970-01-01T00:00:00.000Z" },
+        })
+        expect(member?.indexes?.find((index) => index.name === "recent")?.on).toEqual([
+            { desc: "lastActivityAt" },
+            { desc: "id" },
+        ])
     })
 
     it("keeps the graph node kinds of today", () => {

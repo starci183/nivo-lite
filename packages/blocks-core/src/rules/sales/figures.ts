@@ -1,3 +1,5 @@
+import type { Message } from "../../rows/message-text"
+
 /** The counts of customers by stage, as the counts of a list read gives them. */
 export type StageCounts = Readonly<Record<string, number>>
 
@@ -27,7 +29,30 @@ export interface SalesFigures {
     readonly closedValueVnd: number
     /** The share of closed customers that were won, as a fraction; 0 while none is closed. */
     readonly conversion: number
+    /** The line under the open count. */
+    readonly openHint: Message
+    /** The line under the value on offer: how many deals it is spread over. */
+    readonly proposalHint: Message
+    /** The line under the closed count: what they add up to, in millions of VND. */
+    readonly closedHint: Message
+    /** The line under the conversion. */
+    readonly conversionHint: Message
 }
+
+/** The message keys of the hint lines under the figures. */
+export const FIGURE_HINT_KEYS: {
+    readonly open: string
+    readonly proposal: string
+    readonly closed: string
+    readonly conversion: string
+} = {
+    open: "fig_open_hint",
+    proposal: "fig_proposal_hint",
+    closed: "fig_closed_hint",
+    conversion: "fig_conversion_hint",
+}
+
+const MILLION = 1_000_000
 
 const OPEN_STAGES: ReadonlyArray<string> = ["new", "qualified", "proposal"]
 
@@ -42,5 +67,9 @@ export const salesFiguresOf = (stages: StageCounts, totals: OrderTotals): SalesF
         closedCount: totals.closedCount,
         closedValueVnd: totals.closedVnd,
         conversion: decided === 0 ? 0 : won / decided,
+        openHint: { key: FIGURE_HINT_KEYS.open },
+        proposalHint: { key: FIGURE_HINT_KEYS.proposal, values: { count: totals.draftCount } },
+        closedHint: { key: FIGURE_HINT_KEYS.closed, values: { amount: Math.round(totals.closedVnd / MILLION) } },
+        conversionHint: { key: FIGURE_HINT_KEYS.conversion },
     }
 }

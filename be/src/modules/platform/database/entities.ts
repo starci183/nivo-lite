@@ -48,7 +48,6 @@ import { contentPillarsEntities } from "@modules/domain/content-pillars"
 import { contentPlansEntities } from "@modules/domain/content-plans"
 import { contentSettingsEntities } from "@modules/domain/content-settings"
 import { contentWeeklyReportsEntities } from "@modules/domain/content-weekly-reports"
-import { contractsEntities } from "@modules/domain/contracts"
 import { creditsEntities } from "@modules/domain/credits"
 import { dataRecordsEntities } from "@modules/domain/data-records"
 import { dataSyncRunsEntities } from "@modules/domain/data-sync-runs"
@@ -56,7 +55,6 @@ import { decisionsEntities } from "@modules/domain/decisions"
 import { dossierReviewEntities } from "@modules/domain/dossier-review"
 import { emailMessagesEntities } from "@modules/domain/email-messages"
 import { eventsEntities } from "@modules/domain/events"
-import { executionsEntities } from "@modules/domain/executions"
 import { hiringEntities } from "@modules/domain/hiring"
 import { identityEntities } from "@modules/domain/identity"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
@@ -66,16 +64,6 @@ import { knowledgeChunksEntities } from "@modules/domain/knowledge-chunks"
 import { knowledgeGapsEntities } from "@modules/domain/knowledge-gaps"
 import { knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
 import { knowledgeSuggestionStateEntities } from "@modules/domain/knowledge-suggestion-state"
-import { leadActionsEntities } from "@modules/domain/lead-actions"
-import { leadFlowsEntities } from "@modules/domain/lead-flows"
-import { leadsEntities } from "@modules/domain/leads"
-import { loyaltyCampaignsEntities } from "@modules/domain/loyalty-campaigns"
-import { loyaltyCustomerLinksEntities } from "@modules/domain/loyalty-customer-links"
-import { loyaltyCustomersEntities } from "@modules/domain/loyalty-customers"
-import { loyaltyLedgerEntities } from "@modules/domain/loyalty-ledger"
-import { loyaltyOtpsEntities } from "@modules/domain/loyalty-otps"
-import { loyaltyProgramsEntities } from "@modules/domain/loyalty-programs"
-import { loyaltyRewardsEntities } from "@modules/domain/loyalty-rewards"
 import { mcpCallLogEntities } from "@modules/domain/mcp-call-log"
 import { mcpConnectorsEntities } from "@modules/domain/mcp-connectors"
 import { mcpGatewayReceiptsEntities } from "@modules/domain/mcp-gateway-receipts"
@@ -95,14 +83,12 @@ import { modulesEntities } from "@modules/domain/modules"
 import { nivoKnowledgeEntities } from "@modules/domain/nivo-knowledge"
 import { officeRoomsEntities } from "@modules/domain/office-rooms"
 import { openclawAgentSyncEntities } from "@modules/domain/openclaw-agent-sync"
-import { ordersEntities } from "@modules/domain/orders"
 import { paymentOrderRequestsEntities } from "@modules/domain/payment-order-requests"
 import { paymentOrdersEntities } from "@modules/domain/payment-orders"
 import { platformAdminEntities } from "@modules/domain/platform-admin"
 import { platformAuditEntities } from "@modules/domain/platform-audit"
 import { publicApiEntities } from "@modules/domain/public-api"
 import { publicDocumentsEntities } from "@modules/domain/public-documents"
-import { responsibilitiesEntities } from "@modules/domain/responsibilities"
 import { sepayTransactionsEntities } from "@modules/domain/sepay-transactions"
 import { shiftsEntities } from "@modules/domain/shifts"
 import { staffEntities } from "@modules/domain/staff"
@@ -187,14 +173,12 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...contentPlansEntities,
     ...contentSettingsEntities,
     ...contentWeeklyReportsEntities,
-    ...contractsEntities,
     ...creditsEntities,
     ...dataRecordsEntities,
     ...dataSyncRunsEntities,
     ...decisionsEntities,
     ...emailMessagesEntities,
     ...eventsEntities,
-    ...executionsEntities,
     ...hiringEntities,
     ...identityEntities,
     ...inboundEventsEntities,
@@ -204,16 +188,6 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...knowledgeGapsEntities,
     ...knowledgeSourcesEntities,
     ...knowledgeSuggestionStateEntities,
-    ...leadActionsEntities,
-    ...leadFlowsEntities,
-    ...leadsEntities,
-    ...loyaltyCampaignsEntities,
-    ...loyaltyCustomerLinksEntities,
-    ...loyaltyCustomersEntities,
-    ...loyaltyLedgerEntities,
-    ...loyaltyOtpsEntities,
-    ...loyaltyProgramsEntities,
-    ...loyaltyRewardsEntities,
     ...mcpCallLogEntities,
     ...mcpConnectorsEntities,
     ...mcpGatewayReceiptsEntities,
@@ -233,14 +207,12 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...nivoKnowledgeEntities,
     ...officeRoomsEntities,
     ...openclawAgentSyncEntities,
-    ...ordersEntities,
     ...paymentOrderRequestsEntities,
     ...paymentOrdersEntities,
     ...platformAdminEntities,
     ...platformAuditEntities,
     ...publicApiEntities,
     ...publicDocumentsEntities,
-    ...responsibilitiesEntities,
     ...sepayTransactionsEntities,
     ...shiftsEntities,
     ...staffEntities,
