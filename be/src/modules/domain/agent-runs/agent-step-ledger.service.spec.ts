@@ -20,6 +20,7 @@ const build = async () => {
     fakeTransaction(em)
     const store = mock<AgentRunStoreService>()
     store.at.mockImplementation((_ws, _manager, work) => work(scoped))
+    store.appendIn.mockResolvedValue(0)
     store.patchRunWith.mockImplementation(async (_scoped, _runId, builder) => {
         await builder(runRecordOf())
         return runRecordOf()
@@ -194,7 +195,7 @@ describe("AgentStepLedgerService commit", () => {
             running,
             expect.objectContaining({ status: "done", result: { ok: 1 }, claimedUntil: null, waitItemId: null }),
         )
-        expect(store.appendRows).toHaveBeenCalled()
+        expect(store.appendIn).toHaveBeenCalledWith(scoped, "run-1", [])
         expect(queue.enqueueAdvance).toHaveBeenCalledWith(
             { runId: "run-1", workspaceId: "ws-1" },
             "step-1",
@@ -419,5 +420,35 @@ describe("AgentStepLedgerService compensation marks", () => {
         })
         await expect(ledger.commitCompensation(step, false, "boom")).resolves.toBe("dead")
         expect(wrote).toEqual([{ status: "dead", error: { code: "compensation_failed" }, endedAt: WHEN.toISOString() }])
+    })
+})
+
+describe("AgentStepLedgerService commit settles after the append", () => {
+    it("ends the run when every next step it names was already written, and keeps it running when a step was appended", async () => {
+        const { ledger, records, store } = await build()
+        const written: Array<unknown> = []
+        store.patchRunWith.mockImplementation(async (_scoped, _runId, builder) => {
+            written.push(await builder(runRecordOf({ status: "running" })))
+            return runRecordOf()
+        })
+        const next = [
+            { stepKey: "reply", nodeKey: "reply", kind: "node", effect: { kind: "read" as const }, input: {} },
+        ]
+        const finished = [
+            stepRecordOf({ stepKey: "step-1", status: "done" }),
+            stepRecordOf({ stepKey: "reply", status: "done" }),
+        ]
+
+        withSteps(records, [running])
+        records.stepsOf.mockReset().mockResolvedValueOnce([running]).mockResolvedValue(finished)
+        store.appendIn.mockResolvedValueOnce(0)
+        await ledger.commit(claimed, { kind: "done", result: {}, next })
+
+        withSteps(records, [running])
+        records.stepsOf.mockReset().mockResolvedValueOnce([running]).mockResolvedValue(finished)
+        store.appendIn.mockResolvedValueOnce(1)
+        await ledger.commit(claimed, { kind: "done", result: {}, next })
+
+        expect(written).toEqual([{ status: "done", endedAt: WHEN.toISOString() }, { status: "running" }])
     })
 })

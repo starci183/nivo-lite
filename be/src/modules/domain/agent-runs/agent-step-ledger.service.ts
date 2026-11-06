@@ -129,7 +129,6 @@ export class AgentStepLedgerService {
 
     private async followUp(tx: EntityManager, ref: RunRef, step: StepView, commit: StepCommit): Promise<void> {
         if (commit.kind === "done") {
-            await this.store.appendRows(tx, ref, commit.next)
             await this.queue.enqueueAdvance(ref, step.stepKey, "done", tx)
         }
         if (commit.kind === "retry") {
@@ -144,9 +143,10 @@ export class AgentStepLedgerService {
         if (Number(current.version) !== step.fence || current.status !== "running") return "fenced"
         const written = await this.records.patchStep(scoped, current, this.outcomeOf(commit))
         if (written === null) return "fenced"
+        const appended = commit.kind === "done" ? await this.store.appendIn(scoped, step.runId, commit.next) : 0
         await this.store.patchRunWith(scoped, step.runId, async (fresh) => {
             const steps = await this.records.stepsOf(scoped, step.runId)
-            return this.runValues(fresh, steps, commit)
+            return this.runValues(fresh, steps, commit, appended)
         })
         return "ok"
     }
@@ -185,10 +185,19 @@ export class AgentStepLedgerService {
     }
 
     /** What a commit writes to the run: its status after the step, read against the steps as they stand. */
-    private runValues(run: RunRecord, steps: ReadonlyArray<StepRecord>, commit: StepCommit): MutationValues {
+    /**
+     * The run's status after a commit, read from the steps after the next ones were appended: a next step that was already written (a
+     * replay) adds nothing, so a run whose steps are all done ends even when the finished step named it again.
+     */
+    private runValues(
+        run: RunRecord,
+        steps: ReadonlyArray<StepRecord>,
+        commit: StepCommit,
+        appended: number,
+    ): MutationValues {
         if (run.status !== "running" && run.status !== "waiting") return { stepSeq: run.stepSeq }
         if (commit.kind === "retry" || commit.kind === "failed") return { status: "running" }
-        const more = commit.kind === "done" && (commit.continues === true || commit.next.length > 0)
+        const more = commit.kind === "done" && (commit.continues === true || appended > 0)
         if (more) return { status: "running" }
         if (steps.every((step) => step.status === "done")) return { status: "done", endedAt: iso(this.clock.now()) }
         return { status: steps.some(open) ? "running" : "waiting" }
