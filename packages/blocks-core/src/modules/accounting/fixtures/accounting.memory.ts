@@ -87,13 +87,19 @@ export const putBookEntry = (world: MemoryWorld, record: BookEntryRecord): Recor
     return putRecord(world, "accounting.book-entry", id, data, { version })
 }
 
+/** The fields of a question the department asked. */
+export interface QuestionData {
+    /** What it asks. */
+    readonly text: string
+    /** Where it came from, or null. */
+    readonly source: string | null
+    /** Open until somebody answers; absent means open. */
+    readonly status?: string
+}
+
 /** Stores a question the department asked, asked at `createdAt`. */
-export const putQuestion = (
-    world: MemoryWorld,
-    id: string,
-    data: { readonly text: string; readonly source: string | null; readonly status?: string },
-    createdAt: string,
-): RecordRow => putRecord(world, "accounting.question", id, { status: "open", ...data }, { createdAt })
+export const putQuestion = (world: MemoryWorld, id: string, data: QuestionData, createdAt: string): RecordRow =>
+    putRecord(world, "accounting.question", id, { status: "open", ...data }, { createdAt })
 
 /** Stores the settings row of the workspace. */
 export const putSettings = (world: MemoryWorld, data: Readonly<Record<string, unknown>>): RecordRow =>
