@@ -1,5 +1,6 @@
 import type { ConnectionsRegionView, ItemsRegionView, KnowledgeRegionView } from "../../../views/views.types"
 import type { ModuleFixtures } from "../../module-fixtures"
+import { PLATFORM_MESSAGES } from "../platform-messages"
 import type { InstallationFacts, InstallationView, ParkedRunRow } from "../platform.types"
 
 /** An installation with one enabled module and one the workspace has not enabled. */
@@ -118,8 +119,8 @@ export const KNOWLEDGE_VIEW: KnowledgeRegionView = {
 /** What the agent knows, with no open gap. */
 export const KNOWLEDGE_NONE: KnowledgeRegionView = { ...KNOWLEDGE_VIEW, gaps: null }
 
-/** Two runs the engine parked, about two orders. */
-export const PARKED_RUNS_VIEW: { readonly count: string; readonly rows: ReadonlyArray<ParkedRunRow> } = {
+/** The view of two runs the engine parked, about two orders, with the words of one language of the platform messages. */
+const parkedRunsIn = (words: Readonly<Record<string, string>>): ParkedRunsView => ({
     count: "2",
     rows: [
         {
@@ -127,9 +128,9 @@ export const PARKED_RUNS_VIEW: { readonly count: string; readonly rows: Readonly
             module: "sales",
             subjectKind: "sales.order",
             subjectId: "order-2",
-            step: "confirm",
+            step: words["parked_step_confirm"] ?? "",
             errorCode: "DELIVERY_FAILED",
-            errorWords: "The message could not be sent",
+            errorWords: words["parked_error_delivery_failed"] ?? "",
             parkedAt: "2026-11-04T10:30:00.000Z",
         },
         {
@@ -137,13 +138,25 @@ export const PARKED_RUNS_VIEW: { readonly count: string; readonly rows: Readonly
             module: "sales",
             subjectKind: "sales.order",
             subjectId: "order-1",
-            step: "notify",
+            step: words["parked_step_notify"] ?? "",
             errorCode: "TIMEOUT",
-            errorWords: "The channel did not answer",
+            errorWords: words["parked_error_timeout"] ?? "",
             parkedAt: "2026-11-04T09:10:00.000Z",
         },
     ],
+})
+
+/** What platform.parked-runs answers. */
+interface ParkedRunsView {
+    readonly count: string | null
+    readonly rows: ReadonlyArray<ParkedRunRow>
 }
+
+/** Two runs the engine parked, in the default language (Vietnamese): the words are those of the platform messages. */
+export const PARKED_RUNS_VIEW: ParkedRunsView = parkedRunsIn(PLATFORM_MESSAGES.vi)
+
+/** The same two parked runs in English. */
+export const PARKED_RUNS_VIEW_EN: ParkedRunsView = parkedRunsIn(PLATFORM_MESSAGES.en)
 
 /** No run is parked. */
 export const PARKED_RUNS_NONE: { readonly count: null; readonly rows: ReadonlyArray<ParkedRunRow> } = {
@@ -158,7 +171,11 @@ export const PLATFORM_FIXTURES: ModuleFixtures = {
         "platform.agent-done": { ready: DONE_VIEW, empty: DONE_NONE },
         "platform.agent-connections": { ready: CONNECTIONS_VIEW, empty: CONNECTIONS_NONE },
         "platform.agent-knowledge": { ready: KNOWLEDGE_VIEW, empty: KNOWLEDGE_NONE },
-        "platform.parked-runs": { ready: PARKED_RUNS_VIEW, empty: PARKED_RUNS_NONE },
+        "platform.parked-runs": {
+            ready: PARKED_RUNS_VIEW,
+            readyIn: { vi: PARKED_RUNS_VIEW, en: PARKED_RUNS_VIEW_EN },
+            empty: PARKED_RUNS_NONE,
+        },
     },
     actions: { "platform.resume-run": { ok: true } },
 }

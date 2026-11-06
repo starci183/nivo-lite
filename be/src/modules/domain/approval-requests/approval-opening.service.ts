@@ -3,8 +3,10 @@ import type { EntityManager } from "typeorm"
 import { AuthorityRulesService, appliesToAgent, bandOf } from "@modules/domain/authority-rules"
 import type { ApprovalSetup } from "@modules/domain/authority-rules"
 import { MemberGrantsService } from "@modules/domain/member-grants"
+import { POST_APPROVAL_JOB } from "@nivo-lite/blocks-core/modules"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
+import { ModuleJobsQueue } from "@modules/queues/module-jobs"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ApprovalRequestRecord,
@@ -92,6 +94,7 @@ export class ApprovalOpeningService {
         private readonly grants: MemberGrantsService,
         private readonly escalation: ApprovalEscalationService,
         private readonly announcer: ApprovalAnnouncerService,
+        private readonly jobs: ModuleJobsQueue,
     ) {}
 
     /**
@@ -119,6 +122,18 @@ export class ApprovalOpeningService {
                 ? await this.entityManager.transaction((tx) => this.write(tx, write))
                 : await this.write(manager, write)
         return toOpened(opened.row)
+    }
+
+    /**
+     * Enqueues the declared job that puts the approval card of a new request in the team chat, in the transaction that inserts the request:
+     * the cards exist when the request does, and the request id is the dedupe key, so each decision has one card per room.
+     */
+    private askInChat(tx: EntityManager, request: ApprovalRequestRecord): Promise<void> {
+        return this.jobs.enqueue(
+            { workspaceId: request.workspace_id, job: POST_APPROVAL_JOB, input: { decisionId: request.id } },
+            tx,
+            { dedupeKey: `${POST_APPROVAL_JOB}:${request.id}` },
+        )
     }
 
     private async setupFor(params: OpenApprovalParams): Promise<ApprovalSetup> {
@@ -184,7 +199,10 @@ export class ApprovalOpeningService {
             return { row: toRequestRecord(pending), resolved: null }
         }
         const inserted = toRequestRecord(row)
-        if (set.approvers.length > 0) return { row: inserted, resolved: null }
+        if (set.approvers.length > 0) {
+            await this.askInChat(tx, inserted)
+            return { row: inserted, resolved: null }
+        }
         const resolved = await this.escalation.expire(tx, inserted, input.directory, input.now)
         await this.announcer.resolved(resolved, tx)
         return { row: { ...inserted, status: "expired" }, resolved }

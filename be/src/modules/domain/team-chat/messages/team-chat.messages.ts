@@ -3,6 +3,9 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** Localized team chat refusals. */
 export const TEAM_CHAT_MESSAGES: MessageBundle = {
     vi: {
+        "teamChat.report": "\u0110\u00e3 xong: {{trigger}}",
+        "teamChat.approval": "C\u1ea7n b\u1ea1n duy\u1ec7t: {{action}} {{amount}}",
+        "teamChat.approvalNoAmount": "C\u1ea7n b\u1ea1n duy\u1ec7t: {{action}}",
         "errors.TEAM_CHAT_NOT_FOUND": "Không tìm thấy phòng, tin nhắn hoặc thành viên này.",
         "errors.TEAM_CHAT_NOT_MEMBER": "Bạn không ở trong phòng này.",
         "errors.TEAM_CHAT_FORBIDDEN": "Bạn không được làm việc này trong phòng này.",
@@ -20,6 +23,9 @@ export const TEAM_CHAT_MESSAGES: MessageBundle = {
         "errors.TEAM_CHAT_FILE_TYPE_NOT_ALLOWED": "Loại tệp này không được gửi.",
     },
     en: {
+        "teamChat.report": "Done: {{trigger}}",
+        "teamChat.approval": "Needs your approval: {{action}} {{amount}}",
+        "teamChat.approvalNoAmount": "Needs your approval: {{action}}",
         "errors.TEAM_CHAT_NOT_FOUND": "The room, message or member was not found.",
         "errors.TEAM_CHAT_NOT_MEMBER": "You are not in this room.",
         "errors.TEAM_CHAT_FORBIDDEN": "You may not do this in this room.",

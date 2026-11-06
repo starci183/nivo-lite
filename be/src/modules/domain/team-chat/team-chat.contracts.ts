@@ -69,7 +69,12 @@ export interface MessageView {
     readonly editedAt: Date | null
     readonly pinned: boolean
     readonly mentions: ReadonlyArray<MemberRef & { readonly name: string }>
-    readonly attachments: ReadonlyArray<{ readonly fileKey: string; readonly name: string; readonly mimeType: string; readonly sizeBytes: number }>
+    readonly attachments: ReadonlyArray<{
+        readonly fileKey: string
+        readonly name: string
+        readonly mimeType: string
+        readonly sizeBytes: number
+    }>
     /** The run a report is about; null for any other kind. */
     readonly runId: string | null
     /** The decision an approval card is about; null for any other kind. */
@@ -116,8 +121,7 @@ export interface UnreadView {
 
 /** An operation that answers its value or a refusal code, never throws for a domain case. */
 export type TeamChatResult<V> =
-    | { readonly ok: true; readonly value: V }
-    | { readonly ok: false; readonly refusal: TeamChatErrorCode }
+    { readonly ok: true; readonly value: V } | { readonly ok: false; readonly refusal: TeamChatErrorCode }
 
 /** The input of a send. */
 export interface SendInput {

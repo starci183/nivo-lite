@@ -1,7 +1,15 @@
 import { TeamChatErrorCode } from "./errors/team-chat.error"
 import { BODY_MAX, FILES_MAX, MENTIONS_MAX, PAGE_DEFAULT, PAGE_MAX } from "./team-chat.contracts"
 import type { MemberRef } from "./team-chat.contracts"
-import { cursorOf, directKeyOf, groupNameOf, pageSizeOf, positionOf, sendProblem, uniqueMembers } from "./team-chat.policy"
+import {
+    cursorOf,
+    directKeyOf,
+    groupNameOf,
+    pageSizeOf,
+    positionOf,
+    sendProblem,
+    uniqueMembers,
+} from "./team-chat.policy"
 
 const ME: MemberRef = { memberKind: "user", memberId: "11111111-1111-4111-8111-111111111111" }
 const BOT: MemberRef = { memberKind: "agent", memberId: "22222222-2222-4222-8222-222222222222" }

@@ -24,7 +24,7 @@ import { ChatActivityModule } from "@modules/domain/chat-activity"
 import { CHAT_RECORDS_ERROR_KINDS, CHAT_RECORDS_MESSAGES, ChatRecordsModule } from "@modules/domain/chat-records"
 import { CHAT_MARKERS_ERROR_KINDS, CHAT_MARKERS_MESSAGES, ChatMarkersModule } from "@modules/domain/chat-markers"
 import { ChatTypingModule } from "@modules/domain/chat-typing"
-import { TEAM_CHAT_ERROR_KINDS, TEAM_CHAT_MESSAGES, TeamChatModule } from "@modules/domain/team-chat"
+import { TEAM_CHAT_ERROR_KINDS, TEAM_CHAT_MESSAGES, TeamChatModule, TeamChatNativeService } from "@modules/domain/team-chat"
 import {
     CHANNELS_ERROR_KINDS,
     CHANNELS_MESSAGES,
@@ -74,7 +74,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
         ...options.mcpGateway,
         console: true,
         keyCheck: true,
-        natives: [...NATIVE_TOOL_ADAPTERS, ...CUSTOMER_TOOL_ADAPTERS, AgentNativeService, ChatSendNativeService],
+        natives: [...NATIVE_TOOL_ADAPTERS, ...CUSTOMER_TOOL_ADAPTERS, AgentNativeService, ChatSendNativeService, TeamChatNativeService],
     }),
     EntityEngineDoorModule.register({ isGlobal: true }),
     CustomerTurnsModule.register({ isGlobal: true, ...customerTurnsOptionsOf(options.connections.publicApiUrl) }),

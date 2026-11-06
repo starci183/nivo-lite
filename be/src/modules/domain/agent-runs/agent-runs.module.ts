@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { WORK_ITEM_CLOSED } from "@modules/domain/work-items"
 import { AgentStepQueueModule } from "@modules/queues/agent-step"
+import { ModuleJobsQueueModule } from "@modules/queues/module-jobs"
 import { AgentRunAlertsService } from "./agent-run-alerts.service"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
@@ -37,7 +38,7 @@ export class AgentRunsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), AgentStepQueueModule.register({})],
+            imports: [...(base.imports ?? []), AgentStepQueueModule.register({}), ModuleJobsQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 {

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
+import { In, IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { WorkspaceMemberSeatsService, WorkspaceMembersReadService } from "@modules/domain/workspace-members"
@@ -170,7 +170,11 @@ export class TeamChatService {
     async createRoom(
         workspaceId: string,
         viewerId: string,
-        input: { readonly kind: "direct" | "group"; readonly name: string | null; readonly members: ReadonlyArray<MemberRef> },
+        input: {
+            readonly kind: "direct" | "group"
+            readonly name: string | null
+            readonly members: ReadonlyArray<MemberRef>
+        },
     ): Promise<TeamChatResult<RoomView>> {
         const creator: MemberRef = { memberKind: "user", memberId: viewerId }
         const others = uniqueMembers(input.members, creator)
@@ -295,7 +299,12 @@ export class TeamChatService {
     }
 
     /** Pins a message of a room; pinning a pinned message changes nothing. */
-    async pin(workspaceId: string, viewerId: string, roomId: string, messageId: string): Promise<TeamChatResult<MessageView>> {
+    async pin(
+        workspaceId: string,
+        viewerId: string,
+        roomId: string,
+        messageId: string,
+    ): Promise<TeamChatResult<MessageView>> {
         const message = await this.pinnable(workspaceId, viewerId, roomId, messageId)
         if (message === null) return refused(TeamChatErrorCode.NotFound)
         await this.entityManager
@@ -309,7 +318,12 @@ export class TeamChatService {
     }
 
     /** Takes a pin off; unpinning a message that is not pinned changes nothing. */
-    async unpin(workspaceId: string, viewerId: string, roomId: string, messageId: string): Promise<TeamChatResult<MessageView>> {
+    async unpin(
+        workspaceId: string,
+        viewerId: string,
+        roomId: string,
+        messageId: string,
+    ): Promise<TeamChatResult<MessageView>> {
         const message = await this.pinnable(workspaceId, viewerId, roomId, messageId)
         if (message === null) return refused(TeamChatErrorCode.NotFound)
         await this.entityManager.delete(ChatRoomPinEntity, { roomId, messageId })
@@ -387,7 +401,14 @@ export class TeamChatService {
                 })
                 const id = (inserted.identifiers[0] as { id: string }).id
                 await manager.insert(ChatRoomMemberEntity, [
-                    { roomId: id, workspaceId, memberKind: "user", memberId: viewerId, role: "owner", lastReadAt: DATABASE_NOW },
+                    {
+                        roomId: id,
+                        workspaceId,
+                        memberKind: "user",
+                        memberId: viewerId,
+                        role: "owner",
+                        lastReadAt: DATABASE_NOW,
+                    },
                     ...others.map((member) => ({
                         roomId: id,
                         workspaceId,
@@ -469,7 +490,11 @@ export class TeamChatService {
               GROUP BY m.room_id`,
             [workspaceId, viewerId, roomId],
         )
-        return rows.map((row) => ({ roomId: row.room_id, unreadCount: Number(row.unread), mentionCount: Number(row.mentions) }))
+        return rows.map((row) => ({
+            roomId: row.room_id,
+            unreadCount: Number(row.unread),
+            mentionCount: Number(row.mentions),
+        }))
     }
 
     private async roomViews(
@@ -485,7 +510,10 @@ export class TeamChatService {
         })
         const names = await this.namesOf(
             workspaceId,
-            members.map((member) => ({ memberKind: member.memberKind as MemberRef["memberKind"], memberId: member.memberId })),
+            members.map((member) => ({
+                memberKind: member.memberKind as MemberRef["memberKind"],
+                memberId: member.memberId,
+            })),
         )
         const unread = new Map((await this.unreadRows(workspaceId, viewerId, null)).map((row) => [row.roomId, row]))
         const lasts = await this.lastMessages(workspaceId, viewerId, ids)
@@ -500,7 +528,11 @@ export class TeamChatService {
                     lastReadAt: member.lastReadAt,
                     muted: member.muted,
                 }))
-                .toSorted((left, right) => Number(right.role === "owner") - Number(left.role === "owner") || left.name.localeCompare(right.name))
+                .toSorted(
+                    (left, right) =>
+                        Number(right.role === "owner") - Number(left.role === "owner") ||
+                        left.name.localeCompare(right.name),
+                )
                 .slice(0, MEMBERS_MAX)
             const mine = seated.find((member) => member.memberKind === "user" && member.memberId === viewerId)
             const other = views.find((member) => !(member.memberKind === "user" && member.memberId === viewerId))
@@ -568,7 +600,9 @@ export class TeamChatService {
         const approvals = await this.approvalStates(
             workspaceId,
             viewerId,
-            messages.flatMap((message) => (message.kind === "approval" && message.ref !== null ? [message.ref["decision_id"] ?? ""] : [])),
+            messages.flatMap((message) =>
+                message.kind === "approval" && message.ref !== null ? [message.ref["decision_id"] ?? ""] : [],
+            ),
         )
         return messages.map((message) => ({
             id: message.id,
@@ -576,8 +610,7 @@ export class TeamChatService {
             kind: message.kind as MessageView["kind"],
             authorKind: message.authorKind as MessageView["authorKind"],
             authorId: message.authorId,
-            authorName:
-                message.authorId === null ? "" : (names.get(`${message.authorKind}:${message.authorId}`) ?? ""),
+            authorName: message.authorId === null ? "" : (names.get(`${message.authorKind}:${message.authorId}`) ?? ""),
             body: message.body,
             createdAt: message.createdAt,
             editedAt: message.editedAt,
@@ -594,7 +627,6 @@ export class TeamChatService {
         }))
     }
 
-
     /**
      * Writes the report of a finished run: ONE `report` message with the run as its ref, in the room the agent is configured to report
      * to, else in the direct room between the agent and the owner of the workspace, opened here when it does not exist (never on a read).
@@ -602,11 +634,24 @@ export class TeamChatService {
      */
     async postReport(
         workspaceId: string,
-        report: { readonly runId: string; readonly agentId: string; readonly body: string; readonly roomId: string | null },
+        report: {
+            readonly runId: string
+            readonly agentId: string
+            readonly body: string
+            readonly roomId: string | null
+        },
     ): Promise<{ readonly roomId: string; readonly messageId: string; readonly created: boolean } | null> {
         const roomId = await this.reportRoom(workspaceId, report.agentId, report.roomId)
         if (roomId === null) return null
-        const written = await this.insertCard(workspaceId, roomId, "report", "run_id", report.runId, report.agentId, report.body)
+        const written = await this.insertCard(
+            workspaceId,
+            roomId,
+            "report",
+            "run_id",
+            report.runId,
+            report.agentId,
+            report.body,
+        )
         return { roomId, ...written }
     }
 
@@ -624,19 +669,35 @@ export class TeamChatService {
             readonly approverSeatIds: ReadonlyArray<string>
         },
     ): Promise<number> {
-        const named = approval.roomIds.length === 0
-            ? []
-            : await this.entityManager.find(ChatRoomEntity, { where: { id: In([...approval.roomIds]), workspaceId } })
-        const seats = approval.approverSeatIds.length === 0 || approval.agentId === null
-            ? []
-            : await this.seats.seatsByIds(workspaceId, approval.approverSeatIds, approval.approverSeatIds.length)
+        const named =
+            approval.roomIds.length === 0
+                ? []
+                : await this.entityManager.find(ChatRoomEntity, {
+                      where: { id: In([...approval.roomIds]), workspaceId },
+                  })
+        const seats =
+            approval.approverSeatIds.length === 0 || approval.agentId === null
+                ? []
+                : await this.seats.seatsByIds(workspaceId, approval.approverSeatIds, approval.approverSeatIds.length)
         const direct = await Promise.all(
-            seats.map((seat) => this.directRoomOf(workspaceId, seat.userId, { memberKind: "agent", memberId: approval.agentId ?? "" })),
+            seats.map((seat) =>
+                this.directRoomOf(workspaceId, seat.userId, { memberKind: "agent", memberId: approval.agentId ?? "" }),
+            ),
         )
-        const rooms = [...new Set([...named.map((room) => room.id), ...direct.flatMap((id) => (id === null ? [] : [id]))])]
+        const rooms = [
+            ...new Set([...named.map((room) => room.id), ...direct.flatMap((id) => (id === null ? [] : [id]))]),
+        ]
         await Promise.all(
             rooms.map((roomId) =>
-                this.insertCard(workspaceId, roomId, "approval", "decision_id", approval.decisionId, approval.agentId, approval.body),
+                this.insertCard(
+                    workspaceId,
+                    roomId,
+                    "approval",
+                    "decision_id",
+                    approval.decisionId,
+                    approval.agentId,
+                    approval.body,
+                ),
             ),
         )
         return rooms.length
@@ -677,14 +738,18 @@ export class TeamChatService {
         const created = inserted[0]
         if (created !== undefined) return { roomId, messageId: created.id }
         const kept = await this.entityManager.findOneOrFail(ChatRoomMessageEntity, {
-            where: { roomId, authorId: line.authorAgentId ?? undefined, clientId: line.key ?? undefined },
+            where: { roomId, authorId: line.authorAgentId ?? IsNull(), clientId: line.key ?? IsNull() },
         })
         return { roomId, messageId: kept.id }
     }
 
     private async lineRoom(
         workspaceId: string,
-        line: { readonly authorAgentId: string | null; readonly roomId: string | null; readonly toUserId: string | null },
+        line: {
+            readonly authorAgentId: string | null
+            readonly roomId: string | null
+            readonly toUserId: string | null
+        },
     ): Promise<string | null> {
         if (line.roomId !== null) {
             const named = await this.entityManager.findOne(ChatRoomEntity, { where: { id: line.roomId, workspaceId } })
@@ -692,6 +757,43 @@ export class TeamChatService {
         }
         if (line.toUserId === null || line.authorAgentId === null) return null
         return this.directRoomOf(workspaceId, line.toUserId, { memberKind: "agent", memberId: line.authorAgentId })
+    }
+
+    /** The request a decision card is about, with the group it stored; null when the workspace has no such request. */
+    async approvalRequest(
+        workspaceId: string,
+        decisionId: string,
+    ): Promise<{
+        readonly id: string
+        readonly action: string
+        readonly amount: number | null
+        readonly unit: string
+        readonly requestedByAgentId: string | null
+        readonly storedGroup: unknown
+    } | null> {
+        const rows: Array<{
+            id: string
+            action: string
+            amount: string | null
+            unit: string
+            agent: string | null
+            stored_group: unknown
+        }> = await this.entityManager.query(
+            `SELECT id, action, amount, unit, requested_by_agent_id AS agent, approver_group AS stored_group
+               FROM public.approval_requests WHERE workspace_id = $1 AND id = $2`,
+            [workspaceId, decisionId],
+        )
+        const row = rows[0]
+        return row === undefined
+            ? null
+            : {
+                  id: row.id,
+                  action: row.action,
+                  amount: row.amount === null ? null : Number(row.amount),
+                  unit: row.unit,
+                  requestedByAgentId: row.agent,
+                  storedGroup: row.stored_group,
+              }
     }
 
     /** Where each decision stands, for the viewer: pending, approved, refused or expired, who settled it, and whether the viewer may. */
@@ -734,7 +836,9 @@ export class TeamChatService {
     /** The room a run reports to: the configured one when it is of the workspace, else the agent's direct room with the owner. */
     private async reportRoom(workspaceId: string, agentId: string, preferred: string | null): Promise<string | null> {
         if (preferred !== null) {
-            const configured = await this.entityManager.findOne(ChatRoomEntity, { where: { id: preferred, workspaceId } })
+            const configured = await this.entityManager.findOne(ChatRoomEntity, {
+                where: { id: preferred, workspaceId },
+            })
             if (configured !== null) return configured.id
         }
         const owner: Array<{ owner_id: string }> = await this.entityManager.query(
@@ -742,7 +846,9 @@ export class TeamChatService {
             [workspaceId],
         )
         const ownerId = owner[0]?.owner_id
-        return ownerId === undefined ? null : this.directRoomOf(workspaceId, ownerId, { memberKind: "agent", memberId: agentId })
+        return ownerId === undefined
+            ? null
+            : this.directRoomOf(workspaceId, ownerId, { memberKind: "agent", memberId: agentId })
     }
 
     /** The direct room of a person and a member, opened when the pair has none; null when the member is not of the workspace. */
@@ -769,7 +875,16 @@ export class TeamChatService {
             `INSERT INTO public.chat_room_messages (room_id, workspace_id, author_kind, author_id, body, kind, ref)
                   VALUES ($1, $2, $3, $4, $5, $6, jsonb_build_object($7::text, $8::text))
              ON CONFLICT DO NOTHING RETURNING id`,
-            [roomId, workspaceId, authorId === null ? "system" : "agent", authorId, body.slice(0, CARD_BODY_MAX), kind, refKey, refId],
+            [
+                roomId,
+                workspaceId,
+                authorId === null ? "system" : "agent",
+                authorId,
+                body.slice(0, CARD_BODY_MAX),
+                kind,
+                refKey,
+                refId,
+            ],
         )
         const created = inserted[0]
         if (created !== undefined) return { messageId: created.id, created: true }

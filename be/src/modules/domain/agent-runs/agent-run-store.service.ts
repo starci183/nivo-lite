@@ -7,7 +7,9 @@ import type { ScopedTx } from "@modules/domain/entity-engine"
 import { eachInOrder, isRecord } from "@modules/platform/primitives"
 import type { MutationValues } from "@nivo-lite/agent-sdk/mutation"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
+import { POST_REPORT_JOB } from "@nivo-lite/blocks-core/modules"
 import { AgentStepQueue } from "@modules/queues/agent-step"
+import { ModuleJobsQueue } from "@modules/queues/module-jobs"
 import { AgentRunRecordsService } from "./agent-run-records.service"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { handlerViewOf, handlerViewsOf, routeStepOf, runRecordOf, runViewOf, stepViewOf } from "./agent-runs.mapper"
@@ -44,6 +46,7 @@ export class AgentRunStoreService {
         private readonly engine: EntityEngineService,
         private readonly records: AgentRunRecordsService,
         private readonly queue: AgentStepQueue,
+        private readonly jobs: ModuleJobsQueue,
     ) {}
 
     /** Runs `work` in the scope of the workspace: on `manager` when the caller holds a transaction, else in one of its own. */
@@ -200,7 +203,9 @@ export class AgentRunStoreService {
         const values = await build(run)
         if (values === null) return null
         const written = await this.records.patchRun(scoped, run, values)
-        return written ?? (await this.patchRunWith(scoped, runId, build, left - 1))
+        if (written === null) return this.patchRunWith(scoped, runId, build, left - 1)
+        if (written.status === "done" && run.status !== "done") await this.reportEnded(scoped, written)
+        return written
     }
 
     /** Writes the run's status after a step changed: the steps are read after the run, so a racing commit is seen on the next try. */
@@ -211,6 +216,22 @@ export class AgentRunStoreService {
             const status = statusAfter(steps, more)
             return status === "done" ? { status, endedAt: iso(this.clock.now()) } : { status }
         })
+    }
+
+    /**
+     * Enqueues the declared job that posts the report of a run that ended, in the transaction of the run's final status: the report exists
+     * when the status does, and not otherwise. The run id is the dedupe key, so a replay of the settling enqueues one delivery.
+     */
+    private reportEnded(scoped: ScopedTx, run: RunRecord): Promise<void> {
+        return this.jobs.enqueue(
+            {
+                workspaceId: scoped.workspaceId,
+                job: POST_REPORT_JOB,
+                input: { runId: run.id, agentId: run.agentId, trigger: run.trigger },
+            },
+            scoped.manager,
+            { dedupeKey: `${POST_REPORT_JOB}:${run.id}` },
+        )
     }
 
     /** The run of a wake, or null; a producer reads it through the transaction that writes its work. */
