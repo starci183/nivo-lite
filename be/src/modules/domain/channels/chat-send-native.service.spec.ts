@@ -9,7 +9,9 @@ import { CHAT_MANIFEST, ChatSendNativeService } from "./chat-send-native.service
 
 const CALLER = { agentId: "agent-1", conversationId: null }
 const CONVERSATION = "11111111-1111-4111-8111-111111111111"
+const MESSAGE = "22222222-2222-4222-8222-222222222222"
 const ARGS = { conversationId: CONVERSATION, text: "Xin chao", key: "work-1" }
+const STORED_ARGS = { ...ARGS, key: MESSAGE }
 const TARGET: ChatConversationTarget = {
     id: CONVERSATION,
     workspaceId: "ws-1",
@@ -55,6 +57,7 @@ describe("ChatSendNativeService", () => {
         await expect(service.invoke("ws-1", "send", ARGS, CALLER)).resolves.toEqual({ ok: true })
 
         expect(conversations.targetOf).toHaveBeenCalledWith("ws-1", CONVERSATION)
+        expect(messages.find).not.toHaveBeenCalled()
         expect(messages.storeAgentLine).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             conversationId: CONVERSATION,
@@ -85,8 +88,9 @@ describe("ChatSendNativeService", () => {
             value: { id: "msg-9", role: "agent", body: "Stored words", deliveryStatus: null },
         })
 
-        await expect(service.invoke("ws-1", "send", ARGS, CALLER)).resolves.toEqual({ ok: true })
+        await expect(service.invoke("ws-1", "send", STORED_ARGS, CALLER)).resolves.toEqual({ ok: true })
 
+        expect(messages.find).toHaveBeenCalledWith("ws-1", CONVERSATION, MESSAGE)
         expect(messages.storeAgentLine).not.toHaveBeenCalled()
         expect(delivery.deliver).toHaveBeenCalledWith({
             workspaceId: "ws-1",
@@ -103,7 +107,7 @@ describe("ChatSendNativeService", () => {
             value: { id: "msg-9", role: "agent", body: "Stored words", deliveryStatus: "sent" },
         })
 
-        await expect(service.invoke("ws-1", "send", ARGS, CALLER)).resolves.toEqual({ ok: true })
+        await expect(service.invoke("ws-1", "send", STORED_ARGS, CALLER)).resolves.toEqual({ ok: true })
 
         expect(delivery.deliver).not.toHaveBeenCalled()
     })

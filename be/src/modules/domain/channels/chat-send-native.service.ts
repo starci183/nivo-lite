@@ -7,6 +7,9 @@ import { ChannelDeliveryService } from "./channel-delivery.service"
 import { CHAT_SEND_INPUT_SCHEMA, CHAT_SEND_SCHEMA } from "./chat-send-native.schema"
 import type { ChatSendInput } from "./chat-send-native.schema"
 
+/** The shape of the id of a record: only a replay key of this shape can name a line already stored in the conversation. */
+const MESSAGE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /** The expected reasons `chat.send` refuses with. */
 type ChatSendRefusal = "not_found" | "connection_refused" | "delivery_unknown"
 
@@ -79,8 +82,10 @@ export class ChatSendNativeService implements NativeAdapter {
      * never stored twice), else the line stored once under the key.
      */
     private async lineOf(workspaceId: string, input: ChatSendInput): Promise<ChatStoredReply> {
-        const known = await this.messages.find(workspaceId, input.conversationId, input.key)
-        if (known.kind === "ok")
+        const known = MESSAGE_ID.test(input.key)
+            ? await this.messages.find(workspaceId, input.conversationId, input.key)
+            : null
+        if (known?.kind === "ok")
             return { id: known.value.id, body: known.value.body, sent: known.value.deliveryStatus === "sent" }
         return await this.messages.storeAgentLine({
             workspaceId,
