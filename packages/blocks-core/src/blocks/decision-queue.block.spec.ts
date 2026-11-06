@@ -27,6 +27,7 @@ describe("decisionQueueBlock", () => {
         expect(decisionQueueBlock.slots).toEqual({
             queue: { kind: "read", shape: "record", required: true },
             command: { kind: "action", required: false },
+            options: { kind: "read", shape: "record", required: false },
         })
     })
 

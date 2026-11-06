@@ -17,8 +17,6 @@ export interface RaisePayload {
     readonly payload: PayloadMembers
     /** The amount at stake in VND, when there is one. */
     readonly amountVnd?: number | undefined
-    /** The payment claim the item answers, when it answers one. */
-    readonly claimId?: string | undefined
 }
 
 /** What the undo of a recorded effect names: the record to undo. */

@@ -7,7 +7,6 @@ import { BrainFactsModule } from "@modules/domain/brain-facts"
 import { ChatRecordsModule } from "@modules/domain/chat-records"
 import { ConnectionsModule } from "@modules/domain/connections"
 import { DossierReviewModule } from "@modules/domain/dossier-review"
-import { EntityEngineModule, ReadOnlyEngineAlertsService } from "@modules/domain/entity-engine"
 import { KnowledgeModule } from "@modules/domain/knowledge"
 import { KnowledgeChunksModule } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesModule } from "@modules/domain/knowledge-sources"
@@ -17,9 +16,7 @@ import { McpGatewayModule } from "@modules/domain/mcp-gateway"
 import { NativeToolsModule, NATIVE_TOOL_ADAPTERS } from "@modules/domain/native-tools"
 import { NivoKnowledgeModule } from "@modules/domain/nivo-knowledge"
 import { AiModule } from "@modules/integrations/ai"
-import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
-import { MODULE_JOBS } from "@nivo-lite/blocks-core/modules"
-import { MCP_CREDENTIAL_MODULES, MCP_PROOF_TOKEN_KEY } from "./mcp-credential-capabilities.options"
+import { MCP_CREDENTIAL_MODULES } from "./mcp-credential-capabilities.options"
 import { QUIET_INSTALLATIONS } from "./quiet-peers.options"
 
 @Module({ providers: [QUIET_INSTALLATIONS], exports: [AGENTS_INSTALLATIONS] })
@@ -52,13 +49,6 @@ export const NATIVE_TOOLS_MODULES: ReadonlyArray<DynamicModule> = [
     DossierReviewModule.register({ isGlobal: true, readOnly: true }),
     ConnectionsModule.readOnly({ isGlobal: true, readOnly: true }),
     { module: NativeToolsProofInstallationsModule, global: true },
-    EntityEngineModule.register({
-        isGlobal: true,
-        alerts: ReadOnlyEngineAlertsService,
-        entities: FLOW_F_ENTITIES,
-        jobs: MODULE_JOBS,
-        cursorKey: MCP_PROOF_TOKEN_KEY,
-    }),
     ChatRecordsModule.register({ isGlobal: true }),
     AgentGraphsModule.register({ isGlobal: true, rightsOnly: true }),
     NativeToolsModule.register({ isGlobal: true }),

@@ -100,35 +100,6 @@ end;
 $$;
 
 --
--- Name: add_lead_responsibility(uuid, uuid, text, text, text, timestamp with time zone, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.add_lead_responsibility(p_workspace uuid, p_lead uuid, p_title text, p_owner text, p_next_action text, p_due timestamp with time zone DEFAULT NULL::timestamp with time zone, p_locale text DEFAULT 'vi'::text) RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_actor text := public.lead_actor_name(p_workspace);
-  v_en boolean := coalesce(p_locale, 'vi') = 'en';
-  v_owner record;
-  v_row public.responsibilities;
-begin
-  if not exists (select 1 from public.leads l where l.workspace_id = p_workspace and l.id = p_lead) then
-    raise exception 'RESPONSIBILITIES_LEAD_NOT_FOUND' using errcode = 'P0002';
-  end if;
-  select * into v_owner from public.lead_step_owner(p_workspace, p_owner, v_actor);
-  insert into public.responsibilities (workspace_id, lead_id, title, owner_kind, owner_agent_id, owner_name, next_action, due_at)
-  values (p_workspace, p_lead, p_title, v_owner.o_kind, v_owner.o_agent, v_owner.o_name, p_next_action, p_due)
-  returning * into v_row;
-  insert into public.events (workspace_id, lead_id, kind, actor, summary)
-  values (p_workspace, p_lead, 'responsibility.assigned', v_actor,
-          case when v_en then 'Owner: ' || v_row.owner_name || ' · Next action: ' || v_row.next_action
-               else 'Người phụ trách: ' || v_row.owner_name || ' · Bước tiếp theo: ' || v_row.next_action end);
-  return public.lead_step_json(v_row);
-end;
-$$;
-
---
 -- Name: admin_console_audit(text, uuid, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -616,94 +587,6 @@ end
 $$;
 
 --
--- Name: assign_lead_responsibility(uuid, uuid, text, text, timestamp with time zone, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.assign_lead_responsibility(p_workspace uuid, p_responsibility uuid, p_owner text, p_next_action text, p_due timestamp with time zone DEFAULT NULL::timestamp with time zone, p_title text DEFAULT NULL::text, p_locale text DEFAULT 'vi'::text) RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_actor text := public.lead_actor_name(p_workspace);
-  v_en boolean := coalesce(p_locale, 'vi') = 'en';
-  v_owner record;
-  v_row public.responsibilities;
-begin
-  select * into v_owner from public.lead_step_owner(p_workspace, p_owner, v_actor);
-  update public.responsibilities
-     set owner_kind = v_owner.o_kind, owner_agent_id = v_owner.o_agent, owner_name = v_owner.o_name,
-         next_action = p_next_action, due_at = p_due, title = coalesce(p_title, title)
-   where workspace_id = p_workspace and id = p_responsibility
-  returning * into v_row;
-  if not found then
-    raise exception 'RESPONSIBILITIES_NOT_FOUND' using errcode = 'P0002';
-  end if;
-  insert into public.events (workspace_id, lead_id, kind, actor, summary)
-  values (p_workspace, v_row.lead_id, 'responsibility.assigned', v_actor,
-          case when v_en then 'Owner: ' || v_row.owner_name || ' · Next action: ' || v_row.next_action
-               else 'Người phụ trách: ' || v_row.owner_name || ' · Bước tiếp theo: ' || v_row.next_action end);
-  return public.lead_step_json(v_row);
-end;
-$$;
-
---
--- Name: automation_command_enqueue(uuid, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.automation_command_enqueue(p_workspace uuid, p_kind text, p_template text) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_id uuid;
-begin
-  if (select auth.uid()) is null or not public.is_manager(p_workspace) then
-    raise exception 'automation_command_enqueue: not a manager of the workspace' using errcode = '42501';
-  end if;
-  insert into public.automation_commands (workspace_id, kind, template_key, created_by)
-  values (p_workspace, p_kind, p_template, (select auth.uid()))
-  returning id into v_id;
-  perform public.job_enqueue(p_workspace, 'automation', 'automation.command',
-    jsonb_build_object('commandId', v_id), 'automation.command:' || v_id::text);
-  return v_id;
-end $$;
-
---
--- Name: automations_data(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.automations_data(ws uuid) RETURNS jsonb
-    LANGUAGE sql STABLE
-    SET search_path TO 'public'
-    AS $$
-  select jsonb_build_object(
-    'installations', coalesce((select jsonb_agg(jsonb_build_object('module_key', i.module_key, 'operating_mode', i.operating_mode,
-                                  'ctx', (select jsonb_build_object('id', v.id, 'version', v.version, 'snapshot', v.snapshot)
-                                          from module_context_versions v where v.id = i.active_context_version_id)) order by i.created_at)
-                               from module_installations i where i.workspace_id = ws), '[]'::jsonb),
-    'pipelines', coalesce((select jsonb_agg(to_jsonb(p)) from automation_pipelines p where p.workspace_id = ws), '[]'::jsonb),
-    'runs', coalesce((select jsonb_agg(jsonb_build_object('id', r.id, 'pipeline_id', r.pipeline_id, 'trigger_ref', r.trigger_ref, 'status', r.status,
-                                  'steps', r.steps, 'evidence', r.evidence, 'error', r.error, 'created_at', r.created_at, 'finished_at', r.finished_at)
-                                  order by r.created_at desc)
-                      from (select * from automation_runs where workspace_id = ws order by created_at desc limit 80) r), '[]'::jsonb),
-    'google', (select jsonb_build_object('id', c.id, 'status', c.status, 'last_error', c.last_error, 'public_meta', c.public_meta, 'name', c.name)
-               from connections c where c.workspace_id = ws and c.provider = 'google' and c.status <> 'disconnected' order by c.created_at limit 1),
-    'knowledge', coalesce((select jsonb_agg(jsonb_build_object('title', k.title, 'content', k.content))
-                           from (select title, content from knowledge_sources where workspace_id = ws limit 60) k), '[]'::jsonb),
-    'due_invoices', (select count(*) from invoices where workspace_id = ws and due_at is not null),
-    'connections', coalesce((select jsonb_agg(jsonb_build_object('provider', c.provider, 'status', c.status))
-                             from connections c where c.workspace_id = ws and c.status <> 'disconnected'), '[]'::jsonb),
-    'chat_agents', (select count(*) from agents where workspace_id = ws and module in ('chatbot', 'booking') and status = 'active'),
-    'workspace_name', (select name from workspaces where id = ws),
-    'authority', (select jsonb_build_object('reply_style', a.reply_style, 'brand_voice', a.brand_voice) from authority a where a.workspace_id = ws),
-    'rules', coalesce((select jsonb_agg(jsonb_build_object('department', r.department, 'action', r.action, 'mode', r.mode))
-                       from authority_rules r where r.workspace_id = ws), '[]'::jsonb),
-    'contracts', (select count(*) from contracts where workspace_id = ws),
-    'shipped_orders', (select count(*) from orders where workspace_id = ws and shipped_at is not null)
-  );
-$$;
-
---
 -- Name: be_account_providers(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1076,30 +959,6 @@ CREATE FUNCTION public.credit_usd_value() RETURNS numeric
 $$;
 
 --
--- Name: dashboard_data(uuid, timestamp with time zone, timestamp with time zone, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.dashboard_data(ws uuid, since7 timestamp with time zone, founding_from timestamp with time zone, founding_to timestamp with time zone) RETURNS jsonb
-    LANGUAGE sql STABLE
-    SET search_path TO 'public'
-    AS $$
-  select jsonb_build_object(
-    'responsibilities', public.responsibility_rows(ws),
-    'agents', coalesce((select jsonb_agg(to_jsonb(a) order by a.created_at) from agents a where a.workspace_id = ws), '[]'::jsonb),
-    'events', coalesce((select jsonb_agg(to_jsonb(e) order by e.created_at desc)
-                        from (select * from events where workspace_id = ws order by created_at desc limit 6) e), '[]'::jsonb),
-    'leads', coalesce((select jsonb_agg(jsonb_build_object('id', l.id, 'stage', l.stage, 'created_at', l.created_at, 'contact_name', l.contact_name, 'company', l.company))
-                       from leads l where l.workspace_id = ws), '[]'::jsonb),
-    'pending', coalesce((select jsonb_agg(jsonb_build_object('id', x.id, 'responsibility_id', x.responsibility_id, 'created_at', x.created_at,
-                                                             'lead_id', (select r.lead_id from responsibilities r where r.id = x.responsibility_id)) order by x.created_at desc)
-                         from executions x where x.workspace_id = ws and x.status = 'pending_approval'), '[]'::jsonb),
-    'promo', public.promo_state(ws, founding_from, founding_to),
-    'governance', public.governance_rows(ws, since7),
-    'exceptions', public.exception_rows(ws)
-  );
-$$;
-
---
 -- Name: display_name_of(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1115,61 +974,6 @@ $$;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
-
---
--- Name: exception_rows(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.exception_rows(ws uuid) RETURNS jsonb
-    LANGUAGE sql STABLE
-    SET search_path TO 'public'
-    AS $$
-  select coalesce(jsonb_agg(to_jsonb(w) || jsonb_build_object(
-           'lead', (select jsonb_build_object('id', l.id, 'contact_name', l.contact_name, 'company', l.company, 'channel', l.channel) from leads l where l.id = w.lead_id),
-           'staff', (select jsonb_build_object('name', s.name) from staff s where s.id = w.assigned_staff_id)) order by w.created_at), '[]'::jsonb)
-  from (select * from work_items where workspace_id = ws and status in ('waiting_decision', 'failed') order by created_at limit 100) w;
-$$;
-
---
--- Name: governance_rows(uuid, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.governance_rows(ws uuid, since7 timestamp with time zone) RETURNS jsonb
-    LANGUAGE sql STABLE
-    SET search_path TO 'public'
-    AS $$
-  select jsonb_build_object(
-    'auth', (select jsonb_build_object('goal_revenue_vnd', a.goal_revenue_vnd, 'goal_new_customers', a.goal_new_customers,
-                                       'goal_first_reply_minutes', a.goal_first_reply_minutes)
-             from authority a where a.workspace_id = ws),
-    'leads', coalesce((select jsonb_agg(jsonb_build_object('id', l.id, 'contact_name', l.contact_name, 'company', l.company,
-                                                           'origin', l.origin, 'stage', l.stage, 'created_at', l.created_at))
-                       from (select * from leads where workspace_id = ws limit 10000) l), '[]'::jsonb),
-    'orders', coalesce((select jsonb_agg(jsonb_build_object('id', o.id, 'lead_id', o.lead_id, 'order_no', o.order_no, 'items', o.items,
-                                                            'amount_vnd', o.amount_vnd, 'status', o.status, 'origin', o.origin))
-                        from orders o where o.workspace_id = ws and o.status in ('confirmed', 'invoiced', 'paid')), '[]'::jsonb),
-    'invoices', coalesce((select jsonb_agg(jsonb_build_object('id', i.id, 'order_id', i.order_id, 'lead_id', i.lead_id, 'invoice_no', i.invoice_no,
-                                                              'amount_vnd', i.amount_vnd, 'status', i.status, 'origin', i.origin))
-                          from invoices i where i.workspace_id = ws and i.status in ('issued', 'paid')), '[]'::jsonb),
-    'txs', coalesce((select jsonb_agg(jsonb_build_object('id', t.id, 'invoice_id', t.invoice_id, 'payer', t.payer, 'reference', t.reference,
-                                                         'amount_vnd', t.amount_vnd, 'status', t.status, 'origin', t.origin))
-                     from transactions t where t.workspace_id = ws and t.status in ('matched', 'unmatched', 'needs_review')), '[]'::jsonb),
-    'work', coalesce((select jsonb_agg(jsonb_build_object('id', w.id, 'lead_id', w.lead_id, 'department', w.department, 'status', w.status,
-                                                          'reason', w.reason, 'decided_path', w.decided_path, 'created_at', w.created_at,
-                                                          'updated_at', w.updated_at, 'completed_at', w.completed_at,
-                                                          'summary', w.proposal ->> 'summary',
-                                                          'contact', w.proposal -> 'fields' ->> 'contact_name',
-                                                          'customer', w.proposal -> 'fields' ->> 'customer') order by w.created_at desc)
-                      from (select * from work_items where workspace_id = ws order by created_at desc limit 2000) w), '[]'::jsonb),
-    'pending_without_work', (select count(*) from executions x where x.workspace_id = ws and x.status = 'pending_approval' and x.work_item_id is null),
-    'decisions7', coalesce((select jsonb_agg(jsonb_build_object('work_item_id', d.work_item_id, 'lead_id', d.lead_id, 'decider_kind', d.decider_kind,
-                                                                'outcome', d.outcome, 'created_at', d.created_at))
-                            from decisions d where d.workspace_id = ws and d.created_at >= since7), '[]'::jsonb),
-    'recent', coalesce((select jsonb_agg(to_jsonb(d) || jsonb_build_object('lead', (select jsonb_build_object('contact_name', l.contact_name)
-                                                                                 from leads l where l.id = d.lead_id)) order by d.created_at desc)
-                        from (select * from decisions where workspace_id = ws order by created_at desc limit 40) d), '[]'::jsonb)
-  );
-$$;
 
 --
 -- Name: hiring_application_submit(uuid, uuid, jsonb, text, text, text[]); Type: FUNCTION; Schema: public; Owner: -
@@ -2625,66 +2429,6 @@ end;
 $$;
 
 --
--- Name: lead_flows_fill_installation(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.lead_flows_fill_installation() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  if new.installation_id is null and new.connection_id is not null then
-    select i.id into new.installation_id
-      from public.agent_connections ac join public.module_installations i on i.agent_id = ac.agent_id
-     where ac.connection_id = new.connection_id and i.module_key = 'lead_gen' and i.workspace_id = new.workspace_id
-     order by i.created_at limit 1;
-  end if;
-  if new.installation_id is null then
-    select r.installation_id into new.installation_id from public.resolve_installation(new.workspace_id, 'lead_gen', new.conversation_id, null, null) r;
-  end if;
-  if new.lead_id is not null and new.installation_id is not null then
-    update public.leads set installation_id = new.installation_id where id = new.lead_id and installation_id is null;
-  end if;
-  return new;
-end;
-$$;
-
---
--- Name: responsibilities; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.responsibilities (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    lead_id uuid NOT NULL,
-    title text NOT NULL,
-    owner_kind text NOT NULL,
-    owner_agent_id uuid,
-    owner_name text NOT NULL,
-    next_action text NOT NULL,
-    due_at timestamp with time zone,
-    status text DEFAULT 'open'::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT responsibilities_owner_kind_check CHECK ((owner_kind = ANY (ARRAY['human'::text, 'agent'::text]))),
-    CONSTRAINT responsibilities_status_check CHECK ((status = ANY (ARRAY['open'::text, 'waiting_approval'::text, 'done'::text])))
-);
-
---
--- Name: lead_step_json(public.responsibilities); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.lead_step_json(r public.responsibilities) RETURNS jsonb
-    LANGUAGE sql IMMUTABLE
-    SET search_path TO 'public'
-    AS $$
-  select jsonb_build_object(
-    'id', r.id, 'leadId', r.lead_id, 'title', r.title, 'ownerKind', r.owner_kind, 'ownerAgentId', r.owner_agent_id,
-    'ownerName', r.owner_name, 'nextAction', r.next_action,
-    'dueAt', to_char(r.due_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'), 'status', r.status
-  );
-$$;
-
---
 -- Name: lead_step_owner(uuid, text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2709,54 +2453,6 @@ begin
   o_kind := 'agent';
 end;
 $_$;
-
---
--- Name: loyalty_ledger_immutable(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.loyalty_ledger_immutable() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-begin
-  raise exception 'loyalty_ledger is append-only (add an adjust row instead)';
-end $$;
-
---
--- Name: loyalty_post(uuid, uuid, text, integer, text, text, bigint, uuid, uuid, uuid, uuid, text, timestamp with time zone, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.loyalty_post(p_workspace uuid, p_customer uuid, p_kind text, p_points integer, p_ref text, p_by text, p_amount_vnd bigint DEFAULT NULL::bigint, p_order_id uuid DEFAULT NULL::uuid, p_invoice_id uuid DEFAULT NULL::uuid, p_reward_id uuid DEFAULT NULL::uuid, p_work_item_id uuid DEFAULT NULL::uuid, p_evidence text DEFAULT NULL::text, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_occurred_at timestamp with time zone DEFAULT NULL::timestamp with time zone) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_id uuid;
-  v_balance int;
-  v_reward public.loyalty_rewards%rowtype;
-begin
-  perform 1 from public.loyalty_customers where id = p_customer and workspace_id = p_workspace for update;
-  if not found then raise exception 'customer_not_found'; end if;
-  if exists (select 1 from public.loyalty_ledger where workspace_id = p_workspace and ref = p_ref) then return null; end if;
-  if p_points < 0 then
-    select coalesce(sum(points), 0) into v_balance from public.loyalty_ledger where customer_id = p_customer;
-    if v_balance + p_points < 0 then raise exception 'insufficient_points'; end if;
-  end if;
-  if p_kind = 'redeem' and p_reward_id is not null then
-    select * into v_reward from public.loyalty_rewards where id = p_reward_id and workspace_id = p_workspace for update;
-    if not found then raise exception 'reward_not_found'; end if;
-    if not v_reward.active then raise exception 'reward_inactive'; end if;
-    if v_reward.stock is not null and v_reward.stock <= 0 then raise exception 'out_of_stock'; end if;
-    if v_reward.per_customer_limit is not null
-       and (select count(*) from public.loyalty_ledger where customer_id = p_customer and reward_id = p_reward_id and kind = 'redeem') >= v_reward.per_customer_limit then
-      raise exception 'limit_reached';
-    end if;
-    if v_reward.stock is not null then update public.loyalty_rewards set stock = stock - 1 where id = p_reward_id; end if;
-  end if;
-  insert into public.loyalty_ledger (workspace_id, customer_id, kind, points, amount_vnd, order_id, invoice_id, reward_id, work_item_id, ref, by_name, evidence, expires_at, occurred_at)
-  values (p_workspace, p_customer, p_kind, p_points, p_amount_vnd, p_order_id, p_invoice_id, p_reward_id, p_work_item_id, p_ref, coalesce(nullif(p_by, ''), 'NIVO'), p_evidence, p_expires_at, coalesce(p_occurred_at, now()))
-  returning id into v_id;
-  return v_id;
-end $$;
 
 --
 -- Name: match_knowledge(uuid, text, extensions.vector, text, integer, text, text, uuid); Type: FUNCTION; Schema: public; Owner: -
@@ -2901,73 +2597,6 @@ CREATE FUNCTION public.my_staff_id(ws uuid) RETURNS uuid
 $$;
 
 --
--- Name: n8n_runs_mirror(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.n8n_runs_mirror() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare v_pipeline uuid;
-begin
-  select id into v_pipeline from public.automation_pipelines where workspace_id = new.workspace_id and template_key = new.template_key;
-  if v_pipeline is null then return new; end if;
-  insert into public.automation_runs (pipeline_id, workspace_id, trigger_ref, dedupe_key, payload, status, steps, evidence, error, attempts, run_at, created_at, finished_at)
-  values (
-    v_pipeline, new.workspace_id, new.template_key, 'n8n:' || new.id, jsonb_build_object('n8n_run_id', new.id, 'dedupe', new.dedupe_key), new.status,
-    jsonb_build_array(jsonb_build_object(
-      'label', case new.status when 'queued' then 'Đã xếp lượt chạy cho n8n' when 'running' then 'n8n đang chạy' when 'done' then 'n8n đã chạy xong' when 'skipped' then 'Bỏ qua' else 'Lỗi' end,
-      'status', case new.status when 'done' then 'done' when 'skipped' then 'skipped' when 'failed' then 'failed' else 'waiting' end,
-      'detail', new.summary)),
-    new.summary, case when new.status = 'failed' then new.summary end, 1, new.created_at, new.created_at, new.finished_at)
-  on conflict (pipeline_id, dedupe_key) do update
-    set status = excluded.status, steps = excluded.steps, evidence = excluded.evidence, error = excluded.error, finished_at = excluded.finished_at;
-  return new;
-end $$;
-
---
--- Name: office_data(uuid, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.office_data(ws uuid, since7 timestamp with time zone) RETURNS jsonb
-    LANGUAGE sql STABLE
-    SET search_path TO 'public'
-    AS $$
-  with exec_json as (
-    select x.status as st, x.created_at as c_at, x.decided_at as d_at,
-           to_jsonb(x) || jsonb_build_object(
-             'responsibility', (select to_jsonb(r) || jsonb_build_object('lead', (select jsonb_build_object('id', l.id, 'contact_name', l.contact_name, 'company', l.company, 'channel', l.channel)
-                                                                                 from leads l where l.id = r.lead_id))
-                                from responsibilities r where r.id = x.responsibility_id),
-             'work_item', (select jsonb_build_object('id', w.id, 'assigned_staff_id', w.assigned_staff_id) from work_items w where w.id = x.work_item_id),
-             'agent', (select jsonb_build_object('id', a.id, 'name', a.name) from agents a where a.id = x.agent_id)) as j
-    from executions x where x.workspace_id = ws and x.status in ('pending_approval', 'approved', 'rejected')
-  )
-  select jsonb_build_object(
-    'messages', coalesce((select jsonb_agg(to_jsonb(m) order by m.created_at desc)
-                          from (select * from messages where workspace_id = ws order by created_at desc limit 100) m), '[]'::jsonb),
-    'agents', coalesce((select jsonb_agg(to_jsonb(a) order by a.created_at) from agents a where a.workspace_id = ws), '[]'::jsonb),
-    'responsibilities', public.responsibility_rows(ws),
-    'pending', coalesce((select jsonb_agg(j order by c_at desc) from exec_json where st = 'pending_approval'), '[]'::jsonb),
-    'decided', coalesce((select jsonb_agg(z.j order by z.d_at desc nulls last)
-                         from (select j, d_at from exec_json where st in ('approved', 'rejected') order by d_at desc nulls last limit 8) z), '[]'::jsonb),
-    'leads', coalesce((select jsonb_agg(to_jsonb(l) order by l.created_at desc) from leads l where l.workspace_id = ws), '[]'::jsonb),
-    'open_responsibilities', coalesce((select jsonb_agg(jsonb_build_object('lead_id', r.lead_id, 'owner_name', r.owner_name, 'next_action', r.next_action, 'status', r.status))
-                                       from responsibilities r where r.workspace_id = ws and r.status <> 'done'), '[]'::jsonb),
-    'exceptions', public.exception_rows(ws),
-    'recent_items', coalesce((select jsonb_agg(to_jsonb(w) || jsonb_build_object(
-                                'lead', (select jsonb_build_object('id', l.id, 'contact_name', l.contact_name, 'company', l.company, 'channel', l.channel) from leads l where l.id = w.lead_id),
-                                'staff', (select jsonb_build_object('name', s.name) from staff s where s.id = w.assigned_staff_id),
-                                'decisions', coalesce((select jsonb_agg(jsonb_build_object('decided_by', d.decided_by, 'created_at', d.created_at)) from decisions d where d.work_item_id = w.id), '[]'::jsonb))
-                              order by w.created_at desc)
-                              from (select * from work_items where workspace_id = ws and status in ('done', 'rejected') order by created_at desc limit 40) w), '[]'::jsonb),
-    'governance', public.governance_rows(ws, since7),
-    'staff', coalesce((select jsonb_agg(to_jsonb(s) order by s.active desc, s.created_at) from staff s where s.workspace_id = ws), '[]'::jsonb),
-    'members', coalesce((select jsonb_agg(to_jsonb(m)) from public.workspace_members_directory(ws) m), '[]'::jsonb)
-  );
-$$;
-
---
 -- Name: owns_workspace(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3047,36 +2676,6 @@ CREATE FUNCTION public.post_office_notice(p_workspace uuid, p_body text) RETURNS
 $$;
 
 --
--- Name: promo_state(uuid, timestamp with time zone, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.promo_state(ws uuid, founding_from timestamp with time zone, founding_to timestamp with time zone) RETURNS jsonb
-    LANGUAGE sql STABLE
-    SET search_path TO 'public'
-    AS $$
-  with website as (select l.id, l.created_at from leads l where l.workspace_id = ws and l.channel ilike '%website%'),
-       approved as (select x.responsibility_id from executions x where x.workspace_id = ws and x.status = 'approved')
-  select jsonb_build_object(
-    'chatbot', (select jsonb_build_object('id', a.id, 'knowledge', a.knowledge) from agents a
-                where a.workspace_id = ws and a.module = 'chatbot' order by a.created_at limit 1),
-    'is_founding_member', exists (select 1 from events e where e.workspace_id = ws and e.kind = 'module.purchased'
-                                  and e.created_at >= founding_from and e.created_at <= founding_to),
-    'website_leads', coalesce((select jsonb_agg(jsonb_build_object('id', id, 'created_at', created_at)) from website), '[]'::jsonb),
-    -- first response per website lead: earliest approval or assignment event
-    'first_events', coalesce((select jsonb_agg(jsonb_build_object('lead_id', e.lead_id, 'at', e.first_at))
-                              from (select lead_id, min(created_at) as first_at from events
-                                    where workspace_id = ws and kind in ('execution.approved', 'responsibility.assigned')
-                                      and lead_id in (select id from website) group by lead_id) e), '[]'::jsonb),
-    'approved_count', (select count(*) from approved),
-    'has_won', exists (select 1 from events e where e.workspace_id = ws and e.kind = 'outcome.recorded'
-                       and e.lead_id in (select id from leads where workspace_id = ws and stage = 'won')),
-    'invoice_approved', exists (select 1 from responsibilities r where r.workspace_id = ws
-                                and (r.title ilike 'Prepare invoice%' or r.title ilike 'Chuẩn bị hóa đơn%')
-                                and r.id in (select responsibility_id from approved))
-  );
-$$;
-
---
 -- Name: read_app_command(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3110,70 +2709,6 @@ CREATE FUNCTION public.record_ai_usage(p_workspace uuid, p_kind text, p_module t
     AS $$
   insert into public.ai_usage_events (workspace_id, kind, module, model, prompt_tokens, completion_tokens, cost_usd, estimated)
   values (p_workspace, p_kind, p_module, p_model, greatest(p_prompt, 0), greatest(p_completion, 0), greatest(p_cost, 0), p_estimated);
-$$;
-
---
--- Name: record_lead_outcome(uuid, uuid, text, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.record_lead_outcome(p_workspace uuid, p_lead uuid, p_stage text, p_evidence text, p_locale text DEFAULT 'vi'::text) RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_actor text := public.lead_actor_name(p_workspace);
-  v_en boolean := coalesce(p_locale, 'vi') = 'en';
-  v_lead record;
-  v_label text;
-  v_agent record;
-  v_handed boolean := false;
-begin
-  if p_stage not in ('new', 'qualified', 'proposal', 'won', 'lost') then
-    raise exception 'stage_invalid' using errcode = '22023';
-  end if;
-  update public.leads set stage = p_stage where workspace_id = p_workspace and id = p_lead
-  returning id, contact_name, company, channel, need, stage into v_lead;
-  if not found then
-    raise exception 'LEADS_NOT_FOUND' using errcode = 'P0002';
-  end if;
-  v_label := case p_stage
-    when 'new' then case when v_en then 'new' else 'mới' end
-    when 'qualified' then case when v_en then 'qualified' else 'đủ điều kiện' end
-    when 'proposal' then case when v_en then 'proposal' else 'đề xuất' end
-    when 'won' then case when v_en then 'won' else 'chốt được' end
-    else case when v_en then 'lost' else 'không chốt' end
-  end;
-  insert into public.events (workspace_id, lead_id, kind, actor, summary, evidence)
-  values (p_workspace, p_lead, 'outcome.recorded', v_actor,
-          case when v_en then 'Stage → ' else 'Giai đoạn → ' end || v_label, nullif(p_evidence, ''));
-  insert into public.messages (workspace_id, lead_id, author_kind, author_name, body)
-  values (p_workspace, p_lead, 'system', 'NIVO',
-          case when v_en then v_lead.contact_name || ' moved to ' || v_label || '.' else v_lead.contact_name || ' chuyển sang ' || v_label || '.' end);
-  if p_stage = 'won' then
-    select a.id, a.name into v_agent from public.agents a
-     where a.workspace_id = p_workspace and a.module = 'accounting' and a.status = 'active'
-     order by a.created_at limit 1;
-    if found then
-      insert into public.responsibilities (workspace_id, lead_id, title, owner_kind, owner_agent_id, owner_name, next_action, due_at)
-      values (p_workspace, p_lead,
-              case when v_en then 'Prepare invoice for ' || v_lead.contact_name else 'Chuẩn bị hóa đơn cho ' || v_lead.contact_name end,
-              'agent', v_agent.id, v_agent.name,
-              case when v_en then 'Draft the invoice from the agreed scope for owner approval'
-                   else 'Soạn hóa đơn theo phạm vi đã thống nhất để chủ doanh nghiệp duyệt' end,
-              now() + interval '1 day');
-      insert into public.events (workspace_id, lead_id, kind, actor, summary)
-      values (p_workspace, p_lead, 'responsibility.assigned', 'Sales Agent',
-              case when v_en then 'Handed to ' || v_agent.name || ' · Next action: Draft the invoice from the agreed scope'
-                   else 'Đã bàn giao cho ' || v_agent.name || ' · Bước tiếp theo: Soạn hóa đơn theo phạm vi đã thống nhất' end);
-      v_handed := true;
-    end if;
-  end if;
-  return jsonb_build_object(
-    'leadId', v_lead.id, 'stage', v_lead.stage, 'contactName', v_lead.contact_name, 'company', v_lead.company,
-    'channel', v_lead.channel, 'need', v_lead.need,
-    'origin', (select l.origin from public.leads l where l.id = p_lead), 'handedToAccounting', v_handed
-  );
-end;
 $$;
 
 --
@@ -3226,34 +2761,6 @@ begin
       'workspaceId', p_workspace, 'installationId', p_installation, 'force', coalesce(p_force, false),
       'requestedAt', (extract(epoch from now()) * 1000)::bigint)),
     'agents.sync:' || v_subject || ':' || floor(extract(epoch from now()) / 60)::bigint::text);
-end $$;
-
---
--- Name: request_execution_decision(uuid, uuid, text, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.request_execution_decision(p_workspace uuid, p_execution uuid, p_decision text, p_edited_draft text DEFAULT NULL::text, p_locale text DEFAULT 'vi'::text) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  if auth.uid() is null or not public.is_member(p_workspace) then
-    raise exception 'not allowed' using errcode = '42501';
-  end if;
-  if p_decision not in ('approved', 'rejected') then
-    raise exception 'unknown decision %', p_decision using errcode = '22023';
-  end if;
-  if not exists (
-    select 1 from public.executions e where e.id = p_execution and e.workspace_id = p_workspace and e.status = 'pending_approval'
-  ) then
-    raise exception 'approval card is not pending' using errcode = 'P0002';
-  end if;
-  return public.job_enqueue(
-    p_workspace, 'decisions', 'decisions.decide-execution',
-    jsonb_build_object(
-      'workspaceId', p_workspace, 'userId', auth.uid(), 'locale', case when p_locale = 'en' then 'en' else 'vi' end,
-      'executionId', p_execution, 'decision', p_decision, 'editedDraft', left(p_edited_draft, 10000)),
-    'decisions.decide-execution:' || p_execution::text);
 end $$;
 
 --
@@ -3421,15 +2928,6 @@ begin
     return query select i.id, 'single'::text from public.module_installations i where i.workspace_id = p_ws and i.module_key = p_module;
     return;
   end if;
-  if p_lead is not null then
-    select i.id into found from public.leads l join public.module_installations i on i.id = l.installation_id
-     where l.id = p_lead and l.workspace_id = p_ws and i.module_key = p_module;
-    if found is null then
-      select i.id into found from public.lead_flows f join public.module_installations i on i.id = f.installation_id
-       where f.lead_id = p_lead and f.workspace_id = p_ws and i.module_key = p_module order by f.created_at desc limit 1;
-    end if;
-    if found is not null then return query select found, 'lead'::text; return; end if;
-  end if;
   if p_chain is not null then
     select w.installation_id into found from public.work_items w join public.module_installations i on i.id = w.installation_id
      where w.workspace_id = p_ws and w.chain_id = p_chain and i.module_key = p_module order by w.created_at limit 1;
@@ -3437,20 +2935,6 @@ begin
   end if;
   return query select i.id, 'first'::text from public.module_installations i where i.workspace_id = p_ws and i.module_key = p_module order by i.created_at limit 1;
 end;
-$$;
-
---
--- Name: responsibility_rows(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.responsibility_rows(ws uuid) RETURNS jsonb
-    LANGUAGE sql STABLE
-    SET search_path TO 'public'
-    AS $$
-  select coalesce(jsonb_agg(to_jsonb(r) || jsonb_build_object(
-           'lead', (select jsonb_build_object('id', l.id, 'contact_name', l.contact_name, 'company', l.company, 'stage', l.stage) from leads l where l.id = r.lead_id))
-         order by r.due_at asc nulls last), '[]'::jsonb)
-  from responsibilities r where r.workspace_id = ws;
 $$;
 
 --
@@ -3675,35 +3159,11 @@ CREATE FUNCTION public.shell_data(ws uuid, founding_from timestamp with time zon
     SET search_path TO 'public'
     AS $$
   select jsonb_build_object(
-    'lead_count', (select count(*) from leads where workspace_id = ws),
-    'open_responsibility_count', (select count(*) from responsibilities where workspace_id = ws and status <> 'done'),
     'agents', coalesce((select jsonb_agg(jsonb_build_object('id', a.id, 'name', a.name, 'module', a.module, 'status', a.status) order by a.created_at)
                         from agents a where a.workspace_id = ws), '[]'::jsonb),
     'has_chatbot', exists (select 1 from agents a where a.workspace_id = ws and a.module = 'chatbot'),
     'is_founding_member', exists (select 1 from events e where e.workspace_id = ws and e.kind = 'module.purchased'
-                                  and e.created_at >= founding_from and e.created_at <= founding_to),
-    -- approval cards waiting for a decision, newest first, with the customer they belong to
-    'pending', coalesce((select jsonb_agg(jsonb_build_object('id', x.id, 'draft', x.draft, 'next_action', r.next_action,
-                                                             'lead_id', l.id, 'contact_name', l.contact_name) order by x.created_at desc)
-                         from executions x
-                         left join responsibilities r on r.id = x.responsibility_id
-                         left join leads l on l.id = r.lead_id
-                         where x.workspace_id = ws and x.status = 'pending_approval'), '[]'::jsonb),
-    -- work items waiting / failed that have no approval card of their own
-    'exceptions', coalesce((select jsonb_agg(jsonb_build_object('id', w.id, 'lead_id', w.lead_id, 'contact_name', l.contact_name,
-                                                                'summary', w.proposal ->> 'summary', 'error', w.error) order by w.created_at)
-                            from (select * from work_items w0 where w0.workspace_id = ws and w0.status in ('waiting_decision', 'failed')
-                                  and w0.execution_id is null order by w0.created_at limit 100) w
-                            left join leads l on l.id = w.lead_id), '[]'::jsonb),
-    -- decisions waiting on a person: waiting work items (test runs excluded) + legacy pending approvals without a work item
-    'pending_decisions',
-      (select count(*) from work_items w
-        where w.workspace_id = ws and w.status = 'waiting_decision'
-          and not exists (select 1 from leads l where l.id = w.lead_id and (l.contact_name ~ 'UAT|DBG' or l.company ~ 'UAT|DBG'))
-          and coalesce(w.proposal ->> 'summary', '') !~ 'UAT|DBG'
-          and coalesce(w.proposal -> 'fields' ->> 'contact_name', '') !~ 'UAT|DBG'
-          and coalesce(w.proposal -> 'fields' ->> 'customer', '') !~ 'UAT|DBG')
-      + (select count(*) from executions x where x.workspace_id = ws and x.status = 'pending_approval' and x.work_item_id is null)
+                                  and e.created_at >= founding_from and e.created_at <= founding_to)
   );
 $$;
 
@@ -4881,26 +4341,6 @@ CREATE TABLE public.authority_rules (
 );
 
 --
--- Name: automation_commands; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.automation_commands (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    kind text NOT NULL,
-    template_key text NOT NULL,
-    status text DEFAULT 'queued'::text NOT NULL,
-    result jsonb,
-    fault_code text,
-    created_by uuid NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    finished_at timestamp with time zone,
-    CONSTRAINT automation_commands_kind_check CHECK ((kind = ANY (ARRAY['propose_body'::text, 'run_now'::text]))),
-    CONSTRAINT automation_commands_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'done'::text, 'failed'::text]))),
-    CONSTRAINT automation_commands_template_key_check CHECK ((template_key ~ '^[a-z][a-z0-9_-]{2,60}$'::text))
-);
-
---
 -- Name: automation_pipelines; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4923,28 +4363,6 @@ CREATE TABLE public.automation_pipelines (
     created_by uuid,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
---
--- Name: automation_runs; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.automation_runs (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    pipeline_id uuid NOT NULL,
-    workspace_id uuid NOT NULL,
-    trigger_ref text DEFAULT ''::text NOT NULL,
-    dedupe_key text NOT NULL,
-    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
-    status text DEFAULT 'queued'::text NOT NULL,
-    steps jsonb DEFAULT '[]'::jsonb NOT NULL,
-    evidence text,
-    error text,
-    attempts integer DEFAULT 0 NOT NULL,
-    run_at timestamp with time zone DEFAULT now() NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    finished_at timestamp with time zone,
-    CONSTRAINT automation_runs_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'skipped'::text, 'waiting_approval'::text, 'failed'::text])))
 );
 
 --
@@ -5520,28 +4938,6 @@ CREATE TABLE public.content_settings (
 );
 
 --
--- Name: contracts; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.contracts (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    lead_id uuid,
-    customer_name text NOT NULL,
-    plan text DEFAULT ''::text NOT NULL,
-    starts_on date NOT NULL,
-    ends_on date NOT NULL,
-    amount_vnd bigint,
-    status text DEFAULT 'active'::text NOT NULL,
-    note text DEFAULT ''::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT contracts_amount_vnd_check CHECK (((amount_vnd IS NULL) OR (amount_vnd >= 0))),
-    CONSTRAINT contracts_check CHECK ((ends_on >= starts_on)),
-    CONSTRAINT contracts_status_check CHECK ((status = ANY (ARRAY['active'::text, 'ended'::text, 'cancelled'::text])))
-);
-
---
 -- Name: credit_pack_purchases; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5698,25 +5094,6 @@ CREATE TABLE public.events (
     evidence text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     work_item_id uuid
-);
-
---
--- Name: executions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.executions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    responsibility_id uuid NOT NULL,
-    agent_id uuid,
-    kind text DEFAULT 'follow_up'::text NOT NULL,
-    draft text NOT NULL,
-    status text DEFAULT 'pending_approval'::text NOT NULL,
-    decided_by text,
-    decided_at timestamp with time zone,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    work_item_id uuid,
-    CONSTRAINT executions_status_check CHECK ((status = ANY (ARRAY['pending_approval'::text, 'approved'::text, 'rejected'::text])))
 );
 
 --
@@ -6343,270 +5720,6 @@ CREATE TABLE public.knowledge_suggestion_state (
 );
 
 --
--- Name: lead_actions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.lead_actions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    requested_by uuid NOT NULL,
-    action text NOT NULL,
-    input jsonb NOT NULL,
-    locale text NOT NULL,
-    status text DEFAULT 'queued'::text NOT NULL,
-    job_id uuid,
-    fencing_token bigint,
-    result jsonb,
-    error_code text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT lead_actions_action_check CHECK ((action = ANY (ARRAY['create'::text, 'refresh-context'::text, 'suggest-owner'::text, 'draft-execution'::text, 'settle-won'::text]))),
-    CONSTRAINT lead_actions_locale_check CHECK ((locale = ANY (ARRAY['vi'::text, 'en'::text]))),
-    CONSTRAINT lead_actions_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'succeeded'::text, 'failed'::text])))
-);
-
---
--- Name: lead_flows; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.lead_flows (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    lead_id uuid,
-    connection_id uuid,
-    conversation_id uuid,
-    platform text,
-    psid text,
-    igsid text,
-    phone text,
-    email text,
-    name text,
-    state text DEFAULT 'new'::text NOT NULL,
-    resume_state text,
-    source jsonb DEFAULT '{}'::jsonb NOT NULL,
-    touches jsonb DEFAULT '[]'::jsonb NOT NULL,
-    answers jsonb DEFAULT '[]'::jsonb NOT NULL,
-    asked integer DEFAULT 0 NOT NULL,
-    pending_question integer,
-    contact_asked_at timestamp with time zone,
-    signals jsonb DEFAULT '{}'::jsonb NOT NULL,
-    score text,
-    score_reasons jsonb DEFAULT '[]'::jsonb NOT NULL,
-    scored_at timestamp with time zone,
-    analysis jsonb,
-    last_user_at timestamp with time zone,
-    last_user_text text,
-    greeted_at timestamp with time zone,
-    handed_off_at timestamp with time zone,
-    followed_up_at timestamp with time zone,
-    closed_at timestamp with time zone,
-    escalated_at timestamp with time zone,
-    escalation_reason text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    installation_id uuid,
-    CONSTRAINT lead_flows_asked_check CHECK (((asked >= 0) AND (asked <= 4))),
-    CONSTRAINT lead_flows_platform_check CHECK ((platform = ANY (ARRAY['facebook'::text, 'instagram'::text]))),
-    CONSTRAINT lead_flows_score_check CHECK ((score = ANY (ARRAY['hot'::text, 'warm'::text, 'cold'::text]))),
-    CONSTRAINT lead_flows_state_check CHECK ((state = ANY (ARRAY['new'::text, 'greeted'::text, 'qualifying'::text, 'scored'::text, 'handed_off'::text, 'nurturing'::text, 'closed'::text, 'escalated'::text])))
-);
-
---
--- Name: leads; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.leads (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    contact_name text NOT NULL,
-    company text NOT NULL,
-    channel text NOT NULL,
-    need text NOT NULL,
-    stage text DEFAULT 'new'::text NOT NULL,
-    context_summary text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    phone text,
-    email text,
-    origin text,
-    installation_id uuid,
-    CONSTRAINT leads_origin_check CHECK ((origin = ANY (ARRAY['live'::text, 'simulated'::text]))),
-    CONSTRAINT leads_stage_check CHECK ((stage = ANY (ARRAY['new'::text, 'qualified'::text, 'proposal'::text, 'won'::text, 'lost'::text])))
-);
-
---
--- Name: loyalty_customers; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.loyalty_customers (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    name text DEFAULT ''::text NOT NULL,
-    phone text,
-    email text,
-    birthday date,
-    tier_key text,
-    tier_since timestamp with time zone,
-    joined_at timestamp with time zone DEFAULT now() NOT NULL,
-    note text DEFAULT ''::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
---
--- Name: loyalty_ledger; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.loyalty_ledger (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    customer_id uuid NOT NULL,
-    kind text NOT NULL,
-    points integer NOT NULL,
-    amount_vnd bigint,
-    order_id uuid,
-    invoice_id uuid,
-    reward_id uuid,
-    work_item_id uuid,
-    ref text NOT NULL,
-    by_name text DEFAULT 'NIVO'::text NOT NULL,
-    evidence text,
-    expires_at timestamp with time zone,
-    occurred_at timestamp with time zone DEFAULT now() NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT loyalty_ledger_check CHECK ((((kind = 'earn'::text) AND (points > 0)) OR ((kind = ANY (ARRAY['redeem'::text, 'expire'::text])) AND (points < 0)) OR (kind = 'adjust'::text))),
-    CONSTRAINT loyalty_ledger_kind_check CHECK ((kind = ANY (ARRAY['earn'::text, 'redeem'::text, 'expire'::text, 'adjust'::text]))),
-    CONSTRAINT loyalty_ledger_points_check CHECK ((points <> 0))
-);
-
---
--- Name: loyalty_balances; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.loyalty_balances WITH (security_invoker='true') AS
- SELECT c.workspace_id,
-    c.id AS customer_id,
-    (COALESCE(sum(l.points), (0)::bigint))::integer AS points,
-    (COALESCE(sum(l.amount_vnd) FILTER (WHERE (l.kind = 'earn'::text)), (0)::numeric))::bigint AS lifetime_spend_vnd,
-    (COALESCE(sum(l.points) FILTER (WHERE (l.kind = 'earn'::text)), (0)::bigint))::integer AS lifetime_earned,
-    (count(*) FILTER (WHERE ((l.kind = 'earn'::text) AND (l.order_id IS NOT NULL))))::integer AS visits,
-    max(l.occurred_at) FILTER (WHERE (l.kind = 'earn'::text)) AS last_visit_at
-   FROM (public.loyalty_customers c
-     LEFT JOIN public.loyalty_ledger l ON ((l.customer_id = c.id)))
-  GROUP BY c.workspace_id, c.id;
-
---
--- Name: loyalty_campaigns; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.loyalty_campaigns (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    name text NOT NULL,
-    segment jsonb DEFAULT '{}'::jsonb NOT NULL,
-    draft text DEFAULT ''::text NOT NULL,
-    status text DEFAULT 'draft'::text NOT NULL,
-    work_item_id uuid,
-    recipients integer DEFAULT 0 NOT NULL,
-    draft_ms integer,
-    created_by text DEFAULT ''::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    finished_at timestamp with time zone,
-    CONSTRAINT loyalty_campaigns_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'waiting'::text, 'waiting_decision'::text, 'sending'::text, 'done'::text, 'rejected'::text, 'failed'::text])))
-);
-
---
--- Name: loyalty_customer_links; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.loyalty_customer_links (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    customer_id uuid NOT NULL,
-    kind text NOT NULL,
-    ref text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT loyalty_customer_links_kind_check CHECK ((kind = ANY (ARRAY['lead'::text, 'conversation'::text, 'channel'::text])))
-);
-
---
--- Name: loyalty_otps; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.loyalty_otps (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    customer_id uuid NOT NULL,
-    code_hash text NOT NULL,
-    attempts integer DEFAULT 0 NOT NULL,
-    expires_at timestamp with time zone NOT NULL,
-    used_at timestamp with time zone,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
---
--- Name: loyalty_programs; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.loyalty_programs (
-    workspace_id uuid NOT NULL,
-    slug text NOT NULL,
-    name text DEFAULT ''::text NOT NULL,
-    enabled boolean DEFAULT true NOT NULL,
-    config jsonb DEFAULT '{}'::jsonb NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT loyalty_programs_slug_check CHECK ((slug ~ '^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$'::text))
-);
-
---
--- Name: loyalty_rewards; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.loyalty_rewards (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    key text NOT NULL,
-    name text NOT NULL,
-    kind text DEFAULT 'voucher'::text NOT NULL,
-    value_vnd bigint DEFAULT 0 NOT NULL,
-    percent integer,
-    points_cost integer NOT NULL,
-    stock integer,
-    per_customer_limit integer,
-    min_tier_key text,
-    note text DEFAULT ''::text NOT NULL,
-    active boolean DEFAULT true NOT NULL,
-    sort_order integer DEFAULT 0 NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT loyalty_rewards_key_check CHECK ((key ~ '^[a-z0-9][a-z0-9_-]{0,38}$'::text)),
-    CONSTRAINT loyalty_rewards_kind_check CHECK ((kind = ANY (ARRAY['voucher'::text, 'item'::text, 'percent'::text]))),
-    CONSTRAINT loyalty_rewards_per_customer_limit_check CHECK (((per_customer_limit IS NULL) OR (per_customer_limit > 0))),
-    CONSTRAINT loyalty_rewards_percent_check CHECK (((percent IS NULL) OR ((percent >= 1) AND (percent <= 100)))),
-    CONSTRAINT loyalty_rewards_points_cost_check CHECK ((points_cost > 0)),
-    CONSTRAINT loyalty_rewards_stock_check CHECK (((stock IS NULL) OR (stock >= 0))),
-    CONSTRAINT loyalty_rewards_value_vnd_check CHECK ((value_vnd >= 0))
-);
-
---
--- Name: loyalty_sends; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.loyalty_sends (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    campaign_id uuid NOT NULL,
-    customer_id uuid NOT NULL,
-    lead_id uuid,
-    conversation_id uuid,
-    status text DEFAULT 'queued'::text NOT NULL,
-    body text,
-    error text,
-    sent_at timestamp with time zone,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT loyalty_sends_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'sent'::text, 'failed'::text, 'skipped'::text])))
-);
-
---
 -- Name: messages; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6799,49 +5912,6 @@ CREATE TABLE public.modules (
 );
 
 --
--- Name: n8n_pipelines; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.n8n_pipelines (
-    workspace_id uuid NOT NULL,
-    template_key text NOT NULL,
-    enabled boolean DEFAULT false NOT NULL,
-    config jsonb DEFAULT '{}'::jsonb NOT NULL,
-    updated_by uuid,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
---
--- Name: n8n_platform_config; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.n8n_platform_config (
-    key text NOT NULL,
-    value text NOT NULL
-);
-
---
--- Name: n8n_runs; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.n8n_runs (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    template_key text NOT NULL,
-    dedupe_key text NOT NULL,
-    token_hash text NOT NULL,
-    expires_at timestamp with time zone NOT NULL,
-    status text DEFAULT 'queued'::text NOT NULL,
-    summary text,
-    result jsonb,
-    engine_job_id uuid,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    finished_at timestamp with time zone,
-    CONSTRAINT n8n_runs_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text, 'skipped'::text])))
-);
-
---
 -- Name: nivo_knowledge; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -6900,31 +5970,6 @@ CREATE TABLE public.openclaw_agent_sync (
     error text,
     files jsonb DEFAULT '[]'::jsonb NOT NULL,
     CONSTRAINT openclaw_agent_sync_status_check CHECK ((status = ANY (ARRAY['ok'::text, 'error'::text])))
-);
-
---
--- Name: orders; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.orders (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    lead_id uuid,
-    inbound_event_id uuid,
-    order_no text NOT NULL,
-    items text DEFAULT ''::text NOT NULL,
-    amount_vnd bigint,
-    status text DEFAULT 'draft'::text NOT NULL,
-    origin text DEFAULT 'live'::text NOT NULL,
-    confirmed_by text,
-    confirmed_at timestamp with time zone,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    shipped_at timestamp with time zone,
-    carrier text,
-    tracking_code text,
-    CONSTRAINT orders_amount_vnd_check CHECK (((amount_vnd IS NULL) OR (amount_vnd >= 0))),
-    CONSTRAINT orders_origin_check CHECK ((origin = ANY (ARRAY['live'::text, 'simulated'::text]))),
-    CONSTRAINT orders_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'confirmed'::text, 'invoiced'::text, 'paid'::text, 'cancelled'::text])))
 );
 
 --
@@ -7377,29 +6422,6 @@ CREATE TABLE public.telegram_inbox (
 );
 
 --
--- Name: transactions; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.transactions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    inbound_event_id uuid,
-    channel text DEFAULT 'bank'::text NOT NULL,
-    amount_vnd bigint NOT NULL,
-    reference text,
-    payer text,
-    occurred_at timestamp with time zone DEFAULT now() NOT NULL,
-    invoice_id uuid,
-    status text DEFAULT 'unmatched'::text NOT NULL,
-    origin text DEFAULT 'live'::text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT transactions_amount_vnd_check CHECK ((amount_vnd >= 0)),
-    CONSTRAINT transactions_channel_check CHECK ((channel = ANY (ARRAY['bank'::text, 'cash'::text, 'card'::text, 'ewallet'::text]))),
-    CONSTRAINT transactions_origin_check CHECK ((origin = ANY (ARRAY['live'::text, 'simulated'::text]))),
-    CONSTRAINT transactions_status_check CHECK ((status = ANY (ARRAY['unmatched'::text, 'matched'::text, 'needs_review'::text])))
-);
-
---
 -- Name: video_brand_kits; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7752,13 +6774,6 @@ ALTER TABLE ONLY public.authority_rules
     ADD CONSTRAINT authority_rules_workspace_id_department_action_key UNIQUE (workspace_id, department, action);
 
 --
--- Name: automation_commands automation_commands_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.automation_commands
-    ADD CONSTRAINT automation_commands_pkey PRIMARY KEY (id);
-
---
 -- Name: automation_pipelines automation_pipelines_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -7771,20 +6786,6 @@ ALTER TABLE ONLY public.automation_pipelines
 
 ALTER TABLE ONLY public.automation_pipelines
     ADD CONSTRAINT automation_pipelines_workspace_id_template_key_key UNIQUE (workspace_id, template_key);
-
---
--- Name: automation_runs automation_runs_pipeline_id_dedupe_key_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.automation_runs
-    ADD CONSTRAINT automation_runs_pipeline_id_dedupe_key_key UNIQUE (pipeline_id, dedupe_key);
-
---
--- Name: automation_runs automation_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.automation_runs
-    ADD CONSTRAINT automation_runs_pkey PRIMARY KEY (id);
 
 --
 -- Name: automation_templates automation_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -8025,13 +7026,6 @@ ALTER TABLE ONLY public.content_settings
     ADD CONSTRAINT content_settings_pkey PRIMARY KEY (workspace_id);
 
 --
--- Name: contracts contracts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.contracts
-    ADD CONSTRAINT contracts_pkey PRIMARY KEY (id);
-
---
 -- Name: credit_pack_purchases credit_pack_purchases_order_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8114,13 +7108,6 @@ ALTER TABLE ONLY public.email_messages
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_pkey PRIMARY KEY (id);
-
---
--- Name: executions executions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.executions
-    ADD CONSTRAINT executions_pkey PRIMARY KEY (id);
 
 --
 -- Name: hiring_apply_hits hiring_apply_hits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -8403,118 +7390,6 @@ ALTER TABLE ONLY public.knowledge_suggestion_state
     ADD CONSTRAINT knowledge_suggestion_state_pkey PRIMARY KEY (workspace_id, suggestion_key);
 
 --
--- Name: lead_actions lead_actions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.lead_actions
-    ADD CONSTRAINT lead_actions_pkey PRIMARY KEY (id);
-
---
--- Name: lead_flows lead_flows_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.lead_flows
-    ADD CONSTRAINT lead_flows_pkey PRIMARY KEY (id);
-
---
--- Name: leads leads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.leads
-    ADD CONSTRAINT leads_pkey PRIMARY KEY (id);
-
---
--- Name: loyalty_campaigns loyalty_campaigns_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_campaigns
-    ADD CONSTRAINT loyalty_campaigns_pkey PRIMARY KEY (id);
-
---
--- Name: loyalty_customer_links loyalty_customer_links_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_customer_links
-    ADD CONSTRAINT loyalty_customer_links_pkey PRIMARY KEY (id);
-
---
--- Name: loyalty_customer_links loyalty_customer_links_workspace_id_kind_ref_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_customer_links
-    ADD CONSTRAINT loyalty_customer_links_workspace_id_kind_ref_key UNIQUE (workspace_id, kind, ref);
-
---
--- Name: loyalty_customers loyalty_customers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_customers
-    ADD CONSTRAINT loyalty_customers_pkey PRIMARY KEY (id);
-
---
--- Name: loyalty_ledger loyalty_ledger_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_ledger
-    ADD CONSTRAINT loyalty_ledger_pkey PRIMARY KEY (id);
-
---
--- Name: loyalty_ledger loyalty_ledger_workspace_id_ref_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_ledger
-    ADD CONSTRAINT loyalty_ledger_workspace_id_ref_key UNIQUE (workspace_id, ref);
-
---
--- Name: loyalty_otps loyalty_otps_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_otps
-    ADD CONSTRAINT loyalty_otps_pkey PRIMARY KEY (id);
-
---
--- Name: loyalty_programs loyalty_programs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_programs
-    ADD CONSTRAINT loyalty_programs_pkey PRIMARY KEY (workspace_id);
-
---
--- Name: loyalty_programs loyalty_programs_slug_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_programs
-    ADD CONSTRAINT loyalty_programs_slug_key UNIQUE (slug);
-
---
--- Name: loyalty_rewards loyalty_rewards_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_rewards
-    ADD CONSTRAINT loyalty_rewards_pkey PRIMARY KEY (id);
-
---
--- Name: loyalty_rewards loyalty_rewards_workspace_id_key_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_rewards
-    ADD CONSTRAINT loyalty_rewards_workspace_id_key_key UNIQUE (workspace_id, key);
-
---
--- Name: loyalty_sends loyalty_sends_campaign_id_customer_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_sends
-    ADD CONSTRAINT loyalty_sends_campaign_id_customer_id_key UNIQUE (campaign_id, customer_id);
-
---
--- Name: loyalty_sends loyalty_sends_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_sends
-    ADD CONSTRAINT loyalty_sends_pkey PRIMARY KEY (id);
-
---
 -- Name: messages messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8613,34 +7488,6 @@ ALTER TABLE ONLY public.modules
     ADD CONSTRAINT modules_pkey PRIMARY KEY (key);
 
 --
--- Name: n8n_pipelines n8n_pipelines_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.n8n_pipelines
-    ADD CONSTRAINT n8n_pipelines_pkey PRIMARY KEY (workspace_id, template_key);
-
---
--- Name: n8n_platform_config n8n_platform_config_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.n8n_platform_config
-    ADD CONSTRAINT n8n_platform_config_pkey PRIMARY KEY (key);
-
---
--- Name: n8n_runs n8n_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.n8n_runs
-    ADD CONSTRAINT n8n_runs_pkey PRIMARY KEY (id);
-
---
--- Name: n8n_runs n8n_runs_workspace_id_template_key_dedupe_key_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.n8n_runs
-    ADD CONSTRAINT n8n_runs_workspace_id_template_key_dedupe_key_key UNIQUE (workspace_id, template_key, dedupe_key);
-
---
 -- Name: nivo_knowledge nivo_knowledge_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -8667,20 +7514,6 @@ ALTER TABLE ONLY public.office_command_candidates
 
 ALTER TABLE ONLY public.openclaw_agent_sync
     ADD CONSTRAINT openclaw_agent_sync_pkey PRIMARY KEY (installation_id);
-
---
--- Name: orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.orders
-    ADD CONSTRAINT orders_pkey PRIMARY KEY (id);
-
---
--- Name: orders orders_workspace_id_order_no_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.orders
-    ADD CONSTRAINT orders_workspace_id_order_no_key UNIQUE (workspace_id, order_no);
 
 --
 -- Name: payment_order_requests payment_order_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -8765,13 +7598,6 @@ ALTER TABLE ONLY public.public_api
 
 ALTER TABLE ONLY public.queue
     ADD CONSTRAINT queue_pkey PRIMARY KEY (id);
-
---
--- Name: responsibilities responsibilities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.responsibilities
-    ADD CONSTRAINT responsibilities_pkey PRIMARY KEY (id);
 
 --
 -- Name: sepay_transactions sepay_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -8912,13 +7738,6 @@ ALTER TABLE ONLY public.telegram_inbox
 
 ALTER TABLE ONLY public.telegram_inbox
     ADD CONSTRAINT telegram_inbox_provider_delivery_id_key UNIQUE (provider, delivery_id);
-
---
--- Name: transactions transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.transactions
-    ADD CONSTRAINT transactions_pkey PRIMARY KEY (id);
 
 --
 -- Name: video_brand_kits video_brand_kits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -9098,34 +7917,10 @@ CREATE INDEX authority_actions_module ON public.authority_actions USING btree (m
 CREATE INDEX authority_rules_ws ON public.authority_rules USING btree (workspace_id);
 
 --
--- Name: automation_commands_workspace; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX automation_commands_workspace ON public.automation_commands USING btree (workspace_id, created_at DESC);
-
---
 -- Name: automation_pipelines_enabled; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX automation_pipelines_enabled ON public.automation_pipelines USING btree (template_key) WHERE enabled;
-
---
--- Name: automation_runs_due; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX automation_runs_due ON public.automation_runs USING btree (run_at) WHERE (status = ANY (ARRAY['queued'::text, 'failed'::text]));
-
---
--- Name: automation_runs_pipeline; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX automation_runs_pipeline ON public.automation_runs USING btree (pipeline_id, created_at DESC);
-
---
--- Name: automation_runs_workspace; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX automation_runs_workspace ON public.automation_runs USING btree (workspace_id, created_at DESC);
 
 --
 -- Name: booking_exceptions_ws; Type: INDEX; Schema: public; Owner: -
@@ -9332,12 +8127,6 @@ CREATE INDEX content_pillars_ws ON public.content_pillars USING btree (workspace
 CREATE INDEX content_plans_ws ON public.content_plans USING btree (workspace_id, created_at DESC);
 
 --
--- Name: contracts_ws_end; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX contracts_ws_end ON public.contracts USING btree (workspace_id, status, ends_on);
-
---
 -- Name: credit_pack_purchases_period; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9384,12 +8173,6 @@ CREATE INDEX email_messages_workspace ON public.email_messages USING btree (work
 --
 
 CREATE INDEX events_lead_id_created_at_idx ON public.events USING btree (lead_id, created_at);
-
---
--- Name: executions_responsibility_id_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX executions_responsibility_id_idx ON public.executions USING btree (responsibility_id);
 
 --
 -- Name: hiring_apply_hits_ip; Type: INDEX; Schema: public; Owner: -
@@ -9668,132 +8451,6 @@ CREATE INDEX knowledge_sources_open ON public.knowledge_sources USING btree (wor
 CREATE INDEX knowledge_sources_ws ON public.knowledge_sources USING btree (workspace_id, created_at DESC);
 
 --
--- Name: lead_actions_workspace_created; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX lead_actions_workspace_created ON public.lead_actions USING btree (workspace_id, created_at DESC);
-
---
--- Name: lead_flows_email; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX lead_flows_email ON public.lead_flows USING btree (workspace_id, email) WHERE (email IS NOT NULL);
-
---
--- Name: lead_flows_igsid; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX lead_flows_igsid ON public.lead_flows USING btree (connection_id, igsid) WHERE (igsid IS NOT NULL);
-
---
--- Name: lead_flows_installation; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX lead_flows_installation ON public.lead_flows USING btree (workspace_id, installation_id);
-
---
--- Name: lead_flows_lead; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX lead_flows_lead ON public.lead_flows USING btree (workspace_id, lead_id) WHERE (lead_id IS NOT NULL);
-
---
--- Name: lead_flows_phone; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX lead_flows_phone ON public.lead_flows USING btree (workspace_id, phone) WHERE (phone IS NOT NULL);
-
---
--- Name: lead_flows_psid; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX lead_flows_psid ON public.lead_flows USING btree (connection_id, psid) WHERE (psid IS NOT NULL);
-
---
--- Name: lead_flows_state; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX lead_flows_state ON public.lead_flows USING btree (workspace_id, state, updated_at DESC);
-
---
--- Name: leads_installation; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX leads_installation ON public.leads USING btree (workspace_id, installation_id);
-
---
--- Name: leads_workspace_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX leads_workspace_id_created_at_idx ON public.leads USING btree (workspace_id, created_at DESC);
-
---
--- Name: leads_ws_email; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX leads_ws_email ON public.leads USING btree (workspace_id, email);
-
---
--- Name: leads_ws_phone; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX leads_ws_phone ON public.leads USING btree (workspace_id, phone);
-
---
--- Name: loyalty_campaigns_ws; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX loyalty_campaigns_ws ON public.loyalty_campaigns USING btree (workspace_id, created_at DESC);
-
---
--- Name: loyalty_customer_links_customer; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX loyalty_customer_links_customer ON public.loyalty_customer_links USING btree (customer_id);
-
---
--- Name: loyalty_customers_email; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX loyalty_customers_email ON public.loyalty_customers USING btree (workspace_id, email) WHERE (email IS NOT NULL);
-
---
--- Name: loyalty_customers_phone; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX loyalty_customers_phone ON public.loyalty_customers USING btree (workspace_id, phone) WHERE (phone IS NOT NULL);
-
---
--- Name: loyalty_customers_ws; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX loyalty_customers_ws ON public.loyalty_customers USING btree (workspace_id, created_at DESC);
-
---
--- Name: loyalty_ledger_customer; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX loyalty_ledger_customer ON public.loyalty_ledger USING btree (customer_id, occurred_at DESC);
-
---
--- Name: loyalty_ledger_ws; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX loyalty_ledger_ws ON public.loyalty_ledger USING btree (workspace_id, occurred_at DESC);
-
---
--- Name: loyalty_otps_customer; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX loyalty_otps_customer ON public.loyalty_otps USING btree (customer_id, created_at DESC);
-
---
--- Name: loyalty_sends_open; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX loyalty_sends_open ON public.loyalty_sends USING btree (workspace_id, created_at) WHERE (status = 'queued'::text);
-
---
 -- Name: messages_workspace_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9848,12 +8505,6 @@ CREATE INDEX module_setup_sessions_inst ON public.module_setup_sessions USING bt
 CREATE INDEX module_setup_writes_session ON public.module_setup_writes USING btree (setup_session_id, created_at);
 
 --
--- Name: n8n_runs_workspace; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX n8n_runs_workspace ON public.n8n_runs USING btree (workspace_id, created_at DESC);
-
---
 -- Name: nivo_knowledge_embedding; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9890,12 +8541,6 @@ CREATE INDEX office_command_candidates_ws ON public.office_command_candidates US
 CREATE INDEX openclaw_agent_sync_workspace ON public.openclaw_agent_sync USING btree (workspace_id);
 
 --
--- Name: orders_ws; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX orders_ws ON public.orders USING btree (workspace_id, status);
-
---
 -- Name: payment_order_requests_ws_time; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -9930,18 +8575,6 @@ CREATE INDEX public_api_unprocessed ON public.public_api USING btree (created_at
 --
 
 CREATE INDEX queue_unsent_idx ON public.queue USING btree (created_at, id) WHERE (sent_at IS NULL);
-
---
--- Name: responsibilities_lead_id_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX responsibilities_lead_id_idx ON public.responsibilities USING btree (lead_id);
-
---
--- Name: responsibilities_workspace_id_status_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX responsibilities_workspace_id_status_idx ON public.responsibilities USING btree (workspace_id, status);
 
 --
 -- Name: sepay_transactions_review; Type: INDEX; Schema: public; Owner: -
@@ -10020,12 +8653,6 @@ CREATE INDEX shifts_swap_ws ON public.shifts_swap_requests USING btree (workspac
 --
 
 CREATE INDEX staff_ws ON public.staff USING btree (workspace_id);
-
---
--- Name: transactions_ws; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX transactions_ws ON public.transactions USING btree (workspace_id, status);
 
 --
 -- Name: video_project_versions_ws; Type: INDEX; Schema: public; Owner: -
@@ -10142,18 +8769,6 @@ CREATE TRIGGER content_settings_touch BEFORE UPDATE ON public.content_settings F
 CREATE TRIGGER knowledge_sources_visibility_sync AFTER UPDATE OF visibility, module ON public.knowledge_sources FOR EACH ROW EXECUTE FUNCTION public.knowledge_chunk_visibility_sync();
 
 --
--- Name: lead_flows lead_flows_fill_installation; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER lead_flows_fill_installation BEFORE INSERT OR UPDATE OF connection_id, lead_id ON public.lead_flows FOR EACH ROW EXECUTE FUNCTION public.lead_flows_fill_installation();
-
---
--- Name: loyalty_ledger loyalty_ledger_no_update; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER loyalty_ledger_no_update BEFORE UPDATE ON public.loyalty_ledger FOR EACH ROW EXECUTE FUNCTION public.loyalty_ledger_immutable();
-
---
 -- Name: module_context_versions module_context_versions_immutable; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -10164,12 +8779,6 @@ CREATE TRIGGER module_context_versions_immutable BEFORE UPDATE ON public.module_
 --
 
 CREATE TRIGGER module_installations_fill BEFORE INSERT OR UPDATE OF module_key, name ON public.module_installations FOR EACH ROW EXECUTE FUNCTION public.module_installations_fill();
-
---
--- Name: n8n_runs n8n_runs_mirror; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER n8n_runs_mirror AFTER INSERT OR UPDATE ON public.n8n_runs FOR EACH ROW EXECUTE FUNCTION public.n8n_runs_mirror();
 
 --
 -- Name: video_brand_kits video_brand_kits_touch; Type: TRIGGER; Schema: public; Owner: -
@@ -10361,13 +8970,6 @@ ALTER TABLE ONLY public.authority
     ADD CONSTRAINT authority_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
--- Name: automation_commands automation_commands_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.automation_commands
-    ADD CONSTRAINT automation_commands_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
 -- Name: automation_pipelines automation_pipelines_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10387,20 +8989,6 @@ ALTER TABLE ONLY public.automation_pipelines
 
 ALTER TABLE ONLY public.automation_pipelines
     ADD CONSTRAINT automation_pipelines_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: automation_runs automation_runs_pipeline_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.automation_runs
-    ADD CONSTRAINT automation_runs_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES public.automation_pipelines(id) ON DELETE CASCADE;
-
---
--- Name: automation_runs automation_runs_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.automation_runs
-    ADD CONSTRAINT automation_runs_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
 -- Name: billing_events billing_events_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -10487,13 +9075,6 @@ ALTER TABLE ONLY public.booking_settings
     ADD CONSTRAINT booking_settings_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
--- Name: booking_waitlist booking_waitlist_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.booking_waitlist
-    ADD CONSTRAINT booking_waitlist_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE SET NULL;
-
---
 -- Name: booking_waitlist booking_waitlist_resource_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10520,20 +9101,6 @@ ALTER TABLE ONLY public.booking_waitlist
 
 ALTER TABLE ONLY public.bookings
     ADD CONSTRAINT bookings_installation_id_fkey FOREIGN KEY (installation_id) REFERENCES public.module_installations(id) ON DELETE SET NULL;
-
---
--- Name: bookings bookings_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.bookings
-    ADD CONSTRAINT bookings_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE SET NULL;
-
---
--- Name: bookings bookings_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.bookings
-    ADD CONSTRAINT bookings_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE SET NULL;
 
 --
 -- Name: bookings bookings_resource_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -10739,20 +9306,6 @@ ALTER TABLE ONLY public.content_settings
     ADD CONSTRAINT content_settings_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
--- Name: contracts contracts_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.contracts
-    ADD CONSTRAINT contracts_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE SET NULL;
-
---
--- Name: contracts contracts_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.contracts
-    ADD CONSTRAINT contracts_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
 -- Name: credit_pack_purchases credit_pack_purchases_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10816,13 +9369,6 @@ ALTER TABLE ONLY public.data_sync_runs
     ADD CONSTRAINT data_sync_runs_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
--- Name: decisions decisions_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.decisions
-    ADD CONSTRAINT decisions_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE SET NULL;
-
---
 -- Name: decisions decisions_work_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10851,13 +9397,6 @@ ALTER TABLE ONLY public.email_messages
     ADD CONSTRAINT email_messages_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
--- Name: events events_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.events
-    ADD CONSTRAINT events_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE CASCADE;
-
---
 -- Name: events events_work_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10870,34 +9409,6 @@ ALTER TABLE ONLY public.events
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: executions executions_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.executions
-    ADD CONSTRAINT executions_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.agents(id) ON DELETE SET NULL;
-
---
--- Name: executions executions_responsibility_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.executions
-    ADD CONSTRAINT executions_responsibility_id_fkey FOREIGN KEY (responsibility_id) REFERENCES public.responsibilities(id) ON DELETE CASCADE;
-
---
--- Name: executions executions_work_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.executions
-    ADD CONSTRAINT executions_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES public.work_items(id) ON DELETE SET NULL;
-
---
--- Name: executions executions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.executions
-    ADD CONSTRAINT executions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
 -- Name: hiring_availability hiring_availability_member_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -11068,13 +9579,6 @@ ALTER TABLE ONLY public.hiring_settings
     ADD CONSTRAINT hiring_settings_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
--- Name: inbound_events inbound_events_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.inbound_events
-    ADD CONSTRAINT inbound_events_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE SET NULL;
-
---
 -- Name: inbound_events inbound_events_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11229,20 +9733,6 @@ ALTER TABLE ONLY public.inventory_suppliers
     ADD CONSTRAINT inventory_suppliers_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
--- Name: invoices invoices_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.invoices
-    ADD CONSTRAINT invoices_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE SET NULL;
-
---
--- Name: invoices invoices_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.invoices
-    ADD CONSTRAINT invoices_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE SET NULL;
-
---
 -- Name: invoices invoices_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11327,172 +9817,11 @@ ALTER TABLE ONLY public.knowledge_suggestion_state
     ADD CONSTRAINT knowledge_suggestion_state_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
--- Name: lead_actions lead_actions_requested_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.lead_actions
-    ADD CONSTRAINT lead_actions_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES auth.users(id);
-
---
--- Name: lead_actions lead_actions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.lead_actions
-    ADD CONSTRAINT lead_actions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: lead_flows lead_flows_connection_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.lead_flows
-    ADD CONSTRAINT lead_flows_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.connections(id) ON DELETE SET NULL;
-
---
--- Name: lead_flows lead_flows_installation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.lead_flows
-    ADD CONSTRAINT lead_flows_installation_id_fkey FOREIGN KEY (installation_id) REFERENCES public.module_installations(id) ON DELETE SET NULL;
-
---
--- Name: lead_flows lead_flows_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.lead_flows
-    ADD CONSTRAINT lead_flows_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE CASCADE;
-
---
--- Name: lead_flows lead_flows_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.lead_flows
-    ADD CONSTRAINT lead_flows_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: leads leads_installation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.leads
-    ADD CONSTRAINT leads_installation_id_fkey FOREIGN KEY (installation_id) REFERENCES public.module_installations(id) ON DELETE SET NULL;
-
---
--- Name: leads leads_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.leads
-    ADD CONSTRAINT leads_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: loyalty_campaigns loyalty_campaigns_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_campaigns
-    ADD CONSTRAINT loyalty_campaigns_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: loyalty_customer_links loyalty_customer_links_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_customer_links
-    ADD CONSTRAINT loyalty_customer_links_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.loyalty_customers(id) ON DELETE CASCADE;
-
---
--- Name: loyalty_customer_links loyalty_customer_links_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_customer_links
-    ADD CONSTRAINT loyalty_customer_links_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: loyalty_customers loyalty_customers_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_customers
-    ADD CONSTRAINT loyalty_customers_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: loyalty_ledger loyalty_ledger_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_ledger
-    ADD CONSTRAINT loyalty_ledger_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.loyalty_customers(id) ON DELETE CASCADE;
-
---
--- Name: loyalty_ledger loyalty_ledger_reward_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_ledger
-    ADD CONSTRAINT loyalty_ledger_reward_id_fkey FOREIGN KEY (reward_id) REFERENCES public.loyalty_rewards(id) ON DELETE SET NULL;
-
---
--- Name: loyalty_ledger loyalty_ledger_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_ledger
-    ADD CONSTRAINT loyalty_ledger_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: loyalty_otps loyalty_otps_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_otps
-    ADD CONSTRAINT loyalty_otps_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.loyalty_customers(id) ON DELETE CASCADE;
-
---
--- Name: loyalty_otps loyalty_otps_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_otps
-    ADD CONSTRAINT loyalty_otps_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: loyalty_programs loyalty_programs_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_programs
-    ADD CONSTRAINT loyalty_programs_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: loyalty_rewards loyalty_rewards_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_rewards
-    ADD CONSTRAINT loyalty_rewards_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: loyalty_sends loyalty_sends_campaign_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_sends
-    ADD CONSTRAINT loyalty_sends_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES public.loyalty_campaigns(id) ON DELETE CASCADE;
-
---
--- Name: loyalty_sends loyalty_sends_customer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_sends
-    ADD CONSTRAINT loyalty_sends_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.loyalty_customers(id) ON DELETE CASCADE;
-
---
--- Name: loyalty_sends loyalty_sends_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.loyalty_sends
-    ADD CONSTRAINT loyalty_sends_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
 -- Name: messages messages_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.messages
     ADD CONSTRAINT messages_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.agents(id) ON DELETE SET NULL;
-
---
--- Name: messages messages_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.messages
-    ADD CONSTRAINT messages_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE SET NULL;
 
 --
 -- Name: messages messages_staff_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -11642,27 +9971,6 @@ ALTER TABLE ONLY public.module_setup_writes
     ADD CONSTRAINT module_setup_writes_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
--- Name: n8n_pipelines n8n_pipelines_updated_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.n8n_pipelines
-    ADD CONSTRAINT n8n_pipelines_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES auth.users(id) ON DELETE SET NULL;
-
---
--- Name: n8n_pipelines n8n_pipelines_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.n8n_pipelines
-    ADD CONSTRAINT n8n_pipelines_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: n8n_runs n8n_runs_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.n8n_runs
-    ADD CONSTRAINT n8n_runs_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
 -- Name: office_command_candidates office_command_candidates_message_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11696,27 +10004,6 @@ ALTER TABLE ONLY public.openclaw_agent_sync
 
 ALTER TABLE ONLY public.openclaw_agent_sync
     ADD CONSTRAINT openclaw_agent_sync_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: orders orders_inbound_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.orders
-    ADD CONSTRAINT orders_inbound_event_id_fkey FOREIGN KEY (inbound_event_id) REFERENCES public.inbound_events(id) ON DELETE SET NULL;
-
---
--- Name: orders orders_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.orders
-    ADD CONSTRAINT orders_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE SET NULL;
-
---
--- Name: orders orders_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.orders
-    ADD CONSTRAINT orders_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
 -- Name: payment_order_requests payment_order_requests_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -11782,39 +10069,11 @@ ALTER TABLE ONLY public.public_api
     ADD CONSTRAINT public_api_key_id_fkey FOREIGN KEY (key_id) REFERENCES public.api_keys(id) ON DELETE CASCADE;
 
 --
--- Name: public_api public_api_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.public_api
-    ADD CONSTRAINT public_api_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE SET NULL;
-
---
 -- Name: public_api public_api_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.public_api
     ADD CONSTRAINT public_api_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: responsibilities responsibilities_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.responsibilities
-    ADD CONSTRAINT responsibilities_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE CASCADE;
-
---
--- Name: responsibilities responsibilities_owner_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.responsibilities
-    ADD CONSTRAINT responsibilities_owner_agent_id_fkey FOREIGN KEY (owner_agent_id) REFERENCES public.agents(id) ON DELETE SET NULL;
-
---
--- Name: responsibilities responsibilities_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.responsibilities
-    ADD CONSTRAINT responsibilities_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
 -- Name: sepay_transactions sepay_transactions_matched_order_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -12055,27 +10314,6 @@ ALTER TABLE ONLY public.staff
     ADD CONSTRAINT staff_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
--- Name: transactions transactions_inbound_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.transactions
-    ADD CONSTRAINT transactions_inbound_event_id_fkey FOREIGN KEY (inbound_event_id) REFERENCES public.inbound_events(id) ON DELETE SET NULL;
-
---
--- Name: transactions transactions_invoice_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.transactions
-    ADD CONSTRAINT transactions_invoice_id_fkey FOREIGN KEY (invoice_id) REFERENCES public.invoices(id) ON DELETE SET NULL;
-
---
--- Name: transactions transactions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.transactions
-    ADD CONSTRAINT transactions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
 -- Name: video_brand_kits video_brand_kits_updated_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -12181,13 +10419,6 @@ ALTER TABLE ONLY public.work_items
     ADD CONSTRAINT work_items_department_fk FOREIGN KEY (department) REFERENCES public.modules(key) ON UPDATE CASCADE;
 
 --
--- Name: work_items work_items_execution_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.work_items
-    ADD CONSTRAINT work_items_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES public.executions(id) ON DELETE SET NULL;
-
---
 -- Name: work_items work_items_inbound_event_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -12200,13 +10431,6 @@ ALTER TABLE ONLY public.work_items
 
 ALTER TABLE ONLY public.work_items
     ADD CONSTRAINT work_items_installation_id_fkey FOREIGN KEY (installation_id) REFERENCES public.module_installations(id) ON DELETE SET NULL;
-
---
--- Name: work_items work_items_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.work_items
-    ADD CONSTRAINT work_items_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE CASCADE;
 
 --
 -- Name: work_items work_items_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -12787,30 +11011,6 @@ CREATE POLICY authority_rules_manager_update ON public.authority_rules FOR UPDAT
 CREATE POLICY authority_rules_member_select ON public.authority_rules FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
--- Name: automation_commands; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.automation_commands ENABLE ROW LEVEL SECURITY;
-
---
--- Name: automation_commands automation_commands_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY automation_commands_app_be_select ON public.automation_commands FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: automation_commands automation_commands_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY automation_commands_app_be_update ON public.automation_commands FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: automation_commands automation_commands_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY automation_commands_manager_select ON public.automation_commands FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
-
---
 -- Name: automation_pipelines; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12851,42 +11051,6 @@ CREATE POLICY automation_pipelines_manager_all ON public.automation_pipelines TO
 --
 
 CREATE POLICY automation_pipelines_member_select ON public.automation_pipelines FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: automation_runs; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.automation_runs ENABLE ROW LEVEL SECURITY;
-
---
--- Name: automation_runs automation_runs_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY automation_runs_app_be_delete ON public.automation_runs FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: automation_runs automation_runs_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY automation_runs_app_be_insert ON public.automation_runs FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: automation_runs automation_runs_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY automation_runs_app_be_select ON public.automation_runs FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: automation_runs automation_runs_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY automation_runs_app_be_update ON public.automation_runs FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: automation_runs automation_runs_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY automation_runs_member_select ON public.automation_runs FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: automation_templates; Type: ROW SECURITY; Schema: public; Owner: -
@@ -13897,54 +12061,6 @@ CREATE POLICY content_settings_manager_all ON public.content_settings TO authent
 CREATE POLICY content_settings_member_select ON public.content_settings FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
--- Name: contracts; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.contracts ENABLE ROW LEVEL SECURITY;
-
---
--- Name: contracts contracts_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY contracts_app_be_delete ON public.contracts FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: contracts contracts_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY contracts_app_be_insert ON public.contracts FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: contracts contracts_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY contracts_app_be_select ON public.contracts FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: contracts contracts_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY contracts_app_be_update ON public.contracts FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: contracts contracts_member_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY contracts_member_insert ON public.contracts FOR INSERT TO authenticated WITH CHECK (public.is_member(workspace_id));
-
---
--- Name: contracts contracts_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY contracts_member_select ON public.contracts FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: contracts contracts_member_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY contracts_member_update ON public.contracts FOR UPDATE TO authenticated USING (public.is_member(workspace_id)) WITH CHECK (public.is_member(workspace_id));
-
---
 -- Name: credit_pack_purchases; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -14219,42 +12335,6 @@ CREATE POLICY events_member_insert ON public.events FOR INSERT TO authenticated 
 --
 
 CREATE POLICY events_member_select ON public.events FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: executions; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.executions ENABLE ROW LEVEL SECURITY;
-
---
--- Name: executions executions_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY executions_app_be_delete ON public.executions FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: executions executions_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY executions_app_be_insert ON public.executions FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: executions executions_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY executions_app_be_select ON public.executions FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: executions executions_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY executions_app_be_update ON public.executions FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: executions executions_member_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY executions_member_all ON public.executions TO authenticated USING (public.is_member(workspace_id)) WITH CHECK (public.is_member(workspace_id));
 
 --
 -- Name: hiring_apply_hits; Type: ROW SECURITY; Schema: public; Owner: -
@@ -15265,414 +13345,6 @@ CREATE POLICY knowledge_suggestion_state_manager_all ON public.knowledge_suggest
 CREATE POLICY knowledge_suggestion_state_member_select ON public.knowledge_suggestion_state FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
--- Name: lead_actions; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.lead_actions ENABLE ROW LEVEL SECURITY;
-
---
--- Name: lead_actions lead_actions_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY lead_actions_app_be_delete ON public.lead_actions FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: lead_actions lead_actions_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY lead_actions_app_be_insert ON public.lead_actions FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: lead_actions lead_actions_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY lead_actions_app_be_select ON public.lead_actions FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: lead_actions lead_actions_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY lead_actions_app_be_update ON public.lead_actions FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: lead_flows; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.lead_flows ENABLE ROW LEVEL SECURITY;
-
---
--- Name: lead_flows lead_flows_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY lead_flows_app_be_delete ON public.lead_flows FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: lead_flows lead_flows_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY lead_flows_app_be_insert ON public.lead_flows FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: lead_flows lead_flows_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY lead_flows_app_be_select ON public.lead_flows FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: lead_flows lead_flows_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY lead_flows_app_be_update ON public.lead_flows FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: lead_flows lead_flows_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY lead_flows_manager_select ON public.lead_flows FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
-
---
--- Name: leads; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
-
---
--- Name: leads leads_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY leads_app_be_delete ON public.leads FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: leads leads_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY leads_app_be_insert ON public.leads FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: leads leads_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY leads_app_be_select ON public.leads FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: leads leads_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY leads_app_be_update ON public.leads FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: leads leads_member_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY leads_member_all ON public.leads TO authenticated USING (public.is_member(workspace_id)) WITH CHECK (public.is_member(workspace_id));
-
---
--- Name: loyalty_campaigns; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.loyalty_campaigns ENABLE ROW LEVEL SECURITY;
-
---
--- Name: loyalty_campaigns loyalty_campaigns_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_campaigns_app_be_delete ON public.loyalty_campaigns FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_campaigns loyalty_campaigns_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_campaigns_app_be_insert ON public.loyalty_campaigns FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_campaigns loyalty_campaigns_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_campaigns_app_be_select ON public.loyalty_campaigns FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_campaigns loyalty_campaigns_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_campaigns_app_be_update ON public.loyalty_campaigns FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_campaigns loyalty_campaigns_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_campaigns_member_select ON public.loyalty_campaigns FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: loyalty_customer_links; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.loyalty_customer_links ENABLE ROW LEVEL SECURITY;
-
---
--- Name: loyalty_customer_links loyalty_customer_links_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_customer_links_app_be_delete ON public.loyalty_customer_links FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_customer_links loyalty_customer_links_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_customer_links_app_be_insert ON public.loyalty_customer_links FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_customer_links loyalty_customer_links_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_customer_links_app_be_select ON public.loyalty_customer_links FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_customer_links loyalty_customer_links_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_customer_links_app_be_update ON public.loyalty_customer_links FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_customer_links loyalty_customer_links_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_customer_links_member_select ON public.loyalty_customer_links FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: loyalty_customers; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.loyalty_customers ENABLE ROW LEVEL SECURITY;
-
---
--- Name: loyalty_customers loyalty_customers_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_customers_app_be_delete ON public.loyalty_customers FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_customers loyalty_customers_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_customers_app_be_insert ON public.loyalty_customers FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_customers loyalty_customers_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_customers_app_be_select ON public.loyalty_customers FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_customers loyalty_customers_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_customers_app_be_update ON public.loyalty_customers FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_customers loyalty_customers_manager_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_customers_manager_update ON public.loyalty_customers FOR UPDATE TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: loyalty_customers loyalty_customers_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_customers_member_select ON public.loyalty_customers FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: loyalty_ledger; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.loyalty_ledger ENABLE ROW LEVEL SECURITY;
-
---
--- Name: loyalty_ledger loyalty_ledger_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_ledger_app_be_insert ON public.loyalty_ledger FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_ledger loyalty_ledger_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_ledger_app_be_select ON public.loyalty_ledger FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_ledger loyalty_ledger_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_ledger_member_select ON public.loyalty_ledger FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: loyalty_otps; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.loyalty_otps ENABLE ROW LEVEL SECURITY;
-
---
--- Name: loyalty_otps loyalty_otps_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_otps_app_be_delete ON public.loyalty_otps FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_otps loyalty_otps_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_otps_app_be_insert ON public.loyalty_otps FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_otps loyalty_otps_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_otps_app_be_select ON public.loyalty_otps FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_otps loyalty_otps_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_otps_app_be_update ON public.loyalty_otps FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_programs; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.loyalty_programs ENABLE ROW LEVEL SECURITY;
-
---
--- Name: loyalty_programs loyalty_programs_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_programs_app_be_delete ON public.loyalty_programs FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_programs loyalty_programs_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_programs_app_be_insert ON public.loyalty_programs FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_programs loyalty_programs_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_programs_app_be_select ON public.loyalty_programs FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_programs loyalty_programs_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_programs_app_be_update ON public.loyalty_programs FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_programs loyalty_programs_manager_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_programs_manager_insert ON public.loyalty_programs FOR INSERT TO authenticated WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: loyalty_programs loyalty_programs_manager_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_programs_manager_update ON public.loyalty_programs FOR UPDATE TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: loyalty_programs loyalty_programs_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_programs_member_select ON public.loyalty_programs FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: loyalty_rewards; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.loyalty_rewards ENABLE ROW LEVEL SECURITY;
-
---
--- Name: loyalty_rewards loyalty_rewards_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_rewards_app_be_delete ON public.loyalty_rewards FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_rewards loyalty_rewards_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_rewards_app_be_insert ON public.loyalty_rewards FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_rewards loyalty_rewards_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_rewards_app_be_select ON public.loyalty_rewards FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_rewards loyalty_rewards_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_rewards_app_be_update ON public.loyalty_rewards FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_rewards loyalty_rewards_manager_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_rewards_manager_delete ON public.loyalty_rewards FOR DELETE TO authenticated USING (public.is_manager(workspace_id));
-
---
--- Name: loyalty_rewards loyalty_rewards_manager_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_rewards_manager_insert ON public.loyalty_rewards FOR INSERT TO authenticated WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: loyalty_rewards loyalty_rewards_manager_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_rewards_manager_update ON public.loyalty_rewards FOR UPDATE TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: loyalty_rewards loyalty_rewards_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_rewards_member_select ON public.loyalty_rewards FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: loyalty_sends; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.loyalty_sends ENABLE ROW LEVEL SECURITY;
-
---
--- Name: loyalty_sends loyalty_sends_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_sends_app_be_delete ON public.loyalty_sends FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_sends loyalty_sends_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_sends_app_be_insert ON public.loyalty_sends FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_sends loyalty_sends_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_sends_app_be_select ON public.loyalty_sends FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_sends loyalty_sends_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_sends_app_be_update ON public.loyalty_sends FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: loyalty_sends loyalty_sends_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY loyalty_sends_member_select ON public.loyalty_sends FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: messages; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -16075,102 +13747,6 @@ CREATE POLICY modules_app_be_update ON public.modules FOR UPDATE TO app_be USING
 CREATE POLICY modules_authenticated_select ON public.modules FOR SELECT TO authenticated USING ((( SELECT auth.uid() AS uid) IS NOT NULL));
 
 --
--- Name: n8n_pipelines; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.n8n_pipelines ENABLE ROW LEVEL SECURITY;
-
---
--- Name: n8n_pipelines n8n_pipelines_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY n8n_pipelines_app_be_delete ON public.n8n_pipelines FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: n8n_pipelines n8n_pipelines_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY n8n_pipelines_app_be_insert ON public.n8n_pipelines FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: n8n_pipelines n8n_pipelines_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY n8n_pipelines_app_be_select ON public.n8n_pipelines FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: n8n_pipelines n8n_pipelines_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY n8n_pipelines_app_be_update ON public.n8n_pipelines FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: n8n_pipelines n8n_pipelines_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY n8n_pipelines_member_select ON public.n8n_pipelines FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: n8n_platform_config; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.n8n_platform_config ENABLE ROW LEVEL SECURITY;
-
---
--- Name: n8n_platform_config n8n_platform_config_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY n8n_platform_config_app_be_insert ON public.n8n_platform_config FOR INSERT TO app_be WITH CHECK ((key IS NOT NULL));
-
---
--- Name: n8n_platform_config n8n_platform_config_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY n8n_platform_config_app_be_select ON public.n8n_platform_config FOR SELECT TO app_be USING ((key IS NOT NULL));
-
---
--- Name: n8n_platform_config n8n_platform_config_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY n8n_platform_config_app_be_update ON public.n8n_platform_config FOR UPDATE TO app_be USING ((key IS NOT NULL)) WITH CHECK ((key IS NOT NULL));
-
---
--- Name: n8n_runs; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.n8n_runs ENABLE ROW LEVEL SECURITY;
-
---
--- Name: n8n_runs n8n_runs_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY n8n_runs_app_be_delete ON public.n8n_runs FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: n8n_runs n8n_runs_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY n8n_runs_app_be_insert ON public.n8n_runs FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: n8n_runs n8n_runs_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY n8n_runs_app_be_select ON public.n8n_runs FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: n8n_runs n8n_runs_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY n8n_runs_app_be_update ON public.n8n_runs FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: n8n_runs n8n_runs_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY n8n_runs_member_select ON public.n8n_runs FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: nivo_knowledge; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -16289,42 +13865,6 @@ CREATE POLICY openclaw_agent_sync_member_select ON public.openclaw_agent_sync FO
 --
 
 CREATE POLICY openclaw_agent_sync_platform_admin_select ON public.openclaw_agent_sync FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
-
---
--- Name: orders; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
-
---
--- Name: orders orders_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY orders_app_be_delete ON public.orders FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: orders orders_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY orders_app_be_insert ON public.orders FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: orders orders_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY orders_app_be_select ON public.orders FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: orders orders_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY orders_app_be_update ON public.orders FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: orders orders_member_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY orders_member_all ON public.orders TO authenticated USING (public.is_member(workspace_id)) WITH CHECK (public.is_member(workspace_id));
 
 --
 -- Name: payment_order_requests; Type: ROW SECURITY; Schema: public; Owner: -
@@ -16517,42 +14057,6 @@ CREATE POLICY queue_app_be_select ON public.queue FOR SELECT TO app_be USING ((q
 --
 
 CREATE POLICY queue_app_be_update ON public.queue FOR UPDATE TO app_be USING ((queue IS NOT NULL)) WITH CHECK ((queue IS NOT NULL));
-
---
--- Name: responsibilities; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.responsibilities ENABLE ROW LEVEL SECURITY;
-
---
--- Name: responsibilities responsibilities_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY responsibilities_app_be_delete ON public.responsibilities FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: responsibilities responsibilities_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY responsibilities_app_be_insert ON public.responsibilities FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: responsibilities responsibilities_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY responsibilities_app_be_select ON public.responsibilities FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: responsibilities responsibilities_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY responsibilities_app_be_update ON public.responsibilities FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: responsibilities responsibilities_member_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY responsibilities_member_all ON public.responsibilities TO authenticated USING (public.is_member(workspace_id)) WITH CHECK (public.is_member(workspace_id));
 
 --
 -- Name: sepay_transactions; Type: ROW SECURITY; Schema: public; Owner: -
@@ -17187,42 +14691,6 @@ CREATE POLICY telegram_inbox_app_be_select ON public.telegram_inbox FOR SELECT T
 CREATE POLICY telegram_inbox_app_be_update ON public.telegram_inbox FOR UPDATE TO app_be USING ((provider = 'telegram'::text)) WITH CHECK ((provider = 'telegram'::text));
 
 --
--- Name: transactions; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
-
---
--- Name: transactions transactions_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY transactions_app_be_delete ON public.transactions FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: transactions transactions_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY transactions_app_be_insert ON public.transactions FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: transactions transactions_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY transactions_app_be_select ON public.transactions FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: transactions transactions_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY transactions_app_be_update ON public.transactions FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: transactions transactions_member_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY transactions_member_all ON public.transactions TO authenticated USING (public.is_member(workspace_id)) WITH CHECK (public.is_member(workspace_id));
-
---
 -- Name: video_brand_kits; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -17681,9 +15149,7 @@ REVOKE ALL ON TABLE public.app_errors FROM anon, authenticated;
 REVOKE ALL ON TABLE public.authority FROM anon, authenticated;
 REVOKE ALL ON TABLE public.authority_actions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.authority_rules FROM anon, authenticated;
-REVOKE ALL ON TABLE public.automation_commands FROM anon, authenticated;
 REVOKE ALL ON TABLE public.automation_pipelines FROM anon, authenticated;
-REVOKE ALL ON TABLE public.automation_runs FROM anon, authenticated;
 REVOKE ALL ON TABLE public.automation_templates FROM anon, authenticated;
 REVOKE ALL ON TABLE public.billing_config FROM anon, authenticated;
 REVOKE ALL ON TABLE public.billing_events FROM anon, authenticated;
@@ -17712,7 +15178,6 @@ REVOKE ALL ON TABLE public.content_items FROM anon, authenticated;
 REVOKE ALL ON TABLE public.content_pillars FROM anon, authenticated;
 REVOKE ALL ON TABLE public.content_plans FROM anon, authenticated;
 REVOKE ALL ON TABLE public.content_settings FROM anon, authenticated;
-REVOKE ALL ON TABLE public.contracts FROM anon, authenticated;
 REVOKE ALL ON TABLE public.credit_pack_purchases FROM anon, authenticated;
 REVOKE ALL ON TABLE public.credit_packs FROM anon, authenticated;
 REVOKE ALL ON TABLE public.credit_topup_draws FROM anon, authenticated;
@@ -17724,7 +15189,6 @@ REVOKE ALL ON TABLE public.decisions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.email_messages FROM anon, authenticated;
 
 REVOKE ALL ON TABLE public.events FROM anon, authenticated;
-REVOKE ALL ON TABLE public.executions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.hiring_apply_hits FROM anon, authenticated;
 REVOKE ALL ON SEQUENCE public.hiring_apply_hits_id_seq FROM anon, authenticated;
 REVOKE ALL ON TABLE public.hiring_availability FROM anon, authenticated;
@@ -17756,18 +15220,6 @@ REVOKE ALL ON TABLE public.knowledge_chunks FROM anon, authenticated;
 REVOKE ALL ON TABLE public.knowledge_gaps FROM anon, authenticated;
 REVOKE ALL ON TABLE public.knowledge_sources FROM anon, authenticated;
 REVOKE ALL ON TABLE public.knowledge_suggestion_state FROM anon, authenticated;
-REVOKE ALL ON TABLE public.lead_actions FROM anon, authenticated;
-REVOKE ALL ON TABLE public.lead_flows FROM anon, authenticated;
-REVOKE ALL ON TABLE public.leads FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_balances FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_campaigns FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_customer_links FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_customers FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_ledger FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_otps FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_programs FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_rewards FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_sends FROM anon, authenticated;
 REVOKE ALL ON TABLE public.messages FROM anon, authenticated;
 REVOKE ALL ON TABLE public.meta_comments FROM anon, authenticated;
 REVOKE ALL ON TABLE public.meta_inbox FROM anon, authenticated;
@@ -17779,13 +15231,9 @@ REVOKE ALL ON TABLE public.module_setup_messages FROM anon, authenticated;
 REVOKE ALL ON TABLE public.module_setup_sessions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.module_setup_writes FROM anon, authenticated;
 REVOKE ALL ON TABLE public.modules FROM anon, authenticated;
-REVOKE ALL ON TABLE public.n8n_pipelines FROM anon, authenticated;
-REVOKE ALL ON TABLE public.n8n_platform_config FROM anon, authenticated;
-REVOKE ALL ON TABLE public.n8n_runs FROM anon, authenticated;
 REVOKE ALL ON TABLE public.nivo_knowledge FROM anon, authenticated;
 REVOKE ALL ON TABLE public.office_command_candidates FROM anon, authenticated;
 REVOKE ALL ON TABLE public.openclaw_agent_sync FROM anon, authenticated;
-REVOKE ALL ON TABLE public.orders FROM anon, authenticated;
 REVOKE ALL ON TABLE public.payment_order_requests FROM anon, authenticated;
 REVOKE ALL ON TABLE public.payment_orders FROM anon, authenticated;
 REVOKE ALL ON TABLE public.plan_usage_tiers FROM anon, authenticated;
@@ -17795,7 +15243,6 @@ REVOKE ALL ON TABLE public.platform_audit FROM anon, authenticated;
 REVOKE ALL ON TABLE public.platform_flags FROM anon, authenticated;
 REVOKE ALL ON TABLE public.public_api FROM anon, authenticated;
 REVOKE ALL ON TABLE public.queue FROM anon, authenticated;
-REVOKE ALL ON TABLE public.responsibilities FROM anon, authenticated;
 REVOKE ALL ON TABLE public.sepay_transactions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.shifts_attendance FROM anon, authenticated;
 REVOKE ALL ON TABLE public.shifts_availability FROM anon, authenticated;
@@ -17811,7 +15258,6 @@ REVOKE ALL ON TABLE public.shifts_staff_pay FROM anon, authenticated;
 REVOKE ALL ON TABLE public.shifts_swap_requests FROM anon, authenticated;
 REVOKE ALL ON TABLE public.staff FROM anon, authenticated;
 REVOKE ALL ON TABLE public.telegram_inbox FROM anon, authenticated;
-REVOKE ALL ON TABLE public.transactions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.video_brand_kits FROM anon, authenticated;
 REVOKE ALL ON TABLE public.video_project_versions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.video_projects FROM anon, authenticated;
@@ -17847,13 +15293,6 @@ GRANT EXECUTE ON FUNCTION be_access.user_emails(p_ids uuid[]) TO app_be;
 
 REVOKE EXECUTE ON FUNCTION public.accept_invite(token text) FROM PUBLIC, anon, authenticated;
 GRANT ALL ON FUNCTION public.accept_invite(token text) TO authenticated;
-
---
--- Name: FUNCTION add_lead_responsibility(p_workspace uuid, p_lead uuid, p_title text, p_owner text, p_next_action text, p_due timestamp with time zone, p_locale text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.add_lead_responsibility(p_workspace uuid, p_lead uuid, p_title text, p_owner text, p_next_action text, p_due timestamp with time zone, p_locale text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.add_lead_responsibility(p_workspace uuid, p_lead uuid, p_title text, p_owner text, p_next_action text, p_due timestamp with time zone, p_locale text) TO authenticated;
 
 --
 -- Name: FUNCTION admin_console_audit(p_action text, p_workspace uuid, p_data jsonb); Type: ACL; Schema: public; Owner: -
@@ -17986,28 +15425,6 @@ REVOKE EXECUTE ON FUNCTION public.app_errors_record(p_scope text, p_message text
 GRANT EXECUTE ON FUNCTION public.app_errors_record(p_scope text, p_message text, p_stack text, p_ws uuid, p_connection uuid, p_ctx jsonb) TO app_be;
 
 --
--- Name: FUNCTION assign_lead_responsibility(p_workspace uuid, p_responsibility uuid, p_owner text, p_next_action text, p_due timestamp with time zone, p_title text, p_locale text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.assign_lead_responsibility(p_workspace uuid, p_responsibility uuid, p_owner text, p_next_action text, p_due timestamp with time zone, p_title text, p_locale text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.assign_lead_responsibility(p_workspace uuid, p_responsibility uuid, p_owner text, p_next_action text, p_due timestamp with time zone, p_title text, p_locale text) TO authenticated;
-
---
--- Name: FUNCTION automation_command_enqueue(p_workspace uuid, p_kind text, p_template text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.automation_command_enqueue(p_workspace uuid, p_kind text, p_template text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.automation_command_enqueue(p_workspace uuid, p_kind text, p_template text) TO authenticated;
-
---
--- Name: FUNCTION automations_data(ws uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.automations_data(ws uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.automations_data(ws uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.automations_data(ws uuid) TO app_be;
-
---
 -- Name: FUNCTION be_account_providers(p_user uuid); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18128,32 +15545,11 @@ REVOKE EXECUTE ON FUNCTION public.credit_usd_value() FROM PUBLIC, anon, authenti
 GRANT EXECUTE ON FUNCTION public.credit_usd_value() TO app_be;
 
 --
--- Name: FUNCTION dashboard_data(ws uuid, since7 timestamp with time zone, founding_from timestamp with time zone, founding_to timestamp with time zone); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.dashboard_data(ws uuid, since7 timestamp with time zone, founding_from timestamp with time zone, founding_to timestamp with time zone) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.dashboard_data(ws uuid, since7 timestamp with time zone, founding_from timestamp with time zone, founding_to timestamp with time zone) TO authenticated;
-
---
 -- Name: FUNCTION display_name_of(uid uuid); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE EXECUTE ON FUNCTION public.display_name_of(uid uuid) FROM PUBLIC, anon, authenticated;
 GRANT ALL ON FUNCTION public.display_name_of(uid uuid) TO authenticated;
-
---
--- Name: FUNCTION exception_rows(ws uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.exception_rows(ws uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.exception_rows(ws uuid) TO authenticated;
-
---
--- Name: FUNCTION governance_rows(ws uuid, since7 timestamp with time zone); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.governance_rows(ws uuid, since7 timestamp with time zone) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.governance_rows(ws uuid, since7 timestamp with time zone) TO authenticated;
 
 --
 -- Name: FUNCTION hiring_application_submit(p_ws uuid, p_job uuid, p_fields jsonb, p_consent text, p_ip text, p_lines text[]); Type: ACL; Schema: public; Owner: -
@@ -18693,42 +16089,10 @@ GRANT ALL ON FUNCTION public.knowledge_retry_source(p_source uuid) TO authentica
 REVOKE EXECUTE ON FUNCTION public.lead_actor_name(p_workspace uuid) FROM PUBLIC, anon, authenticated;
 
 --
--- Name: FUNCTION lead_flows_fill_installation(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.lead_flows_fill_installation() FROM PUBLIC, anon, authenticated;
-
---
--- Name: TABLE responsibilities; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.responsibilities TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.responsibilities TO app_be;
-
---
--- Name: FUNCTION lead_step_json(r public.responsibilities); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.lead_step_json(r public.responsibilities) FROM PUBLIC, anon, authenticated;
-
---
 -- Name: FUNCTION lead_step_owner(p_workspace uuid, p_owner text, p_actor text, OUT o_kind text, OUT o_agent uuid, OUT o_name text); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE EXECUTE ON FUNCTION public.lead_step_owner(p_workspace uuid, p_owner text, p_actor text, OUT o_kind text, OUT o_agent uuid, OUT o_name text) FROM PUBLIC, anon, authenticated;
-
---
--- Name: FUNCTION loyalty_ledger_immutable(); Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON FUNCTION public.loyalty_ledger_immutable() TO anon;
-GRANT ALL ON FUNCTION public.loyalty_ledger_immutable() TO authenticated;
-
---
--- Name: FUNCTION loyalty_post(p_workspace uuid, p_customer uuid, p_kind text, p_points integer, p_ref text, p_by text, p_amount_vnd bigint, p_order_id uuid, p_invoice_id uuid, p_reward_id uuid, p_work_item_id uuid, p_evidence text, p_expires_at timestamp with time zone, p_occurred_at timestamp with time zone); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.loyalty_post(p_workspace uuid, p_customer uuid, p_kind text, p_points integer, p_ref text, p_by text, p_amount_vnd bigint, p_order_id uuid, p_invoice_id uuid, p_reward_id uuid, p_work_item_id uuid, p_evidence text, p_expires_at timestamp with time zone, p_occurred_at timestamp with time zone) FROM PUBLIC, anon, authenticated;
 
 --
 -- Name: FUNCTION match_knowledge(p_workspace uuid, p_module text, p_query_embedding extensions.vector, p_query text, p_limit integer, p_audience text, p_query_model text, p_installation uuid); Type: ACL; Schema: public; Owner: -
@@ -18782,19 +16146,6 @@ GRANT ALL ON FUNCTION public.my_staff_id(ws uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.my_staff_id(ws uuid) TO app_be;
 
 --
--- Name: FUNCTION n8n_runs_mirror(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.n8n_runs_mirror() FROM PUBLIC, anon, authenticated;
-
---
--- Name: FUNCTION office_data(ws uuid, since7 timestamp with time zone); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.office_data(ws uuid, since7 timestamp with time zone) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.office_data(ws uuid, since7 timestamp with time zone) TO authenticated;
-
---
 -- Name: FUNCTION owns_workspace(ws uuid); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18824,13 +16175,6 @@ REVOKE EXECUTE ON FUNCTION public.post_office_notice(p_workspace uuid, p_body te
 GRANT EXECUTE ON FUNCTION public.post_office_notice(p_workspace uuid, p_body text) TO app_be;
 
 --
--- Name: FUNCTION promo_state(ws uuid, founding_from timestamp with time zone, founding_to timestamp with time zone); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.promo_state(ws uuid, founding_from timestamp with time zone, founding_to timestamp with time zone) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.promo_state(ws uuid, founding_from timestamp with time zone, founding_to timestamp with time zone) TO authenticated;
-
---
 -- Name: FUNCTION read_app_command(p_id uuid); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18845,13 +16189,6 @@ REVOKE EXECUTE ON FUNCTION public.record_ai_usage(p_workspace uuid, p_kind text,
 GRANT EXECUTE ON FUNCTION public.record_ai_usage(p_workspace uuid, p_kind text, p_module text, p_model text, p_prompt integer, p_completion integer, p_cost numeric, p_estimated boolean) TO app_be;
 
 --
--- Name: FUNCTION record_lead_outcome(p_workspace uuid, p_lead uuid, p_stage text, p_evidence text, p_locale text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.record_lead_outcome(p_workspace uuid, p_lead uuid, p_stage text, p_evidence text, p_locale text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.record_lead_outcome(p_workspace uuid, p_lead uuid, p_stage text, p_evidence text, p_locale text) TO authenticated;
-
---
 -- Name: FUNCTION request_admin_invite_resend(p_workspace uuid, p_invite uuid); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18864,13 +16201,6 @@ GRANT ALL ON FUNCTION public.request_admin_invite_resend(p_workspace uuid, p_inv
 
 REVOKE EXECUTE ON FUNCTION public.request_agent_sync(p_workspace uuid, p_installation uuid, p_force boolean) FROM PUBLIC, anon, authenticated;
 GRANT ALL ON FUNCTION public.request_agent_sync(p_workspace uuid, p_installation uuid, p_force boolean) TO authenticated;
-
---
--- Name: FUNCTION request_execution_decision(p_workspace uuid, p_execution uuid, p_decision text, p_edited_draft text, p_locale text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.request_execution_decision(p_workspace uuid, p_execution uuid, p_decision text, p_edited_draft text, p_locale text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.request_execution_decision(p_workspace uuid, p_execution uuid, p_decision text, p_edited_draft text, p_locale text) TO authenticated;
 
 --
 -- Name: FUNCTION request_invite_command(p_workspace uuid, p_action text, p_invite uuid, p_email text, p_role text, p_staff uuid); Type: ACL; Schema: public; Owner: -
@@ -18914,13 +16244,6 @@ GRANT ALL ON FUNCTION public.request_work_decision(p_workspace uuid, p_work_item
 GRANT ALL ON FUNCTION public.resolve_installation(p_ws uuid, p_module text, p_conversation uuid, p_lead uuid, p_chain uuid) TO anon;
 GRANT ALL ON FUNCTION public.resolve_installation(p_ws uuid, p_module text, p_conversation uuid, p_lead uuid, p_chain uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.resolve_installation(p_ws uuid, p_module text, p_conversation uuid, p_lead uuid, p_chain uuid) TO app_be;
-
---
--- Name: FUNCTION responsibility_rows(ws uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.responsibility_rows(ws uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.responsibility_rows(ws uuid) TO authenticated;
 
 --
 -- Name: FUNCTION revoke_my_session(session_id uuid); Type: ACL; Schema: public; Owner: -
@@ -19439,25 +16762,11 @@ GRANT ALL ON TABLE public.authority_rules TO authenticated;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.authority_rules TO app_be;
 
 --
--- Name: TABLE automation_commands; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.automation_commands TO authenticated;
-GRANT SELECT,UPDATE ON TABLE public.automation_commands TO app_be;
-
---
 -- Name: TABLE automation_pipelines; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT ALL ON TABLE public.automation_pipelines TO authenticated;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.automation_pipelines TO app_be;
-
---
--- Name: TABLE automation_runs; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.automation_runs TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.automation_runs TO app_be;
 
 --
 -- Name: TABLE automation_templates; Type: ACL; Schema: public; Owner: -
@@ -19671,13 +16980,6 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.content_settings TO authentica
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.content_settings TO app_be;
 
 --
--- Name: TABLE contracts; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,UPDATE ON TABLE public.contracts TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contracts TO app_be;
-
---
 -- Name: TABLE credit_pack_purchases; Type: ACL; Schema: public; Owner: -
 --
 
@@ -19739,13 +17041,6 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.email_messages TO app_be;
 
 GRANT ALL ON TABLE public.events TO authenticated;
 GRANT SELECT,INSERT ON TABLE public.events TO app_be;
-
---
--- Name: TABLE executions; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.executions TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.executions TO app_be;
 
 --
 -- Name: TABLE hiring_apply_hits; Type: ACL; Schema: public; Owner: -
@@ -19957,123 +17252,6 @@ GRANT ALL ON TABLE public.knowledge_suggestion_state TO authenticated;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.knowledge_suggestion_state TO app_be;
 
 --
--- Name: TABLE lead_actions; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lead_actions TO app_be;
-
---
--- Name: TABLE lead_flows; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.lead_flows TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lead_flows TO app_be;
-
---
--- Name: TABLE leads; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.leads TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.leads TO app_be;
-
---
--- Name: TABLE loyalty_customers; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.loyalty_customers TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.loyalty_customers TO app_be;
-
---
--- Name: COLUMN loyalty_customers.name; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(name) ON TABLE public.loyalty_customers TO authenticated;
-
---
--- Name: COLUMN loyalty_customers.phone; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(phone) ON TABLE public.loyalty_customers TO authenticated;
-
---
--- Name: COLUMN loyalty_customers.email; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(email) ON TABLE public.loyalty_customers TO authenticated;
-
---
--- Name: COLUMN loyalty_customers.birthday; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(birthday) ON TABLE public.loyalty_customers TO authenticated;
-
---
--- Name: COLUMN loyalty_customers.note; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(note) ON TABLE public.loyalty_customers TO authenticated;
-
---
--- Name: COLUMN loyalty_customers.updated_at; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(updated_at) ON TABLE public.loyalty_customers TO authenticated;
-
---
--- Name: TABLE loyalty_ledger; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.loyalty_ledger TO authenticated;
-GRANT SELECT,INSERT ON TABLE public.loyalty_ledger TO app_be;
-
---
--- Name: TABLE loyalty_balances; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.loyalty_balances TO authenticated;
-
---
--- Name: TABLE loyalty_campaigns; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.loyalty_campaigns TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.loyalty_campaigns TO app_be;
-
---
--- Name: TABLE loyalty_customer_links; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.loyalty_customer_links TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.loyalty_customer_links TO app_be;
-
---
--- Name: TABLE loyalty_otps; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.loyalty_otps TO app_be;
-
---
--- Name: TABLE loyalty_programs; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,UPDATE ON TABLE public.loyalty_programs TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.loyalty_programs TO app_be;
-
---
--- Name: TABLE loyalty_rewards; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.loyalty_rewards TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.loyalty_rewards TO app_be;
-
---
--- Name: TABLE loyalty_sends; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.loyalty_sends TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.loyalty_sends TO app_be;
-
---
 -- Name: TABLE messages; Type: ACL; Schema: public; Owner: -
 --
 
@@ -20150,67 +17328,6 @@ GRANT SELECT ON TABLE public.modules TO authenticated;
 GRANT SELECT,INSERT,UPDATE ON TABLE public.modules TO app_be;
 
 --
--- Name: TABLE n8n_pipelines; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.n8n_pipelines TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.n8n_pipelines TO app_be;
-
---
--- Name: TABLE n8n_platform_config; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,UPDATE ON TABLE public.n8n_platform_config TO app_be;
-
---
--- Name: TABLE n8n_runs; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.n8n_runs TO app_be;
-
---
--- Name: COLUMN n8n_runs.id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(id) ON TABLE public.n8n_runs TO authenticated;
-
---
--- Name: COLUMN n8n_runs.workspace_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(workspace_id) ON TABLE public.n8n_runs TO authenticated;
-
---
--- Name: COLUMN n8n_runs.template_key; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(template_key) ON TABLE public.n8n_runs TO authenticated;
-
---
--- Name: COLUMN n8n_runs.status; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(status) ON TABLE public.n8n_runs TO authenticated;
-
---
--- Name: COLUMN n8n_runs.summary; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(summary) ON TABLE public.n8n_runs TO authenticated;
-
---
--- Name: COLUMN n8n_runs.created_at; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(created_at) ON TABLE public.n8n_runs TO authenticated;
-
---
--- Name: COLUMN n8n_runs.finished_at; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(finished_at) ON TABLE public.n8n_runs TO authenticated;
-
---
 -- Name: TABLE nivo_knowledge; Type: ACL; Schema: public; Owner: -
 --
 
@@ -20230,13 +17347,6 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.office_command_candidates TO a
 
 GRANT SELECT ON TABLE public.openclaw_agent_sync TO authenticated;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.openclaw_agent_sync TO app_be;
-
---
--- Name: TABLE orders; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.orders TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.orders TO app_be;
 
 --
 -- Name: TABLE payment_order_requests; Type: ACL; Schema: public; Owner: -
@@ -20398,13 +17508,6 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.staff TO app_be;
 GRANT SELECT,INSERT,UPDATE ON TABLE public.telegram_inbox TO app_be;
 
 --
--- Name: TABLE transactions; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.transactions TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.transactions TO app_be;
-
---
 -- Name: TABLE video_brand_kits; Type: ACL; Schema: public; Owner: -
 --
 
@@ -20517,7 +17620,6 @@ SELECT pgmq.create('inventory_order');
 SELECT pgmq.create('inventory_replenish');
 SELECT pgmq.create('invite_command');
 SELECT pgmq.create('knowledge');
-SELECT pgmq.create('lead_actions');
 SELECT pgmq.create('lead_gen');
 SELECT pgmq.create('meta_inbound');
 SELECT pgmq.create('n8n');
@@ -20715,15 +17817,7 @@ INSERT INTO public.authority_actions (action, module_key, sort_order, default_mo
 --
 
 --
--- Data for Name: automation_commands; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
 -- Data for Name: automation_pipelines; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: automation_runs; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 --
@@ -20769,23 +17863,7 @@ INSERT INTO public.billing_config (key, value, note) VALUES
 --
 
 --
--- Data for Name: leads; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: responsibilities; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: executions; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
 -- Data for Name: inbound_events; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: orders; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 --
@@ -20873,10 +17951,6 @@ INSERT INTO public.billing_config (key, value, note) VALUES
 --
 
 --
--- Data for Name: contracts; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
 -- Data for Name: credit_packs; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -20884,245 +17958,6 @@ INSERT INTO public.credit_packs (code, credits, price_vnd, sort, active) VALUES
 	('credits_1000', 1000, 299000, 1, true),
 	('credits_3000', 3000, 849000, 2, true),
 	('credits_10000', 10000, 2690000, 3, true);
-
---
--- Data for Name: payment_orders; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: credit_pack_purchases; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: credit_topup_draws; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: credit_topups; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: data_records; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: data_sync_runs; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: decisions; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: email_messages; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: events; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: hiring_apply_hits; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: hiring_availability; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: hiring_jobs; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: hiring_candidates; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: hiring_consents; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: hiring_events; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: hiring_interviews; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: hiring_offers; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: hiring_onboarding; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: hiring_retention_log; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: hiring_settings; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: inventory_suppliers; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: inventory_items; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: inventory_locations; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: inventory_movements; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: inventory_purchase_orders; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: inventory_po_lines; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: inventory_receipts; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: inventory_recipes; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: inventory_recipe_lines; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: inventory_stock_levels; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: invoices; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: job_outbox; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: job_slots; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: jobs; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: knowledge_chunks; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: knowledge_gaps; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: knowledge_suggestion_state; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: lead_actions; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: lead_flows; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: loyalty_campaigns; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: loyalty_customers; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: loyalty_customer_links; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: loyalty_rewards; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: loyalty_ledger; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: loyalty_otps; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: loyalty_programs; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: loyalty_sends; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: messages; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: meta_comments; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: meta_inbox; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: meta_threads; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: module_context_notes; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: module_context_versions; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: module_setup_sessions; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: module_setup_messages; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: module_setup_writes; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: n8n_pipelines; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: n8n_platform_config; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-INSERT INTO public.n8n_platform_config (key, value) VALUES
-	('api_base', 'https://nivo.vn');
-
---
--- Data for Name: n8n_runs; Type: TABLE DATA; Schema: public; Owner: postgres
---
 
 --
 -- Data for Name: nivo_knowledge; Type: TABLE DATA; Schema: public; Owner: postgres
@@ -21249,10 +18084,6 @@ INSERT INTO public.platform_flags (key, enabled) VALUES
 --
 
 --
--- Data for Name: transactions; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
 -- Data for Name: video_brand_kits; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -21370,9 +18201,7 @@ REVOKE ALL ON TABLE public.app_errors FROM anon, authenticated;
 REVOKE ALL ON TABLE public.authority FROM anon, authenticated;
 REVOKE ALL ON TABLE public.authority_actions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.authority_rules FROM anon, authenticated;
-REVOKE ALL ON TABLE public.automation_commands FROM anon, authenticated;
 REVOKE ALL ON TABLE public.automation_pipelines FROM anon, authenticated;
-REVOKE ALL ON TABLE public.automation_runs FROM anon, authenticated;
 REVOKE ALL ON TABLE public.automation_templates FROM anon, authenticated;
 REVOKE ALL ON TABLE public.billing_config FROM anon, authenticated;
 REVOKE ALL ON TABLE public.billing_events FROM anon, authenticated;
@@ -21398,7 +18227,6 @@ REVOKE ALL ON TABLE public.content_items FROM anon, authenticated;
 REVOKE ALL ON TABLE public.content_pillars FROM anon, authenticated;
 REVOKE ALL ON TABLE public.content_plans FROM anon, authenticated;
 REVOKE ALL ON TABLE public.content_settings FROM anon, authenticated;
-REVOKE ALL ON TABLE public.contracts FROM anon, authenticated;
 REVOKE ALL ON TABLE public.credit_pack_purchases FROM anon, authenticated;
 REVOKE ALL ON TABLE public.credit_packs FROM anon, authenticated;
 REVOKE ALL ON TABLE public.credit_topup_draws FROM anon, authenticated;
@@ -21408,7 +18236,6 @@ REVOKE ALL ON TABLE public.data_sync_runs FROM anon, authenticated;
 REVOKE ALL ON TABLE public.decisions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.email_messages FROM anon, authenticated;
 REVOKE ALL ON TABLE public.events FROM anon, authenticated;
-REVOKE ALL ON TABLE public.executions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.hiring_availability FROM anon, authenticated;
 REVOKE ALL ON TABLE public.hiring_candidates FROM anon, authenticated;
 REVOKE ALL ON TABLE public.hiring_consents FROM anon, authenticated;
@@ -21435,16 +18262,6 @@ REVOKE ALL ON TABLE public.knowledge_chunks FROM anon, authenticated;
 REVOKE ALL ON TABLE public.knowledge_gaps FROM anon, authenticated;
 REVOKE ALL ON TABLE public.knowledge_sources FROM anon, authenticated;
 REVOKE ALL ON TABLE public.knowledge_suggestion_state FROM anon, authenticated;
-REVOKE ALL ON TABLE public.lead_flows FROM anon, authenticated;
-REVOKE ALL ON TABLE public.leads FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_balances FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_campaigns FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_customer_links FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_customers FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_ledger FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_programs FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_rewards FROM anon, authenticated;
-REVOKE ALL ON TABLE public.loyalty_sends FROM anon, authenticated;
 REVOKE ALL ON TABLE public.messages FROM anon, authenticated;
 REVOKE ALL ON TABLE public.meta_comments FROM anon, authenticated;
 REVOKE ALL ON TABLE public.meta_threads FROM anon, authenticated;
@@ -21455,18 +18272,14 @@ REVOKE ALL ON TABLE public.module_setup_messages FROM anon, authenticated;
 REVOKE ALL ON TABLE public.module_setup_sessions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.module_setup_writes FROM anon, authenticated;
 REVOKE ALL ON TABLE public.modules FROM anon, authenticated;
-REVOKE ALL ON TABLE public.n8n_pipelines FROM anon, authenticated;
-REVOKE ALL ON TABLE public.n8n_runs FROM anon, authenticated;
 REVOKE ALL ON TABLE public.nivo_knowledge FROM anon, authenticated;
 REVOKE ALL ON TABLE public.office_command_candidates FROM anon, authenticated;
 REVOKE ALL ON TABLE public.openclaw_agent_sync FROM anon, authenticated;
-REVOKE ALL ON TABLE public.orders FROM anon, authenticated;
 REVOKE ALL ON TABLE public.payment_order_requests FROM anon, authenticated;
 REVOKE ALL ON TABLE public.payment_orders FROM anon, authenticated;
 REVOKE ALL ON TABLE public.plan_usage_tiers FROM anon, authenticated;
 REVOKE ALL ON TABLE public.plans FROM anon, authenticated;
 REVOKE ALL ON TABLE public.platform_audit FROM anon, authenticated;
-REVOKE ALL ON TABLE public.responsibilities FROM anon, authenticated;
 REVOKE ALL ON TABLE public.sepay_transactions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.shifts_attendance FROM anon, authenticated;
 REVOKE ALL ON TABLE public.shifts_availability FROM anon, authenticated;
@@ -21481,7 +18294,6 @@ REVOKE ALL ON TABLE public.shifts_staff FROM anon, authenticated;
 REVOKE ALL ON TABLE public.shifts_staff_pay FROM anon, authenticated;
 REVOKE ALL ON TABLE public.shifts_swap_requests FROM anon, authenticated;
 REVOKE ALL ON TABLE public.staff FROM anon, authenticated;
-REVOKE ALL ON TABLE public.transactions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.video_brand_kits FROM anon, authenticated;
 REVOKE ALL ON TABLE public.video_project_versions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.video_projects FROM anon, authenticated;
@@ -21516,10 +18328,8 @@ DROP POLICY IF EXISTS authority_manager_delete ON public.authority;
 DROP POLICY IF EXISTS authority_manager_insert ON public.authority;
 DROP POLICY IF EXISTS authority_manager_update ON public.authority;
 DROP POLICY IF EXISTS authority_member_select ON public.authority;
-DROP POLICY IF EXISTS automation_commands_manager_select ON public.automation_commands;
 DROP POLICY IF EXISTS automation_pipelines_manager_all ON public.automation_pipelines;
 DROP POLICY IF EXISTS automation_pipelines_member_select ON public.automation_pipelines;
-DROP POLICY IF EXISTS automation_runs_member_select ON public.automation_runs;
 DROP POLICY IF EXISTS automation_templates_authenticated_select ON public.automation_templates;
 DROP POLICY IF EXISTS billing_events_manager_select ON public.billing_events;
 DROP POLICY IF EXISTS billing_events_platform_admin_select ON public.billing_events;
@@ -21558,9 +18368,6 @@ DROP POLICY IF EXISTS content_plans_manager_all ON public.content_plans;
 DROP POLICY IF EXISTS content_plans_member_select ON public.content_plans;
 DROP POLICY IF EXISTS content_settings_manager_all ON public.content_settings;
 DROP POLICY IF EXISTS content_settings_member_select ON public.content_settings;
-DROP POLICY IF EXISTS contracts_member_insert ON public.contracts;
-DROP POLICY IF EXISTS contracts_member_select ON public.contracts;
-DROP POLICY IF EXISTS contracts_member_update ON public.contracts;
 DROP POLICY IF EXISTS credit_pack_purchases_manager_select ON public.credit_pack_purchases;
 DROP POLICY IF EXISTS credit_packs_authenticated_select ON public.credit_packs;
 DROP POLICY IF EXISTS credit_topup_draws_manager_select ON public.credit_topup_draws;
@@ -21572,7 +18379,6 @@ DROP POLICY IF EXISTS decisions_member_select ON public.decisions;
 DROP POLICY IF EXISTS email_messages_member_select ON public.email_messages;
 DROP POLICY IF EXISTS events_member_insert ON public.events;
 DROP POLICY IF EXISTS events_member_select ON public.events;
-DROP POLICY IF EXISTS executions_member_all ON public.executions;
 DROP POLICY IF EXISTS hiring_availability_manager_all ON public.hiring_availability;
 DROP POLICY IF EXISTS hiring_availability_member_select ON public.hiring_availability;
 DROP POLICY IF EXISTS hiring_candidates_manager_all ON public.hiring_candidates;
@@ -21608,21 +18414,6 @@ DROP POLICY IF EXISTS knowledge_sources_member_select ON public.knowledge_source
 DROP POLICY IF EXISTS knowledge_sources_platform_admin_select ON public.knowledge_sources;
 DROP POLICY IF EXISTS knowledge_suggestion_state_manager_all ON public.knowledge_suggestion_state;
 DROP POLICY IF EXISTS knowledge_suggestion_state_member_select ON public.knowledge_suggestion_state;
-DROP POLICY IF EXISTS lead_flows_manager_select ON public.lead_flows;
-DROP POLICY IF EXISTS leads_member_all ON public.leads;
-DROP POLICY IF EXISTS loyalty_campaigns_member_select ON public.loyalty_campaigns;
-DROP POLICY IF EXISTS loyalty_customer_links_member_select ON public.loyalty_customer_links;
-DROP POLICY IF EXISTS loyalty_customers_manager_update ON public.loyalty_customers;
-DROP POLICY IF EXISTS loyalty_customers_member_select ON public.loyalty_customers;
-DROP POLICY IF EXISTS loyalty_ledger_member_select ON public.loyalty_ledger;
-DROP POLICY IF EXISTS loyalty_programs_manager_insert ON public.loyalty_programs;
-DROP POLICY IF EXISTS loyalty_programs_manager_update ON public.loyalty_programs;
-DROP POLICY IF EXISTS loyalty_programs_member_select ON public.loyalty_programs;
-DROP POLICY IF EXISTS loyalty_rewards_manager_delete ON public.loyalty_rewards;
-DROP POLICY IF EXISTS loyalty_rewards_manager_insert ON public.loyalty_rewards;
-DROP POLICY IF EXISTS loyalty_rewards_manager_update ON public.loyalty_rewards;
-DROP POLICY IF EXISTS loyalty_rewards_member_select ON public.loyalty_rewards;
-DROP POLICY IF EXISTS loyalty_sends_member_select ON public.loyalty_sends;
 DROP POLICY IF EXISTS messages_member_all ON public.messages;
 DROP POLICY IF EXISTS module_context_notes_manager_all ON public.module_context_notes;
 DROP POLICY IF EXISTS module_context_versions_manager_insert ON public.module_context_versions;
@@ -21637,21 +18428,17 @@ DROP POLICY IF EXISTS module_setup_messages_manager_all ON public.module_setup_m
 DROP POLICY IF EXISTS module_setup_sessions_manager_all ON public.module_setup_sessions;
 DROP POLICY IF EXISTS module_setup_writes_manager_all ON public.module_setup_writes;
 DROP POLICY IF EXISTS modules_authenticated_select ON public.modules;
-DROP POLICY IF EXISTS n8n_pipelines_member_select ON public.n8n_pipelines;
-DROP POLICY IF EXISTS n8n_runs_member_select ON public.n8n_runs;
 DROP POLICY IF EXISTS nivo_knowledge_authenticated_select ON public.nivo_knowledge;
 DROP POLICY IF EXISTS office_command_candidates_manager_all ON public.office_command_candidates;
 DROP POLICY IF EXISTS office_command_candidates_manager_select ON public.office_command_candidates;
 DROP POLICY IF EXISTS openclaw_agent_sync_member_select ON public.openclaw_agent_sync;
 DROP POLICY IF EXISTS openclaw_agent_sync_platform_admin_select ON public.openclaw_agent_sync;
-DROP POLICY IF EXISTS orders_member_all ON public.orders;
 DROP POLICY IF EXISTS payment_order_requests_manager_select ON public.payment_order_requests;
 DROP POLICY IF EXISTS payment_orders_member_select ON public.payment_orders;
 DROP POLICY IF EXISTS payment_orders_platform_admin_select ON public.payment_orders;
 DROP POLICY IF EXISTS plan_usage_tiers_authenticated_select ON public.plan_usage_tiers;
 DROP POLICY IF EXISTS plans_authenticated_select ON public.plans;
 DROP POLICY IF EXISTS platform_audit_platform_admin_select ON public.platform_audit;
-DROP POLICY IF EXISTS responsibilities_member_all ON public.responsibilities;
 DROP POLICY IF EXISTS sepay_transactions_manager_select ON public.sepay_transactions;
 DROP POLICY IF EXISTS sepay_transactions_platform_admin_select ON public.sepay_transactions;
 DROP POLICY IF EXISTS shifts_attendance_manager_all ON public.shifts_attendance;
@@ -21684,7 +18471,6 @@ DROP POLICY IF EXISTS staff_manager_delete ON public.staff;
 DROP POLICY IF EXISTS staff_manager_insert ON public.staff;
 DROP POLICY IF EXISTS staff_manager_update ON public.staff;
 DROP POLICY IF EXISTS staff_member_select ON public.staff;
-DROP POLICY IF EXISTS transactions_member_all ON public.transactions;
 DROP POLICY IF EXISTS video_brand_kits_manager_all ON public.video_brand_kits;
 DROP POLICY IF EXISTS video_brand_kits_member_select ON public.video_brand_kits;
 DROP POLICY IF EXISTS video_project_versions_manager_all ON public.video_project_versions;
@@ -21720,7 +18506,6 @@ DROP POLICY IF EXISTS objects_videos_member_select ON storage.objects;
 
 -- Definer functions are not callable by the browser roles (the back end keeps its own grants).
 REVOKE EXECUTE ON FUNCTION public.accept_invite(text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.add_lead_responsibility(uuid, uuid, text, text, text, pg_catalog.timestamptz, text) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.admin_console_audit(text, uuid, jsonb) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.admin_console_quota(uuid) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.admin_console_signups(pg_catalog.int4) FROM anon, authenticated;
@@ -21731,8 +18516,6 @@ REVOKE EXECUTE ON FUNCTION public.admin_set_workspace_plan(uuid, text, pg_catalo
 REVOKE EXECUTE ON FUNCTION public.admin_set_workspace_status(uuid, text) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.api_key_create(uuid, text) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.api_key_revoke(uuid, uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.assign_lead_responsibility(uuid, uuid, text, text, pg_catalog.timestamptz, text, text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.automation_command_enqueue(uuid, text, text) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.brain_command(uuid, text, jsonb) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.brain_command_wait(uuid) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.connection_command_submit(uuid, text, jsonb) FROM anon, authenticated;
@@ -21752,10 +18535,8 @@ REVOKE EXECUTE ON FUNCTION public.my_staff_id(uuid) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.owns_workspace(uuid) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.payment_order_request(uuid, text, text) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.read_app_command(uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.record_lead_outcome(uuid, uuid, text, text, text) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.request_admin_invite_resend(uuid, uuid) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.request_agent_sync(uuid, uuid, pg_catalog.bool) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.request_execution_decision(uuid, uuid, text, text, text) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.request_invite_command(uuid, text, uuid, text, text, uuid) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.request_office_confirm(uuid, uuid, text) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.request_office_propose(uuid, uuid, text) FROM anon, authenticated;
@@ -21792,29 +18573,17 @@ GRANT USAGE ON SCHEMA extensions TO app_be;
 ALTER ROLE app_be SET search_path = public, extensions;
 
 REVOKE EXECUTE ON FUNCTION public.agent_connections_same_workspace() FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.automations_data(uuid) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.content_items_touch() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.content_settings_touch() FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.dashboard_data(uuid, pg_catalog.timestamptz, pg_catalog.timestamptz, pg_catalog.timestamptz) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.exception_rows(uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.exception_rows(uuid) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.governance_rows(uuid, pg_catalog.timestamptz) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.governance_rows(uuid, pg_catalog.timestamptz) TO app_be;
 REVOKE EXECUTE ON FUNCTION public.knowledge_chunk_visibility_sync() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.knowledge_fold(text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.knowledge_fold(text) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.loyalty_ledger_immutable() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.match_knowledge(uuid, text, extensions.vector, text, pg_catalog.int4, text, text, uuid) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.module_context_versions_immutable() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.module_installations_fill() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.module_type_name(text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.module_type_name(text) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.office_data(uuid, pg_catalog.timestamptz) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.promo_state(uuid, pg_catalog.timestamptz, pg_catalog.timestamptz) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.promo_state(uuid, pg_catalog.timestamptz, pg_catalog.timestamptz) TO app_be;
 REVOKE EXECUTE ON FUNCTION public.resolve_installation(uuid, text, uuid, uuid, uuid) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.responsibility_rows(uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.responsibility_rows(uuid) TO app_be;
 REVOKE EXECUTE ON FUNCTION public.session_bootstrap() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.shell_data(uuid, pg_catalog.timestamptz, pg_catalog.timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.video_renders_touch() FROM PUBLIC, anon, authenticated;
@@ -21824,33 +18593,6 @@ REVOKE EXECUTE ON FUNCTION public.video_touch() FROM PUBLIC, anon, authenticated
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon, authenticated;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
-
--- ---- from 20261026000155_sales-action-lookup.sql ----
--- The Sales action lookup of the back end (be/src/modules/domain/sales): the job outbox is not granted to app_be, so the two reads that answer "what became of the
--- action I just queued" go through this definer function. Key it by the queue dedupe key (the just-enqueued action) or by the outbox id (a status poll);
--- the caller passes exactly one. Only decisions-queue jobs and shipment ticks of the automation queue are visible, as before.
-CREATE OR REPLACE FUNCTION public.sales_action_find(p_workspace uuid, p_dedupe_key text DEFAULT NULL, p_outbox uuid DEFAULT NULL)
-RETURNS TABLE(id uuid, state text, work_item_id text, work_status text, target_found boolean)
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-  SELECT o.id, o.state, COALESCE(o.payload->>'workItemId', e.work_item_id::text) AS work_item_id,
-    w.status AS work_status,
-    CASE WHEN o.payload ? 'workItemId' OR e.work_item_id IS NOT NULL THEN w.id IS NOT NULL
-         WHEN o.payload ? 'executionId' THEN e.id IS NOT NULL
-         ELSE s.id IS NOT NULL END AS target_found
-  FROM public.job_outbox o
-  LEFT JOIN public.executions e ON e.id::text = o.payload->>'executionId' AND e.workspace_id = o.workspace_id
-  LEFT JOIN public.work_items w ON w.id::text = COALESCE(o.payload->>'workItemId', e.work_item_id::text) AND w.workspace_id = o.workspace_id
-  LEFT JOIN public.orders s ON s.id::text = o.payload->>'orderId' AND s.workspace_id = o.workspace_id
-  WHERE o.workspace_id = p_workspace
-    AND ((p_dedupe_key IS NOT NULL AND o.dedupe_key = p_dedupe_key) OR (p_outbox IS NOT NULL AND o.id = p_outbox))
-    AND (o.queue = 'decisions' OR (o.queue = 'automation' AND o.name = 'automation.tick' AND o.payload->>'kind' = 'shipment'))
-  LIMIT 1
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.sales_action_find(uuid, text, uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.sales_action_find(uuid, text, uuid) TO app_be;
 
 -- ---- from 20261026000200_engine_contract_retire.sql ----
 -- Retires the schema of the old engine. Nothing in the back end or the front end reads it: the api runs its jobs on pgmq and its ticks are the cron
@@ -22548,14 +19290,6 @@ ALTER TABLE public.module_installations
     ADD CONSTRAINT module_installations_status_check
     CHECK ((status = ANY (ARRAY['installing'::text, 'setup'::text, 'ready'::text, 'live'::text, 'paused'::text, 'needs_connection'::text])));
 
--- ---- from 20261101000902_transactions-direction.sql ----
--- Bank moves in both directions: a live SePay delivery that takes money out of the workspace's account (a supplier payment) is
--- recorded as a debit beside the credits, so a paid supplier invoice can be told from an open one. Existing rows are credits.
-
-ALTER TABLE public.transactions
-    ADD COLUMN direction text DEFAULT 'credit'::text NOT NULL,
-    ADD CONSTRAINT transactions_direction_check CHECK ((direction = ANY (ARRAY['credit'::text, 'debit'::text])));
-
 -- ---- from 20261101000903_api-key-agent-binding.sql ----
 -- A per-agent credential for the MCP endpoint: an API key may be bound to one agent of its workspace. Such a key carries only
 -- the `tools:call` scope and names the agent the gateway serves; deleting the agent deletes its keys, so a removed agent's key
@@ -22634,120 +19368,14 @@ begin
 end $$;
 
 REVOKE EXECUTE ON FUNCTION public.booking_reserve(p jsonb, p_force boolean) FROM PUBLIC, anon, authenticated;
-
-CREATE OR REPLACE FUNCTION public.governance_rows(ws uuid, since7 timestamp with time zone) RETURNS jsonb
-    LANGUAGE sql STABLE
-    SET search_path TO 'public'
-    AS $$
-  select jsonb_build_object(
-    'auth', (select jsonb_build_object('goal_revenue_vnd', a.goal_revenue_vnd, 'goal_new_customers', a.goal_new_customers,
-                                       'goal_first_reply_minutes', a.goal_first_reply_minutes)
-             from authority a where a.workspace_id = ws),
-    'leads', coalesce((select jsonb_agg(jsonb_build_object('id', l.id, 'contact_name', l.contact_name, 'company', l.company,
-                                                           'stage', l.stage, 'created_at', l.created_at))
-                       from (select * from leads where workspace_id = ws limit 10000) l), '[]'::jsonb),
-    'orders', coalesce((select jsonb_agg(jsonb_build_object('id', o.id, 'lead_id', o.lead_id, 'order_no', o.order_no, 'items', o.items,
-                                                            'amount_vnd', o.amount_vnd, 'status', o.status))
-                        from orders o where o.workspace_id = ws and o.status in ('confirmed', 'invoiced', 'paid')), '[]'::jsonb),
-    'invoices', coalesce((select jsonb_agg(jsonb_build_object('id', i.id, 'order_id', i.order_id, 'lead_id', i.lead_id, 'invoice_no', i.invoice_no,
-                                                              'amount_vnd', i.amount_vnd, 'status', i.status))
-                          from invoices i where i.workspace_id = ws and i.status in ('issued', 'paid')), '[]'::jsonb),
-    'txs', coalesce((select jsonb_agg(jsonb_build_object('id', t.id, 'invoice_id', t.invoice_id, 'payer', t.payer, 'reference', t.reference,
-                                                         'amount_vnd', t.amount_vnd, 'status', t.status))
-                     from transactions t where t.workspace_id = ws and t.status in ('matched', 'unmatched', 'needs_review')), '[]'::jsonb),
-    'work', coalesce((select jsonb_agg(jsonb_build_object('id', w.id, 'lead_id', w.lead_id, 'department', w.department, 'status', w.status,
-                                                          'reason', w.reason, 'decided_path', w.decided_path, 'created_at', w.created_at,
-                                                          'updated_at', w.updated_at, 'completed_at', w.completed_at,
-                                                          'summary', w.proposal ->> 'summary',
-                                                          'contact', w.proposal -> 'fields' ->> 'contact_name',
-                                                          'customer', w.proposal -> 'fields' ->> 'customer') order by w.created_at desc)
-                      from (select * from work_items where workspace_id = ws order by created_at desc limit 2000) w), '[]'::jsonb),
-    'pending_without_work', (select count(*) from executions x where x.workspace_id = ws and x.status = 'pending_approval' and x.work_item_id is null),
-    'decisions7', coalesce((select jsonb_agg(jsonb_build_object('work_item_id', d.work_item_id, 'lead_id', d.lead_id, 'decider_kind', d.decider_kind,
-                                                                'outcome', d.outcome, 'created_at', d.created_at))
-                            from decisions d where d.workspace_id = ws and d.created_at >= since7), '[]'::jsonb),
-    'recent', coalesce((select jsonb_agg(to_jsonb(d) || jsonb_build_object('lead', (select jsonb_build_object('contact_name', l.contact_name)
-                                                                                 from leads l where l.id = d.lead_id)) order by d.created_at desc)
-                        from (select * from decisions where workspace_id = ws order by created_at desc limit 40) d), '[]'::jsonb)
-  );
-$$;
-
-CREATE OR REPLACE FUNCTION public.record_lead_outcome(p_workspace uuid, p_lead uuid, p_stage text, p_evidence text, p_locale text DEFAULT 'vi'::text) RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_actor text := public.lead_actor_name(p_workspace);
-  v_en boolean := coalesce(p_locale, 'vi') = 'en';
-  v_lead record;
-  v_label text;
-  v_agent record;
-  v_handed boolean := false;
-begin
-  if p_stage not in ('new', 'qualified', 'proposal', 'won', 'lost') then
-    raise exception 'stage_invalid' using errcode = '22023';
-  end if;
-  update public.leads set stage = p_stage where workspace_id = p_workspace and id = p_lead
-  returning id, contact_name, company, channel, need, stage into v_lead;
-  if not found then
-    raise exception 'LEADS_NOT_FOUND' using errcode = 'P0002';
-  end if;
-  v_label := case p_stage
-    when 'new' then case when v_en then 'new' else 'mới' end
-    when 'qualified' then case when v_en then 'qualified' else 'đủ điều kiện' end
-    when 'proposal' then case when v_en then 'proposal' else 'đề xuất' end
-    when 'won' then case when v_en then 'won' else 'chốt được' end
-    else case when v_en then 'lost' else 'không chốt' end
-  end;
-  insert into public.events (workspace_id, lead_id, kind, actor, summary, evidence)
-  values (p_workspace, p_lead, 'outcome.recorded', v_actor,
-          case when v_en then 'Stage → ' else 'Giai đoạn → ' end || v_label, nullif(p_evidence, ''));
-  insert into public.messages (workspace_id, lead_id, author_kind, author_name, body)
-  values (p_workspace, p_lead, 'system', 'NIVO',
-          case when v_en then v_lead.contact_name || ' moved to ' || v_label || '.' else v_lead.contact_name || ' chuyển sang ' || v_label || '.' end);
-  if p_stage = 'won' then
-    select a.id, a.name into v_agent from public.agents a
-     where a.workspace_id = p_workspace and a.module = 'accounting' and a.status = 'active'
-     order by a.created_at limit 1;
-    if found then
-      insert into public.responsibilities (workspace_id, lead_id, title, owner_kind, owner_agent_id, owner_name, next_action, due_at)
-      values (p_workspace, p_lead,
-              case when v_en then 'Prepare invoice for ' || v_lead.contact_name else 'Chuẩn bị hóa đơn cho ' || v_lead.contact_name end,
-              'agent', v_agent.id, v_agent.name,
-              case when v_en then 'Draft the invoice from the agreed scope for owner approval'
-                   else 'Soạn hóa đơn theo phạm vi đã thống nhất để chủ doanh nghiệp duyệt' end,
-              now() + interval '1 day');
-      insert into public.events (workspace_id, lead_id, kind, actor, summary)
-      values (p_workspace, p_lead, 'responsibility.assigned', 'Sales Agent',
-              case when v_en then 'Handed to ' || v_agent.name || ' · Next action: Draft the invoice from the agreed scope'
-                   else 'Đã bàn giao cho ' || v_agent.name || ' · Bước tiếp theo: Soạn hóa đơn theo phạm vi đã thống nhất' end);
-      v_handed := true;
-    end if;
-  end if;
-  return jsonb_build_object(
-    'leadId', v_lead.id, 'stage', v_lead.stage, 'contactName', v_lead.contact_name, 'company', v_lead.company,
-    'channel', v_lead.channel, 'need', v_lead.need, 'handedToAccounting', v_handed
-  );
-end;
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.record_lead_outcome(p_workspace uuid, p_lead uuid, p_stage text, p_evidence text, p_locale text) FROM PUBLIC, anon, authenticated;
-
-DELETE FROM public.transactions WHERE origin <> 'live';
 DELETE FROM public.bookings WHERE origin <> 'live';
 DELETE FROM public.invoices WHERE origin <> 'live';
-DELETE FROM public.orders WHERE origin <> 'live';
 DELETE FROM public.work_items WHERE origin <> 'live';
 DELETE FROM public.inbound_events WHERE origin <> 'live';
-DELETE FROM public.leads WHERE origin <> 'live';
-
-ALTER TABLE public.transactions DROP CONSTRAINT IF EXISTS transactions_origin_check, DROP COLUMN origin;
 ALTER TABLE public.bookings DROP CONSTRAINT IF EXISTS bookings_origin_check, DROP COLUMN origin;
 ALTER TABLE public.invoices DROP CONSTRAINT IF EXISTS invoices_origin_check, DROP COLUMN origin;
-ALTER TABLE public.orders DROP CONSTRAINT IF EXISTS orders_origin_check, DROP COLUMN origin;
 ALTER TABLE public.work_items DROP CONSTRAINT IF EXISTS work_items_origin_check, DROP COLUMN origin;
 ALTER TABLE public.inbound_events DROP CONSTRAINT IF EXISTS inbound_events_origin_check, DROP COLUMN origin;
-ALTER TABLE public.leads DROP CONSTRAINT IF EXISTS leads_origin_check, DROP COLUMN origin;
 
 DELETE FROM public.job_outbox WHERE queue = 'vietcombank-delivery';
 DELETE FROM public.job_slots WHERE queue = 'vietcombank-delivery';
@@ -22782,9 +19410,7 @@ CREATE FUNCTION public.workspace_footprint(p_workspace uuid) RETURNS jsonb
     'app_commands', (select count(*) from public.app_commands where workspace_id = p_workspace),
     'authority', (select count(*) from public.authority where workspace_id = p_workspace),
     'authority_rules', (select count(*) from public.authority_rules where workspace_id = p_workspace),
-    'automation_commands', (select count(*) from public.automation_commands where workspace_id = p_workspace),
     'automation_pipelines', (select count(*) from public.automation_pipelines where workspace_id = p_workspace),
-    'automation_runs', (select count(*) from public.automation_runs where workspace_id = p_workspace),
     'billing_events', (select count(*) from public.billing_events where workspace_id = p_workspace),
     'booking_exceptions', (select count(*) from public.booking_exceptions where workspace_id = p_workspace),
     'booking_hours', (select count(*) from public.booking_hours where workspace_id = p_workspace),
@@ -22811,8 +19437,7 @@ CREATE FUNCTION public.workspace_footprint(p_workspace uuid) RETURNS jsonb
     'content_pillars', (select count(*) from public.content_pillars where workspace_id = p_workspace),
     'content_plans', (select count(*) from public.content_plans where workspace_id = p_workspace),
     'content_settings', (select count(*) from public.content_settings where workspace_id = p_workspace),
-    'content_weekly_reports', (select count(*) from public.content_weekly_reports where workspace_id = p_workspace),
-    'contracts', (select count(*) from public.contracts where workspace_id = p_workspace)
+    'content_weekly_reports', (select count(*) from public.content_weekly_reports where workspace_id = p_workspace)
   )
   ||
   jsonb_build_object(
@@ -22824,7 +19449,6 @@ CREATE FUNCTION public.workspace_footprint(p_workspace uuid) RETURNS jsonb
     'decisions', (select count(*) from public.decisions where workspace_id = p_workspace),
     'email_messages', (select count(*) from public.email_messages where workspace_id = p_workspace),
     'events', (select count(*) from public.events where workspace_id = p_workspace),
-    'executions', (select count(*) from public.executions where workspace_id = p_workspace),
     'hiring_availability', (select count(*) from public.hiring_availability where workspace_id = p_workspace),
     'hiring_candidates', (select count(*) from public.hiring_candidates where workspace_id = p_workspace),
     'hiring_consents', (select count(*) from public.hiring_consents where workspace_id = p_workspace),
@@ -22850,21 +19474,10 @@ CREATE FUNCTION public.workspace_footprint(p_workspace uuid) RETURNS jsonb
     'knowledge_chunks', (select count(*) from public.knowledge_chunks where workspace_id = p_workspace),
     'knowledge_gaps', (select count(*) from public.knowledge_gaps where workspace_id = p_workspace),
     'knowledge_sources', (select count(*) from public.knowledge_sources where workspace_id = p_workspace),
-    'knowledge_suggestion_state', (select count(*) from public.knowledge_suggestion_state where workspace_id = p_workspace),
-    'lead_actions', (select count(*) from public.lead_actions where workspace_id = p_workspace),
-    'lead_flows', (select count(*) from public.lead_flows where workspace_id = p_workspace),
-    'leads', (select count(*) from public.leads where workspace_id = p_workspace),
-    'loyalty_campaigns', (select count(*) from public.loyalty_campaigns where workspace_id = p_workspace),
-    'loyalty_customer_links', (select count(*) from public.loyalty_customer_links where workspace_id = p_workspace),
-    'loyalty_customers', (select count(*) from public.loyalty_customers where workspace_id = p_workspace),
-    'loyalty_ledger', (select count(*) from public.loyalty_ledger where workspace_id = p_workspace),
-    'loyalty_otps', (select count(*) from public.loyalty_otps where workspace_id = p_workspace),
-    'loyalty_programs', (select count(*) from public.loyalty_programs where workspace_id = p_workspace),
-    'loyalty_rewards', (select count(*) from public.loyalty_rewards where workspace_id = p_workspace)
+    'knowledge_suggestion_state', (select count(*) from public.knowledge_suggestion_state where workspace_id = p_workspace)
   )
   ||
   jsonb_build_object(
-    'loyalty_sends', (select count(*) from public.loyalty_sends where workspace_id = p_workspace),
     'mcp_call_log', (select count(*) from public.mcp_call_log where workspace_id = p_workspace),
     'mcp_connectors', (select count(*) from public.mcp_connectors where workspace_id = p_workspace),
     'mcp_tool_grants', (select count(*) from public.mcp_tool_grants where workspace_id = p_workspace),
@@ -22875,17 +19488,13 @@ CREATE FUNCTION public.workspace_footprint(p_workspace uuid) RETURNS jsonb
     'module_setup_messages', (select count(*) from public.module_setup_messages where workspace_id = p_workspace),
     'module_setup_sessions', (select count(*) from public.module_setup_sessions where workspace_id = p_workspace),
     'module_setup_writes', (select count(*) from public.module_setup_writes where workspace_id = p_workspace),
-    'n8n_pipelines', (select count(*) from public.n8n_pipelines where workspace_id = p_workspace),
-    'n8n_runs', (select count(*) from public.n8n_runs where workspace_id = p_workspace),
     'office_command_candidates', (select count(*) from public.office_command_candidates where workspace_id = p_workspace),
     'office_rooms', (select count(*) from public.office_rooms where workspace_id = p_workspace),
     'office_rooms_reads', (select count(*) from public.office_rooms_reads where workspace_id = p_workspace),
     'openclaw_agent_sync', (select count(*) from public.openclaw_agent_sync where workspace_id = p_workspace),
-    'orders', (select count(*) from public.orders where workspace_id = p_workspace),
     'payment_order_requests', (select count(*) from public.payment_order_requests where workspace_id = p_workspace),
     'payment_orders', (select count(*) from public.payment_orders where workspace_id = p_workspace),
     'public_api', (select count(*) from public.public_api where workspace_id = p_workspace),
-    'responsibilities', (select count(*) from public.responsibilities where workspace_id = p_workspace),
     'shifts_attendance', (select count(*) from public.shifts_attendance where workspace_id = p_workspace),
     'shifts_availability', (select count(*) from public.shifts_availability where workspace_id = p_workspace),
     'shifts_coverage', (select count(*) from public.shifts_coverage where workspace_id = p_workspace),
@@ -22899,7 +19508,6 @@ CREATE FUNCTION public.workspace_footprint(p_workspace uuid) RETURNS jsonb
     'shifts_staff_pay', (select count(*) from public.shifts_staff_pay where workspace_id = p_workspace),
     'shifts_swap_requests', (select count(*) from public.shifts_swap_requests where workspace_id = p_workspace),
     'staff', (select count(*) from public.staff where workspace_id = p_workspace),
-    'transactions', (select count(*) from public.transactions where workspace_id = p_workspace),
     'video_brand_kits', (select count(*) from public.video_brand_kits where workspace_id = p_workspace),
     'video_delegations', (select count(*) from public.video_delegations where workspace_id = p_workspace),
     'video_project_versions', (select count(*) from public.video_project_versions where workspace_id = p_workspace),
@@ -22933,107 +19541,11 @@ CREATE FUNCTION public.workspace_user_references(p_user uuid, p_keep uuid[]) RET
       'workspaces.owner_id', (select count(*) from public.workspaces t
         where t.owner_id = p_user and t.id = any(p_keep))
     ),
-    'block', jsonb_build_object(
-      'lead_actions.requested_by', (select count(*) from public.lead_actions t
-        where t.requested_by = p_user and t.workspace_id = any(p_keep))
-    )
+    'block', '{}'::jsonb
   )
 $$;
 REVOKE ALL ON FUNCTION public.workspace_user_references(uuid, uuid[]) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.workspace_user_references(uuid, uuid[]) TO app_be;
-
--- ---- from 20261101001020_work-threads.sql ----
--- v0.3.2 "Văn phòng số": one work thread where people and agents tag each other, and the steps of the chain that thread runs.
--- work_threads: the thread of a workspace, optionally about one lead or one order.
--- thread_messages: what a member or an agent wrote in it; mentions is the list of {kind, id} the author tagged, never parsed from
---   text, and approval is the snapshot of the approval card the message carries (the rule, the tagged set, the outcome).
--- work_chains: every step of the chain (who acted, what kind, which rule, what became of it); the Chuỗi thực thi panel and
---   its summary read only this table.
--- Owner capabilities: be/src/modules/domain/work-threads and be/src/modules/domain/work-chains.
-
-CREATE TABLE public.work_threads (
-    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    title text NOT NULL,
-    lead_id uuid REFERENCES public.leads(id) ON DELETE SET NULL,
-    order_id uuid REFERENCES public.orders(id) ON DELETE SET NULL,
-    status text DEFAULT 'open'::text NOT NULL,
-    created_by uuid NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT work_threads_status_check CHECK ((status = ANY (ARRAY['open'::text, 'waiting'::text, 'done'::text, 'stopped'::text]))),
-    CONSTRAINT work_threads_title_check CHECK (((length(title) >= 1) AND (length(title) <= 200)))
-);
-
-CREATE INDEX work_threads_workspace_id_updated_at_idx ON public.work_threads USING btree (workspace_id, updated_at DESC);
-CREATE INDEX work_threads_lead_id_idx ON public.work_threads USING btree (lead_id) WHERE (lead_id IS NOT NULL);
-
-CREATE TABLE public.thread_messages (
-    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    thread_id uuid NOT NULL REFERENCES public.work_threads(id) ON DELETE CASCADE,
-    author_kind text NOT NULL,
-    author_id uuid NOT NULL,
-    body text NOT NULL,
-    quoted jsonb DEFAULT '[]'::jsonb NOT NULL,
-    mentions jsonb DEFAULT '[]'::jsonb NOT NULL,
-    approval jsonb,
-    approval_request_id uuid,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT thread_messages_author_kind_check CHECK ((author_kind = ANY (ARRAY['member'::text, 'agent'::text]))),
-    CONSTRAINT thread_messages_body_check CHECK (((length(body) >= 1) AND (length(body) <= 4000))),
-    CONSTRAINT thread_messages_quoted_check CHECK ((jsonb_typeof(quoted) = 'array'::text)),
-    CONSTRAINT thread_messages_mentions_check CHECK ((jsonb_typeof(mentions) = 'array'::text)),
-    CONSTRAINT thread_messages_approval_check CHECK (((approval IS NULL) = (approval_request_id IS NULL)))
-);
-
-CREATE INDEX thread_messages_thread_id_created_at_idx ON public.thread_messages USING btree (thread_id, created_at);
-CREATE UNIQUE INDEX thread_messages_approval_request_id_key ON public.thread_messages USING btree (approval_request_id) WHERE (approval_request_id IS NOT NULL);
-
-CREATE TABLE public.work_chains (
-    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    thread_id uuid NOT NULL REFERENCES public.work_threads(id) ON DELETE CASCADE,
-    seq integer NOT NULL,
-    actor_kind text NOT NULL,
-    actor_id uuid NOT NULL,
-    kind text NOT NULL,
-    action text NOT NULL,
-    detail text DEFAULT ''::text NOT NULL,
-    rule text,
-    target jsonb,
-    approval_request_id uuid,
-    status text DEFAULT 'done'::text NOT NULL,
-    decided_by uuid,
-    started_at timestamp with time zone DEFAULT now() NOT NULL,
-    finished_at timestamp with time zone,
-    CONSTRAINT work_chains_thread_seq_key UNIQUE (thread_id, seq),
-    CONSTRAINT work_chains_actor_kind_check CHECK ((actor_kind = ANY (ARRAY['member'::text, 'agent'::text]))),
-    CONSTRAINT work_chains_kind_check CHECK ((kind = ANY (ARRAY['self'::text, 'ask_approval'::text, 'hand_off'::text, 'assign'::text]))),
-    CONSTRAINT work_chains_status_check CHECK ((status = ANY (ARRAY['waiting'::text, 'done'::text, 'rejected'::text, 'expired'::text, 'stopped'::text]))),
-    CONSTRAINT work_chains_seq_check CHECK ((seq >= 1)),
-    CONSTRAINT work_chains_target_check CHECK (((target IS NULL) OR (jsonb_typeof(target) = 'object'::text)))
-);
-
-CREATE INDEX work_chains_approval_request_id_idx ON public.work_chains USING btree (approval_request_id) WHERE (approval_request_id IS NOT NULL);
-
-ALTER TABLE public.work_threads ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.thread_messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.work_chains ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY work_threads_app_be_all ON public.work_threads TO app_be
-    USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-CREATE POLICY thread_messages_app_be_all ON public.thread_messages TO app_be
-    USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-CREATE POLICY work_chains_app_be_all ON public.work_chains TO app_be
-    USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
-REVOKE ALL ON TABLE public.work_threads FROM anon, authenticated;
-REVOKE ALL ON TABLE public.thread_messages FROM anon, authenticated;
-REVOKE ALL ON TABLE public.work_chains FROM anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.work_threads TO app_be;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.thread_messages TO app_be;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.work_chains TO app_be;
 
 -- ---- from 20261102000100_responsibility-member-owner.sql ----
 -- v0.3.2 step 1: the owner of a person-owned step is a concrete workspace member, never the generic "human".
@@ -23053,9 +19565,6 @@ CREATE FUNCTION public.workspace_owner_member(p_workspace uuid) RETURNS uuid
 $$;
 REVOKE ALL ON FUNCTION public.workspace_owner_member(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.workspace_owner_member(uuid) TO app_be;
-
-ALTER TABLE public.responsibilities
-    ADD COLUMN owner_member_id uuid REFERENCES public.workspace_members(id) ON DELETE SET NULL;
 
 -- A person-owned step without a named member belongs to the workspace owner, and shows that member's name; an agent-owned step
 -- names no member. Fires on insert and on update, so the member a deleted seat leaves behind (ON DELETE SET NULL) is refilled.
@@ -23081,19 +19590,6 @@ begin
   end if;
   return new;
 end $$;
-
-CREATE TRIGGER responsibilities_member_owner
-    BEFORE INSERT OR UPDATE ON public.responsibilities
-    FOR EACH ROW EXECUTE FUNCTION public.responsibilities_member_owner();
-
--- Existing "human" steps move to the workspace owner (the trigger fills the member and the name).
-UPDATE public.responsibilities SET owner_kind = owner_kind WHERE owner_kind = 'human' AND owner_member_id IS NULL;
-
-ALTER TABLE public.responsibilities
-    ADD CONSTRAINT responsibilities_owner_member_check
-    CHECK (((owner_kind = 'agent' AND owner_member_id IS NULL) OR owner_kind = 'human'));
-
-CREATE INDEX responsibilities_owner_member_idx ON public.responsibilities USING btree (owner_member_id) WHERE (owner_member_id IS NOT NULL);
 
 -- The decision log names the member who decided. Past lines keep the name they were written with; the member is linked when that
 -- name belongs to exactly one member of the workspace.
@@ -23340,46 +19836,6 @@ INSERT INTO public.authority_actions (action, module_key, sort_order, default_mo
     ('give_discount', 'sales', 5, 'ask', NULL, '{customer}', true, NULL, '{"en": "Give discount", "vi": "Giảm giá"}')
 ON CONFLICT DO NOTHING;
 
--- ---- from 20261102003300_thread-work.sql ----
--- v0.3.2: the work an agent does inside a work thread. One row per work item the agents' runtime started for a thread: which
--- agent does it, where it stands in the thread (running, asked a group for approval, waiting for a member's answer, done, stopped),
--- the approval request it waits for and, when it waits for data, the member it asked and the fields it needs. The thread-work
--- capability is its only writer; the work item itself stays in work_items.
-
-CREATE TABLE public.thread_work (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    thread_id uuid NOT NULL,
-    work_item_id uuid NOT NULL,
-    agent_id uuid NOT NULL,
-    state text DEFAULT 'running'::text NOT NULL,
-    approval_request_id uuid,
-    waiting_member_id uuid,
-    missing_fields text[] DEFAULT '{}'::text[] NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT thread_work_pkey PRIMARY KEY (id),
-    CONSTRAINT thread_work_work_item_key UNIQUE (work_item_id),
-    CONSTRAINT thread_work_state_check CHECK ((state = ANY (ARRAY['running'::text, 'asked'::text, 'waiting_member'::text, 'done'::text, 'stopped'::text]))),
-    CONSTRAINT thread_work_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    CONSTRAINT thread_work_thread_id_fkey FOREIGN KEY (thread_id) REFERENCES public.work_threads(id) ON DELETE CASCADE,
-    CONSTRAINT thread_work_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES public.work_items(id) ON DELETE CASCADE,
-    CONSTRAINT thread_work_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.agents(id) ON DELETE CASCADE,
-    CONSTRAINT thread_work_waiting_member_id_fkey FOREIGN KEY (waiting_member_id) REFERENCES public.workspace_members(id) ON DELETE SET NULL
-);
-
-CREATE INDEX thread_work_thread_idx ON public.thread_work USING btree (workspace_id, thread_id);
-CREATE INDEX thread_work_asked_idx ON public.thread_work USING btree (state) WHERE (state = 'asked'::text);
-
-ALTER TABLE public.thread_work ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY thread_work_app_be_select ON public.thread_work FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-CREATE POLICY thread_work_app_be_insert ON public.thread_work FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-CREATE POLICY thread_work_app_be_update ON public.thread_work FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
-REVOKE ALL ON TABLE public.thread_work FROM anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON TABLE public.thread_work TO app_be;
-
 -- ---- from 20261103000100_mcp-sealed-credential_contract_drop.sql ----
 -- v0.3.3: the credential of a remote MCP connector is sealed per workspace in the database and set from the console, the same way
 -- a channel connection's credential is (AES-256-GCM under CHANNEL_TOKEN_KEY, through the connection-secrets capability). The
@@ -23494,20 +19950,6 @@ CREATE FUNCTION public.http_rate_limit_consume(p_bucket_key text, p_window_ms do
     $$;
 REVOKE EXECUTE ON FUNCTION public.http_rate_limit_consume(text, double precision, bigint) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.http_rate_limit_consume(text, double precision, bigint) TO app_be;
-
--- ---- from 20261104000200_list-pagination.sql ----
--- The main list connections seek by workspace, immutable creation time and unique id.
-CREATE INDEX leads_workspace_created_id_idx
-    ON public.leads (workspace_id, created_at DESC, id DESC);
-
-CREATE INDEX orders_workspace_created_id_idx
-    ON public.orders (workspace_id, created_at DESC, id DESC);
-
-CREATE INDEX work_threads_workspace_created_id_idx
-    ON public.work_threads (workspace_id, created_at DESC, id DESC);
-
-CREATE INDEX work_threads_workspace_lead_created_id_idx
-    ON public.work_threads (workspace_id, lead_id, created_at DESC, id DESC);
 
 -- ---- from 20261104000300_messages-card-action-done_contract_widen.sql ----
 -- Customer turns emit the v1 action_done card already supported by the Hub card contract.
@@ -23962,7 +20404,6 @@ SELECT pgmq.drop_queue('inventory_order');
 SELECT pgmq.drop_queue('inventory_replenish');
 SELECT pgmq.drop_queue('invite_command');
 SELECT pgmq.drop_queue('knowledge');
-SELECT pgmq.drop_queue('lead_actions');
 SELECT pgmq.drop_queue('lead_gen');
 SELECT pgmq.drop_queue('marketing_tick');
 SELECT pgmq.drop_queue('meta_inbound');
@@ -24237,7 +20678,7 @@ where i.status = 'ready'
 -- Additive only: row-level policies and table grants on public.invoices already cover new columns, so none change here.
 
 ALTER TABLE public.invoices
-    ADD COLUMN contract_id uuid REFERENCES public.contracts(id) ON DELETE SET NULL;
+    ADD COLUMN contract_id uuid;
 ALTER TABLE public.invoices ADD COLUMN period_ends_on date;
 ALTER TABLE public.invoices
     ADD CONSTRAINT invoices_contract_period_check CHECK (((contract_id IS NULL) OR (period_ends_on IS NOT NULL)));
@@ -25012,34 +21453,6 @@ begin new.updated_at := now(); return new; end $$;
 -- A trigger function is fired by the table's trigger, which does not check EXECUTE; closed to the browser roles like every other trigger function.
 REVOKE EXECUTE ON FUNCTION public.set_updated_at() FROM PUBLIC, anon, authenticated;
 
--- Lead, loyalty, MCP, meta and module tables (l to m): created_at and updated_at as timestamptz NOT NULL DEFAULT now() with the update trigger.
--- Left out on purpose: loyalty_ledger and module_context_versions (immutable by trigger), mcp_call_log and module_setup_messages (append-only logs).
-CREATE TRIGGER lead_actions_set_updated_at BEFORE UPDATE ON public.lead_actions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-CREATE TRIGGER lead_flows_set_updated_at BEFORE UPDATE ON public.lead_flows FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-ALTER TABLE public.leads ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER leads_set_updated_at BEFORE UPDATE ON public.leads FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-ALTER TABLE public.loyalty_campaigns ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER loyalty_campaigns_set_updated_at BEFORE UPDATE ON public.loyalty_campaigns FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-ALTER TABLE public.loyalty_customer_links ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER loyalty_customer_links_set_updated_at BEFORE UPDATE ON public.loyalty_customer_links FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-CREATE TRIGGER loyalty_customers_set_updated_at BEFORE UPDATE ON public.loyalty_customers FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-CREATE TRIGGER loyalty_programs_set_updated_at BEFORE UPDATE ON public.loyalty_programs FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-ALTER TABLE public.loyalty_rewards ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER loyalty_rewards_set_updated_at BEFORE UPDATE ON public.loyalty_rewards FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-ALTER TABLE public.loyalty_sends ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER loyalty_sends_set_updated_at BEFORE UPDATE ON public.loyalty_sends FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-ALTER TABLE public.loyalty_otps ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER loyalty_otps_set_updated_at BEFORE UPDATE ON public.loyalty_otps FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
 CREATE TRIGGER mcp_connectors_set_updated_at BEFORE UPDATE ON public.mcp_connectors FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 ALTER TABLE public.mcp_gateway_receipts ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
@@ -25117,13 +21530,7 @@ CREATE TRIGGER authority_actions_set_updated_at BEFORE UPDATE ON public.authorit
 ALTER TABLE public.authority_rules ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER authority_rules_set_updated_at BEFORE UPDATE ON public.authority_rules FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-ALTER TABLE public.automation_commands ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER automation_commands_set_updated_at BEFORE UPDATE ON public.automation_commands FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
 CREATE TRIGGER automation_pipelines_set_updated_at BEFORE UPDATE ON public.automation_pipelines FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-ALTER TABLE public.automation_runs ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER automation_runs_set_updated_at BEFORE UPDATE ON public.automation_runs FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 ALTER TABLE public.automation_templates ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER automation_templates_set_updated_at BEFORE UPDATE ON public.automation_templates FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
@@ -25215,8 +21622,6 @@ CREATE TRIGGER content_pillars_set_updated_at BEFORE UPDATE ON public.content_pi
 
 ALTER TABLE public.content_settings ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
 
-CREATE TRIGGER contracts_set_updated_at BEFORE UPDATE ON public.contracts FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
 ALTER TABLE public.credit_pack_purchases ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.credit_pack_purchases ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER credit_pack_purchases_set_updated_at BEFORE UPDATE ON public.credit_pack_purchases FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
@@ -25239,9 +21644,6 @@ CREATE TRIGGER data_sync_runs_set_updated_at BEFORE UPDATE ON public.data_sync_r
 
 ALTER TABLE public.decisions ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER decisions_set_updated_at BEFORE UPDATE ON public.decisions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-ALTER TABLE public.executions ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER executions_set_updated_at BEFORE UPDATE ON public.executions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 ALTER TABLE public.hiring_availability ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.hiring_availability ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
@@ -25327,20 +21729,6 @@ ALTER TABLE public.knowledge_suggestion_state ADD COLUMN created_at timestamptz 
 ALTER TABLE public.knowledge_suggestion_state ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER knowledge_suggestion_state_set_updated_at BEFORE UPDATE ON public.knowledge_suggestion_state FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
--- ---- from 20261109100215_entity-base-timestamps-n-p.sql ----
--- entity-base-timestamps-n-p: forward-only; immutable once on origin/main.
--- Entity-base round (BE-PERSISTENCE-3), n8n through public_api (n to p): every table the entities now map through AbstractEntity / UuidAbstractEntity
--- carries created_at and updated_at as timestamptz NOT NULL DEFAULT now(), and a BEFORE UPDATE trigger (public.set_updated_at, created by
--- 20261109100202_entity-base-set-updated-at) stamps updated_at, so the application never writes it.
--- Left out on purpose: platform_audit (an append-only audit log).
-
-ALTER TABLE public.n8n_platform_config ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
-ALTER TABLE public.n8n_platform_config ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER n8n_platform_config_set_updated_at BEFORE UPDATE ON public.n8n_platform_config FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-ALTER TABLE public.n8n_runs ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER n8n_runs_set_updated_at BEFORE UPDATE ON public.n8n_runs FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
 ALTER TABLE public.nivo_knowledge ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER nivo_knowledge_set_updated_at BEFORE UPDATE ON public.nivo_knowledge FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
@@ -25364,9 +21752,6 @@ ALTER TABLE public.openclaw_agent_sync ADD COLUMN created_at timestamptz NOT NUL
 ALTER TABLE public.openclaw_agent_sync ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER openclaw_agent_sync_set_updated_at BEFORE UPDATE ON public.openclaw_agent_sync FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-ALTER TABLE public.orders ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER orders_set_updated_at BEFORE UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
 ALTER TABLE public.payment_order_requests ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER payment_order_requests_set_updated_at BEFORE UPDATE ON public.payment_order_requests FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
@@ -25375,15 +21760,6 @@ CREATE TRIGGER payment_orders_set_updated_at BEFORE UPDATE ON public.payment_ord
 
 ALTER TABLE public.public_api ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER public_api_set_updated_at BEFORE UPDATE ON public.public_api FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
--- ---- from 20261109100216_entity-base-timestamps-r-s.sql ----
--- entity-base-timestamps-r-s: forward-only; immutable once on origin/main.
--- Entity-base round (BE-PERSISTENCE-3), responsibilities through staff (r to s): every table the entities now map through AbstractEntity / UuidAbstractEntity
--- carries created_at and updated_at as timestamptz NOT NULL DEFAULT now(), and a BEFORE UPDATE trigger (public.set_updated_at, created by
--- 20261109100202_entity-base-set-updated-at) stamps updated_at, so the application never writes it.
-
-ALTER TABLE public.responsibilities ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER responsibilities_set_updated_at BEFORE UPDATE ON public.responsibilities FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 ALTER TABLE public.sepay_transactions ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.sepay_transactions ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
@@ -25440,23 +21816,9 @@ ALTER TABLE public.telegram_inbox ADD COLUMN created_at timestamptz NOT NULL DEF
 ALTER TABLE public.telegram_inbox ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER telegram_inbox_set_updated_at BEFORE UPDATE ON public.telegram_inbox FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-ALTER TABLE public.thread_messages ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER thread_messages_set_updated_at BEFORE UPDATE ON public.thread_messages FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-CREATE TRIGGER thread_work_set_updated_at BEFORE UPDATE ON public.thread_work FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-ALTER TABLE public.transactions ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER transactions_set_updated_at BEFORE UPDATE ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
 ALTER TABLE public.video_brand_kits ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
 
 CREATE TRIGGER video_delegations_set_updated_at BEFORE UPDATE ON public.video_delegations FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-ALTER TABLE public.work_chains ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
-ALTER TABLE public.work_chains ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER work_chains_set_updated_at BEFORE UPDATE ON public.work_chains FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-CREATE TRIGGER work_threads_set_updated_at BEFORE UPDATE ON public.work_threads FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 ALTER TABLE public.workspace_invites ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER workspace_invites_set_updated_at BEFORE UPDATE ON public.workspace_invites FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
@@ -25590,7 +21952,6 @@ CREATE TRIGGER hiring_retention_log_set_updated_at BEFORE UPDATE ON public.hirin
 ALTER TABLE public.inbox ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.inbox ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.inventory_movements ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
-ALTER TABLE public.loyalty_ledger ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.mcp_call_log ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.module_context_versions ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.module_context_versions ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
@@ -25603,8 +21964,6 @@ DROP TRIGGER IF EXISTS inbox_set_updated_at ON public.inbox;
 CREATE TRIGGER inbox_set_updated_at BEFORE UPDATE ON public.inbox FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 DROP TRIGGER IF EXISTS inventory_movements_set_updated_at ON public.inventory_movements;
 CREATE TRIGGER inventory_movements_set_updated_at BEFORE UPDATE ON public.inventory_movements FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS loyalty_ledger_set_updated_at ON public.loyalty_ledger;
-CREATE TRIGGER loyalty_ledger_set_updated_at BEFORE UPDATE ON public.loyalty_ledger FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 DROP TRIGGER IF EXISTS mcp_call_log_set_updated_at ON public.mcp_call_log;
 CREATE TRIGGER mcp_call_log_set_updated_at BEFORE UPDATE ON public.mcp_call_log FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 DROP TRIGGER IF EXISTS module_context_versions_set_updated_at ON public.module_context_versions;
@@ -25899,9 +22258,7 @@ AS $function$
     'app_commands', (select count(*) from public.app_commands where workspace_id = p_workspace),
     'authority', (select count(*) from public.authority where workspace_id = p_workspace),
     'authority_rules', (select count(*) from public.authority_rules where workspace_id = p_workspace),
-    'automation_commands', (select count(*) from public.automation_commands where workspace_id = p_workspace),
     'automation_pipelines', (select count(*) from public.automation_pipelines where workspace_id = p_workspace),
-    'automation_runs', (select count(*) from public.automation_runs where workspace_id = p_workspace),
     'billing_events', (select count(*) from public.billing_events where workspace_id = p_workspace),
     'booking_exceptions', (select count(*) from public.booking_exceptions where workspace_id = p_workspace),
     'booking_hours', (select count(*) from public.booking_hours where workspace_id = p_workspace),
@@ -25928,8 +22285,7 @@ AS $function$
     'content_pillars', (select count(*) from public.content_pillars where workspace_id = p_workspace),
     'content_plans', (select count(*) from public.content_plans where workspace_id = p_workspace),
     'content_settings', (select count(*) from public.content_settings where workspace_id = p_workspace),
-    'content_weekly_reports', (select count(*) from public.content_weekly_reports where workspace_id = p_workspace),
-    'contracts', (select count(*) from public.contracts where workspace_id = p_workspace)
+    'content_weekly_reports', (select count(*) from public.content_weekly_reports where workspace_id = p_workspace)
   )
   ||
   jsonb_build_object(
@@ -25941,7 +22297,6 @@ AS $function$
     'decisions', (select count(*) from public.decisions where workspace_id = p_workspace),
     'email_messages', (select count(*) from public.email_messages where workspace_id = p_workspace),
     'events', (select count(*) from public.events where workspace_id = p_workspace),
-    'executions', (select count(*) from public.executions where workspace_id = p_workspace),
     'hiring_availability', (select count(*) from public.hiring_availability where workspace_id = p_workspace),
     'hiring_candidates', (select count(*) from public.hiring_candidates where workspace_id = p_workspace),
     'hiring_consents', (select count(*) from public.hiring_consents where workspace_id = p_workspace),
@@ -25967,21 +22322,10 @@ AS $function$
     'knowledge_chunks', (select count(*) from public.knowledge_chunks where workspace_id = p_workspace),
     'knowledge_gaps', (select count(*) from public.knowledge_gaps where workspace_id = p_workspace),
     'knowledge_sources', (select count(*) from public.knowledge_sources where workspace_id = p_workspace),
-    'knowledge_suggestion_state', (select count(*) from public.knowledge_suggestion_state where workspace_id = p_workspace),
-    'lead_actions', (select count(*) from public.lead_actions where workspace_id = p_workspace),
-    'lead_flows', (select count(*) from public.lead_flows where workspace_id = p_workspace),
-    'leads', (select count(*) from public.leads where workspace_id = p_workspace),
-    'loyalty_campaigns', (select count(*) from public.loyalty_campaigns where workspace_id = p_workspace),
-    'loyalty_customer_links', (select count(*) from public.loyalty_customer_links where workspace_id = p_workspace),
-    'loyalty_customers', (select count(*) from public.loyalty_customers where workspace_id = p_workspace),
-    'loyalty_ledger', (select count(*) from public.loyalty_ledger where workspace_id = p_workspace),
-    'loyalty_otps', (select count(*) from public.loyalty_otps where workspace_id = p_workspace),
-    'loyalty_programs', (select count(*) from public.loyalty_programs where workspace_id = p_workspace),
-    'loyalty_rewards', (select count(*) from public.loyalty_rewards where workspace_id = p_workspace)
+    'knowledge_suggestion_state', (select count(*) from public.knowledge_suggestion_state where workspace_id = p_workspace)
   )
   ||
   jsonb_build_object(
-    'loyalty_sends', (select count(*) from public.loyalty_sends where workspace_id = p_workspace),
     'mcp_call_log', (select count(*) from public.mcp_call_log where workspace_id = p_workspace),
     'mcp_connectors', (select count(*) from public.mcp_connectors where workspace_id = p_workspace),
     'mcp_tool_grants', (select count(*) from public.mcp_tool_grants where workspace_id = p_workspace),
@@ -25992,16 +22336,13 @@ AS $function$
     'module_setup_messages', (select count(*) from public.module_setup_messages where workspace_id = p_workspace),
     'module_setup_sessions', (select count(*) from public.module_setup_sessions where workspace_id = p_workspace),
     'module_setup_writes', (select count(*) from public.module_setup_writes where workspace_id = p_workspace),
-    'n8n_runs', (select count(*) from public.n8n_runs where workspace_id = p_workspace),
     'office_command_candidates', (select count(*) from public.office_command_candidates where workspace_id = p_workspace),
     'office_rooms', (select count(*) from public.office_rooms where workspace_id = p_workspace),
     'office_rooms_reads', (select count(*) from public.office_rooms_reads where workspace_id = p_workspace),
     'openclaw_agent_sync', (select count(*) from public.openclaw_agent_sync where workspace_id = p_workspace),
-    'orders', (select count(*) from public.orders where workspace_id = p_workspace),
     'payment_order_requests', (select count(*) from public.payment_order_requests where workspace_id = p_workspace),
     'payment_orders', (select count(*) from public.payment_orders where workspace_id = p_workspace),
     'public_api', (select count(*) from public.public_api where workspace_id = p_workspace),
-    'responsibilities', (select count(*) from public.responsibilities where workspace_id = p_workspace),
     'shifts_attendance', (select count(*) from public.shifts_attendance where workspace_id = p_workspace),
     'shifts_availability', (select count(*) from public.shifts_availability where workspace_id = p_workspace),
     'shifts_coverage', (select count(*) from public.shifts_coverage where workspace_id = p_workspace),
@@ -26015,7 +22356,6 @@ AS $function$
     'shifts_staff_pay', (select count(*) from public.shifts_staff_pay where workspace_id = p_workspace),
     'shifts_swap_requests', (select count(*) from public.shifts_swap_requests where workspace_id = p_workspace),
     'staff', (select count(*) from public.staff where workspace_id = p_workspace),
-    'transactions', (select count(*) from public.transactions where workspace_id = p_workspace),
     'video_brand_kits', (select count(*) from public.video_brand_kits where workspace_id = p_workspace),
     'video_delegations', (select count(*) from public.video_delegations where workspace_id = p_workspace),
     'video_project_versions', (select count(*) from public.video_project_versions where workspace_id = p_workspace),
@@ -26030,7 +22370,6 @@ $function$;
 
 -- Functions, by exact signature.
 DROP FUNCTION IF EXISTS public.accept_invite(text);
-DROP FUNCTION IF EXISTS public.add_lead_responsibility(uuid,uuid,text,text,text,timestamp with time zone,text);
 DROP FUNCTION IF EXISTS public.admin_console_audit(text,uuid,jsonb);
 DROP FUNCTION IF EXISTS public.admin_console_quota(uuid);
 DROP FUNCTION IF EXISTS public.admin_console_signups(integer);
@@ -26041,8 +22380,6 @@ DROP FUNCTION IF EXISTS public.admin_set_workspace_plan(uuid,text,bigint);
 DROP FUNCTION IF EXISTS public.admin_set_workspace_status(uuid,text);
 DROP FUNCTION IF EXISTS public.api_key_create(uuid,text);
 DROP FUNCTION IF EXISTS public.api_key_revoke(uuid,uuid);
-DROP FUNCTION IF EXISTS public.assign_lead_responsibility(uuid,uuid,text,text,timestamp with time zone,text,text);
-DROP FUNCTION IF EXISTS public.automation_command_enqueue(uuid,text,text);
 DROP FUNCTION IF EXISTS public.booking_peak_load(uuid,timestamp with time zone,timestamp with time zone,uuid);
 DROP FUNCTION IF EXISTS public.booking_rate_hit(text,integer,integer);
 DROP FUNCTION IF EXISTS public.booking_relocate(uuid,uuid,timestamp with time zone,timestamp with time zone,timestamp with time zone,boolean);
@@ -26051,9 +22388,6 @@ DROP FUNCTION IF EXISTS public.brain_command(uuid,text,jsonb);
 DROP FUNCTION IF EXISTS public.brain_command_wait(uuid);
 DROP FUNCTION IF EXISTS public.connection_command_take(uuid);
 DROP FUNCTION IF EXISTS public.create_free_workspace(text);
-DROP FUNCTION IF EXISTS public.dashboard_data(uuid,timestamp with time zone,timestamp with time zone,timestamp with time zone);
-DROP FUNCTION IF EXISTS public.exception_rows(uuid);
-DROP FUNCTION IF EXISTS public.governance_rows(uuid,timestamp with time zone);
 DROP FUNCTION IF EXISTS public.hiring_new_token();
 DROP FUNCTION IF EXISTS public.hiring_ops_status();
 DROP FUNCTION IF EXISTS public.invite_preview(text);
@@ -26061,23 +22395,17 @@ DROP FUNCTION IF EXISTS public.is_owner(uuid);
 DROP FUNCTION IF EXISTS public.job_cutover_adopt(text,bigint,timestamp with time zone,jsonb,integer,timestamp with time zone,boolean);
 DROP FUNCTION IF EXISTS public.job_cutover_redirect();
 DROP FUNCTION IF EXISTS public.lead_actor_name(uuid);
-DROP FUNCTION IF EXISTS public.lead_step_json(responsibilities);
 DROP FUNCTION IF EXISTS public.lead_step_owner(uuid,text,text);
-DROP FUNCTION IF EXISTS public.loyalty_post(uuid,uuid,text,integer,text,text,bigint,uuid,uuid,uuid,uuid,text,timestamp with time zone,timestamp with time zone);
 DROP FUNCTION IF EXISTS public.match_knowledge(uuid,text,extensions.vector,text,integer,text,text,uuid);
 DROP FUNCTION IF EXISTS public.my_sessions();
 DROP FUNCTION IF EXISTS public.my_staff_id(uuid);
-DROP FUNCTION IF EXISTS public.office_data(uuid,timestamp with time zone);
 DROP FUNCTION IF EXISTS public.owns_workspace(uuid);
 DROP FUNCTION IF EXISTS public.payment_order_request(uuid,text,text);
 DROP FUNCTION IF EXISTS public.read_app_command(uuid);
-DROP FUNCTION IF EXISTS public.record_lead_outcome(uuid,uuid,text,text,text);
 DROP FUNCTION IF EXISTS public.request_agent_sync(uuid,uuid,boolean);
-DROP FUNCTION IF EXISTS public.request_execution_decision(uuid,uuid,text,text,text);
 DROP FUNCTION IF EXISTS public.request_office_confirm(uuid,uuid,text);
 DROP FUNCTION IF EXISTS public.request_office_propose(uuid,uuid,text);
 DROP FUNCTION IF EXISTS public.request_work_decision(uuid,uuid,text,jsonb,text,text,text);
-DROP FUNCTION IF EXISTS public.responsibility_rows(uuid);
 DROP FUNCTION IF EXISTS public.revoke_my_session(uuid);
 DROP FUNCTION IF EXISTS public.revoke_workspace_invite(uuid,uuid);
 DROP FUNCTION IF EXISTS public.session_bootstrap();
@@ -26113,7 +22441,6 @@ DROP FUNCTION IF EXISTS public.zalo_wizard_start(uuid,text,text,text);
 
 -- Tables (their policies, triggers and indexes go with them).
 DROP TABLE IF EXISTS public.booking_rate;
-DROP TABLE IF EXISTS public.n8n_pipelines;
 DROP TABLE IF EXISTS public.platform_flags;
 
 -- ---- from 20261109100300_knowledge-source-stage.sql ----
@@ -27697,46 +24024,6 @@ REVOKE ALL ON FUNCTION public.workspaces_add_governance() FROM PUBLIC, anon, aut
 SELECT public.ensure_workspace_governance(w.id) FROM public.workspaces w
 WHERE NOT EXISTS (SELECT 1 FROM public.authority s WHERE s.workspace_id = w.id);
 
--- ---- from 20261111101200_order-payment-reconcile.sql ----
--- order-payment-reconcile: Accounting matches a bank credit to the sales order it pays, and keeps the customer's word that they paid until the money is seen.
--- Expand only: one nullable column and one new table, nothing existing changes.
--- transactions.order_id: the sales order a bank credit paid. One transaction pays one order and one order is paid by one transaction (the partial unique index).
--- payment_claims: the ledger of what a customer said ("I transferred 5k, name X") before any matching credit was seen. A claim waits as `open`; an arriving credit
--- that matches settles it (`settled`); one that waited past the configured timeout is given to the owner (`escalated`); one a failed run recorded and then undid is `withdrawn`. dedupe_key makes a repeated message one claim.
-
-ALTER TABLE public.transactions
-    ADD COLUMN order_id uuid REFERENCES public.orders(id) ON DELETE SET NULL;
-CREATE UNIQUE INDEX transactions_order_id_key ON public.transactions USING btree (order_id) WHERE order_id IS NOT NULL;
-
-CREATE TABLE public.payment_claims (
-    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    lead_id uuid NOT NULL REFERENCES public.leads(id) ON DELETE CASCADE,
-    conversation_id uuid,
-    amount_vnd bigint,
-    names text[] NOT NULL DEFAULT '{}'::text[],
-    body text NOT NULL,
-    claimed_at timestamptz NOT NULL DEFAULT now(),
-    status text NOT NULL DEFAULT 'open',
-    settled_transaction_id uuid REFERENCES public.transactions(id) ON DELETE SET NULL,
-    dedupe_key text NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT now(),
-    updated_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT payment_claims_status_check CHECK (status IN ('open', 'settled', 'escalated', 'withdrawn')),
-    CONSTRAINT payment_claims_amount_check CHECK (amount_vnd IS NULL OR amount_vnd > 0)
-);
-CREATE UNIQUE INDEX payment_claims_dedupe_key ON public.payment_claims USING btree (workspace_id, dedupe_key);
-CREATE INDEX payment_claims_open_idx ON public.payment_claims USING btree (workspace_id, claimed_at) WHERE status = 'open';
-
-CREATE TRIGGER payment_claims_set_updated_at BEFORE UPDATE ON public.payment_claims FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-ALTER TABLE public.payment_claims ENABLE ROW LEVEL SECURITY;
-CREATE POLICY payment_claims_app_be_select ON public.payment_claims FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
-CREATE POLICY payment_claims_app_be_insert ON public.payment_claims FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
-CREATE POLICY payment_claims_app_be_update ON public.payment_claims FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
-REVOKE ALL ON TABLE public.payment_claims FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON TABLE public.payment_claims TO app_be;
-
 -- ---- from 20261111101400_connection-poll-schedule.sql ----
 -- The poll plan of every polled connection, one row each, so a tick wakes only the connections that are due instead of scanning all of them.
 -- `next_poll_at` is when the connection is read next (the planner adds random jitter, so tenants never poll in step); the scheduler claims due rows
@@ -27782,16 +24069,6 @@ CREATE POLICY connection_poll_schedule_app_be_insert ON public.connection_poll_s
 CREATE POLICY connection_poll_schedule_app_be_update ON public.connection_poll_schedule FOR UPDATE TO app_be
     USING (workspace_id IS NOT NULL)
     WITH CHECK (workspace_id IS NOT NULL);
-
--- ---- from 20261111101500_order-note-failed-system.sql ----
--- order-note-failed-system: the delivery address and notes of an order get their own column. Expand only: one new column with a default.
--- The `failed_system` status of an order a system failure cut short is widened in its own contract migration, 20261111102510. Table
--- grants and row level security of public.orders already cover the column (grants are per table, the policies read workspace_id).
-
-ALTER TABLE public.orders ADD COLUMN note text NOT NULL DEFAULT '';
-
-COMMENT ON COLUMN public.orders.note IS
-    'The delivery address and the notes the customer gave with the order; empty when there are none.';
 
 -- ---- from 20261111101600_connection-poll-unavailable.sql ----
 -- A connection whose provider plan lacks the capability the poll needs (the OA plan does not allow reading old messages) is no failure: it stays connected
@@ -27938,12 +24215,6 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.agent_turn_begin(uuid, text, text, integer, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.agent_turn_begin(uuid, text, text, integer, integer) TO app_be;
-
--- ---- from 20261111102000_payment-claim-lead-optional.sql ----
--- payment-claim-lead-optional: a payment claim belongs to the conversation it was said in; the customer may not be a lead yet.
--- Expand only: the lead column accepts null, nothing existing changes.
-
-ALTER TABLE public.payment_claims ALTER COLUMN lead_id DROP NOT NULL;
 
 -- ---- from 20261111102010_trigger-burst.sql ----
 -- trigger-burst: the flow of an agent sets the burst of its conversations. The window and the longest wait a wake takes are resolved once,
@@ -28194,15 +24465,6 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.agent_turn_begin(uuid, text, text, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.agent_turn_begin(uuid, text, text, integer) TO app_be;
-
--- ---- from 20261111102510_order-status-failed-system_contract_widen.sql ----
--- order-status-failed-system: an order a system failure cut short gets its own status, `failed_system`. Widening only: the old statuses
--- stay allowed and no row changes. Table grants and row level security of public.orders already cover it.
-
-ALTER TABLE public.orders DROP CONSTRAINT orders_status_check;
-ALTER TABLE public.orders ADD CONSTRAINT orders_status_check CHECK (
-    status = ANY (ARRAY['draft'::text, 'confirmed'::text, 'invoiced'::text, 'paid'::text, 'cancelled'::text, 'failed_system'::text])
-);
 
 -- ---- from 20261111103000_brain-dossiers-owner-due.sql ----
 -- brain-dossiers-owner-due: forward-only; immutable once on origin/main.

@@ -38,7 +38,6 @@ const providerOptions = () => ({
         endpoint: { gatewayUrl: null, virtualKey: null, chatModel: "work", embeddingModel: "embed" },
     },
     connectionSecrets: { tokenKey: TOKEN_KEY },
-    loyaltyOtps: { pepper: new Secret("world-proof") },
     channels: { siteUrl: SITE },
     telegram: { apiBase: "https://telegram.invalid", timeoutMs: 1000 },
     zalo: {

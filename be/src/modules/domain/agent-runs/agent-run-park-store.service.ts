@@ -11,7 +11,16 @@ import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { stepViewOf } from "./agent-runs.mapper"
 import { jsonValueOf } from "./policies/json-value.policy"
-import type { ParkedQuery, ParkedRef, ResumeAnswer, ResumeWrite, RunStepView } from "./agent-runs-engine.contracts"
+import { subjectOfRun } from "./policies/run-subject.policy"
+import type {
+    OptionalFailedStep,
+    OptionalRunStanding,
+    ParkedFacts,
+    ParkedQuery,
+    ParkedRef,
+    ResumeAnswer,
+    ResumeWrite,
+} from "./agent-runs-engine.contracts"
 
 /** The most parked runs one read looks at before the filters that need their steps cut it to the pass limit. */
 const CANDIDATES_MAX = 100
@@ -34,7 +43,7 @@ export class AgentRunParkStoreService {
     ) {}
 
     /** The first failed step of a run, or null when none failed. */
-    async failedStepOf(workspaceId: string, runId: string): Promise<RunStepView | null> {
+    async failedStepOf(workspaceId: string, runId: string): Promise<OptionalFailedStep> {
         const steps = await this.store.stepsOf(workspaceId, runId)
         return steps.find((step) => step.status === "failed") ?? null
     }
@@ -146,5 +155,47 @@ export class AgentRunParkStoreService {
             })
             return found
         })
+    }
+
+    /** The parked runs of a workspace for a person to look at, newest first, at most `limit`; a run with no failed step is left out. */
+    parkedFacts(workspaceId: string, limit: number): Promise<ReadonlyArray<ParkedFacts>> {
+        return this.store.at(workspaceId, undefined, async (scoped) => {
+            const runs = await this.records.runsOf(
+                scoped,
+                "parked",
+                null,
+                [
+                    ["resumeNotBefore", "asc"],
+                    ["id", "asc"],
+                ],
+                Math.min(limit, CANDIDATES_MAX),
+            )
+            const newestFirst = runs.toSorted(
+                (a, b) => (b.endedAt?.getTime() ?? 0) - (a.endedAt?.getTime() ?? 0) || b.id.localeCompare(a.id),
+            )
+            const found: Array<ParkedFacts> = []
+            await eachInOrder(newestFirst, async (run) => {
+                const steps = await this.records.stepsOf(scoped, run.id)
+                const failed = steps.find((step) => step.status === "failed")
+                if (failed === undefined) return
+                const subject = subjectOfRun(steps[0]?.input, run.context)
+                found.push({
+                    runId: run.id,
+                    agentId: run.agentId,
+                    subjectKind: subject?.kind ?? "",
+                    subjectId: subject?.id ?? "",
+                    stepKey: failed.stepKey,
+                    errorCode: failed.errorCode ?? "",
+                    parkedAt: (run.endedAt ?? new Date(0)).toISOString(),
+                })
+            })
+            return found
+        })
+    }
+
+    /** Where one run of the workspace stands; null when the workspace has no such run. */
+    async standingOf(workspaceId: string, runId: string): Promise<OptionalRunStanding> {
+        const run = await this.store.runById(workspaceId, runId)
+        return run?.workspaceId === workspaceId ? { agentId: run.agentId, parked: run.status === "parked" } : null
     }
 }

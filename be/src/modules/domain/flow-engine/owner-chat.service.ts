@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { DecisionsService, ModuleCatalogService, WorkDecisionService } from "@modules/domain/decisions"
 import type { WorkItem } from "@modules/domain/decisions"
-import { LeadRecordsService } from "@modules/domain/leads"
 import { isManagerRole } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { DomainError } from "@modules/platform/errors"
@@ -41,7 +40,6 @@ export class OwnerChatService {
         private readonly decisions: DecisionsService,
         private readonly work: WorkDecisionService,
         private readonly modules: ModuleCatalogService,
-        private readonly leads: LeadRecordsService,
         private readonly authority: AuthorityChatService,
     ) {}
 
@@ -124,15 +122,9 @@ export class OwnerChatService {
             limit: WAITING_LIMIT,
         })
         const items = [...page.items].sort((a, b) => a.created_at.localeCompare(b.created_at))
-        const leadIds = [...new Set(items.flatMap((item) => (item.lead_id === null ? [] : [item.lead_id])))]
-        const names = new Map(
-            (await this.leads.namesOf(member.workspaceId, leadIds)).map(
-                (lead) => [lead.id, lead.contact_name] as const,
-            ),
-        )
         return items.map((item: WorkItem) => ({
             item,
-            customer: waitingCustomerOf(item, item.lead_id === null ? "" : (names.get(item.lead_id) ?? "")),
+            customer: waitingCustomerOf(item),
             ref: refOf(item),
             amount: amountOf(item),
         }))

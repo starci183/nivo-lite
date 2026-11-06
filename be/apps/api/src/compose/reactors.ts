@@ -4,7 +4,6 @@ import { AgentSyncMessageModule } from "@features/reactors/agent-sync"
 import { BankFeedPollMessageModule } from "@features/reactors/bank-feed-poll"
 import { BookingEffectsMessageModule } from "@features/reactors/booking-effects"
 import { ContentDraftingMessageModule } from "@features/reactors/content-drafting"
-import { ContractRenewalMessageModule } from "@features/reactors/contract-renewal"
 import { InventoryDeductionMessageModule } from "@features/reactors/inventory-deduction"
 import { SourceFactsMessageModule } from "@features/reactors/source-facts"
 import { AgentGraphApprovalsMessageModule } from "@features/reactors/agent-graph-approvals"
@@ -19,7 +18,6 @@ export const API_REACTORS: Array<DynamicModule> = [
     BankFeedPollMessageModule.register({}),
     BookingEffectsMessageModule.register({}),
     ContentDraftingMessageModule.register({}),
-    ContractRenewalMessageModule.register({}),
     InventoryDeductionMessageModule.register({}),
     SourceFactsMessageModule.register({}),
     VideoScriptingMessageModule.register({}),

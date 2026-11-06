@@ -365,4 +365,3 @@ export type { RuleMode }
 export type { Authority } from "@modules/domain/authority"
 export type { AuthorityRule, GateVerdict, OptionalAuthorityRule } from "@modules/domain/authority-rules"
 export type { OptionalAgentIdentity } from "./work-lines.contracts"
-export type { ResponsibilityRecord, ResponsibilityStatus } from "@modules/domain/responsibilities"

@@ -135,10 +135,6 @@
           "reason": "settles a payment order and its credits atomically"
         },
         {
-          "name": "public.sales_action_find",
-          "reason": "sales action lookup by key or outbox id"
-        },
-        {
           "name": "public.seat_office_member",
           "reason": "seats a member in the office rooms"
         },
@@ -760,40 +756,9 @@
     },
     "destructiveRulings": [
       {
-        "migration": "db/migrations/20261112001000_chatbot-partitions_contract_drop.sql",
-        "objects": [
-          "public.records_chat_conversation:constraint:records_chat_conversation_status_chk",
-          "public.records_chat_conversation:constraint:records_chat_conversation_visitor_name_chk",
-          "public.records_chat_conversation:index:records_chat_conversation_recent",
-          "public.records_chat_conversation:index:records_chat_conversation_channel_recent",
-          "public.records_chat_conversation:index:records_chat_conversation_status_recent",
-          "public.records_chat_conversation:index:records_chat_conversation_visitor_name_trgm_idx"
-        ],
-        "reason": "the Chatbot move gives chat.conversation the inbox fields (name replaces visitorName, status ai|needs|handled) and re-keys its indexes on lastAt; no data is carried over (owner 2026-11-05 \"không care prod\")",
-        "date": "2026-11-06"
-      },
-      {
-        "migration": "db/migrations/20261112001150_chatbot-records_contract_drop.sql",
-        "objects": [
-          "public.records_chat_conversation:index:records_chat_conversation_channel_external_key",
-          "public.records_chat_conversation:constraint:records_chat_conversation_kind_chk"
-        ],
-        "reason": "chat.conversation keys its channel identity on the connection too (two bots of one workspace meet the same Telegram chat id) and drops `kind` (the owner test chats are deleted with the legacy chat tables); no data is carried over (owner 2026-11-05 \"không care prod\")",
-        "date": "2026-11-06"
-      },
-      {
-        "migration": "db/migrations/20261112001200_accounting-partitions_contract_drop.sql",
-        "objects": ["public.records_accounting_adjustment:index:records_accounting_adjustment_target"],
-        "reason": "the Accounting move ends the target index of accounting.adjustment with id so the lineage query is index-prefixed; no data is carried over (owner 2026-11-05 \"không care prod\")",
-        "date": "2026-11-06"
-      },
-      {
-        "migration": "db/migrations/20261112001500_entity-engine-partitions_contract_drop.sql",
-        "objects": [
-          "public.records_accounting_book_entry:constraint:records_accounting_book_entry_kind_chk",
-          "public.v_records_accounting_book_entry"
-        ],
-        "reason": "the Accounting join widens accounting.book-entry (the kinds expense and reversal, the fields the book and its questions read): its kind check and typed view are replaced by the wider ones; no data is carried over (owner 2026-11-05 \"không care prod\")",
+        "migration": "db/migrations/20261112001100_sales-partitions.sql",
+        "objects": ["public.records_sales_order.records_sales_order_status_chk"],
+        "reason": "the Sales move widens the status check of sales.order (failed_system joins the statuses): the planner replaces the check in place; nothing reads the constraint by name and no data is carried over (owner 2026-11-05 \"không care prod\")",
         "date": "2026-11-06"
       }
     ]

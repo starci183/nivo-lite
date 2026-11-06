@@ -19,7 +19,7 @@ export const PublicBrand = (props: PublicBrandProps) => {
     if (props.isLoading === true) {
         return (
             <Cluster gap="inline">
-                <Avatar name={GHOST} shape="rounded" size="control" isLoading />
+                <Avatar name={GHOST} size="control" isLoading />
                 <Text isLoading>{GHOST}</Text>
             </Cluster>
         )

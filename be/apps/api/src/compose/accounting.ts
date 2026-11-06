@@ -1,5 +1,4 @@
 import type { DynamicModule } from "@nestjs/common"
-import { OrdersGraphqlModule } from "@features/api/orders"
 import {
     ACCOUNTING_ERROR_KINDS,
     ACCOUNTING_MESSAGES,
@@ -14,8 +13,6 @@ import {
     EmailMessagesModule,
 } from "@modules/domain/email-messages"
 import { INVOICES_ERROR_KINDS, INVOICES_MESSAGES, InvoicesModule } from "@modules/domain/invoices"
-import { ORDERS_ERROR_KINDS, ORDERS_MESSAGES, OrdersModule } from "@modules/domain/orders"
-import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
 import {
     WORK_PERFORMERS_ERROR_KINDS,
     WORK_PERFORMERS_MESSAGES,
@@ -27,13 +24,10 @@ import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 /** The accounting area of the API, in registration order. */
 export const accountingModules = (): Array<DynamicModule> => [
-    OrdersModule.register({ isGlobal: true }),
-    OrdersGraphqlModule.register({}),
     StaffModule.register({ isGlobal: true }),
     SupplierPayablesModule.register({ isGlobal: true }),
     AccountingModule.register({ isGlobal: true, gateway: McpAccountingGatewayService }),
     InvoicesModule.register({ isGlobal: true }),
-    TransactionsModule.register({ isGlobal: true }),
     EmailMessagesModule.register({ isGlobal: true }),
     WorkPerformersModule.register({ isGlobal: true, writer: AiTasksService }),
     OfficeRoomsModule.register({ isGlobal: true }),
@@ -43,8 +37,6 @@ export const accountingModules = (): Array<DynamicModule> => [
 export const accountingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
     EMAIL_MESSAGES_ERROR_KINDS,
     INVOICES_ERROR_KINDS,
-    ORDERS_ERROR_KINDS,
-    TRANSACTIONS_ERROR_KINDS,
     WORK_PERFORMERS_ERROR_KINDS,
     AI_TASKS_ERROR_KINDS,
     STAFF_ERROR_KINDS,
@@ -56,8 +48,6 @@ export const accountingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKi
 export const accountingMessages: ReadonlyArray<MessageBundle> = [
     EMAIL_MESSAGES_MESSAGES,
     INVOICES_MESSAGES,
-    ORDERS_MESSAGES,
-    TRANSACTIONS_MESSAGES,
     WORK_PERFORMERS_MESSAGES,
     AI_TASKS_MESSAGES,
     STAFF_MESSAGES,

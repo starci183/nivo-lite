@@ -1,6 +1,0 @@
-export { LOYALTY_OTPS_ERROR_KINDS } from "./errors/loyalty-otps.error"
-export { parseLoyaltyOtpsConfig } from "./loyalty-otps.config"
-export { LoyaltyOtpsModule } from "./loyalty-otps.module"
-export { LoyaltyOtpsService } from "./loyalty-otps.service"
-export { LOYALTY_OTPS_MESSAGES } from "./messages/loyalty-otps.messages"
-export { loyaltyOtpsEntities } from "./persistence/entities"

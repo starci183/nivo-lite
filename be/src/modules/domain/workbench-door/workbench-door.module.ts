@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { WORKBENCH_DOOR_OPTIONS } from "./workbench-door.decorators"
 import { DoorPortsService } from "./door-ports.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workbench-door.module-definition"
+import { WorkspaceTimeZoneService } from "./workspace-time-zone.service"
 import { WorkbenchDoorService } from "./workbench-door.service"
 
 @Module({})
@@ -17,6 +18,7 @@ export class WorkbenchDoorModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 { provide: WORKBENCH_DOOR_OPTIONS, useValue: options },
                 DoorPortsService,
+                WorkspaceTimeZoneService,
                 WorkbenchDoorService,
             ],
             exports: [WorkbenchDoorService],

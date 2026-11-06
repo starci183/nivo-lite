@@ -1,5 +1,4 @@
 export { useZaloChecks } from "./useZaloChecks"
-export { useZaloEventsView } from "./useZaloEventsView"
 export { useZaloOverviewFacts } from "./useZaloOverviewFacts"
 export { useZaloHead } from "./useZaloHead"
 export { useZaloPage } from "./useZaloPage"

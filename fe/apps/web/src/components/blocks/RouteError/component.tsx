@@ -1,4 +1,4 @@
-import { Alert, Page, Stack } from "@starci/grammar/common"
+import { Alert, Page, Stack, SurfaceCard } from "@starci/grammar/common"
 import type { BreadcrumbItem } from "@starci/grammar/common"
 
 /** Copy, trail and the retry command supplied by the connected route error block. */
@@ -14,7 +14,7 @@ export interface RouteErrorBaseProps {
     readonly on: { readonly retry?: () => void }
 }
 
-/** Draws a failed route: the page's own trail and heading stay real, the body is one negative Alert with the safe retry. */
+/** Draws a failed route: the page's own trail and heading stay real, the body is one surface card holding the negative Alert with the safe retry (content never sits bare on the tinted page). */
 export const RouteErrorBase = (props: RouteErrorBaseProps) => (
     <Page
         measure="product"
@@ -24,12 +24,14 @@ export const RouteErrorBase = (props: RouteErrorBaseProps) => (
         }}
     >
         <Stack gap="region">
-            <Alert
-                tone="negative"
-                title={props.props.alertTitle}
-                description={props.props.message}
-                {...(props.on.retry ? { action: { label: props.props.retryLabel, onAction: props.on.retry } } : {})}
-            />
+            <SurfaceCard ariaLabel={props.props.alertTitle}>
+                <Alert
+                    tone="negative"
+                    title={props.props.alertTitle}
+                    description={props.props.message}
+                    {...(props.on.retry ? { action: { label: props.props.retryLabel, onAction: props.on.retry } } : {})}
+                />
+            </SurfaceCard>
         </Stack>
     </Page>
 )

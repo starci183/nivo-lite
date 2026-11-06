@@ -3,6 +3,7 @@ import { z } from "zod"
 import { MAX_BODY, MAX_ID, MAX_LINE } from "../../bounds"
 import { ORDER_ITEMS_SHAPE } from "../../entities/sales/order.entity"
 import { ORDER_STATUSES } from "../../rules/sales/order-status"
+import { MAX_DISCOUNT_PCT, MAX_REMIND_DAYS } from "../../rules/sales/settings"
 import type { SalesSettings } from "../../rules/sales/settings"
 import type { OrderBrief } from "../../rules/sales/lead-orders"
 import { LEAD_STAGES, MAX_REASON_CHARS } from "../../rules/sales/stage"
@@ -66,6 +67,10 @@ const settingsData = z.object({
     draftWithoutTotalNeedsApproval: z.boolean(),
     closedDealsCanFlip: z.boolean(),
     reopenNeedsApproval: z.boolean(),
+    maxDiscountPct: z.number().int().min(0).max(MAX_DISCOUNT_PCT),
+    remindAfterDays: z.number().int().min(1).max(MAX_REMIND_DAYS),
+    autoWon: z.boolean(),
+    notifyAccounting: z.boolean(),
 })
 
 /** The fields of an order a customer's detail adds up. */
@@ -165,6 +170,10 @@ export const SETTINGS_FIELDS: ReadonlyArray<string> = [
     "draftWithoutTotalNeedsApproval",
     "closedDealsCanFlip",
     "reopenNeedsApproval",
+    "maxDiscountPct",
+    "remindAfterDays",
+    "autoWon",
+    "notifyAccounting",
 ]
 
 /** The settings a record holds; null when its fields are not those of the settings. */

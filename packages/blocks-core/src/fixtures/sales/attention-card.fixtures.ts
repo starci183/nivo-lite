@@ -17,14 +17,34 @@ export interface AttentionFixtureRecord {
     readonly at: string
 }
 
+/** One run a read of `platform.parked-runs` answers. */
+export interface ParkedRunFixtureRecord {
+    /** The run id. */
+    readonly id: string
+    /** The module the run works for. */
+    readonly module: string
+    /** The kind of the record the run is about. */
+    readonly subjectKind: string
+    /** The id of the record the run is about. */
+    readonly subjectId: string
+    /** The step the run stopped at. */
+    readonly step: string
+    /** The code of the error that parked it. */
+    readonly errorCode: string
+    /** What the error says. */
+    readonly errorWords: string
+    /** When it was parked, ISO text. */
+    readonly parkedAt: string
+}
+
 /** The three reads the card fills its list from, in one status. */
 export interface AttentionFixtureSlots {
     /** The deals past their step and the questions for the owner. */
     readonly attention: DataSlot<ReadonlyArray<AttentionFixtureRecord>>
     /** The customers waiting for a reply. */
     readonly awaitingReply: DataSlot<ReadonlyArray<AttentionFixtureRecord>>
-    /** The steps that failed. */
-    readonly failedSteps: DataSlot<ReadonlyArray<AttentionFixtureRecord>>
+    /** The runs the engine parked. */
+    readonly parkedRuns: DataSlot<ReadonlyArray<ParkedRunFixtureRecord>>
 }
 
 /** The props the card is drawn with on the Sales board. */
@@ -36,8 +56,8 @@ export const ATTENTION_RECORDS: ReadonlyArray<AttentionFixtureRecord> = data.att
 /** The customer who waits for a reply. */
 export const AWAITING_REPLY_RECORDS: ReadonlyArray<AttentionFixtureRecord> = data.awaitingReply
 
-/** The step that failed. */
-export const FAILED_STEP_RECORDS: ReadonlyArray<AttentionFixtureRecord> = data.failedSteps
+/** The run the engine parked after a step failed. */
+export const PARKED_RUN_RECORDS: ReadonlyArray<ParkedRunFixtureRecord> = data.parkedRuns
 
 /** The order over the limit that waits for the owner's approval. */
 export const OWNER_RECORDS: ReadonlyArray<AttentionFixtureRecord> = data.owner
@@ -61,18 +81,18 @@ export const attentionCardFixtures: AttentionCardFixtures = {
     ready: {
         attention: { items: ATTENTION_RECORDS },
         awaitingReply: { items: AWAITING_REPLY_RECORDS },
-        failedSteps: { items: FAILED_STEP_RECORDS },
+        parkedRuns: { items: PARKED_RUN_RECORDS },
     },
     loading: {
         attention: { isLoading: true },
         awaitingReply: { isLoading: true },
-        failedSteps: { isLoading: true },
+        parkedRuns: { isLoading: true },
     },
-    empty: { attention: { isEmpty: true }, awaitingReply: { isEmpty: true }, failedSteps: { isEmpty: true } },
-    error: { attention: { isError: true }, awaitingReply: { isEmpty: true }, failedSteps: { isEmpty: true } },
+    empty: { attention: { isEmpty: true }, awaitingReply: { isEmpty: true }, parkedRuns: { isEmpty: true } },
+    error: { attention: { isError: true }, awaitingReply: { isEmpty: true }, parkedRuns: { isEmpty: true } },
     waiting: {
         attention: { items: OWNER_RECORDS },
         awaitingReply: { isEmpty: true },
-        failedSteps: { isEmpty: true },
+        parkedRuns: { isEmpty: true },
     },
 }

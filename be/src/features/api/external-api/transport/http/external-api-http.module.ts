@@ -3,19 +3,11 @@ import { ExternalApiModule } from "../../external-api.module"
 import { AddKnowledgeController } from "./add-knowledge.controller"
 import { ConfigurableModuleClass } from "./external-api-http.module-definition"
 import { ListEventsController } from "./list-events.controller"
-import { ListLeadsController } from "./list-leads.controller"
 import { SendMessageController } from "./send-message.controller"
-import { SubmitLeadController } from "./submit-lead.controller"
 
 @Module({
     imports: [ExternalApiModule.register({})],
-    controllers: [
-        AddKnowledgeController,
-        ListEventsController,
-        ListLeadsController,
-        SendMessageController,
-        SubmitLeadController,
-    ],
+    controllers: [AddKnowledgeController, ListEventsController, SendMessageController],
 })
 /** The HTTP transport of the external API feature. */
 export class ExternalApiHttpModule extends ConfigurableModuleClass {}

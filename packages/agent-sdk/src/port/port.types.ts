@@ -1,4 +1,4 @@
-import type { Namespaced } from "../schema/schema.types"
+import type { Namespaced, SpecLocale } from "../schema/schema.types"
 
 /**
  * A typed capability a read, an action or a node needs; the host (the back end) provides it. `T` is its method shape. `__shape` is
@@ -43,4 +43,6 @@ export interface RunContext {
     readonly now: Date
     /** The IANA time zone of the workspace (for example `Asia/Ho_Chi_Minh`), in which "today", "this week" and "this month" begin. */
     readonly timeZone: string
+    /** The language of the viewer who asked ("vi" or "en"), for the words a provider returns; a job with no viewer runs in "vi". */
+    readonly locale: SpecLocale
 }

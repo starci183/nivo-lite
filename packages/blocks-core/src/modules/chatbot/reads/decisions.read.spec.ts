@@ -9,6 +9,13 @@ describe("the chatbot.decisions read", () => {
         expect(result).toMatchObject({ ok: true, data: { count: "1", more: null } })
     })
 
+    it("counts none when no conversation waits for a person", async () => {
+        const world = memoryWorld()
+        world.conversations.splice(0)
+        const result = await DECISIONS.execute?.(memoryProvider(world), {}, STAFF_CONTEXT)
+        expect(result).toMatchObject({ ok: true, data: { count: null, rows: [] } })
+    })
+
     it("is read with the view permission", () => {
         expect(DECISIONS.permission).toBe("chatbot.view")
     })

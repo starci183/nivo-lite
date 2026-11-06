@@ -5,6 +5,9 @@ import type { StoredSpec } from "@nivo-lite/agent-sdk/spec"
 import { useWorkbenchDeclaration } from "@/hooks/workbenchSpec"
 import { SpecWorkbenchFrameBase } from "./component"
 
+/** The module every installation has: its reads (the runs it parked) and actions (resume one) a spec of any module may bind. */
+const PLATFORM_MODULE_KEY = "platform"
+
 /** What the route hands the frame: the module, the installation of the url, its spec and the view the route opens. */
 type SpecWorkbenchFrameProps = {
     readonly module: string
@@ -17,15 +20,16 @@ type SpecWorkbenchFrameProps = {
 /** The connected workbench: finds the declaration of the module, whose reads and actions the spec binds, and draws the spec on the installation of the url when the module is enabled for the workspace. */
 export const SpecWorkbenchFrame = (props: SpecWorkbenchFrameProps) => {
     const declaration = useWorkbenchDeclaration(props.module)
+    const platform = useWorkbenchDeclaration(PLATFORM_MODULE_KEY)
     const enabled = useEnabledModules()
-    if (declaration === null || !enabled.includes(props.module)) return null
+    if (declaration === null || platform === null || !enabled.includes(props.module)) return null
     return (
         <SpecWorkbenchFrameBase
             props={{
                 spec: props.spec,
                 fallback: props.fallback,
-                reads: declaration.reads,
-                actions: declaration.actions,
+                reads: [...declaration.reads, ...platform.reads],
+                actions: [...declaration.actions, ...platform.actions],
                 permissions: declaration.permissions,
                 namespace: declaration.namespace,
                 installationId: props.installationId,

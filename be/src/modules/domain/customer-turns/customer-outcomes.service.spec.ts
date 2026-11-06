@@ -35,7 +35,6 @@ import type { Logger } from "@modules/platform/logging"
 import { CustomerOutcomesService } from "./customer-outcomes.service"
 import { StaffEscalationService } from "./staff-escalation.service"
 import { TurnModulesService } from "./turn-modules.service"
-import { TurnPurchasesService } from "./turn-purchases.service"
 import type { WorkItem } from "@modules/domain/decisions"
 import { findingsOf } from "./reply-reading.policy"
 
@@ -47,7 +46,6 @@ const build = async () => {
     const bus = mock<CommandBusService>()
     const inbound = mock<InboundEventsService>()
     const invoices = mock<InvoicesService>()
-    const purchases = mock<TurnPurchasesService>()
     const gaps = mock<KnowledgeGapNotesService>()
     const directory = mock<AgentDirectoryService>()
     const modules = mock<TurnModulesService>()
@@ -60,7 +58,7 @@ const build = async () => {
     const staff = mock<StaffEscalationService>()
     const logger = mock<Logger>()
     const catalog = mock<MessageCatalog>(catalogData)
-    const core = { engine, bus, inbound, invoices, purchases, gaps, directory }
+    const core = { engine, bus, inbound, invoices, gaps, directory }
     const peers = { modules, conversations, evidence, items, bindings, rules, hiring, staff, logger, catalog }
     const doubles = { ...core, ...peers }
     arrangeCustomerOutcomes(doubles)
@@ -80,7 +78,6 @@ const build = async () => {
             { provide: AgentBindingsService, useValue: bindings },
             { provide: AuthorityRulesService, useValue: rules },
             { provide: HiringPublicService, useValue: hiring },
-            { provide: TurnPurchasesService, useValue: purchases },
             { provide: StaffEscalationService, useValue: staff },
             { provide: KnowledgeGapNotesService, useValue: gaps },
             { provide: TurnModulesService, useValue: modules },
@@ -159,20 +156,6 @@ describe("CustomerOutcomesService", () => {
         )
         expect(verdict).toMatchObject({ reply: "Thanks!", send: true, lines: ["customerTurns.chatHandoff"] })
     })
-
-    it("takes an order at a price written in the knowledge", async () => {
-        const known = await build()
-        const verdict = await known.outcomes.settle(
-            turnOf(),
-            proposalOf({ order: { items: "Tra sua", amount_vnd: 50_000 } }),
-        )
-        expect(known.purchases.recordOrder).toHaveBeenCalledWith(
-            expect.any(Object),
-            expect.any(Object),
-            expect.objectContaining({ order: { items: "Tra sua", amountVnd: 50_000 } }),
-        )
-        expect(verdict).toEqual({ reply: "Thanks!", send: true, lines: [] })
-    })
 })
 
 describe("CustomerOutcomesService", () => {
@@ -182,11 +165,6 @@ describe("CustomerOutcomesService", () => {
             turnOf(),
             proposalOf({ order: { items: "Tra sua", amount_vnd: 99_000 } }),
         )
-        expect(unknown.purchases.recordOrder).toHaveBeenCalledWith(
-            expect.any(Object),
-            expect.any(Object),
-            expect.objectContaining({ order: null }),
-        )
         expect(verdict.reply).toBe("customerTurns.orderPriceUnknownReply")
         expect(unknown.engine.runWork).toHaveBeenCalledWith(
             expect.any(Object),
@@ -195,26 +173,14 @@ describe("CustomerOutcomesService", () => {
         expect(unknown.modules.settle).not.toHaveBeenCalled()
     })
 
-    it("answers a payment claim with fixed text and opens one check for the open invoice", async () => {
-        const { outcomes, invoices, purchases } = await build()
-        purchases.recordClaim.mockResolvedValueOnce({
-            lines: ["customerTurns.claimRecorded"],
-            changed: true,
-            leadId: null,
-        })
+    it("answers a payment claim of an open invoice with fixed text", async () => {
+        const { outcomes, invoices } = await build()
         invoices.latestOfLead.mockResolvedValueOnce(customerPaymentInvoices.claimed)
         const verdict = await outcomes.settle(
             turnOf("l1"),
             proposalOf({ payment_claim: true }, { reply: "Paid, thanks!" }),
         )
         expect(verdict.reply).toBe("customerTurns.paymentClaimReply")
-        expect(purchases.recordClaim).toHaveBeenCalledWith(
-            expect.any(Object),
-            expect.any(Object),
-            expect.objectContaining({ invoice_no: "HD-01" }),
-            expect.objectContaining({ key: "telegram" }),
-        )
-        expect(verdict.lines).toContain("customerTurns.claimRecorded")
     })
 
     it("hands the question to a person when the AI could not answer", async () => {
@@ -268,24 +234,21 @@ describe("CustomerOutcomesService", () => {
         expect(engine.runQueued).not.toHaveBeenCalled()
     })
 
-    it("adds a module's redemption line and drains the new work while retaining the model's reply", async () => {
+    it("adds a module's line and drains the new work while retaining the model's reply", async () => {
         const { outcomes, modules, engine, gaps } = await build()
-        modules.settle.mockResolvedValueOnce({ reply: null, lines: ["customerTurns.redeemAsked"] })
-        const verdict = await outcomes.settle(
-            turnOf(),
-            proposalOf({ loyalty: { intent: "redeem", reward_key: "tea-voucher" } }),
-        )
-        expect(verdict).toEqual({ reply: "Thanks!", send: true, lines: ["customerTurns.redeemAsked"] })
+        modules.settle.mockResolvedValueOnce({ reply: null, lines: ["customerTurns.bookingEvidence"] })
+        const verdict = await outcomes.settle(turnOf(), proposalOf({ booking_request: { intent: "book" } }))
+        expect(verdict).toEqual({ reply: "Thanks!", send: true, lines: ["customerTurns.bookingEvidence"] })
         expect(engine.runQueued).toHaveBeenCalledWith({ workspaceId: WS, actor: "OpenClaw", locale: "vi" }, 2)
-        expect(gaps.note).toHaveBeenCalledWith(objectLike({ signals: objectLike({ isTransaction: true }) }))
+        expect(gaps.note).toHaveBeenCalled()
     })
 
-    it("leaves booking and redemption for a person when the proposal needs a human answer", async () => {
+    it("leaves booking for a person when the proposal needs a human answer", async () => {
         const { outcomes, modules, engine } = await build()
         const verdict = await outcomes.settle(
             turnOf(),
             proposalOf(
-                { booking_request: { intent: "book" }, loyalty: { intent: "redeem", reward_key: "tea-voucher" } },
+                { booking_request: { intent: "book" } },
                 { needsHuman: true, reason: "over_authority", proposedAnswer: "Please check the request" },
             ),
         )
@@ -432,46 +395,31 @@ describe("CustomerOutcomesService", () => {
         )
     })
 
-    it("drains three steps after an order and logs a drain that cannot run", async () => {
-        const ordered = await build()
-        ordered.purchases.recordOrder.mockResolvedValue({
-            lines: ["customerTurns.orderRecorded"],
-            changed: true,
-            leadId: "l9",
-        })
-        const turn = turnOf()
-        const web = { ...turn, conversation: { ...turn.conversation, channel: "sms" } }
-        const verdict = await ordered.outcomes.settle(
-            web,
-            proposalOf({ order: { items: "Tra sua", amount_vnd: 50_000 } }),
-        )
-        expect(verdict.lines).toContain("customerTurns.orderRecorded")
-        expect(ordered.engine.runQueued).toHaveBeenCalledWith(expect.objectContaining({ locale: "vi" }), 3)
-
+    it("logs a drain that cannot run", async () => {
         const broken = await build()
         const cause = new Error("queue down")
         broken.engine.runQueued.mockRejectedValue(cause)
-        broken.purchases.recordOrder.mockResolvedValue({ lines: [], changed: true, leadId: null })
-        await broken.outcomes.settle(turnOf(), proposalOf({ order: { items: "Tra sua", amount_vnd: 50_000 } }))
+        await broken.outcomes.settle(
+            turnOf(),
+            proposalOf({}, { needsHuman: true, reason: "over_authority", proposedAnswer: "Please check" }),
+        )
         expect(broken.logger.error).toHaveBeenCalledWith(CustomerTurnsLogEvent.DrainFailed, cause, { workspaceId: WS })
     })
 })
 
 describe("CustomerOutcomesService the graph of the agent on the reply", () => {
-    const { ASK, found, order, askCases, stopCases } = customerReplyGraphCases()
+    const { ASK, askCases, stopCases } = customerReplyGraphCases()
 
     it("judges the text that really leaves, a module's answer in place of the model's, and holds it when the graph asks", async () => {
-        const { outcomes, modules, engine, purchases, staff } = await build()
+        const { outcomes, modules, engine, staff } = await build()
         engine.checkGraph.mockResolvedValue(ASK)
-        purchases.recordOrder.mockResolvedValue(found)
         modules.settle.mockResolvedValueOnce({ reply: "Your appointment is requested", lines: [] })
 
-        await expect(outcomes.settle(turnOf("l1"), order)).resolves.toEqual(EXPECTED.heldModuleReply)
+        await expect(outcomes.settle(turnOf("l1"), proposalOf({}))).resolves.toEqual(EXPECTED.heldModuleReply)
 
         const text = "Your appointment is requested"
         expect(engine.checkGraph).toHaveBeenCalledWith(objectLike({ road: "reply", leadId: "l1", text }))
-        const evidence = [{ key: "amount_vnd", value: 50_000, kind: "claimed", via: "order_record" }]
-        const seed = objectLike({ draft: text, evidence })
+        const seed = objectLike({ draft: text })
         const spec = objectLike({ dedupeKey: "reply_customer:graph:m1", forceAsk: "branch_ask", seed })
         expect(engine.runWork).toHaveBeenCalledWith(expect.any(Object), spec)
         expect(staff.escalate).toHaveBeenCalledTimes(1)

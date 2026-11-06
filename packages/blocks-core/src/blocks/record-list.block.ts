@@ -25,6 +25,7 @@ const props: z.ZodObject<{
     chipPaths: z.ZodOptional<z.ZodArray<z.ZodString>>
     badgeTones: z.ZodOptional<z.ZodRecord<z.ZodString, EnumSchema<(typeof CELL_TONES)[number]>>>
     avatar: z.ZodOptional<z.ZodBoolean>
+    surface: z.ZodOptional<z.ZodEnum<{ plain: "plain"; card: "card" }>>
     labels: z.ZodOptional<LabelsSchema>
     emptySearch: z.ZodOptional<TextSchema>
     selectParam: z.ZodOptional<ParamNameSchema>
@@ -43,6 +44,7 @@ const props: z.ZodObject<{
         .refine((tones) => Object.keys(tones).length <= TONES_MAX)
         .optional(),
     avatar: z.boolean().optional(),
+    surface: z.enum(["plain", "card"]).optional(),
     labels: labelsProp.optional(),
     emptySearch: specText.optional(),
     selectParam: paramName.optional(),
@@ -59,7 +61,7 @@ const slots: Slots = {
 }
 
 /**
- * Bound records as a card with an optional action on each row; with a `selectParam` a selectable list that writes the chosen row
+ * Bound records as a card (with `surface` `card`, ONE surface holds the rows, which the tinted page shows around) with an optional action on each row; with a `selectParam` a selectable list that writes the chosen row
  * to the param, marks the row the param names and loads further pages on request. With a `searchParam` its empty state says
  * the search found nothing and offers to clear it.
  */

@@ -14,7 +14,7 @@ const SPOTLIGHT = [
     "outline-solid",
     "outline-accent",
     "outline-offset-4",
-    "rounded-xl",
+    "rounded-(--radius)",
     "transition-[outline-color]",
 ]
 

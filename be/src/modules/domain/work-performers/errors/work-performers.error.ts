@@ -5,8 +5,6 @@ import type { ErrorKind } from "@modules/platform/errors"
 export enum WorkPerformersErrorCode {
     /** The item names no record to act on. */
     SubjectMissing = "WORK_PERFORMERS_SUBJECT_MISSING",
-    /** The order is gone or was cancelled. */
-    OrderUnavailable = "WORK_PERFORMERS_ORDER_UNAVAILABLE",
     /** The customer email could not be sent. */
     EmailNotSent = "WORK_PERFORMERS_EMAIL_NOT_SENT",
     /** The booking could not be moved to the time asked (taken, closed or not movable). */
@@ -17,20 +15,16 @@ export enum WorkPerformersErrorCode {
     ApprovalInvalid = "WORK_PERFORMERS_APPROVAL_INVALID",
     /** The connector refused or did not answer the approved call. */
     ConnectorRefused = "WORK_PERFORMERS_CONNECTOR_REFUSED",
-    /** The conversation is gone or belongs to another workspace. */
-    ConversationUnavailable = "WORK_PERFORMERS_CONVERSATION_UNAVAILABLE",
 }
 
 /** How each work-performers code travels. */
 export const WORK_PERFORMERS_ERROR_KINDS: Record<WorkPerformersErrorCode, ErrorKind> = {
     [WorkPerformersErrorCode.SubjectMissing]: "invalid",
-    [WorkPerformersErrorCode.OrderUnavailable]: "not-found",
     [WorkPerformersErrorCode.EmailNotSent]: "unavailable",
     [WorkPerformersErrorCode.BookingNotMoved]: "conflict",
     [WorkPerformersErrorCode.ReminderEmpty]: "invalid",
     [WorkPerformersErrorCode.ApprovalInvalid]: "invalid",
     [WorkPerformersErrorCode.ConnectorRefused]: "unavailable",
-    [WorkPerformersErrorCode.ConversationUnavailable]: "not-found",
 }
 
 /** The one error class of the work-performers capability. */

@@ -5,37 +5,17 @@ import type { AuthorityPatch, AuthorityProfile } from "@modules/domain/authority
 import { AuthorityActionsService, ruleRefusalOf } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
-import { InvoicesService } from "@modules/domain/invoices"
-import type { ReconcileInvoiceRow } from "@modules/domain/invoices"
-import { TransactionsService } from "@modules/domain/transactions"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { toProposal } from "@modules/domain/work-items"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { WorkContext, WorkItem } from "./decisions.contracts"
-import type {
-    AuthoritySheet,
-    ListWorkItemsQuery,
-    ReconcileCandidate,
-    ReconcileDetails,
-    ReconcilePayment,
-    WorkItemPage,
-} from "./decisions-views.contracts"
+import type { AuthoritySheet, ListWorkItemsQuery, WorkItemPage } from "./decisions-views.contracts"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 import { EvidenceService } from "./evidence.service"
 import { clampDecisionPageSize, splitPage } from "./paging.policy"
-import type { AccountingWaitingWorkRow, WorkItemViewRow } from "./work-item-views.rows"
+import type { WorkItemViewRow } from "./work-item-views.rows"
 import { ruleSummary } from "./rule-save.policy"
 import { WorkItemViewsService } from "./work-item-views.service"
-
-/** A proposal field when it is text. */
-const textField = (item: WorkItem, key: string): string | null => {
-    const value = item.proposal.fields[key]
-    return typeof value === "string" ? value : null
-}
-
-/** One reconcile invoice as the owner reads it. */
-const candidateOf = (row: ReconcileInvoiceRow): ReconcileCandidate => ({ ...row })
 
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 
@@ -54,21 +34,8 @@ export class DecisionsService {
         private readonly rules: AuthorityRulesService,
         private readonly actions: AuthorityActionsService,
         private readonly evidence: EvidenceService,
-        private readonly invoices: InvoicesService,
-        private readonly transactions: TransactionsService,
         private readonly views: WorkItemViewsService,
     ) {}
-
-    /** Waiting accounting work and the related names; any workspace member may read. */
-    async listAccountingWaiting(
-        principalId: string,
-        workspaceId: string,
-        limit: number = 500,
-    ): Promise<Array<AccountingWaitingWorkRow>> {
-        await this.members.require(principalId, workspaceId)
-        const rows = await this.views.accountingWaiting(workspaceId, limit)
-        return rows.map((row) => ({ ...row, proposal: toProposal(row.proposal) }))
-    }
 
     /** One page of the workspace's work items, newest first; any member may read. */
     async listWorkItems(principalId: string, workspaceId: string, query: ListWorkItemsQuery): Promise<WorkItemPage> {
@@ -121,30 +88,6 @@ export class DecisionsService {
         const saved = await this.rules.save(workspaceId, change)
         await this.log(workspaceId, member, "authority.rule_updated", ruleSummary(saved, change))
         return saved
-    }
-
-    /** The payment and the candidate invoices of a waiting reconciliation. Any member may read. */
-    async reconcileDetails(principalId: string, workspaceId: string, workItemId: string): Promise<ReconcileDetails> {
-        await this.members.require(principalId, workspaceId)
-        const item = await this.getWorkItem(principalId, workspaceId, workItemId)
-        const moment =
-            item.subject_type === "transaction" && item.subject_id !== null
-                ? await this.transactions.momentOf(workspaceId, item.subject_id)
-                : null
-        const ids = (item.proposal.candidates ?? []).map((candidate) => candidate.id)
-        const rows = await this.invoices.listForReconcile(workspaceId, ids)
-        const byId = new Map(rows.map((row) => [row.id, row]))
-        const payment: ReconcilePayment = {
-            amount_vnd: moment?.amount_vnd ?? item.proposal.amount_vnd ?? null,
-            payer: moment?.payer ?? textField(item, "payer"),
-            reference: moment?.reference ?? textField(item, "claim"),
-            occurred_at: moment?.occurred_at ?? (item.subject_type === "invoice" ? item.created_at : null),
-        }
-        const candidates = ids.flatMap((id) => {
-            const row = byId.get(id)
-            return row === undefined ? [] : [candidateOf(row)]
-        })
-        return { payment, candidates }
     }
 
     private async log(workspaceId: string, member: WorkspaceMember, kind: string, summary: string): Promise<void> {

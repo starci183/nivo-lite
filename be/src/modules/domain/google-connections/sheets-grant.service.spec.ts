@@ -295,6 +295,8 @@ describe("SheetsGrantService > grant", () => {
                 email: "",
                 sheetId: SHEET,
                 sheetUrl: `https://docs.google.com/spreadsheets/d/${SHEET}/edit`,
+                sheetTitle: "",
+                lastRowAt: "",
             },
         ],
         [

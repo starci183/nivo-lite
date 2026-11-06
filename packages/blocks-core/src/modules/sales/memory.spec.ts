@@ -344,6 +344,12 @@ describe("the in-memory engine conditions, aggregates and settings", () => {
         expect((await provided.upsert("key_key", { ...SETTINGS_VALUES, approvalThresholdVnd: -5 })).ok).toBe(false)
     })
 
+    it("refuses a negation of a condition it does not run", async () => {
+        await expect(ordersOf().list({ ...ORDER_ROWS, where: q.not(q.search(["note"], "x")) })).rejects.toThrow(
+            "does not run the condition",
+        )
+    })
+
     it("takes no upsert on the other tables", async () => {
         expect((await orders().upsert("order_no_key", {})).ok).toBe(false)
     })

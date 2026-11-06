@@ -142,7 +142,11 @@ describe("the books through the door", () => {
         const list = await proof.read(scene, "accounting.entries", { q: "nguyen" })
         const [row, ...others] = rowsOf(list)
         expect(others).toEqual([])
-        expect(row).toMatchObject({ kind: "income" })
+        expect(row).toMatchObject({ kind: "income", amountVnd: ORDER_AMOUNT })
+        expect(row).toHaveProperty("status")
+        expect(row).toHaveProperty("counterparty")
+        expect(row).not.toHaveProperty("sourceEntity")
+        expect(row).not.toHaveProperty("sourceId")
         expect(String(row?.["note"])).toContain("NGUYEN VAN DINH")
         expect(await proof.read(scene, "accounting.entry-counts")).toMatchObject({ counts: { income: 1 } })
         expect(await proof.read(scene, "accounting.entry", { id: row?.["id"] })).toMatchObject({

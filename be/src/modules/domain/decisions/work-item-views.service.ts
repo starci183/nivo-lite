@@ -1,12 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { LeadReadService } from "@modules/domain/leads"
-import { StaffDirectoryService } from "@modules/domain/staff"
 import { WorkItemsViewsReadService } from "@modules/domain/work-items"
 import type { WorkItemWithCursor } from "@modules/domain/work-items"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { DecisionEntity } from "./persistence/entities"
-import type { AccountingWaitingWorkRow, WorkItemViewRow } from "./work-item-views.rows"
+import type { WorkItemViewRow } from "./work-item-views.rows"
 
 /** One page of work items asked for: no status filter when `statuses` is empty, no action filter when `action` is null. */
 export interface WorkItemViewFilter {
@@ -21,14 +19,12 @@ export interface WorkItemViewFilter {
 }
 
 @Injectable()
-/** Reads the work items of a workspace as views: the item, its latest decision and, for accounting, its customer and staff member. */
+/** Reads the work items of a workspace as views: the item, its latest decision. */
 export class WorkItemViewsService {
-    /** Captures the work items, leads and staff read services and the primary entity manager. */
+    /** Captures the work items read service and the primary entity manager. */
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly items: WorkItemsViewsReadService,
-        private readonly leads: LeadReadService,
-        private readonly staff: StaffDirectoryService,
     ) {}
 
     /** One work item of the workspace, with the latest decision's name as `decidedBy` and `deciderName`; undefined when there is none. */
@@ -43,32 +39,6 @@ export class WorkItemViewsService {
     async list(workspaceId: string, filter: WorkItemViewFilter): Promise<Array<WorkItemViewRow>> {
         const page = await this.items.listPage(workspaceId, filter)
         return this.withDeciders(workspaceId, page)
-    }
-
-    /** Waiting accounting work with its customer and assigned staff member, oldest first. */
-    async accountingWaiting(workspaceId: string, limit: number): Promise<Array<AccountingWaitingWorkRow>> {
-        const items = await this.items.waitingAccounting(workspaceId, limit)
-        const leadIds = items.flatMap((item) => (item.lead_id === null ? [] : [item.lead_id]))
-        const staffIds = items.flatMap((item) => (item.assigned_staff_id === null ? [] : [item.assigned_staff_id]))
-        const cards = new Map((await this.leads.cardsOf(workspaceId, leadIds)).map((card) => [card.id, card]))
-        const names = new Map((await this.staff.namesOf(workspaceId, staffIds)).map((staff) => [staff.id, staff.name]))
-        return items.map((item) => {
-            const card = item.lead_id === null ? undefined : cards.get(item.lead_id)
-            return {
-                ...item,
-                lead:
-                    card === undefined
-                        ? null
-                        : {
-                              id: card.id,
-                              contact_name: card.contactName,
-                              company: card.company,
-                              channel: card.channel,
-                          },
-                assigned_staff_name:
-                    item.assigned_staff_id === null ? null : (names.get(item.assigned_staff_id) ?? null),
-            }
-        })
     }
 
     /** The pages' items with the name of each one's latest decider, under `decidedBy` and `deciderName`. */

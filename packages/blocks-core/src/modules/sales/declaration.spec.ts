@@ -2,9 +2,18 @@ import { seedSpecProblems } from "@nivo-lite/agent-sdk/module"
 import type { SpecNode } from "@nivo-lite/agent-sdk/spec"
 import { coreBlocks } from "../../blocks/core-blocks"
 import { salesBlocks } from "../../blocks/sales/sales-blocks"
-import { ATTENTION_COUNT_KEY, ATTENTION_KINDS, ATTENTION_KIND_VIEWS } from "../../rules/sales/attention-list"
+import { resumeRunAction } from "../platform/actions/resume-run.action"
+import {
+    ATTENTION_COUNT_KEY,
+    ATTENTION_KINDS,
+    ATTENTION_KIND_VIEWS,
+    PARKED_REASON_KEYS,
+    PARKED_STEP_KEYS,
+} from "../../rules/sales/attention-list"
+import { FIGURE_HINT_KEYS } from "../../rules/sales/figures"
 import { PIPELINE_WORD_KEYS, stageKeyOf } from "../../rules/sales/pipeline"
 import { LEAD_STAGES } from "../../rules/sales/stage"
+import { platformModule } from "../platform/declaration"
 import { salesModule } from "./declaration"
 import { SALES_FIXTURES } from "./fixtures/sales.fixtures"
 import { SALES_MESSAGES } from "./sales-messages"
@@ -27,7 +36,7 @@ const keysIn = (value: unknown): ReadonlyArray<string> => {
 
 describe("the Sales module declaration", () => {
     it("is judged sound against the installed core blocks, its own reads, actions and permissions", () => {
-        expect(seedSpecProblems(salesModule, coreBlocks)).toEqual([])
+        expect(seedSpecProblems(salesModule, coreBlocks, [platformModule])).toEqual([])
     })
 
     it("declares the reads and actions of the Sales workbench under its own key", () => {
@@ -90,7 +99,8 @@ describe("the fixtures of the Sales module", () => {
     ]
 
     it("hold every read the seed spec binds, and every read of the module", () => {
-        expect(bound.filter((id) => !(id in SALES_FIXTURES.reads))).toEqual([])
+        const platformReads = new Set<string>(platformModule.reads.map((read) => read.id))
+        expect(bound.filter((id) => !(id in SALES_FIXTURES.reads) && !platformReads.has(id))).toEqual([])
         expect(salesModule.reads.map((read) => read.id).sort()).toEqual(Object.keys(SALES_FIXTURES.reads).sort())
     })
 
@@ -132,10 +142,17 @@ describe("the messages of the Sales module", () => {
             ...refusals.flatMap((reason) => keysIn(refusedWith(reason))),
             ...salesBlocks.flatMap((block) => keysIn(block.title)),
             ATTENTION_COUNT_KEY,
+            FIGURE_HINT_KEYS.open,
+            FIGURE_HINT_KEYS.proposal,
+            FIGURE_HINT_KEYS.closed,
+            FIGURE_HINT_KEYS.conversion,
             ...ATTENTION_KINDS.flatMap((kind) => [
                 ATTENTION_KIND_VIEWS[kind].chipKey,
                 ATTENTION_KIND_VIEWS[kind].commandKey,
             ]),
+            ...[resumeRunAction].flatMap((action) => keysIn(action.label)),
+            ...PARKED_STEP_KEYS.values(),
+            ...PARKED_REASON_KEYS.values(),
             ...Object.values(PIPELINE_WORD_KEYS),
             ...LEAD_STAGES.map(stageKeyOf),
             "refusal_conflict",

@@ -1,9 +1,4 @@
-import type {
-    KnowledgeRequestBody,
-    LeadRequestBody,
-    LegacyLeadRequestBody,
-    MessageRequestBody,
-} from "./public-api.contracts"
+import type { KnowledgeRequestBody, MessageRequestBody } from "./public-api.contracts"
 
 /** A current or historical public API delivery, retaining its original domain identity. */
 export type PublicApiJob =
@@ -14,16 +9,6 @@ export type PublicApiJob =
           readonly workspaceId: string
           /** The original ledger identity. */
           readonly requestId: string
-      }
-    | {
-          /** The historical delivery already has an inbound event. */
-          readonly format: "lead"
-          /** The workspace owning the inbound event. */
-          readonly workspaceId: string
-          /** The original inbound identity used for replay dedupe. */
-          readonly identity: string
-          /** The remaining admitted customer facts. */
-          readonly body: LegacyLeadRequestBody
       }
     | {
           /** The historical delivery contains an admitted message. */
@@ -50,12 +35,6 @@ export type PublicApiJob =
 
 /** The validated discriminated ledger body sent to its owning fulfillment service. */
 export type PublicApiBody =
-    | {
-          /** Customer handoff. */
-          readonly kind: "lead"
-          /** The admitted customer facts. */
-          readonly body: LeadRequestBody
-      }
     | {
           /** Customer message. */
           readonly kind: "message"

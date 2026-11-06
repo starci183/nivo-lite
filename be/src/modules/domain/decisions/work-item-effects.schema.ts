@@ -30,7 +30,6 @@ export const raisePayloadSchema: z.ZodType<RaisePayload> = z.object({
     title: z.string().min(1).max(2000),
     payload: payloadMembersSchema,
     amountVnd: z.number().nonnegative().optional(),
-    claimId: z.string().min(1).max(200).optional(),
 })
 
 /** The payload of an undo that names one record by its id. */

@@ -30,5 +30,8 @@ export const accountingQuestionEntity: EntityDefinition<QuestionFields> = define
     name: "accounting.question",
     dataKind: "accounting-question",
     fields: questionFields,
-    indexes: [{ name: "status_created", on: ["status", "createdAt", "id"] }],
+    indexes: [
+        { name: "status_created", on: ["status", "createdAt", "id"] },
+        { name: "source", on: ["source", "id"] },
+    ],
 })

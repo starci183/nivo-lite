@@ -16,6 +16,7 @@ describe("accounting module", () => {
             "accounting.due-soon",
             "accounting.weekly",
             "accounting.decisions",
+            "accounting.open-orders",
             "accounting.question-count",
             "accounting.questions",
             "accounting.close-check",
@@ -25,6 +26,7 @@ describe("accounting module", () => {
             "accounting.adjust",
             "accounting.save-settings",
             "accounting.answer-question",
+            "accounting.resolve-unmatched-payment",
         ])
         expect(accountingModule.permissions).toEqual(["accounting.view", "accounting.manage"])
     })

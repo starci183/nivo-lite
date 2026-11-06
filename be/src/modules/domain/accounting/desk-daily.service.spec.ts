@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { FakeClock, builder, mock } from "@starci/jest-preset"
+import { FakeClock, mock } from "@starci/jest-preset"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
@@ -12,10 +12,8 @@ import type { AccountingGateway, PaymentCredit } from "./accounting-gateway.port
 import { AccountingRoomService } from "./accounting-room.service"
 import { DeskDailyService, vnDayOf } from "./desk-daily.service"
 import { EinvoiceReviewService } from "./einvoice-review.service"
-import { CARD_COPY, RENEWAL_COPY, kindText } from "./messages/accounting-desk.messages"
-import type { RenewalCashFacts } from "./renewal-cash.contracts"
+import { CARD_COPY, kindText } from "./messages/accounting-desk.messages"
 import { ReceivableReconcileService } from "./receivable-reconcile.service"
-import { RenewalCashService } from "./renewal-cash.service"
 import { SupplierPaymentsService } from "./supplier-payments.service"
 
 const WS = "ws-1"
@@ -49,45 +47,7 @@ interface BuildOptions {
     readonly status?: InstallationStatus
     /** The optional features the workspace has tools for. */
     readonly connected?: DeskConnections
-    /** The rows the renewal-to-cash reader answers. */
-    readonly renewal?: ReadonlyArray<RenewalCashFacts>
 }
-
-const renewalFactsOf = builder<RenewalCashFacts>({
-    issued_count: 0,
-    issued_total: 0,
-    issued: [],
-    paid_count: 0,
-    paid_total: 0,
-    paid: [],
-    unpaid_count: 0,
-    unpaid_total: 0,
-    unpaid: [],
-    expiring_count: 0,
-    expiring_total: 0,
-    expiring: [],
-    unmatched_count: 0,
-    unmatched_total: 0,
-    unmatched: [],
-})
-
-/** A day with nothing to tell. */
-const NO_RENEWAL = renewalFactsOf()
-
-/** A day whose one renewal invoice was paid and extended its contract. */
-const PAID_DAY = renewalFactsOf({
-    paid_count: 1,
-    paid_total: 2_160_000,
-    paid: [
-        {
-            invoice_no: "INV-202610-0001",
-            amount_vnd: 2_160_000,
-            customer_name: "Truong Phat",
-            ends_on: "2027-11-29",
-            extended: true,
-        },
-    ],
-})
 
 const INSTALLATION = mock<InstallationRecord>({ id: "inst-1", workspaceId: WS, moduleKey: "accounting" })
 
@@ -96,7 +56,6 @@ const build = async ({
     installation = INSTALLATION,
     status = "live",
     connected = { invoices: true, receivables: true },
-    renewal = [],
 }: BuildOptions = {}) => {
     const brain = mock<BrainFactsService>({ list: jest.fn(() => Promise.resolve(facts)) })
     const installations = mock<InstallationRecordsService>({
@@ -141,7 +100,6 @@ const build = async ({
         post: jest.fn(() => Promise.resolve()),
         postCard: jest.fn((_workspaceId: string, card: HubCardPayload) => Promise.resolve(card)),
     })
-    const renewals = mock<RenewalCashService>({ read: jest.fn(() => Promise.resolve(renewal[0] ?? NO_RENEWAL)) })
     // 06:30 in Vietnam on 20/10.
     const clock = new FakeClock("2026-10-19T23:30:00Z")
     const moduleRef = await Test.createTestingModule({
@@ -156,7 +114,6 @@ const build = async ({
             { provide: SupplierPaymentsService, useValue: supplierPayments },
             { provide: AccountingRoomService, useValue: room },
             { provide: CLOCK, useValue: clock },
-            { provide: RenewalCashService, useValue: renewals },
         ],
     }).compile()
     return {
@@ -168,7 +125,6 @@ const build = async ({
         receivables,
         supplierPayments,
         room,
-        renewals,
     }
 }
 
@@ -271,68 +227,5 @@ describe("DeskDailyService run guard and optional roles", () => {
         await expect(quiet.daily.runAll()).resolves.toBe(2)
         expect(quiet.brain.list).toHaveBeenCalledWith("ws-2", { statuses: ["active"] })
         expect(quiet.review.review).not.toHaveBeenCalled()
-    })
-})
-
-describe("DeskDailyService renewal-to-cash story", () => {
-    it("reads the calendar day in Vietnam with a 30-day horizon and answers the story with its lines", async () => {
-        const { daily, renewals } = await build({ renewal: [PAID_DAY] })
-
-        const report = await daily.renewalOfDay(WS, "2026-10-27")
-
-        expect(renewals.read).toHaveBeenCalledWith({
-            workspaceId: WS,
-            from: new Date("2026-10-26T17:00:00.000Z"),
-            to: new Date("2026-10-27T17:00:00.000Z"),
-            day: "2026-10-27",
-            horizonDay: "2026-11-26",
-            bound: 20,
-        })
-        expect(report.story.paid.items).toEqual([
-            {
-                invoiceNo: "INV-202610-0001",
-                amountVnd: 2_160_000,
-                customer: "Truong Phat",
-                endsOn: "2027-11-29",
-                extended: true,
-            },
-        ])
-        expect(report.lines).toContain(
-            RENEWAL_COPY.item([
-                "INV-202610-0001",
-                CARD_COPY.money(2_160_000),
-                "Truong Phat",
-                RENEWAL_COPY.extended("29/11/2027"),
-            ]),
-        )
-    })
-
-    it("tells an empty day when the reader answers no row", async () => {
-        const { daily } = await build()
-
-        const report = await daily.renewalOfDay(WS, "2026-10-27")
-
-        expect(report.story.issued).toEqual({ count: 0, totalVnd: 0, items: [] })
-        expect(report.lines[0]).toBe(RENEWAL_COPY.issuedNone)
-    })
-
-    it("adds the story of the last 24 hours to the morning card", async () => {
-        const { daily, renewals, room } = await build({ renewal: [PAID_DAY] })
-
-        const outcome = await daily.run(WS)
-
-        expect(renewals.read).toHaveBeenCalledWith(
-            expect.objectContaining({
-                from: new Date("2026-10-18T23:30:00.000Z"),
-                to: new Date("2026-10-19T23:30:00.000Z"),
-                day: "2026-10-20",
-                horizonDay: "2026-11-19",
-            }),
-        )
-        expect(outcome.card?.text).toContain(RENEWAL_COPY.paid(1, CARD_COPY.money(2_160_000)))
-        expect(outcome.card?.hub.data?.["renewal"]).toEqual(
-            expect.objectContaining({ day: "2026-10-20", horizonDay: "2026-11-19" }),
-        )
-        expect(room.postCard).toHaveBeenCalledWith(WS, outcome.card?.hub, outcome.card?.text)
     })
 })

@@ -1,21 +1,9 @@
 // Read services lead the barrel: other capabilities import this barrel while it loads (import cycles), they must already be defined.
 export { InvoicesCashReadService } from "./invoices-cash-read.service"
-export type { CashInvoice } from "./invoices-cash-read.contracts"
 export { INVOICES_ERROR_KINDS } from "./errors/invoices.error"
 export { INVOICES_MESSAGES } from "./messages/invoices.messages"
 export { InvoicesModule } from "./invoices.module"
 export { InvoicesService } from "./invoices.service"
 export { InvoicesLedgerService } from "./invoices-ledger.service"
-export { InvoicesFiguresService } from "./invoices-figures.service"
-export type { OverdueInvoice, ReceiptInvoice } from "./invoices-ledger.contracts"
-export type {
-    InvoiceAccountingRow,
-    InvoiceRow,
-    InvoiceViewRow,
-    NewInvoice,
-    NewRenewalInvoice,
-    ReconcileInvoiceRow,
-} from "./invoices.contracts"
+export type { InvoiceRow, NewInvoice, NewRenewalInvoice } from "./invoices.contracts"
 export { invoicesEntities } from "./persistence/entities"
-export { InvoicesAutomationReadService } from "./invoices-automation-read.service"
-export type { InvoiceListingRecord } from "./invoices.contracts"

@@ -12,6 +12,7 @@ export type ConsoleDestination = {
     readonly label:
         | "navAuthority"
         | "navInbox"
+        | "navChat"
         | "navBrain"
         | "navModules"
         | "navTeam"
@@ -31,6 +32,7 @@ export type ConsoleDestination = {
 /** The Brain owns the business memory, so its documents are no separate destination. */
 export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
     { key: "inbox", label: "navInbox", route: "/inbox", icon: "email", group: "work" },
+    { key: "chat", label: "navChat", route: "/chat", icon: "chat", group: "work" },
     { key: "brain", label: "navBrain", route: "/brain", icon: "brain", group: "operate", also: ["/knowledge"] },
     { key: "authority", label: "navAuthority", route: "/authority", icon: "password", group: "operate" },
     { key: "modules", label: "navModules", route: "/agents", icon: "apps", group: "setup" },
@@ -54,9 +56,8 @@ export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
     { key: "credits", label: "navCredits", route: "/billing", icon: "wallet", group: "setup", managerOnly: true },
 ]
 
-/** The destination a path inside the workspace belongs to; an agent chat belongs to Agents, a path outside the rail to none. */
+/** The destination a path inside the workspace belongs to; a path outside the rail to none. */
 export const activeDestinationKey = (path: string): string | null => {
-    if (path.startsWith("/modules/") && path.includes("/chat")) return "modules"
     const found = DESTINATIONS.find((d) => [d.route, ...(d.also ?? [])].some((route) => path.startsWith(route)))
     return found?.key ?? null
 }

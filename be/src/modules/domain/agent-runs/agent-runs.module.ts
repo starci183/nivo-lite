@@ -77,6 +77,7 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                 AgentRunsService,
                 AgentRunAlertsService,
                 AgentRunResumeService,
+                AgentRunParkStoreService,
                 AgentRunOwnerResumeService,
                 AgentRunHandlersService,
                 AgentRunSweepService,

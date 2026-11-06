@@ -16,9 +16,8 @@ describe("the accounting.decisions read", () => {
         putTransaction(world, transactionOf({ id: "00000000-0000-4000-8000-0000000000a7", status: "matched" }))
         const result = await run(decisionsRead, world)
         expect(result).toMatchObject({ ok: true, data: { count: "2" } })
-        expect(result.ok && result.data).toMatchObject({
-            rows: [{ id: expect.any(String) }, { id: expect.any(String) }],
-        })
+        expect(result.ok && result.data).toHaveProperty("rows.0.id")
+        expect(result.ok && result.data).toHaveProperty("rows.1.id")
     })
 
     it("has no count when every payment is tied", async () => {

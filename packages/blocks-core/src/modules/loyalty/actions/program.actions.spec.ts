@@ -20,6 +20,7 @@ const contextOf = (memberId: string | null): RunContext => ({
     memberId,
     now: new Date(SAMPLE_NOW),
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 })
 
 /** What running stands in for an action that does not run in the package, which the expectation before it already failed. */

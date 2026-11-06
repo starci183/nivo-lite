@@ -151,6 +151,16 @@ describe("AgentStepLedgerService claim of a step", () => {
         await expect(ledger.claim(REF, "step-1")).resolves.toEqual({ kind: "busy" })
     })
 
+    it("claims in a transaction of its own, so the scope the engine enters holds for every read and write of the claim", async () => {
+        const { ledger, store, em, records } = await build()
+        withSteps(records, [stepRecordOf({ status: "pending", notBefore: null, attempt: 0 })])
+
+        await ledger.claim(REF, "step-1")
+
+        expect(em.transaction).toHaveBeenCalledTimes(1)
+        expect(store.at).toHaveBeenCalledWith("ws-1", expect.anything(), expect.any(Function))
+    })
+
     it("claims inside a caller's transaction", async () => {
         const { ledger, store, em, records } = await build()
         withSteps(records, [stepRecordOf({ status: "pending", notBefore: null, attempt: 0 })])

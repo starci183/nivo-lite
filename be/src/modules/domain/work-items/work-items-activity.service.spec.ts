@@ -1,29 +1,19 @@
 import { Test } from "@nestjs/testing"
 import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { QueryBuilderAnswers } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
-import { mock, mockEntityManager } from "@starci/jest-preset"
+import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import type { DashboardListQuery } from "./work-items-activity.contracts"
-import { WORK_ITEMS_LEADS } from "./work-items.decorators"
-import type { WorkItemsLeadDirectory } from "./work-items.port"
 import { WorkItemsActivityService } from "./work-items-activity.service"
 import { WorkItemEntity } from "./persistence/entities"
 
-const buildWith = async (entityManager: MockEntityManager) => {
-    const leads = mock<WorkItemsLeadDirectory>()
-    leads.cardsOf.mockResolvedValue([])
+const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
-        providers: [
-            WorkItemsActivityService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: WORK_ITEMS_LEADS, useValue: leads },
-        ],
+        providers: [WorkItemsActivityService, { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager }],
     }).compile()
-    return { service: moduleRef.get(WorkItemsActivityService), leads }
+    return moduleRef.get(WorkItemsActivityService)
 }
-
-const build = async (entityManager: MockEntityManager) => (await buildWith(entityManager)).service
 
 /** A manager whose one query builder answers these terminals. */
 const answering = (answers: QueryBuilderAnswers) => {
@@ -43,9 +33,7 @@ const LIST: DashboardListQuery = {
     limit: 10,
 }
 
-const CARD = { id: "lead-1", contactName: "Minh An", company: "Hoa Viet", channel: "web", stage: "new", email: null }
-
-/** One item as the lists read it before the lead's name is folded in. */
+/** One item as the lists read it. */
 const lineOf = (changes: Record<string, unknown> = {}) => ({
     id: "w1",
     action: "send_follow_up",
@@ -61,24 +49,22 @@ const lineOf = (changes: Record<string, unknown> = {}) => ({
 })
 
 describe("WorkItemsActivityService > recentOf", () => {
-    it("reads the department's newest work, bounded, and names the customer after the lead", async () => {
+    it("reads the department's newest work, bounded, and names the customer from the proposal", async () => {
         const { em, fake } = answering({ getRawMany: [lineOf({ leadId: "lead-1" }), lineOf({ id: "w2" })] })
-        const { service, leads } = await buildWith(em)
-        leads.cardsOf.mockResolvedValue([CARD])
+        const service = await build(em)
 
         const lines = await service.recentOf("ws", "sales", 6)
 
-        expect(lines.map((line) => line.customer)).toEqual(["Minh An", "Proposal customer"])
+        expect(lines.map((line) => line.customer)).toEqual(["Proposal customer", "Proposal customer"])
         expect(lines[0]).toEqual({
             id: "w1",
             action: "send_follow_up",
             status: "done",
             at: "2026-10-12T09:00:00.000Z",
             summary: "Close the booking",
-            customer: "Minh An",
+            customer: "Proposal customer",
             leadId: "lead-1",
         })
-        expect(leads.cardsOf).toHaveBeenCalledWith("ws", ["lead-1"])
         expect(em.createQueryBuilder).toHaveBeenCalledWith(WorkItemEntity, "w")
         expect(fake.callsOf("where")).toEqual([
             ["w.workspaceId = :workspaceId AND w.department = :department", { workspaceId: "ws", department: "sales" }],
@@ -88,7 +74,7 @@ describe("WorkItemsActivityService > recentOf", () => {
 
     it("defaults a missing status to queued", async () => {
         const { em } = answering({ getRawMany: [lineOf({ status: undefined })] })
-        const { service } = await buildWith(em)
+        const service = await build(em)
 
         await expect(service.recentOf("ws", "sales", 6)).resolves.toMatchObject([{ status: "queued" }])
     })
@@ -97,7 +83,7 @@ describe("WorkItemsActivityService > recentOf", () => {
 describe("WorkItemsActivityService > dashboardList", () => {
     it("lists the items waiting for a decision, oldest first, over the whole department", async () => {
         const { em, fake } = answering({ getRawMany: [lineOf({ resultHref: undefined })] })
-        const { service } = await buildWith(em)
+        const service = await build(em)
 
         await expect(service.dashboardList(LIST)).resolves.toEqual([
             {
@@ -116,17 +102,15 @@ describe("WorkItemsActivityService > dashboardList", () => {
         expect(fake.callsOf("limit")).toEqual([[500]])
     })
 
-    it("leaves test runs out, in the lead or in the proposal, and counts the rest", async () => {
+    it("leaves test runs out of the proposal, and counts the rest", async () => {
         const { em } = answering({
             getRawMany: [
                 lineOf({ id: "keep" }),
-                lineOf({ id: "lead-test", leadId: "lead-1" }),
                 lineOf({ id: "proposal-test", proposalSummary: "UAT run" }),
                 lineOf({ id: "keep-2", proposalSummary: null, proposalCustomer: null }),
             ],
         })
-        const { service, leads } = await buildWith(em)
-        leads.cardsOf.mockResolvedValue([{ ...CARD, contactName: "DBG visitor" }])
+        const service = await build(em)
 
         const lines = await service.dashboardList({ ...LIST, limit: 1 })
 
@@ -136,7 +120,7 @@ describe("WorkItemsActivityService > dashboardList", () => {
 
     it("narrows a waiting list to its instance", async () => {
         const { em, fake } = answering({ getRawMany: [] })
-        const { service } = await buildWith(em)
+        const service = await build(em)
 
         await service.dashboardList({ ...LIST, installationId: "inst-1" })
 
@@ -146,7 +130,7 @@ describe("WorkItemsActivityService > dashboardList", () => {
     it("lists the items done by themselves since a moment, newest first, with the result link", async () => {
         const since = new Date("2026-10-01T00:00:00.000Z")
         const { em, fake } = answering({ getRawMany: [lineOf({ resultHref: "/leads/l1" })] })
-        const { service } = await buildWith(em)
+        const service = await build(em)
 
         await expect(service.dashboardList({ ...LIST, kind: "done", since })).resolves.toMatchObject([
             { resultHref: "/leads/l1" },

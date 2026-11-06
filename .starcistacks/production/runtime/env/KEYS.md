@@ -21,6 +21,7 @@ turns every granted key into one versioned Swarm secret (see the production READ
 | `PRIMARY_DB_SCHEMA` | `api-public.conf` | The schema the primary connection is bound to (`public`). |
 | `STORAGE_ACCESS_KEY` | its sealed member (granted in `application-stacks.yaml`) | MinIO service-account access key of the S3 object store. |
 | `STORAGE_SECRET_KEY` | its sealed member (granted in `application-stacks.yaml`) | MinIO service-account secret key of the S3 object store. |
+| `ENTITY_ENGINE_CURSOR_KEY` | its sealed member (granted in `application-stacks.yaml`) | Signs the list cursors of the entity engine: base64 of 32 random bytes. The api (and the cli commands run in the api container) read the whole member; the gateway is granted the key by name. A changed key only invalidates the cursors already handed out. |
 | `OTP_PEPPER` | its sealed member (granted in `application-stacks.yaml`) | At least 32 characters; hashes loyalty one-time codes. |
 | `CHANNEL_TOKEN_KEY` | its sealed member (granted in `application-stacks.yaml`) | Encrypts stored channel tokens and the per-workspace credentials of remote MCP connectors. One random 32-byte key, set once and never overwritten or rotated: a different key leaves every sealed credential unreadable. |
 | `N8N_SIGNING_SECRET` | its sealed member (granted in `application-stacks.yaml`) | Must equal what the n8n workflows sign with. |
@@ -107,6 +108,7 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 | --- | --- | --- |
 | `PORT` | stack environment | The listener port (`8790`); internal only, on the private `agents` network as `nivo-mcp`. |
 | `PRIMARY_DB_URL` | its sealed member (granted in `application-stacks.yaml`) (required) | The same `app_be` connection as the api: connectors, grants and the call audit. |
+| `ENTITY_ENGINE_CURSOR_KEY` | its sealed member (granted in `application-stacks.yaml`) (required) | The same cursor key as the api: the gateway reads the graph of each agent through the entity engine. |
 | `CHANNEL_TOKEN_KEY` | its sealed member (granted in `application-stacks.yaml`) (required) | The same connection key as the api: it opens the bearer credential each remote connector has sealed in its own `mcp_connectors` row. Connector credentials are set per workspace in the console (Settings > Connections), never as deployment keys. |
 | `PRIMARY_DB_SCHEMA` | stack environment | `public`. |
 | `HTTP_SECURITY_ALLOWED_ORIGINS` | stack environment | The OriginGuard and CORS allowlist (`https://app.nivo.vn`); the gateway has no browser caller, so only the console origin is listed. |

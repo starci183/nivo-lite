@@ -11,7 +11,6 @@ import { AGENT_GRAPHS_ERROR_KINDS, AGENT_GRAPHS_MESSAGES, AgentGraphsModule } fr
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { AgentsModule } from "@modules/domain/agents"
 import { DataRecordsModule } from "@modules/domain/data-records"
-import { ENTITY_ENGINE_ERROR_KINDS, ENTITY_ENGINE_MESSAGES } from "@modules/domain/entity-engine"
 import { EventsModule } from "@modules/domain/events"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { IDENTITY_ERROR_KINDS, IDENTITY_MESSAGES, IdentityModule, refuseSessions } from "@modules/domain/identity"
@@ -19,9 +18,8 @@ import { LivenessModule } from "@modules/domain/liveness"
 import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
 import { McpCallLogModule } from "@modules/domain/mcp-call-log"
 import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
-import { CUSTOMER_TOOL_ADAPTERS, NATIVE_TOOL_ADAPTERS } from "@modules/domain/native-tools"
+import { NATIVE_TOOL_ADAPTERS } from "@modules/domain/native-tools"
 import { PaymentTransactionsModule } from "@modules/domain/payment-transactions"
-import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
 import { ProviderRegistryModule } from "@modules/domain/provider-registry"
 import { SepayProviderModule } from "@modules/domain/sepay-provider"
 import { StaffModule } from "@modules/domain/staff"
@@ -41,7 +39,6 @@ import { LoggingModule } from "@modules/platform/logging"
 import { QueueModule } from "@modules/platform/queue"
 import { RetryModule } from "@modules/platform/retry"
 import type { McpAppOptions } from "../mcp.options"
-import { entityEngineStoreModules } from "./entity-engine"
 import { mcpKnowledgeErrorKinds, mcpKnowledgeMessages, mcpKnowledgeModules } from "./knowledge"
 
 /** The message bundles of what the mcp app composes. */
@@ -49,7 +46,6 @@ const MCP_BUNDLES = [
     AGENT_GRAPHS_MESSAGES,
     API_KEYS_MESSAGES,
     CONNECTION_SECRETS_MESSAGES,
-    ENTITY_ENGINE_MESSAGES,
     ERRORS_MESSAGES,
     HTTP_SECURITY_MESSAGES,
     IDENTITY_MESSAGES,
@@ -58,7 +54,6 @@ const MCP_BUNDLES = [
     MCP_GATEWAY_RECEIPTS_MESSAGES,
     MCP_MESSAGES,
     SEPAY_MESSAGES,
-    TRANSACTIONS_MESSAGES,
 ]
 
 /** The error kind tables of what the mcp app composes. */
@@ -67,7 +62,6 @@ const MCP_ERROR_KIND_TABLES = [
     API_KEYS_ERROR_KINDS,
     CONFIG_ERROR_KINDS,
     CONNECTION_SECRETS_ERROR_KINDS,
-    ENTITY_ENGINE_ERROR_KINDS,
     HTTP_SECURITY_ERROR_KINDS,
     IDENTITY_ERROR_KINDS,
     ...mcpKnowledgeErrorKinds,
@@ -75,7 +69,6 @@ const MCP_ERROR_KIND_TABLES = [
     MCP_GATEWAY_RECEIPTS_ERROR_KINDS,
     MCP_ERROR_KINDS,
     SEPAY_ERROR_KINDS,
-    TRANSACTIONS_ERROR_KINDS,
 ]
 
 /**
@@ -119,11 +112,9 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
     WorkspaceMembersModule.register({ isGlobal: true }),
     AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     InboundEventsModule.register({ isGlobal: true }),
-    TransactionsModule.register({ isGlobal: true }),
     PaymentTransactionsModule.register({ isGlobal: true }),
     ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
     DataRecordsModule.register({ isGlobal: true }),
-    ...entityEngineStoreModules(options),
     AgentGraphsModule.register({ isGlobal: true, rightsOnly: true }),
     ...mcpKnowledgeModules(options),
     ProviderRegistryModule.register({ isGlobal: true }),
@@ -134,7 +125,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
         isGlobal: true,
         ...options.mcpGateway,
         keyCheck: true,
-        natives: [...NATIVE_TOOL_ADAPTERS, ...CUSTOMER_TOOL_ADAPTERS],
+        natives: [...NATIVE_TOOL_ADAPTERS],
     }),
     SystemHealthHttpModule.register({}),
     McpEndpointHttpModule.register({}),
