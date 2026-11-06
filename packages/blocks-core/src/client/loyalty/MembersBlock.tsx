@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ReadHandle } from "@nivo-lite/agent-sdk/block"
-import { Avatar, Badge, ListBox, Select, Stack, SurfaceCard, Tabs, Text } from "@starci/grammar/common"
+import { Avatar, Badge, ListBox, Section, Select, Stack, SurfaceCard, Tabs, Text } from "@starci/grammar/common"
 import type { ListBoxItem } from "@starci/grammar/common"
 import type { loyaltyMembersBlock } from "../../blocks/loyalty/members.block"
 import { cellContextOf, formatValue } from "../../rows/cell-format"
@@ -105,10 +105,11 @@ export const MembersBlock = (props: Props): ReactNode => {
         }
     }
     return (
-        <SurfaceCard
-            label={words(props.props.label)}
+        <Section
+            title={words(props.props.label)}
+            headingLevel={3}
             {...(tierCounts === null ? {} : { fact: formatValue(tierCounts.total, "number", context) })}
-            labelEnd={
+            action={
                 <Select
                     label={words(props.props.sortLabel)}
                     isLabelHidden
@@ -120,63 +121,65 @@ export const MembersBlock = (props: Props): ReactNode => {
                 />
             }
         >
-            <Stack gap="row">
-                <PaneSearch
-                    param={props.props.searchParam}
-                    params={props.params}
-                    label={words(props.props.searchLabel)}
-                    clearLabel={word("searchClear")}
-                />
-                <Tabs
-                    kind="filter"
-                    label={words(props.props.label)}
-                    moreLabel={(count) => moreLabelOf(moreTemplate, count)}
-                    overflowLabel={word("filtersOverflow")}
-                    inset="none"
-                    selectedKey={selectedMemberTab(params, tiers, showAtRisk)}
-                    items={memberTabsOf(
-                        tiers,
-                        tierCounts,
-                        countsOf(props.slots.activityCounts),
-                        { all: words(props.props.all), atRisk: words(props.props.atRisk) },
-                        showAtRisk,
-                    )}
-                    onSelect={(key) => choose(tabParamValue(key) ?? ALL_TAB)}
-                />
-                <SlotView
-                    slot={entries}
-                    labels={labels}
-                    placeholder={PLACEHOLDER_ENTRIES}
-                    onRetry={props.slots.rows.retry}
-                    render={(items, isLoading) => (
-                        <Stack gap="row">
-                            <ListBox
-                                label={words(props.props.label)}
-                                items={items.map(itemOf)}
-                                selectionMode="single"
-                                selectionIndicator="none"
-                                selectedIds={selectionOf(props.params.value(props.props.selectParam))}
-                                onSelectionChange={(ids) => {
-                                    const id = chosenRow(ids)
-                                    if (id !== null) props.params.set(props.props.selectParam, id)
-                                }}
-                                isLoading={isLoading}
-                            />
-                            {props.slots.rows.page === null ? null : (
-                                <LoadMore
-                                    page={props.slots.rows.page}
-                                    words={{
-                                        label: words(props.props.label),
-                                        loadMore: word("listLoadMore"),
-                                        loadFailed: word("listLoadFailed"),
-                                        retry: labels.retry,
+            <SurfaceCard ariaLabel={words(props.props.label)}>
+                <Stack gap="row">
+                    <PaneSearch
+                        param={props.props.searchParam}
+                        params={props.params}
+                        label={words(props.props.searchLabel)}
+                        clearLabel={word("searchClear")}
+                    />
+                    <Tabs
+                        kind="filter"
+                        label={words(props.props.label)}
+                        moreLabel={(count) => moreLabelOf(moreTemplate, count)}
+                        overflowLabel={word("filtersOverflow")}
+                        inset="none"
+                        selectedKey={selectedMemberTab(params, tiers, showAtRisk)}
+                        items={memberTabsOf(
+                            tiers,
+                            tierCounts,
+                            countsOf(props.slots.activityCounts),
+                            { all: words(props.props.all), atRisk: words(props.props.atRisk) },
+                            showAtRisk,
+                        )}
+                        onSelect={(key) => choose(tabParamValue(key) ?? ALL_TAB)}
+                    />
+                    <SlotView
+                        slot={entries}
+                        labels={labels}
+                        placeholder={PLACEHOLDER_ENTRIES}
+                        onRetry={props.slots.rows.retry}
+                        render={(items, isLoading) => (
+                            <Stack gap="row">
+                                <ListBox
+                                    label={words(props.props.label)}
+                                    items={items.map(itemOf)}
+                                    selectionMode="single"
+                                    selectionIndicator="none"
+                                    selectedIds={selectionOf(props.params.value(props.props.selectParam))}
+                                    onSelectionChange={(ids) => {
+                                        const id = chosenRow(ids)
+                                        if (id !== null) props.params.set(props.props.selectParam, id)
                                     }}
+                                    isLoading={isLoading}
                                 />
-                            )}
-                        </Stack>
-                    )}
-                />
-            </Stack>
-        </SurfaceCard>
+                                {props.slots.rows.page === null ? null : (
+                                    <LoadMore
+                                        page={props.slots.rows.page}
+                                        words={{
+                                            label: words(props.props.label),
+                                            loadMore: word("listLoadMore"),
+                                            loadFailed: word("listLoadFailed"),
+                                            retry: labels.retry,
+                                        }}
+                                    />
+                                )}
+                            </Stack>
+                        )}
+                    />
+                </Stack>
+            </SurfaceCard>
+        </Section>
     )
 }

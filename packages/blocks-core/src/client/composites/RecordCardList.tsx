@@ -45,7 +45,9 @@ export const RecordCardList = (props: RecordCardListProps): ReactNode => {
     const items = props.rows.map((row) => rowOf(row, props))
     const empty = <EmptyNotice message={props.empty} />
     return props.isCard ? (
-        <SurfaceCard kind="list" label={props.title} isLoading={props.isLoading} items={items} empty={empty} />
+        <Section title={props.title} headingLevel={3}>
+            <SurfaceCard kind="list" ariaLabel={props.title} isLoading={props.isLoading} items={items} empty={empty} />
+        </Section>
     ) : (
         <Section
             kind="list"

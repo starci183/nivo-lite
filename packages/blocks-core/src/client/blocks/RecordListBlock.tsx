@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
-import { SurfaceCard } from "@starci/grammar/common"
+import { Section, SurfaceCard } from "@starci/grammar/common"
 import type { recordListBlock } from "../../blocks/record-list.block"
 import { RECORD_ROWS_PLACEHOLDER, recordsView, rowsOf } from "../../rows/rows"
 import { queryOf } from "../../rows/search"
@@ -11,12 +11,19 @@ import { SelectableRows } from "../composites/SelectableRows"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
-/** What a selectable list is drawn in: its own rows, or one surface card holding them. */
+/** What a selectable list is drawn in: its own rows, or one surface card holding them under its label. */
 const Listed = (props: {
     readonly isCard: boolean
     readonly label: string
     readonly children: ReactNode
-}): ReactNode => (props.isCard ? <SurfaceCard ariaLabel={props.label}>{props.children}</SurfaceCard> : props.children)
+}): ReactNode =>
+    props.isCard ? (
+        <Section title={props.label} headingLevel={3}>
+            <SurfaceCard ariaLabel={props.label}>{props.children}</SurfaceCard>
+        </Section>
+    ) : (
+        props.children
+    )
 
 /** Bound records as a card with an action on each row, or as a selectable list that writes the chosen row to a param. */
 export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactNode => {

@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot } from "@nivo-lite/agent-sdk/client"
 import type { ActionHandle, ReadHandle } from "@nivo-lite/agent-sdk/block"
-import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
+import { EmptyNotice, Section, SurfaceCard } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import type { salesAttentionCardBlock } from "../../blocks/sales/attention-card.block"
 import { countedWords } from "../../rows/counted-words"
@@ -107,14 +107,19 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
             placeholder={PLACEHOLDER}
             onRetry={retry}
             render={(items, isLoading) => (
-                <SurfaceCard
-                    kind="list"
-                    label={words(props.props.label)}
-                    isLoading={isLoading}
+                <Section
+                    title={words(props.props.label)}
+                    headingLevel={3}
                     {...(isLoading ? {} : { fact: countedWords(word(ATTENTION_COUNT_KEY), items.length) })}
-                    items={items.map(rowOf)}
-                    empty={<EmptyNotice message={labels.empty} />}
-                />
+                >
+                    <SurfaceCard
+                        kind="list"
+                        ariaLabel={words(props.props.label)}
+                        isLoading={isLoading}
+                        items={items.map(rowOf)}
+                        empty={<EmptyNotice message={labels.empty} />}
+                    />
+                </Section>
             )}
         />
     )
