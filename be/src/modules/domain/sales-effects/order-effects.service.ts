@@ -1,9 +1,10 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import { rematchJob } from "@nivo-lite/blocks-core/modules/accounting"
-import { AGENT_NAME, leadRowOf, orderRowOf } from "@nivo-lite/blocks-core/modules/sales"
+import { AGENT_NAME, ORDER_FIELDS, leadRowOf, orderRowOf } from "@nivo-lite/blocks-core/modules/sales"
 import { itemsTextOf, pricedLinesOf, stageAfterConfirm } from "@nivo-lite/blocks-core/rules/sales"
 import type { EntitiesApi } from "@nivo-lite/agent-sdk/entity/port"
+import { q } from "@nivo-lite/agent-sdk/query"
 import type { EffectCall, EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
@@ -11,8 +12,13 @@ import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { SalesEffectsError, SalesEffectsErrorCode } from "./errors/sales-effects.error"
-import { isRecordId, payloadOf } from "./sales-effects.policy"
+import { OPEN_ORDER, isRecordId, payloadOf, standsFor } from "./sales-effects.policy"
+import type { OrderRequest } from "./sales-effects.policy"
+import type { OrderRow } from "@nivo-lite/blocks-core/modules/sales"
 import { confirmSchema, recordSchema, rematchSchema, voidSchema } from "./sales-effects.schema"
+
+/** The most open orders of one customer the lookup compares with the request. */
+const OPEN_ORDERS_LOOKED_AT = 20
 
 const LEAD = "sales.lead"
 const ORDER = "sales.order"
@@ -73,11 +79,18 @@ export class OrderEffectsService implements OnModuleInit {
         return await this.inScope(turn, async (api) => {
             const lead = isRecordId(given.leadId) ? await api.get(LEAD, given.leadId) : null
             if (lead === null) throw new SalesEffectsError({ code: SalesEffectsErrorCode.LeadNotFound })
+            const lines = pricedLinesOf(given.items)
+            const standing = await this.openOrderFor(api, lead.id, {
+                lines,
+                amountVnd: given.amountVnd,
+                note: given.note ?? "",
+            })
+            if (standing !== null) return subjectOf(standing.id)
             const made = await api.insert(
                 ORDER,
                 {
                     leadId: lead.id,
-                    items: { lines: pricedLinesOf(given.items) },
+                    items: { lines },
                     itemsText: itemsTextOf(given.items),
                     amountVnd: given.amountVnd,
                     ...(given.note === undefined ? {} : { note: given.note }),
@@ -87,6 +100,25 @@ export class OrderEffectsService implements OnModuleInit {
             if (!made.ok) throw new SalesEffectsError({ code: SalesEffectsErrorCode.WriteRefused })
             return subjectOf(made.row.id)
         })
+    }
+
+    /** The newest open order of the customer that already stands for the request, or null. */
+    private async openOrderFor(api: EntitiesApi, leadId: string, request: OrderRequest): Promise<OrderRow | null> {
+        const page = await api.list({
+            from: ORDER,
+            select: ORDER_FIELDS,
+            where: q.and(q.eq("leadId", leadId), q.in("status", OPEN_ORDER)),
+            order: [
+                ["createdAt", "desc"],
+                ["id", "desc"],
+            ],
+            page: { size: OPEN_ORDERS_LOOKED_AT },
+        })
+        return (
+            page.rows
+                .map((listed) => orderRowOf(listed.row))
+                .find((order) => order !== null && standsFor(order, request)) ?? null
+        )
     }
 
     private async confirm(turn: NodeTurn, payload: EffectPayload): Promise<SubjectRef> {
