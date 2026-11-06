@@ -122,6 +122,7 @@ export const messageRowsOf = (
     nodes: ReadonlyArray<ChatMessageNode>,
     viewerId: string,
     words: ChatRowWords,
+    reportHref: (agentId: string, runId: string) => string | null,
 ): ReadonlyArray<TeamChatMessageRow> => {
     const chronological = [...nodes].reverse()
     return chronological.map((message, index) => {
@@ -147,7 +148,10 @@ export const messageRowsOf = (
                 contentType: file.mimeType,
                 url: file.url,
             })),
-            reportRunId: message.report === null || message.report === undefined ? null : message.report.runId,
+            reportHref:
+                message.report === null || message.report === undefined
+                    ? null
+                    : reportHref(message.report.agentId, message.report.runId),
             approval: approvalOf(message, words),
         }
     })
