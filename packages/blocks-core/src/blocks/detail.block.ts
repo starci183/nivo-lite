@@ -7,6 +7,8 @@ import type { CellFormat } from "../rows/cell-format"
 import { ITEMS_MAX, PATH_MAX } from "./bounds"
 import { currencyCode } from "./currency-prop"
 import { labelsProp } from "./labels-prop"
+import { paramName } from "./param-name"
+import type { ParamNameSchema } from "./param-name"
 import type { LabelsSchema } from "./labels-prop"
 import type { EnumSchema, OptionalAction, RequiredRead, TextSchema } from "./schema-types"
 
@@ -28,6 +30,22 @@ const section: SectionSchema = z.object({
     items: z.array(fact).max(ITEMS_MAX),
 })
 
+type TimelineSchema = z.ZodObject<{
+    title: TextSchema
+    listPath: z.ZodString
+    textPath: z.ZodString
+    notePath: z.ZodOptional<z.ZodString>
+    atPath: z.ZodOptional<z.ZodString>
+}>
+
+const timeline: TimelineSchema = z.object({
+    title: specText,
+    listPath: z.string().max(PATH_MAX),
+    textPath: z.string().max(PATH_MAX),
+    notePath: z.string().max(PATH_MAX).optional(),
+    atPath: z.string().max(PATH_MAX).optional(),
+})
+
 const props: z.ZodObject<{
     label: TextSchema
     idle: z.ZodOptional<TextSchema>
@@ -36,6 +54,11 @@ const props: z.ZodObject<{
     labels: z.ZodOptional<LabelsSchema>
     items: z.ZodArray<FactSchema>
     sections: z.ZodOptional<z.ZodArray<SectionSchema>>
+    titlePath: z.ZodOptional<z.ZodString>
+    kind: z.ZodOptional<TextSchema>
+    closeParam: z.ZodOptional<ParamNameSchema>
+    timeline: z.ZodOptional<TimelineSchema>
+    pinsPrimary: z.ZodOptional<z.ZodBoolean>
 }> = z.object({
     label: specText,
     idle: specText.optional(),
@@ -44,6 +67,11 @@ const props: z.ZodObject<{
     labels: labelsProp.optional(),
     items: z.array(fact).max(ITEMS_MAX),
     sections: z.array(section).max(DETAIL_SECTIONS_MAX).optional(),
+    titlePath: z.string().max(PATH_MAX).optional(),
+    kind: specText.optional(),
+    closeParam: paramName.optional(),
+    timeline: timeline.optional(),
+    pinsPrimary: z.boolean().optional(),
 })
 /** The slots of the detail block: the record it shows, and the two actions it may offer on that record. */
 type Slots = {
@@ -57,11 +85,17 @@ const slots: Slots = {
     secondary: { kind: "action", required: false },
 }
 
-/** The facts of one bound record, in titled groups, with up to two actions on it; with no record chosen it says so instead of failing. */
+/**
+ * The facts of one bound record, in titled groups, with up to two actions on it. With `titlePath` the head names the record (its
+ * title, its `kind`, and a close control that clears `closeParam`); with `timeline` a list of the record's steps is drawn as a
+ * timeline; with `pinsPrimary` the primary action stands pinned at the bottom of the pane.
+ * With no record chosen it says so instead of failing.
+ */
 export const detailBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "core.detail",
     title: { key: "blockDetail" },
     props,
     slots,
+    params: ["closeParam"],
     children: false,
 })

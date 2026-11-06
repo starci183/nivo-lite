@@ -1,7 +1,7 @@
 import { useState } from "react"
 import type { ReactNode } from "react"
 import type { ActionHandle } from "@nivo-lite/agent-sdk/block"
-import { Button, Cluster, DropdownMenu, Form, Heading, Quote, Stack, Text, Textarea } from "@starci/grammar/common"
+import { Button, Cluster, DropdownMenu, Form, Quote, Stack, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
 import type { ProposalRow } from "../../rows/conversation.types"
 
 /** The words of the proposal that are not its own. */
@@ -127,26 +127,27 @@ export const ConversationProposal = (props: ConversationProposalProps): ReactNod
     const [isEditing, setIsEditing] = useState(false)
     const { proposal } = props
     return (
-        <Stack gap="row">
-            <Heading level={3}>{props.words.title}</Heading>
-            {proposal.asked === "" ? null : (
-                <Text size="sm" tone="muted">
-                    {proposal.asked}
-                </Text>
-            )}
-            {isEditing ? (
-                <ProposalEditForm {...props} onClose={() => setIsEditing(false)} />
-            ) : (
-                <>
-                    <Quote text={proposal.text} />
-                    {proposal.note === "" ? null : (
-                        <Text size="sm" tone="muted">
-                            {proposal.note}
-                        </Text>
-                    )}
-                    <ProposalCommands {...props} onEdit={() => setIsEditing(true)} />
-                </>
-            )}
-        </Stack>
+        <SurfaceCard label={props.words.title} headingLevel={3}>
+            <Stack gap="row">
+                {proposal.asked === "" ? null : (
+                    <Text size="sm" tone="muted">
+                        {proposal.asked}
+                    </Text>
+                )}
+                {isEditing ? (
+                    <ProposalEditForm {...props} onClose={() => setIsEditing(false)} />
+                ) : (
+                    <>
+                        <Quote text={proposal.text} />
+                        {proposal.note === "" ? null : (
+                            <Text size="sm" tone="muted">
+                                {proposal.note}
+                            </Text>
+                        )}
+                        <ProposalCommands {...props} onEdit={() => setIsEditing(true)} />
+                    </>
+                )}
+            </Stack>
+        </SurfaceCard>
     )
 }

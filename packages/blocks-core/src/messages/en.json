@@ -107,7 +107,7 @@
   "conversationDiscard": "Discard",
   "conversationComposerLabel": "Reply message",
   "conversationComposerPlaceholder": "Write a reply",
-  "conversationLocked": "You cannot reply to this conversation right now.",
+  "conversationLocked": "Take over the conversation to reply yourself.",
   "conversationTooLong": "This message is too long.",
   "conversationActionFailed": "That did not work. Try again.",
   "blockListPane": "List pane",
@@ -141,5 +141,8 @@
   "runCallFailed": "Failed",
   "runStepApproval": "Open the approval",
   "runTimelineIdle": "Choose a run to see its steps",
+  "conversationContact": "Customer",
+  "detailClose": "Close",
+  "conversationContactClose": "Close",
   "conversationProposalMore": "More"
 }

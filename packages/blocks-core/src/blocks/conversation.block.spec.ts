@@ -14,7 +14,7 @@ const BASE = {
 describe("conversationBlock", () => {
     it("is the generic conversation of the core namespace, named for what it is", () => {
         expect(conversationBlock.id).toBe("core.conversation")
-        expect(conversationBlock.children).toBe(false)
+        expect(conversationBlock.children).toEqual({ max: 2 })
         expect(Object.keys(conversationBlock.propsJson).length).toBeGreaterThan(0)
     })
 
@@ -65,6 +65,7 @@ describe("conversationBlock", () => {
         }
         expect(conversationBlock.props.safeParse({ ...BASE, head: { titlePath: "name" }, proposal }).success).toBe(true)
         expect(conversationBlock.props.safeParse({ ...BASE, head, proposal }).success).toBe(true)
+        expect(conversationBlock.props.safeParse({ ...BASE, listLabel: WORD, contactLabel: WORD }).success).toBe(true)
         expect(conversationBlock.props.safeParse({ ...BASE, head: { subtitlePath: "channel" } }).success).toBe(false)
         expect(
             conversationBlock.props.safeParse({ ...BASE, proposal: { ...proposal, textPath: undefined } }).success,

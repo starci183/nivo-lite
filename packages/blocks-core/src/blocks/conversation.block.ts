@@ -54,6 +54,8 @@ const props: z.ZodObject<{
     composer: z.ZodBoolean
     selectParam: z.ZodString
     maxLength: z.ZodOptional<z.ZodNumber>
+    listLabel: z.ZodOptional<TextSchema>
+    contactLabel: z.ZodOptional<TextSchema>
     head: z.ZodOptional<HeadSchema>
     proposal: z.ZodOptional<ProposalSchema>
 }> = z.object({
@@ -70,6 +72,8 @@ const props: z.ZodObject<{
     composer: z.boolean(),
     selectParam: paramName,
     maxLength: z.number().int().min(1).max(MAX_LENGTH_CEILING).optional(),
+    listLabel: specText.optional(),
+    contactLabel: specText.optional(),
     head: head.optional(),
     proposal: proposal.optional(),
 })
@@ -102,6 +106,8 @@ const slots: Slots = {
 }
 
 /**
+ * The conversation of a workbench in three panes: the first child is the list of threads and the second the contact beside the open
+ * thread, each a block bound to its own read; the thread in the middle is this block's own (messages, composer, proposed reply).
  * The messages of one chosen thread with a composer under them, a head that names the thread (its avatar, name and a line under it),
  * a reply proposed for the person to approve, change or refuse, and the actions to hand the thread to a person or close it.
  */
@@ -111,5 +117,5 @@ export const conversationBlock: BlockDefinition<typeof props, typeof slots> = de
     props,
     slots,
     params: ["selectParam"],
-    children: false,
+    children: { max: 2 },
 })

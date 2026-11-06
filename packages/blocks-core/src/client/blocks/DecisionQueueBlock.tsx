@@ -65,6 +65,7 @@ export const DecisionQueueBlock = (props: RenderOf<typeof decisionQueueBlock>): 
                 <DecisionList
                     surface={spec.surface}
                     commandSize={spec.commandSize ?? "sm"}
+                    isHeadless={spec.isHeadless === true}
                     queue={view}
                     isLoading={isLoading}
                     edit={edit}
