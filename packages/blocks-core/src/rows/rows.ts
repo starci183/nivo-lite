@@ -20,6 +20,8 @@ export interface RecordRow {
     readonly meta: string
     /** The words of the further marks after the badge, one chip each; empty ones are left out. */
     readonly chips: ReadonlyArray<string>
+    /** The key of the command the row asks for, from its record; absent when the list has no choice field. */
+    readonly action?: string
 }
 
 /** The dotted paths of a record that name the parts of its row. */
@@ -38,6 +40,8 @@ export interface RowPaths {
     readonly metaPath?: string | undefined
     /** The paths of the further chips of the row, after the badge. */
     readonly chipPaths?: ReadonlyArray<string> | undefined
+    /** The path of the text that names which command of the list applies to the row; absent gives every row the first one. */
+    readonly actionPath?: string | undefined
 }
 
 /** The most records one bound list carries; a longer one is a failed read, never a half list. */
@@ -81,6 +85,7 @@ const rowOf = (record: unknown, paths: RowPaths, relabel: Relabel, untitled: str
             tone: paths.badgeTones?.[textOf(valueAt(record, paths.badgePath))] ?? "neutral",
             meta: textAt(record, paths.metaPath, relabel),
             chips: (paths.chipPaths ?? []).map((path) => textAt(record, path, relabel)).filter((text) => text !== ""),
+            ...(paths.actionPath === undefined ? {} : { action: textOf(valueAt(record, paths.actionPath)) }),
         },
     ]
 }

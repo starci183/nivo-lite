@@ -29,6 +29,21 @@ describe("rowsOf", () => {
         ])
     })
 
+    it("carries the key of the command a row asks for when the list has a choice field, empty when the record has none", () => {
+        const paths = { idPath: "id", titlePath: "title", actionPath: "next" }
+        expect(
+            rowsOf(
+                [
+                    { id: "a", title: "T", next: "reply" },
+                    { id: "b", title: "B" },
+                ],
+                paths,
+                keepRaw,
+                "?",
+            )?.map((row) => row.action),
+        ).toEqual(["reply", ""])
+    })
+
     it("draws the further chips their paths name and leaves out the empty ones", () => {
         const paths = { idPath: "id", titlePath: "title", chipPaths: ["channel", "owner"] }
         expect(

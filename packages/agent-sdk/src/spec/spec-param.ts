@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { ParamHandle, ReadDefinition } from "../block/block.types"
+import { isTimeToken } from "../block/time-token"
 import type { PropsSchema } from "../schema/schema.types"
 import type { SpecParam, SpecProblem } from "./spec.types"
 
@@ -49,7 +50,7 @@ export const allowedValuesOf = (
 
 /** Whether a param is unsound: a bad name, `of` that does not fit the type, an `of` that names nothing, or a default outside it. */
 const isUnsound = (name: string, param: SpecParam, reads: ReadonlyArray<ReadDefinition> | undefined): boolean => {
-    if (!PARAM_NAME.test(name) || name === INSTALLATION_NAME) return true
+    if (!PARAM_NAME.test(name) || name === INSTALLATION_NAME || isTimeToken("$" + name)) return true
     if ((param.type === "enum") !== (param.of !== undefined)) return true
     const allowed = allowedValuesOf(param, reads)
     if (allowed === undefined) return true
