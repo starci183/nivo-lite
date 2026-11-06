@@ -3,7 +3,8 @@ import type { RunContext } from "@nivo-lite/agent-sdk/port"
 import { entriesSource, providerOf } from "../accounting.doubles"
 import { ENTRY_COUNTS, ENTRY_ROWS } from "../fixtures/accounting.fixtures"
 import { entriesSourcePort } from "../ports"
-import { ENTRIES_SHAPE, ENTRY_KINDS, entriesRead, entryCountsRead } from "./entries.read"
+import { ENTRY_STATUSES } from "../../../rules/accounting/entry-status"
+import { ENTRIES_SHAPE, ENTRY_KINDS, entriesRead, entryCountsRead, entryStatusCountsRead } from "./entries.read"
 
 const CONTEXT: RunContext = { workspaceId: "w1", memberId: "m1", now: new Date("2026-11-04T12:00:00.000Z") }
 
@@ -35,7 +36,10 @@ const harness = () => {
 describe("accounting entries", () => {
     it("searches the note, filters by kind and sorts newest or largest first, 30 to a page", () => {
         expect(ENTRIES_SHAPE.search).toEqual({ fields: ["note"] })
-        expect(ENTRIES_SHAPE.filters).toEqual({ kind: { field: "kind", op: "eq", of: ENTRY_KINDS } })
+        expect(ENTRIES_SHAPE.filters).toEqual({
+            kind: { field: "kind", op: "eq", of: ENTRY_KINDS },
+            status: { field: "status", op: "eq", of: ENTRY_STATUSES },
+        })
         expect(Object.keys(ENTRIES_SHAPE.sort)).toEqual(["recent", "amount"])
         expect(ENTRIES_SHAPE.page.size).toBe(30)
     })
@@ -61,6 +65,13 @@ describe("accounting entries", () => {
         const { queries, execute } = harness()
         await expect(execute(entryCountsRead, { q: "dinh" })).resolves.toEqual({ ok: true, data: ENTRY_COUNTS })
         expect(queries).toEqual([{ q: "dinh", filters: {}, sort: "recent", cursor: null, size: 30 }])
+    })
+
+    it("counts the entries per status under the same search", async () => {
+        const { queries, execute } = harness()
+        await expect(execute(entryStatusCountsRead, { q: "dinh" })).resolves.toEqual({ ok: true, data: ENTRY_COUNTS })
+        expect(queries).toEqual([{ q: "dinh", filters: {}, sort: "recent", cursor: null, size: 30 }])
+        expect(entryStatusCountsRead.listing).toEqual({ kind: "counts", of: "accounting.entries", by: "status" })
     })
 
     it("is a list of book entries and a counts read of the same kind filter", () => {

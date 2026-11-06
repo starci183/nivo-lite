@@ -4,10 +4,12 @@ import { adjustAction } from "./actions/adjust.action"
 import { saveSettingsAction } from "./actions/save-settings.action"
 import { settleAction } from "./actions/settle.action"
 import { closeCheckRead } from "./reads/close-check.read"
-import { entriesRead, entryCountsRead } from "./reads/entries.read"
+import { decisionsRead } from "./reads/decisions.read"
+import { entriesRead, entryCountsRead, entryStatusCountsRead } from "./reads/entries.read"
 import { entryRead } from "./reads/entry.read"
 import { figuresRead } from "./reads/figures.read"
 import { settingsRead } from "./reads/settings.read"
+import { weeklyRead } from "./reads/weekly.read"
 import { accountingSpecDocument } from "./specs/accounting.spec-document"
 
 /**
@@ -20,7 +22,17 @@ export const accountingModule: ModuleDeclaration = defineModule({
     key: "accounting",
     namespace: "accounting",
     permissions: ["accounting.view", "accounting.manage"],
-    reads: [entriesRead, entryCountsRead, entryRead, figuresRead, closeCheckRead, settingsRead],
+    reads: [
+        entriesRead,
+        entryCountsRead,
+        entryStatusCountsRead,
+        entryRead,
+        figuresRead,
+        weeklyRead,
+        decisionsRead,
+        closeCheckRead,
+        settingsRead,
+    ],
     actions: [adjustAction, saveSettingsAction],
     tools: ["ledger.status", "ledger.append"],
     specs: [accountingSpecDocument],

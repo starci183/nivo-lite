@@ -15,6 +15,7 @@ import type {
     QuestionCounter,
     SettingsStore,
     TransactionStore,
+    UnmatchedList,
 } from "./accounting.types"
 
 /**
@@ -63,3 +64,6 @@ export const doorPort: PortDefinition<Door> = definePort<Door>("accounting.door"
 
 /** The rules the workspace chose for its books. */
 export const accountingSettingsPort: PortDefinition<SettingsStore> = definePort<SettingsStore>("accounting.settings")
+
+/** The payments nobody tied to an invoice, listed for the owner's decisions. */
+export const unmatchedListPort: PortDefinition<UnmatchedList> = definePort<UnmatchedList>("accounting.unmatched-list")

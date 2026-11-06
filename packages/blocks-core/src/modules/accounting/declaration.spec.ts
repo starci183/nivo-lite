@@ -9,8 +9,11 @@ describe("accounting module", () => {
         expect(accountingModule.reads.map((read) => read.id)).toEqual([
             "accounting.entries",
             "accounting.entry-counts",
+            "accounting.status-counts",
             "accounting.entry",
             "accounting.figures",
+            "accounting.weekly",
+            "accounting.decisions",
             "accounting.close-check",
             "accounting.settings",
         ])
@@ -35,10 +38,10 @@ describe("accounting module", () => {
     })
 
     it("draws a head of figures, a book view bound to the list, its counts and the detail, and a settings form", () => {
-        const [view] = accountingSpecDocument.views
-        expect(accountingSpecDocument.views.map((each) => each.id)).toEqual(["book", "settings"])
+        const view = accountingSpecDocument.views.find((each) => each.id === "book")
+        expect(accountingSpecDocument.views.map((each) => each.id)).toEqual(["overview", "book", "settings"])
         expect(view?.id).toBe("book")
-        expect(Object.keys(accountingSpecDocument.params ?? {})).toEqual(["q", "kind", "sort", "selected", "period"])
+        expect(Object.keys(accountingSpecDocument.params ?? {})).toEqual(["q", "sort", "selected", "period", "status"])
         expect(accountingSpecDocument.head?.map((node) => node.block)).toEqual(["core.figures"])
     })
 })

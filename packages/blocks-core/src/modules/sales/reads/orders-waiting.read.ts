@@ -2,10 +2,10 @@ import { defineRead } from "@nivo-lite/agent-sdk/block"
 import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { waitingViewOf } from "../../../rules/sales/waiting"
-import type { WaitingOrder, WaitingView } from "../../../rules/sales/waiting"
+import type { WaitingView } from "../../../rules/sales/waiting"
 import { ORDER_QUERY_KEY, ORDERS_VIEW_ID, SALES_VIEW, WAITING_SHOWN } from "../constants"
 import { salesLeadStore, salesOrderStore, salesSettings } from "../ports"
-import { settingsOf } from "../settings-store"
+import { waitingOrdersOf } from "./waiting-orders"
 
 const variables: z.ZodObject<Record<string, never>> = z.object({})
 
@@ -23,18 +23,8 @@ export const ordersWaitingRead: ReadDefinition = defineRead({
     variables,
     permission: SALES_VIEW,
     ports: { leads: salesLeadStore, orders: salesOrderStore, settings: salesSettings },
-    run: async ({ leads, orders, settings }): Promise<WaitingView> => {
-        const page = await orders.waiting(await settingsOf(settings), WAITING_SHOWN)
-        const leadIds = page.rows.flatMap((order) => (order.leadId === null ? [] : [order.leadId]))
-        const names: Readonly<Record<string, string>> =
-            leadIds.length === 0 ? {} : await leads.names([...new Set(leadIds)])
-        const waiting = page.rows.map((order): WaitingOrder => ({
-            id: order.id,
-            orderNo: order.orderNo,
-            items: order.items,
-            amountVnd: order.amountVnd,
-            customer: order.leadId === null ? null : (names[order.leadId] ?? null),
-        }))
-        return waitingViewOf(waiting, page.total, WAITING_SHOWN, waitingHrefOf)
+    run: async (stores): Promise<WaitingView> => {
+        const waiting = await waitingOrdersOf(stores)
+        return waitingViewOf(waiting.rows, waiting.total, WAITING_SHOWN, waitingHrefOf)
     },
 })

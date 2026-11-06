@@ -59,17 +59,97 @@
         },
         "children": [
           {
-            "id": "attention-waiting",
-            "block": "core.waiting",
+            "id": "attention-figures",
+            "block": "core.figures",
             "props": {
               "label": {
-                "key": "waiting_owner"
-              }
+                "key": "figures_label"
+              },
+              "currency": "VND",
+              "items": [
+                {
+                  "term": {
+                    "key": "fig_open"
+                  },
+                  "path": "openCount",
+                  "format": "count"
+                },
+                {
+                  "term": {
+                    "key": "fig_proposal"
+                  },
+                  "path": "proposalValueVnd",
+                  "format": "money"
+                },
+                {
+                  "term": {
+                    "key": "fig_closed"
+                  },
+                  "path": "closedCount",
+                  "format": "count"
+                },
+                {
+                  "term": {
+                    "key": "fig_conversion"
+                  },
+                  "path": "conversion",
+                  "format": "percent"
+                }
+              ]
             },
             "bind": {
-              "region": {
-                "read": "sales.orders-waiting"
+              "data": {
+                "read": "sales.figures"
               }
+            }
+          },
+          {
+            "id": "attention-decisions",
+            "block": "core.decision-queue",
+            "props": {
+              "surface": "section",
+              "label": {
+                "key": "decisions_label"
+              },
+              "emptyTitle": {
+                "key": "decisions_empty_title"
+              },
+              "emptyBody": {
+                "key": "decisions_empty_body"
+              },
+              "seeWhy": {
+                "key": "decisions_see_why"
+              },
+              "moreMenu": {
+                "key": "decisions_more"
+              },
+              "currency": "VND",
+              "commands": [
+                {
+                  "id": "approve",
+                  "label": {
+                    "key": "command_approve"
+                  }
+                },
+                {
+                  "id": "reject",
+                  "label": {
+                    "key": "command_reject"
+                  },
+                  "intent": "danger"
+                }
+              ]
+            },
+            "bind": {
+              "queue": {
+                "read": "sales.decisions"
+              },
+              "command": {
+                "action": "sales.decide"
+              }
+            },
+            "when": {
+              "permission": "sales.approve"
             }
           },
           {
@@ -83,41 +163,23 @@
                 "key": "attention_empty"
               },
               "idPath": "id",
-              "titlePath": "orderNo",
-              "descriptionPath": "items",
-              "badgePath": "status",
+              "titlePath": "title",
+              "descriptionPath": "description",
+              "badgePath": "reason",
               "labels": {
-                "status": {
-                  "draft": {
-                    "key": "status_draft"
-                  },
-                  "confirmed": {
-                    "key": "status_confirmed"
-                  },
-                  "invoiced": {
-                    "key": "status_invoiced"
-                  },
-                  "paid": {
-                    "key": "status_paid"
-                  },
-                  "cancelled": {
-                    "key": "status_cancelled"
-                  },
-                  "failed_system": {
-                    "key": "status_failed_system"
+                "reason": {
+                  "owner": {
+                    "key": "reason_owner"
                   }
                 }
-              },
-              "selectParam": "order"
+              }
             },
             "bind": {
               "rows": {
-                "read": "sales.orders",
-                "variables": {
-                  "q": "",
-                  "status": "draft",
-                  "sort": "recent"
-                }
+                "read": "sales.attention"
+              },
+              "open": {
+                "action": "sales.confirm-order"
               }
             }
           }

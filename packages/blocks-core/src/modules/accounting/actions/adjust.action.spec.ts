@@ -58,6 +58,9 @@ describe("accounting.adjust", () => {
         expect(adjustAction.refreshes).toEqual([
             "accounting.entries",
             "accounting.entry-counts",
+            "accounting.status-counts",
+            "accounting.weekly",
+            "accounting.decisions",
             "accounting.figures",
             "accounting.entry",
         ])

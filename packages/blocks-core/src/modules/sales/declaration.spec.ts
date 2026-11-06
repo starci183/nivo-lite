@@ -37,19 +37,26 @@ describe("the Sales module declaration", () => {
             "sales.order",
             "sales.orders-waiting",
             "sales.settings",
+            "sales.figures",
+            "sales.attention",
+            "sales.decisions",
         ])
         expect(salesModule.actions.map((action) => action.id)).toEqual([
             "sales.move-stage",
             "sales.confirm-order",
             "sales.cancel-order",
             "sales.save-settings",
+            "sales.decide",
         ])
     })
 
     it("declares the three permissions and nothing outside them is asked", () => {
         expect(salesModule.permissions).toEqual(["sales.view", "sales.manage", "sales.approve"])
         expect(salesModule.reads.every((read) => read.permission === "sales.view")).toBe(true)
-        expect(salesModule.actions.every((action) => action.permission === "sales.manage")).toBe(true)
+        expect(salesModule.actions.filter((action) => action.permission !== "sales.manage").map((a) => a.id)).toEqual([
+            "sales.decide",
+        ])
+        expect(salesModule.actions.find((action) => action.id === "sales.decide")?.permission).toBe("sales.approve")
     })
 
     it("seeds one spec with the attention, customers, orders and settings views", () => {

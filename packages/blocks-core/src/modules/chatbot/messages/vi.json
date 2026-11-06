@@ -48,5 +48,16 @@
   "stage_qualified": "Đủ điều kiện",
   "stage_proposal": "Đề xuất",
   "stage_won": "Đã chốt",
-  "stage_lost": "Không chốt"
+  "stage_lost": "Không chốt",
+  "figures_label": "Hộp thư hôm nay",
+  "fig_total": "Hội thoại",
+  "fig_ai_share": "AI tự trả lời",
+  "fig_needs": "Cần người",
+  "fig_handled": "Người đang xử lý",
+  "decisions_label": "Khách đang chờ bạn",
+  "decisions_empty_title": "Không có khách nào đang chờ",
+  "decisions_empty_body": "Khách cần người trả lời sẽ hiện ở đây.",
+  "decisions_see_why": "Vì sao",
+  "decisions_more": "Thêm",
+  "action_decide": "Quyết định hội thoại"
 }

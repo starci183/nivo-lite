@@ -1,10 +1,14 @@
 import { defineModule } from "@nivo-lite/agent-sdk/module"
 import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
 import { cancelOrderAction } from "./actions/cancel-order.action"
+import { decideAction } from "./actions/decide.action"
 import { confirmOrderAction } from "./actions/confirm-order.action"
 import { moveStageAction } from "./actions/move-stage.action"
 import { saveSettingsAction } from "./actions/save-settings.action"
 import { SALES_PERMISSIONS } from "./constants"
+import { attentionRead } from "./reads/attention.read"
+import { decisionsRead } from "./reads/decisions.read"
+import { figuresRead } from "./reads/figures.read"
 import { leadRead } from "./reads/lead.read"
 import { leadCountsRead, leadsRead } from "./reads/leads.read"
 import { orderRead } from "./reads/order.read"
@@ -34,7 +38,10 @@ export const salesModule: ModuleDeclaration = defineModule({
         orderRead,
         ordersWaitingRead,
         settingsRead,
+        figuresRead,
+        attentionRead,
+        decisionsRead,
     ],
-    actions: [moveStageAction, confirmOrderAction, cancelOrderAction, saveSettingsAction],
+    actions: [moveStageAction, confirmOrderAction, cancelOrderAction, saveSettingsAction, decideAction],
     specs: [SALES_WORKBENCH_SPEC],
 })

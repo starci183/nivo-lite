@@ -48,5 +48,16 @@
   "stage_qualified": "Qualified",
   "stage_proposal": "Proposal",
   "stage_won": "Won",
-  "stage_lost": "Lost"
+  "stage_lost": "Lost",
+  "figures_label": "Inbox today",
+  "fig_total": "Conversations",
+  "fig_ai_share": "Answered by AI",
+  "fig_needs": "Need a person",
+  "fig_handled": "Held by a person",
+  "decisions_label": "Customers waiting for you",
+  "decisions_empty_title": "Nobody is waiting",
+  "decisions_empty_body": "Customers who need a person show here.",
+  "decisions_see_why": "Why",
+  "decisions_more": "More",
+  "action_decide": "Decide a conversation"
 }
