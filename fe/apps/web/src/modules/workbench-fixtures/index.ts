@@ -4,14 +4,20 @@ import type { FixtureTables } from "@/modules/workbench-host"
 
 /**
  * The fixture tables the prototype data port answers from, joined from the fixtures of every module: each read by id answers its
- * `ready` data, each action by id its outcome. Generic: it names no module, and an empty record gives empty tables.
+ * `ready` data (the one written for the viewer's language when the fixture carries it in `readyIn`), each action by id its outcome.
+ * Generic: it names no module, and an empty record gives empty tables.
  */
-export const fixtureTablesOf = (modules: Readonly<Record<string, ModuleFixtures>>): FixtureTables => {
+export const fixtureTablesOf = (
+    modules: Readonly<Record<string, ModuleFixtures>>,
+    locale: "vi" | "en",
+): FixtureTables => {
     const fixtures = Object.values(modules)
     return {
         reads: Object.fromEntries(
             fixtures.flatMap((module) =>
-                Object.entries(module.reads).map(([id, fixture]) => [id, () => fixture.ready] as const),
+                Object.entries(module.reads).map(
+                    ([id, fixture]) => [id, () => fixture.readyIn?.[locale] ?? fixture.ready] as const,
+                ),
             ),
         ),
         actions: Object.fromEntries(

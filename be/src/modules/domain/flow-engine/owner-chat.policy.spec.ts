@@ -98,19 +98,15 @@ const registerTextAndVerdicts = () => {
 }
 
 const registerReferences = () => {
-    it("prefers a lead name, then customer and payer strings, and trims the result", async () => {
+    it("prefers the customer string, then the payer string, and trims the result", async () => {
         const subject = await buildSubject()
 
         const item = itemOf({ proposal: { summary: "", fields: { customer: " Customer ", payer: " Payer " } } })
-        expect(subject.waitingCustomerOf(item, " Lead ")).toBe("Lead")
-        expect(subject.waitingCustomerOf(item, "")).toBe("Customer")
+        expect(subject.waitingCustomerOf(item)).toBe("Customer")
         expect(
-            subject.waitingCustomerOf(
-                itemOf({ proposal: { summary: "", fields: { customer: 4, payer: " Payer " } } }),
-                "",
-            ),
+            subject.waitingCustomerOf(itemOf({ proposal: { summary: "", fields: { customer: 4, payer: " Payer " } } })),
         ).toBe("Payer")
-        expect(subject.waitingCustomerOf(itemOf({ proposal: { summary: "", fields: {} } }), "")).toBe("")
+        expect(subject.waitingCustomerOf(itemOf({ proposal: { summary: "", fields: {} } }))).toBe("")
     })
 
     it("finds the first usable reference or returns blank", async () => {

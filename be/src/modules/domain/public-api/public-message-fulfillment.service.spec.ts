@@ -15,7 +15,6 @@ import { PublicMessageFulfillmentService } from "./public-message-fulfillment.se
 
 const body: MessageRequestBody = {
     conversationId: "conversation-1",
-    leadId: "stale-lead",
     text: "Exact caller text\nwith its original spacing.  ",
     requireApproval: false,
     source: "api:n8n",
@@ -54,7 +53,7 @@ describe("PublicMessageFulfillmentService", () => {
         const { tx, conversation } = managerWith(CONVERSATION)
         const { service, work, evidence, logger, chats } = await build(conversation)
 
-        expect(await service.fulfill("workspace-1", "request-1", body, RECENT, tx)).toBe("lead-1")
+        await service.fulfill("workspace-1", "request-1", body, RECENT, tx)
 
         expect(chats.find).toHaveBeenCalledWith("workspace-1", "conversation-1")
         expect(work.enqueueWork).toHaveBeenCalledWith(
@@ -97,17 +96,15 @@ describe("PublicMessageFulfillmentService", () => {
         const { tx, conversation } = managerWith({ ...CONVERSATION, lead_id: null })
         const { service, work, evidence } = await build(conversation)
 
-        expect(
-            await service.fulfill(
-                "workspace-1",
-                "request-1",
-                { ...body, requireApproval: true },
-                RECENT,
-                tx,
-                "legacy-message",
-                false,
-            ),
-        ).toBeNull()
+        await service.fulfill(
+            "workspace-1",
+            "request-1",
+            { ...body, requireApproval: true },
+            RECENT,
+            tx,
+            "legacy-message",
+            false,
+        )
 
         expect(work.enqueueWork).toHaveBeenCalledWith(
             ctx,

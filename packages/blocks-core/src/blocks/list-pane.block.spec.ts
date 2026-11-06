@@ -16,6 +16,11 @@ describe("listPaneBlock", () => {
         expect(listPaneBlock.props.safeParse({ search: true, searchParam: "q" }).success).toBe(true)
     })
 
+    it("takes a title that stays above the card, and refuses one that is not text", () => {
+        expect(listPaneBlock.props.safeParse({ search: false, title: { key: "pane_title" } }).success).toBe(true)
+        expect(listPaneBlock.props.safeParse({ search: false, title: 3 }).success).toBe(false)
+    })
+
     it("takes a pane without a search", () => {
         expect(listPaneBlock.props.safeParse({ search: false }).success).toBe(true)
     })

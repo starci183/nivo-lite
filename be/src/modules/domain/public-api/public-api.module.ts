@@ -5,12 +5,9 @@ import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./public-api.module-definition"
 import { PublicEventsService } from "./public-events.service"
 import { PublicKnowledgeService } from "./public-knowledge.service"
-import { PublicLeadsService } from "./public-leads.service"
 import { PublicMessagesService } from "./public-messages.service"
 import { PublicApiProcessingService } from "./public-api-processing.service"
-import { PublicLeadFulfillmentService } from "./public-lead-fulfillment.service"
 import { PublicMessageFulfillmentService } from "./public-message-fulfillment.service"
-import { PublicLeadCompletionService } from "./public-lead-completion.service"
 import { PublicApiLedgerService } from "./public-api-ledger.service"
 import { PublicConversationsService } from "./public-conversations.service"
 
@@ -28,24 +25,13 @@ export class PublicApiModule extends ConfigurableModuleClass {
                 { provide: INBOX, useClass: InboxService },
                 PublicEventsService,
                 PublicKnowledgeService,
-                PublicLeadsService,
                 PublicMessagesService,
                 PublicApiProcessingService,
-                PublicLeadFulfillmentService,
                 PublicMessageFulfillmentService,
-                PublicLeadCompletionService,
                 PublicApiLedgerService,
                 PublicConversationsService,
             ],
-            exports: [
-                PublicEventsService,
-                PublicKnowledgeService,
-                PublicLeadsService,
-                PublicMessagesService,
-                PublicApiProcessingService,
-                PublicLeadFulfillmentService,
-                PublicLeadCompletionService,
-            ],
+            exports: [PublicEventsService, PublicKnowledgeService, PublicMessagesService, PublicApiProcessingService],
         }
     }
 }

@@ -10,18 +10,21 @@ const props: z.ZodObject<{
     search: z.ZodBoolean
     searchParam: z.ZodOptional<ParamNameSchema>
     searchLabel: z.ZodOptional<TextSchema>
+    title: z.ZodOptional<TextSchema>
 }> = z
     .object({
         search: z.boolean(),
         searchParam: paramName.optional(),
         searchLabel: specText.optional(),
+        title: specText.optional(),
     })
     .refine((value) => !value.search || value.searchParam !== undefined)
 const slots: Record<never, never> = {}
 
 /**
- * The pane of a list: a search field over its two children, a filter-tabs block and a list (a record list, a table or a board). The text
- * typed waits 300 ms and is written to the `searchParam`; Escape clears it. The blocks inside read the param through their own
+ * The pane of a list, drawn as one surface card: the first child (the filter tabs) and the search field are its header, then a divider,
+ * then the list (a record list, a table or a board) with its empty, loading and error states inside the same card. The optional `title` stays above the card. The
+ * text typed waits 300 ms and is written to the `searchParam`; Escape clears it. The blocks inside read the param through their own
  * bindings.
  */
 export const listPaneBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({

@@ -23,10 +23,18 @@ const noteOf = (source: string, ...parts: ReadonlyArray<string | null>): string 
     return joined === "" ? source : joined
 }
 
+/** The record an entry comes from. */
+interface EntrySource {
+    /** The entity of the record. */
+    readonly entity: string
+    /** Its id. */
+    readonly id: string
+}
+
 /** The entry of a kind with the status the reader sees: a source row, a day, an amount, what it says and who it is with. */
 const entryOf = (
     kind: BookEntryValues["kind"],
-    source: { readonly entity: string; readonly id: string },
+    source: EntrySource,
     day: string,
     amountVnd: number,
     note: string,
@@ -53,7 +61,7 @@ export const postTransaction = (
 ): ReadonlyArray<BookEntryValues> => {
     const posted =
         transaction.direction === "credit"
-            ? transaction.status === "matched" || settings.postUnmatched
+            ? transaction.status === "matched" || transaction.status === "other_income" || settings.postUnmatched
             : settings.postExpenses
     if (!posted) return []
     return [

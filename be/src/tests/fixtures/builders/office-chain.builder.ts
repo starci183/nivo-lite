@@ -3,7 +3,6 @@ import type { EntityManager } from "typeorm"
 import { callDbFunction } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { agentsEntities } from "@modules/domain/agents"
-import { leadsEntities } from "@modules/domain/leads"
 import { workspacesEntities } from "@modules/domain/workspaces"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 
@@ -11,8 +10,6 @@ const [AgentEntity] = agentsEntities
 
 const [WorkspaceEntity] = workspacesEntities
 const [WorkspaceMemberEntity] = workspaceMembersEntities
-
-const [LeadEntity] = leadsEntities
 
 /** The most member rows one read takes; the story seats five. */
 const PEOPLE_MAX = 10
@@ -112,20 +109,3 @@ export const persistOfficeRows = (manager: EntityManager, identity: OfficeIdenti
         })
         return members
     })
-
-/** Persists the customer of the story (chi Thao, who books the Deluxe room) and answers her lead id. */
-export const persistStoryLead = async (
-    manager: EntityManager,
-    workspaceId: string,
-    leadId: string,
-): Promise<string> => {
-    await manager.insert(LeadEntity, {
-        id: leadId,
-        workspaceId: workspaceId,
-        contactName: "Chi Thao",
-        company: "",
-        channel: "zalo",
-        need: "Deluxe room 24-26/10",
-    })
-    return leadId
-}

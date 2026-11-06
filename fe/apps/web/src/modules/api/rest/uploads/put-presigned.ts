@@ -8,6 +8,8 @@ export interface PutPresignedRequest {
     readonly file: Blob
     /** The content type the address was signed for: the back end refuses the upload when the header differs. */
     readonly contentType: string
+    /** The other headers the address was signed with (the content type is `contentType`): sent as given. */
+    readonly headers?: Readonly<Record<string, string>>
     /** Reports the upload progress as a fraction between 0 and 1. */
     readonly onProgress?: (fraction: number) => void
     /** Optional abort signal. */
@@ -19,11 +21,12 @@ export const putPresigned = async ({
     url,
     file,
     contentType,
+    headers,
     onProgress,
     signal,
 }: PutPresignedRequest): Promise<void> => {
     await axios.put(url, file, {
-        headers: { "Content-Type": contentType },
+        headers: { ...headers, "Content-Type": contentType },
         ...(signal ? { signal } : {}),
         onUploadProgress: (event) => {
             if (event.total) onProgress?.(event.loaded / event.total)

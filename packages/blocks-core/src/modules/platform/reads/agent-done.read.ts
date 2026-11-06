@@ -20,7 +20,7 @@ export const agentDoneRead: ReadDefinition = defineRead({
     shape: "record",
     fields: ["count", "rows", "linkLabel", "linkHref", "more"],
     paths: { rows: "list" },
-    variables: z.object({ agent: z.string().uuid().max(MAX_ID) }),
+    variables: z.object({ agent: z.uuid().max(MAX_ID) }),
     permission: "platform.view",
     ports: { runs: agentRuns },
     run: async ({ runs }, { agent }): Promise<ItemsRegionView> => {

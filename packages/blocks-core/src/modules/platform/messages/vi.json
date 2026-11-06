@@ -1,6 +1,22 @@
 {
   "action_resume_run": "Chạy lại",
+  "parked_error_delivery_failed": "Không gửi được tin nhắn",
+  "parked_error_timeout": "Kênh không phản hồi",
+  "parked_step_confirm": "Xác nhận đơn hàng",
+  "parked_step_notify": "Báo cho khách",
   "refusal_forbidden": "Chỉ chủ, quản lý hoặc người quản lý module này mới chạy lại được",
   "refusal_missing": "Không tìm thấy lượt chạy này",
-  "refusal_not_parked": "Lượt chạy này không đang dừng, không có gì để chạy lại"
+  "refusal_not_parked": "Lượt chạy này không đang dừng, không có gì để chạy lại",
+  "tab_runs": "Lịch sử chạy",
+  "runs_title": "Lượt chạy",
+  "status_label": "Lọc lượt chạy theo trạng thái",
+  "filter_all": "Tất cả",
+  "status_running": "Đang chạy",
+  "status_parked": "Tạm dừng",
+  "status_done": "Xong",
+  "status_failed": "Lỗi",
+  "runs_empty": "Trợ lý này chưa chạy lần nào",
+  "run_idle_title": "Chọn một lượt chạy",
+  "run_idle_body": "Chọn một lượt chạy để xem các bước",
+  "timeline_label": "Các bước của lượt chạy"
 }

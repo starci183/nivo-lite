@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import type { RoomView, TeamChatResult } from "@modules/domain/team-chat"
+import type { ChatRoomView, TeamChatResult } from "@modules/domain/team-chat"
 import { eachInOrder } from "@modules/platform/primitives"
 import { persistTeamChat, teamChatIdentity } from "../../fixtures/builders/team-chat.builder"
 import { waitForProof } from "../../world/redis-proof.service"
@@ -69,7 +69,7 @@ const received = async (stream: TypingStreamClient, count: number): Promise<void
 
 const member = (memberId: string) => ({ memberKind: "user" as const, memberId })
 
-const roomIdOf = (result: TeamChatResult<RoomView>): string => {
+const roomIdOf = (result: TeamChatResult<ChatRoomView>): string => {
     assert(result.ok, "the room must be created")
     return result.value.id
 }

@@ -23,6 +23,8 @@ export interface ThreadRow extends ConversationState {
     readonly unanswered: boolean
     /** When a person took the conversation over, as ISO 8601; null while the AI answers. */
     readonly handledAt: string | null
+    /** The link of the customer's picture the channel gave; null or absent when it gave none. */
+    readonly avatarUrl?: string | null | undefined
 }
 
 /** Where a line stands: posted in the thread, proposed by the AI and waiting for a person, or refused. */
@@ -86,6 +88,8 @@ export interface ThreadView {
     readonly name: string
     /** The proper name of the channel. */
     readonly channelName: string
+    /** The link of the customer's picture; empty when the channel gave none. */
+    readonly avatarUrl: string
     /** The customer record behind the conversation; empty while the customer was not captured. */
     readonly leadId: string
     /** Where the conversation stands in the inbox. */

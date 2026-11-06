@@ -55,6 +55,7 @@ export const claimEntity: EntityDefinition<ClaimFields> = defineEntity({
     },
     indexes: [
         { name: "key", on: ["id"] },
+        { name: "status_recent", on: ["status", { desc: "createdAt" }, { desc: "id" }] },
         { name: "status_claimed", on: ["status", { desc: "claimedAt" }, { desc: "id" }] },
         { name: "lead_claimed", on: ["leadId", { desc: "claimedAt" }, { desc: "id" }] },
         { name: "conversation_claimed", on: ["conversationId", { desc: "claimedAt" }, { desc: "id" }] },

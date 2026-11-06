@@ -77,7 +77,7 @@
         "records_accounting_question_status_chk",
         "records_accounting_question_text_chk"
       ],
-      "indexes": ["records_accounting_question_status_created"]
+      "indexes": ["records_accounting_question_source", "records_accounting_question_status_created"]
     },
     {
       "entity": "accounting.settings",
@@ -86,6 +86,7 @@
         "records_accounting_settings_post_expenses_chk",
         "records_accounting_settings_post_outgoing_chk",
         "records_accounting_settings_post_unmatched_chk",
+        "records_accounting_settings_rematch_days_chk",
         "records_accounting_settings_scope_chk",
         "records_accounting_settings_vat_period_chk",
         "records_accounting_settings_void_mode_chk"
@@ -307,6 +308,7 @@
       "partition": "records_chat_conversation",
       "checks": [
         "records_chat_conversation_agent_id_chk",
+        "records_chat_conversation_avatar_url_chk",
         "records_chat_conversation_channel_chk",
         "records_chat_conversation_connection_id_chk",
         "records_chat_conversation_connector_party_id_chk",
@@ -321,6 +323,8 @@
         "records_chat_conversation_lead_id_chk",
         "records_chat_conversation_message_count_chk",
         "records_chat_conversation_name_chk",
+        "records_chat_conversation_profile_at_chk",
+        "records_chat_conversation_profile_tried_at_chk",
         "records_chat_conversation_status_chk",
         "records_chat_conversation_unanswered_chk",
         "records_chat_conversation_waiting_chk"
@@ -332,6 +336,7 @@
         "records_chat_conversation_customer",
         "records_chat_conversation_key",
         "records_chat_conversation_last_text_trgm_idx",
+        "records_chat_conversation_lead_created",
         "records_chat_conversation_lead_recent",
         "records_chat_conversation_name_trgm_idx",
         "records_chat_conversation_recent",
@@ -442,6 +447,7 @@
         "records_loyalty_member_contact_chk",
         "records_loyalty_member_email_chk",
         "records_loyalty_member_joined_at_chk",
+        "records_loyalty_member_last_activity_at_chk",
         "records_loyalty_member_last_visit_at_chk",
         "records_loyalty_member_lead_id_chk",
         "records_loyalty_member_lifetime_spend_vnd_chk",
@@ -533,7 +539,8 @@
         "records_payment_claim_key",
         "records_payment_claim_lead_claimed",
         "records_payment_claim_settled_transaction_key",
-        "records_payment_claim_status_claimed"
+        "records_payment_claim_status_claimed",
+        "records_payment_claim_status_recent"
       ]
     },
     {
@@ -554,13 +561,16 @@
         "records_payment_transaction_status_chk"
       ],
       "indexes": [
+        "records_payment_transaction_amount_recent",
         "records_payment_transaction_direction_occurred",
         "records_payment_transaction_direction_status_occurred",
         "records_payment_transaction_external_ref_key",
         "records_payment_transaction_invoice",
+        "records_payment_transaction_key",
         "records_payment_transaction_occurred",
         "records_payment_transaction_order_key",
-        "records_payment_transaction_status_occurred"
+        "records_payment_transaction_status_occurred",
+        "records_payment_transaction_status_recent"
       ]
     },
     {
@@ -592,6 +602,7 @@
         "records_sales_lead_due",
         "records_sales_lead_email_key",
         "records_sales_lead_email_trgm_idx",
+        "records_sales_lead_key",
         "records_sales_lead_name",
         "records_sales_lead_need_trgm_idx",
         "records_sales_lead_needs",
@@ -637,12 +648,22 @@
       "partition": "records_sales_settings",
       "checks": [
         "records_sales_settings_approval_threshold_vnd_chk",
+        "records_sales_settings_auto_won_chk",
         "records_sales_settings_closed_deals_can_flip_chk",
         "records_sales_settings_draft_without_total_needs_approval_chk",
         "records_sales_settings_key_chk",
+        "records_sales_settings_max_discount_pct_chk",
+        "records_sales_settings_notify_accounting_chk",
+        "records_sales_settings_remind_after_days_chk",
         "records_sales_settings_reopen_needs_approval_chk"
       ],
       "indexes": ["records_sales_settings_key", "records_sales_settings_key_key"]
+    },
+    {
+      "entity": "workspace.settings",
+      "partition": "records_workspace_settings",
+      "checks": ["records_workspace_settings_key_chk", "records_workspace_settings_time_zone_chk"],
+      "indexes": ["records_workspace_settings_key_id", "records_workspace_settings_workspace_key"]
     }
   ]
 }

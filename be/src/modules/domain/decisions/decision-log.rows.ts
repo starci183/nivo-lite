@@ -9,7 +9,7 @@ export interface DecisionActorRow {
 }
 
 /** A row of the decision log before the customer name is read. */
-export interface DecisionLogRow extends Omit<DecisionRecord, "leadName"> {
+export interface DecisionLogRow extends DecisionRecord {
     /** The instant of the row as fixed-width UTC text, to order rows of different sources at full precision. */
     readonly sort_key: string
 }

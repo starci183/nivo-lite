@@ -6,12 +6,19 @@ describe("contactOf", () => {
         expect(contactOf(THREAD_CONTACT, "Visitor")).toEqual({
             name: THREAD_CONTACT.name,
             channelName: "Zalo OA",
+            avatar: "",
             handledBy: "",
             stage: "new",
             need: THREAD_CONTACT.need,
             phone: THREAD_CONTACT.phone,
             leadId: "lead-thu",
         })
+    })
+
+    it("carries the picture link of the customer", () => {
+        expect(contactOf({ id: "t6", avatarUrl: "https://zalo.test/a.png" }, "Visitor")?.avatar).toBe(
+            "https://zalo.test/a.png",
+        )
     })
 
     it("names an unnamed visitor", () => {

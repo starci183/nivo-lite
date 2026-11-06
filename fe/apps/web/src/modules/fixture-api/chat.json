@@ -1,0 +1,207 @@
+{
+  "viewer": {
+    "id": "fixture-user",
+    "name": "Nguyễn Minh Anh"
+  },
+  "people": [
+    {
+      "id": "user-lan",
+      "name": "Lan Phạm"
+    },
+    {
+      "id": "user-huy",
+      "name": "Huy Trần"
+    }
+  ],
+  "agents": [
+    {
+      "id": "agent-chatbot",
+      "name": "Mây CSKH"
+    },
+    {
+      "id": "agent-sales",
+      "name": "Mây Bán hàng"
+    },
+    {
+      "id": "agent-accounting",
+      "name": "Mây Kế toán"
+    }
+  ],
+  "rooms": [
+    {
+      "id": "room-chatbot",
+      "kind": "direct",
+      "name": "Mây CSKH",
+      "members": ["fixture-user", "agent-chatbot"],
+      "unread": 3,
+      "mentions": 1
+    },
+    {
+      "id": "room-sales",
+      "kind": "direct",
+      "name": "Mây Bán hàng",
+      "members": ["fixture-user", "agent-sales"],
+      "unread": 1,
+      "mentions": 0
+    },
+    {
+      "id": "room-lan",
+      "kind": "direct",
+      "name": "Lan Phạm",
+      "members": ["fixture-user", "user-lan"],
+      "unread": 0,
+      "mentions": 0
+    },
+    {
+      "id": "room-ops",
+      "kind": "group",
+      "name": "Vận hành",
+      "members": ["fixture-user", "user-lan", "user-huy", "agent-chatbot"],
+      "unread": 0,
+      "mentions": 0
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01",
+      "roomId": "room-chatbot",
+      "kind": "text",
+      "author": "fixture-user",
+      "body": "@Mây CSKH tổng hợp đơn hàng tuần này giúp mình",
+      "minutesAgo": 1500,
+      "pinned": false,
+      "runId": null,
+      "decisionId": null,
+      "status": "pending",
+      "decidedBy": "",
+      "decidedMinutesAgo": null
+    },
+    {
+      "id": "m02",
+      "roomId": "room-chatbot",
+      "kind": "report",
+      "author": "agent-chatbot",
+      "body": "Tuần này có 42 đơn, doanh thu 18.400.000đ. 3 đơn đang chờ xác nhận thanh toán.",
+      "minutesAgo": 1490,
+      "pinned": true,
+      "runId": "run-1042",
+      "decisionId": null,
+      "status": "pending",
+      "decidedBy": "",
+      "decidedMinutesAgo": null
+    },
+    {
+      "id": "m03",
+      "roomId": "room-chatbot",
+      "kind": "text",
+      "author": "fixture-user",
+      "body": "Cảm ơn. Nhắc khách ba đơn chờ thanh toán nhé.",
+      "minutesAgo": 1480,
+      "pinned": false,
+      "runId": null,
+      "decisionId": null,
+      "status": "pending",
+      "decidedBy": "",
+      "decidedMinutesAgo": null
+    },
+    {
+      "id": "m04",
+      "roomId": "room-chatbot",
+      "kind": "approval",
+      "author": "agent-chatbot",
+      "body": "Xin duyệt giảm giá 15% cho đơn #1042 của khách Hoa Xinh (đơn 2.300.000đ).",
+      "minutesAgo": 25,
+      "decisionId": "decision-1",
+      "status": "pending",
+      "pinned": false,
+      "runId": null,
+      "decidedBy": "",
+      "decidedMinutesAgo": null
+    },
+    {
+      "id": "m05",
+      "roomId": "room-chatbot",
+      "kind": "approval",
+      "author": "agent-chatbot",
+      "body": "Xin duyệt hoàn tiền 450.000đ cho đơn #1038.",
+      "minutesAgo": 22,
+      "decisionId": "decision-2",
+      "status": "approved",
+      "decidedBy": "Lan Phạm",
+      "decidedMinutesAgo": 20,
+      "pinned": false,
+      "runId": null
+    },
+    {
+      "id": "m06",
+      "roomId": "room-chatbot",
+      "kind": "text",
+      "author": "agent-chatbot",
+      "body": "Em đã gửi lời nhắc cho 3 khách và sẽ báo lại khi có thanh toán.",
+      "minutesAgo": 5,
+      "pinned": false,
+      "runId": null,
+      "decisionId": null,
+      "status": "pending",
+      "decidedBy": "",
+      "decidedMinutesAgo": null
+    },
+    {
+      "id": "m07",
+      "roomId": "room-sales",
+      "kind": "text",
+      "author": "agent-sales",
+      "body": "Có 5 khách hỏi giá combo mới, em đã gửi bảng giá.",
+      "minutesAgo": 90,
+      "pinned": false,
+      "runId": null,
+      "decisionId": null,
+      "status": "pending",
+      "decidedBy": "",
+      "decidedMinutesAgo": null
+    },
+    {
+      "id": "m08",
+      "roomId": "room-lan",
+      "kind": "text",
+      "author": "user-lan",
+      "body": "Mai mình họp lúc 9 giờ nhé",
+      "minutesAgo": 1600,
+      "pinned": false,
+      "runId": null,
+      "decisionId": null,
+      "status": "pending",
+      "decidedBy": "",
+      "decidedMinutesAgo": null
+    },
+    {
+      "id": "m09",
+      "roomId": "room-ops",
+      "kind": "text",
+      "author": "user-huy",
+      "body": "Đã chốt lịch giao hàng thứ bảy",
+      "minutesAgo": 4000,
+      "pinned": false,
+      "runId": null,
+      "decisionId": null,
+      "status": "pending",
+      "decidedBy": "",
+      "decidedMinutesAgo": null
+    },
+    {
+      "id": "m10",
+      "roomId": "room-ops",
+      "kind": "system",
+      "author": "",
+      "body": "Huy Trần đã tham gia nhóm",
+      "minutesAgo": 4100,
+      "pinned": false,
+      "runId": null,
+      "decisionId": null,
+      "status": "pending",
+      "decidedBy": "",
+      "decidedMinutesAgo": null
+    }
+  ],
+  "agentReply": "Em đã nhận việc, em sẽ báo lại ngay khi xong."
+}

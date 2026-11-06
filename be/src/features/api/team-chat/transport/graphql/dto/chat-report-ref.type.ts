@@ -1,6 +1,5 @@
 import { Field, ID, ObjectType } from "@nestjs/graphql"
 
-
 @ObjectType()
 /** The run a report message is about. */
 export class ChatReportRefType {

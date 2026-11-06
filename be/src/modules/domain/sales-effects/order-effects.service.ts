@@ -1,9 +1,10 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
+import { rematchJob } from "@nivo-lite/blocks-core/modules/accounting"
 import { AGENT_NAME, leadRowOf, orderRowOf } from "@nivo-lite/blocks-core/modules/sales"
 import { itemsTextOf, pricedLinesOf, stageAfterConfirm } from "@nivo-lite/blocks-core/rules/sales"
 import type { EntitiesApi } from "@nivo-lite/agent-sdk/entity/port"
-import type { EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
+import type { EffectCall, EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
@@ -11,7 +12,7 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { SalesEffectsError, SalesEffectsErrorCode } from "./errors/sales-effects.error"
 import { isRecordId, payloadOf } from "./sales-effects.policy"
-import { confirmSchema, recordSchema, voidSchema } from "./sales-effects.schema"
+import { confirmSchema, recordSchema, rematchSchema, voidSchema } from "./sales-effects.schema"
 
 const LEAD = "sales.lead"
 const ORDER = "sales.order"
@@ -39,6 +40,32 @@ export class OrderEffectsService implements OnModuleInit {
         this.registry?.addExecutor({ effect: "order.record", execute: (turn, payload) => this.record(turn, payload) })
         this.registry?.addExecutor({ effect: "order.confirm", execute: (turn, payload) => this.confirm(turn, payload) })
         this.registry?.addExecutor({ effect: "order.void", execute: (turn, payload) => this.void(turn, payload) })
+        this.registry?.addExecutor({
+            effect: "payment.rematch",
+            execute: (turn, payload, call) => this.rematch(turn, payload, call),
+        })
+    }
+
+    /**
+     * Asks the engine to look again for a credit that arrived before the order had a payment code: it enqueues the declared
+     * `payment.rematch` job for the order in the same transaction, with the instant of this run from the engine clock. The effect key
+     * of the call is the delivery key, so the order is looked at again once however often the node runs.
+     */
+    private async rematch(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<SubjectRef> {
+        const { orderId } = payloadOf(rematchSchema, payload)
+        return await this.engine.scoped(turn.workspaceId, async (tx) => {
+            const api = this.ports.entitiesApi((use) => use(tx), "action")
+            const record = isRecordId(orderId) ? await api.get(ORDER, orderId) : null
+            if (record === null) throw new SalesEffectsError({ code: SalesEffectsErrorCode.OrderNotFound })
+            await this.ports
+                .outboxApi((use) => use(tx))
+                .enqueue(
+                    rematchJob,
+                    { orderId, at: this.clock.now().toISOString() },
+                    { dedupeKey: call.dedupeKey ?? call.key },
+                )
+            return subjectOf(orderId)
+        })
     }
 
     private async record(turn: NodeTurn, payload: EffectPayload): Promise<SubjectRef> {

@@ -3,6 +3,7 @@ import { mock } from "@starci/jest-preset"
 import { ChatConversationsService, ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
 import type { ChatConversationTarget } from "@modules/domain/chat-records"
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
+import { ChannelCustomerProfileService } from "./channel-customer-profile.service"
 import { ChannelDeliveryService } from "./channel-delivery.service"
 import type { DeliveryReceipt } from "./channels.contracts"
 import { CHAT_MANIFEST, ChatSendNativeService } from "./chat-send-native.service"
@@ -31,22 +32,25 @@ const build = async () => {
     messages.storeAgentLine.mockResolvedValue({ id: "msg-1", body: "Xin chao", sent: false })
     const delivery = mock<ChannelDeliveryService>()
     delivery.deliver.mockResolvedValue(DELIVERED)
+    const customers = mock<ChannelCustomerProfileService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChatSendNativeService,
             { provide: ChatConversationsService, useValue: conversations },
             { provide: ChatMessagesService, useValue: messages },
             { provide: ChannelDeliveryService, useValue: delivery },
+            { provide: ChannelCustomerProfileService, useValue: customers },
         ],
     }).compile()
-    return { service: moduleRef.get(ChatSendNativeService), conversations, messages, delivery }
+    return { service: moduleRef.get(ChatSendNativeService), conversations, messages, delivery, customers }
 }
 
 describe("ChatSendNativeService", () => {
-    it("announces one internal write tool that plays the domain tool chat.send and takes its replay key", () => {
+    it("announces two internal tools: a write that plays chat.send and takes its replay key, and a read that plays chat.profile", () => {
         expect(CHAT_MANIFEST.key).toBe("chat")
         expect(CHAT_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.domain, tool.internalOnly])).toEqual([
             ["send", "write", "chat.send", true],
+            ["profile", "read", "chat.profile", true],
         ])
         expect(CHAT_MANIFEST.tools[0]?.idempotencyArg).toBe("key")
     })
@@ -110,6 +114,37 @@ describe("ChatSendNativeService", () => {
         await expect(service.invoke("ws-1", "send", STORED_ARGS, CALLER)).resolves.toEqual({ ok: true })
 
         expect(delivery.deliver).not.toHaveBeenCalled()
+    })
+})
+
+describe("ChatSendNativeService: profile", () => {
+    it("answers the name and picture the channel says of the customer of the conversation", async () => {
+        const { service, conversations, customers } = await build()
+        customers.profileOf.mockResolvedValue({ name: "Minh", avatarUrl: "https://zalo.test/a.png" })
+
+        await expect(service.invoke("ws-1", "profile", { conversationId: CONVERSATION }, CALLER)).resolves.toEqual({
+            name: "Minh",
+            avatarUrl: "https://zalo.test/a.png",
+        })
+
+        expect(conversations.targetOf).toHaveBeenCalledWith("ws-1", CONVERSATION)
+        expect(customers.profileOf).toHaveBeenCalledWith(TARGET)
+    })
+
+    it("refuses a conversation the workspace does not have, a channel that cannot say and arguments that do not fit", async () => {
+        const { service, conversations, customers } = await build()
+        customers.profileOf.mockResolvedValue(null)
+
+        await expect(service.invoke("ws-1", "profile", { conversationId: CONVERSATION }, CALLER)).rejects.toMatchObject(
+            { code: McpGatewayErrorCode.NativeRefused, params: { reason: "profile_unavailable" } },
+        )
+        await expect(service.invoke("ws-1", "profile", { conversationId: "x" }, CALLER)).rejects.toMatchObject({
+            code: McpGatewayErrorCode.InvalidArguments,
+        })
+        conversations.targetOf.mockResolvedValue({ kind: "refused", code: ChatRecordsErrorCode.NotFound })
+        await expect(service.invoke("ws-1", "profile", { conversationId: CONVERSATION }, CALLER)).rejects.toMatchObject(
+            { code: McpGatewayErrorCode.NativeRefused, params: { reason: "not_found" } },
+        )
     })
 })
 

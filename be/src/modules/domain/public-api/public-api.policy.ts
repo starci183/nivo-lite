@@ -2,16 +2,13 @@ import { createHash } from "node:crypto"
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { PublicApiErrorCode } from "./errors/public-api.error"
-import type { AcceptLeadParams, LeadFacts, RequestKind } from "./public-api.contracts"
+import type { RequestKind } from "./public-api.contracts"
 
 /** Characters of the text of one knowledge source. */
 export const SOURCE_CHARS_MAX = 120_000
 
 /** Tags kept on one knowledge source. */
 export const TAGS_MAX = 12
-
-/** A new customer's need when the API caller supplies none; historical rows used it as a sentinel. */
-export const DEFAULT_API_NEED = "Created through the API"
 
 /** The window of events read when the caller names none: one day. */
 const EVENTS_DEFAULT_WINDOW_MS = 86_400_000
@@ -21,8 +18,6 @@ const EVENTS_DEFAULT_WINDOW_MS = 86_400_000
  * the v0.3.6 backlog). An older message is never sent automatically: its work is forced to approval with the caller's draft kept.
  */
 export const MESSAGE_AUTO_SEND_WINDOW_MS = 86_400_000
-
-export { contactParts, normaliseContact } from "@modules/domain/leads"
 
 /** The first part of the dedupe key of a request: its kind and the key that sent it. */
 export const dedupePrefix = (kind: RequestKind, keyId: string): string => `${kind}:${keyId}:`
@@ -59,25 +54,9 @@ export const checkContent = (content: string): Outcome<string, PublicApiErrorCod
         ? refused(PublicApiErrorCode.ContentTooLong, { max: SOURCE_CHARS_MAX })
         : ok(content)
 
-/** The channel a customer handed over without one is attributed to. */
-const DEFAULT_CHANNEL = "API"
-
 /** A page size as the caller wrote it: a number inside 1..max, the fallback when it is absent or not a number. */
 export const clampLimit = (raw: string | undefined, fallback: number, max: number): number =>
     Math.min(max, Math.max(1, Number(raw) || fallback))
-
-/** A hand-over with every absent text made empty, the channel defaulted and the stage decided. */
-export const leadFacts = (params: AcceptLeadParams): LeadFacts => ({
-    name: params.name,
-    phone: params.phone ?? "",
-    email: params.email ?? "",
-    company: params.company ?? "",
-    need: params.need ?? "",
-    channel: params.channel || DEFAULT_CHANNEL,
-    externalId: params.externalId ?? "",
-    note: params.note ?? "",
-    stage: params.stage || null,
-})
 
 /** The visibility of a knowledge source an API key adds: always internal. A document becomes public only as a separate public document an owner approved. */
 export const visibilityOf = (): "internal" => "internal"

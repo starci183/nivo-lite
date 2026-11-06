@@ -44,16 +44,19 @@ export const defineModule = (config: ModuleDeclarationConfig): ModuleDeclaration
 /**
  * What is wrong with the seed specs of a module against the installed blocks and the module's own reads, actions and permissions:
  * every `specProblems` finding, with the index of the spec it is in. Empty when every seed spec may be stored and drawn. A separate
- * function, not a check of `defineModule`, so a module declaration never imports the blocks that draw it.
+ * function, not a check of `defineModule`, so a module declaration never imports the blocks that draw it. A spec may also bind the reads
+ * and actions of the modules given as `shared` (the platform's, which every installation has): the parked runs of a work view and the
+ * action that resumes one.
  */
 export const seedSpecProblems = (
     declaration: ModuleDeclaration,
     blocks: ReadonlyArray<BlockDefinition>,
+    shared: ReadonlyArray<ModuleDeclaration> = [],
 ): ReadonlyArray<SeedSpecProblem> =>
     declaration.specs.flatMap((spec, index) =>
         specProblems(spec, blocks, {
-            reads: declaration.reads,
-            actions: declaration.actions,
+            reads: [...declaration.reads, ...shared.flatMap((other) => other.reads)],
+            actions: [...declaration.actions, ...shared.flatMap((other) => other.actions)],
             permissions: declaration.permissions,
         }).map((problem): SeedSpecProblem => ({ spec: index, problem })),
     )

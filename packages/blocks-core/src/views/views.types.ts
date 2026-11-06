@@ -148,6 +148,8 @@ export interface DecisionRowView {
     readonly reason: string | null
     /** The sum the decision is about, as words; null when it concerns none. */
     readonly amount: string | null
+    /** The same sum in VND as a number, for a picker that ranks what it lists by how close it is; absent when the read gives none. */
+    readonly amountValue?: number | undefined
     /** What the agent proposes to do if the person agrees. */
     readonly proposal: string
     /** The branch that decided the row; null when none is recorded. */

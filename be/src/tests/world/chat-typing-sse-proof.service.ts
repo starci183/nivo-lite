@@ -12,7 +12,7 @@ import {
     ChatTypingModule,
     ChatTypingService,
 } from "@modules/domain/chat-typing"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import {
     AuthGuard,
     IDENTITY_ERROR_KINDS,
@@ -194,7 +194,7 @@ type StartTypingReplicaResultShape = {
     hub: ProofHub
     origin: string
     typing: typingContract.ChatTypingService
-    team: TeamChatService
+    team: TeamChatRoomsService
     topic: (recipientId: string, roomId: string) => realtimeContract.RealtimeTopic<ChatTypingFrame>
     open: (streamOptions: TypingStreamOptions) => Promise<TypingStreamClient>
     close: () => Promise<void>
@@ -219,7 +219,7 @@ export const startTypingReplica = async (
             hub,
             origin,
             typing: app.get(ChatTypingService),
-            team: app.get(TeamChatService),
+            team: app.get(TeamChatRoomsService),
             topic: (recipientId: string, roomId: string) =>
                 contracts.topicOf(recipientId, identity.workspaceId, roomId),
             open: async (streamOptions: TypingStreamOptions): Promise<TypingStreamClient> => {

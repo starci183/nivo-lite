@@ -14,7 +14,7 @@ import {
     ENTITY_ENGINE_DOOR_MESSAGES,
     EntityEngineDoorModule,
 } from "@modules/domain/entity-engine-door"
-import { CUSTOMER_TOOL_ADAPTERS, NATIVE_TOOL_ADAPTERS, NativeToolsModule } from "@modules/domain/native-tools"
+import { NATIVE_TOOL_ADAPTERS, NativeToolsModule } from "@modules/domain/native-tools"
 import {
     INBOUND_EVENTS_ERROR_KINDS,
     INBOUND_EVENTS_MESSAGES,
@@ -23,7 +23,13 @@ import {
 import { ChatActivityModule } from "@modules/domain/chat-activity"
 import { CHAT_RECORDS_ERROR_KINDS, CHAT_RECORDS_MESSAGES, ChatRecordsModule } from "@modules/domain/chat-records"
 import { CHAT_TYPING_ERROR_KINDS, CHAT_TYPING_MESSAGES, ChatTypingModule } from "@modules/domain/chat-typing"
-import { TEAM_CHAT_ERROR_KINDS, TEAM_CHAT_MESSAGES, TeamChatModule } from "@modules/domain/team-chat"
+import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
+import {
+    TEAM_CHAT_ERROR_KINDS,
+    TEAM_CHAT_MESSAGES,
+    TeamChatModule,
+    TeamChatNativeService,
+} from "@modules/domain/team-chat"
 import {
     CHANNELS_ERROR_KINDS,
     CHANNELS_MESSAGES,
@@ -58,7 +64,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     ChatRecordsModule.register({ isGlobal: true }),
     ChatActivityModule.register({ isGlobal: true }),
     ChatTypingModule.register({ isGlobal: true }),
-    TeamChatModule.register({ isGlobal: true }),
+    TeamChatModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
     ChannelReceiptsModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),
     ChannelsModule.register({ isGlobal: true, ...options.channels, ports: { inbox: ZaloInboxPageReadService } }),
@@ -66,13 +72,13 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
         isGlobal: true,
         outcomes: CustomerOutcomesService,
     }),
-    NativeToolsModule.register({ isGlobal: true, customer: true }),
+    NativeToolsModule.register({ isGlobal: true }),
     McpGatewayModule.register({
         isGlobal: true,
         ...options.mcpGateway,
         console: true,
         keyCheck: true,
-        natives: [...NATIVE_TOOL_ADAPTERS, ...CUSTOMER_TOOL_ADAPTERS, AgentNativeService, ChatSendNativeService],
+        natives: [...NATIVE_TOOL_ADAPTERS, AgentNativeService, ChatSendNativeService, TeamChatNativeService],
     }),
     EntityEngineDoorModule.register({ isGlobal: true }),
     CustomerTurnsModule.register({ isGlobal: true, ...customerTurnsOptionsOf(options.connections.publicApiUrl) }),

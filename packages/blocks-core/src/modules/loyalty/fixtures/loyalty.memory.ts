@@ -2,6 +2,7 @@ import type { ListFilter, ListPage, ListQuery, ListShape, ListSource } from "@ni
 import type { EntityApi, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { unprovided } from "@nivo-lite/agent-sdk/port"
 import type { PortDefinition, PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
+import { NEVER_BOUGHT } from "../../../entities/loyalty/member.entity"
 import { tierByKey } from "../../../rules/loyalty/config"
 import { fold } from "../../../rules/loyalty/fold"
 import { activityOf } from "../../../rules/loyalty/stats"
@@ -52,6 +53,7 @@ export const OWNER_CONTEXT: RunContext = {
     memberId: OWNER_ID,
     now: new Date(SAMPLE_NOW),
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 }
 
 /** The text of a field of a row; empty when the field is not text. */
@@ -172,6 +174,7 @@ export const putMember = (world: MemoryWorld, member: MemberRow, nowMs: number =
             contact: member.phone ?? member.email ?? "",
             tier: tierByKey(SAMPLE_PROGRAM.config, member.tierKey)?.name ?? "",
             activity: activityOf(member, nowMs),
+            lastActivityAt: member.lastVisitAt ?? NEVER_BOUGHT,
         },
         { version, createdAt: member.joinedAt },
     )

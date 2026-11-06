@@ -64,14 +64,15 @@ export interface KindSum {
     readonly vnd: number
 }
 
+/** The money of one kind as it moves the balance: in is plus, out is minus, anything else moves nothing. */
+const signedVnd = (total: KindSum): number => {
+    if (CASH_IN_KINDS.includes(total.kind)) return total.vnd
+    return CASH_OUT_KINDS.includes(total.kind) ? -total.vnd : 0
+}
+
 /** The balance the entries before a period left: the money in less the money out. */
 export const openingOf = (before: ReadonlyArray<KindSum>): number =>
-    before.reduce(
-        (sum, total) =>
-            sum +
-            (CASH_IN_KINDS.includes(total.kind) ? total.vnd : CASH_OUT_KINDS.includes(total.kind) ? -total.vnd : 0),
-        0,
-    )
+    before.reduce((sum, total) => sum + signedVnd(total), 0)
 
 /**
  * The cash book of a period: each entry of the period that moved money (oldest first) becomes a line with the balance after it,

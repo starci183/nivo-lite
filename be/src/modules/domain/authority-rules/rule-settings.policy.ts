@@ -12,7 +12,8 @@ import type {
 import { AuthorityRulesErrorCode } from "./errors/authority-rules.error"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const ROOM_KEY = /^[a-z][a-z0-9_-]{0,39}$/
+/** A team-chat room id: the groups an approver rule names are rooms of the team chat, by uuid. */
+const ROOM_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
 const ROLES: ReadonlySet<string> = new Set(["owner", "manager", "staff"])
 const PERCENT_MAX = 100
 
@@ -43,7 +44,7 @@ const timeoutLegal = (minutes: number): boolean =>
 
 const groupLegal = (change: RuleChange): boolean =>
     (change.approver_roles ?? []).every((role) => ROLES.has(role)) &&
-    (change.approver_rooms ?? []).every((room) => ROOM_KEY.test(room)) &&
+    (change.approver_rooms ?? []).every((room) => ROOM_ID.test(room)) &&
     (change.approver_members ?? []).every((member) => UUID.test(member))
 
 const settingsOf = (change: RuleChange): RuleSettingsPatch => ({

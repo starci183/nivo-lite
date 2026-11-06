@@ -2,6 +2,7 @@ import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeContext, NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import { z } from "zod"
+import { paymentRematchEffect } from "../../vocabulary"
 import type { PaymentInstruction } from "../../vocabulary"
 import type { OrderLine } from "./payment-request.policy"
 import { failureKindOf } from "../core/failure.policy"
@@ -91,7 +92,8 @@ const instructionOf = async (
  * `payment.request`: asks the customer to pay a confirmed order. The business rules are here: only a confirmed order with an amount,
  * the order number reduced to letters and digits as the transfer content, and one request per order across runs (dedupe key
  * `payment-request:<orderId>`). The account and the QR link come from the `payment.instruction` tool; when it fails or no provider is
- * connected, nothing is sent and a work item (`connect_sepay`) goes to the owner.
+ * connected, nothing is sent and a work item (`connect_sepay`) goes to the owner. Once the code is sent, the `payment.rematch` effect (one
+ * per order across runs) asks the engine to look for a credit that arrived before the code existed.
  */
 export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
     id: "payment.request",
@@ -103,7 +105,7 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
     rights: [
         { kind: "order", access: "read", scope: "turn", fields: ["id", "orderNo", "amountVnd", "status", "items"] },
     ],
-    effects: ["channel.send", "work-item.raise"],
+    effects: ["channel.send", "payment.rematch", "work-item.raise"],
     tools: [INSTRUCTION_TOOL],
     run: async (given, context) => {
         const [order] = await context.data.read<PayableOrder>("order", {
@@ -136,6 +138,11 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
             { conversationId: given.conversationId, text },
             { dedupeKey: `payment-request:${given.orderId}` },
         )
+        await context.effect(
+            paymentRematchEffect.id,
+            { orderId: given.orderId },
+            { dedupeKey: `payment-rematch:${given.orderId}` },
+        )
         return { status: "sent", content, qrUrl: instruction.qrUrl }
     },
     examples: [
@@ -161,6 +168,7 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
                         ].join("\n"),
                     },
                 },
+                { kind: "payment.rematch", payload: { orderId: "o1" } },
             ],
             grant: SENDING_GRANT,
             tools: [

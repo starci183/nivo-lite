@@ -94,7 +94,8 @@
                   "format": "number"
                 }
               ],
-              "currency": "VND"
+              "currency": "VND",
+              "variant": "ribbon"
             },
             "bind": {
               "data": {
@@ -212,7 +213,7 @@
                       "term": {
                         "key": "fact_enabled"
                       },
-                      "path": "enabled",
+                      "path": "state",
                       "format": "badge"
                     },
                     {
@@ -221,7 +222,17 @@
                       },
                       "path": "publicPath"
                     }
-                  ]
+                  ],
+                  "labels": {
+                    "state": {
+                      "active": {
+                        "key": "state_on"
+                      },
+                      "paused": {
+                        "key": "state_off"
+                      }
+                    }
+                  }
                 },
                 "bind": {
                   "record": {
@@ -853,7 +864,8 @@
                     "key": "kind_percent"
                   }
                 }
-              }
+              },
+              "surface": "card"
             },
             "bind": {
               "rows": {
@@ -1253,7 +1265,29 @@
                   "format": "dateTime",
                   "priority": "low"
                 }
-              ]
+              ],
+              "labels": {
+                "status": {
+                  "waiting": {
+                    "key": "campaign_waiting"
+                  },
+                  "draft": {
+                    "key": "campaign_draft"
+                  },
+                  "waiting_decision": {
+                    "key": "campaign_waiting_decision"
+                  },
+                  "sending": {
+                    "key": "campaign_sending"
+                  },
+                  "done": {
+                    "key": "campaign_done"
+                  },
+                  "failed": {
+                    "key": "campaign_failed"
+                  }
+                }
+              }
             },
             "bind": {
               "rows": {

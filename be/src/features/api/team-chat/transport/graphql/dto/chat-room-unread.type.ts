@@ -1,6 +1,5 @@
 import { Field, ID, Int, ObjectType } from "@nestjs/graphql"
 
-
 @ObjectType()
 /** What one room has unread for the viewer. */
 export class ChatRoomUnreadType {

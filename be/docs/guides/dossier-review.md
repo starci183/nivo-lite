@@ -789,8 +789,7 @@ D:/.claude/contexts/grammars/core.md (or the grammar hfs.json names). Templates:
 fe/apps/web/src/components/blocks/BrainDossiers/, fe/apps/web/src/components/blocks/KnowledgeDocs/,
 fe/apps/web/src/features/pages/BrainPage/, fe/apps/web/src/components/blocks/BrainPageFrame/,
 fe/apps/web/src/hooks/brain/, fe/apps/web/src/hooks/swr/api/graphql/, fe/apps/web/src/modules/api/graphql/queries/, fe/apps/web/src/modules/api/graphql/mutations/,
-fe/apps/web/src/modules/brain/, fe/apps/web/src/modules/routes/knowledge-routes.ts, fe/apps/web/src/app/[locale]/(console)/brain/page.tsx,
-fe/apps/web/src/modules/i18n/messages/vi.json, fe/apps/web/src/modules/i18n/messages/en.json, fe/i18n-dynamic-keys.yaml. Use only
+fe/apps/web/src/modules/brain/, fe/apps/web/src/modules/routes/knowledge-routes.ts, fe/apps/web/src/modules/i18n/messages/vi.json, fe/apps/web/src/modules/i18n/messages/en.json, fe/i18n-dynamic-keys.yaml. Use only
 @starci/grammar/common components (0.16.3); no new primitive, no raw HTML control, no inline style.
 
 Files you create (names without extension, under the folders named):
@@ -815,7 +814,7 @@ Files you create (names without extension, under the folders named):
   "Review all dossiers" header action for owners and managers, the third `detail` pane collapse="drawer" of section 7);
   fe/apps/web/src/features/pages/BrainPage/component.tsx (the todo panel); fe/apps/web/src/modules/routes/knowledge-routes.ts (the Brain tab
   list gains "todo" after "dossiers"; the dossier, finding and draft parameters); fe/apps/web/src/modules/brain/tabs.ts and the index
-  beside it; the brain page route fe/apps/web/src/app/[locale]/(console)/brain/page.tsx if it must pass the new parameters;
+  beside it; the brain page route if it must pass the new parameters;
   fe/apps/web/src/components/blocks/BrainPageFrame/ (the tab label with its count); the add-knowledge action in
   fe/apps/web/src/components/blocks/KnowledgeDocs/ and fe/apps/web/src/hooks/knowledge/ so the upload action can preset the topic and the
   tag dossier:<ref> (add a `tags` field to the preset and pass it into the add mutation); the index files of fe/apps/web/src/hooks/brain/ and fe/apps/web/src/hooks/swr/;

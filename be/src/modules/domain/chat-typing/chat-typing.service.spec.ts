@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import { TeamChatService } from "@modules/domain/team-chat"
-import type { RoomMemberView, RoomView } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
+import type { ChatRoomView } from "@modules/domain/team-chat"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { REALTIME_HUB } from "@modules/platform/realtime"
@@ -12,7 +12,10 @@ import { ChatTypingService } from "./chat-typing.service"
 const NOW = "2026-10-25T03:00:00.000Z"
 const ROOM = "room-1"
 
-const memberOf = (memberId: string, name: string, memberKind: "user" | "agent" = "user"): RoomMemberView => ({
+/** A member of a room as its view lists it. */
+type RoomMember = ChatRoomView["members"][number]
+
+const memberOf = (memberId: string, name: string, memberKind: "user" | "agent" = "user"): RoomMember => ({
     memberKind,
     memberId,
     name,
@@ -21,7 +24,7 @@ const memberOf = (memberId: string, name: string, memberKind: "user" | "agent" =
     muted: false,
 })
 
-const roomOf = (members: ReadonlyArray<RoomMemberView>): RoomView => ({
+const roomOf = (members: ReadonlyArray<RoomMember>): ChatRoomView => ({
     id: ROOM,
     kind: "group",
     name: "Sales",
@@ -43,7 +46,7 @@ const SITTING = [
 ]
 
 const build = async () => {
-    const chat = mock<TeamChatService>({ room: jest.fn().mockResolvedValue(roomOf(SITTING)) })
+    const chat = mock<TeamChatRoomsService>({ room: jest.fn().mockResolvedValue(roomOf(SITTING)) })
     const seats = mock<WorkspaceMemberSeatsService>({
         activeUsers: jest.fn().mockResolvedValue([
             { userId: "user-1", displayName: "Mai Linh" },
@@ -56,7 +59,7 @@ const build = async () => {
     const container = await Test.createTestingModule({
         providers: [
             ChatTypingService,
-            { provide: TeamChatService, useValue: chat },
+            { provide: TeamChatRoomsService, useValue: chat },
             { provide: WorkspaceMemberSeatsService, useValue: seats },
             { provide: REALTIME_HUB, useValue: realtime },
             { provide: CLOCK, useValue: clock },

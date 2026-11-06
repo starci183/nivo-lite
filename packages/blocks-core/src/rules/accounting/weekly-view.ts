@@ -25,7 +25,10 @@ export interface WeeklyRecord {
 /** The weekly record the read answers. */
 export const weeklyRecord: z.ZodType<WeeklyRecord> = z.looseObject({
     periodKey: z.enum(["this", "last"]),
-    fromDay: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    fromDay: z
+        .string()
+        .length(10)
+        .regex(/^\d{4}-\d{2}-\d{2}$/),
     w1: week,
     w2: week,
     w3: week,

@@ -9,26 +9,36 @@ describe("the chatbot.thread read", () => {
             ok: true,
             data: {
                 id: "c1",
-                name: "Nguy\u1ec5n Minh Anh",
+                name: "Minh Anh Nguyen",
                 channelName: "Zalo",
+                avatarUrl: "",
                 leadId: "l1",
                 status: "needs",
                 handledBy: "",
                 stage: "qualified",
                 need: "Two flower pots",
-                company: "Hoa Sen Studio",
+                company: "Lotus Studio",
                 phone: "0901234567",
                 email: "minh@example.com",
             },
         })
     })
 
+    it("carries the picture link the channel gave the customer", async () => {
+        const world = memoryWorld()
+        world.conversations.push({
+            ...recordOfThread({ ...WAITING_ROW, avatarUrl: "https://zalo.test/minh.png" }),
+            id: "pic",
+        })
+        expect(await THREAD.execute?.(memoryProvider(world), { id: "pic" }, STAFF_CONTEXT)).toMatchObject({
+            ok: true,
+            data: { avatarUrl: "https://zalo.test/minh.png" },
+        })
+    })
+
     it("names the holder of a conversation a person holds", async () => {
         const result = await THREAD.execute?.(memoryProvider(memoryWorld()), { id: "c2" }, STAFF_CONTEXT)
-        expect(result).toMatchObject({
-            ok: true,
-            data: { handledBy: "L\u00ea Thu H\u00e0", channelName: "Telegram", stage: "" },
-        })
+        expect(result).toMatchObject({ ok: true, data: { handledBy: "Thu Ha Le", channelName: "Telegram", stage: "" } })
     })
 
     it("answers nothing for a conversation the workspace does not have, and empty facts for a customer not yet captured", async () => {

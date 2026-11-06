@@ -2,7 +2,6 @@ import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import {
     ASSIGNABLE_ROLES,
-    ROOM_KEYS,
     isAssignableRole,
     mayAssign,
     mayTag,
@@ -61,9 +60,8 @@ const memberOf = builder<MemberState>({
 })
 
 describe("ownership constants and roles", () => {
-    it("lists the three workspace roles and the six department rooms", () => {
+    it("lists the three workspace roles", () => {
         expect(ASSIGNABLE_ROLES).toEqual(["owner", "manager", "staff"])
-        expect(ROOM_KEYS).toEqual(["executive", "frontdesk", "sales", "marketing", "care", "accounting"])
     })
 
     it("knows a role by its name", async () => {

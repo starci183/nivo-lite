@@ -168,12 +168,11 @@ export const ConversationPane = (props: ConversationPaneProps): ReactNode => {
     const threadWords = useThreadWords()
     const nowMs = useReadingTime()
     const { messages, send, handoff, release } = props.slots
-    const maxLength = REPLY_MAX
     const serverRows = derivedSlot(parsedSlot(messages.slot, recordsView), (records) =>
         messagesOf(records, THREAD_LINE_FIELDS),
     )
     const lastId = "items" in serverRows ? (serverRows.items.at(-1)?.id ?? null) : null
-    const composer = useConversationSend(props.threadId, send, maxLength, lastId)
+    const composer = useConversationSend(props.threadId, send, REPLY_MAX, lastId)
     const thread = slotWithPending(serverRows, composer.pending)
     const retryable = new Set(composer.pending.map((entry) => entry.key))
     const scrollRef = useScrolledToEnd("items" in thread ? (thread.items.at(-1)?.id ?? "") : "")
@@ -185,7 +184,7 @@ export const ConversationPane = (props: ConversationPaneProps): ReactNode => {
             })
             .catch(() => actionFailed(host, words))
     }
-    const issue = draftIssue(composer.draft, maxLength)
+    const issue = draftIssue(composer.draft, REPLY_MAX)
     const label = words({ key: "inbox_thread_label" })
     const clock = { locale: host.locale(), zone: undefined, nowMs }
     const older = olderOf(messages.page, words)
@@ -201,6 +200,7 @@ export const ConversationPane = (props: ConversationPaneProps): ReactNode => {
                         ? null
                         : {
                               title: contact.name,
+                              avatar: contact.avatar,
                               subtitle:
                                   contact.channelName === ""
                                       ? ""
@@ -229,7 +229,7 @@ export const ConversationPane = (props: ConversationPaneProps): ReactNode => {
                 sendLabel={send.label}
                 lockedText={send.isAllowed && isHeld ? null : words({ key: "conversationLocked" })}
                 draft={composer.draft}
-                maxLength={maxLength}
+                maxLength={REPLY_MAX}
                 problem={issue === "tooLong" ? words({ key: "conversationTooLong" }) : null}
                 isSending={send.isRunning}
                 canSend={composer.canSend}

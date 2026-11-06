@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { Cluster, DataTable, EmptyNotice, Heading, Section, Stack, Text } from "@starci/grammar/common"
+import { Cluster, DataTable, EmptyNotice, Heading, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import type { accountingLedgerBlock } from "../../blocks/accounting/ledger.block"
 import { bookPeriodOf } from "../../rules/accounting/book-view"
 import type { Ledger } from "../../rules/accounting/ledger"
@@ -119,6 +119,13 @@ export const LedgerBlock = (props: RenderOf<typeof accountingLedgerBlock>): Reac
             closing: words({ key: "ledger_closing" }),
         })
     const kindWord = (kind: string): string => words({ key: `kind_${kind}` })
+    const columnLabels = {
+        entry: words({ key: "ledger_col_entry" }),
+        income: words({ key: "ledger_in" }),
+        expense: words({ key: "ledger_out" }),
+        balance: words({ key: "ledger_col_balance" }),
+    }
+    const cardWords = { income: words({ key: "ledger_in" }), expense: words({ key: "ledger_out" }) }
     return (
         <Stack gap="row">
             <Cluster gap="inline" justify="between" align="center">
@@ -135,48 +142,26 @@ export const LedgerBlock = (props: RenderOf<typeof accountingLedgerBlock>): Reac
                 onRetry={read.retry}
                 render={(ledger, isLoading) => (
                     <Stack gap="section">
-                        {isPhone ? (
-                            <Section
-                                kind="list"
-                                ariaLabel={words(props.props.title)}
-                                isLoading={isLoading}
-                                items={bandCells(ledger).map((cell) => ({
-                                    id: cell.id,
-                                    title: cell.term,
-                                    meta: { text: cell.value },
-                                }))}
-                                empty={<EmptyNotice message={labels.empty} />}
-                            />
-                        ) : (
-                            <Section
-                                kind="figures"
-                                ariaLabel={words(props.props.title)}
-                                isLoading={isLoading}
-                                items={bandCells(ledger).map((cell) => ({
-                                    id: cell.id,
-                                    term: cell.term,
-                                    value: cell.value,
-                                }))}
-                            />
-                        )}
+                        <SurfaceCard
+                            kind="figures"
+                            ariaLabel={words(props.props.title)}
+                            isLoading={isLoading}
+                            items={bandCells(ledger).map((cell) => ({
+                                id: cell.id,
+                                term: cell.term,
+                                value: cell.value,
+                            }))}
+                        />
                         {sectionsOf(ledger, kindWord).map((section) => (
                             <Day
                                 key={section.day}
                                 section={section}
-                                columnLabels={{
-                                    entry: words({ key: "ledger_col_entry" }),
-                                    income: words({ key: "ledger_in" }),
-                                    expense: words({ key: "ledger_out" }),
-                                    balance: words({ key: "ledger_col_balance" }),
-                                }}
+                                columnLabels={columnLabels}
                                 closingLabel={words({ key: "ledger_day_balance" })}
                                 empty={labels.empty}
                                 isLoading={isLoading}
                                 isPhone={isPhone}
-                                cardWords={{
-                                    income: words({ key: "ledger_in" }),
-                                    expense: words({ key: "ledger_out" }),
-                                }}
+                                cardWords={cardWords}
                             />
                         ))}
                     </Stack>

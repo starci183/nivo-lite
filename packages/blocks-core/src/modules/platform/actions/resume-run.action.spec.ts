@@ -9,6 +9,7 @@ const contextOf = (memberId: string | null): RunContext => ({
     memberId,
     now: new Date("2026-11-04T11:30:00.000Z"),
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 })
 
 interface World {

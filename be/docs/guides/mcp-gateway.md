@@ -12,7 +12,7 @@ registers. NIVO core never names a connector or one of its tools; flows find too
 - The rows live in their own capabilities, each the one writer of its table: `be/src/modules/domain/mcp-connectors`
   (`mcp_connectors`), `be/src/modules/domain/mcp-tool-grants` (`mcp_tool_grants`, also the seed's batch `upsert`) and
   `be/src/modules/domain/mcp-call-log` (`mcp_call_log`). The SePay connector reads bank credits and debits through
-  `TransactionsService.listBankCredits` and `listBankDebits` of `be/src/modules/domain/transactions`.
+  `PaymentTransactionsService.list` of `be/src/modules/domain/payment-transactions` (the `transactions.list` and `transactions.debits` tools).
 - Native adapters. `sepay` and `einvoice` are built in; an app adds more with `McpGatewayModule.register({ natives: [AdapterClass] })`
   (the api and the mcp app do, the cli passes none). Each class is a provider of a global module of the app, and the gateway injects
   it from the global container beside the two built-in ones. `NativeAdapter.invoke(workspaceId, tool, args, caller)` gets the caller,
@@ -121,7 +121,7 @@ connector-specific argument shapes.
   user session, so every access token is refused.
 - The door is a `@Credential({ kind: "tool-token", workflow: "mcp-gateway" })` door. Its credential is an agent key: an API key
   of `be/src/modules/domain/api-keys` bound to one agent of the workspace (`api_keys.agent_id`, migration
-  `db/migrations/20261101000903_api-key-agent-binding.sql`) that carries only the `tools:call` scope. An owner or manager creates it with
+  the api key agent binding migration (folded into the baseline)) that carries only the `tools:call` scope. An owner or manager creates it with
   `createApiKey(input: { name, agentId })`; the secret is shown once and only its hash is stored.
 - `McpAgentAuthenticatorService` of `be/src/modules/domain/api-credentials` verifies it (`ApiKeysService.verifyAgentKey`): the
   caller is the agent the key is bound to, in the only workspace the key acts for. A missing or unknown key, a revoked key, a
@@ -186,7 +186,7 @@ assume nothing happened.
   `tools/list`). Rotate it with `setMcpConnectorCredential(input: { key, credential })`, which seals the new value and reads the
   catalog with it. The tools stay unapproved until an owner or manager reviews the pinned tools (`mcpConnectors`) and approves them
   with `approveMcpConnector(input: { key })`.
-- Migration `db/migrations/20261103000100_mcp-sealed-credential_contract_drop.sql` drops `credential_ref`: a row that named a gateway variable
+- Migration the mcp sealed credential contract drop migration (folded into the baseline) drops `credential_ref`: a row that named a gateway variable
   becomes `needed`, and its credential is entered once in the console.
 
 ## Known limits

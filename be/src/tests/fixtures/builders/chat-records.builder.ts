@@ -69,6 +69,13 @@ const same = (left: unknown, right: unknown): boolean => JSON.stringify(left) ==
 const matches = (row: FakeRow, expr: FilterExpr | undefined): boolean => {
     if (expr === undefined) return true
     if (expr.op === "and") return expr.of.every((part) => matches(row, part))
+    if (expr.op === "or") return expr.of.some((part) => matches(row, part))
+    if (expr.op === "isNull") return valueOf(row, expr.field) === null
+    if (expr.op === "notNull") return valueOf(row, expr.field) !== null
+    if (expr.op === "lt") {
+        const value = valueOf(row, expr.field)
+        return typeof value === "string" && value < sortKey(expr.value)
+    }
     if (expr.op === "in") return expr.values.some((value) => same(value, valueOf(row, expr.field)))
     if (expr.op === "eq") return same(valueOf(row, expr.field), expr.value)
     if (expr.op === "ne") return !same(valueOf(row, expr.field), expr.value)

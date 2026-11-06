@@ -1,18 +1,16 @@
 import { Injectable, Optional } from "@nestjs/common"
 import { InjectWorkBranchDecider, isOverLimit } from "@modules/domain/authority-rules"
 import type { WorkBranchDecider } from "@modules/domain/authority-rules"
-import { ExecutionsService } from "@modules/domain/executions"
-import { InjectAgentDirectory, OfficeLinesService } from "@modules/domain/messages"
-import type { AgentDirectory } from "@modules/domain/messages"
-import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import type { GateVerdict, OptionalAuthorityRule, Proposal, WorkContext, WorkItem } from "./decisions.contracts"
+import type { WorkAskCards } from "./work-lines.contracts"
+import { WorkLinesService } from "./work-lines.service"
+import type { OptionalAuthorityRule, Proposal, WorkContext, WorkItem } from "./decisions.contracts"
 import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
 import type { Judgement } from "./work-engine.contracts"
-import { InjectInboundEventStatus } from "./work-engine.decorators"
+import { InjectInboundEventStatus, InjectWorkAskCards } from "./work-engine.decorators"
 import { formatVnd } from "./work-engine.policy"
 import type { InboundEventStatus } from "./work-engine.port"
 
@@ -23,20 +21,27 @@ const withEvidence = (summary: string, note: string): string =>
     note === "" ? summary : `${summary}${SEPARATOR}${note}`
 
 @Injectable()
-/** Puts an item in front of a person: the waiting state, the approval card of a follow-up, and the evidence, Office and inbound lines. */
+/** Puts an item in front of a person: the waiting state and the evidence, team-chat and inbound lines. */
 export class WorkApprovalService {
     constructor(
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        @InjectAgentDirectory() private readonly agents: AgentDirectory,
         @InjectInboundEventStatus() private readonly inbound: InboundEventStatus,
         private readonly items: WorkItemsService,
-        private readonly executions: ExecutionsService,
         private readonly modules: ModuleCatalogService,
         private readonly evidence: EvidenceService,
-        private readonly office: OfficeLinesService,
-        private readonly responsibilities: ResponsibilityJournalService,
+        private readonly lines: WorkLinesService,
+        @InjectWorkAskCards() private readonly cards: WorkAskCards,
         @Optional() @InjectWorkBranchDecider() private readonly branches?: WorkBranchDecider,
     ) {}
+
+    /**
+     * Whether the approval hook posted a card for the decision of this ask. The card is then the one message of the ask; an ask with no
+     * decision, or whose decision has no card (no request opened, nobody to show it to), is said as one line to the owner.
+     */
+    private async cardPosted(ctx: WorkContext, decisionId: string | undefined): Promise<boolean> {
+        if (decisionId === undefined) return false
+        return (await this.cards.cardRooms(ctx.workspaceId, decisionId)) > 0
+    }
 
     /** The names of the fields in the language of the reader; a field without a label shows as it is. */
     fieldLabels(ctx: WorkContext, fields: ReadonlyArray<string>): string {
@@ -49,7 +54,7 @@ export class WorkApprovalService {
             .join(", ")
     }
 
-    /** The item waits for a decision; the person is told in the evidence log, the Office and the inbound status. */
+    /** The item waits for a decision; the person is told in the evidence log, the team chat and the inbound status. */
     async ask(ctx: WorkContext, item: WorkItem, proposal: Proposal, judgement: Judgement): Promise<WorkItem> {
         const { verdict, rule } = judgement
         const waiting = await this.items.markWaiting(item.id, {
@@ -57,7 +62,7 @@ export class WorkApprovalService {
             reasons: verdict.reasons,
             missing: verdict.missing,
             proposal,
-            executionId: await this.approvalCardFor(ctx, item, proposal, verdict),
+            executionId: item.execution_id,
         })
         const reason = this.catalog.get(`engine.reason.${verdict.reason}`, {}, ctx.locale)
         const notes = [
@@ -74,17 +79,18 @@ export class WorkApprovalService {
             summary: `${reason}: ${proposal.summary}`,
             evidence: notes.length === 0 ? null : notes.join(SEPARATOR),
         })
-        await this.office.post(ctx, {
-            dept: waiting.department,
-            body: this.catalog.get(
-                "engine.ask",
-                { dept, reason, summary: withEvidence(proposal.summary, this.evidenceNote(ctx, proposal)) },
-                ctx.locale,
-            ),
-            lead_id: waiting.lead_id,
-            work_item_id: waiting.id,
-            installation_id: waiting.installation_id,
-        })
+        if (!(await this.cardPosted(ctx, judgement.branchDecisionId))) {
+            await this.lines.say(ctx, {
+                department: waiting.department,
+                installationId: waiting.installation_id,
+                body: this.catalog.get(
+                    "engine.ask",
+                    { dept, reason, summary: withEvidence(proposal.summary, this.evidenceNote(ctx, proposal)) },
+                    ctx.locale,
+                ),
+                key: `ask:${waiting.id}`,
+            })
+        }
         if (judgement.branchDecisionId !== undefined) {
             await this.branches?.route({
                 workspaceId: ctx.workspaceId,
@@ -96,37 +102,6 @@ export class WorkApprovalService {
             await this.inbound.mark(ctx, waiting.inbound_event_id, "needs_decision", waiting.lead_id)
         }
         return waiting
-    }
-
-    /**
-     * Follow-up drafts keep using the existing approval card (the Office bubble, the lead page) when nothing is missing: the
-     * card is created and the customer's responsibility moves to waiting for approval. Any other item keeps the card it has.
-     */
-    private async approvalCardFor(
-        ctx: WorkContext,
-        item: WorkItem,
-        proposal: Proposal,
-        verdict: GateVerdict,
-    ): Promise<string | null> {
-        if (item.action !== "send_follow_up" || verdict.missing.length > 0 || item.execution_id !== null) {
-            return item.execution_id
-        }
-        if (item.lead_id === null) return null
-        const named = proposal.fields.responsibility_id
-        const responsibilityId =
-            typeof named === "string" && named !== ""
-                ? named
-                : (await this.responsibilities.ensureFor(ctx, item.lead_id)).id
-        const sales = await this.agents.agentOfDepartment(ctx.workspaceId, "sales", null)
-        const card = await this.executions.open({
-            workspaceId: ctx.workspaceId,
-            responsibilityId,
-            agentId: sales?.id ?? null,
-            draft: proposal.draft ?? "",
-            workItemId: item.id,
-        })
-        await this.responsibilities.markWaitingApproval(ctx, responsibilityId)
-        return card
     }
 
     /** Where what the work knows came from, in the reader's words ("the customer says", "SePay"); empty when the work does not say. */

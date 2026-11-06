@@ -29,6 +29,14 @@ export type BuildWiringProofResultOptionsConnectionPollShape = {
 }
 /** The build wiring proof result options redis record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsRedisShape = { connectTimeoutMs: number }
+/** The build wiring proof result options remote files record the builders hand out and the specs expect. */
+export type BuildWiringProofResultOptionsRemoteFilesShape = {
+    maxBytes: number
+    timeoutMs: number
+    maxRedirects: number
+}
+/** The build wiring proof result options entity engine record the builders hand out and the specs expect. */
+export type BuildWiringProofResultOptionsEntityEngineShape = { cursorKey: Secret; buildId: undefined }
 /** The build wiring proof result options agent work record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsAgentWorkShape = { debounceMs: number }
 /** The build wiring proof result options zalo provider record the builders hand out and the specs expect. */
@@ -162,8 +170,6 @@ export type BuildWiringProofResultOptionsZaloShape = {
 export type BuildWiringProofResultOptionsTelegramShape = { apiBase: string; timeoutMs: number }
 /** The build wiring proof result options channels record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsChannelsShape = { siteUrl: string }
-/** The build wiring proof result options loyalty otps record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsLoyaltyOtpsShape = { pepper: Secret }
 /** The build wiring proof result options connection secrets record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsConnectionSecretsShape = { tokenKey: Secret }
 /** The build wiring proof result options ai tasks endpoint record the builders hand out and the specs expect. */
@@ -299,11 +305,12 @@ export type BuildWiringProofResultOptionsShape = {
     billing: BuildWiringProofResultOptionsBillingShape
     connectionPoll: BuildWiringProofResultOptionsConnectionPollShape
     redis: BuildWiringProofResultOptionsRedisShape
+    remoteFiles: BuildWiringProofResultOptionsRemoteFilesShape
+    entityEngine: BuildWiringProofResultOptionsEntityEngineShape
     openclaw: BuildWiringProofResultOptionsOpenclawShape
     agentTurns: BuildWiringProofResultOptionsAgentTurnsShape
     aiTasks: BuildWiringProofResultOptionsAiTasksShape
     connectionSecrets: BuildWiringProofResultOptionsConnectionSecretsShape
-    loyaltyOtps: BuildWiringProofResultOptionsLoyaltyOtpsShape
     channels: BuildWiringProofResultOptionsChannelsShape
     telegram: BuildWiringProofResultOptionsTelegramShape
     sepay: BuildWiringProofResultOptionsTelegramShape

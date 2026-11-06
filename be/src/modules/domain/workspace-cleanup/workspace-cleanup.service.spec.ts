@@ -31,7 +31,7 @@ const ORPHAN = { id: "u-orphan", email: "spa@example.test" }
 const KEPT_ROW: WorkspaceFootprintRow = { id: HAKUEN, name: "HAKUEN", footprint: null }
 const SPA_ROW: WorkspaceFootprintRow = { id: SPA, name: "Spa", footprint: { leads: 2, workspace_members: 1 } }
 const KEPT = [{ user_id: OWNER.id }, { user_id: STAFF.id }]
-const CLEAN = { cascade: { "app_commands.requested_by": 0 }, block: { "lead_actions.requested_by": 0 } }
+const CLEAN = { cascade: { "app_commands.requested_by": 0 }, block: { "decisions.decided_by": 0 } }
 
 /** What the doubles answer in one spec. */
 interface Fixture {
@@ -164,13 +164,13 @@ describe("WorkspaceCleanupService dry run", () => {
 
 describe("WorkspaceCleanupService references to kept data", () => {
     it("refuses in the dry run an account a kept row blocks, naming the users and tables", async () => {
-        const blocked = { cascade: {}, block: { "lead_actions.requested_by": 2 } }
+        const blocked = { cascade: {}, block: { "decisions.decided_by": 2 } }
         const { cleanup, print } = await build({ refs: { [ORPHAN.id]: blocked } })
 
         await expect(cleanup.run({ keep: HAKUEN, dryRun: true, allowKeptCascade: true })).rejects.toEqual(
             refusedWith(WorkspaceCleanupErrorCode.UserReferenceBlocked, {
                 users: ORPHAN.id,
-                tables: "lead_actions.requested_by",
+                tables: "decisions.decided_by",
             }),
         )
         expect(print).not.toHaveBeenCalled()
@@ -241,7 +241,7 @@ describe("WorkspaceCleanupService execute refusals", () => {
 
     it("refuses an execute when a blocking reference appeared since the review, before any delete", async () => {
         const digest = await digestOf()
-        const blocked = { cascade: {}, block: { "lead_actions.requested_by": 1 } }
+        const blocked = { cascade: {}, block: { "decisions.decided_by": 1 } }
         const { cleanup, prune, accounts } = await build({ refs: { [ORPHAN.id]: blocked } })
 
         await expect(cleanup.run({ keep: HAKUEN, execute: true, receiptDigest: digest })).rejects.toEqual(

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -19,7 +19,7 @@ const RECIPIENT_LIMIT = 500
 /** Authorizes chat typing at the boundary of the team-chat room: only a person who sits in the room can type in it. */
 export class ChatTypingService {
     constructor(
-        private readonly chat: TeamChatService,
+        private readonly chat: TeamChatRoomsService,
         private readonly seats: WorkspaceMemberSeatsService,
         @InjectRealtimeHub() private readonly hub: RealtimeHub,
         @InjectClock() private readonly clock: Clock,

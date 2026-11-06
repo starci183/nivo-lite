@@ -1,6 +1,6 @@
 import type { ActionResult } from "@nivo-lite/agent-sdk/block"
-import type { RunContext } from "@nivo-lite/agent-sdk/port"
-import { ORDER_WAITING, sampleState, SAMPLE_NOW } from "../fixtures/sales.data"
+import { ORDER_WAITING, sampleState } from "../fixtures/sales.data"
+import { salesContextOf } from "../fixtures/sales.context"
 import { memoryProvider } from "../memory"
 import type { MemoryState } from "../memory"
 import { decideAction } from "./decide.action"
@@ -8,12 +8,7 @@ import { decideAction } from "./decide.action"
 const OWNER = "owner-1"
 
 const decide = (state: MemoryState, raw: unknown, memberId: string | null = OWNER): Promise<ActionResult> => {
-    const context: RunContext = {
-        workspaceId: "w1",
-        memberId,
-        now: new Date(SAMPLE_NOW),
-        timeZone: "Asia/Ho_Chi_Minh",
-    }
+    const context = salesContextOf(memberId)
     return (
         decideAction.execute?.(memoryProvider(state), raw, context) ??
         Promise.resolve({ ok: false, reason: "failed", message: { key: "not_run" } })

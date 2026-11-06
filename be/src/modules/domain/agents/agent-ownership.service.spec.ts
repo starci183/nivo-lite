@@ -20,8 +20,9 @@ import {
     WorkspaceMembersService,
 } from "@modules/domain/workspace-members"
 import type { MemberSeatRecord } from "@modules/domain/workspace-members"
-import { OfficeRoomDirectoryService } from "@modules/domain/office-rooms"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { AGENTS_ROOMS } from "./agents.decorators"
+import type { AgentRooms, AgentSeatRoom } from "./agents.port"
 import { AgentOwnershipService } from "./agent-ownership.service"
 import { AgentsErrorCode } from "./errors/agents.error"
 import { AgentEntity } from "./persistence/entities"
@@ -47,19 +48,15 @@ interface SeatWorld {
     readonly counted?: number
 }
 
-/** Who sits in the department rooms of the workspace. */
-interface SeatRoom {
-    readonly userId: string
-    readonly key: string
-}
-
 const build = async (
     entityManager: MockEntityManager,
     world: SeatWorld = {},
-    seatRooms: ReadonlyArray<SeatRoom> = [{ userId: "u-lan", key: "sales" }],
+    seatRooms: ReadonlyArray<AgentSeatRoom> = [{ userId: "u-lan", key: "sales" }],
 ) => {
-    const rooms = mock<OfficeRoomDirectoryService>({
-        labelsOf: jest.fn(() => Promise.resolve([{ key: "sales", name: "Sales" }])),
+    const rooms = mock<AgentRooms>({
+        labelsOf: jest.fn((_workspaceId: string, ids: ReadonlyArray<string>) =>
+            Promise.resolve(ids.filter((id) => id === "sales").map((id) => ({ key: id, name: "Sales" }))),
+        ),
         seatRoomsOf: jest.fn(() => Promise.resolve([...seatRooms])),
     })
     const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(memberOf())) })
@@ -75,7 +72,7 @@ const build = async (
             AgentOwnershipService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: WorkspaceMembersService, useValue: members },
-            { provide: OfficeRoomDirectoryService, useValue: rooms },
+            { provide: AGENTS_ROOMS, useValue: rooms },
             { provide: WorkspaceMemberSeatsService, useValue: seats },
             { provide: WorkspaceMemberDirectoryService, useValue: directory },
         ],
@@ -359,14 +356,16 @@ describe("AgentOwnershipService setOwnership", () => {
         )
     })
 
-    it("accepts an owner who is also the fallback and an empty tag list without counting agents", async () => {
+    it("accepts an owner who is also the fallback, no tag and no room, without counting agents or rooms", async () => {
         const em = mockEntityManager({ count: [AgentEntity, 1], update: [AgentEntity, { affected: 1 }] })
-        const { service, seats } = await build(em, countedOf({ members: 1 }))
+        const { service, seats, rooms } = await build(em, countedOf({ members: 1 }))
 
-        await service.setOwnership("u1", "w1", "a1", { ...CHANGE, fallbackMemberId: "m-minh", canTagAgentIds: [] })
+        const change = { ...CHANGE, fallbackMemberId: "m-minh", canTagAgentIds: [], assignableRooms: [] }
+        await service.setOwnership("u1", "w1", "a1", change)
 
         expect(seats.countActiveAmong).toHaveBeenCalledWith("w1", ["m-minh"])
         expect(em.count).not.toHaveBeenCalledWith(AgentEntity, expect.anything())
+        expect(rooms.labelsOf).not.toHaveBeenCalled()
     })
 
     it("refuses an owner who is not an active member of the workspace", async () => {

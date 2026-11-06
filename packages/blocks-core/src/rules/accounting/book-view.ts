@@ -96,7 +96,7 @@ export const bookPeriodOf = (value: string | null): BookPeriod => (value === "la
 
 /** The line after the title: the period and how many entries the book holds under the search, from a template with `{count}`. */
 export const bookSubtitleOf = (period: string, count: number, countTemplate: string): string =>
-    `\u00b7 ${period} \u00b7 ${countTemplate.replaceAll("{count}", String(count))}`
+    `${period} \u00b7 ${countTemplate.replaceAll("{count}", String(count))}`
 
 /** One entry as a phone card: the name over the day and the second line, the amount at the end and the status mark. */
 export interface PhoneCard {

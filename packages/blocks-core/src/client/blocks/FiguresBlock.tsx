@@ -1,8 +1,9 @@
 import type { ReactNode } from "react"
+import { SurfaceCard } from "@starci/grammar/common"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { figuresBlock } from "../../blocks/figures.block"
 import { cellContextOf } from "../../rows/cell-format"
-import { chartPointOf, figureTextOf } from "../../rows/figure-format"
+import { chartPointOf, figureTextOf, isRibbon } from "../../rows/figure-format"
 import { messageTextOf } from "../../rows/message-text"
 import { textOf, valueAt } from "../../slots/paths"
 import { FiguresBars, FiguresProportion, FiguresStrip } from "../composites/FiguresStrip"
@@ -17,12 +18,20 @@ export const FiguresBlock = (props: RenderOf<typeof figuresBlock>): ReactNode =>
     const read = props.slots.data
     const context = cellContextOf(host.locale(), props.props.currency)
     const kind = props.props.kind ?? "tiles"
+    const ribbon = kind === "tiles" && isRibbon(props.props.variant, props.props.items.length)
     return (
         <SlotView
             slot={read.slot}
             labels={labels}
             placeholder={{}}
             onRetry={read.retry}
+            {...(ribbon
+                ? {
+                      frame: (notice: ReactNode) => (
+                          <SurfaceCard ariaLabel={words(props.props.label)}>{notice}</SurfaceCard>
+                      ),
+                  }
+                : {})}
             render={(record, isLoading) => {
                 const label = words(props.props.label)
                 const caption = textOf(valueAt(record, props.props.captionPath))
@@ -54,6 +63,7 @@ export const FiguresBlock = (props: RenderOf<typeof figuresBlock>): ReactNode =>
                 return (
                     <FiguresStrip
                         label={label}
+                        isRibbon={isRibbon(props.props.variant, points.length)}
                         isLoading={isLoading}
                         items={points.map((point, index) => {
                             const hint = messageTextOf(valueAt(record, props.props.items[index]?.hintPath), (key) =>

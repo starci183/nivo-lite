@@ -18,7 +18,6 @@ import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent
 import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
 import { ExpireApprovalsQueueModule } from "@features/jobs/expire-approvals"
 import { WatchAgentGraphsQueueModule } from "@features/jobs/watch-agent-graphs"
-import { DraftLoyaltyCampaignQueueModule } from "@features/jobs/draft-loyalty-campaign"
 import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
 import { CompleteZaloAuthorizationQueueModule } from "@features/jobs/complete-zalo-authorization"
 import { RefreshZaloTokensQueueModule } from "@features/jobs/refresh-zalo-tokens"
@@ -26,7 +25,6 @@ import { PollDueConnectionsQueueModule } from "@features/jobs/poll-due-connectio
 import { ReconcileZaloInboxQueueModule } from "@features/jobs/reconcile-zalo-inbox"
 import { ReconcileBankFeedQueueModule } from "@features/jobs/reconcile-bank-feed"
 import { RunZaloWizardQueueModule } from "@features/jobs/run-zalo-wizard"
-import { RunLeadActionQueueModule } from "@features/jobs/run-lead-action"
 import { RunModuleJobQueueModule } from "@features/jobs/module-jobs"
 import { ParkedJobsQueueModule } from "@features/jobs/parked-jobs"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
@@ -42,7 +40,6 @@ import { HiringTickQueueModule } from "@features/jobs/hiring-tick"
 import { RunShiftsAlertsQueueModule } from "@features/jobs/run-shifts-alerts"
 import { RunAccountingMorningQueueModule } from "@features/jobs/run-accounting-morning"
 import { RunMarketingTickQueueModule } from "@features/jobs/run-marketing-tick"
-import { RunLeadGenQueueModule } from "@features/jobs/run-lead-gen"
 import { SweepRealtimeEventsQueueModule } from "@features/jobs/sweep-realtime-events"
 import { SweepSystemHistoryQueueModule } from "@features/jobs/sweep-system-history"
 import { DeliverGenericWebhookQueueModule } from "@features/jobs/deliver-generic-webhook"
@@ -73,21 +70,18 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     SyncAgentsQueueModule.register({}),
     ExpireApprovalsQueueModule.register({}),
     WatchAgentGraphsQueueModule.register({}),
-    DraftLoyaltyCampaignQueueModule.register({}),
     CheckConnectionHealthQueueModule.register({}),
     CompleteZaloAuthorizationQueueModule.register({}),
     RefreshZaloTokensQueueModule.register({}),
     ReconcileZaloInboxQueueModule.register({}),
     PollDueConnectionsQueueModule.register({}),
     RunZaloWizardQueueModule.register({}),
-    RunLeadActionQueueModule.register({}),
     RunModuleJobQueueModule.register({}),
     ParkedJobsQueueModule.register({}),
     ProcessPublicApiQueueModule.register({}),
     CreatePaymentOrderQueueModule.register({}),
     PublishContentQueueModule.register({}),
     AcceptMetaEventQueueModule.register({}),
-    RunLeadGenQueueModule.register({}),
     SweepRealtimeEventsQueueModule.register({}),
     SweepSystemHistoryQueueModule.register({}),
     IssueInviteQueueModule.register({}),

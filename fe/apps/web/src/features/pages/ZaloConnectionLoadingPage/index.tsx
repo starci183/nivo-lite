@@ -7,14 +7,6 @@ const STEPS = ["stepApp", "stepPaste", "stepAuthorize", "stepCheck", "stepAgents
 /** The loading view of one Zalo OA connection: the frame of the page itself with only what is read unresolved. */
 export const ZaloConnectionLoadingPage = async (): Promise<ReactElement> => {
     const t = await getTranslations("zaloConnection")
-    return (
-        <ZaloConnectionLoadingPageBase
-            props={{
-                title: t("title"),
-                mainLabel: t("mainLabel"),
-                railLabel: t("eventsTitle"),
-                steps: STEPS.map((key) => ({ id: key, title: t(key) })),
-            }}
-        />
-    )
+    const steps = STEPS.map((key) => ({ id: key, title: t(key) }))
+    return <ZaloConnectionLoadingPageBase props={{ steps, title: t("title"), mainLabel: t("mainLabel") }} />
 }

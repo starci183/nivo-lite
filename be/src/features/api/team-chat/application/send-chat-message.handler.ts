@@ -1,5 +1,5 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import type { MessageView, TeamChatResult } from "@modules/domain/team-chat"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
@@ -11,13 +11,12 @@ import { SendChatMessageCommand } from "./send-chat-message.command"
 export class SendChatMessageHandler extends ICQRSHandler<SendChatMessageCommand, TeamChatResult<MessageView>> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly chat: TeamChatService,
+        private readonly chat: TeamChatRoomsService,
     ) {
         super(logger)
     }
 
     protected override process(command: SendChatMessageCommand): Promise<TeamChatResult<MessageView>> {
-        const { principal: p, request: r } = command.params
-        return this.chat.send(r.workspaceId, p.id, r)
+        return this.chat.send(command.params.request.workspaceId, command.params.principal.id, command.params.request)
     }
 }

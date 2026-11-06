@@ -12,7 +12,7 @@ export const settingsRead: ReadDefinition = defineRead({
     id: "accounting.settings",
     dataKind: "accounting-settings",
     shape: "record",
-    fields: ["postExpenses", "postOutgoing", "postUnmatched", "voidMode", "vatPeriod"],
+    fields: ["postExpenses", "postOutgoing", "postUnmatched", "voidMode", "vatPeriod", "rematchDays"],
     paths: {},
     variables,
     permission: "accounting.view",
