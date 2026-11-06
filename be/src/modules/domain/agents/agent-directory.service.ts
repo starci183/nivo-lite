@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
+import { In, Not } from "typeorm"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { storedAvatarAddress } from "@modules/integrations/object-storage"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -22,6 +22,9 @@ import type {
 } from "./agent-directory.contracts"
 import type { OptionalId } from "./agents.contracts"
 import { AgentEntity } from "./persistence/entities"
+
+/** The module of the internal agent every workspace is seeded with: it runs jobs and is no persona, so no seat, count or sheet shows it. */
+const INTERNAL_MODULE = "nivo"
 
 const CARD_COLUMNS = { id: true, name: true, module: true, canTagAgentIds: true } as const
 
@@ -160,7 +163,7 @@ export class AgentDirectoryService {
     async moduleRefsOf(workspaceId: string, limit: number): Promise<Array<AgentModuleRef>> {
         const agents = await this.entityManager.find(AgentEntity, {
             select: { id: true, module: true },
-            where: { workspaceId },
+            where: { workspaceId, module: Not(INTERNAL_MODULE) },
             order: { createdAt: "ASC", id: "ASC" },
             take: limit,
         })
@@ -266,7 +269,7 @@ export class AgentDirectoryService {
 
     /** How many agents the workspace has, active or paused. */
     countOf(workspaceId: string): Promise<number> {
-        return this.entityManager.count(AgentEntity, { where: { workspaceId } })
+        return this.entityManager.count(AgentEntity, { where: { workspaceId, module: Not(INTERNAL_MODULE) } })
     }
 
     /** The oldest agents of the workspace as seats, oldest first (ties by id). */
@@ -328,7 +331,7 @@ export class AgentDirectoryService {
     async sheetsOf(workspaceId: string, limit: number): Promise<Array<AgentSheet>> {
         const agents = await this.entityManager.find(AgentEntity, {
             select: SHEET_COLUMNS,
-            where: { workspaceId },
+            where: { workspaceId, module: Not(INTERNAL_MODULE) },
             order: { createdAt: "ASC" },
             take: limit,
         })
@@ -392,5 +395,6 @@ export class AgentDirectoryService {
             .addSelect("a.avatarUrl", "avatar_url")
             .addSelect(SEAT_AT, "at")
             .where("a.workspaceId = :workspaceId", { workspaceId })
+            .andWhere("a.module <> :internal", { internal: INTERNAL_MODULE })
     }
 }

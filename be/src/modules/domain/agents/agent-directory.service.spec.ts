@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { agentCreatedAt, agentEntityOf, lanAgent } from "@tests/fixtures/builders/agents.builder"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { In } from "typeorm"
+import { In, Not } from "typeorm"
 import { queueSubQueryBuilders } from "@tests/fixtures/builders/sub-query-builder.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentDirectoryService } from "./agent-directory.service"
@@ -158,7 +158,7 @@ describe("AgentDirectoryService > handles, seats and ids", () => {
             const em = mockEntityManager({ count: [AgentEntity, 3] })
 
             await expect((await build(em)).countOf("w1")).resolves.toBe(3)
-            expect(em.count).toHaveBeenCalledWith(AgentEntity, { where: { workspaceId: "w1" } })
+            expect(em.count).toHaveBeenCalledWith(AgentEntity, { where: { workspaceId: "w1", module: Not("nivo") } })
         })
     })
 
@@ -169,6 +169,7 @@ describe("AgentDirectoryService > handles, seats and ids", () => {
 
             await expect((await build(em)).firstSeats("w1", 4)).resolves.toEqual([{ id: "a1" }])
             expect(read?.argsOf("where")).toContainEqual(["a.workspaceId = :workspaceId", { workspaceId: "w1" }])
+            expect(read?.argsOf("andWhere")).toContainEqual(["a.module <> :internal", { internal: "nivo" }])
             expect(read?.argsOf("orderBy")).toContainEqual(["a.createdAt"])
             expect(read?.argsOf("addOrderBy")).toContainEqual(["a.id"])
             expect(read?.argsOf("limit")).toContainEqual([4])
@@ -279,7 +280,7 @@ describe("AgentDirectoryService > sheets", () => {
             await expect((await build(em)).sheetsOf("w1", 200)).resolves.toEqual([SHEET])
             expect(em.find).toHaveBeenCalledWith(AgentEntity, {
                 select: SHEET_SELECT,
-                where: { workspaceId: "w1" },
+                where: { workspaceId: "w1", module: Not("nivo") },
                 order: { createdAt: "ASC" },
                 take: 200,
             })
@@ -396,7 +397,7 @@ describe("AgentDirectoryService status and modules", () => {
         await expect((await build(em)).moduleRefsOf("w1", 500)).resolves.toEqual([{ id: "a1", module: "chatbot" }])
         expect(em.find).toHaveBeenCalledWith(AgentEntity, {
             select: { id: true, module: true },
-            where: { workspaceId: "w1" },
+            where: { workspaceId: "w1", module: Not("nivo") },
             order: { createdAt: "ASC", id: "ASC" },
             take: 500,
         })
