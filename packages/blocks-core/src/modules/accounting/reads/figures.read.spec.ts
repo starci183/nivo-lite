@@ -34,6 +34,8 @@ const worldOf = (unmatched: number, waiting: number): MemoryWorld => {
         entryDate: "2026-11-02",
         amountVnd: 5_000_000,
         note: null,
+        counterparty: null,
+        status: "paid",
     })
     putBookEntry(world, {
         id: "e2",
@@ -44,6 +46,8 @@ const worldOf = (unmatched: number, waiting: number): MemoryWorld => {
         entryDate: "2026-11-03",
         amountVnd: 2_000_000,
         note: null,
+        counterparty: null,
+        status: "paid",
     })
     putInvoice(world, INVOICE)
     for (let n = 0; n < unmatched; n += 1) {

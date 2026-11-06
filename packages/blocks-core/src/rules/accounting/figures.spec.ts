@@ -64,6 +64,19 @@ describe("figures", () => {
         })
     })
 
+    it("takes the reversal of a voided invoice off what was invoiced", () => {
+        const figures = figuresOf({
+            totals: [
+                { kind: "invoice", vnd: 5_000_000, count: 2 },
+                { kind: "reversal", vnd: -2_000_000, count: 1 },
+            ],
+            unmatched: { vnd: 0, count: 0 },
+            openInvoices: [],
+            now: NOW,
+        })
+        expect(figures.invoiced).toEqual({ vnd: 3_000_000, count: 1 })
+    })
+
     it("has zero figures for a period with no entries", () => {
         const none = { vnd: 0, count: 0 }
         expect(figuresOf({ totals: [], unmatched: none, openInvoices: [], now: NOW })).toEqual({

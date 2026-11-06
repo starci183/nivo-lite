@@ -12,6 +12,11 @@ import type {
     TransactionRecord,
 } from "../../rules/accounting/accounting.types"
 import type { KindTotal, Measure, OpenInvoice } from "../../rules/accounting/figures"
+import { CASH_KINDS } from "../../rules/accounting/ledger"
+import type { QuestionLine } from "../../rules/accounting/questions"
+import { ACCOUNTING_SETTINGS_DEFAULTS } from "../../rules/accounting/settings"
+import type { AccountingSettings } from "../../rules/accounting/settings"
+import { SETTINGS_KEY } from "../../entities/accounting/settings.entity"
 import type { DayRange, InstantRange, TargetStores } from "./accounting.types"
 import {
     CLAIM_FIELDS,
@@ -25,7 +30,12 @@ import {
     leadNameOf,
     openInvoiceOf,
     orderOf,
+    questionOf,
+    QUESTION_FIELDS,
+    settingsOfRecord,
+    SETTINGS_FIELDS,
     transactionOf,
+    TRANSACTION_FIELDS,
 } from "./accounting-records"
 
 /** The most corrections one record carries that a lineage lists. */
@@ -182,7 +192,9 @@ export const openInvoices = (invoices: EntityApi, limit: number): Promise<Readon
 /** The kind of entry a group of the totals is for; null for a group the books do not know. */
 const kindOf = (row: AggregateRow): BookEntryKind | null => {
     const kind = row.groups["kind"]
-    return kind === "income" || kind === "invoice" || kind === "adjustment" ? kind : null
+    return kind === "income" || kind === "expense" || kind === "invoice" || kind === "reversal" || kind === "adjustment"
+        ? kind
+        : null
 }
 
 /** The sums of the book entries of a range of days, by kind; a kind with no entry is absent. */
@@ -235,3 +247,147 @@ const conversationPagesFrom = async (
 /** The conversation a customer wrote in last among the newest conversations of the workspace; null when none of them is theirs. */
 export const latestConversationOfLead = (conversations: EntityApi, leadId: string): Promise<string | null> =>
     conversationPagesFrom(conversations, leadId, undefined, CONVERSATION_PAGES_MAX)
+
+/** The most entries one read of a period lists: the cash book and the weeks add up no more. */
+export const PERIOD_ENTRIES_MAX = 1_000
+
+/** The pages of a query from the one `after` names on, until `limit` rows are read or the pages end. */
+const pagesFrom = async (
+    entity: EntityApi,
+    query: EntityQuery,
+    limit: number,
+    after: string | undefined,
+    read: ReadonlyArray<PageRow>,
+): Promise<ReadonlyArray<PageRow>> => {
+    const size = Math.min(PAGE_SIZE, limit - read.length)
+    const page = await entity.list({ ...query, page: after === undefined ? { size } : { size, after } })
+    const rows = [...read, ...page.rows]
+    return page.next === null || rows.length >= limit ? rows : pagesFrom(entity, query, limit, page.next, rows)
+}
+
+/** The fields of a book entry a query selects. */
+const BOOK_FIELDS: ReadonlyArray<string> = [
+    "kind",
+    "sourceEntity",
+    "sourceId",
+    "entryDate",
+    "amountVnd",
+    "note",
+    "counterparty",
+    "status",
+]
+
+/** The entries of a range of days that moved money (income, expense, reversal), oldest first by day then id. */
+export const cashEntries = async (book: EntityApi, range: DayRange): Promise<ReadonlyArray<BookEntryRecord>> => {
+    const rows = await pagesFrom(
+        book,
+        {
+            select: BOOK_FIELDS,
+            where: q.and(q.in("kind", CASH_KINDS), q.gte("entryDate", range.fromDay), q.lt("entryDate", range.toDay)),
+            order: [
+                ["entryDate", "asc"],
+                ["id", "asc"],
+            ],
+            page: { size: PAGE_SIZE },
+        },
+        PERIOD_ENTRIES_MAX,
+        undefined,
+        [],
+    )
+    return rows.flatMap((listed) => bookEntryOf(listed.row) ?? [])
+}
+
+/** The income entries of a range of days, newest first: what the weeks of a period add up. */
+export const incomeEntries = async (book: EntityApi, range: DayRange): Promise<ReadonlyArray<BookEntryRecord>> => {
+    const rows = await pagesFrom(
+        book,
+        {
+            select: BOOK_FIELDS,
+            where: q.and(q.eq("kind", "income"), q.gte("entryDate", range.fromDay), q.lt("entryDate", range.toDay)),
+            order: [
+                ["entryDate", "desc"],
+                ["id", "desc"],
+            ],
+            page: { size: PAGE_SIZE },
+        },
+        PERIOD_ENTRIES_MAX,
+        undefined,
+        [],
+    )
+    return rows.flatMap((listed) => bookEntryOf(listed.row) ?? [])
+}
+
+/** The payments of a range that are unmatched or wait for review, newest first, at most `limit`. */
+export const unmatchedPayments = async (
+    transactions: EntityApi,
+    range: InstantRange,
+    limit: number,
+): Promise<ReadonlyArray<TransactionRecord>> => {
+    const page = await transactions.list({
+        select: TRANSACTION_FIELDS,
+        where: q.and(
+            q.in("status", ["unmatched", "needs_review"]),
+            q.gte("occurredAt", range.fromIso),
+            q.lt("occurredAt", range.toIso),
+        ),
+        order: [
+            ["occurredAt", "desc"],
+            ["id", "desc"],
+        ],
+        page: { size: Math.min(limit, PAGE_SIZE) },
+    })
+    return page.rows.flatMap((listed) => transactionOf(listed.row) ?? [])
+}
+
+/** How many questions wait for the owner. */
+export const openQuestionCount = async (questions: EntityApi): Promise<number> => {
+    const [row] = await questions.aggregate({
+        where: q.eq("status", "open"),
+        measures: { count: { kind: "count" } },
+        limit: 1,
+    })
+    return numberOf(row?.measures["count"])
+}
+
+/** The questions that wait for the owner, oldest first, at most `limit`. */
+export const waitingQuestions = async (questions: EntityApi, limit: number): Promise<ReadonlyArray<QuestionLine>> => {
+    const page = await questions.list({
+        select: QUESTION_FIELDS,
+        where: q.eq("status", "open"),
+        order: [
+            ["createdAt", "asc"],
+            ["id", "asc"],
+        ],
+        page: { size: Math.min(limit, PAGE_SIZE) },
+    })
+    return page.rows.flatMap((listed) => questionOf(listed.row) ?? [])
+}
+
+/** Records the answer to a question; refused (`ok: false`) when the question is gone or already answered. */
+export const answerQuestion = async (
+    questions: EntityApi,
+    id: string,
+    answer: string,
+    answeredBy: string,
+): Promise<{ readonly ok: boolean }> => {
+    const found = await questions.get(id)
+    if (found === null || found.data["status"] !== "open") return { ok: false }
+    const written = await questions.update(id, found.version, { status: "answered", answer, answeredBy })
+    return { ok: written.ok }
+}
+
+/** The settings the workspace saved, else the defaults. */
+export const workspaceSettings = async (store: EntityApi): Promise<AccountingSettings> => {
+    const page = await store.list({
+        select: SETTINGS_FIELDS,
+        where: q.eq("scope", SETTINGS_KEY),
+        order: BY_ID,
+        page: { size: 1 },
+    })
+    const found = firstOf(page.rows)
+    return found === null ? ACCOUNTING_SETTINGS_DEFAULTS : settingsOfRecord(found.row)
+}
+
+/** Saves the settings of the workspace: the one row is written, or rewritten. */
+export const saveWorkspaceSettings = (store: EntityApi, settings: AccountingSettings): Promise<unknown> =>
+    store.upsert("scope_key", { scope: SETTINGS_KEY, ...settings })

@@ -11,7 +11,9 @@ import {
     memoryWorld,
     putAdjustment,
     putInvoice,
+    putLead,
     putRecord,
+    putSettings,
     putTransaction,
     rowsOf,
 } from "../fixtures/accounting.memory"
@@ -47,6 +49,7 @@ const run = (world: MemoryWorld, sourceEntity: Source, sourceId: string): Promis
             invoices: entityApi(world, "accounting.invoice"),
             adjustments: entityApi(world, "accounting.adjustment"),
             book: entityApi(world, "accounting.book-entry"),
+            settings: entityApi(world, "accounting.settings"),
         },
         { sourceEntity, sourceId },
         CONTEXT,
@@ -81,6 +84,44 @@ describe("accounting.book-project", () => {
         rowsOf(world, "payment.transaction").splice(1)
         await run(world, "accounting.invoice", SETTLED)
         expect(entriesOf(world).map((entry) => entry[0])).toEqual(["invoice", "income"])
+    })
+
+    it("posts the status and the counterparty the rows of the list draw", async () => {
+        const world = worldOf()
+        putLead(world, "00000000-0000-4000-8000-0000000000c1", "Dinh")
+        putInvoice(
+            world,
+            { ...INVOICE, id: "00000000-0000-4000-8000-0000000000f7" },
+            "00000000-0000-4000-8000-0000000000c1",
+        )
+        await run(world, "payment.transaction", TRANSACTION.id)
+        await run(world, "accounting.invoice", INVOICE.id)
+        await run(world, "accounting.invoice", "00000000-0000-4000-8000-0000000000f7")
+        expect(
+            rowsOf(world, "accounting.book-entry").map((row) => [row.data["status"], row.data["counterparty"]]),
+        ).toEqual([
+            ["paid", TRANSACTION.payer],
+            ["open", null],
+            ["open", "Dinh"],
+        ])
+    })
+
+    it("posts money out as an expense, or nothing when the workspace chose not to", async () => {
+        const world = memoryWorld()
+        putTransaction(world, transactionOf({ direction: "debit" }))
+        await run(world, "payment.transaction", TRANSACTION.id)
+        expect(entriesOf(world)).toEqual([["expense", TRANSACTION.id, 5_000_000]])
+        const off = memoryWorld()
+        putTransaction(off, transactionOf({ direction: "debit" }))
+        putSettings(off, {
+            postExpenses: false,
+            postOutgoing: true,
+            postUnmatched: false,
+            voidMode: "reversal",
+            vatPeriod: "quarterly",
+        })
+        await run(off, "payment.transaction", TRANSACTION.id)
+        expect(entriesOf(off)).toEqual([])
     })
 
     it("posts a correction", async () => {

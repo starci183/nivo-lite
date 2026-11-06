@@ -4,6 +4,8 @@ import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
 import type { ListSource } from "@nivo-lite/agent-sdk/block"
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import { adjustmentEntity } from "../../entities/accounting/adjustment.entity"
+import { accountingQuestionEntity } from "../../entities/accounting/question.entity"
+import { accountingSettingsEntity } from "../../entities/accounting/settings.entity"
 import { bookEntryEntity } from "../../entities/accounting/book-entry.entity"
 import { invoiceEntity } from "../../entities/accounting/invoice.entity"
 import { conversationEntity } from "../../entities/chat/conversation.entity"
@@ -42,6 +44,12 @@ export const CONVERSATIONS: PortDefinition<EntityApi> = entityPort(conversationE
 
 /** The port of the books (`accounting.book-entry`, a projection written by declared jobs only). */
 export const BOOK: PortDefinition<EntityApi> = entityPort(bookEntryEntity)
+
+/** The port of the questions the department asks the owner (`accounting.question`). */
+export const QUESTIONS: PortDefinition<EntityApi> = entityPort(accountingQuestionEntity)
+
+/** The port of the workspace's accounting settings (`accounting.settings`, one row). */
+export const SETTINGS: PortDefinition<EntityApi> = entityPort(accountingSettingsEntity)
 
 /** The port the entries list runs on: the engine turns a list shape and a query into one query over `accounting.book-entry`. */
 export const ENTRIES_LIST: PortDefinition<ListSource<EntryRow>> =

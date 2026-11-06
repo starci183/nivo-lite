@@ -8,7 +8,7 @@ const catalog = new Map<string, AnyEntityDefinition>(FLOW_F_ENTITIES.map((entity
 const entityNamed = (name: string): AnyEntityDefinition | undefined => catalog.get(name)
 
 describe("flow F entity declarations", () => {
-    it("declares the thirteen entities once each", () => {
+    it("declares the fifteen entities once each", () => {
         expect(FLOW_F_ENTITIES.map((entity) => entity.name)).toEqual([
             "sales.lead",
             "sales.order",
@@ -19,6 +19,8 @@ describe("flow F entity declarations", () => {
             "accounting.invoice",
             "accounting.adjustment",
             "accounting.book-entry",
+            "accounting.question",
+            "accounting.settings",
             "agent.turn",
             "agent.run",
             "agent.run-step",

@@ -1,11 +1,13 @@
 import type { ActionResult } from "@nivo-lite/agent-sdk/block"
-import { INVOICE, TRANSACTION } from "../../../rules/accounting/accounting.fixtures"
+import { ADJUSTMENT, INVOICE, TRANSACTION } from "../../../rules/accounting/accounting.fixtures"
+import { entryStatusOf } from "../../../rules/accounting/entry-status"
 import {
     ACCOUNTANT_CONTEXT,
     ACCOUNTANT_ID,
     SYSTEM_CONTEXT,
     memoryProvider,
     memoryWorld,
+    putBookEntry,
     putInvoice,
     putTransaction,
     rowsOf,
@@ -16,10 +18,30 @@ import { adjustAction } from "./adjust.action"
 
 const NOT_RUNNABLE = new Error("not runnable")
 
+const INVOICE_ENTRY = "00000000-0000-4000-8000-0000000001a3"
+const PAYMENT_ENTRY = "00000000-0000-4000-8000-0000000001a1"
+const CORRECTION_ENTRY = "00000000-0000-4000-8000-0000000001a2"
+
+const entryOf = (id: string, kind: "income" | "invoice" | "adjustment", sourceEntity: string, sourceId: string) => ({
+    id,
+    version: "1",
+    kind,
+    sourceEntity,
+    sourceId,
+    entryDate: "2026-11-02",
+    amountVnd: 1,
+    note: null,
+    counterparty: null,
+    status: entryStatusOf(kind),
+})
+
 const worldOf = (): MemoryWorld => {
     const world = memoryWorld()
     putInvoice(world, INVOICE)
     putTransaction(world, TRANSACTION)
+    putBookEntry(world, entryOf(INVOICE_ENTRY, "invoice", "accounting.invoice", INVOICE.id))
+    putBookEntry(world, entryOf(PAYMENT_ENTRY, "income", "payment.transaction", TRANSACTION.id))
+    putBookEntry(world, entryOf(CORRECTION_ENTRY, "adjustment", "accounting.adjustment", ADJUSTMENT.id))
     return world
 }
 
@@ -27,8 +49,7 @@ const run = (world: MemoryWorld, raw: unknown, context = ACCOUNTANT_CONTEXT): Pr
     adjustAction.execute?.(memoryProvider(world), raw, context) ?? Promise.reject(NOT_RUNNABLE)
 
 const payload = {
-    targetType: "invoice",
-    targetId: INVOICE.id,
+    id: INVOICE_ENTRY,
     note: "  Discount agreed  by phone",
     correctedAmount: 1_800_000,
 }
@@ -41,6 +62,10 @@ describe("accounting.adjust", () => {
         expect(adjustAction.refreshes).toEqual([
             "accounting.entries",
             "accounting.entry-counts",
+            "accounting.status-counts",
+            "accounting.weekly",
+            "accounting.ledger",
+            "accounting.decisions",
             "accounting.figures",
             "accounting.entry",
         ])
@@ -70,11 +95,7 @@ describe("accounting.adjust", () => {
 
     it("credits the system when no member asked or the seat is gone, and takes a note without an amount", async () => {
         const system = worldOf()
-        await run(
-            system,
-            { targetType: "transaction", targetId: TRANSACTION.id, note: "Counted twice" },
-            SYSTEM_CONTEXT,
-        )
+        await run(system, { id: PAYMENT_ENTRY, note: "Counted twice" }, SYSTEM_CONTEXT)
         expect(rowsOf(system, "accounting.adjustment")[0]?.data).toMatchObject({
             createdBy: "system",
             createdByUser: null,
@@ -105,8 +126,26 @@ describe("accounting.adjust", () => {
         expect(rowsOf(world, "accounting.adjustment")).toEqual([])
     })
 
-    it("refuses a record that is not there, and writes nothing", async () => {
+    it("refuses an entry that is gone and an entry that is itself a correction, and writes nothing", async () => {
+        const gone = memoryWorld()
+        await expect(run(gone, payload)).resolves.toEqual({
+            ok: false,
+            reason: "refused",
+            message: { key: "adjust_target_missing" },
+        })
+        const world = worldOf()
+        await expect(run(world, { ...payload, id: CORRECTION_ENTRY })).resolves.toEqual({
+            ok: false,
+            reason: "refused",
+            message: { key: "adjust_entry_final" },
+        })
+        expect(rowsOf(world, "accounting.adjustment")).toEqual([])
+        expect(world.jobs).toEqual([])
+    })
+
+    it("refuses an entry whose source record is not there, and writes nothing", async () => {
         const world = memoryWorld()
+        putBookEntry(world, entryOf(INVOICE_ENTRY, "invoice", "accounting.invoice", INVOICE.id))
         await expect(run(world, payload)).resolves.toEqual({
             ok: false,
             reason: "refused",

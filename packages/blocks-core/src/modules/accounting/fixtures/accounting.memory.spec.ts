@@ -35,6 +35,16 @@ const ENTRY = {
     entryDate: "2026-11-04",
     amountVnd: 100,
     note: null,
+    counterparty: null,
+    status: "paid",
+} as const
+
+const ROW = {
+    entryDate: "2026-11-04",
+    note: null,
+    amountVnd: 100,
+    status: "paid",
+    counterparty: null,
 } as const
 
 const SHAPE = { sort: {}, page: { size: 1 }, row: { id: "id", title: "note" } }
@@ -275,14 +285,18 @@ describe("the memory ports", () => {
         const list = entriesList(world)
         await expect(list.page(SHAPE, QUERY)).resolves.toEqual({
             rows: [
-                { id: "e1", note: "a", entryDate: "2026-11-04", kind: "income" },
-                { id: "e2", note: null, entryDate: "2026-11-04", kind: "invoice" },
-                { id: "e3", note: null, entryDate: "2026-11-04", kind: "adjustment" },
+                { ...ROW, id: "e1", note: "a", kind: "income" },
+                { ...ROW, id: "e2", kind: "invoice" },
+                { ...ROW, id: "e3", kind: "adjustment" },
             ],
             cursor: null,
         })
         const filtered = await list.page(SHAPE, { ...QUERY, filters: { kind: "invoice" } })
         expect(filtered.rows.map((row) => row.id)).toEqual(["e2"])
+        const open = await list.page(SHAPE, { ...QUERY, filters: { status: "open" } })
+        expect(open.rows).toEqual([])
+        const paid = await list.page(SHAPE, { ...QUERY, filters: { status: "paid" } })
+        expect(paid.rows).toHaveLength(3)
         await expect(list.counts(SHAPE, "kind", QUERY)).resolves.toEqual({ income: 1, invoice: 1, adjustment: 1 })
     })
 

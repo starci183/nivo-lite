@@ -1,5 +1,6 @@
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import type { BookEntryKind } from "../../rules/accounting/accounting.types"
+import type { EntryStatus } from "../../rules/accounting/entry-status"
 
 /** A row of the entries list: the declared fields of a book entry the list draws. */
 export interface EntryRow {
@@ -11,6 +12,12 @@ export interface EntryRow {
     readonly entryDate: string
     /** What the entry records. */
     readonly kind: BookEntryKind
+    /** The amount, in VND. */
+    readonly amountVnd: number
+    /** Where the entry stands for the person reading the books. */
+    readonly status: EntryStatus
+    /** The customer or the supplier the entry is with, for the second line of its row; null when unknown. */
+    readonly counterparty: string | null
 }
 
 /** A range of shop calendar days, `[fromDay, toDay)`, as `YYYY-MM-DD`. */
