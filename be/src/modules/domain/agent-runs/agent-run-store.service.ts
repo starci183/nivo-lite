@@ -4,16 +4,18 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { EntityEngineService } from "@modules/domain/entity-engine"
 import type { ScopedTx } from "@modules/domain/entity-engine"
-import { eachInOrder, isRecord } from "@modules/platform/primitives"
+import { eachInOrder } from "@modules/platform/primitives"
 import type { MutationValues } from "@nivo-lite/agent-sdk/mutation"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { AgentStepQueue } from "@modules/queues/agent-step"
 import { AgentRunRecordsService } from "./agent-run-records.service"
+import { AgentRunReportService } from "./agent-run-report.service"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { handlerViewOf, handlerViewsOf, routeStepOf, runRecordOf, runViewOf, stepViewOf } from "./agent-runs.mapper"
 import type { RunRecord } from "./agent-runs-records.contracts"
 import { SETTLE_TRIES, STEPS_MAX, TELL_STATUSES, filled } from "./policies/agent-runs.policy"
 import { jsonValueOf } from "./policies/json-value.policy"
+import { planBindingVerdict } from "./policies/plan-binding.policy"
 import { CLOSED_RUN, statusAfter } from "./policies/run-status.policy"
 import type { RouteMove, RunRef, RunStepView, RunView, WaitAnswer } from "./agent-runs-engine.contracts"
 import type { RunOpen, StepLink, StepSpec, StepView } from "./agent-runs.contracts"
@@ -44,6 +46,7 @@ export class AgentRunStoreService {
         private readonly engine: EntityEngineService,
         private readonly records: AgentRunRecordsService,
         private readonly queue: AgentStepQueue,
+        private readonly report: AgentRunReportService,
     ) {}
 
     /** Runs `work` in the scope of the workspace: on `manager` when the caller holds a transaction, else in one of its own. */
@@ -62,19 +65,14 @@ export class AgentRunStoreService {
         const existing = await this.records.runOfWake(scoped, input.wakeId)
         const run = existing ?? (await this.insertRun(scoped, input))
         if (input.planning !== true) return run
-        const binding = "planBinding" in run.context ? run.context.planBinding : undefined
-        if (binding !== undefined) {
-            if (
-                !isRecord(binding) ||
-                run.graphVersionId !== input.versionId ||
-                binding.versionId !== input.versionId ||
-                binding.trigger !== input.trigger
-            )
-                throw new AgentRunsError({ code: AgentRunsErrorCode.PlanConflict })
-            return run
-        }
-        if (run.graphVersionId !== null && run.graphVersionId !== input.versionId)
-            throw new AgentRunsError({ code: AgentRunsErrorCode.PlanConflict })
+        const verdict = planBindingVerdict({
+            binding: "planBinding" in run.context ? run.context.planBinding : undefined,
+            graphVersionId: run.graphVersionId,
+            versionId: input.versionId,
+            trigger: input.trigger,
+        })
+        if (verdict === "conflict") throw new AgentRunsError({ code: AgentRunsErrorCode.PlanConflict })
+        if (verdict === "bound") return run
         if (run.stepSeq > 0 || (await this.records.stepsOf(scoped, run.id)).length > 0)
             throw new AgentRunsError({ code: AgentRunsErrorCode.PlanConflict })
         const context = {
@@ -200,7 +198,10 @@ export class AgentRunStoreService {
         const values = await build(run)
         if (values === null) return null
         const written = await this.records.patchRun(scoped, run, values)
-        return written ?? (await this.patchRunWith(scoped, runId, build, left - 1))
+        if (written === null) return this.patchRunWith(scoped, runId, build, left - 1)
+        if (written.status === "done" && run.status !== "done")
+            await this.report.ended(scoped.manager, scoped.workspaceId, written)
+        return written
     }
 
     /** Writes the run's status after a step changed: the steps are read after the run, so a racing commit is seen on the next try. */

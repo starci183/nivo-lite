@@ -6,6 +6,7 @@ import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { MemberGrantsService } from "@modules/domain/member-grants"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { ModuleJobsQueue } from "@modules/queues/module-jobs"
 import {
     DIRECTORY,
     GRANTS,
@@ -61,6 +62,8 @@ const build = async (em: MockEntityManager, arrangement: Arrangement = {}) => {
     const escalation = mock<ApprovalEscalationService>()
     escalation.expire.mockResolvedValue(EXPIRED_AT_ONCE)
     const announcer = mock<ApprovalAnnouncerService>()
+    const jobs = mock<ModuleJobsQueue>()
+    jobs.enqueue.mockResolvedValue(undefined)
     announcer.resolved.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -71,9 +74,10 @@ const build = async (em: MockEntityManager, arrangement: Arrangement = {}) => {
             { provide: MemberGrantsService, useValue: grants },
             { provide: ApprovalEscalationService, useValue: escalation },
             { provide: ApprovalAnnouncerService, useValue: announcer },
+            { provide: ModuleJobsQueue, useValue: jobs },
         ],
     }).compile()
-    return { service: moduleRef.get(ApprovalOpeningService), transaction, escalation, announcer }
+    return { service: moduleRef.get(ApprovalOpeningService), transaction, escalation, announcer, jobs }
 }
 
 describe("ApprovalOpeningService > open", () => {
@@ -101,6 +105,35 @@ describe("ApprovalOpeningService > open", () => {
         })
     })
 
+    it("enqueues the declared job that posts the approval card, in the transaction that inserts the request, once per request", async () => {
+        const { em } = inserting(approvalRequestEntityOf({ approvers: [MINH_REF] }))
+        const { service, jobs } = await build(em)
+
+        await service.open(openOf())
+
+        expect(jobs.enqueue).toHaveBeenCalledTimes(1)
+        expect(jobs.enqueue).toHaveBeenCalledWith(
+            {
+                workspaceId: "ws-1",
+                job: "platform.post-approval",
+                input: { decisionId: "request-1" },
+            },
+            expect.anything(),
+            { dedupeKey: "platform.post-approval:request-1" },
+        )
+    })
+
+    it("posts no card for a request that expired at once because nobody could approve it", async () => {
+        const { em } = inserting(requestWithoutApproversExpiringNow())
+        const { service, jobs } = await build(em, { directory: [OWNER, MINH], grants: [] })
+
+        await service.open(openOf())
+
+        expect(jobs.enqueue).not.toHaveBeenCalled()
+    })
+})
+
+describe("ApprovalOpeningService > open, what the rule and the graph say", () => {
     it("gives the approvers the order the rule lists them and the policy and time the rule names", async () => {
         const { em, values } = inserting(sequentialRequest())
         const setup = setupOf({

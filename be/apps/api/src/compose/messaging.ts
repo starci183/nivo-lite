@@ -24,6 +24,13 @@ import { ChatActivityModule } from "@modules/domain/chat-activity"
 import { CHAT_RECORDS_ERROR_KINDS, CHAT_RECORDS_MESSAGES, ChatRecordsModule } from "@modules/domain/chat-records"
 import { CHAT_MARKERS_ERROR_KINDS, CHAT_MARKERS_MESSAGES, ChatMarkersModule } from "@modules/domain/chat-markers"
 import { ChatTypingModule } from "@modules/domain/chat-typing"
+import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
+import {
+    TEAM_CHAT_ERROR_KINDS,
+    TEAM_CHAT_MESSAGES,
+    TeamChatModule,
+    TeamChatNativeService,
+} from "@modules/domain/team-chat"
 import {
     CHANNELS_ERROR_KINDS,
     CHANNELS_MESSAGES,
@@ -59,6 +66,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     ChatActivityModule.register({ isGlobal: true }),
     ChatMarkersModule.register({ isGlobal: true }),
     ChatTypingModule.register({ isGlobal: true }),
+    TeamChatModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
     ChannelReceiptsModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),
     ChannelsModule.register({ isGlobal: true, ...options.channels, ports: { inbox: ZaloInboxPageReadService } }),
@@ -72,7 +80,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
         ...options.mcpGateway,
         console: true,
         keyCheck: true,
-        natives: [...NATIVE_TOOL_ADAPTERS, AgentNativeService, ChatSendNativeService],
+        natives: [...NATIVE_TOOL_ADAPTERS, AgentNativeService, ChatSendNativeService, TeamChatNativeService],
     }),
     EntityEngineDoorModule.register({ isGlobal: true }),
     CustomerTurnsModule.register({ isGlobal: true, ...customerTurnsOptionsOf(options.connections.publicApiUrl) }),
@@ -94,6 +102,7 @@ export const messagingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
     SEPAY_ERROR_KINDS,
     ZALO_ERROR_KINDS,
     CHAT_MARKERS_ERROR_KINDS,
+    TEAM_CHAT_ERROR_KINDS,
     MCP_GATEWAY_ERROR_KINDS,
     ENTITY_ENGINE_DOOR_ERROR_KINDS,
     CUSTOMER_TURNS_ERROR_KINDS,
@@ -112,6 +121,7 @@ export const messagingMessages: ReadonlyArray<MessageBundle> = [
     SEPAY_MESSAGES,
     ZALO_MESSAGES,
     CHAT_MARKERS_MESSAGES,
+    TEAM_CHAT_MESSAGES,
     MCP_GATEWAY_MESSAGES,
     ENTITY_ENGINE_DOOR_MESSAGES,
     GATEWAY_TURNS_MESSAGES,

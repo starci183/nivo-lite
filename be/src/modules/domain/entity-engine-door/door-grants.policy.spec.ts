@@ -23,6 +23,8 @@ describe("door grants", () => {
             "chat.send",
             "ledger.append",
             "ledger.status",
+            "team-chat.post-approval",
+            "team-chat.post-report",
         ])
     })
 

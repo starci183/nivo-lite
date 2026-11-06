@@ -25,6 +25,7 @@ export class ApprovalRequestsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
+            imports: [...(base.imports ?? [])],
             providers: [
                 ...(base.providers ?? []),
                 { provide: APPROVAL_AGENT_OWNERS, useExisting: options.ports.agentOwners },

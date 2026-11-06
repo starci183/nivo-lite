@@ -51,6 +51,7 @@ export class EntityEngineModule extends ConfigurableModuleClass {
                 ListSourceService,
                 ModuleJobRunnerService,
                 EntityNodePortsService,
+                ModuleJobsQueueModule,
             ],
         }
     }
