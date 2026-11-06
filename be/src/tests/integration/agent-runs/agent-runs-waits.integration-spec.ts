@@ -4,7 +4,6 @@ import { agentGraphsEntities } from "@modules/domain/agent-graphs"
 import { approvalRequestsEntities } from "@modules/domain/approval-requests"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { DecisionLogReadService, WorkRecorderService } from "@modules/domain/decisions"
-import { agentRunsEntities } from "@modules/domain/agent-runs"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { AgentRunSweepService } from "../../../modules/domain/agent-runs/agent-run-sweep.service"
 import { AgentRunItemClosedService } from "../../../modules/domain/agent-runs/agent-run-item-closed.service"
@@ -22,10 +21,10 @@ import { WAIT_RUNS_MODULES } from "../../world/agent-runs-capabilities.options"
 import { WaitsExtensionActivity, waitsExtensionStep } from "../../world/agent-runs-waits.module"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { sceneOf } from "@tests/world/agent-runs-scene.service"
+import { stepRecordsOf } from "../../world/agent-runs-database.service"
 
 const world = useTestWorld({ modules: WAIT_RUNS_MODULES })
 const scene = sceneOf(world)
-const [, StepEntity] = agentRunsEntities
 const [, , , , GraphDecisionEntity] = agentGraphsEntities
 const [ApprovalRequestEntity] = approvalRequestsEntities
 const [MemberEntity] = workspaceMembersEntities
@@ -69,12 +68,12 @@ const askingRun = async (
         deadlineAt: deadline.toISOString(),
     })
     await em().transaction((tx) =>
-        runs().append(tx, scened.runId, [
+        runs().append(scene.workspaceId, tx, scened.runId, [
             ask,
             ...(options.sibling === true ? [waitsExtensionStep("door", "door", { wakeId: scened.wakeId })] : []),
         ]),
     )
-    await runs().advance(scened.runId, SIGNAL)
+    await runs().advance(scene.workspaceId, scened.runId, SIGNAL)
     return { ...scened, item, itemId: item.id, requestId }
 }
 
@@ -96,8 +95,7 @@ describe("agent-runs/wait-timeout: an extension wait passes its deadline with no
         expect(await em().findOneByOrFail(GraphDecisionEntity, { workItemId: itemId })).toMatchObject({
             closedAs: "expired",
         })
-        expect((await scene.runRow(runId)).status).toBe("dead")
-        expect((await scene.runRow(runId)).errorCode).toBe("wait_timeout")
+        expect(await scene.runRow(runId)).toMatchObject({ status: "dead", error: { code: "wait_timeout" } })
         expect(activity().told).toEqual(["ask:wait_timeout"])
         expect(await statuses(runId)).toEqual(["ask:failed"])
         expect((await items().findMany([itemId], 1))[0]?.status).toBe("waiting_decision")
@@ -117,7 +115,7 @@ describe("agent-runs/wait-timeout: an extension wait passes its deadline with no
         await world.resolve(AgentRunSweepService).sweep()
         const renewed = await em().findOneByOrFail(GraphDecisionEntity, { workItemId: itemId })
         const request = await em().findOneByOrFail(ApprovalRequestEntity, { id: renewed.approvalRequestId ?? "" })
-        const step = await em().findOneByOrFail(StepEntity, { runId, stepKey: "ask" })
+        const step = (await stepRecordsOf(world, scene.workspaceId, runId)).find((record) => record.stepKey === "ask")
         const owner = await em().findOneByOrFail(MemberEntity, { workspaceId: scene.workspaceId, role: "owner" })
         await world.resolve(AgentRunSweepService).sweep()
 
@@ -130,7 +128,7 @@ describe("agent-runs/wait-timeout: an extension wait passes its deadline with no
         })
         expect(request.approvers.map((member) => member.role)).toEqual(["owner"])
         expect(request.approvers.map((member) => member.memberId)).toEqual([owner.id])
-        expect(step.claimUntil?.getTime()).toBeGreaterThan(after(HOUR_MS).getTime())
+        expect(step?.claimedUntil?.getTime()).toBeGreaterThan(after(HOUR_MS).getTime())
         expect((await em().findOneByOrFail(GraphDecisionEntity, { workItemId: itemId })).approvalRequestId).toBe(
             request.id,
         )
@@ -169,7 +167,7 @@ describe("agent-runs/wait-answer: a person answers the real work item", () => {
         const { runId } = await askingRun("wait-other", after(HOUR_MS))
 
         const resumed = await em().transaction((tx) =>
-            runs().resumeWaiting(tx, world.id(), { approved: true, by: null }),
+            runs().resumeWaiting(scene.workspaceId, tx, world.id(), { approved: true, by: null }),
         )
 
         expect(resumed).toBe(false)

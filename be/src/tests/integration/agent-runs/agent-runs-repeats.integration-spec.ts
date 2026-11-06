@@ -50,13 +50,18 @@ describe("agent-runs/duplicate-webhook: the same fact arrives twice", () => {
                 context: { message: "again" },
             }),
         )
-        await em().transaction((tx) => runs().append(tx, runId, [chainFrom("door", wakeId), chainFrom("door", wakeId)]))
+        await em().transaction((tx) =>
+            runs().append(scene.workspaceId, tx, runId, [chainFrom("door", wakeId), chainFrom("door", wakeId)]),
+        )
 
         expect(again.id).toBe(runId)
         expect(await statuses(runId)).toEqual(["turn:pending", "door:pending"])
 
-        await Promise.all([runs().advance(runId, SIGNAL), runs().advance(runId, SIGNAL)])
-        await runs().advance(runId, SIGNAL)
+        await Promise.all([
+            runs().advance(scene.workspaceId, runId, SIGNAL),
+            runs().advance(scene.workspaceId, runId, SIGNAL),
+        ])
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
 
         expect(await statuses(runId)).toEqual(["turn:done", "door:done", "tool:done", "reply:done"])
         expect(script().performed).toEqual([`door:${wakeId}`, `tool:${wakeId}`, `reply:${wakeId}`])
@@ -66,8 +71,8 @@ describe("agent-runs/duplicate-webhook: the same fact arrives twice", () => {
         const { wakeId } = await scene.newRun("inline-replay")
         const spec = chainFrom("tool", wakeId)
 
-        const first = await runs().runInline(wakeId, spec, SIGNAL)
-        const second = await runs().runInline(wakeId, spec, SIGNAL)
+        const first = await runs().runInline(scene.workspaceId, wakeId, spec, SIGNAL)
+        const second = await runs().runInline(scene.workspaceId, wakeId, spec, SIGNAL)
 
         expect(second).toEqual(first)
         expect(script().calls.get("tool")).toBe(1)
@@ -83,16 +88,16 @@ describe("agent-runs/connector-timeout: the connector does not answer", () => {
             { kind: "retry", code: "connector_timeout" },
         ]
 
-        const held = await runs().advance(runId, SIGNAL)
+        const held = await runs().advance(scene.workspaceId, runId, SIGNAL)
         expect(held.retryAfterMs).toBeNull()
         expect(await statuses(runId)).toEqual(["turn:done", "door:done", "tool:pending"])
-        const waiting = await runs().advance(runId, SIGNAL)
+        const waiting = await runs().advance(scene.workspaceId, runId, SIGNAL)
         expect(waiting.retryAfterMs).toBeGreaterThan(0)
 
         await scene.endBackoff(runId)
-        await runs().advance(runId, SIGNAL)
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
         await scene.endBackoff(runId)
-        await runs().advance(runId, SIGNAL)
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
 
         expect(await statuses(runId)).toEqual(["turn:done", "door:done", "tool:done", "reply:done"])
         expect((await scene.stepsOf(runId))[2]?.attempt).toBe(3)
@@ -103,15 +108,14 @@ describe("agent-runs/connector-timeout: the connector does not answer", () => {
         const { runId, wakeId } = await scene.newRun("timeout-for-good")
         script().toolTries = Array.from({ length: 5 }, () => ({ kind: "retry" as const, code: "connector_timeout" }))
 
-        await runs().advance(runId, SIGNAL)
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
         await scene.endBackoff(runId)
-        await runs().advance(runId, SIGNAL)
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
         await scene.endBackoff(runId)
-        await runs().advance(runId, SIGNAL)
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
         await world.resolve(AgentRunSweepService).sweep()
 
-        expect((await scene.runRow(runId)).status).toBe("compensated")
-        expect((await scene.runRow(runId)).errorCode).toBe("connector_timeout")
+        expect(await scene.runRow(runId)).toMatchObject({ status: "compensated", error: { code: "connector_timeout" } })
         expect(script().performed).toEqual([`door:${wakeId}`, `undo:door:${wakeId}`])
         expect(script().sent.size).toBe(0)
         expect(script().told).toEqual(["tool:connector_timeout"])
@@ -125,11 +129,10 @@ describe("agent-runs/connector-timeout: the connector does not answer", () => {
             specOf("late", "late", { kind: "read" }),
         ])
 
-        await runs().advance(runId, SIGNAL)
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
 
         expect(script().performed).toEqual([`door:${runId}`, `reply:${runId}`])
-        expect((await scene.runRow(runId)).status).toBe("dead")
-        expect((await scene.runRow(runId)).errorCode).toBe("late_failure")
+        expect(await scene.runRow(runId)).toMatchObject({ status: "dead", error: { code: "late_failure" } })
         expect(script().told).toEqual(["late:late_failure"])
         expect(await statuses(runId)).toEqual(["door:done", "reply:done", "late:failed", "tool:pending"])
     })

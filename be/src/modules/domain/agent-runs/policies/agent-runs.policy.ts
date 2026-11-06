@@ -89,3 +89,15 @@ export const PARK_MAX_RESUMES = 5
 
 /** The most parked runs one pass resumes. */
 export const PARK_PASS_LIMIT = 25
+
+/** The most steps one run holds and reads: a run is a short chain, and one page of the engine holds them all. */
+export const STEPS_MAX = 100
+
+/** The tries of a run write that lost its version to another writer, before the caller is told to try again. */
+export const SETTLE_TRIES = 5
+
+/** The most workspaces one pass of the sweep or of the parked resume visits. */
+export const WORKSPACE_SLICE = 100
+
+/** The statuses of a run that was given to a person or ended and may still be untold. */
+export const TELL_STATUSES: ReadonlyArray<string> = ["parked", "dead", "compensated"]

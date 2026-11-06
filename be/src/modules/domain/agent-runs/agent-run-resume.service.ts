@@ -7,12 +7,14 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
 import { AgentRunParkStoreService } from "./agent-run-park-store.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
+import { AgentRunWorkspacesService } from "./agent-run-workspaces.service"
 import { AgentRunsLogEvent } from "./agent-runs.log-events"
 import { InjectAgentRunsOptions } from "./agent-runs.decorators"
 import type { AgentRunsOptions } from "./agent-runs.options"
 import {
     DECISION_ACTOR_UNKNOWN,
     PARK_MAX_RESUMES,
+    WORKSPACE_SLICE,
     PARK_PASS_LIMIT,
     PARK_SWEEP_MINUTES,
     TOOL_OUTCOME_UNKNOWN,
@@ -40,6 +42,7 @@ export class AgentRunResumeService implements OnApplicationBootstrap {
         private readonly store: AgentRunParkStoreService,
         private readonly runs: AgentRunStoreService,
         private readonly handlers: AgentRunHandlersService,
+        private readonly workspaces: AgentRunWorkspacesService,
         @Optional() @InjectAgentRunsOptions() private readonly options: AgentRunsOptions | null = null,
     ) {}
 
@@ -59,8 +62,8 @@ export class AgentRunResumeService implements OnApplicationBootstrap {
     }
 
     /** Notes the build a run parked under. */
-    async markParked(runId: string): Promise<void> {
-        if (this.build !== "") await this.store.markParked(runId, this.build)
+    async markParked(workspaceId: string, runId: string): Promise<void> {
+        if (this.build !== "") await this.store.markParked(workspaceId, runId, this.build)
     }
 
     /** A person's request: no cap on tries, the reason and the person stay on the run. */
@@ -69,11 +72,36 @@ export class AgentRunResumeService implements OnApplicationBootstrap {
     }
 
     /**
-     * One pass over the parked runs the machine may take: by build when the app just started, else those parked for the sweep's pause. Each run
-     * is bounded in its tries and spaced by a doubling pause; one failing run never stops the rest.
+     * One pass over the parked runs the machine may take: by build when the app just started (every workspace), else those parked for the
+     * sweep's pause (the workspaces `only` names, else the next slice). Each run is bounded in its tries and spaced by a doubling pause; one failing run or
+     * workspace never stops the rest.
      */
-    async resumeParked(byBuild: boolean): Promise<ParkedPassReport> {
+    async resumeParked(byBuild: boolean, only?: ReadonlyArray<string>): Promise<ParkedPassReport> {
+        const found = only ?? (await this.slices(byBuild)).flat()
+        const reports: Array<ParkedPassReport> = []
+        await eachInOrder(found, async (workspaceId) => {
+            try {
+                reports.push(await this.resumeIn(workspaceId, byBuild))
+            } catch (cause) {
+                this.logger.error(AgentRunsLogEvent.ResumeFailed, cause, { kind: "workspace", workspaceId })
+            }
+        })
+        return {
+            looked: reports.reduce((sum, report) => sum + report.looked, 0),
+            resumed: reports.reduce((sum, report) => sum + report.resumed, 0),
+        }
+    }
+
+    /** The workspaces a pass visits: every one for the build pass, the next slice for the sweep's. */
+    private async slices(all: boolean): Promise<ReadonlyArray<ReadonlyArray<string>>> {
+        const slice = await this.workspaces.next()
+        if (!all || slice.length < WORKSPACE_SLICE) return [slice]
+        return [slice, ...(await this.slices(all))]
+    }
+
+    private async resumeIn(workspaceId: string, byBuild: boolean): Promise<ParkedPassReport> {
         const runs = await this.store.parked({
+            workspaceId,
             limit: PARK_PASS_LIMIT,
             build: this.build,
             byBuild,
@@ -85,6 +113,7 @@ export class AgentRunResumeService implements OnApplicationBootstrap {
         await eachInOrder(runs, async ({ runId }) => {
             try {
                 const request = {
+                    workspaceId,
                     runId,
                     actor: byBuild ? ACTOR_BUILD : ACTOR_SWEEP,
                     reason: byBuild ? `build ${this.build}` : "scheduled retry",
@@ -102,12 +131,14 @@ export class AgentRunResumeService implements OnApplicationBootstrap {
     }
 
     private async attempt(request: ResumeRequest, auto: boolean): Promise<ResumeResult> {
-        const failed = await this.store.failedStepOf(request.runId)
+        const failed = await this.store.failedStepOf(request.workspaceId, request.runId)
         if (failed?.errorCode != null && OUTCOME_UNKNOWN.includes(failed.errorCode)) return { kind: "outcome_unknown" }
         const view =
             failed === null
                 ? undefined
-                : (await this.runs.viewsOf(request.runId)).find((step) => step.stepKey === failed.stepKey)
+                : (await this.runs.viewsOf(request.workspaceId, request.runId)).find(
+                      (step) => step.stepKey === failed.stepKey,
+                  )
         const input = view === undefined ? undefined : await this.handlers.of(view.kind)?.refresh?.(view)
         const answer = await this.store.resumeRun({
             ...request,

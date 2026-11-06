@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { runStepViewOf, runViewOf, stepSpecOf, stepViewOf } from "@tests/fixtures/builders/agent-runs.builder"
+import { OPEN, runStepViewOf, runViewOf, stepSpecOf, stepViewOf } from "@tests/fixtures/builders/agent-runs.builder"
 import * as coverage from "@tests/fixtures/builders/agent-runs-coverage.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
@@ -68,11 +68,11 @@ const WAIT = coverage.runWaitOf()
 
 describe("AgentRunsService.waitsOn", () => {
     it("recognizes only a persisted wait in the caller's workspace", async () => {
-        const { service, store, em } = await build([])
+        const { service, store } = await build([])
         await expect(service.waitsOn("ws-1", "item-1")).resolves.toBe(true)
-        expect(store.waitingOn).toHaveBeenCalledWith(em, "item-1")
+        expect(store.waitingOn).toHaveBeenCalledWith("ws-1", "item-1")
+        store.waitingOn.mockResolvedValue(null)
         await expect(service.waitsOn("ws-other", "item-1")).resolves.toBe(false)
-        store.waitingOn.mockResolvedValueOnce(null)
         await expect(service.waitsOn("ws-1", "missing-item")).resolves.toBe(false)
     })
 })
@@ -85,9 +85,9 @@ describe("AgentRunsService.waitOn", () => {
         ledger.claimIn.mockResolvedValueOnce({ kind: "claimed", step })
         ledger.commitIn.mockResolvedValueOnce("ok")
         await service.waitOn(em, WAIT)
-        expect(store.runOfWake).toHaveBeenCalledWith("wake-1", em)
+        expect(store.runOfWake).toHaveBeenCalledWith("ws-1", "wake-1", em)
         expect(store.appendRows).toHaveBeenCalledWith(em, { runId: "run-1", workspaceId: "ws-1" }, [WAIT.spec])
-        expect(ledger.claimIn).toHaveBeenCalledWith(em, "run-1", WAIT.spec.stepKey)
+        expect(ledger.claimIn).toHaveBeenCalledWith(em, { runId: "run-1", workspaceId: "ws-1" }, WAIT.spec.stepKey)
         expect(ledger.commitIn).toHaveBeenCalledWith(em, step, {
             kind: "wait",
             workItemId: "item-1",
@@ -119,20 +119,15 @@ describe("AgentRunsService.waitOn", () => {
         expect(ledger.claimIn).not.toHaveBeenCalled()
     })
 
-    it("refuses a wake in another workspace before writing or claiming its wait", async () => {
+    it("refuses a wake in another workspace or a missing run before writing or claiming its wait", async () => {
         const { service, store, ledger, em } = await build([])
         await expect(service.waitOn(em, { ...WAIT, workspaceId: "other-workspace" })).rejects.toMatchObject(
             refusal("wait_scope"),
         )
-        expect(store.appendRows).not.toHaveBeenCalled()
-        expect(ledger.claimIn).not.toHaveBeenCalled()
-    })
-
-    it("refuses a missing run and writes no step", async () => {
-        const { service, store, em } = await build([])
         store.runOfWake.mockResolvedValueOnce(null)
         await expect(service.waitOn(em, WAIT)).rejects.toMatchObject({ code: AgentRunsErrorCode.RunNotFound })
         expect(store.appendRows).not.toHaveBeenCalled()
+        expect(ledger.claimIn).not.toHaveBeenCalled()
     })
 
     it("refuses an unclaimable or fenced step so the producer transaction rolls back", async () => {
@@ -151,29 +146,20 @@ describe("AgentRunsService.waitOn", () => {
 describe("AgentRunsService.open and append", () => {
     it("opens the one run of a wake through the store", async () => {
         const { service, store, em } = await build([])
-        const input = {
-            workspaceId: "ws-1",
-            agentId: "agent-1",
-            wakeId: "wake-1",
-            trigger: "customer_message",
-            versionId: null,
-            context: {},
-        }
-
-        await expect(service.open(em, input)).resolves.toMatchObject({ id: "run-1" })
-        expect(store.open).toHaveBeenCalledWith(em, input)
+        await expect(service.open(em, OPEN)).resolves.toMatchObject({ id: "run-1" })
+        expect(store.open).toHaveBeenCalledWith(em, OPEN)
     })
 
     it("answers the run the store holds for an id", async () => {
         const { service } = await build([])
-        await expect(service.runOf("run-1")).resolves.toEqual(runViewOf())
+        await expect(service.runOf("ws-1", "run-1")).resolves.toEqual(runViewOf())
     })
 
     it("writes steps behind the last one with the workspace of the run", async () => {
         const { service, store, em } = await build([])
         const specs = [stepSpecOf()]
 
-        await service.append(em, "run-1", specs)
+        await service.append("ws-1", em, "run-1", specs)
 
         expect(store.append).toHaveBeenCalledWith(em, { runId: "run-1", workspaceId: "ws-1" }, specs)
     })
@@ -181,7 +167,7 @@ describe("AgentRunsService.open and append", () => {
     it("writes nothing and reads nothing for no steps", async () => {
         const { service, store, em } = await build([])
 
-        await service.append(em, "run-1", [])
+        await service.append("ws-1", em, "run-1", [])
 
         expect(store.runIn).not.toHaveBeenCalled()
         expect(store.append).not.toHaveBeenCalled()
@@ -192,10 +178,13 @@ describe("AgentRunsService.advance", () => {
     it("drives the pending steps in order until the run has none", async () => {
         const { service, steps, ledger } = await build([claimed("a"), claimed("b"), { kind: "idle" }], [DONE, DONE])
 
-        await expect(service.advance("run-1", SIGNAL)).resolves.toEqual({ run: runViewOf(), retryAfterMs: null })
+        await expect(service.advance("ws-1", "run-1", SIGNAL)).resolves.toEqual({
+            run: runViewOf(),
+            retryAfterMs: null,
+        })
 
         expect(steps.execute).toHaveBeenCalledTimes(2)
-        expect(ledger.claim).toHaveBeenCalledWith("run-1", null)
+        expect(ledger.claim).toHaveBeenCalledWith({ runId: "run-1", workspaceId: "ws-1" }, null)
     })
 
     it("parks a waiting branch and stops at a failed or fenced step", async () => {
@@ -207,7 +196,7 @@ describe("AgentRunsService.advance", () => {
             const waiting = end.kind === "wait"
             const { service, ledger } = await build([claimed("a"), waiting ? { kind: "idle" } : claimed("b")], [end])
 
-            await service.advance("run-1", SIGNAL)
+            await service.advance("ws-1", "run-1", SIGNAL)
 
             expect(ledger.claim).toHaveBeenCalledTimes(waiting ? 2 : 1)
         }
@@ -220,7 +209,7 @@ describe("AgentRunsService.advance", () => {
         )
         store.runById.mockResolvedValueOnce(runViewOf({ status: "waiting" }))
 
-        await expect(service.advance("run-1", SIGNAL)).resolves.toEqual({
+        await expect(service.advance("ws-1", "run-1", SIGNAL)).resolves.toEqual({
             run: runViewOf({ status: "waiting" }),
             retryAfterMs: null,
         })
@@ -234,7 +223,7 @@ describe("AgentRunsService.advance scheduling", () => {
     it("answers how long a step is held by its backoff", async () => {
         const { service } = await build([{ kind: "later", retryAfterMs: 4000 }])
 
-        await expect(service.advance("run-1", SIGNAL)).resolves.toMatchObject({ retryAfterMs: 4000 })
+        await expect(service.advance("ws-1", "run-1", SIGNAL)).resolves.toMatchObject({ retryAfterMs: 4000 })
     })
 
     it("gives a step whose tries are spent to the failure route as a timeout", async () => {
@@ -244,7 +233,7 @@ describe("AgentRunsService.advance scheduling", () => {
             [{ kind: "failed", code: "step_timeout" }],
         )
 
-        await service.advance("run-1", SIGNAL)
+        await service.advance("ws-1", "run-1", SIGNAL)
 
         expect(steps.fail).toHaveBeenCalledWith(step, "step_timeout", false, SIGNAL)
     })
@@ -252,9 +241,9 @@ describe("AgentRunsService.advance scheduling", () => {
     it("continues an undo in progress when the run is closed to forward steps", async () => {
         const { service, compensation, steps } = await build([{ kind: "closed" }])
 
-        await service.advance("run-1", SIGNAL)
+        await service.advance("ws-1", "run-1", SIGNAL)
 
-        expect(compensation.run).toHaveBeenCalledWith("run-1", SIGNAL)
+        expect(compensation.run).toHaveBeenCalledWith({ runId: "run-1", workspaceId: "ws-1" }, SIGNAL)
         expect(steps.execute).not.toHaveBeenCalled()
     })
 
@@ -262,7 +251,7 @@ describe("AgentRunsService.advance scheduling", () => {
         for (const kind of ["busy", "idle", "gone"] as const) {
             const { service, steps, compensation } = await build([{ kind }])
 
-            await service.advance("run-1", SIGNAL)
+            await service.advance("ws-1", "run-1", SIGNAL)
 
             expect(steps.execute).not.toHaveBeenCalled()
             expect(compensation.run).not.toHaveBeenCalled()
@@ -275,11 +264,11 @@ describe("AgentRunsService.advance scheduling", () => {
             many,
             Array.from({ length: 60 }, () => DONE),
         )
-        await bounded.service.advance("run-1", SIGNAL)
+        await bounded.service.advance("ws-1", "run-1", SIGNAL)
         const stop = new AbortController()
         stop.abort()
         const aborted = await build([claimed("a")])
-        await aborted.service.advance("run-1", stop.signal)
+        await aborted.service.advance("ws-1", "run-1", stop.signal)
 
         expect(bounded.steps.execute).toHaveBeenCalledTimes(50)
         expect(aborted.ledger.claim).not.toHaveBeenCalled()
@@ -290,7 +279,7 @@ describe("AgentRunsService.runInline replay", () => {
     it("answers a completed stage from its row without appending or claiming a closed run", async () => {
         const { service, store, ledger } = await build([])
         store.stepOf.mockResolvedValue(runStepViewOf({ status: "done", result: { stored: "original" } }))
-        await expect(service.runInline("wake-1", stepSpecOf(), SIGNAL)).resolves.toEqual({ stored: "original" })
+        await expect(service.runInline("ws-1", "wake-1", stepSpecOf(), SIGNAL)).resolves.toEqual({ stored: "original" })
         expect(store.append).not.toHaveBeenCalled()
         expect(ledger.claim).not.toHaveBeenCalled()
     })
@@ -298,7 +287,7 @@ describe("AgentRunsService.runInline replay", () => {
     it("replays an empty completed answer without reopening its run", async () => {
         const { service, store } = await build([])
         store.stepOf.mockResolvedValue(runStepViewOf({ status: "done", result: null }))
-        await expect(service.runInline("wake-1", stepSpecOf(), SIGNAL)).resolves.toEqual({})
+        await expect(service.runInline("ws-1", "wake-1", stepSpecOf(), SIGNAL)).resolves.toEqual({})
         expect(store.append).not.toHaveBeenCalled()
     })
 
@@ -307,7 +296,7 @@ describe("AgentRunsService.runInline replay", () => {
         store.stepOf
             .mockResolvedValueOnce(null)
             .mockResolvedValueOnce(runStepViewOf({ status: "done", result: { stored: "winner" } }))
-        await expect(service.runInline("wake-1", stepSpecOf(), SIGNAL)).resolves.toEqual({ stored: "winner" })
+        await expect(service.runInline("ws-1", "wake-1", stepSpecOf(), SIGNAL)).resolves.toEqual({ stored: "winner" })
         expect(steps.execute).not.toHaveBeenCalled()
     })
 })
@@ -317,30 +306,30 @@ describe("AgentRunsService.runInline", () => {
         const { service, steps, store, ledger } = await build([claimed("tool-1")], [DONE])
         const spec = stepSpecOf()
 
-        await expect(service.runInline("wake-1", spec, SIGNAL)).resolves.toEqual({ ok: true })
+        await expect(service.runInline("ws-1", "wake-1", spec, SIGNAL)).resolves.toEqual({ ok: true })
 
         expect(store.append).toHaveBeenCalledWith(expect.anything(), { runId: "run-1", workspaceId: "ws-1" }, [spec])
-        expect(ledger.claim).toHaveBeenCalledWith("run-1", "tool-1")
+        expect(ledger.claim).toHaveBeenCalledWith({ runId: "run-1", workspaceId: "ws-1" }, "tool-1")
         expect(steps.execute).toHaveBeenCalledTimes(1)
     })
 
     it("answers the stored result of a step done before, without calling the handler", async () => {
         const { service, steps } = await build([{ kind: "done", answer: { id: "order-1" } }])
 
-        await expect(service.runInline("wake-1", stepSpecOf(), SIGNAL)).resolves.toEqual({ id: "order-1" })
+        await expect(service.runInline("ws-1", "wake-1", stepSpecOf(), SIGNAL)).resolves.toEqual({ id: "order-1" })
         expect(steps.execute).not.toHaveBeenCalled()
     })
 
     it("answers an empty result for a done step that stored none", async () => {
         const { service } = await build([{ kind: "done", answer: null }])
 
-        await expect(service.runInline("wake-1", stepSpecOf(), SIGNAL)).resolves.toEqual({})
+        await expect(service.runInline("ws-1", "wake-1", stepSpecOf(), SIGNAL)).resolves.toEqual({})
     })
 
     it("answers that the step waits for a person", async () => {
         const { service } = await build([claimed("tool-1")], [{ kind: "wait", workItemId: "item-1" }])
 
-        await expect(service.runInline("wake-1", stepSpecOf(), SIGNAL)).resolves.toEqual({
+        await expect(service.runInline("ws-1", "wake-1", stepSpecOf(), SIGNAL)).resolves.toEqual({
             waiting: true,
             workItemId: "item-1",
         })
@@ -354,11 +343,13 @@ describe("AgentRunsService.runInline", () => {
             [{ kind: "failed", code: "step_timeout" }],
         )
 
-        await expect(failed.service.runInline("wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(
+        await expect(failed.service.runInline("ws-1", "wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(
             refusal("connector_timeout"),
         )
-        await expect(fenced.service.runInline("wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(refusal("fenced"))
-        await expect(exhausted.service.runInline("wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(
+        await expect(fenced.service.runInline("ws-1", "wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(
+            refusal("fenced"),
+        )
+        await expect(exhausted.service.runInline("ws-1", "wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(
             refusal("step_timeout"),
         )
     })
@@ -368,11 +359,13 @@ describe("AgentRunsService.runInline", () => {
         const later = await build([{ kind: "later", retryAfterMs: 10 }])
         const closed = await build([{ kind: "closed" }])
 
-        await expect(busy.service.runInline("wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(refusal("step_busy"))
-        await expect(later.service.runInline("wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(
+        await expect(busy.service.runInline("ws-1", "wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(
+            refusal("step_busy"),
+        )
+        await expect(later.service.runInline("ws-1", "wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(
             refusal("retry_later"),
         )
-        await expect(closed.service.runInline("wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(
+        await expect(closed.service.runInline("ws-1", "wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(
             refusal("step_closed"),
         )
     })
@@ -381,7 +374,7 @@ describe("AgentRunsService.runInline", () => {
         const { service, store } = await build([])
         store.runOfWake.mockResolvedValue(null)
 
-        await expect(service.runInline("wake-9", stepSpecOf(), SIGNAL)).rejects.toMatchObject({
+        await expect(service.runInline("ws-1", "wake-9", stepSpecOf(), SIGNAL)).rejects.toMatchObject({
             code: AgentRunsErrorCode.RunNotFound,
         })
     })
@@ -391,10 +384,12 @@ describe("AgentRunsService when the process is shutting down", () => {
     it("claims no new step and refuses an inline call, so the sweep or the next boot takes them", async () => {
         const { service, ledger } = await build([claimed("a")], [], undefined, true)
 
-        await service.advance("run-1", SIGNAL)
+        await service.advance("ws-1", "run-1", SIGNAL)
 
         expect(ledger.claim).not.toHaveBeenCalled()
-        await expect(service.runInline("wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(refusal("shutting_down"))
+        await expect(service.runInline("ws-1", "wake-1", stepSpecOf(), SIGNAL)).rejects.toMatchObject(
+            refusal("shutting_down"),
+        )
     })
 })
 
@@ -408,7 +403,7 @@ describe("AgentRunsService.interrupted", () => {
         ])
         store.viewsOf.mockResolvedValue([stepViewOf({ stepKey: "ask" }), held])
 
-        await service.interrupted("wake-1", "runtime_down", SIGNAL)
+        await service.interrupted("ws-1", "wake-1", "runtime_down", SIGNAL)
 
         expect(steps.fail).toHaveBeenCalledWith(held, "runtime_down", true, SIGNAL)
     })
@@ -416,9 +411,9 @@ describe("AgentRunsService.interrupted", () => {
     it("does nothing for a wake with no run or no step in flight", async () => {
         const { service, steps, store } = await build([])
         store.stepsOf.mockResolvedValue([])
-        await service.interrupted("wake-1", "runtime_down", SIGNAL)
+        await service.interrupted("ws-1", "wake-1", "runtime_down", SIGNAL)
         store.runOfWake.mockResolvedValue(null)
-        await service.interrupted("wake-2", "runtime_down", SIGNAL)
+        await service.interrupted("ws-1", "wake-2", "runtime_down", SIGNAL)
 
         expect(steps.fail).not.toHaveBeenCalled()
     })
@@ -427,15 +422,15 @@ describe("AgentRunsService.interrupted", () => {
 describe("AgentRunsService.resumeWaiting", () => {
     it("refuses a handler that still needs review without completing the waiting work", async () => {
         const { service, store, em } = await build([], [], coverage.retryingDecisionHandlerOf())
-        await expect(service.resumeWaiting(em, "item-1", { approved: true, by: "member-1" })).rejects.toMatchObject(
-            refusal("decision_not_ready"),
-        )
+        await expect(
+            service.resumeWaiting("ws-1", em, "item-1", { approved: true, by: "member-1" }),
+        ).rejects.toMatchObject(refusal("decision_not_ready"))
         expect(store.resume).not.toHaveBeenCalled()
     })
 
     it("refuses an approved legacy decision with no recorded principal", async () => {
         const { service, store, em } = await build([])
-        await expect(service.resumeWaiting(em, "item-1", { approved: true, by: null })).rejects.toMatchObject(
+        await expect(service.resumeWaiting("ws-1", em, "item-1", { approved: true, by: null })).rejects.toMatchObject(
             refusal("decision_actor_unknown"),
         )
         expect(store.resume).not.toHaveBeenCalled()
@@ -450,18 +445,20 @@ describe("AgentRunsService.resumeWaiting", () => {
         }
         const { service, store, em } = await build([], [], handler)
 
-        await expect(service.resumeWaiting(em, "item-1", { approved: true, by: "member-1" })).resolves.toBe(true)
+        await expect(service.resumeWaiting("ws-1", em, "item-1", { approved: true, by: "member-1" })).resolves.toBe(
+            true,
+        )
 
-        expect(store.resume).toHaveBeenCalledWith(em, "item-1", { result: { approved: true }, next })
+        expect(store.resume).toHaveBeenCalledWith(em, "ws-1", "item-1", { result: { approved: true }, next })
     })
 
     it("stores the verdict itself when the handler has no onDecided", async () => {
         const handler: AgentStepHandler = { kind: "ask", run: () => Promise.resolve({ kind: "failed", code: "x" }) }
         const { service, store, em } = await build([], [], handler)
 
-        await service.resumeWaiting(em, "item-1", { approved: false, by: "timeout" })
+        await service.resumeWaiting("ws-1", em, "item-1", { approved: false, by: "timeout" })
 
-        expect(store.resume).toHaveBeenCalledWith(em, "item-1", {
+        expect(store.resume).toHaveBeenCalledWith(em, "ws-1", "item-1", {
             result: { approved: false, by: "timeout" },
             next: [],
         })
@@ -474,9 +471,9 @@ describe("AgentRunsService.resumeWaiting", () => {
             onDecided: () => ({ kind: "failed", code: "invalid_input" }),
         }
         const { service, store, em } = await build([], [], handler)
-        await expect(service.resumeWaiting(em, "item-1", { approved: true, by: "member-1" })).rejects.toMatchObject(
-            refusal("invalid_input"),
-        )
+        await expect(
+            service.resumeWaiting("ws-1", em, "item-1", { approved: true, by: "member-1" }),
+        ).rejects.toMatchObject(refusal("invalid_input"))
         expect(store.resume).not.toHaveBeenCalled()
     })
 
@@ -484,7 +481,9 @@ describe("AgentRunsService.resumeWaiting", () => {
         const { service, store, em } = await build([])
         store.waitingOn.mockResolvedValue(null)
 
-        await expect(service.resumeWaiting(em, "item-1", { approved: true, by: "member-1" })).resolves.toBe(false)
+        await expect(service.resumeWaiting("ws-1", em, "item-1", { approved: true, by: "member-1" })).resolves.toBe(
+            false,
+        )
         expect(store.resume).not.toHaveBeenCalled()
     })
 })

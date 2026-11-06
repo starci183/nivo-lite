@@ -125,7 +125,7 @@ describe("AgentRunStepsService.execute", () => {
             kind: "failed",
             code: "no_handler",
         })
-        expect(deadLetter.tell).toHaveBeenCalledWith("run-1", "turn", "no_handler")
+        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", "turn", "no_handler")
     })
 })
 
@@ -155,14 +155,19 @@ describe("AgentRunStepsService.execute failures", () => {
             kind: "failed",
             code: "handler_threw",
         })
-        expect(store.route).toHaveBeenCalledWith(expect.anything(), "run-1", {
-            from: "running",
-            to: "dead",
-            code: "handler_threw",
-            compensate: [],
-        })
-        expect(resume.markParked).toHaveBeenCalledWith("run-1")
-        expect(deadLetter.tell).toHaveBeenCalledWith("run-1", "turn", "handler_threw")
+        expect(store.route).toHaveBeenCalledWith(
+            "ws-1",
+            "run-1",
+            {
+                from: "running",
+                to: "parked",
+                code: "handler_threw",
+                compensate: [],
+            },
+            expect.anything(),
+        )
+        expect(resume.markParked).toHaveBeenCalledWith("ws-1", "run-1")
+        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", "turn", "handler_threw")
     })
 
     it("parks a step the handler answered failed instead of undoing the steps done before it", async () => {
@@ -173,7 +178,12 @@ describe("AgentRunStepsService.execute failures", () => {
 
         await service.execute(stepViewOf(), SIGNAL)
 
-        expect(store.route).toHaveBeenCalledWith(expect.anything(), "run-1", expect.objectContaining({ to: "dead" }))
+        expect(store.route).toHaveBeenCalledWith(
+            "ws-1",
+            "run-1",
+            expect.objectContaining({ to: "parked" }),
+            expect.anything(),
+        )
         expect(compensation.run).not.toHaveBeenCalled()
     })
 
@@ -221,7 +231,9 @@ describe("AgentRunStepsService.fail", () => {
             code: "slow",
         })
     })
+})
 
+describe("AgentRunStepsService.fail undoing and parking", () => {
     it("undoes the done compensable steps in reverse order when no pivot is done and the tries are spent", async () => {
         const { service, store, compensation, deadLetter } = await build(
             { kind: "retry", code: "slow" },
@@ -230,13 +242,21 @@ describe("AgentRunStepsService.fail", () => {
 
         await service.fail(stepViewOf({ attempt: 3 }), "slow", true, SIGNAL)
 
-        expect(store.route).toHaveBeenCalledWith(expect.anything(), "run-1", {
-            from: "running",
-            to: "compensating",
-            code: "slow",
-            compensate: ["door"],
-        })
-        expect(compensation.run).toHaveBeenCalledWith("run-1", SIGNAL)
+        expect(store.route).toHaveBeenCalledWith(
+            "ws-1",
+            "run-1",
+            {
+                from: "running",
+                to: "compensating",
+                code: "slow",
+                compensate: ["door"],
+            },
+            expect.anything(),
+        )
+        expect(compensation.run).toHaveBeenCalledWith(
+            expect.objectContaining({ runId: "run-1", workspaceId: "ws-1" }),
+            SIGNAL,
+        )
         expect(deadLetter.tell).not.toHaveBeenCalled()
     })
 
@@ -248,14 +268,19 @@ describe("AgentRunStepsService.fail", () => {
 
         await service.fail(stepViewOf(), "bad", false, SIGNAL)
 
-        expect(store.route).toHaveBeenCalledWith(expect.anything(), "run-1", {
-            from: "running",
-            to: "dead",
-            code: "bad",
-            compensate: [],
-        })
+        expect(store.route).toHaveBeenCalledWith(
+            "ws-1",
+            "run-1",
+            {
+                from: "running",
+                to: "parked",
+                code: "bad",
+                compensate: [],
+            },
+            expect.anything(),
+        )
         expect(compensation.run).not.toHaveBeenCalled()
-        expect(deadLetter.tell).toHaveBeenCalledWith("run-1", "turn", "bad")
+        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", "turn", "bad")
     })
 
     it("sends an unknown tool outcome to a person at once and never retries it", async () => {
@@ -267,7 +292,7 @@ describe("AgentRunStepsService.fail", () => {
             kind: "failed",
             code: TOOL_OUTCOME_UNKNOWN,
         })
-        expect(deadLetter.tell).toHaveBeenCalledWith("run-1", "turn", TOOL_OUTCOME_UNKNOWN)
+        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", "turn", TOOL_OUTCOME_UNKNOWN)
     })
 })
 

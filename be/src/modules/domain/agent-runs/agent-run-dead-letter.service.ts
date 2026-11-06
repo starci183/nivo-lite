@@ -38,16 +38,16 @@ export class AgentRunDeadLetterService {
     ) {}
 
     /** Calls the dead letter of the run's handler when nobody was told yet; `stepKey` names the failed step when the caller knows it. */
-    async tell(runId: string, stepKey: string | null, code: string): Promise<void> {
-        const run = await this.store.runById(runId)
+    async tell(workspaceId: string, runId: string, stepKey: string | null, code: string): Promise<void> {
+        const run = await this.store.runById(workspaceId, runId)
         if (run === null || run.spoken) return
-        const steps = await this.store.viewsOf(runId)
+        const steps = await this.store.viewsOf(workspaceId, runId)
         const failed = steps.find((step) => step.stepKey === stepKey) ?? steps.find((step) => step.status === "failed")
         const voice = this.voiceOf(failed, steps)
         if (!(await this.noticed(run, failed ?? steps.at(-1), code))) return
         if (voice === null) {
             this.logger.warn(AgentRunsLogEvent.DeadWithoutVoice, { runId, code })
-            await this.store.spoken(runId)
+            await this.store.spoken(workspaceId, runId)
             return
         }
         try {
@@ -56,16 +56,18 @@ export class AgentRunDeadLetterService {
             this.logger.error(AgentRunsLogEvent.DeadLetterFailed, cause, { runId, code })
             return
         }
-        if (await this.store.spoken(runId)) this.logger.info(AgentRunsLogEvent.DeadLettered, { runId, code })
+        if (await this.store.spoken(workspaceId, runId))
+            this.logger.info(AgentRunsLogEvent.DeadLettered, { runId, code })
     }
 
     /** Raises the one owner item of a parked run; false when it could not, so the run stays untold and the sweep tries again. */
     private async noticed(run: RunView, step: StepView | undefined, code: string): Promise<boolean> {
-        if (run.status !== "dead" || step === undefined) return true
+        if (run.status !== "parked" || step === undefined) return true
         try {
             await this.alerts.raise({
                 kind: "flow-parked",
                 jobId: run.id,
+                workspaceId: run.workspaceId,
                 flowKind: AGENT_RUN_FLOW_KIND,
                 failureClass: "code",
                 reason: code,

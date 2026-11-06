@@ -8,6 +8,7 @@ import { AgentStepLedgerService } from "./agent-step-ledger.service"
 import { AgentRunsLogEvent } from "./agent-runs.log-events"
 import { ADVANCE_MAX_STEPS, HANDLER_THREW } from "./policies/agent-runs.policy"
 import type { StepView } from "./agent-runs.contracts"
+import type { RunRef } from "./agent-runs-engine.contracts"
 
 /** The code of a run whose undo finished: the failure that started it stays on the run. */
 const COMPENSATED = "compensated"
@@ -28,26 +29,26 @@ export class AgentRunCompensationService {
     ) {}
 
     /** Undoes what is left to undo in the run, in reverse order, until none is left, one fails, or the claim is another worker's. */
-    run(runId: string, signal: AbortSignal): Promise<void> {
-        return this.undoNext(runId, signal, ADVANCE_MAX_STEPS)
+    run(ref: RunRef, signal: AbortSignal): Promise<void> {
+        return this.undoNext(ref, signal, ADVANCE_MAX_STEPS)
     }
 
-    private async undoNext(runId: string, signal: AbortSignal, left: number): Promise<void> {
+    private async undoNext(ref: RunRef, signal: AbortSignal, left: number): Promise<void> {
         if (left <= 0 || signal.aborted) return
-        const claim = await this.ledger.claimCompensation(runId)
+        const claim = await this.ledger.claimCompensation(ref)
         if (claim.kind === "finished") {
-            const run = await this.store.runById(runId)
-            await this.deadLetter.tell(runId, null, run?.errorCode ?? COMPENSATED)
+            const run = await this.store.runById(ref.workspaceId, ref.runId)
+            await this.deadLetter.tell(ref.workspaceId, ref.runId, null, run?.errorCode ?? COMPENSATED)
             return
         }
         if (claim.kind !== "claimed") return
         const failure = await this.undo(claim.step, signal)
         const committed = await this.ledger.commitCompensation(claim.step, failure === null, failure)
         if (committed === "dead") {
-            await this.deadLetter.tell(runId, claim.step.stepKey, "compensation_failed")
+            await this.deadLetter.tell(ref.workspaceId, ref.runId, claim.step.stepKey, "compensation_failed")
             return
         }
-        if (committed === "ok" && failure === null) await this.undoNext(runId, signal, left - 1)
+        if (committed === "ok" && failure === null) await this.undoNext(ref, signal, left - 1)
     }
 
     /** Runs the undo; answers null when it worked, else the code of why not. */

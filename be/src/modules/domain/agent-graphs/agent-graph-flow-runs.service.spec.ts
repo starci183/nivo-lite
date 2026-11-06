@@ -134,7 +134,7 @@ describe("AgentGraphFlowRunsService", () => {
             versionId: "version-1",
             context: TURN.context,
         })
-        expect(runs.append).toHaveBeenCalledWith(expect.anything(), "run-1", [
+        expect(runs.append).toHaveBeenCalledWith("ws-1", expect.anything(), "run-1", [
             {
                 stepKey: "keep",
                 nodeKey: "keep",

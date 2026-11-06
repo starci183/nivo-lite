@@ -295,6 +295,7 @@ describe("InboundWorkHandlerService.settle", () => {
         const ending = await handler.settle(turn, { text: "ok" }, SIGNAL)
 
         expect(runs.runInline).toHaveBeenCalledWith(
+            "ws-1",
             "wake-5",
             {
                 stepKey: "final_reply",
@@ -316,6 +317,7 @@ describe("InboundWorkHandlerService.settle", () => {
         await handler.settle(turnOf({ source: REPLYING }), { text: "ok" }, SIGNAL)
 
         expect(runs.runInline).toHaveBeenCalledWith(
+            "ws-1",
             "wake-1",
             expect.objectContaining({ nodeKey: "intent_reply" }),
             SIGNAL,

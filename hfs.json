@@ -691,6 +691,10 @@
           "reason": "enters the entity engine scope of one workspace for the current transaction: sets nivo.workspace_id and switches to the NOBYPASSRLS role app_engine (both transaction-local); TypeORM cannot set a role"
         },
         {
+          "name": "public.engine_scope_leave",
+          "reason": "leaves the entity engine scope inside a caller transaction: clears nivo.workspace_id and restores the session role (both transaction-local); TypeORM cannot set a role"
+        },
+        {
           "name": "public.engine_workspace",
           "reason": "the workspace of the current engine scope (null outside one), read by the app_engine RLS policies"
         }

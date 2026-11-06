@@ -42,7 +42,7 @@ const build = async () => {
         ),
     })
     const runs = mock<AgentRunsService>({
-        resumeWaiting: jest.fn((_tx: unknown, itemId: string, decision: StepDecision) => {
+        resumeWaiting: jest.fn((_workspaceId: string, _tx: unknown, itemId: string, decision: StepDecision) => {
             verdicts.push(`${itemId}:${String(decision.approved)}:${String(decision.by)}`)
             return Promise.resolve(true)
         }),
@@ -73,12 +73,12 @@ describe("AgentRunItemClosedService.closed", () => {
         expect(second).not.toBe(first)
         expect(first.queryRunner?.isTransactionActive).toBe(false)
         expect(second.queryRunner?.isTransactionActive).toBe(false)
-        expect(runs.resumeWaiting).toHaveBeenNthCalledWith(1, first, "item-1", {
+        expect(runs.resumeWaiting).toHaveBeenNthCalledWith(1, "ws-1", first, "item-1", {
             approved: true,
             by: "member-1",
             data: { fields: { args_json: '{"qty":1}' }, draft: "Edited" },
         })
-        expect(runs.resumeWaiting).toHaveBeenNthCalledWith(2, second, "item-2", {
+        expect(runs.resumeWaiting).toHaveBeenNthCalledWith(2, "ws-1", second, "item-2", {
             approved: false,
             by: "member-2",
             data: { fields: {}, draft: null },

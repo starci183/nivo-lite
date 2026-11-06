@@ -1,4 +1,3 @@
-export { agentRunsEntities } from "./persistence/entities"
 export { AGENT_RUNS_ERROR_KINDS } from "./errors/agent-runs.error"
 export { AGENT_RUNS_MESSAGES } from "./messages/agent-runs.messages"
 export { AGENT_RUN_WAIT_TIMEOUT, AGENT_RUN_ITEM_VERDICTS } from "./agent-runs.decorators"
@@ -19,6 +18,7 @@ export type {
     StepDecision,
     StepEffect,
     StepJson,
+    RunOpen,
     StepLink,
     StepSpec,
     StepView,
@@ -34,3 +34,4 @@ export type {
     WaitExpiry,
 } from "./agent-runs-engine.contracts"
 export type { OptionalRunTrace } from "./agent-runs-engine.contracts"
+export type { RunRecord, StepRecord } from "./agent-runs-records.contracts"

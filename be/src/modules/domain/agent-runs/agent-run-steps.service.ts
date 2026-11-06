@@ -71,7 +71,7 @@ export class AgentRunStepsService {
         park: boolean = false,
     ): Promise<StepEnd> {
         const routed = await this.entityManager.transaction(async (tx) => {
-            const steps = await this.store.routeStepsOf(tx, step.runId)
+            const steps = await this.store.routeStepsOf(step.workspaceId, step.runId, tx)
             const route = routeFailure({
                 code,
                 retryable,
@@ -86,8 +86,8 @@ export class AgentRunStepsService {
             }
             if ((await this.ledger.commitIn(tx, step, { kind: "failed", code })) === "fenced") return null
             const compensate = route.kind === "compensate" ? route.stepKeys : []
-            const to = route.kind === "compensate" ? "compensating" : "dead"
-            await this.store.route(tx, step.runId, { from: "running", to, code, compensate })
+            const to = route.kind === "compensate" ? "compensating" : "parked"
+            await this.store.route(step.workspaceId, step.runId, { from: "running", to, code, compensate }, tx)
             return route
         })
         if (routed === null) return this.fenced(step)
@@ -96,11 +96,11 @@ export class AgentRunStepsService {
         } else {
             this.logger.warn(AgentRunsLogEvent.StepFailed, { runId: step.runId, stepKey: step.stepKey, code })
         }
-        if (routed.kind === "compensate") await this.compensation.run(step.runId, signal)
+        if (routed.kind === "compensate") await this.compensation.run(step, signal)
         if (routed.kind === "person") {
-            await this.resume.markParked(step.runId)
+            await this.resume.markParked(step.workspaceId, step.runId)
             this.logger.warn(AgentRunsLogEvent.RunParked, { runId: step.runId, stepKey: step.stepKey, code })
-            await this.deadLetter.tell(step.runId, step.stepKey, code)
+            await this.deadLetter.tell(step.workspaceId, step.runId, step.stepKey, code)
         }
         return { kind: "failed", code }
     }

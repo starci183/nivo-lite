@@ -36,7 +36,12 @@ export class ResumeRunPerformerService implements WorkPerformer {
         if (runId === "")
             throw new WorkPerformersError({ code: WorkPerformersErrorCode.ApprovalInvalid, params: { item: item.id } })
         const actor = ("memberId" in by ? by.memberId : undefined) ?? by.name
-        const answer = await this.resumes.resume({ runId, actor, reason: `item ${item.id}` })
+        const answer = await this.resumes.resume({
+            workspaceId: ctx.workspaceId,
+            runId,
+            actor,
+            reason: `item ${item.id}`,
+        })
         if (answer.kind !== "resumed")
             throw new WorkPerformersError({ code: WorkPerformersErrorCode.ApprovalInvalid, params: { item: item.id } })
         return { summary: this.kit.text(ctx, "runResumed"), evidence: "captured", lead_id: item.lead_id }

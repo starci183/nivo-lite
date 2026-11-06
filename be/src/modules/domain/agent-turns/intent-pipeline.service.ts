@@ -52,6 +52,7 @@ export class IntentPipelineService {
         const keys = await this.intents.nodeKeysOf(turn.workspaceId, turn.agentId, plan.trigger, turn.source)
         const kept = turnRowSchema.safeParse(
             await this.runs.runInline(
+                turn.workspaceId,
                 turn.wakeId,
                 {
                     stepKey: STEP_KEY.turn,
@@ -72,6 +73,7 @@ export class IntentPipelineService {
         const keys = await this.intents.nodeKeysOf(turn.workspaceId, turn.agentId, plan.trigger, turn.source)
         const read = readResultSchema.safeParse(
             await this.runs.runInline(
+                turn.workspaceId,
                 turn.wakeId,
                 {
                     stepKey: STEP_KEY.read,
@@ -117,6 +119,7 @@ export class IntentPipelineService {
     ): Promise<IntentDoorResult> {
         const keys = await this.intents.nodeKeysOf(turn.workspaceId, turn.agentId, read.trace.trigger, turn.source)
         return this.runs.runInline(
+            turn.workspaceId,
             turn.wakeId,
             {
                 stepKey: STEP_KEY.door,

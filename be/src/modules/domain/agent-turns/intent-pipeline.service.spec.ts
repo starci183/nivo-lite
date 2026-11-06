@@ -61,7 +61,9 @@ const build = async (answers: Readonly<Record<string, StepJson>>) => {
     const tx = fakeTransaction(mockEntityManager())
     const runs = mock<AgentRunsService>({
         open: jest.fn(() => Promise.resolve(mock({}))),
-        runInline: jest.fn((_wakeId: string, spec: StepSpec) => Promise.resolve(answers[spec.stepKey] ?? {})),
+        runInline: jest.fn((_workspaceId: string, _wakeId: string, spec: StepSpec) =>
+            Promise.resolve(answers[spec.stepKey] ?? {}),
+        ),
     })
     const intents = mock<IntentTurnService>({
         nodeKeysOf: jest.fn().mockResolvedValue({ turn: "understand", acts: { reply_customer: "answer" } }),
@@ -112,15 +114,15 @@ describe("IntentPipelineService > read", () => {
         expect(runs.open).toHaveBeenCalledTimes(1)
         expect(intents.nodeKeysOf).toHaveBeenCalledWith("ws-1", "agent-1", "customer_message", "customer")
         const [first, second] = jest.mocked(runs.runInline).mock.calls
-        expect(first?.[0]).toBe("wake-1")
-        expect(first?.[1]).toEqual({
+        expect(first?.[1]).toBe("wake-1")
+        expect(first?.[2]).toEqual({
             stepKey: "turn",
             nodeKey: "understand",
             kind: "turn",
             effect: { kind: "read" },
             input: { text: "model text" },
         })
-        expect(second?.[1]).toEqual({
+        expect(second?.[2]).toEqual({
             stepKey: "read_result",
             nodeKey: "understand",
             kind: "read_result",
@@ -137,7 +139,7 @@ describe("IntentPipelineService > read", () => {
 
         await service.read(turn, plan, "new text", signal)
 
-        expect(jest.mocked(runs.runInline).mock.calls[1]?.[1].input).toEqual({ plan, text: "stored text" })
+        expect(jest.mocked(runs.runInline).mock.calls[1]?.[2].input).toEqual({ plan, text: "stored text" })
     })
 
     it("cuts a text longer than a row holds", async () => {
@@ -145,7 +147,7 @@ describe("IntentPipelineService > read", () => {
 
         await service.read(turn, plan, "x".repeat(50_000), signal)
 
-        expect(jest.mocked(runs.runInline).mock.calls[0]?.[1].input).toEqual({ text: "x".repeat(40_000) })
+        expect(jest.mocked(runs.runInline).mock.calls[0]?.[2].input).toEqual({ text: "x".repeat(40_000) })
     })
 
     it("takes the safe road when the stored reading cannot be read back", async () => {
@@ -173,7 +175,7 @@ describe("IntentPipelineService > door", () => {
         await expect(service.door(turn, "door", read, signal)).resolves.toEqual({ replied: true })
         expect(intents.nodeKeysOf).toHaveBeenCalledWith("ws-1", "agent-1", "customer_message", "customer")
 
-        const [wakeId, spec] = jest.mocked(runs.runInline).mock.calls[0] ?? []
+        const [, wakeId, spec] = jest.mocked(runs.runInline).mock.calls[0] ?? []
         expect(wakeId).toBe("wake-1")
         expect(spec).toMatchObject({
             stepKey: "door",
@@ -190,7 +192,7 @@ describe("IntentPipelineService > door", () => {
 
         await service.door(turn, "tag_door", { reading: picked, trace }, signal, { settle })
 
-        expect(jest.mocked(runs.runInline).mock.calls[0]?.[1]).toMatchObject({
+        expect(jest.mocked(runs.runInline).mock.calls[0]?.[2]).toMatchObject({
             kind: "tag_door",
             input: { settle },
         })
