@@ -37,14 +37,12 @@ interface RowWords {
 const trailingOf = (row: ThreadListRow, words: RowWords): ReactNode => (
     <Stack gap="inline" align="end">
         {row.at === "" ? null : <RelativeTime dateTime={row.at} locale={words.locale} size="sm" tone="muted" />}
-        <Cluster gap="inline" wrap={false}>
-            {row.status === null ? null : (
-                <Badge tone={STATUS_TONE[row.status]} isDot>
-                    {words.status(row)}
-                </Badge>
-            )}
-            {row.channel === "" ? null : <Badge tone="neutral">{words.channel(row.channel)}</Badge>}
-        </Cluster>
+        {row.status === null ? null : (
+            <Badge tone={STATUS_TONE[row.status]} isDot>
+                {words.status(row)}
+            </Badge>
+        )}
+        {row.channel === "" ? null : <Badge tone="neutral">{words.channel(row.channel)}</Badge>}
     </Stack>
 )
 
@@ -122,7 +120,7 @@ const InboxRows = (props: InboxListProps): ReactNode => {
         locale: host.locale(),
         status: (row) =>
             row.status === "handled" && row.handledBy !== ""
-                ? words({ key: "inbox_status_handled_by" }).replace("{name}", row.handledBy)
+                ? `${row.handledBy}${words({ key: "inbox_status_handled_suffix" })}`
                 : words({ key: `row_${row.status ?? "ai"}` }),
         channel: (key) => words({ key: `channel_${key}` }),
     }

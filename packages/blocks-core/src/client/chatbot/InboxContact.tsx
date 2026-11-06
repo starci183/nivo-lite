@@ -50,7 +50,7 @@ const ContactBody = (props: ContactBodyProps): ReactNode => {
                     </Heading>
                     {contact.channelName === "" ? null : (
                         <Text size="sm" tone="muted">
-                            {words({ key: "inbox_channel_line" }).replace("{channel}", contact.channelName)}
+                            {`${words({ key: "inbox_channel_prefix" })} ${contact.channelName}`}
                         </Text>
                     )}
                 </Stack>
@@ -60,7 +60,7 @@ const ContactBody = (props: ContactBodyProps): ReactNode => {
                 <Text size="sm" tone="muted">
                     {contact.handledBy === ""
                         ? words({ key: "inbox_who_ai" })
-                        : words({ key: "inbox_who_person" }).replace("{name}", contact.handledBy)}
+                        : `${contact.handledBy}${words({ key: "inbox_who_person_suffix" })}`}
                 </Text>
             </Stack>
             <Stack gap="row">

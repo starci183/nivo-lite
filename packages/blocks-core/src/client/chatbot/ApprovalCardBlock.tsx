@@ -108,7 +108,7 @@ const DraftCard = (props: DraftCardProps): ReactNode => {
             <Stack gap="row">
                 {proposal.asked === "" ? null : (
                     <Text size="sm" tone="muted">
-                        {words({ key: "approval_asked" }).replace("{asked}", proposal.asked)}
+                        {`${words({ key: "approval_asked_prefix" })}${proposal.asked}`}
                     </Text>
                 )}
                 {isEditing ? (

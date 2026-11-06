@@ -63,9 +63,9 @@ const HeadTitle = (props: Pick<ConversationHeadProps, "label" | "thread">): Reac
 /** The head band of the thread pane: who it is with, the control that takes the thread over or hands it back, and the contact toggle. */
 export const ConversationHead = (props: ConversationHeadProps): ReactNode => (
     <PaneSection align="center">
-        <Cluster gap="row" wrap={false} justify="between">
+        <Cluster gap="row" justify="between">
             <HeadTitle label={props.label} thread={props.thread} />
-            <Cluster gap="inline" wrap={false} align="center">
+            <Cluster gap="inline" align="center">
                 {props.actions.map((action) => (
                     <Button key={action.id} intent="alternative" isPending={action.isRunning} onPress={action.onPress}>
                         {action.label}
