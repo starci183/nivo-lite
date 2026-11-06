@@ -6,17 +6,30 @@ import { RECORD_ROWS_PLACEHOLDER, recordsView, rowsOf } from "../../rows/rows"
 import { queryOf } from "../../rows/search"
 import { relabeller } from "../../rows/value-labels"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
+import { useInSurface } from "../composites/InSurface"
 import { RecordCardList } from "../composites/RecordCardList"
 import { SelectableRows } from "../composites/SelectableRows"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
-/** What a selectable list is drawn in: its own rows, or the one surface card that holds them. */
-const Framed = (props: {
+/** What the frame of a selectable list is given. */
+interface FramedProps {
     readonly isCard: boolean
     readonly label: string
     readonly children: ReactNode
-}): ReactNode => (props.isCard ? <SurfaceCard ariaLabel={props.label}>{props.children}</SurfaceCard> : props.children)
+}
+
+/** What a selectable list is drawn in: its own rows, or the one surface card that holds them. */
+const Framed = (props: FramedProps): ReactNode =>
+    props.isCard ? <SurfaceCard ariaLabel={props.label}>{props.children}</SurfaceCard> : props.children
+
+/** The action that clears the search an empty list answers with; none when nothing is searched. */
+const clearSearchOf = (
+    searched: string | null,
+    clear: () => void,
+    label: string,
+): Partial<{ emptyAction: { label: string; onAction: () => void } }> =>
+    searched === null ? {} : { emptyAction: { label, onAction: clear } }
 
 /** Bound records as a card with an action on each row, or as a selectable list that writes the chosen row to a param. */
 export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactNode => {
@@ -39,16 +52,13 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
             })
             .catch(() => host.notify("danger", labels.error))
     }
-    const clearSearch =
-        searchParam === undefined || searched === null
-            ? {}
-            : {
-                  emptyAction: {
-                      label: words({ key: "searchClear" }),
-                      onAction: () => props.params.set(searchParam, null),
-                  },
-              }
-    const isCard = props.props.surface === "card"
+    const clearSearch = clearSearchOf(
+        searched,
+        () => props.params.set(searchParam ?? "", null),
+        words({ key: "searchClear" }),
+    )
+    const inSurface = useInSurface()
+    const isCard = props.props.surface === "card" && !inSurface
     const label = words(props.props.label)
     const list = (
         <SlotView
@@ -61,6 +71,7 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
             render={(items, isLoading) =>
                 selectParam === undefined ? (
                     <RecordCardList
+                        isHeadless={inSurface}
                         title={words(props.props.label)}
                         rows={items}
                         empty={labels.empty}

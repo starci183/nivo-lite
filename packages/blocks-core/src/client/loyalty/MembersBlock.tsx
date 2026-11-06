@@ -1,7 +1,18 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ReadHandle } from "@nivo-lite/agent-sdk/block"
-import { Avatar, Badge, ListBox, Section, Select, Stack, SurfaceCard, Tabs, Text } from "@starci/grammar/common"
+import {
+    Avatar,
+    Badge,
+    Divider,
+    ListBox,
+    Section,
+    Select,
+    Stack,
+    SurfaceCard,
+    Tabs,
+    Text,
+} from "@starci/grammar/common"
 import type { ListBoxItem } from "@starci/grammar/common"
 import type { loyaltyMembersBlock } from "../../blocks/loyalty/members.block"
 import { cellContextOf, formatValue } from "../../rows/cell-format"
@@ -123,12 +134,6 @@ export const MembersBlock = (props: Props): ReactNode => {
         >
             <SurfaceCard ariaLabel={words(props.props.label)}>
                 <Stack gap="row">
-                    <PaneSearch
-                        param={props.props.searchParam}
-                        params={props.params}
-                        label={words(props.props.searchLabel)}
-                        clearLabel={word("searchClear")}
-                    />
                     <Tabs
                         kind="filter"
                         label={words(props.props.label)}
@@ -145,6 +150,13 @@ export const MembersBlock = (props: Props): ReactNode => {
                         )}
                         onSelect={(key) => choose(tabParamValue(key) ?? ALL_TAB)}
                     />
+                    <PaneSearch
+                        param={props.props.searchParam}
+                        params={props.params}
+                        label={words(props.props.searchLabel)}
+                        clearLabel={word("searchClear")}
+                    />
+                    <Divider />
                     <SlotView
                         slot={entries}
                         labels={labels}

@@ -87,139 +87,131 @@
             }
           },
           {
-            "id": "customers-section",
-            "block": "core.section",
+            "id": "pane",
+            "block": "core.list-pane",
             "props": {
+              "search": true,
+              "searchParam": "q",
+              "searchLabel": {
+                "key": "search_label"
+              },
               "title": {
                 "key": "customers_section"
               }
             },
             "children": [
               {
-                "id": "pane",
-                "block": "core.list-pane",
+                "id": "statuses",
+                "block": "core.filter-tabs",
                 "props": {
-                  "search": true,
-                  "searchParam": "q",
-                  "searchLabel": {
-                    "key": "search_label"
-                  }
-                },
-                "children": [
-                  {
-                    "id": "statuses",
-                    "block": "core.filter-tabs",
-                    "props": {
-                      "param": "status",
+                  "param": "status",
+                  "label": {
+                    "key": "status_filter_label"
+                  },
+                  "all": {
+                    "key": "filter_all"
+                  },
+                  "items": [
+                    {
+                      "value": "needs",
                       "label": {
-                        "key": "status_filter_label"
+                        "key": "status_needs"
                       },
-                      "all": {
-                        "key": "filter_all"
-                      },
-                      "items": [
-                        {
-                          "value": "needs",
-                          "label": {
-                            "key": "status_needs"
-                          },
-                          "attention": true
-                        },
-                        {
-                          "value": "handled",
-                          "label": {
-                            "key": "status_handled"
-                          }
-                        },
-                        {
-                          "value": "today",
-                          "label": {
-                            "key": "inbox_tab_today"
-                          }
-                        }
-                      ]
+                      "attention": true
                     },
-                    "bind": {
-                      "counts": {
-                        "read": "chatbot.thread-counts",
-                        "variables": {
-                          "q": "$q"
-                        }
+                    {
+                      "value": "handled",
+                      "label": {
+                        "key": "status_handled"
+                      }
+                    },
+                    {
+                      "value": "today",
+                      "label": {
+                        "key": "inbox_tab_today"
+                      }
+                    }
+                  ]
+                },
+                "bind": {
+                  "counts": {
+                    "read": "chatbot.thread-counts",
+                    "variables": {
+                      "q": "$q"
+                    }
+                  }
+                }
+              },
+              {
+                "id": "threads",
+                "block": "core.record-list",
+                "props": {
+                  "label": {
+                    "key": "list_label"
+                  },
+                  "empty": {
+                    "key": "list_empty"
+                  },
+                  "emptySearch": {
+                    "key": "list_empty_search"
+                  },
+                  "idPath": "id",
+                  "titlePath": "name",
+                  "descriptionPath": "lastText",
+                  "selectParam": "selected",
+                  "searchParam": "q",
+                  "badgePath": "status",
+                  "labels": {
+                    "status": {
+                      "needs": {
+                        "key": "row_needs"
+                      },
+                      "handled": {
+                        "key": "row_handled"
+                      },
+                      "ai": {
+                        "key": "row_ai"
+                      }
+                    },
+                    "channel": {
+                      "zalo": {
+                        "key": "channel_zalo"
+                      },
+                      "telegram": {
+                        "key": "channel_telegram"
+                      },
+                      "facebook": {
+                        "key": "channel_facebook"
+                      },
+                      "instagram": {
+                        "key": "channel_instagram"
+                      },
+                      "website": {
+                        "key": "channel_website"
                       }
                     }
                   },
-                  {
-                    "id": "threads",
-                    "block": "core.record-list",
-                    "props": {
-                      "label": {
-                        "key": "list_label"
-                      },
-                      "empty": {
-                        "key": "list_empty"
-                      },
-                      "emptySearch": {
-                        "key": "list_empty_search"
-                      },
-                      "idPath": "id",
-                      "titlePath": "name",
-                      "descriptionPath": "lastText",
-                      "selectParam": "selected",
-                      "searchParam": "q",
-                      "badgePath": "status",
-                      "labels": {
-                        "status": {
-                          "needs": {
-                            "key": "row_needs"
-                          },
-                          "handled": {
-                            "key": "row_handled"
-                          },
-                          "ai": {
-                            "key": "row_ai"
-                          }
-                        },
-                        "channel": {
-                          "zalo": {
-                            "key": "channel_zalo"
-                          },
-                          "telegram": {
-                            "key": "channel_telegram"
-                          },
-                          "facebook": {
-                            "key": "channel_facebook"
-                          },
-                          "instagram": {
-                            "key": "channel_instagram"
-                          },
-                          "website": {
-                            "key": "channel_website"
-                          }
-                        }
-                      },
-                      "avatar": true,
-                      "chipPaths": ["channel"],
-                      "badgeTones": {
-                        "needs": "warning",
-                        "handled": "info",
-                        "ai": "neutral"
-                      },
-                      "surface": "card"
-                    },
-                    "bind": {
-                      "rows": {
-                        "read": "chatbot.threads",
-                        "variables": {
-                          "q": "$q",
-                          "status": "$status"
-                        }
-                      }
+                  "avatar": true,
+                  "chipPaths": ["channel"],
+                  "badgeTones": {
+                    "needs": "warning",
+                    "handled": "info",
+                    "ai": "neutral"
+                  },
+                  "surface": "card"
+                },
+                "bind": {
+                  "rows": {
+                    "read": "chatbot.threads",
+                    "variables": {
+                      "q": "$q",
+                      "status": "$status"
                     }
                   }
-                ],
-                "bind": {}
+                }
               }
-            ]
+            ],
+            "bind": {}
           }
         ]
       }

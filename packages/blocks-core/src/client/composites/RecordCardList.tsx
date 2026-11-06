@@ -13,6 +13,8 @@ interface RecordCardListProps {
     readonly isLoading: boolean
     /** Each row starts with the initials of its title. */
     readonly hasAvatar: boolean
+    /** The rows sit inside a surface card that already names them: no heading, no card of their own. */
+    readonly isHeadless?: boolean
     /** Draw the rows in one surface card, not bare under the heading. */
     readonly isCard: boolean
     /** The command each row offers under its text; null when the viewer may not run it. */
@@ -44,6 +46,8 @@ const rowOf = (row: RecordRow, props: RecordCardListProps): ListRowData => ({
 export const RecordCardList = (props: RecordCardListProps): ReactNode => {
     const items = props.rows.map((row) => rowOf(row, props))
     const empty = <EmptyNotice message={props.empty} />
+    if (props.isHeadless === true)
+        return <Section kind="list" ariaLabel={props.title} isLoading={props.isLoading} items={items} empty={empty} />
     return props.isCard ? (
         <SurfaceCard kind="list" ariaLabel={props.title} isLoading={props.isLoading} items={items} empty={empty} />
     ) : (
