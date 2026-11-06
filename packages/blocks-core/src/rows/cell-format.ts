@@ -2,7 +2,7 @@ import { textOf } from "../slots/paths"
 import type { Relabel } from "./value-labels"
 
 /** The formats a column or a fact may draw its value in. */
-export const CELL_FORMATS = ["text", "number", "money", "date", "dateTime", "badge"] as const
+export const CELL_FORMATS = ["text", "number", "money", "date", "day", "dateTime", "badge"] as const
 
 /** One format of a cell. */
 export type CellFormat = (typeof CELL_FORMATS)[number]
@@ -55,17 +55,32 @@ const numberText = (value: unknown, context: CellContext, money: boolean): strin
     return new Intl.NumberFormat(context.locale, options).format(amount)
 }
 
+/** How a date is drawn: the whole day, the day and month only, or the day with the time. */
+type DateStyle = "day" | "short" | "time"
+
+/** The `Intl` options of each date style. */
+const DATE_STYLES: Readonly<Record<DateStyle, Intl.DateTimeFormatOptions>> = {
+    day: { dateStyle: "medium" },
+    short: { day: "2-digit", month: "2-digit" },
+    time: { dateStyle: "medium", timeStyle: "short" },
+}
+
 /** The day or the moment a value names, drawn in the viewer's language; nothing for a value that is no date. */
-const dateText = (value: unknown, context: CellContext, withTime: boolean): string => {
+const dateText = (value: unknown, context: CellContext, style: DateStyle): string => {
     const date = dateOf(value)
     if (date === null) return ""
     const timeZone = typeof value === "string" && DAY_ONLY.test(value) ? "UTC" : context.timeZone
     const options: Intl.DateTimeFormatOptions = {
-        dateStyle: "medium",
-        ...(withTime ? { timeStyle: "short" as const } : {}),
+        ...DATE_STYLES[style],
         ...(timeZone === undefined ? {} : { timeZone }),
     }
-    return new Intl.DateTimeFormat(context.locale, options).format(date)
+    const format = new Intl.DateTimeFormat(context.locale, options)
+    if (style !== "short") return format.format(date)
+    return format
+        .formatToParts(date)
+        .filter((part) => part.type === "day" || part.type === "month")
+        .map((part) => part.value)
+        .join("/")
 }
 
 /** The text a block draws for a value in the given format; a value that does not fit its format draws as nothing. */
@@ -76,9 +91,11 @@ export const formatValue = (value: unknown, format: CellFormat | undefined, cont
         case "money":
             return numberText(value, context, true)
         case "date":
-            return dateText(value, context, false)
+            return dateText(value, context, "day")
+        case "day":
+            return dateText(value, context, "short")
         case "dateTime":
-            return dateText(value, context, true)
+            return dateText(value, context, "time")
         case "text":
         case "badge":
         case undefined:

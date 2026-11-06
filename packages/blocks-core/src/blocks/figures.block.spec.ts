@@ -23,6 +23,11 @@ describe("figuresBlock", () => {
         expect(accepts({ ...FIGURES, items: [{ ...ITEM, format: "html" }] })).toBe(false)
     })
 
+    it("takes the path of the caption under a chart", () => {
+        expect(accepts({ ...FIGURES, kind: "bars", captionPath: "caption" })).toBe(true)
+        expect(accepts({ ...FIGURES, captionPath: "p".repeat(201) })).toBe(false)
+    })
+
     it("takes the path of the line under a value", () => {
         expect(accepts({ ...FIGURES, items: [{ ...ITEM, hintPath: "note" }] })).toBe(true)
         expect(accepts({ ...FIGURES, items: [{ ...ITEM, hintPath: "p".repeat(201) }] })).toBe(false)

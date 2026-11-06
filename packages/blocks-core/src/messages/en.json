@@ -113,6 +113,7 @@
   "blockListPane": "List pane",
   "blockFilterTabs": "Filter tabs",
   "searchLabel": "Search",
+  "rowUntitled": "Unnamed",
   "searchClear": "Clear search",
   "fieldDatePlaceholder": "YYYY-MM-DD",
   "filtersLabel": "Filters",

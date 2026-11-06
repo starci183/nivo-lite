@@ -40,7 +40,11 @@ const trailingOf = (row: RecordRow): ReactNode => (
                 {row.meta}
             </Text>
         )}
-        {row.badge === "" ? null : <Badge tone="neutral">{row.badge}</Badge>}
+        {row.badge === "" ? null : (
+            <Badge tone={row.tone} isDot>
+                {row.badge}
+            </Badge>
+        )}
         {row.chips.map((chip) => (
             <Badge key={chip} tone="neutral">
                 {chip}

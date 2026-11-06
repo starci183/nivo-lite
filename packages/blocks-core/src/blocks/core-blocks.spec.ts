@@ -136,6 +136,11 @@ describe("the props of the list blocks", () => {
         ).toBe(true)
     })
 
+    it("take the tones of a record list badge and refuse a tone it does not know", () => {
+        expect(recordListBlock.props.safeParse({ ...LIST, badgeTones: { open: "success" } }).success).toBe(true)
+        expect(recordListBlock.props.safeParse({ ...LIST, badgeTones: { open: "purple" } }).success).toBe(false)
+    })
+
     it("refuse more record list chips than the bound", () => {
         expect(recordListBlock.props.safeParse({ ...LIST, chipPaths: ["a", "b", "c", "d"] }).success).toBe(false)
     })

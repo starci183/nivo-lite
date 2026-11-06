@@ -57,7 +57,13 @@ interface TableCellProps {
 /** One cell: its text, in a badge of its tone for a badge column, over its note when it has one. */
 const TableCell = (props: TableCellProps): ReactNode => {
     const { cell } = props
-    if (cell.isBadge) return <Badge tone={cell.tone}>{cell.text}</Badge>
+    if (cell.isBadge) {
+        return (
+            <Badge tone={cell.tone} isDot>
+                {cell.text}
+            </Badge>
+        )
+    }
     if (cell.note === "") return <>{cell.text}</>
     return (
         <Stack gap="inline">
