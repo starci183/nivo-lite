@@ -1,5 +1,7 @@
 export { adjustmentEntity } from "./accounting/adjustment.entity"
 export { bookEntryEntity } from "./accounting/book-entry.entity"
+export { accountingQuestionEntity } from "./accounting/question.entity"
+export { accountingSettingsEntity } from "./accounting/settings.entity"
 export { invoiceEntity } from "./accounting/invoice.entity"
 export {
     agentGraphDecisionEntity,

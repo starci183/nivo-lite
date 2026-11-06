@@ -9,7 +9,11 @@ import type {
     OrderRecord,
     TransactionRecord,
 } from "../../rules/accounting/accounting.types"
+import { ENTRY_STATUSES } from "../../rules/accounting/entry-status"
 import type { OpenInvoice } from "../../rules/accounting/figures"
+import type { QuestionLine } from "../../rules/accounting/questions"
+import { ACCOUNTING_SETTINGS_DEFAULTS, VAT_PERIODS, VOID_MODES } from "../../rules/accounting/settings"
+import type { AccountingSettings } from "../../rules/accounting/settings"
 
 /** The longest ISO 8601 text the engine writes for a time or a day. */
 const MAX_TIME = 40
@@ -51,6 +55,7 @@ const orderData = z.object({
 
 /** The declared fields of a `payment.claim` record the module reads. */
 const claimData = z.object({
+    leadId: nullableText(MAX_ID),
     amountVnd: orNull(money),
     status: z.enum(["open", "settled", "escalated", "withdrawn"]),
     settledTransactionId: nullableText(MAX_ID),
@@ -77,12 +82,14 @@ const adjustmentData = z.object({
 
 /** The declared fields of an `accounting.book-entry` record the module reads. */
 const bookEntryData = z.object({
-    kind: z.enum(["income", "invoice", "adjustment"]),
+    kind: z.enum(["income", "expense", "invoice", "reversal", "adjustment"]),
     sourceEntity: z.string().max(MAX_ID),
     sourceId: z.string().max(MAX_ID),
     entryDate: z.string().max(MAX_TIME),
     amountVnd: money,
     note: nullableText(MAX_NOTE),
+    counterparty: nullableText(MAX_LINE),
+    status: z.enum(ENTRY_STATUSES),
 })
 
 /** The declared fields of a `sales.lead` record the module reads: the customer's name. */
@@ -103,7 +110,7 @@ export const TRANSACTION_FIELDS: ReadonlyArray<string> = [
 export const ORDER_FIELDS: ReadonlyArray<string> = ["orderNo", "amountVnd", "status"]
 
 /** The fields a query for claim rows selects. */
-export const CLAIM_FIELDS: ReadonlyArray<string> = ["amountVnd", "status", "settledTransactionId"]
+export const CLAIM_FIELDS: ReadonlyArray<string> = ["leadId", "amountVnd", "status", "settledTransactionId"]
 
 /** The fields a query for invoice rows selects. */
 export const INVOICE_FIELDS: ReadonlyArray<string> = ["invoiceNo", "amountVnd", "status", "dueAt", "issuedAt", "paidAt"]
@@ -193,4 +200,45 @@ export const bookEntryOf = (record: RecordRow): BookEntryRecord | null => {
 export const leadNameOf = (record: RecordRow): string | null => {
     const parsed = leadData.safeParse(record.data)
     return parsed.success ? parsed.data.contactName : null
+}
+
+/** The declared fields of an `accounting.question` record the module reads. */
+const questionData = z.object({
+    text: z.string().max(MAX_NOTE),
+    source: nullableText(MAX_ID),
+})
+
+/** The fields a query for question rows selects. */
+export const QUESTION_FIELDS: ReadonlyArray<string> = ["text", "source"]
+
+/** The question a record holds, asked at the time the record was made; null when its fields are not those of a question. */
+export const questionOf = (record: RecordRow): QuestionLine | null => {
+    const parsed = questionData.safeParse(record.data)
+    return parsed.success
+        ? { id: record.id, text: parsed.data.text, source: parsed.data.source ?? "", askedAt: record.createdAt }
+        : null
+}
+
+/** The declared fields of an `accounting.settings` record. */
+const settingsData = z.object({
+    postExpenses: z.boolean(),
+    postOutgoing: z.boolean(),
+    postUnmatched: z.boolean(),
+    voidMode: z.enum(VOID_MODES),
+    vatPeriod: z.enum(VAT_PERIODS),
+})
+
+/** The fields a query for the settings row selects. */
+export const SETTINGS_FIELDS: ReadonlyArray<string> = [
+    "postExpenses",
+    "postOutgoing",
+    "postUnmatched",
+    "voidMode",
+    "vatPeriod",
+]
+
+/** The settings a record holds; the defaults when its fields are not those of the settings. */
+export const settingsOfRecord = (record: RecordRow): AccountingSettings => {
+    const parsed = settingsData.safeParse(record.data)
+    return parsed.success ? parsed.data : ACCOUNTING_SETTINGS_DEFAULTS
 }

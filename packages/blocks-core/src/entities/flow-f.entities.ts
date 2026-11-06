@@ -2,6 +2,8 @@ import type { AnyEntityDefinition } from "@nivo-lite/agent-sdk/entity"
 
 import { adjustmentEntity } from "./accounting/adjustment.entity"
 import { bookEntryEntity } from "./accounting/book-entry.entity"
+import { accountingQuestionEntity } from "./accounting/question.entity"
+import { accountingSettingsEntity } from "./accounting/settings.entity"
 import { invoiceEntity } from "./accounting/invoice.entity"
 import { agentGraphDecisionEntity } from "./agent/graph-decision.entity"
 import { agentGraphProposalEntity } from "./agent/graph-proposal.entity"
@@ -32,6 +34,8 @@ export const FLOW_F_ENTITIES: ReadonlyArray<AnyEntityDefinition> = [
     invoiceEntity,
     adjustmentEntity,
     bookEntryEntity,
+    accountingQuestionEntity,
+    accountingSettingsEntity,
     turnEntity,
     agentRunEntity,
     agentRunStepEntity,

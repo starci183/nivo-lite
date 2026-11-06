@@ -42,7 +42,7 @@ const TRANSACTION = {
 
 const ORDER = { orderNo: "DH-1", amountVnd: 5_000_000, status: "confirmed" }
 
-const CLAIM = { amountVnd: 5_000_000, status: "open", settledTransactionId: null }
+const CLAIM = { leadId: null, amountVnd: 5_000_000, status: "open", settledTransactionId: null }
 
 const INVOICE = {
     invoiceNo: "HD-1",
@@ -165,6 +165,8 @@ describe("adjustmentOf and bookEntryOf", () => {
             entryDate: "2026-11-04",
             amountVnd: 5,
             note: null,
+            counterparty: null,
+            status: "paid",
         }
         expect(bookEntryOf(recordOf(data))).toEqual({ id: "r1", version: "4", ...data })
         expect(bookEntryOf(recordOf({ kind: "tip" }))).toBeNull()

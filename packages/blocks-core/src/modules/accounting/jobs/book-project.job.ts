@@ -12,8 +12,9 @@ import {
     postInvoice,
     postTransaction,
 } from "../../../rules/accounting/posting"
-import { adjustmentById, invoiceById, settlesInvoice, transactionById } from "../accounting-data"
-import { ADJUSTMENTS, BOOK, INVOICES, TRANSACTIONS } from "../ports"
+import type { AccountingSettings } from "../../../rules/accounting/settings"
+import { adjustmentById, invoiceById, settlesInvoice, transactionById, workspaceSettings } from "../accounting-data"
+import { ADJUSTMENTS, BOOK, INVOICES, SETTINGS, TRANSACTIONS } from "../ports"
 
 /** The name of the job: the outbox enqueues it by this name. */
 const JOB_NAME = "accounting.book-project"
@@ -46,6 +47,8 @@ type BookProjectPorts = {
     readonly adjustments: PortDefinition<EntityApi>
     /** The books. */
     readonly book: PortDefinition<EntityApi>
+    /** The rules the workspace chose for its books. */
+    readonly settings: PortDefinition<EntityApi>
 }
 
 const ports: BookProjectPorts = {
@@ -53,6 +56,7 @@ const ports: BookProjectPorts = {
     invoices: INVOICES,
     adjustments: ADJUSTMENTS,
     book: BOOK,
+    settings: SETTINGS,
 }
 
 /** The ports a source row is read through. */
@@ -67,14 +71,15 @@ const entriesOf = async (
     entity: z.output<typeof input>["sourceEntity"],
     id: string,
     sources: Sources,
+    settings: AccountingSettings,
 ): Promise<ReadonlyArray<BookEntryValues>> => {
     if (entity === SOURCE_TRANSACTION) {
         const transaction = await transactionById(sources.transactions, id)
-        return transaction === null ? [] : postTransaction(transaction)
+        return transaction === null ? [] : postTransaction(transaction, settings)
     }
     if (entity === SOURCE_INVOICE) {
         const invoice = await invoiceById(sources.invoices, id)
-        return invoice === null ? [] : postInvoice(invoice, await settlesInvoice(sources.transactions, id))
+        return invoice === null ? [] : postInvoice(invoice, await settlesInvoice(sources.transactions, id), settings)
     }
     const adjustment = await adjustmentById(sources.adjustments, id)
     return adjustment === null ? [] : [postAdjustment(adjustment)]
@@ -91,8 +96,13 @@ export const bookProjectJob: JobDefinition<typeof input, BookProjectPorts> = def
     input,
     ports,
     attempts: ATTEMPTS,
-    run: async ({ transactions, invoices, adjustments, book }, given) => {
-        const entries = await entriesOf(given.sourceEntity, given.sourceId, { transactions, invoices, adjustments })
+    run: async ({ transactions, invoices, adjustments, book, settings }, given) => {
+        const entries = await entriesOf(
+            given.sourceEntity,
+            given.sourceId,
+            { transactions, invoices, adjustments },
+            await workspaceSettings(settings),
+        )
         await Promise.all(entries.map((entry) => book.upsert(SOURCE_KEY, { ...entry })))
     },
 })

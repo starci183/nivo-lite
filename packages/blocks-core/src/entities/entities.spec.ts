@@ -20,6 +20,8 @@ describe("flow F entity declarations", () => {
             "accounting.invoice",
             "accounting.adjustment",
             "accounting.book-entry",
+            "accounting.question",
+            "accounting.settings",
             "agent.turn",
             "agent.run",
             "agent.run-step",

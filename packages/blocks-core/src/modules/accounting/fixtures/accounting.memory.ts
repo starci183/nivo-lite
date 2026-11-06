@@ -32,6 +32,7 @@ import type {
 import type { MemberDirectory, MemberFacts } from "../../platform/platform.types"
 import { membersPort } from "../../platform/ports"
 import type { EntryRow } from "../accounting.types"
+import { bookEntryOf } from "../accounting-records"
 import { ENTRIES_LIST } from "../ports"
 import { compareBy, isNil, matches, pick, valueOf } from "./accounting.memory-rows"
 
@@ -194,6 +195,18 @@ export const putBookEntry = (world: MemoryWorld, record: BookEntryRecord): Recor
     const { id, version, ...data } = record
     return putRecord(world, "accounting.book-entry", id, data, { version })
 }
+
+/** Stores a question the department asked, asked at `createdAt`. */
+export const putQuestion = (
+    world: MemoryWorld,
+    id: string,
+    data: { readonly text: string; readonly source: string | null; readonly status?: string },
+    createdAt: string,
+): RecordRow => putRecord(world, "accounting.question", id, { status: "open", ...data }, { createdAt })
+
+/** Stores the settings row of the workspace. */
+export const putSettings = (world: MemoryWorld, data: Readonly<Record<string, unknown>>): RecordRow =>
+    putRecord(world, "accounting.settings", "00000000-0000-4000-8000-0000000005e1", { scope: "workspace", ...data })
 
 /** Stores a customer. */
 export const putLead = (world: MemoryWorld, id: string, contactName: string): RecordRow =>
@@ -395,15 +408,23 @@ export const entriesList = (world: MemoryWorld): ListSource<EntryRow> => ({
     page: (_shape, query) => {
         const rows = rowsOf(world, "accounting.book-entry")
             .filter((row) => query.filters["kind"] === undefined || row.data["kind"] === query.filters["kind"])
+            .filter((row) => query.filters["status"] === undefined || row.data["status"] === query.filters["status"])
             .toSorted(compareBy([["id", "asc"]]))
-            .map((row): EntryRow => {
-                const { note, entryDate, kind } = row.data
-                return {
-                    id: row.id,
-                    note: typeof note === "string" ? note : null,
-                    entryDate: String(entryDate),
-                    kind: kind === "income" || kind === "invoice" ? kind : "adjustment",
-                }
+            .flatMap((row): ReadonlyArray<EntryRow> => {
+                const entry = bookEntryOf(row)
+                return entry === null
+                    ? []
+                    : [
+                          {
+                              id: row.id,
+                              note: entry.note,
+                              entryDate: entry.entryDate,
+                              kind: entry.kind,
+                              amountVnd: entry.amountVnd,
+                              status: entry.status,
+                              counterparty: entry.counterparty,
+                          },
+                      ]
             })
         return Promise.resolve({ rows, cursor: null })
     },
@@ -447,6 +468,8 @@ const portsOf = (world: MemoryWorld): ReadonlyArray<readonly [string, unknown]> 
         "sales.lead",
         "chat.conversation",
         "accounting.book-entry",
+        "accounting.question",
+        "accounting.settings",
     ].map((entity): readonly [string, unknown] => [`engine.entity.${entity}`, entityApi(world, entity)]),
     [ENTRIES_LIST.id, entriesList(world)],
     [membersPort.id, memberDirectory(world)],

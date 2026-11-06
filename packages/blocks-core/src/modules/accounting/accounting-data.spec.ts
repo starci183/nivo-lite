@@ -51,6 +51,8 @@ const ENTRY = {
     entryDate: "2026-11-04",
     amountVnd: 100,
     note: null,
+    counterparty: null,
+    status: "paid",
 } as const
 
 const RANGE = { fromIso: "2026-11-01T00:00:00.000Z", toIso: "2026-12-01T00:00:00.000Z" }
@@ -88,7 +90,7 @@ describe("reading one record", () => {
 
     it("reads an invoice with its customer's name", async () => {
         const world = memoryWorld()
-        putLead(world, LEAD, "Nguyen Van Dinh")
+        putLead(world, LEAD, INVOICE.customer ?? "")
         putInvoice(world, INVOICE, LEAD)
         const api = entityApi(world, "accounting.invoice")
         await expect(invoiceById(api, INVOICE.id)).resolves.toEqual(INVOICE)

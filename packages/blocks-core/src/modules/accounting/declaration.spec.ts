@@ -9,11 +9,23 @@ describe("accounting module", () => {
         expect(accountingModule.reads.map((read) => read.id)).toEqual([
             "accounting.entries",
             "accounting.entry-counts",
+            "accounting.status-counts",
             "accounting.entry",
             "accounting.figures",
+            "accounting.ledger",
+            "accounting.due-soon",
+            "accounting.weekly",
+            "accounting.decisions",
+            "accounting.question-count",
+            "accounting.questions",
             "accounting.close-check",
+            "accounting.settings",
         ])
-        expect(accountingModule.actions.map((action) => action.id)).toEqual(["accounting.adjust"])
+        expect(accountingModule.actions.map((action) => action.id)).toEqual([
+            "accounting.adjust",
+            "accounting.save-settings",
+            "accounting.answer-question",
+        ])
         expect(accountingModule.permissions).toEqual(["accounting.view", "accounting.manage"])
     })
 
@@ -30,10 +42,41 @@ describe("accounting module", () => {
         expect(seedSpecProblems(paymentModule, coreBlocks)).toEqual([])
     })
 
-    it("draws a head of figures and one book view bound to the list, its counts and the detail", () => {
-        const [view] = accountingSpecDocument.views
+    it("draws figures on the overview only, the queue in the aside, a book view bound to the list, its counts and the detail, and a settings form", () => {
+        const view = accountingSpecDocument.views.find((each) => each.id === "book")
+        expect(accountingSpecDocument.views.map((each) => each.id)).toEqual([
+            "overview",
+            "book",
+            "questions",
+            "ledger",
+            "settings",
+        ])
         expect(view?.id).toBe("book")
-        expect(Object.keys(accountingSpecDocument.params ?? {})).toEqual(["q", "kind", "sort", "selected", "period"])
-        expect(accountingSpecDocument.head?.map((node) => node.block)).toEqual(["core.figures"])
+        const rootOf = (id: string): string | undefined =>
+            accountingSpecDocument.views.find((each) => each.id === id)?.root.block
+        expect(rootOf("book")).toBe("accounting.book")
+        expect(rootOf("ledger")).toBe("accounting.ledger")
+        expect(accountingSpecDocument.aside?.children?.map((node) => [node.block, node.showWhen?.is])).toEqual([
+            ["core.decision-queue", ["list", "queue"]],
+            ["accounting.entry-detail", ["detail"]],
+        ])
+        expect(accountingSpecDocument.views.find((each) => each.id === "questions")?.root.block).toBe(
+            "accounting.questions",
+        )
+        expect(Object.keys(accountingSpecDocument.params ?? {})).toEqual([
+            "q",
+            "sort",
+            "selected",
+            "period",
+            "status",
+            "pane",
+        ])
+        expect(accountingSpecDocument.head).toBeUndefined()
+        expect(accountingSpecDocument.views[0]?.root.children?.map((node) => node.id)).toEqual([
+            "figures",
+            "due",
+            "weekly",
+            "ageing",
+        ])
     })
 })

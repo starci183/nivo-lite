@@ -1,3 +1,5 @@
+import type { EntryStatus } from "./entry-status"
+
 /** Where a bank transaction stands against what it paid. */
 export type TransactionStatus = "unmatched" | "matched" | "needs_review"
 
@@ -64,6 +66,8 @@ export interface ClaimRecord {
     readonly settledTransactionId: string | null
     /** The conversation the claim came in. */
     readonly conversationId: string | null
+    /** The customer who said they paid; null when the claim came from a visitor not yet known. */
+    readonly leadId: string | null
 }
 
 /** The statuses of an invoice. */
@@ -112,8 +116,8 @@ export interface AdjustmentRecord {
     readonly createdAt: string
 }
 
-/** What a book entry records: money in, an invoice issued, a correction. */
-export type BookEntryKind = "income" | "invoice" | "adjustment"
+/** What a book entry records: money in, money out, an invoice issued, the reversal of a voided one, a correction. */
+export type BookEntryKind = "income" | "expense" | "invoice" | "reversal" | "adjustment"
 
 /** The values of a book entry (entity `accounting.book-entry`, a projection written by declared jobs only). */
 export interface BookEntryValues {
@@ -129,6 +133,10 @@ export interface BookEntryValues {
     readonly amountVnd: number
     /** A short note; null when there is none. */
     readonly note: string | null
+    /** The customer or supplier the entry is with, for the second line of its row; null when unknown. */
+    readonly counterparty: string | null
+    /** Where the entry stands for the person reading the books. */
+    readonly status: EntryStatus
 }
 
 /** One book entry as a read yields it. */

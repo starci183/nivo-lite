@@ -27,6 +27,8 @@ const entryOf = (changes: Partial<BookEntryRecord>): BookEntryRecord => ({
     entryDate: "2026-11-04",
     amountVnd: 5_000_000,
     note: "NGUYEN VAN DINH",
+    counterparty: null,
+    status: "paid",
     ...changes,
 })
 
