@@ -3,10 +3,12 @@ import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { LEAD_STAGES, MAX_REASON_CHARS, planMove } from "../../../rules/sales/stage"
-import { SALES_MANAGE } from "../constants"
-import { salesLeads } from "../ports"
+import { SALES_APPROVE, SALES_MANAGE } from "../constants"
+import { rightsPort } from "../../platform/ports"
+import { salesLeads, salesSettings } from "../ports"
 import { refusedWith, writeRefusal } from "../refusals"
 import { leadRowOf } from "../sales-records"
+import { settingsOf } from "../settings-store"
 
 const input: z.ZodObject<{
     id: z.ZodString
@@ -28,13 +30,19 @@ export const moveStageAction: ActionDefinition = defineAction({
     permission: SALES_MANAGE,
     label: { key: "action_move_stage" },
     input,
-    ports: { leads: salesLeads },
+    ports: { leads: salesLeads, settings: salesSettings, rights: rightsPort },
     transactional: true,
-    run: async ({ leads }, { id, to, reason }) => {
+    run: async ({ leads, settings, rights }, { id, to, reason }, context) => {
         const record = await leads.get(id)
         const lead = record === null ? null : leadRowOf(record)
         if (lead === null) return refusedWith("missing")
-        const plan = planMove(lead.stage, to, reason ?? null)
+        const plan = planMove(
+            lead.stage,
+            to,
+            reason ?? null,
+            await settingsOf(settings),
+            await rights.holds(context.memberId, SALES_APPROVE),
+        )
         if (plan.kind === "refused") return refusedWith(plan.reason)
         const written = await leads.update(lead.id, lead.version, {
             stage: plan.stage,

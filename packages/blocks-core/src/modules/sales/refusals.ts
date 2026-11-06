@@ -6,9 +6,14 @@ export type SalesRefusal =
     | "missing"
     | "same_stage"
     | "stage_not_allowed"
+    | "reopen_needs_owner"
     | "reason_required"
     | "order_not_confirmable"
     | "order_not_cancellable"
+    | "settings_not_saved"
+    | "not_awaiting"
+    | "phone_required"
+    | "phone_taken"
 
 /** A domain refusal as data: the words come from the module's catalogue under `refusal_<reason>`. */
 export const refusedWith = (reason: SalesRefusal): ActionResult => ({

@@ -1,5 +1,6 @@
-import { needsOwner } from "../../nodes/order/order.policy"
 import type { OrderStatus } from "./order-status"
+import { needsOwner } from "./settings"
+import type { SalesSettings } from "./settings"
 
 /** What deciding to confirm an order looks at. */
 export interface ConfirmInput {
@@ -7,8 +8,8 @@ export interface ConfirmInput {
     readonly status: OrderStatus
     /** The amount of the order, VND, or null while a line has no price. */
     readonly amountVnd: number | null
-    /** From which amount the owner decides. */
-    readonly thresholdVnd: number
+    /** What the workspace decided about when the owner confirms. */
+    readonly settings: SalesSettings
     /** Whether the one confirming holds the owner's right. */
     readonly byOwner: boolean
 }
@@ -28,9 +29,14 @@ export interface WaitingCandidate {
     readonly amountVnd: number | null
 }
 
-/** Whether a draft order waits for the owner: its total is at the threshold or above, or still unknown. */
-export const waitsForOwner = (order: WaitingCandidate, thresholdVnd: number): boolean =>
-    order.status === "draft" && (order.amountVnd === null || needsOwner(order.amountVnd, thresholdVnd))
+/**
+ * Whether a draft order waits for the owner: its total is at the threshold or above, or still unknown when the settings say a
+ * draft without a total waits.
+ */
+export const waitsForOwner = (order: WaitingCandidate, settings: SalesSettings): boolean => {
+    if (order.status !== "draft") return false
+    return order.amountVnd === null ? settings.draftWithoutTotalNeedsApproval : needsOwner(order.amountVnd, settings)
+}
 
 /**
  * Decides what confirming an order does. Only a draft is confirmed, once (an order already confirmed changes nothing, a cancelled or
@@ -40,6 +46,6 @@ export const confirmDecision = (input: ConfirmInput): ConfirmDecision => {
     if (input.status === "cancelled" || input.status === "failed_system")
         return { kind: "refused", reason: "not_confirmable" }
     if (input.status !== "draft") return { kind: "already" }
-    const waits = waitsForOwner({ status: input.status, amountVnd: input.amountVnd }, input.thresholdVnd)
+    const waits = waitsForOwner({ status: input.status, amountVnd: input.amountVnd }, input.settings)
     return waits && !input.byOwner ? { kind: "wait_owner" } : { kind: "confirm" }
 }

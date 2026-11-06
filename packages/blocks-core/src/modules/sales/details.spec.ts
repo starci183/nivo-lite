@@ -1,3 +1,4 @@
+import { SALES_SETTINGS_DEFAULTS } from "../../rules/sales/settings"
 import { LEAD_NEW, ORDER_WAITING } from "./fixtures/sales.data"
 import { leadDetailOf, orderDetailOf } from "./details"
 
@@ -19,6 +20,9 @@ describe("leadDetailOf", () => {
 
 describe("orderDetailOf", () => {
     it("names who confirms a draft that waits for the owner", () => {
-        expect(orderDetailOf(ORDER_WAITING, "Lan", 5_000_000)).toMatchObject({ approval: "owner", customer: "Lan" })
+        expect(orderDetailOf(ORDER_WAITING, "Lan", SALES_SETTINGS_DEFAULTS)).toMatchObject({
+            approval: "owner",
+            customer: "Lan",
+        })
     })
 })

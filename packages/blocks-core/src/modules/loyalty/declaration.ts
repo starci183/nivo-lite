@@ -11,7 +11,14 @@ import { saveProgramAction, syncMembersAction } from "./actions/program.actions"
 import { addPresetRewardsAction, removeRewardAction, saveRewardAction } from "./actions/rewards.actions"
 import { LOYALTY_PERMISSIONS } from "./constants"
 import { figuresRead, statsRead, tiersRead } from "./reads/board.read"
-import { memberCountsRead, memberLedgerRead, memberRead, memberRewardsRead, membersRead } from "./reads/members.read"
+import {
+    memberCountsRead,
+    memberLedgerRead,
+    memberRead,
+    memberRewardsRead,
+    membersRead,
+    tierCountsRead,
+} from "./reads/members.read"
 import { pendingCountRead, pendingRead, pendingWaitingRead } from "./reads/pending.read"
 import { campaignsRead, programRead } from "./reads/program.read"
 import { rewardRead, rewardsRead } from "./reads/rewards.read"
@@ -35,6 +42,7 @@ export const loyaltyModule: ModuleDeclaration = defineModule({
         tiersRead,
         membersRead,
         memberCountsRead,
+        tierCountsRead,
         memberRead,
         memberRewardsRead,
         memberLedgerRead,

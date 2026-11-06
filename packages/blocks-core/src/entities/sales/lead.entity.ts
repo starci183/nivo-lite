@@ -26,6 +26,14 @@ type LeadFields = {
     readonly closedReason: FieldDef<"text", true>
     readonly phone: FieldDef<"text", true>
     readonly email: FieldDef<"text", true>
+    readonly awaitingSince: FieldDef<"timestamptz", true>
+    readonly owner: FieldDef<"text", true>
+    readonly nextStep: FieldDef<"text", true>
+    readonly nextDueAt: FieldDef<"timestamptz", true>
+    readonly quoteVnd: FieldDef<"money_vnd", true>
+    readonly orderVnd: FieldDef<"money_vnd", true>
+    readonly note: FieldDef<"text", true>
+    readonly needs: FieldDef<"text", true>
 }
 
 const leadFields: LeadFields = {
@@ -38,6 +46,14 @@ const leadFields: LeadFields = {
     closedReason: field.text({ maxLength: MAX_REASON_CHARS, nullable: true }),
     phone: field.text({ maxLength: 30, searchable: true, nullable: true }),
     email: field.text({ maxLength: MAX_LINE, searchable: true, nullable: true }),
+    awaitingSince: field.timestamptz({ nullable: true }),
+    owner: field.text({ maxLength: MAX_LINE, nullable: true }),
+    nextStep: field.text({ maxLength: MAX_LINE, nullable: true }),
+    nextDueAt: field.timestamptz({ nullable: true }),
+    quoteVnd: field.moneyVnd({ nullable: true }),
+    orderVnd: field.moneyVnd({ nullable: true }),
+    note: field.text({ maxLength: MAX_BODY, nullable: true }),
+    needs: field.text({ maxLength: MAX_LINE, nullable: true }),
 }
 
 /** One customer of a workspace. Graph node kind `sales-lead`. */
@@ -50,6 +66,9 @@ export const leadEntity: EntityDefinition<LeadFields> = defineEntity({
         { name: "stage_recent", on: ["stage", { desc: "updatedAt" }, { desc: "id" }] },
         { name: "name", on: ["contactName", "id"] },
         { name: "stage_name", on: ["stage", "contactName", "id"] },
+        { name: "awaiting", on: ["awaitingSince", "id"] },
+        { name: "due", on: ["nextDueAt", "id"] },
+        { name: "needs", on: ["needs", "id"] },
     ],
     constraints: [
         {

@@ -25,6 +25,12 @@ export const LEAD_ROW_FIELDS: ReadonlyArray<keyof LeadRow> = [
     "stage",
     "phone",
     "email",
+    "owner",
+    "nextStep",
+    "nextDueAt",
+    "quoteVnd",
+    "orderVnd",
+    "note",
     "updatedAt",
 ]
 

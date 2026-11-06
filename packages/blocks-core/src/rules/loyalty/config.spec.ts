@@ -59,23 +59,23 @@ describe("config", () => {
                 tiers: [
                     {
                         key: "gold",
-                        name: "Gold",
+                        name: "V\u00e0ng",
                         minSpendVnd: 5000,
                         multiplier: 99,
                         winbackDays: 1,
                         benefit: " b ",
                     },
                     { key: "base", name: "Base", minSpendVnd: 100, multiplier: 0.5, winbackDays: 999 },
-                    { key: "gold", name: "Gold again", minSpendVnd: 9000 },
+                    { key: "gold", name: "V\u00e0ng again", minSpendVnd: 9000 },
                 ],
             })
 
             expect(config.tiers).toEqual([
                 { key: "base", name: "Base", minSpendVnd: 0, multiplier: 1, winbackDays: 365, benefit: "" },
-                { key: "gold", name: "Gold", minSpendVnd: 5000, multiplier: 10, winbackDays: 7, benefit: "b" },
+                { key: "gold", name: "V\u00e0ng", minSpendVnd: 5000, multiplier: 10, winbackDays: 7, benefit: "b" },
                 {
                     key: "gold-2",
-                    name: "Gold again",
+                    name: "V\u00e0ng again",
                     minSpendVnd: 9000,
                     multiplier: 1,
                     winbackDays: 45,
@@ -84,10 +84,10 @@ describe("config", () => {
             ])
         })
         it("names a tier and builds its key from the name when the owner left them out", () => {
-            const config = resolveConfig({ tiers: [{ name: "Año Gold" }, {}, 5] })
+            const config = resolveConfig({ tiers: [{ name: "A\u00f1o V\u00e0ng" }, {}, 5] })
 
-            expect(config.tiers.map((tier) => tier.name)).toEqual(["Año Gold", "Tier 2", "Tier 3"])
-            expect(config.tiers.map((tier) => tier.key)).toEqual(["ano-gold", "tier-2", "tier-3"])
+            expect(config.tiers.map((tier) => tier.name)).toEqual(["A\u00f1o V\u00e0ng", "Tier 2", "Tier 3"])
+            expect(config.tiers.map((tier) => tier.key)).toEqual(["ano-vang", "tier-2", "tier-3"])
         })
         it("uses the default ladder for an empty list and at most eight tiers", () => {
             expect(resolveConfig({ tiers: [] }).tiers).toEqual(DEFAULT_CONFIG.tiers)
@@ -150,7 +150,7 @@ describe("config", () => {
         })
 
         it("finds a tier by key and its rank on the ladder", () => {
-            expect(tierByKey(config, "bac")?.name).toBe("Silver")
+            expect(tierByKey(config, "bac")?.name).toBe("B\u1ea1c")
             expect(tierByKey(config, "nope")).toBeNull()
             expect(tierByKey(config, null)).toBeNull()
             expect(tierRank(config, "vang")).toBe(2)

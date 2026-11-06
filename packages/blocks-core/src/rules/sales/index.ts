@@ -21,14 +21,20 @@ export {
     isOrderStatus,
 } from "./order-status"
 export { foldText, matchesQuery } from "./search"
+export type { ApprovalSettings, SalesSettings } from "./settings"
+export {
+    DEFAULT_THRESHOLD_VND,
+    MAX_THRESHOLD_VND,
+    SALES_SETTINGS_DEFAULTS,
+    needsOwner,
+    salesSettingsShape,
+} from "./settings"
 export type { LeadStage, MovePlan, MoveRefusal } from "./stage"
 export {
     LEAD_STAGES,
     MAX_REASON_CHARS,
     MIN_REASON_CHARS,
     OPEN_STAGES,
-    STAGE_FLOW,
-    canMove,
     classifiedStage,
     isLeadStage,
     isOpenStage,

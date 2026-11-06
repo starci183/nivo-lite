@@ -101,7 +101,7 @@ describe("sales.lead-counts", () => {
             counts: { new: 2, qualified: 1, proposal: 1, won: 1, lost: 0 },
             total: 5,
         })
-        expect(await dataOf(leadCountsRead, { q: "wedding" })).toMatchObject({ total: 1 })
+        expect(await dataOf(leadCountsRead, { q: "c\u01b0\u1edbi" })).toMatchObject({ total: 1 })
     })
 })
 
@@ -147,13 +147,13 @@ describe("sales.lead", () => {
 describe("sales.orders", () => {
     it("lists the orders narrowed by status and searched by items", async () => {
         expect([...(await idsOf(ordersRead, { status: "draft" }))].sort()).toEqual(["order-1", "order-2"])
-        expect(await idsOf(ordersRead, { q: "tea" })).toEqual(["order-2"])
+        expect(await idsOf(ordersRead, { q: "tr\u00e0" })).toEqual(["order-2", "order-7"])
     })
 
     it("counts the orders of each status", async () => {
-        expect(await dataOf(orderCountsRead, { q: "gift" })).toMatchObject({
-            counts: { draft: 1, confirmed: 1, paid: 0 },
-            total: 2,
+        expect(await dataOf(orderCountsRead, { q: "qu\u00e0" })).toMatchObject({
+            counts: { draft: 1, confirmed: 1, paid: 1 },
+            total: 3,
         })
     })
 })
@@ -162,7 +162,7 @@ describe("sales.order", () => {
     it("gives an order with its customer and says the owner decides a big draft", async () => {
         expect(await dataOf(orderRead, { id: "order-1" })).toMatchObject({
             orderNo: "DH-20261104-0001",
-            customer: "Pham Quoc Dung",
+            customer: "Ph\u1ea1m Qu\u1ed1c D\u0169ng",
             approval: "owner",
             thresholdVnd: 5_000_000,
         })
@@ -190,8 +190,8 @@ describe("sales.orders-waiting", () => {
             rows: [
                 {
                     id: "order-1",
-                    title: "DH-20261104-0001 · Pham Quoc Dung",
-                    description: "10 x gift set · 6,000,000 VND",
+                    title: "DH-20261104-0001 \u00b7 Ph\u1ea1m Qu\u1ed1c D\u0169ng",
+                    description: "10 x h\u1ed9p qu\u00e0 \u00b7 6.000.000\u00a0\u20ab",
                     href: "?tab=orders&order=order-1",
                 },
             ],

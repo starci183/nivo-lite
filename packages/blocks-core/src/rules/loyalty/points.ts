@@ -46,7 +46,7 @@ export const pointsFor = (config: LoyaltyConfig, purchase: PurchaseFacts, tier: 
 
 /**
  * The note that explains how a purchase earned its points, in a notation that needs no language: the rate per thousand VND, the
- * tier multiplier and the points of the visit, for instance "1.5/1k x 1.2 Silver + 5".
+ * tier multiplier and the points of the visit, for instance "1.5/1k x 1.2 B\u1ea1c + 5".
  */
 export const earnEvidence = (calc: PointsCalc): string => {
     const rate = calc.label === "" ? `${calc.rate}/1k` : `${calc.rate}/1k ${calc.label}`

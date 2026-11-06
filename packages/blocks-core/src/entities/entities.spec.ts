@@ -12,6 +12,7 @@ describe("flow F entity declarations", () => {
         expect(FLOW_F_ENTITIES.map((entity) => entity.name)).toEqual([
             "sales.lead",
             "sales.order",
+            "sales.settings",
             "chat.conversation",
             "chat.message",
             "chat.settings",
