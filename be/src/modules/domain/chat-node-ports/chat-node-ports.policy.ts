@@ -65,6 +65,12 @@ const UNREACHABLE_FAILURES: ReadonlySet<string> = new Set(["zalo_recipient", "za
 export const recipientRefused = (failure: string | null): boolean =>
     failure !== null && UNREACHABLE_FAILURES.has(failure)
 
+/** The Zalo refusals that say the channel is not taking messages right now, so nothing was sent and a later try can go out: the quota of the account and the night hours. */
+const BUSY_FAILURES: ReadonlySet<string> = new Set(["zalo_quota", "zalo_night_hours"])
+
+/** True when the channel refused a message for now (its quota, the night hours), not for good: the step is tried again after a backoff. */
+export const channelBusy = (failure: string | null): boolean => failure !== null && BUSY_FAILURES.has(failure)
+
 /** Who holds the conversation a record stores: the name of the person, or null when the AI does (or the record says nothing). */
 export const handledByOf = (data: Readonly<Record<string, unknown>>): string | null => {
     const held = data["handledBy"]

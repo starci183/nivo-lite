@@ -9,7 +9,8 @@ import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ChannelSendExecutorService } from "./channel-send-executor.service"
-import { ChatNodePortsErrorCode } from "./errors/chat-node-ports.error"
+import { classifyFailure } from "@modules/platform/queue"
+import { ChatNodePortsError, ChatNodePortsErrorCode } from "./errors/chat-node-ports.error"
 
 const NOW = new Date("2026-11-04T10:00:00.000Z")
 
@@ -83,8 +84,8 @@ describe("ChannelSendExecutorService storing", () => {
         expect(executor.effect).toBe("channel.send")
     })
 
-    it("stores the text, pushes it through the outbound path and answers the stored message", async () => {
-        const { executor, messages, delivery } = await build()
+    it("stores the text, pushes it through the outbound path and answers the stored message, logging that the channel took it", async () => {
+        const { executor, messages, delivery, logger } = await build()
 
         await expect(
             executor.execute(TURN, { ...SEND, attachments: [{ url: "https://x/menu", name: "Menu" }] }, CALL),
@@ -101,6 +102,7 @@ describe("ChannelSendExecutorService storing", () => {
             messageId: "m1",
             text: "Hello\nMenu: https://x/menu",
         })
+        expect(logger.info).toHaveBeenCalledWith("chat_node_ports.sent", { turnId: TURN.turnId, messageId: "m1" })
     })
 
     it("refuses a payload that is not a conversation and a text", async () => {
@@ -164,8 +166,8 @@ describe("ChannelSendExecutorService Zalo window and delivery", () => {
         expect(delivery.deliver).toHaveBeenCalledTimes(2)
     })
 
-    it("throws when the channel refused or did not confirm", async () => {
-        const { executor, delivery } = await build()
+    it("throws when the channel refused or did not confirm, logging the code and never the words", async () => {
+        const { executor, delivery, logger } = await build()
         delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: null, outcome: "rejected" })
         await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
             code: ChatNodePortsErrorCode.DeliveryRejected,
@@ -174,6 +176,22 @@ describe("ChannelSendExecutorService Zalo window and delivery", () => {
         await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
             code: ChatNodePortsErrorCode.DeliveryUnconfirmed,
         })
+        expect(logger.warn).toHaveBeenCalledWith("chat_node_ports.send_failed", {
+            turnId: TURN.turnId,
+            code: ChatNodePortsErrorCode.DeliveryRejected,
+        })
+        expect(logger.warn).toHaveBeenCalledWith("chat_node_ports.send_failed", {
+            turnId: TURN.turnId,
+            code: ChatNodePortsErrorCode.DeliveryUnconfirmed,
+        })
+        expect(JSON.stringify(logger.warn.mock.calls)).not.toContain("Hello")
+    })
+
+    it("logs nothing about a failure that is not a refusal of the send (an unknown error passes through)", async () => {
+        const { executor, delivery, logger } = await build()
+        delivery.deliver.mockRejectedValueOnce(new Error("boom"))
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toThrow("boom")
+        expect(logger.warn).not.toHaveBeenCalled()
     })
 
     it("speaks in any conversation of the workspace when the turn serves none", async () => {
@@ -186,7 +204,7 @@ describe("ChannelSendExecutorService Zalo window and delivery", () => {
 })
 
 describe("ChannelSendExecutorService unreachable recipients", () => {
-    it("keeps the message in the conversation, marked not sent, when the customer has no recipient yet, and raises no error", async () => {
+    it("keeps the message in the conversation, marked not sent, and fails the step when the customer has no recipient yet", async () => {
         const { executor, conversations, messages, delivery, logger } = await build()
         conversations.turnOf.mockResolvedValueOnce({
             kind: "ok",
@@ -197,8 +215,12 @@ describe("ChannelSendExecutorService unreachable recipients", () => {
             value: conversation({ channel: "telegram", connectionId: null }),
         })
 
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.RecipientUnreachable,
+        })
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.RecipientUnreachable,
+        })
 
         expect(messages.storeAgentLine).toHaveBeenCalledTimes(2)
         expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "m1", false, "recipient_not_linked")
@@ -214,7 +236,7 @@ describe("ChannelSendExecutorService unreachable recipients", () => {
 
     it("stores the line under the key of the effect call: a retry stores under the same key and only pushes again", async () => {
         const { executor, messages, delivery } = await build()
-        delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: "zalo_quota", outcome: "rejected" })
+        delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: "zalo_token", outcome: "rejected" })
 
         await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
             code: ChatNodePortsErrorCode.DeliveryRejected,
@@ -226,13 +248,17 @@ describe("ChannelSendExecutorService unreachable recipients", () => {
         expect(delivery.deliver).toHaveBeenCalledTimes(3)
     })
 
-    it("keeps the message as not sent and succeeds when the channel says the recipient cannot be reached", async () => {
+    it("keeps the message as not sent and fails the step when the channel says the recipient cannot be reached", async () => {
         const { executor, messages, delivery, logger } = await build()
         delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: "zalo_recipient", outcome: "rejected" })
         delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: "zalo_unfollowed", outcome: "rejected" })
 
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.RecipientUnreachable,
+        })
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.RecipientUnreachable,
+        })
 
         expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "m1", false, "recipient_not_linked")
         expect(logger.info).toHaveBeenCalledTimes(2)
@@ -240,7 +266,7 @@ describe("ChannelSendExecutorService unreachable recipients", () => {
 
     it("still throws for the refusals that are no fault of the recipient, and for an unconfirmed push", async () => {
         const { executor, delivery } = await build()
-        for (const failure of ["zalo_window_expired", "zalo_quota", "zalo_token", "zalo_error", null] as const) {
+        for (const failure of ["zalo_window_expired", "zalo_token", "zalo_error", null] as const) {
             delivery.deliver.mockResolvedValueOnce({ delivered: false, failure, outcome: "rejected" })
             await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
                 code: ChatNodePortsErrorCode.DeliveryRejected,
@@ -254,30 +280,138 @@ describe("ChannelSendExecutorService unreachable recipients", () => {
 })
 
 describe("ChannelSendExecutorService placeholders and plans", () => {
-    it("treats a Zalo conversation of a placeholder sender as unlinked up front, without pushing", async () => {
+    it("treats a Zalo conversation of a placeholder sender as unlinked up front, fails the step and pushes nothing", async () => {
         const { executor, conversations, messages, delivery } = await build()
         conversations.turnOf.mockResolvedValue({
             kind: "ok",
             value: conversation({ channel: "zalo", externalId: "import-dinh:1730000000" }),
         })
 
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.RecipientUnreachable,
+        })
 
         expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "m1", false, "recipient_not_linked")
         expect(delivery.deliver).not.toHaveBeenCalled()
         expect(messages.lastCustomerAt).not.toHaveBeenCalled()
     })
 
-    it("succeeds without retry when the plan of the channel does not allow the reply, leaving the verdict the channel stored", async () => {
+    it("fails the step without retry when the plan of the channel does not allow the reply, leaving the verdict the channel stored", async () => {
         const { executor, messages, delivery, logger } = await build()
         delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: "channel_plan", outcome: "rejected" })
 
-        await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.ChannelPlanBlocked,
+        })
 
         expect(messages.markDelivery).not.toHaveBeenCalled()
         expect(logger.info).toHaveBeenCalledWith("chat_node_ports.plan_blocked", {
             conversationId: "c1",
             channel: "telegram",
         })
+    })
+})
+
+describe("ChannelSendExecutorService retry and settle", () => {
+    it("fails a step the channel refused for now (quota, night hours) with a code the run engine retries, then sends once the channel takes it", async () => {
+        const { executor, messages, delivery } = await build()
+        delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: "zalo_quota", outcome: "rejected" })
+        delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: "zalo_night_hours", outcome: "rejected" })
+
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.DeliveryRateLimited,
+        })
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.DeliveryRateLimited,
+        })
+        await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
+
+        expect(messages.storeAgentLine.mock.calls.map(([line]) => line.key)).toEqual(["run:1", "run:1", "run:1"])
+    })
+
+    it("gives each way a send can end the class the run engine routes it by: only a refusal for now is tried again, every other one goes to a person", () => {
+        const classOf = (code: ChatNodePortsErrorCode): string => classifyFailure(new ChatNodePortsError({ code }))
+        expect(classOf(ChatNodePortsErrorCode.DeliveryRateLimited)).toBe("transient")
+        for (const code of [
+            ChatNodePortsErrorCode.ZaloWindowExpired,
+            ChatNodePortsErrorCode.DeliveryRejected,
+            ChatNodePortsErrorCode.DeliveryUnconfirmed,
+            ChatNodePortsErrorCode.RecipientUnreachable,
+            ChatNodePortsErrorCode.ChannelPlanBlocked,
+            ChatNodePortsErrorCode.HeldByPerson,
+            ChatNodePortsErrorCode.NotSpeaking,
+        ]) {
+            expect(classOf(code)).not.toBe("transient")
+        }
+    })
+})
+
+describe("ChannelSendExecutorService hand-offs", () => {
+    const HOLDER = "a-holder"
+    const SALES = "a-sales"
+    const handOff = (overrides: Partial<NodeTurn> = {}): NodeTurn => ({
+        ...TURN,
+        agentId: SALES,
+        conversationId: "c1",
+        handedOffBy: HOLDER,
+        ...overrides,
+    })
+
+    it("lets the agent that the conversation's agent handed the conversation to speak in it, and the conversation keeps its agent", async () => {
+        const { executor, conversations, messages, delivery } = await build()
+        conversations.turnOf.mockResolvedValue({
+            kind: "ok",
+            value: conversation({ agent: { ...AGENT, id: HOLDER } }),
+        })
+
+        await expect(executor.execute(handOff(), SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
+
+        expect(messages.storeAgentLine).toHaveBeenCalledTimes(1)
+        expect(delivery.deliver).toHaveBeenCalledTimes(1)
+    })
+
+    it("refuses a hand-off that was made from another conversation", async () => {
+        const { executor, conversations } = await build()
+        conversations.turnOf.mockResolvedValue({
+            kind: "ok",
+            value: conversation({ agent: { ...AGENT, id: HOLDER } }),
+        })
+
+        await expect(executor.execute(handOff({ conversationId: "c-other" }), SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.WrongConversation,
+        })
+        await expect(executor.execute(handOff({ conversationId: null }), SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.NotSpeaking,
+        })
+    })
+
+    it("refuses an agent that was handed the conversation by someone who does not hold it, and an agent no hand-off woke", async () => {
+        const { executor, conversations, messages } = await build()
+        conversations.turnOf.mockResolvedValue({
+            kind: "ok",
+            value: conversation({ agent: { ...AGENT, id: HOLDER } }),
+        })
+
+        await expect(executor.execute(handOff({ handedOffBy: "a-third" }), SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.NotSpeaking,
+        })
+        await expect(executor.execute(handOff({ handedOffBy: null }), SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.NotSpeaking,
+        })
+        expect(messages.storeAgentLine).not.toHaveBeenCalled()
+    })
+
+    it("sends exactly once when the hand-off run resumes: the line is stored under the same key and the push carries the same message", async () => {
+        const { executor, conversations, messages, delivery } = await build()
+        conversations.turnOf.mockResolvedValue({
+            kind: "ok",
+            value: conversation({ agent: { ...AGENT, id: HOLDER } }),
+        })
+
+        await executor.execute(handOff(), SEND, CALL)
+        await executor.execute(handOff(), SEND, CALL)
+
+        expect(messages.storeAgentLine.mock.calls.map(([line]) => line.key)).toEqual(["run:1", "run:1"])
+        expect(delivery.deliver.mock.calls.map(([request]) => request.messageId)).toEqual(["m1", "m1"])
     })
 })

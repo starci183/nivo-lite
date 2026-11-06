@@ -1,4 +1,5 @@
 import { waitsForOwner } from "../../rules/sales/order-confirm"
+import { canConfirm } from "../../rules/sales/order-status"
 import type { SalesSettings } from "../../rules/sales/settings"
 import type { OrderSummary } from "../../rules/sales/lead-orders"
 import type { LeadDetail, LeadRow, OrderApproval, OrderDetail, OrderRow } from "./sales.types"
@@ -31,7 +32,12 @@ const approvalOf = (order: OrderRow, settings: SalesSettings): OrderApproval => 
 }
 
 /** The order with its customer's name and who confirms it, flat for a detail block. */
-export const orderDetailOf = (order: OrderRow, customer: string | null, settings: SalesSettings): OrderDetail => ({
+export const orderDetailOf = (
+    order: OrderRow,
+    customer: string | null,
+    settings: SalesSettings,
+    canCancel: boolean,
+): OrderDetail => ({
     id: order.id,
     orderNo: order.orderNo,
     leadId: order.leadId,
@@ -41,6 +47,8 @@ export const orderDetailOf = (order: OrderRow, customer: string | null, settings
     amountVnd: order.amountVnd,
     status: order.status,
     approval: approvalOf(order, settings),
+    canConfirm: canConfirm(order.status),
+    canCancel,
     thresholdVnd: settings.approvalThresholdVnd,
     confirmedBy: order.confirmedBy,
     confirmedAt: order.confirmedAt,

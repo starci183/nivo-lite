@@ -115,6 +115,7 @@ const turnOf = (step: StepView, trigger: StepJson): NodeTurn => ({
     locale: localeOf(trigger),
     origin: trigger.origin === "channel" ? "customer" : "system",
     memberId: textOf(trigger, "actorMemberId"),
+    handedOffBy: textOf(trigger, "authorAgentId"),
 })
 
 /** The node refusal a capability's domain error reports for an effect it refused (`params.refusal`), or null for any other failure. */

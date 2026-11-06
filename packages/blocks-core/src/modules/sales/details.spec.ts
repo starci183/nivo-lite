@@ -19,8 +19,20 @@ describe("leadDetailOf", () => {
 })
 
 describe("orderDetailOf", () => {
+    it("says a draft may be confirmed and a confirmed order may not, and carries whether it may be cancelled", () => {
+        const draft = orderDetailOf(ORDER_WAITING, "Lan", SALES_SETTINGS_DEFAULTS, true)
+        expect(draft).toMatchObject({ canConfirm: true, canCancel: true })
+        const confirmed = orderDetailOf(
+            { ...ORDER_WAITING, status: "confirmed" },
+            "Lan",
+            SALES_SETTINGS_DEFAULTS,
+            false,
+        )
+        expect(confirmed).toMatchObject({ canConfirm: false, canCancel: false })
+    })
+
     it("names who confirms a draft that waits for the owner", () => {
-        expect(orderDetailOf(ORDER_WAITING, "Lan", SALES_SETTINGS_DEFAULTS)).toMatchObject({
+        expect(orderDetailOf(ORDER_WAITING, "Lan", SALES_SETTINGS_DEFAULTS, true)).toMatchObject({
             approval: "owner",
             customer: "Lan",
         })

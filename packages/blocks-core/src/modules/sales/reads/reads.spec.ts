@@ -169,6 +169,22 @@ describe("sales.order", () => {
         expect(await dataOf(orderRead, { id: "order-3" })).toMatchObject({ approval: "done" })
     })
 
+    it("says a draft may be confirmed and cancelled, and a confirmed order only cancelled while nothing was paid or invoiced", async () => {
+        expect(await dataOf(orderRead, { id: "order-2" })).toMatchObject({ canConfirm: true, canCancel: true })
+        expect(await dataOf(orderRead, { id: "order-3" })).toMatchObject({ canConfirm: false, canCancel: true })
+        const paid = sampleState([])
+        paid.transactions.push({
+            id: "t-1",
+            orderId: "order-3",
+            status: "matched",
+            version: "1",
+            createdAt: SAMPLE_NOW,
+            updatedAt: SAMPLE_NOW,
+        })
+        expect(await dataOf(orderRead, { id: "order-3" }, paid)).toMatchObject({ canCancel: false })
+        expect(await dataOf(orderRead, { id: "order-4" })).toMatchObject({ canConfirm: false, canCancel: false })
+    })
+
     it("has no customer name for an order with no customer or whose customer is gone", async () => {
         expect(await dataOf(orderRead, { id: "order-6" })).toMatchObject({ customer: null, leadId: null })
         expect(await dataOf(orderRead, { id: "order-5" })).toMatchObject({ customer: null, leadId: "lead-9" })

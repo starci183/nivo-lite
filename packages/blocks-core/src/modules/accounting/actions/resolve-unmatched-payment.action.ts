@@ -11,22 +11,26 @@ import { textOf } from "../messages/copy"
 import { CLAIMS, ORDERS, TRANSACTIONS } from "../ports"
 import { settleOnOrder } from "./settle.action"
 
-const values: z.ZodUnion<
-    readonly [
-        z.ZodObject<{ order: z.ZodUUID }, z.core.$strict>,
-        z.ZodObject<{ kind: z.ZodLiteral<typeof OTHER_INCOME_KIND> }, z.core.$strict>,
-    ]
-> = z.union([z.object({ order: z.uuid() }).strict(), z.object({ kind: z.literal(OTHER_INCOME_KIND) }).strict()])
-
+/**
+ * The payload the door receives is flat: the `values` of the row command with `id` and `command` merged in (`actionPayloadOf`).
+ * So the chosen order is `order` and the other-income choice is `kind`, both beside `id`; exactly one of them is given.
+ */
 const input: z.ZodObject<{
     id: z.ZodUUID
     command: z.ZodLiteral<typeof RESOLVE_COMMAND>
-    values: typeof values
-}> = z.object({
-    id: z.uuid(),
-    command: z.literal(RESOLVE_COMMAND),
-    values,
-})
+    order: z.ZodOptional<z.ZodUUID>
+    kind: z.ZodOptional<z.ZodLiteral<typeof OTHER_INCOME_KIND>>
+}> = z
+    .object({
+        id: z.uuid(),
+        command: z.literal(RESOLVE_COMMAND),
+        order: z.uuid().optional(),
+        kind: z.literal(OTHER_INCOME_KIND).optional(),
+    })
+    .refine((payload) => (payload.order === undefined) !== (payload.kind === undefined), {
+        message: "exactly one of order and kind",
+        path: ["order"],
+    })
 
 const refused = (reason: OtherIncomeRefusal): ActionResult => ({
     ok: false,
@@ -37,8 +41,8 @@ const refused = (reason: OtherIncomeRefusal): ActionResult => ({
 
 /**
  * `accounting.resolve-unmatched-payment`: the owner resolves a payment nobody tied to an order, from its approval row. `id` is the bank
- * transaction. `values: { order }` ties it to that order through the normal payment path (the same writes and refusals as
- * `payment.settle`); `values: { kind: "other-income" }` records it as other income: the payment leaves the queue and its book entry is
+ * transaction. `order` ties it to that order through the normal payment path (the same writes and refusals as
+ * `payment.settle`); `kind: "other-income"` records it as other income: the payment leaves the queue and its book entry is
  * projected. It writes records only: no door and no assistant. A payment that is gone, money out or already resolved is refused as data.
  */
 export const resolveUnmatchedPaymentAction: ActionDefinition = defineAction({
@@ -49,8 +53,8 @@ export const resolveUnmatchedPaymentAction: ActionDefinition = defineAction({
     ports: { transactions: TRANSACTIONS, orders: ORDERS, claims: CLAIMS, outbox: outboxPort },
     transactional: true,
     refreshes: ["accounting.decisions", "accounting.figures", "accounting.entries", "accounting.ledger"],
-    run: async (ports, { id, values: chosen }): Promise<ActionResult> => {
-        if ("order" in chosen) return settleOnOrder(ports, { transactionId: id, orderId: chosen.order })
+    run: async (ports, { id, order }): Promise<ActionResult> => {
+        if (order !== undefined) return settleOnOrder(ports, { transactionId: id, orderId: order })
         const decision = otherIncomeDecision(await transactionById(ports.transactions, id))
         if (decision.kind === "refuse") return refused(decision.reason)
         const { transaction } = decision

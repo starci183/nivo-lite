@@ -61,6 +61,7 @@ const build = async () => {
     const tx = mock<ScopedTx>()
     const outbox = mock<OutboxApi>()
     engine.scoped.mockImplementation((_workspace, work) => work(tx))
+    api.list.mockResolvedValue({ rows: [], next: null })
     ports.entitiesApi.mockReturnValue(api)
     ports.outboxApi.mockReturnValue(outbox)
     const moduleRef = await Test.createTestingModule({
@@ -191,6 +192,76 @@ describe("OrderEffectsService order.record", () => {
         await expect(run(executorOf("order.record"), RECORD_PAYLOAD)).rejects.toMatchObject({
             code: "SALES_EFFECTS_WRITE_REFUSED",
         })
+    })
+})
+
+describe("OrderEffectsService order.record of a request that stands", () => {
+    const listed = (...records: ReadonlyArray<RecordRow>) => ({
+        rows: records.map((row) => ({ row, joined: {}, position: [], included: {} })),
+        next: null,
+    })
+    const STANDING = {
+        items: {
+            lines: [
+                { name: "tea", qty: 2, unitVnd: 0, amountVnd: 0 },
+                { name: "cake", qty: 1, unitVnd: 0, amountVnd: 0 },
+            ],
+        },
+        amountVnd: 120_000,
+        note: "Leave at the door",
+        status: "confirmed",
+    }
+
+    it("looks for an open order of the customer first, newest first, among drafts and confirmed ones", async () => {
+        const { executorOf, api } = await build()
+        api.get.mockResolvedValue(leadRecord("new"))
+        api.insert.mockResolvedValue(ok(orderRecord()))
+
+        await run(executorOf("order.record"), RECORD_PAYLOAD)
+
+        expect(api.list).toHaveBeenCalledWith(
+            expect.objectContaining({
+                from: "sales.order",
+                where: {
+                    op: "and",
+                    of: [
+                        { op: "eq", field: "leadId", value: LEAD },
+                        { op: "in", field: "status", values: ["draft", "confirmed"] },
+                    ],
+                },
+                order: [
+                    ["createdAt", "desc"],
+                    ["id", "desc"],
+                ],
+            }),
+        )
+    })
+
+    it("reuses the open order that already stands for the same request, and writes nothing", async () => {
+        const { executorOf, api } = await build()
+        api.get.mockResolvedValue(leadRecord("new"))
+        api.list.mockResolvedValue(listed(orderRecord(STANDING)))
+
+        await expect(run(executorOf("order.record"), RECORD_PAYLOAD)).resolves.toEqual({ kind: "order", id: ORDER })
+        await expect(run(executorOf("order.record"), RECORD_PAYLOAD)).resolves.toEqual({ kind: "order", id: ORDER })
+
+        expect(api.insert).not.toHaveBeenCalled()
+    })
+
+    it("records a new order when the open ones ask for something else, or cannot be read", async () => {
+        const { executorOf, api } = await build()
+        api.get.mockResolvedValue(leadRecord("new"))
+        api.insert.mockResolvedValue(ok(orderRecord()))
+        api.list.mockResolvedValue(
+            listed(
+                orderRecord({ ...STANDING, amountVnd: 99_000 }),
+                recordOf("55555555-5555-4555-8555-555555555555", "1", { status: 7 }),
+            ),
+        )
+
+        await run(executorOf("order.record"), RECORD_PAYLOAD)
+
+        expect(api.insert).toHaveBeenCalledTimes(1)
     })
 })
 

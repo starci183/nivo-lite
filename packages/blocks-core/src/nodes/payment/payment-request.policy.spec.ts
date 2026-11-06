@@ -1,4 +1,12 @@
-import { itemsTextOf, noAccountTitleOf, paymentMessageOf, transferContentOf } from "./payment-request.policy"
+import {
+    itemsTextOf,
+    noAccountTitleOf,
+    orderLinesOf,
+    notPayableTitleOf,
+    orderHeldMessageOf,
+    paymentMessageOf,
+    transferContentOf,
+} from "./payment-request.policy"
 import { sampleOf } from "../../messages/catalog"
 
 const instruction = {
@@ -44,5 +52,29 @@ describe("payment request policy", () => {
     it("names the order in the title that tells the owner no payment request could go out", () => {
         expect(noAccountTitleOf("DH-1", "en")).toContain("DH-1")
         expect(noAccountTitleOf("DH-1", "vi")).toContain("SePay")
+    })
+
+    it("tells the customer the order is recorded and the payment details follow, with the items and the amount", () => {
+        const order = { amountVnd: 300_000, lines: [{ name: "tea", qty: 2 }] }
+
+        expect(orderHeldMessageOf(order, "en")).toBe(
+            "We have recorded your order: 2 x tea · 300,000 VND. The shop will send you the payment details as soon as they are ready.",
+        )
+        expect(orderHeldMessageOf({ amountVnd: 300_000, lines: [] }, "vi")).toContain("— · ")
+    })
+
+    it("titles the owner item of an order that cannot be paid yet in the language asked", () => {
+        expect(notPayableTitleOf("o1", "en")).toBe("Order o1 cannot be paid yet: it is not confirmed or has no amount")
+        expect(notPayableTitleOf("o1", "vi")).toContain("o1")
+    })
+
+    it("reads the lines from the object a sales record keeps them in, and finds none in any other shape instead of failing", () => {
+        const record = { lines: [{ name: "tea", qty: 2, unitVnd: 150_000, amountVnd: 300_000 }] }
+
+        expect(orderLinesOf(record)).toEqual([{ name: "tea", qty: 2 }])
+        expect(orderLinesOf({ lines: [] })).toEqual([])
+        for (const other of [[{ name: "tea", qty: 2 }], "2 x tea", null, undefined, {}, { lines: "tea" }]) {
+            expect(orderLinesOf(other)).toEqual([])
+        }
     })
 })

@@ -5,7 +5,7 @@ import { MAX_ID } from "../../../bounds"
 import { SALES_DECISION_COMMANDS } from "../../../rules/sales/decisions"
 import { SALES_APPROVE } from "../constants"
 import { rightsPort } from "../../platform/ports"
-import { salesLeads, salesOrders, salesSettings } from "../ports"
+import { salesClaims, salesInvoices, salesLeads, salesOrders, salesSettings, salesTransactions } from "../ports"
 import { cancelOrderRun } from "./cancel-order.action"
 import { confirmOrderRun } from "./confirm-order.action"
 
@@ -23,12 +23,20 @@ export const decideAction: ActionDefinition = defineAction({
     permission: SALES_APPROVE,
     label: { key: "action_decide" },
     input,
-    ports: { orders: salesOrders, leads: salesLeads, rights: rightsPort, settings: salesSettings },
+    ports: {
+        orders: salesOrders,
+        leads: salesLeads,
+        rights: rightsPort,
+        settings: salesSettings,
+        transactions: salesTransactions,
+        invoices: salesInvoices,
+        claims: salesClaims,
+    },
     transactional: true,
     run: (stores, { id, command }, context): Promise<ActionResult> =>
         command === SALES_DECISION_COMMANDS.approve
             ? confirmOrderRun(stores, { id }, context)
-            : cancelOrderRun(stores.orders, { id }),
+            : cancelOrderRun(stores, { id }),
     refreshes: [
         "sales.orders",
         "sales.order-counts",

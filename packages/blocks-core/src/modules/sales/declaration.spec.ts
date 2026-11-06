@@ -76,6 +76,14 @@ describe("the Sales module declaration", () => {
         expect(salesModule.actions.find((action) => action.id === "sales.decide")?.permission).toBe("sales.approve")
     })
 
+    it("offers confirm and cancel on the order detail only as the read's flags say", () => {
+        const detail = allNodes.find((node) => node.id === "order-detail")
+        expect(detail?.block).toBe("core.detail")
+        expect(detail?.props).toMatchObject({ primaryWhen: "canConfirm", secondaryWhen: "canCancel" })
+        const strays = allNodes.filter((node) => node.id !== "order-detail" && "primaryWhen" in (node.props ?? {}))
+        expect(strays).toEqual([])
+    })
+
     it("seeds one spec with the attention, customers, orders and settings views", () => {
         expect(salesModule.specs).toEqual([SALES_WORKBENCH_SPEC])
         expect(SALES_WORKBENCH_SPEC.views.map((view) => view.id)).toEqual([
@@ -130,6 +138,10 @@ describe("the messages of the Sales module", () => {
         "reason_required",
         "order_not_confirmable",
         "order_not_cancellable",
+        "order_paid",
+        "order_invoiced",
+        "order_has_payment",
+        "order_has_invoice",
         "settings_not_saved",
         "not_awaiting",
         "phone_required",

@@ -600,6 +600,8 @@
                 "id": "order-detail",
                 "block": "core.detail",
                 "props": {
+                  "primaryWhen": "canConfirm",
+                  "secondaryWhen": "canCancel",
                   "label": {
                     "key": "order_detail"
                   },

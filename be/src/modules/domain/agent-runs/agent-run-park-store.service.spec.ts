@@ -265,6 +265,16 @@ describe("AgentRunParkStoreService parked", () => {
         ])
     })
 
+    it("looks only at runs parked: a failed or dead run is left to a person's own resume, never taken by the machine", async () => {
+        const { service, records } = await build()
+        records.runsOf.mockResolvedValue([])
+
+        await service.parked(QUERY)
+        await service.parked({ ...QUERY, byBuild: true, minAgeSeconds: 0 })
+
+        expect(records.runsOf.mock.calls.map((call) => call[1])).toEqual(["parked", "parked"])
+    })
+
     it("takes only runs parked under another build when asked, and skips a run with no failed step", async () => {
         const { service, records } = await build()
         records.runsOf.mockResolvedValue([

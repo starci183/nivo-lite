@@ -64,7 +64,9 @@ enum QueryChatMessages {
 const queryMap: Record<QueryChatMessages, Document> = { [QueryChatMessages.Query1]: query1 }
 
 /** Parameters of the ChatMessages query. */
-type QueryChatMessagesParams = QueryParams<QueryChatMessages, QueryChatMessagesRequest> & { request: QueryChatMessagesRequest }
+type QueryChatMessagesParams = QueryParams<QueryChatMessages, QueryChatMessagesRequest> & {
+    request: QueryChatMessagesRequest
+}
 
 /** One page of the messages of a room, newest first. */
 export const queryChatMessages = async ({

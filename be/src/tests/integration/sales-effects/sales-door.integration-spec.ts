@@ -178,12 +178,41 @@ describe("the order actions", () => {
         expect(await stageOf(AN)).toBe("won")
     })
 
-    it("cancels a draft only, and answers a refusal as data otherwise", async () => {
+    it("cancels a confirmed order that no payment or invoice touches, and then offers nothing more on it", async () => {
+        expect(await door.read(OWNER, "sales.order", { id: CONFIRMED })).toMatchObject({
+            status: "confirmed",
+            canConfirm: false,
+            canCancel: true,
+        })
+        expect(await door.act(OWNER, "sales.cancel-order", { id: CONFIRMED })).toEqual({ ok: true })
+        expect(await door.read(OWNER, "sales.order", { id: CONFIRMED })).toMatchObject({
+            status: "cancelled",
+            canCancel: false,
+        })
         expect(await door.act(OWNER, "sales.cancel-order", { id: CONFIRMED })).toMatchObject({
             ok: false,
             message: { key: "refusal_order_not_cancellable" },
         })
-        expect(await statusOf(CONFIRMED)).toBe("confirmed")
+    })
+
+    it("refuses to cancel a confirmed order that has a payment allocated, and leaves it confirmed", async () => {
+        await saveRecord(seed.manager, scene.workspaceId, "payment.transaction", world.id(), {
+            channel: "bank",
+            direction: "credit",
+            amountVnd: 6_000_000,
+            orderId: BIG,
+            status: "matched",
+            occurredAt: "2026-11-05T09:00:00.000Z",
+        })
+        expect(await door.read(OWNER, "sales.order", { id: BIG })).toMatchObject({
+            status: "confirmed",
+            canCancel: false,
+        })
+        expect(await door.act(OWNER, "sales.cancel-order", { id: BIG })).toMatchObject({
+            ok: false,
+            message: { key: "refusal_order_has_payment" },
+        })
+        expect(await statusOf(BIG)).toBe("confirmed")
     })
 })
 

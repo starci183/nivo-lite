@@ -1,3 +1,4 @@
+import { ORDER_ITEMS_SHAPE } from "../../entities/sales/order.entity"
 import type { PaymentInstruction } from "../../vocabulary"
 import { REQUEST_WORDS } from "./payment-request.messages"
 import type { RequestLocale } from "./payment-request.messages"
@@ -18,6 +19,16 @@ export interface PayableLines {
     readonly lines: ReadonlyArray<OrderLine>
 }
 
+/**
+ * The lines of an order as its record keeps them: `items` is an object that holds the lines (`{ lines: [{ name, qty, unitVnd, amountVnd }] }`), not
+ * a list. A value that is not that shape (a record from before the lines were kept, a damaged one) has no lines, so the message is still
+ * written, with a dash in place of the items.
+ */
+export const orderLinesOf = (items: unknown): ReadonlyArray<OrderLine> => {
+    const parsed = ORDER_ITEMS_SHAPE.safeParse(items)
+    return parsed.success ? parsed.data.lines.map((line) => ({ name: line.name, qty: line.qty })) : []
+}
+
 /** The transfer content of an order number: letters and digits only, upper case (`DH-20261105-0001` becomes `DH202611050001`). */
 export const transferContentOf = (orderNo: string): string => orderNo.replace(/[^A-Za-z0-9]/g, "").toUpperCase()
 
@@ -28,6 +39,19 @@ export const itemsTextOf = (lines: ReadonlyArray<OrderLine>): string =>
 const fill = (template: string, values: Readonly<Record<string, string>>): string =>
     Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{{${name}}}`, value), template)
 
+/** The amount of an order in the language asked, with the currency. */
+const amountTextOf = (amountVnd: number, locale: RequestLocale): string =>
+    `${new Intl.NumberFormat(locale === "vi" ? "vi-VN" : "en-US").format(amountVnd)} ${REQUEST_WORDS[locale].currency}`
+
+/** The message that tells the customer the order is recorded when the payment details cannot be given yet: the items and the amount, and that the shop will send the details. */
+export const orderHeldMessageOf = (order: PayableLines, locale: RequestLocale): string => {
+    const items = itemsTextOf(order.lines)
+    return fill(REQUEST_WORDS[locale].held, {
+        items: items === "" ? "—" : items,
+        amount: amountTextOf(order.amountVnd, locale),
+    })
+}
+
 /** The message that asks the customer to pay: the amount, the items, the account, the transfer content and the QR link. */
 export const paymentMessageOf = (
     instruction: PaymentInstruction,
@@ -36,7 +60,7 @@ export const paymentMessageOf = (
     locale: RequestLocale,
 ): string => {
     const words = REQUEST_WORDS[locale]
-    const amount = `${new Intl.NumberFormat(locale === "vi" ? "vi-VN" : "en-US").format(order.amountVnd)} ${words.currency}`
+    const amount = amountTextOf(order.amountVnd, locale)
     const items = itemsTextOf(order.lines)
     return [
         fill(words.intro, { items: items === "" ? "—" : items, amount }),
@@ -52,3 +76,7 @@ export const paymentMessageOf = (
 /** The title of the work item that tells the owner the payment request could not go out. */
 export const noAccountTitleOf = (orderNo: string, locale: RequestLocale): string =>
     fill(REQUEST_WORDS[locale].noAccount, { order: orderNo })
+
+/** The title of the work item that tells the owner an order reached the payment request without being confirmed or having an amount. */
+export const notPayableTitleOf = (orderId: string, locale: RequestLocale): string =>
+    fill(REQUEST_WORDS[locale].notPayable, { order: orderId })

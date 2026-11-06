@@ -19,9 +19,34 @@ import { matchesQuery } from "../../rules/sales/search"
 import type { RightsDirectory } from "../platform/platform.types"
 import { rightsPort } from "../platform/ports"
 import { SALES_SETTINGS_KEY } from "../../entities/sales/settings.entity"
-import { salesLeads, salesLeadsList, salesOrders, salesOrdersList, salesSettings } from "./ports"
+import {
+    salesClaims,
+    salesInvoices,
+    salesLeads,
+    salesLeadsList,
+    salesOrders,
+    salesOrdersList,
+    salesSettings,
+    salesTransactions,
+} from "./ports"
 import { leadRowOf, orderRowOf, settingsRowOf } from "./sales-records"
 import type { LeadRow, OrderRow } from "./sales.types"
+
+/** A record of another module that points at an order: a payment allocated to it, an invoice issued for it, a claim made about it. */
+export interface OrderLinkRow {
+    /** The record id. */
+    readonly id: string
+    /** The order the record points at. */
+    readonly orderId: string
+    /** What the record says of itself (a claim's status, for one). */
+    readonly status: string
+    /** The version an update must name. */
+    readonly version: string
+    /** When the record was made, ISO text. */
+    readonly createdAt: string
+    /** When the record last changed, ISO text. */
+    readonly updatedAt: string
+}
 
 /** What the in-memory provider holds: the rows, the members who hold the owner's right and the clock. */
 export interface MemoryState {
@@ -29,6 +54,12 @@ export interface MemoryState {
     readonly leads: Array<LeadRow>
     /** The orders; updates replace the entries. */
     readonly orders: Array<OrderRow>
+    /** The payments allocated to orders. */
+    readonly transactions: Array<OrderLinkRow>
+    /** The invoices issued for orders. */
+    readonly invoices: Array<OrderLinkRow>
+    /** The claims customers made about paying orders; updates replace the entries. */
+    readonly claims: Array<OrderLinkRow>
     /** The rules the workspace saved, or null before the first save; an upsert replaces them. */
     settings: SalesSettings | null
     /** The ids of the members who hold every permission; any other member holds none. */
@@ -328,6 +359,20 @@ const entityApi = (table: Table): EntityApi => ({
     unlink: unsupported,
 })
 
+/** The row a record makes for a link to an order; null when it holds no order or status. */
+const orderLinkRowOf = (record: RecordRow): OrderLinkRow | null => {
+    const { orderId, status } = record.data
+    if (typeof orderId !== "string" || typeof status !== "string") return null
+    return {
+        id: record.id,
+        orderId,
+        status,
+        version: record.version,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+    }
+}
+
 const rightsDirectory = (state: MemoryState): RightsDirectory => ({
     holds: (memberId) => Promise.resolve(memberId !== null && state.holders.includes(memberId)),
 })
@@ -360,6 +405,17 @@ export const memoryProvider = (state: MemoryState): PortProvider => {
         now: state.now,
         joins: { lead: leads.records },
     }
+    const linked = (entity: string, rows: Array<OrderLinkRow>, joins: Table["joins"]): Table => ({
+        entity,
+        records: () => rows.map(recordOf),
+        replace: (index, record) => {
+            const row = orderLinkRowOf(record)
+            if (row !== null) rows[index] = row
+            return row !== null
+        },
+        now: state.now,
+        joins,
+    })
     const stamped = (data: Readonly<Record<string, unknown>>): RecordRow => ({
         ...recordOf({ id: "settings-1", version: "1", createdAt: state.now, updatedAt: state.now }),
         data,
@@ -388,6 +444,11 @@ export const memoryProvider = (state: MemoryState): PortProvider => {
             if (port.id === salesOrdersList.id) return memoryList(() => state.orders)
             if (port.id === salesLeads.id) return entityApi(leads)
             if (port.id === salesOrders.id) return entityApi(orders)
+            if (port.id === salesTransactions.id)
+                return entityApi(linked("payment.transaction", state.transactions, {}))
+            if (port.id === salesInvoices.id) return entityApi(linked("accounting.invoice", state.invoices, {}))
+            if (port.id === salesClaims.id)
+                return entityApi(linked("payment.claim", state.claims, { order: orders.records }))
             if (port.id === rightsPort.id) return rightsDirectory(state)
             return unprovided(port)
         },

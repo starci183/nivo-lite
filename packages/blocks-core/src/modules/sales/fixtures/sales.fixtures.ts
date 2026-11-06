@@ -109,9 +109,9 @@ export const SALES_FIXTURES: ModuleFixtures = {
             empty: zeroCounts(ORDER_STATUSES),
         },
         "sales.order": {
-            ready: orderDetailOf(ORDER_CONFIRMED, customerOf(ORDER_CONFIRMED), SALES_SETTINGS_DEFAULTS),
+            ready: orderDetailOf(ORDER_CONFIRMED, customerOf(ORDER_CONFIRMED), SALES_SETTINGS_DEFAULTS, true),
             empty: null,
-            waiting: orderDetailOf(ORDER_WAITING, customerOf(ORDER_WAITING), SALES_SETTINGS_DEFAULTS),
+            waiting: orderDetailOf(ORDER_WAITING, customerOf(ORDER_WAITING), SALES_SETTINGS_DEFAULTS, true),
         },
         "sales.figures": {
             ready: salesFiguresOf(STAGE_COUNTS, TOTALS),

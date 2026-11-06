@@ -15,7 +15,9 @@ export const fixtureTablesOf = (
     return {
         reads: Object.fromEntries(
             fixtures.flatMap((module) =>
-                Object.entries(module.reads).map(([id, fixture]) => [id, () => fixture.readyIn?.[locale] ?? fixture.ready] as const),
+                Object.entries(module.reads).map(
+                    ([id, fixture]) => [id, () => fixture.readyIn?.[locale] ?? fixture.ready] as const,
+                ),
             ),
         ),
         actions: Object.fromEntries(

@@ -17,8 +17,14 @@ export enum ChatNodePortsErrorCode {
     ZaloWindowExpired = "CHAT_NODE_PORTS_ZALO_WINDOW_EXPIRED",
     /** The channel refused the message. */
     DeliveryRejected = "CHAT_NODE_PORTS_DELIVERY_REJECTED",
+    /** The channel is not taking messages for now (Zalo quota or night hours): nothing was sent, and the run engine tries the step again after a backoff. */
+    DeliveryRateLimited = "CHAT_NODE_PORTS_DELIVERY_RATE_LIMITED",
     /** The channel did not say whether it took the message. */
     DeliveryUnconfirmed = "CHAT_NODE_PORTS_DELIVERY_UNCONFIRMED",
+    /** The customer cannot be reached on the channel (no recipient yet, an imported placeholder, a user who does not follow the account): the message stays in the conversation marked failed. */
+    RecipientUnreachable = "CHAT_NODE_PORTS_RECIPIENT_UNREACHABLE",
+    /** The plan of the channel does not let the agent answer: the message stays in the conversation marked failed. */
+    ChannelPlanBlocked = "CHAT_NODE_PORTS_CHANNEL_PLAN_BLOCKED",
     /** The engine refused to store the proposed reply (the conversation or the line moved, or a proposal was stored at the same moment). */
     ProposalRefused = "CHAT_NODE_PORTS_PROPOSAL_REFUSED",
 }
@@ -32,7 +38,10 @@ export const CHAT_NODE_PORTS_ERROR_KINDS: Record<ChatNodePortsErrorCode, ErrorKi
     [ChatNodePortsErrorCode.NotSpeaking]: "forbidden",
     [ChatNodePortsErrorCode.ZaloWindowExpired]: "conflict",
     [ChatNodePortsErrorCode.DeliveryRejected]: "unavailable",
+    [ChatNodePortsErrorCode.DeliveryRateLimited]: "unavailable",
     [ChatNodePortsErrorCode.DeliveryUnconfirmed]: "unavailable",
+    [ChatNodePortsErrorCode.RecipientUnreachable]: "conflict",
+    [ChatNodePortsErrorCode.ChannelPlanBlocked]: "conflict",
     [ChatNodePortsErrorCode.ProposalRefused]: "conflict",
 }
 

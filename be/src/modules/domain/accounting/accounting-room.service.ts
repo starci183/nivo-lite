@@ -1,41 +1,28 @@
 import { Injectable } from "@nestjs/common"
-import { OfficeCardsService, OfficeLinesService } from "@modules/domain/messages"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import type { HubCardPayload } from "./accounting-desk.contracts"
 
-/** The department whose agent (AI Ke toan) speaks in the accounting room. */
+/** The module whose agent (AI Ke toan) speaks to the owner. */
 export const ACCOUNTING_DEPARTMENT = "accounting"
 
-/** The Hub room of the accounting desk. */
-const ACCOUNTING_ROOM = "accounting"
-
-/** The card as the Hub contract v1 stores it: every line carries its marker (empty when the desk gave none). */
-export const officeCardOf = (card: HubCardPayload): HubCardPayload =>
-    card.lines === undefined
-        ? card
-        : { ...card, lines: card.lines.map((line) => ({ at: line.at ?? "", text: line.text })) }
-
 @Injectable()
-/** The adapter to the accounting room of the Hub: plain lines and result cards spoken by the accounting agent. */
+/** The adapter to the team chat for the accounting desk: lines the accounting agent says to the owner in their direct room. */
 export class AccountingRoomService {
-    constructor(
-        private readonly lines: OfficeLinesService,
-        private readonly cards: OfficeCardsService,
-    ) {}
+    constructor(private readonly chat: TeamChatRoomsService) {}
 
-    /** Posts one line as AI Ke toan. */
+    /** Says one line as AI Ke toan to the owner; nothing happens when the workspace has no accounting agent. */
     async post(workspaceId: string, body: string): Promise<void> {
-        await this.lines.post({ workspaceId }, { body, lead_id: null, work_item_id: null, dept: ACCOUNTING_DEPARTMENT })
+        await this.chat.postAsAgent(workspaceId, {
+            agent: ACCOUNTING_DEPARTMENT,
+            toUserId: null,
+            body,
+            key: null,
+        })
     }
 
-    /** Posts a hub card (contract v1) into the accounting room, with its plain-text fallback as the preview line. */
+    /** Says the plain text of a result card to the owner (the team chat has text, report and approval lines only) and answers the card. */
     async postCard(workspaceId: string, card: HubCardPayload, text: string): Promise<HubCardPayload> {
-        await this.cards.postAsDepartment({ workspaceId }, ACCOUNTING_DEPARTMENT, {
-            room: ACCOUNTING_ROOM,
-            body: text,
-            leadId: null,
-            workItemId: null,
-            card: officeCardOf(card),
-        })
+        await this.post(workspaceId, text)
         return card
     }
 }

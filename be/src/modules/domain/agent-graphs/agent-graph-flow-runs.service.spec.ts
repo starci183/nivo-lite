@@ -241,16 +241,24 @@ describe("flow F graphs on fake ports", () => {
 })
 
 describe("flow F graphs: Sales", () => {
-    it("Sales records the order, confirms it under the threshold and asks for the payment", async () => {
+    it("Sales records the order, confirms it under the threshold, asks for the payment and then asks the engine to rematch a credit that arrived before the payment code", async () => {
         const graph = seededGraphOf("sales")
         const world = flowWorldOf({ "catalogue-item": [...CATALOGUE] })
         const run = await driveFlow(await flowServicesOf(world, graph, {}), graph, salesWake())
 
         expect(run.failed).toBeNull()
         expect(run.path).toEqual(["record", "complete", "needs-approval", "confirm", "request-payment"])
-        expect(world.ran.map((entry) => entry.effect)).toEqual(["order.record", "order.confirm", "channel.send"])
+        expect(world.ran.map((entry) => entry.effect)).toEqual([
+            "order.record",
+            "order.confirm",
+            "channel.send",
+            "payment.rematch",
+        ])
         expect(world.ran[0]?.payload).toMatchObject({ leadId: "lead-1", amountVnd: 150_000 })
         expect(String(world.ran[2]?.payload.text)).toContain("DH001")
+        // The rematch comes last, after the message that carries the code: a bank credit that reached the account before the code existed
+        // can only be matched once the code is issued. It names the order, and it is not run when the payment request itself fails (below).
+        expect(world.ran[3]?.payload).toEqual({ orderId: "order-1" })
     })
 
     it("Sales voids the order it recorded when the confirmation fails before any pivot", async () => {

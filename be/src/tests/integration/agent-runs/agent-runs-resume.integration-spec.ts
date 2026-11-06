@@ -89,8 +89,9 @@ describe("agent-runs/park-resume: a dead-lettered run runs again from its failed
         await expect(resumer().resume(request)).resolves.toEqual({ kind: "not_parked" })
         await runs().advance(scene.workspaceId, runId, SIGNAL)
 
-        expect(await statuses(runId)).toEqual(["turn:done", "door:done", "tool:done"])
-        expect(script().performed).toEqual([`door:${wakeId}`, `tool:${wakeId}`])
+        // the tool step chains the reply, so the resumed run goes on to the end of its graph
+        expect(await statuses(runId)).toEqual(["turn:done", "door:done", "tool:done", "reply:done"])
+        expect(script().performed).toEqual([`door:${wakeId}`, `tool:${wakeId}`, `reply:${wakeId}`])
         expect(await scene.runRow(runId)).toMatchObject({ status: "done", resumedBy: "member-1" })
     })
 

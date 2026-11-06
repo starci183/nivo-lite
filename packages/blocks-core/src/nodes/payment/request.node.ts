@@ -4,9 +4,15 @@ import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import { z } from "zod"
 import { paymentRematchEffect } from "../../vocabulary"
 import type { PaymentInstruction } from "../../vocabulary"
-import type { OrderLine } from "./payment-request.policy"
 import { failureKindOf } from "../core/failure.policy"
-import { noAccountTitleOf, paymentMessageOf, transferContentOf } from "./payment-request.policy"
+import {
+    noAccountTitleOf,
+    notPayableTitleOf,
+    orderHeldMessageOf,
+    orderLinesOf,
+    paymentMessageOf,
+    transferContentOf,
+} from "./payment-request.policy"
 import type { RequestLocale } from "./payment-request.messages"
 import type { NodeSchema } from "../node-schema.types"
 import { MAX_BODY, MAX_ID, MAX_LINE } from "../../bounds"
@@ -37,7 +43,8 @@ interface PayableOrder {
     readonly orderNo: string
     readonly amountVnd: number | null
     readonly status: string
-    readonly items: ReadonlyArray<OrderLine>
+    /** The lines as the record keeps them: an object that holds them, read through `orderLinesOf`. */
+    readonly items: unknown
 }
 
 /** The NIVO MCP tool that answers how to pay: the account of the connected provider and the QR link of the transfer. */
@@ -90,9 +97,9 @@ const instructionOf = async (
 
 /**
  * `payment.request`: asks the customer to pay a confirmed order. The business rules are here: only a confirmed order with an amount,
- * the order number reduced to letters and digits as the transfer content, and one request per order across runs (dedupe key
+ * the order number reduced to letters and digits as the transfer content, and an order that is not confirmed or has no amount sends nothing but raises an `order_not_payable` work item for the owner (a payment request that silently does nothing would leave the customer and the shop in the dark), one request per order across runs (dedupe key
  * `payment-request:<orderId>`). The account and the QR link come from the `payment.instruction` tool; when it fails or no provider is
- * connected, nothing is sent and a work item (`connect_sepay`) goes to the owner. Once the code is sent, the `payment.rematch` effect (one
+ * connected, the customer is told the order is recorded and that the shop will send the payment details (once per order), and a work item (`connect_sepay`) goes to the owner. Once the code is sent, the `payment.rematch` effect (one
  * per order across runs) asks the engine to look for a credit that arrived before the code existed.
  */
 export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
@@ -115,6 +122,15 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
         })
         const amountVnd = order?.amountVnd ?? 0
         if (order?.status !== "confirmed" || amountVnd <= 0) {
+            await context.effect(
+                "work-item.raise",
+                {
+                    action: "order_not_payable",
+                    title: notPayableTitleOf(given.orderId, given.locale),
+                    payload: { orderId: given.orderId, status: order?.status ?? "missing" },
+                },
+                { dedupeKey: `order-not-payable:${given.orderId}` },
+            )
             return { status: "not_payable", ...NOT_SENT }
         }
         const content = transferContentOf(order.orderNo)
@@ -124,6 +140,14 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
             transferContent: content,
         })
         if ("failure" in answer) {
+            await context.effect(
+                "channel.send",
+                {
+                    conversationId: given.conversationId,
+                    text: orderHeldMessageOf({ amountVnd, lines: orderLinesOf(order.items) }, given.locale),
+                },
+                { dedupeKey: `order-held:${given.orderId}` },
+            )
             await context.effect("work-item.raise", {
                 action: "connect_sepay",
                 title: noAccountTitleOf(order.orderNo, given.locale),
@@ -132,7 +156,12 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
             return { status: "no_account", ...NOT_SENT }
         }
         const { instruction } = answer
-        const text = paymentMessageOf(instruction, { amountVnd, lines: order.items }, content, given.locale)
+        const text = paymentMessageOf(
+            instruction,
+            { amountVnd, lines: orderLinesOf(order.items) },
+            content,
+            given.locale,
+        )
         await context.effect(
             "channel.send",
             { conversationId: given.conversationId, text },
@@ -188,7 +217,7 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
                         orderNo: "DH-20261105-0001",
                         amountVnd: 300_000,
                         status: "confirmed",
-                        items: [{ name: "tea boxes", qty: 2 }],
+                        items: { lines: [{ name: "tea boxes", qty: 2, unitVnd: 150_000, amountVnd: 300_000 }] },
                     },
                 ],
             },
@@ -198,23 +227,54 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
             params: {},
             input: { orderId: "o1", conversationId: "conv-1", locale: "en" },
             output: { status: "not_payable", content: null, qrUrl: null },
-            effects: [],
-            store: { order: [{ id: "o1", orderNo: "DH-1", amountVnd: 300_000, status: "draft", items: [] }] },
+            effects: [
+                {
+                    kind: "work-item.raise",
+                    payload: {
+                        action: "order_not_payable",
+                        title: "Order o1 cannot be paid yet: it is not confirmed or has no amount",
+                        payload: { orderId: "o1", status: "draft" },
+                    },
+                },
+            ],
+            store: {
+                order: [{ id: "o1", orderNo: "DH-1", amountVnd: 300_000, status: "draft", items: { lines: [] } }],
+            },
         },
         {
             name: "sends nothing for a confirmed order that has no amount",
             params: {},
             input: { orderId: "o1", conversationId: "conv-1", locale: "en" },
             output: { status: "not_payable", content: null, qrUrl: null },
-            effects: [],
-            store: { order: [{ id: "o1", orderNo: "DH-1", amountVnd: null, status: "confirmed", items: [] }] },
+            effects: [
+                {
+                    kind: "work-item.raise",
+                    payload: {
+                        action: "order_not_payable",
+                        title: "Order o1 cannot be paid yet: it is not confirmed or has no amount",
+                        payload: { orderId: "o1", status: "confirmed" },
+                    },
+                },
+            ],
+            store: {
+                order: [{ id: "o1", orderNo: "DH-1", amountVnd: null, status: "confirmed", items: { lines: [] } }],
+            },
         },
         {
             name: "sends nothing for an order that is gone",
             params: {},
             input: { orderId: "o9", conversationId: "conv-1", locale: "en" },
             output: { status: "not_payable", content: null, qrUrl: null },
-            effects: [],
+            effects: [
+                {
+                    kind: "work-item.raise",
+                    payload: {
+                        action: "order_not_payable",
+                        title: "Order o9 cannot be paid yet: it is not confirmed or has no amount",
+                        payload: { orderId: "o9", status: "missing" },
+                    },
+                },
+            ],
         },
     ],
 })

@@ -22,7 +22,7 @@ const worldOf = (status = "open"): MemoryWorld => {
 const run = (world: MemoryWorld, raw: unknown, context = ACCOUNTANT_CONTEXT): Promise<ActionResult> =>
     answerQuestionAction.execute?.(memoryProvider(world), raw, context) ?? Promise.reject(new Error("not runnable"))
 
-const payload = (answer: string) => ({ id: "q1", command: "edit", values: { answer } })
+const payload = (answer: string) => ({ id: "q1", command: "edit", answer })
 
 describe("accounting.answer-question", () => {
     it("records the trimmed answer by the member and closes the question", async () => {

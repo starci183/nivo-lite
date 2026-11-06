@@ -1,10 +1,23 @@
-import type { ActionOutcome } from "@nivo-lite/agent-sdk/block"
+import type { ActionInput, ActionOutcome } from "@nivo-lite/agent-sdk/block"
 import type { SpecText } from "@nivo-lite/agent-sdk/schema"
 import type { CommandView, DecisionQueueView, DecisionRowView } from "../views/views.types"
 import type { FormErrors } from "./form-values"
 
 /** The command id an edit runs under: the action of the queue is run with `{ id, command: "edit", values }`. */
 export const EDIT_COMMAND = "edit"
+
+/** What a queue runs its action with for one row: the row, the command it receives and, when it has any, the values. */
+export const queueInputOf = (
+    rowId: string,
+    commandId: string,
+    values?: Readonly<Record<string, string | number | boolean | null>>,
+): ActionInput => (values === undefined ? { id: rowId, command: commandId } : { id: rowId, command: commandId, values })
+
+/** What the edit of a row runs the action of its queue with. */
+export const editInputOf = (
+    rowId: string,
+    values: Readonly<Record<string, string | number | boolean | null>>,
+): ActionInput => queueInputOf(rowId, EDIT_COMMAND, values)
 
 /**
  * How a declared command looks: the one that decides (`commit`), an alternative to it, a dismissal, a plain one, or one that

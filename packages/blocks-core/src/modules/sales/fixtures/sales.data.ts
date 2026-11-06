@@ -157,6 +157,9 @@ export const SAMPLE_ORDERS: ReadonlyArray<OrderRow> = [
 export const sampleState = (holders: ReadonlyArray<string>): MemoryState => ({
     leads: [...SAMPLE_LEADS],
     orders: [...SAMPLE_ORDERS],
+    transactions: [],
+    invoices: [],
+    claims: [],
     settings: null,
     holders,
     now: SAMPLE_NOW,

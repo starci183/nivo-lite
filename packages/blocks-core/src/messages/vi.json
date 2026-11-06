@@ -69,6 +69,8 @@
   "paymentRequestHolder": "Chủ tài khoản: {{holder}}",
   "paymentRequestContent": "Nội dung chuyển khoản (ghi đúng): {{content}}",
   "paymentRequestQr": "Hoặc quét mã QR: {{url}}",
+  "paymentRequestNotPayable": "Đơn {{order}} chưa thể thu tiền: đơn chưa được xác nhận hoặc chưa có số tiền",
+  "paymentRequestHeld": "Em đã ghi nhận đơn của bạn: {{items}} · {{amount}}. Cửa hàng sẽ gửi thông tin thanh toán cho bạn ngay khi sẵn sàng nhé.",
   "paymentRequestOutro": "Chuyển khoản xong bạn nhắn lại cho shop nhé.",
   "paymentRequestCurrency": "đ",
   "paymentRequestNoAccount": "Đơn {{order}} chưa gửi được thông tin thanh toán: chưa kết nối SePay có đủ số tài khoản",
