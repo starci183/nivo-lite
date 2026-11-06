@@ -16,7 +16,6 @@ import { OrdersFiguresService } from "./orders-figures.service"
 import { OrdersReadService } from "./orders-read.service"
 import { OrdersAutomationReadService } from "./orders-automation-read.service"
 import { OrderConfirmationService } from "./order-confirmation.service"
-import { OrdersGraphService } from "./orders-graph.service"
 
 @Module({})
 /** The orders of a workspace over the primary PostgreSQL connection: the only writer of public.orders. */
@@ -42,7 +41,6 @@ export class OrdersModule extends ConfigurableModuleClass {
                 OrderFactReaderService,
                 OrdersAutomationReadService,
                 OrdersLabelReadService,
-                OrdersGraphService,
                 OrderConfirmationService,
             ],
             exports: [

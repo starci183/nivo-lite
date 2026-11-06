@@ -163,6 +163,7 @@ component_management:
         - "be/src/modules/domain/public-api/**"
         - "be/src/modules/domain/public-documents/**"
         - "be/src/modules/domain/responsibilities/**"
+        - "be/src/modules/domain/sales-effects/**"
         - "be/src/modules/domain/sales-workbench/**"
         - "be/src/modules/domain/sales/**"
         - "be/src/modules/domain/sepay-transactions/**"

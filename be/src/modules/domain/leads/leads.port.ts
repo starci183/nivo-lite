@@ -14,15 +14,6 @@ export interface LeadGenCommentItem {
     readonly result: { readonly href?: string | undefined } | null
 }
 
-/** The lead a conversation became, or null when it became none. */
-export type OptionalLeadId = string | null
-
-/** The one door to the conversations: which lead a conversation of the workspace became. The app root binds it to the conversations capability, which imports leads. */
-export interface LeadConversationDirectory {
-    /** The lead the conversation became; null when the conversation is another workspace's, is missing or has no lead. */
-    leadIdOf(workspaceId: string, conversationId: string): Promise<OptionalLeadId>
-}
-
 /** The one door to the decisions: a work item of the workspace, read for a member. The app root binds it to the decisions capability. */
 export interface LeadGenCommentDecisions {
     /** One work item of the workspace; any member may read. */
