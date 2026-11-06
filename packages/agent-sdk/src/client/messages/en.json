@@ -7,6 +7,9 @@
     "tabs": "Views",
     "invalid": "This value is not valid.",
     "unbound": "This action is not set up.",
-    "unavailable": "This block is not in the version you are running."
+    "unavailable": "This block is not in the version you are running.",
+    "back": "Back",
+    "aside": "Needs your attention",
+    "main": "Main content"
   }
 }

@@ -1,5 +1,5 @@
 import type { StoredSpec } from "../../spec/spec.types"
-import { chromeOf, countChipOf, paneOf } from "./view-chrome"
+import { chromeOf, countChipOf, isAsidePane, paneOf } from "./view-chrome"
 
 describe("chromeOf", () => {
     it("lists the count and command of each view", () => {
@@ -51,5 +51,14 @@ describe("paneOf", () => {
         expect(paneOf("list")).toBe("list")
         expect(paneOf(null)).toBe("list")
         expect(paneOf("other")).toBe("list")
+    })
+})
+
+describe("isAsidePane", () => {
+    it("is true for any pane but the main one", () => {
+        expect(isAsidePane("queue")).toBe(true)
+        expect(isAsidePane("detail")).toBe(true)
+        expect(isAsidePane("list")).toBe(false)
+        expect(isAsidePane(null)).toBe(false)
     })
 })

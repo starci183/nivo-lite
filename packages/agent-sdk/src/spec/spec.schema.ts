@@ -3,7 +3,7 @@ import { KEY_MAX, LIST_MAX, NODES_MAX, RECORD_MAX, TEXT_MAX, VIEWS_MAX } from ".
 import { isNamespaced } from "../schema/namespaced"
 import type { JsonValue } from "../schema/schema.types"
 import { specText } from "../schema/spec-text.schema"
-import type { SpecDocument, SpecNode, SpecParam, SpecView } from "./spec.types"
+import type { SpecAsideSummary, SpecDocument, SpecNode, SpecParam, SpecShowWhen, SpecView } from "./spec.types"
 
 const variable = z.union([z.string().max(TEXT_MAX), z.number(), z.boolean(), z.null()])
 const readBinding = z
@@ -31,6 +31,13 @@ const jsonValue: z.ZodType<JsonValue> = z.lazy(() =>
     ]),
 )
 
+const showWhenSchema: z.ZodType<SpecShowWhen> = z
+    .object({
+        param: z.string().min(1).max(KEY_MAX),
+        is: z.array(z.string().max(KEY_MAX)).min(1).max(LIST_MAX),
+    })
+    .strict()
+
 /** The zod schema of a node, children included. */
 export const specNodeSchema: z.ZodType<SpecNode> = z.lazy(() =>
     z
@@ -51,6 +58,7 @@ export const specNodeSchema: z.ZodType<SpecNode> = z.lazy(() =>
                 .strict()
                 .optional(),
             forbidden: z.enum(["notice", "hide"]).optional(),
+            showWhen: showWhenSchema.optional(),
         })
         .strict(),
 )
@@ -76,6 +84,12 @@ const paramSchema: z.ZodType<SpecParam> = z
     })
     .strict()
 
+const asideSummarySchema: z.ZodType<SpecAsideSummary> = readBinding.extend({
+    label: specText,
+    previewPath: z.string().min(1).max(KEY_MAX).optional(),
+    opens: z.string().min(1).max(KEY_MAX),
+})
+
 /** The zod schema of a spec document: the structure only; blocks, props and bindings are judged by `specProblems`. */
 export const specDocumentSchema: z.ZodType<SpecDocument> = z
     .object({
@@ -87,6 +101,8 @@ export const specDocumentSchema: z.ZodType<SpecDocument> = z
             .optional(),
         head: z.array(specNodeSchema).max(NODES_MAX).optional(),
         foot: z.array(specNodeSchema).max(NODES_MAX).optional(),
+        aside: specNodeSchema.optional(),
+        asideSummary: asideSummarySchema.optional(),
         views: z.array(viewSchema).max(VIEWS_MAX),
     })
     .strict()

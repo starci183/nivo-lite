@@ -1,18 +1,18 @@
-import type { ReadVariables } from "../block/block.types"
-import type { PropsSchema } from "../schema/schema.types"
+import type { ReadDefinition, ReadVariables } from "../block/block.types"
 import { isRecord } from "../schema/is-record"
 import { z } from "../schema/zod-entry"
 
 /** The variable a read writes for the installation of the route. */
 export const INSTALLATION_VARIABLE = "$installationId"
 
-/** The value at a dotted path of a value; undefined when a step is missing. The empty or absent path is the value itself. */
+/** The value at a dotted path of a value, a step into a list being its index (`rows.0.title`); undefined when a step is missing. The empty or absent path is the value itself. */
 export const valueAt = (value: unknown, path: string | undefined): unknown => {
     if (path === undefined || path === "") return value
     let current: unknown = value
     for (const name of path.split(".")) {
-        if (!isRecord(current)) return undefined
-        current = current[name]
+        if (Array.isArray(current)) current = /^\d+$/.test(name) ? current[Number(name)] : undefined
+        else if (isRecord(current)) current = current[name]
+        else return undefined
     }
     return current
 }
@@ -73,7 +73,7 @@ export const variablesOf = (variables: ReadVariables | undefined, installationId
     )
 
 /** Whether a read accepts a variable left out: true for an optional variable of its schema, false for a required or unknown one. */
-export const optionalVariable = (read: { readonly variables: PropsSchema }, name: string): boolean => {
+export const optionalVariable = (read: Pick<ReadDefinition, "variables">, name: string): boolean => {
     const schema = read.variables.shape[name]
     return schema !== undefined && z.safeParse(schema, undefined).success
 }
