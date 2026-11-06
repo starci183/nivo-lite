@@ -16,21 +16,21 @@ import { agentRunEntity } from "./agent/run.entity"
 import { turnEntity } from "./agent/turn.entity"
 import { conversationEntity } from "./chat/conversation.entity"
 import { messageEntity } from "./chat/message.entity"
-import { settingsEntity } from "./chat/settings.entity"
+import { chatSettingsEntity } from "./chat/settings.entity"
 import { claimEntity } from "./payment/claim.entity"
 import { transactionEntity } from "./payment/transaction.entity"
 import { leadEntity } from "./sales/lead.entity"
 import { orderEntity } from "./sales/order.entity"
-import { settingsEntity } from "./sales/settings.entity"
+import { salesSettingsEntity } from "./sales/settings.entity"
 
 /** Every flow F entity declaration. */
 export const FLOW_F_ENTITIES: ReadonlyArray<AnyEntityDefinition> = [
     leadEntity,
     orderEntity,
-    settingsEntity,
+    salesSettingsEntity,
     conversationEntity,
     messageEntity,
-    settingsEntity,
+    chatSettingsEntity,
     transactionEntity,
     claimEntity,
     invoiceEntity,

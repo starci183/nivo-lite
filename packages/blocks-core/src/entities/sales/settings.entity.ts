@@ -21,7 +21,7 @@ const settingsFields: SettingsFields = {
 }
 
 /** The rules a workspace chose for its sales: one record, saved under the key `sales`. Graph node kind `sales-settings`. */
-export const settingsEntity: EntityDefinition<SettingsFields> = defineEntity({
+export const salesSettingsEntity: EntityDefinition<SettingsFields> = defineEntity({
     name: "sales.settings",
     dataKind: "sales-settings",
     fields: settingsFields,

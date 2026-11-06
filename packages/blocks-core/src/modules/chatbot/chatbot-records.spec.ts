@@ -1,7 +1,7 @@
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { conversationEntity } from "../../entities/chat/conversation.entity"
 import { messageEntity } from "../../entities/chat/message.entity"
-import { settingsEntity } from "../../entities/chat/settings.entity"
+import { chatSettingsEntity } from "../../entities/chat/settings.entity"
 import { leadEntity } from "../../entities/sales/lead.entity"
 import {
     CONVERSATION_FIELDS,
@@ -140,6 +140,6 @@ describe("settingsOf", () => {
 
     it("answers nothing for fields that are not the rules, and selects only declared fields", () => {
         expect(settingsOf(recordOf({ openclawTimeoutSec: "soon", holdingMessage: "Wait" }))).toBeNull()
-        expect(SETTINGS_FIELDS.every((name) => name in settingsEntity.fields)).toBe(true)
+        expect(SETTINGS_FIELDS.every((name) => name in chatSettingsEntity.fields)).toBe(true)
     })
 })

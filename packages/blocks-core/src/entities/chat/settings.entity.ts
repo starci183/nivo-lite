@@ -28,7 +28,7 @@ const settingsFields: SettingsFields = {
  * checked by the module's rules), and what that message says (up to 400 characters). One record per workspace, found by its `scope`
  * (the module settings pattern: `<module>.settings`).
  */
-export const settingsEntity: EntityDefinition<SettingsFields> = defineEntity({
+export const chatSettingsEntity: EntityDefinition<SettingsFields> = defineEntity({
     name: "chat.settings",
     dataKind: "chatbot-settings",
     fields: settingsFields,
