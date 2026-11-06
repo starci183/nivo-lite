@@ -823,6 +823,15 @@
         ],
         "reason": "the Chatbot move gives chat.conversation the inbox fields (name replaces visitorName, status ai|needs|handled) and re-keys its indexes on lastAt; no data is carried over (owner 2026-11-05 \"không care prod\")",
         "date": "2026-11-06"
+      },
+      {
+        "migration": "db/migrations/20261112001100_chatbot-records_contract_drop.sql",
+        "objects": [
+          "public.records_chat_conversation:index:records_chat_conversation_channel_external_key",
+          "public.records_chat_conversation:constraint:records_chat_conversation_kind_chk"
+        ],
+        "reason": "chat.conversation keys its channel identity on the connection too (two bots of one workspace meet the same Telegram chat id) and drops `kind` (the owner test chats are deleted with the legacy chat tables); no data is carried over (owner 2026-11-05 \"không care prod\")",
+        "date": "2026-11-06"
       }
     ]
   }

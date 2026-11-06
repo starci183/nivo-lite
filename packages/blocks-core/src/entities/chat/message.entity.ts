@@ -17,6 +17,7 @@ type MessageFields = {
     readonly deliveryStatus: FieldDef<"enum", true>
     readonly deliveryError: FieldDef<"text", true>
     readonly channelRef: FieldDef<"text", true>
+    readonly inReplyTo: FieldDef<"uuid", true>
 }
 
 const messageFields: MessageFields = {
@@ -30,6 +31,7 @@ const messageFields: MessageFields = {
     deliveryStatus: field.enum({ of: ["sent", "failed"], nullable: true }),
     deliveryError: field.text({ maxLength: MAX_DELIVERY_ERROR, nullable: true }),
     channelRef: field.text({ maxLength: MAX_ID, nullable: true }),
+    inReplyTo: field.uuid({ nullable: true }),
 }
 
 /** One message of a conversation. Graph node kind `message`. */
@@ -46,6 +48,19 @@ export const messageEntity: EntityDefinition<MessageFields> = defineEntity({
             on: ["channelRef"],
             where: { op: "notNull", field: "channelRef" },
             refusal: "message-already-stored",
+        },
+        {
+            kind: "unique",
+            name: "reply_once_key",
+            on: ["conversationId", "inReplyTo"],
+            where: {
+                op: "and",
+                of: [
+                    { op: "eq", field: "role", value: "agent" },
+                    { op: "notNull", field: "inReplyTo" },
+                ],
+            },
+            refusal: "reply-exists",
         },
     ],
 })
