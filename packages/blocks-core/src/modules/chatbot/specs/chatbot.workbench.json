@@ -207,8 +207,27 @@
                           "ai": {
                             "key": "row_ai"
                           }
+                        },
+                        "channel": {
+                          "zalo": {
+                            "key": "channel_zalo"
+                          },
+                          "telegram": {
+                            "key": "channel_telegram"
+                          },
+                          "facebook": {
+                            "key": "channel_facebook"
+                          },
+                          "instagram": {
+                            "key": "channel_instagram"
+                          },
+                          "website": {
+                            "key": "channel_website"
+                          }
                         }
-                      }
+                      },
+                      "avatar": true,
+                      "chipPaths": ["channel"]
                     },
                     "bind": {
                       "rows": {
