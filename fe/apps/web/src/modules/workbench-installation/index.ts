@@ -33,6 +33,3 @@ export const servedInstallation = (): ServedInstallation => OWN
 
 /** A prototype enables every installed module and has no back-end registry to compare with, so it never shows the reload notice. */
 export const PROTOTYPE_INSTALLATION: WorkbenchInstallation = { enabled: INSTALLED_MODULE_KEYS, registry: null }
-
-/** The installation id a prototype build opens every workbench on. */
-export const PROTOTYPE_INSTALLATION_ID = "prototype"

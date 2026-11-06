@@ -3,7 +3,7 @@ import { blocks } from "@nivo-lite/plugin-registry/client"
 import type { ReactNode } from "react"
 import { useFixtureWorkbenchHost } from "@/hooks/workbenchFixtureHost"
 import { fixtureTablesOf } from "@/modules/workbench-fixtures"
-import { PROTOTYPE_INSTALLATION, PROTOTYPE_INSTALLATION_ID } from "@/modules/workbench-installation"
+import { PROTOTYPE_INSTALLATION } from "@/modules/workbench-installation"
 import { WorkbenchPrototypeLayoutBase } from "./component"
 
 /** What the layout wraps. */
@@ -20,7 +20,6 @@ export const WorkbenchPrototypeLayout = (props: WorkbenchPrototypeLayoutProps) =
             blocks,
             enabled: PROTOTYPE_INSTALLATION.enabled,
             fixtures: FIXTURES,
-            installationId: PROTOTYPE_INSTALLATION_ID,
         }}
     >
         {props.children}

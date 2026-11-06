@@ -2,23 +2,23 @@
 
 import { useEnabledModules } from "@nivo-lite/agent-sdk/client"
 import type { StoredSpec } from "@nivo-lite/agent-sdk/spec"
-import { useWorkbenchDeclaration, useWorkbenchInstallation } from "@/hooks/workbenchSpec"
+import { useWorkbenchDeclaration } from "@/hooks/workbenchSpec"
 import { SpecWorkbenchFrameBase } from "./component"
 
-/** What the route hands the frame: the module, its spec and the view the route opens. */
+/** What the route hands the frame: the module, the installation of the url, its spec and the view the route opens. */
 type SpecWorkbenchFrameProps = {
     readonly module: string
+    readonly installationId: string
     readonly spec: StoredSpec
     readonly fallback: StoredSpec | null
     readonly tab: string | null
 }
 
-/** The connected workbench: finds the declaration of the module, whose reads and actions the spec binds, and draws the spec on the module's installation when the module is enabled for the workspace. */
+/** The connected workbench: finds the declaration of the module, whose reads and actions the spec binds, and draws the spec on the installation of the url when the module is enabled for the workspace. */
 export const SpecWorkbenchFrame = (props: SpecWorkbenchFrameProps) => {
     const declaration = useWorkbenchDeclaration(props.module)
     const enabled = useEnabledModules()
-    const installationId = useWorkbenchInstallation(props.module)
-    if (declaration === null || installationId === null || !enabled.includes(props.module)) return null
+    if (declaration === null || !enabled.includes(props.module)) return null
     return (
         <SpecWorkbenchFrameBase
             props={{
@@ -28,7 +28,7 @@ export const SpecWorkbenchFrame = (props: SpecWorkbenchFrameProps) => {
                 actions: declaration.actions,
                 permissions: declaration.permissions,
                 namespace: declaration.namespace,
-                installationId,
+                installationId: props.installationId,
                 tab: props.tab,
             }}
         />
