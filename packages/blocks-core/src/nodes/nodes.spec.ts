@@ -7,7 +7,7 @@ import { coreNodes } from "./core-nodes"
 import { raiseWorkItemNode } from "./core/raise-work-item.node"
 import { orderConfirmNode } from "./order/confirm.node"
 import { orderNeedsApprovalNode } from "./order/needs-approval.node"
-import { paymentRequestSepayNode } from "./payment/request-sepay.node"
+import { paymentRequestNode } from "./payment/request.node"
 
 // The worked examples of every node run in the root conformance spec; these cover what an example cannot say.
 
@@ -77,7 +77,7 @@ describe("core.raise-work-item", () => {
     })
 })
 
-describe("payment.request-sepay", () => {
+describe("payment.request", () => {
     const order = { id: "o1", orderNo: "DH-20261105-0001", amountVnd: 300_000, status: "confirmed", items: [] }
     const instruction = {
         bankName: "",
@@ -90,13 +90,13 @@ describe("payment.request-sepay", () => {
     const input = { orderId: "o1", conversationId: "conv-1", locale: "en" }
 
     const run = (tools: ReadonlyArray<unknown>, failure: Error | null = null) =>
-        runOver(paymentRequestSepayNode, input, { store: { order: [order] }, tools }, (ports) =>
+        runOver(paymentRequestNode, input, { store: { order: [order] }, tools }, (ports) =>
             failure === null ? ports : { ...ports, callTool: () => Promise.reject(failure) },
         )
 
     it("declares the tool it calls and reads the order only: the rights of its effect and tool are the grant", () => {
-        expect(paymentRequestSepayNode.tools).toEqual(["payment.instruction"])
-        expect(paymentRequestSepayNode.rights.map((right) => right.kind)).toEqual(["order"])
+        expect(paymentRequestNode.tools).toEqual(["payment.instruction"])
+        expect(paymentRequestNode.rights.map((right) => right.kind)).toEqual(["order"])
     })
 
     it("asks the tool with the order number, the amount and the transfer content, then sends once per order", async () => {

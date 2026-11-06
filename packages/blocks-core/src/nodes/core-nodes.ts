@@ -16,7 +16,7 @@ import { salesLeadFromMessageNode } from "./sales/lead-from-message.node"
 import { salesOrderFromChatNode } from "./sales/order-from-chat.node"
 import { paymentNodes } from "./payment/payment-nodes"
 import { paymentClaimAckNode } from "./payment/claim-ack.node"
-import { paymentRequestSepayNode } from "./payment/request-sepay.node"
+import { paymentRequestNode } from "./payment/request.node"
 
 /**
  * Every core node, React-free so the back end validates graph specs against them without loading React. The business logic of the
@@ -37,7 +37,7 @@ export const coreNodes: ReadonlyArray<NodeDefinition> = [
     orderNeedsApprovalNode,
     orderConfirmNode,
     raiseWorkItemNode,
-    paymentRequestSepayNode,
+    paymentRequestNode,
     ...paymentNodes,
     accountingLedgerReadyNode,
     accountingPostPaymentNode,

@@ -48,7 +48,7 @@
   "nodeOrderConfirmTitle": "Confirm the order",
   "nodeOrderNeedsApprovalTitle": "Does the owner decide?",
   "nodePaymentClaimAckTitle": "Record and acknowledge a payment claim",
-  "nodePaymentRequestSepayTitle": "Request a SePay transfer",
+  "nodePaymentRequestTitle": "Request a bank transfer",
   "answerGap": "I do not have information on this yet.",
   "answerNeutral": "We have received your message.",
   "claimOrderRecorded": "order is recorded\norder has been placed\norder has been recorded\nsent for approval",
