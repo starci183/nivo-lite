@@ -109,10 +109,11 @@ describe("payment.request", () => {
             ],
         ])
         expect(output).toEqual({ status: "sent", content: "DH202611050001", qrUrl: "https://qr.example/x" })
-        expect(executed).toHaveLength(1)
-        expect(executed[0]?.id).toBe("channel.send")
+        expect(executed.map((one) => one.id)).toEqual(["channel.send", "payment.rematch"])
         expect(String(executed[0]?.payload.text)).toContain("Bank: MBBank")
         expect(executed[0]?.dedupeKey).toBe("payment-request:o1")
+        expect(executed[1]?.payload).toEqual({ orderId: "o1" })
+        expect(executed[1]?.dedupeKey).toBe("payment-rematch:o1")
     })
 
     it("raises a connect_sepay work item and sends nothing when the tool fails, naming the kind of the failure", async () => {

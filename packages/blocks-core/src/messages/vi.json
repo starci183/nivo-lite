@@ -144,5 +144,6 @@
   "blockAccountingAgeing": "Tuổi nợ",
   "pickerMatchExact": "Đúng số tiền",
   "pickerMatchNear": "Gần số tiền",
-  "pickerClose": "Đóng"
+  "pickerClose": "Đóng",
+  "effectPaymentRematch": "Đối chiếu lại tiền về trước mã thanh toán"
 }

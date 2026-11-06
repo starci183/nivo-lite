@@ -19,6 +19,7 @@ export type {
     OrderRecordPayload,
     PaymentClaimRecordPayload,
     PaymentMarkPaidPayload,
+    PaymentRematchPayload,
     UndoPayload,
     WorkItemRaisePayload,
 } from "./effects"
@@ -33,6 +34,7 @@ export {
     paymentClaimRecordEffect,
     paymentClaimWithdrawEffect,
     paymentMarkPaidEffect,
+    paymentRematchEffect,
     workItemRaiseEffect,
     workItemWithdrawEffect,
 } from "./effects"

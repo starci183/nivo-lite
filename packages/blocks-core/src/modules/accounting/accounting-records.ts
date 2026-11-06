@@ -12,7 +12,13 @@ import type {
 import { ENTRY_STATUSES } from "../../rules/accounting/entry-status"
 import type { OpenInvoice } from "../../rules/accounting/figures"
 import type { QuestionLine } from "../../rules/accounting/questions"
-import { ACCOUNTING_SETTINGS_DEFAULTS, VAT_PERIODS, VOID_MODES } from "../../rules/accounting/settings"
+import {
+    ACCOUNTING_SETTINGS_DEFAULTS,
+    REMATCH_DAYS_MAX,
+    REMATCH_DAYS_MIN,
+    VAT_PERIODS,
+    VOID_MODES,
+} from "../../rules/accounting/settings"
 import type { AccountingSettings } from "../../rules/accounting/settings"
 
 /** The longest ISO 8601 text the engine writes for a time or a day. */
@@ -226,6 +232,7 @@ const settingsData = z.object({
     postUnmatched: z.boolean(),
     voidMode: z.enum(VOID_MODES),
     vatPeriod: z.enum(VAT_PERIODS),
+    rematchDays: z.number().int().min(REMATCH_DAYS_MIN).max(REMATCH_DAYS_MAX),
 })
 
 /** The fields a query for the settings row selects. */
@@ -235,6 +242,7 @@ export const SETTINGS_FIELDS: ReadonlyArray<string> = [
     "postUnmatched",
     "voidMode",
     "vatPeriod",
+    "rematchDays",
 ]
 
 /** The settings a record holds; the defaults when its fields are not those of the settings. */
