@@ -2,11 +2,11 @@ import type { ActionResult } from "@nivo-lite/agent-sdk/block"
 import type { RunContext } from "@nivo-lite/agent-sdk/port"
 import { ADJUSTMENT, INVOICE } from "../../../rules/accounting/accounting.fixtures"
 import type { NormalizedAdjustment } from "../../../rules/accounting/adjustment"
-import { adjustmentStore, providerOf, recordingOutbox } from "../accounting.doubles"
+import { adjustmentStore, bookEntryStore, providerOf, recordingOutbox } from "../accounting.doubles"
 import type { WriteResult } from "../accounting.types"
-import { adjustmentsPort, outboxPort } from "../ports"
+import { adjustmentsPort, bookEntriesPort, outboxPort } from "../ports"
 import { adjustAction } from "./adjust.action"
-import type { AdjustmentRecord } from "../../../rules/accounting/accounting.types"
+import type { AdjustmentRecord, BookEntryRecord } from "../../../rules/accounting/accounting.types"
 
 const context = (memberId: string | null): RunContext => ({
     workspaceId: "w1",
@@ -16,7 +16,19 @@ const context = (memberId: string | null): RunContext => ({
 
 const NOT_RUNNABLE: ActionResult = { ok: false, reason: "failed", message: { key: "not_runnable" } }
 
+const ENTRY = {
+    id: "00000000-0000-4000-8000-0000000001a3",
+    version: "1",
+    kind: "invoice",
+    entryDate: "2026-11-01",
+    amountVnd: 2_000_000,
+    note: null,
+    sourceEntity: "accounting.invoice",
+    sourceId: INVOICE.id,
+} as const
+
 interface Setup {
+    readonly entry?: Partial<BookEntryRecord> | null
     readonly exists?: boolean
     readonly inserted?: WriteResult<AdjustmentRecord>
 }
@@ -35,6 +47,12 @@ const harness = (setup: Setup = {}) => {
                 },
             }),
         ],
+        [
+            bookEntriesPort,
+            bookEntryStore({
+                get: () => Promise.resolve(setup.entry === null ? null : { ...ENTRY, ...setup.entry }),
+            }),
+        ],
         [outboxPort, outbox],
     ])
     const run = (raw: unknown, memberId: string | null = "m1"): Promise<ActionResult> => {
@@ -44,8 +62,7 @@ const harness = (setup: Setup = {}) => {
 }
 
 const payload = {
-    targetType: "invoice",
-    targetId: INVOICE.id,
+    id: ENTRY.id,
     note: "  Gi\u1ea3m gi\u00e1 \u0111\u00e3 th\u1ecfa thu\u1eadn  qua \u0111i\u1ec7n tho\u1ea1i",
     correctedAmount: 1_800_000,
 }
@@ -91,7 +108,7 @@ describe("accounting.adjust", () => {
 
     it("credits the system when no member asked, and takes a note without an amount", async () => {
         const { inserts, run } = harness()
-        await run({ targetType: "transaction", targetId: ADJUSTMENT.id, note: "Counted twice" }, null)
+        await run({ id: ENTRY.id, note: "Counted twice" }, null)
         expect(inserts[0]).toMatchObject({ createdBy: "system", values: { correctedAmountVnd: null } })
     })
 
@@ -127,6 +144,21 @@ describe("accounting.adjust", () => {
         const { jobs, run } = harness({ inserted: { ok: false, reason: "invalid" } })
         await expect(run(payload)).resolves.toEqual({ ok: false, reason: "failed", message: { key: "adjust_failed" } })
         expect(jobs).toEqual([])
+    })
+
+    it("refuses an entry that is gone and an entry that is itself a correction", async () => {
+        await expect(harness({ entry: null }).run(payload)).resolves.toEqual({
+            ok: false,
+            reason: "refused",
+            message: { key: "adjust_target_missing" },
+        })
+        const final = harness({ entry: { sourceEntity: "accounting.adjustment" } })
+        await expect(final.run(payload)).resolves.toEqual({
+            ok: false,
+            reason: "refused",
+            message: { key: "adjust_entry_final" },
+        })
+        expect(final.inserts).toEqual([])
     })
 
     it("answers invalid for a payload the door should never have passed", async () => {

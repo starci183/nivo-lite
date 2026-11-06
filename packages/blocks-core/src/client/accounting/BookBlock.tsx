@@ -142,7 +142,13 @@ export const BookBlock = (props: RenderOf<typeof accountingBookBlock>): ReactNod
                         emptyContent={<EmptyNotice message={labels.empty} />}
                         selectionMode="single"
                         selectedIds={selectedIdsOf(props.params.value(spec.selectParam))}
-                        onSelectionChange={(ids) => props.params.set(spec.selectParam, chosenIdOf(ids))}
+                        onSelectionChange={(ids) => {
+                            const chosen = chosenIdOf(ids)
+                            props.params.setMany({
+                                [spec.selectParam]: chosen,
+                                [spec.paneParam]: chosen === null ? "list" : "detail",
+                            })
+                        }}
                     />
                 )}
             />

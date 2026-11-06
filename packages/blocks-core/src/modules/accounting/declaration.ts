@@ -7,8 +7,10 @@ import { settleAction } from "./actions/settle.action"
 import { closeCheckRead } from "./reads/close-check.read"
 import { decisionsRead } from "./reads/decisions.read"
 import { entriesRead, entryCountsRead, entryStatusCountsRead } from "./reads/entries.read"
+import { dueSoonRead } from "./reads/due-soon.read"
 import { entryRead } from "./reads/entry.read"
 import { figuresRead } from "./reads/figures.read"
+import { ledgerRead } from "./reads/ledger.read"
 import { settingsRead } from "./reads/settings.read"
 import { questionCountRead, questionsRead } from "./reads/questions.read"
 import { weeklyRead } from "./reads/weekly.read"
@@ -30,6 +32,8 @@ export const accountingModule: ModuleDeclaration = defineModule({
         entryStatusCountsRead,
         entryRead,
         figuresRead,
+        ledgerRead,
+        dueSoonRead,
         weeklyRead,
         decisionsRead,
         questionCountRead,

@@ -58,7 +58,7 @@ export type ConversationRow = {
     /** The customer the row belongs to. */
     readonly leadId: string | null
     /** When the last message arrived, or null. */
-    readonly lastMessageAt: string | null
+    readonly lastAt: string | null
 }
 
 /** One customer payment claim as the `payment-claim` data kind yields it. */

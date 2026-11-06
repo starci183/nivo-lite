@@ -118,6 +118,8 @@ export interface BookEntryStore {
     readonly upsert: (values: BookEntryValues) => Promise<WriteResult<BookEntryRecord>>
     /** The sum of the entries of a range, by kind. */
     readonly totals: (range: DayRange) => Promise<ReadonlyArray<{ kind: BookEntryKind; vnd: number; count: number }>>
+    /** The entries of a range that moved money (income, expense, reversal), oldest first by day then id. */
+    readonly cash: (range: DayRange) => Promise<ReadonlyArray<BookEntryRecord>>
 }
 
 /** The rules the workspace chose for its books. */

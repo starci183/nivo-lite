@@ -147,5 +147,8 @@
   "conversationProposalMore": "Thêm",
   "blockAccountingBook": "Sổ kế toán",
   "blockAccountingEntryDetail": "Chi tiết chứng từ",
-  "blockAccountingQuestions": "Câu hỏi của kế toán"
+  "blockAccountingQuestions": "Câu hỏi của kế toán",
+  "blockAccountingLedger": "Sổ quỹ",
+  "blockAccountingPeriodFigures": "Số liệu kỳ",
+  "blockAccountingDueSoon": "Sắp đến hạn"
 }

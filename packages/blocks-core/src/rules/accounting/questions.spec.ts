@@ -18,6 +18,7 @@ describe("questionQueueOf", () => {
             primary: null,
             edit: { id: "edit" },
             draft: { answer: "" },
+            askedAt: "2026-11-04T02:12:00.000Z",
         })
     })
 

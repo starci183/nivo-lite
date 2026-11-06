@@ -106,7 +106,7 @@ export const paymentAccountKind: DataKindDefinition = defineDataKind({
 export const conversationKind: DataKindDefinition = defineDataKind({
     kind: "conversation",
     title: { key: "dataKindConversation" },
-    fields: z.object({ id, leadId: id.nullable(), channel: text, status: text, lastMessageAt: moment.nullable() }),
+    fields: z.object({ id, leadId: id.nullable(), channel: text, status: text, lastAt: moment.nullable() }),
 })
 
 /** One message of a conversation. */

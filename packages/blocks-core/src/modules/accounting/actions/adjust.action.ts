@@ -1,30 +1,31 @@
 import { defineAction } from "@nivo-lite/agent-sdk/block"
 import type { ActionDefinition, ActionResult } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
+import { MAX_ID } from "../../../bounds"
+import { adjustTargetOf } from "../../../rules/accounting/entry-stages"
 import { normalizeAdjustment } from "../../../rules/accounting/adjustment"
 import { SOURCE_ADJUSTMENT } from "../../../rules/accounting/posting"
 import { textOf } from "../messages/copy"
-import { adjustmentsPort, outboxPort } from "../ports"
+import { adjustmentsPort, bookEntriesPort, outboxPort } from "../ports"
 
 /** The longest note the door accepts; the rule judges the length it needs. */
 const NOTE_MAX = 2_000
 
 const input: z.ZodObject<{
-    targetType: z.ZodEnum<{ invoice: "invoice"; transaction: "transaction" }>
-    targetId: z.ZodUUID
+    id: z.ZodString
     note: z.ZodString
     correctedAmount: z.ZodOptional<z.ZodNullable<z.ZodNumber>>
 }> = z.object({
-    targetType: z.enum(["invoice", "transaction"]),
-    targetId: z.uuid(),
+    id: z.string().min(1).max(MAX_ID),
     note: z.string().max(NOTE_MAX),
     correctedAmount: z.number().nullable().optional(),
 })
 
-const ports = { adjustments: adjustmentsPort, outbox: outboxPort }
+const ports = { adjustments: adjustmentsPort, book: bookEntriesPort, outbox: outboxPort }
 
 /**
- * `accounting.adjust`: an accountant records a correction on an invoice or a payment. Corrections are append-only; the note and the
+ * `accounting.adjust`: an accountant records a correction on an entry of the books, which lands on the invoice or the payment the entry
+ * comes from (an entry that is itself a correction cannot be corrected). Corrections are append-only; the note and the
  * amount are judged by the rule, the record corrected must exist, and the write enqueues the book entry of the correction in the same
  * transaction. A refusal names the field that broke it.
  */
@@ -44,14 +45,18 @@ export const adjustAction: ActionDefinition = defineAction({
         "accounting.figures",
         "accounting.entry",
     ],
-    run: async ({ adjustments, outbox }, given, context): Promise<ActionResult> => {
-        const verdict = normalizeAdjustment(given)
+    run: async ({ adjustments, book, outbox }, given, context): Promise<ActionResult> => {
+        const entry = await book.get(given.id)
+        if (entry === null) return { ok: false, reason: "refused", message: textOf("adjust_target_missing") }
+        const target = adjustTargetOf(entry)
+        if (target === null) return { ok: false, reason: "refused", message: textOf("adjust_entry_final") }
+        const verdict = normalizeAdjustment({ ...target, note: given.note, correctedAmount: given.correctedAmount })
         if (!verdict.ok) {
             const message = textOf(verdict.reason === "note_length" ? "adjust_note_length" : "adjust_amount_invalid")
             const field = verdict.reason === "note_length" ? "note" : "correctedAmount"
             return { ok: false, reason: "invalid", message, fields: { [field]: message } }
         }
-        if (!(await adjustments.targetExists(given.targetType, given.targetId)))
+        if (!(await adjustments.targetExists(target.targetType, target.targetId)))
             return { ok: false, reason: "refused", message: textOf("adjust_target_missing") }
         const written = await adjustments.insert(verdict.adjustment, context.memberId ?? "system")
         if (!written.ok) return { ok: false, reason: "failed", message: textOf("adjust_failed") }

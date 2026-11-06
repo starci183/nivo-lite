@@ -31,7 +31,7 @@
     },
     "pane": {
       "type": "enum",
-      "of": ["list", "queue"],
+      "of": ["list", "queue", "detail"],
       "url": "pane",
       "default": "list"
     }
@@ -51,52 +51,14 @@
         "children": [
           {
             "id": "figures",
-            "block": "core.figures",
+            "block": "accounting.period-figures",
             "props": {
               "label": {
                 "key": "figures"
-              },
-              "items": [
-                {
-                  "term": {
-                    "key": "fig_income"
-                  },
-                  "path": "income.vnd",
-                  "format": "money"
-                },
-                {
-                  "term": {
-                    "key": "fig_invoiced"
-                  },
-                  "path": "invoiced.vnd",
-                  "format": "money"
-                },
-                {
-                  "term": {
-                    "key": "fig_adjustments"
-                  },
-                  "path": "adjustments.vnd",
-                  "format": "money"
-                },
-                {
-                  "term": {
-                    "key": "fig_unmatched"
-                  },
-                  "path": "unmatched.vnd",
-                  "format": "money"
-                },
-                {
-                  "term": {
-                    "key": "fig_receivable"
-                  },
-                  "path": "receivable.vnd",
-                  "format": "money"
-                }
-              ],
-              "currency": "VND"
+              }
             },
             "bind": {
-              "data": {
+              "figures": {
                 "read": "accounting.figures",
                 "variables": {
                   "period": "$period"
@@ -105,8 +67,37 @@
             },
             "when": {
               "permission": "accounting.view"
+            }
+          },
+          {
+            "id": "due",
+            "block": "accounting.due-soon",
+            "props": {
+              "title": {
+                "key": "due_title"
+              },
+              "horizon": {
+                "key": "due_horizon"
+              },
+              "empty": {
+                "key": "due_empty"
+              },
+              "notice": {
+                "key": "due_notice"
+              },
+              "linkLabel": {
+                "key": "due_link"
+              },
+              "linkPath": "connections"
             },
-            "children": []
+            "bind": {
+              "due": {
+                "read": "accounting.due-soon"
+              }
+            },
+            "when": {
+              "permission": "accounting.view"
+            }
           },
           {
             "id": "weekly",
@@ -217,83 +208,43 @@
         "key": "tab_book"
       },
       "root": {
-        "id": "book-root",
-        "block": "core.master-detail",
+        "id": "book-book",
+        "block": "accounting.book",
         "props": {
-          "emptyTitle": {
-            "key": "entry_empty_title"
+          "title": {
+            "key": "tab_book"
           },
-          "emptyBody": {
-            "key": "entry_empty_body"
-          }
+          "searchLabel": {
+            "key": "search"
+          },
+          "empty": {
+            "key": "entries_empty"
+          },
+          "emptySearch": {
+            "key": "entries_empty_search"
+          },
+          "searchParam": "q",
+          "filterParam": "status",
+          "selectParam": "selected",
+          "periodParam": "period",
+          "paneParam": "pane"
         },
-        "children": [
-          {
-            "id": "book-book",
-            "block": "accounting.book",
-            "props": {
-              "title": {
-                "key": "tab_book"
-              },
-              "searchLabel": {
-                "key": "search"
-              },
-              "empty": {
-                "key": "entries_empty"
-              },
-              "emptySearch": {
-                "key": "entries_empty_search"
-              },
-              "searchParam": "q",
-              "filterParam": "status",
-              "selectParam": "selected",
-              "periodParam": "period"
-            },
-            "bind": {
-              "rows": {
-                "read": "accounting.entries",
-                "variables": {
-                  "q": "$q",
-                  "status": "$status",
-                  "sort": "$sort"
-                }
-              },
-              "counts": {
-                "read": "accounting.status-counts",
-                "variables": {
-                  "q": "$q"
-                }
-              }
+        "bind": {
+          "rows": {
+            "read": "accounting.entries",
+            "variables": {
+              "q": "$q",
+              "status": "$status",
+              "sort": "$sort"
             }
           },
-          {
-            "id": "book-detail",
-            "block": "accounting.entry-detail",
-            "props": {
-              "label": {
-                "key": "entry"
-              },
-              "idle": {
-                "key": "entry_idle"
-              },
-              "kind": {
-                "key": "entry_kind"
-              },
-              "closeParam": "selected"
-            },
-            "bind": {
-              "record": {
-                "read": "accounting.entry",
-                "variables": {
-                  "id": "$selected"
-                }
-              },
-              "adjust": {
-                "action": "accounting.adjust"
-              }
+          "counts": {
+            "read": "accounting.status-counts",
+            "variables": {
+              "q": "$q"
             }
           }
-        ]
+        }
       }
     },
     {
@@ -334,82 +285,24 @@
       },
       "root": {
         "id": "ledger-root",
-        "block": "core.master-detail",
+        "block": "accounting.ledger",
         "props": {
-          "emptyTitle": {
-            "key": "entry_empty_title"
+          "title": {
+            "key": "ledger_title"
           },
-          "emptyBody": {
-            "key": "entry_empty_body"
-          }
+          "empty": {
+            "key": "ledger_empty"
+          },
+          "periodParam": "period"
         },
-        "children": [
-          {
-            "id": "ledger-book",
-            "block": "accounting.book",
-            "props": {
-              "title": {
-                "key": "tab_ledger"
-              },
-              "searchLabel": {
-                "key": "search"
-              },
-              "empty": {
-                "key": "entries_empty"
-              },
-              "emptySearch": {
-                "key": "entries_empty_search"
-              },
-              "searchParam": "q",
-              "filterParam": "status",
-              "selectParam": "selected",
-              "periodParam": "period"
-            },
-            "bind": {
-              "rows": {
-                "read": "accounting.entries",
-                "variables": {
-                  "q": "$q",
-                  "status": "$status",
-                  "sort": "$sort"
-                }
-              },
-              "counts": {
-                "read": "accounting.status-counts",
-                "variables": {
-                  "q": "$q"
-                }
-              }
-            }
-          },
-          {
-            "id": "ledger-detail",
-            "block": "accounting.entry-detail",
-            "props": {
-              "label": {
-                "key": "entry"
-              },
-              "idle": {
-                "key": "entry_idle"
-              },
-              "kind": {
-                "key": "entry_kind"
-              },
-              "closeParam": "selected"
-            },
-            "bind": {
-              "record": {
-                "read": "accounting.entry",
-                "variables": {
-                  "id": "$selected"
-                }
-              },
-              "adjust": {
-                "action": "accounting.adjust"
-              }
+        "bind": {
+          "ledger": {
+            "read": "accounting.ledger",
+            "variables": {
+              "period": "$period"
             }
           }
-        ]
+        }
       }
     },
     {
@@ -490,33 +383,78 @@
     }
   ],
   "aside": {
-    "id": "decisions",
-    "block": "core.decision-queue",
+    "id": "aside",
+    "block": "core.stack",
     "props": {
-      "surface": "section",
-      "label": {
-        "key": "decisions_label"
-      },
-      "emptyTitle": {
-        "key": "decisions_empty_title"
-      },
-      "emptyBody": {
-        "key": "decisions_empty_body"
-      },
-      "seeWhy": {
-        "key": "decisions_see_why"
-      },
-      "moreMenu": {
-        "key": "decisions_more"
-      },
-      "currency": "VND",
-      "isHeadless": true
+      "gap": "region"
     },
-    "bind": {
-      "queue": {
-        "read": "accounting.decisions"
+    "children": [
+      {
+        "id": "decisions",
+        "block": "core.decision-queue",
+        "props": {
+          "surface": "section",
+          "label": {
+            "key": "decisions_label"
+          },
+          "emptyTitle": {
+            "key": "decisions_empty_title"
+          },
+          "emptyBody": {
+            "key": "decisions_empty_body"
+          },
+          "seeWhy": {
+            "key": "decisions_see_why"
+          },
+          "moreMenu": {
+            "key": "decisions_more"
+          },
+          "currency": "VND",
+          "isHeadless": true
+        },
+        "bind": {
+          "queue": {
+            "read": "accounting.decisions"
+          }
+        },
+        "showWhen": {
+          "param": "pane",
+          "is": ["list", "queue"]
+        }
+      },
+      {
+        "id": "entry",
+        "block": "accounting.entry-detail",
+        "props": {
+          "label": {
+            "key": "entry"
+          },
+          "idle": {
+            "key": "entry_idle"
+          },
+          "kind": {
+            "key": "entry_kind"
+          },
+          "closeParam": "selected",
+          "paneParam": "pane"
+        },
+        "bind": {
+          "record": {
+            "read": "accounting.entry",
+            "variables": {
+              "id": "$selected"
+            }
+          },
+          "adjust": {
+            "action": "accounting.adjust"
+          }
+        },
+        "showWhen": {
+          "param": "pane",
+          "is": ["detail"]
+        }
       }
-    }
+    ]
   },
   "asideSummary": {
     "read": "accounting.decisions",

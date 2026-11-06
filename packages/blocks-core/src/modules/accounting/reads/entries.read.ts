@@ -42,7 +42,7 @@ export const entriesRead: ListReadDefinition = listRead({
     id: "accounting.entries",
     dataKind: "book-entry",
     permission: "accounting.view",
-    fields: ["id", "title", "entryDate", "kind", "amountVnd", "status"],
+    fields: ["id", "title", "entryDate", "kind", "amountVnd", "status", "counterparty"],
     list: ENTRIES_SHAPE,
     source: entriesSourcePort,
 })

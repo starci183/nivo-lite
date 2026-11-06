@@ -12,6 +12,7 @@ export const entryDetailFixtureProps: z.infer<(typeof accountingEntryDetailBlock
     },
     kind: { vi: "Ch\u1ee9ng t\u1eeb", en: "Entry" },
     closeParam: "selected",
+    paneParam: "pane",
 }
 
 /** H-0140 of the canvas: its order and invoice exist, the payment does not yet. */

@@ -85,6 +85,7 @@ export const bookEntryStore = (changes: Partial<BookEntryStore> = {}): BookEntry
     get: unused,
     upsert: unused,
     totals: unused,
+    cash: unused,
     ...changes,
 })
 

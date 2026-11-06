@@ -51,11 +51,11 @@ export const LEAD_DINH: LeadRow = { id: "lead-dinh", contactName: sampleOf("samp
 export const CONVERSATION_DINH: ConversationRow = {
     id: "conversation-dinh",
     leadId: "lead-dinh",
-    lastMessageAt: "2026-11-04T00:54:00.000Z",
+    lastAt: "2026-11-04T00:54:00.000Z",
 }
 
 /** An older conversation of the same customer, with no message in it. */
-export const CONVERSATION_OLD: ConversationRow = { id: "conversation-old", leadId: "lead-dinh", lastMessageAt: null }
+export const CONVERSATION_OLD: ConversationRow = { id: "conversation-old", leadId: "lead-dinh", lastAt: null }
 
 /** A second order, invoiced and never confirmed, of a customer with no lead row, waiting for 7,000. */
 export const ORDER_SECOND: OrderRow = {

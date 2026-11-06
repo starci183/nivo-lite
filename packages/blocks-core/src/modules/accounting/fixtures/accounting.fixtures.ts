@@ -4,6 +4,8 @@ import { questionQueueOf } from "../../../rules/accounting/questions"
 import type { QuestionLine } from "../../../rules/accounting/questions"
 import { unmatchedQueueOf } from "../../../rules/accounting/decisions"
 import { entryStatusOf } from "../../../rules/accounting/entry-status"
+import { dueSoonOf } from "../../../rules/accounting/due-soon"
+import { ledgerOf } from "../../../rules/accounting/ledger"
 import { figuresOf } from "../../../rules/accounting/figures"
 import { lineageOf } from "../../../rules/accounting/lineage"
 import { closeVerdict, periodOf } from "../../../rules/accounting/period"
@@ -11,10 +13,13 @@ import { weeklyIncomeOf } from "../../../rules/accounting/weekly"
 import type { WeeklyIncome } from "../../../rules/accounting/weekly"
 import { ACCOUNTING_SETTINGS_DEFAULTS } from "../../../rules/accounting/settings"
 import type { ModuleFixtures } from "../../module-fixtures"
+import type { BookEntryRecord } from "../../../rules/accounting/accounting.types"
 import type { EntryRow } from "../accounting.types"
 import type { CloseView } from "../reads/close-check.read"
 import type { EntryDetail } from "../reads/entry.read"
+import type { DueSoonView } from "../reads/due-soon.read"
 import type { FiguresView } from "../reads/figures.read"
+import type { LedgerView } from "../reads/ledger.read"
 
 /** The shop's "now" of the fixtures: 4 Nov 2026, 18:30 shop time. */
 export const FIXTURE_NOW: Date = new Date("2026-11-04T11:30:00.000Z")
@@ -176,6 +181,64 @@ export const CLOSE_READY: CloseView = {
     ...closeVerdict({ period: lastPeriod, now: FIXTURE_NOW, unmatchedPayments: 0, waitingQuestions: 0 }),
 }
 
+const cashEntry = (
+    id: string,
+    kind: "income" | "expense",
+    entryDate: string,
+    amountVnd: number,
+    note: string,
+): BookEntryRecord => ({
+    id,
+    version: "1",
+    kind,
+    sourceEntity: "payment.transaction",
+    sourceId: id,
+    entryDate,
+    amountVnd,
+    note,
+})
+
+/** The entries of this month that moved money, oldest first. */
+export const CASH_ENTRIES: ReadonlyArray<BookEntryRecord> = [
+    cashEntry(
+        "00000000-0000-4000-8000-0000000001e1",
+        "expense",
+        "2026-11-02",
+        1_280_000,
+        "PC-0012 \u00b7 Mua kh\u0103n b\u00f4ng",
+    ),
+    cashEntry(
+        "00000000-0000-4000-8000-0000000001e2",
+        "income",
+        "2026-11-03",
+        1_950_000,
+        "H\u0110-0141 \u00b7 Anh Khoa",
+    ),
+    cashEntry("00000000-0000-4000-8000-0000000001e3", "income", "2026-11-04", 3_500_000, "SePay \u00b7 CK HOA SEN SPA"),
+]
+
+/** The cash book of this month: 12,000,000 brought forward, three entries on three days. */
+export const LEDGER_VIEW: LedgerView = {
+    periodKey: "this",
+    fromDay: "2026-11-01",
+    toDay: "2026-12-01",
+    ...ledgerOf(12_000_000, CASH_ENTRIES),
+}
+
+/** The cash book of a month with no entry that moved money: the balance stays where it was. */
+export const LEDGER_NONE: LedgerView = {
+    periodKey: "this",
+    fromDay: "2026-11-01",
+    toDay: "2026-12-01",
+    ...ledgerOf(12_000_000, []),
+}
+
+/** The tax declarations that fall due within 30 days of the fixtures' now. */
+export const DUE_SOON_VIEW: DueSoonView = { rows: dueSoonOf(FIXTURE_NOW) }
+
+/** Nothing falls due. */
+export const DUE_SOON_NONE: DueSoonView = { rows: [] }
+
 const NONE = { vnd: 0, count: 0 }
 
 /** The figures of a month with no entry at all. */
@@ -205,6 +268,8 @@ export const ACCOUNTING_FIXTURES: ModuleFixtures = {
         "accounting.questions": { ready: questionQueueOf(QUESTIONS, 3), empty: questionQueueOf([], 0) },
         "accounting.entry": { ready: ENTRY_DETAIL, empty: null },
         "accounting.figures": { ready: FIGURES_VIEW, empty: FIGURES_NONE },
+        "accounting.ledger": { ready: LEDGER_VIEW, empty: LEDGER_NONE },
+        "accounting.due-soon": { ready: DUE_SOON_VIEW, empty: DUE_SOON_NONE },
         "accounting.settings": { ready: ACCOUNTING_SETTINGS_DEFAULTS, empty: null },
         "accounting.close-check": { ready: CLOSE_READY, waiting: CLOSE_WAITING },
     },

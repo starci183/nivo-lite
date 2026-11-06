@@ -19,6 +19,7 @@ export const bookFixtureProps: z.infer<(typeof accountingBookBlock)["props"]> = 
     filterParam: "status",
     selectParam: "selected",
     periodParam: "period",
+    paneParam: "pane",
 }
 
 /** The entries of the canvas: an invoice paid, one still owed, an unmatched transfer, an expense. */

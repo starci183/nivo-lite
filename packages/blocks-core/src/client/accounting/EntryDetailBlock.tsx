@@ -147,7 +147,12 @@ export const EntryDetailBlock = (props: RenderOf<typeof accountingEntryDetailBlo
                                     <IconButton
                                         intent="dismiss"
                                         label={words({ key: "detailClose" })}
-                                        onPress={() => props.params.set(props.props.closeParam, null)}
+                                        onPress={() =>
+                                            props.params.setMany({
+                                                [props.props.closeParam]: null,
+                                                [props.props.paneParam]: "list",
+                                            })
+                                        }
                                     />
                                 </Cluster>
                                 <Stack gap="row">

@@ -30,6 +30,7 @@ const rowOf = (question: QuestionLine): DecisionRowView => ({
     menu: [],
     draft: { answer: "" },
     waitingFor: null,
+    askedAt: question.askedAt,
 })
 
 /** The questions that wait for the owner as a decision queue whose edit form is the answer; `total` counts every question that waits. */

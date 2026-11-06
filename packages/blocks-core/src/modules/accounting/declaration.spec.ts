@@ -12,6 +12,8 @@ describe("accounting module", () => {
             "accounting.status-counts",
             "accounting.entry",
             "accounting.figures",
+            "accounting.ledger",
+            "accounting.due-soon",
             "accounting.weekly",
             "accounting.decisions",
             "accounting.question-count",
@@ -50,10 +52,14 @@ describe("accounting module", () => {
             "settings",
         ])
         expect(view?.id).toBe("book")
-        const placed = (id: string): ReadonlyArray<string> =>
-            (accountingSpecDocument.views.find((each) => each.id === id)?.root.children ?? []).map((node) => node.block)
-        expect(placed("book")).toEqual(["accounting.book", "accounting.entry-detail"])
-        expect(placed("ledger")).toEqual(["accounting.book", "accounting.entry-detail"])
+        const rootOf = (id: string): string | undefined =>
+            accountingSpecDocument.views.find((each) => each.id === id)?.root.block
+        expect(rootOf("book")).toBe("accounting.book")
+        expect(rootOf("ledger")).toBe("accounting.ledger")
+        expect(accountingSpecDocument.aside?.children?.map((node) => [node.block, node.showWhen?.is])).toEqual([
+            ["core.decision-queue", ["list", "queue"]],
+            ["accounting.entry-detail", ["detail"]],
+        ])
         expect(accountingSpecDocument.views.find((each) => each.id === "questions")?.root.block).toBe(
             "accounting.questions",
         )
@@ -68,6 +74,7 @@ describe("accounting module", () => {
         expect(accountingSpecDocument.head).toBeUndefined()
         expect(accountingSpecDocument.views[0]?.root.children?.map((node) => node.id)).toEqual([
             "figures",
+            "due",
             "weekly",
             "ageing",
         ])

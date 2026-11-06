@@ -147,5 +147,8 @@
   "conversationProposalMore": "More",
   "blockAccountingBook": "Accounting book",
   "blockAccountingEntryDetail": "Entry detail",
-  "blockAccountingQuestions": "Accounting questions"
+  "blockAccountingQuestions": "Accounting questions",
+  "blockAccountingLedger": "Cash book",
+  "blockAccountingPeriodFigures": "Period figures",
+  "blockAccountingDueSoon": "Due soon"
 }
