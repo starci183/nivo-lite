@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { TeamChatRoomsService } from "@modules/domain/team-chat"
+import { lineClientIdOf, TeamChatRoomsService } from "@modules/domain/team-chat"
 import type { HubNote, HubNoteSource } from "./gateway-turns.contracts"
 
 /** What a note line refers to. */
@@ -39,7 +39,7 @@ export class HubNotesService {
 
     /** Says a retried operation's note once: the same key is the same line. */
     async postOnce(note: HubNote, agentId: string, _refs: NoteRefs, key: string): Promise<void> {
-        await this.say(note, agentId, `hub.note:${key}`)
+        await this.say(note, agentId, lineClientIdOf(`hub.note:${key}`))
     }
 
     private async say(note: HubNote, agentId: string, key: string | null): Promise<void> {

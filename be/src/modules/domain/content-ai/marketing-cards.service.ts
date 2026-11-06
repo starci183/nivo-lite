@@ -1,14 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { TeamChatRoomsService } from "@modules/domain/team-chat"
+import { lineClientIdOf, TeamChatRoomsService } from "@modules/domain/team-chat"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import type { MarketingCard } from "./marketing-cards.contracts"
 
 /** The module whose agent (AI Marketing) speaks to the owner. */
 const DEPARTMENT = "content"
-
-/** The longest key a line is kept under: a retried line of the same work item and words is the same line. */
-const KEY_MAX = 160
 
 /** Where a card goes: the workspace and the language of its text line. */
 export interface CardScope {
@@ -38,7 +35,7 @@ export class MarketingCardsService {
 
     /** Says a plain line as AI Marketing to the owner (a failure the owner should see), once per work item and words; nothing happens without a content agent. */
     async line(scope: CardScope, body: string, workItemId: string | null): Promise<void> {
-        const key = workItemId === null ? null : `${workItemId}:${body}`.slice(0, KEY_MAX)
+        const key = workItemId === null ? null : lineClientIdOf(`${workItemId}:${body}`)
         await this.chat.postAsAgent(scope.workspaceId, { agent: DEPARTMENT, toUserId: null, body, key })
     }
 
