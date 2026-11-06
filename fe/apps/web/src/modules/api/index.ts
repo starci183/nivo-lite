@@ -7,7 +7,6 @@ export type {
     LeadGenWorkbenchQuery,
     LeadBoardQuery,
     DossierFindingsQuery,
-    WorkThreadsQuery,
     GoogleConnectionStateQuery,
     SetLedgerSheetMutation,
 } from "./graphql/__generated__/graphql"
@@ -73,15 +72,10 @@ export type {
     PublicRequirementsType,
     PublicSlotType,
 } from "./graphql/index"
-export type { DecideSalesDraftRequest } from "./graphql/index"
 export type {
     AgentChatTurnStatusType,
     AgentGenerationStatusType,
     AgentKnowledgeLensType,
-    AutomationCardType,
-    AutomationGoogleAccountType,
-    AutomationRunType,
-    AutomationsOverviewType,
     BillingPlanType,
     BillingWorkspaceType,
     BookingBoardType,
@@ -102,28 +96,12 @@ export type {
     KnowledgeSourceTextType,
     KnowledgeSourceType,
     KnowledgeSuggestionContextType,
-    LeadActionQueuedType,
-    LeadActionStatusType,
-    LeadFlowDecisionType,
-    LeadFlowInvoiceType,
-    LeadFlowOrderType,
-    LeadFlowTransactionType,
-    LeadFlowType,
-    LeadFlowWorkItemType,
-    LeadJourneyType,
     LeadRecordType,
     LessonMiningStatusType,
-    LocalizedTextType,
-    MissingRequirementType,
     ModuleInstallationType,
     NivoEntryType,
     OpenApiTestType,
-    PreviewSampleType,
     RetrievedPassageType,
-    RunStepType,
-    SalesActionType,
-    TemplateDefinitionType,
-    TemplateSettingType,
 } from "./graphql/index"
 export { putPresigned } from "./rest/uploads/put-presigned"
 export type {
@@ -157,11 +135,10 @@ export type {
     WizardConnectionType,
     ZaloWizardConnectionType,
 } from "./graphql/index"
-export type { MentionDirectoryType, ThreadMessageType, WorkChainType } from "./graphql/index"
 export { INPUT_BOUNDS, inputBoundsIssues } from "./graphql/__generated__/input-bounds"
 export type { AcceptInviteMutation, AcceptTemplateUpdateMutation } from "./graphql/__generated__/graphql"
 export type { AddBookingMutation } from "./graphql/__generated__/graphql"
-export type { AddResponsibilityMutation, AddShiftsAvailabilityMutation } from "./graphql/__generated__/graphql"
+export type { AddShiftsAvailabilityMutation } from "./graphql/__generated__/graphql"
 export type { AdjustInventoryStockMutation } from "./graphql/__generated__/graphql"
 export type { AdminExtendSubscriptionMutation } from "./graphql/__generated__/graphql"
 export type { AdminResendWorkspaceInviteMutation, AdminSessionQuery } from "./graphql/__generated__/graphql"
@@ -187,7 +164,7 @@ export type {
     AssignBrainDossierMutation,
     AssignDossierFindingMutation,
 } from "./graphql/__generated__/graphql"
-export type { AssignResponsibilityMutation, AuthorityQuery } from "./graphql/__generated__/graphql"
+export type { AuthorityQuery } from "./graphql/__generated__/graphql"
 export type { AuthorizeDriveMutation, AuthorizeGoogleMutation } from "./graphql/__generated__/graphql"
 export type { AuthorizeMetaMutation, AuthorizeZaloMutation, BillingPlanQuery } from "./graphql/__generated__/graphql"
 export type { BillingPlanQuoteQuery, BillingPlansQuery } from "./graphql/__generated__/graphql"
@@ -212,24 +189,23 @@ export type { ContentMediaQuery, ContentWorkbenchQuery, CopyInviteLinkMutation }
 export type { CreateApiKeyMutation } from "./graphql/__generated__/graphql"
 export type { CreateContentItemMutation, CreateHiringCvUploadMutation } from "./graphql/__generated__/graphql"
 export type { CreateInventoryPoMutation, CreateInviteMutation } from "./graphql/__generated__/graphql"
-export type { CreateKnowledgeUploadMutation, CreateLeadMutation } from "./graphql/__generated__/graphql"
+export type { CreateKnowledgeUploadMutation } from "./graphql/__generated__/graphql"
 export type { CreateVideoMediaUploadMutation, CreateVideoProjectMutation } from "./graphql/__generated__/graphql"
-export type { CreateWorkThreadMutation, CreateWorkspaceMutation } from "./graphql/__generated__/graphql"
+export type { CreateWorkspaceMutation } from "./graphql/__generated__/graphql"
 export type { CreditPacksBoughtQuery, CreditPacksQuery, CreditQuotaStatusQuery } from "./graphql/__generated__/graphql"
 export type { CreditRecentCostUsdQuery, CreditTopupLotsQuery } from "./graphql/__generated__/graphql"
 export type { CreditUsageSummaryQuery, DashboardQuery, DataSyncRunQuery } from "./graphql/__generated__/graphql"
 export type { DecideBrainFactMutation, DecideBrainLessonMutation } from "./graphql/__generated__/graphql"
 export type { DecideBrandProposalMutation, DecideExecutionMutation } from "./graphql/__generated__/graphql"
-export type { DecideSalesDraftMutation } from "./graphql/__generated__/graphql"
 export type { DecideSetupCardMutation, DecideShiftsAvailabilityMutation } from "./graphql/__generated__/graphql"
-export type { DecideThreadApprovalMutation, DecideWorkItemMutation } from "./graphql/__generated__/graphql"
-export type { DecisionHistoryQuery, DeclineAgentGraphProposalMutation } from "./graphql/__generated__/graphql"
+export type { DecideWorkItemMutation } from "./graphql/__generated__/graphql"
+export type { DeclineAgentGraphProposalMutation } from "./graphql/__generated__/graphql"
 export type { DeleteConnectionMutation, DeleteHiringCandidateMutation } from "./graphql/__generated__/graphql"
 export type { DeleteInventoryRecipeMutation, DeleteKnowledgeSourceMutation } from "./graphql/__generated__/graphql"
 export type { DisconnectConnectionMutation, DisconnectDriveMutation } from "./graphql/__generated__/graphql"
 export type { DismissDossierFindingMutation, DismissKnowledgeGapMutation } from "./graphql/__generated__/graphql"
 export type { DossierRemedyDraftQuery, DossierReviewSummaryQuery } from "./graphql/__generated__/graphql"
-export type { DraftInventoryLowStockMutation, DraftLeadExecutionMutation } from "./graphql/__generated__/graphql"
+export type { DraftInventoryLowStockMutation } from "./graphql/__generated__/graphql"
 export type { DraftPublicDocumentMutation } from "./graphql/__generated__/graphql"
 export type { DriveGrantQuery, DriveLinkedFolderQuery, DrivePickedFolderQuery } from "./graphql/__generated__/graphql"
 export type { DuplicateVideoProjectMutation, EnqueueKnowledgeSourceMutation } from "./graphql/__generated__/graphql"
@@ -244,8 +220,8 @@ export type { InventoryTemplatesQuery, InventoryWorkbenchQuery } from "./graphql
 export type { InvitePreviewQuery, KeepCurrentBrainFactMutation } from "./graphql/__generated__/graphql"
 export type { KnowledgeCategoriesQuery, KnowledgeSourceQuery } from "./graphql/__generated__/graphql"
 export type { KnowledgeSourcesQuery, KnowledgeSuggestionsQuery } from "./graphql/__generated__/graphql"
-export type { KnowledgeUsageQuery, LeadActionStatusQuery, LeadFlowQuery } from "./graphql/__generated__/graphql"
-export type { LeadGenCommentStatusQuery, LeadJourneyQuery } from "./graphql/__generated__/graphql"
+export type { KnowledgeUsageQuery } from "./graphql/__generated__/graphql"
+export type { LeadGenCommentStatusQuery } from "./graphql/__generated__/graphql"
 export type { LessonMiningStatusQuery, LinkHiringStaffMutation } from "./graphql/__generated__/graphql"
 export type { ListTelegramChatsQuery, LoadCsvImportQuery } from "./graphql/__generated__/graphql"
 export type { LoadDatabaseConnectionQuery, LoadImapConnectionQuery } from "./graphql/__generated__/graphql"
@@ -257,7 +233,7 @@ export type { MarkContentPublishedMutation, MarkOfficeConversationReadMutation }
 export type { MarkOfficeRoomReadMutation } from "./graphql/__generated__/graphql"
 export type { MarkVideoPublishedMutation, MarketingWeeklyReportQuery } from "./graphql/__generated__/graphql"
 export type { MarketplaceListingsQuery, McpCallLogQuery, McpConnectorsQuery } from "./graphql/__generated__/graphql"
-export type { McpToolGrantsQuery, MemberGrantsQuery, MentionDirectoryQuery } from "./graphql/__generated__/graphql"
+export type { McpToolGrantsQuery, MemberGrantsQuery } from "./graphql/__generated__/graphql"
 export type { MetaConnectionQuery, ModuleInstallationsQuery } from "./graphql/__generated__/graphql"
 export type { ModuleRequirementFactsQuery, MoneyConnectionQuery } from "./graphql/__generated__/graphql"
 export type { MoveBookingMutation, MoveContentItemMutation } from "./graphql/__generated__/graphql"
@@ -270,9 +246,8 @@ export type { OpenPlanPaymentOrderQuery, OrderTemplateListingMutation } from "./
 export type { PackageAgentTemplateMutation, PaymentOrderQuery } from "./graphql/__generated__/graphql"
 export type { PaymentOrdersQuery, PostMarketingWeeklyReportMutation } from "./graphql/__generated__/graphql"
 export type { PostOfficeMessageMutation, PostSetupMessageMutation } from "./graphql/__generated__/graphql"
-export type { PostThreadMessageMutation } from "./graphql/__generated__/graphql"
 export type { PreviewCsvSourceQuery, PreviewDatabaseTableQuery } from "./graphql/__generated__/graphql"
-export type { ProposeAutomationBodyMutation, ProposeBrandKitMutation } from "./graphql/__generated__/graphql"
+export type { ProposeBrandKitMutation } from "./graphql/__generated__/graphql"
 export type { ProposeOfficeCommandMutation, ProposeShiftsWeekMutation } from "./graphql/__generated__/graphql"
 export type { PublicBookingPageQuery, PublicBookingTimesQuery } from "./graphql/__generated__/graphql"
 export type { PublicDocumentsQuery, PublicHiringInterviewQuery } from "./graphql/__generated__/graphql"
@@ -280,8 +255,7 @@ export type { PublicHiringJobQuery, PublicHiringOfferQuery } from "./graphql/__g
 export type { PublishAgentGraphMutation } from "./graphql/__generated__/graphql"
 export type { ReassignShiftsShiftMutation, ReceiveInventoryPoMutation } from "./graphql/__generated__/graphql"
 export type { RecheckZaloConnectionMutation } from "./graphql/__generated__/graphql"
-export type { RecordOutcomeMutation } from "./graphql/__generated__/graphql"
-export type { RedraftPublicDocumentMutation, RefreshLeadContextMutation } from "./graphql/__generated__/graphql"
+export type { RedraftPublicDocumentMutation } from "./graphql/__generated__/graphql"
 export type { RegisterMcpConnectorMutation, ReindexKnowledgeSourceMutation } from "./graphql/__generated__/graphql"
 export type { RejectDossierRemedyDraftMutation, RemoveAgentMutation } from "./graphql/__generated__/graphql"
 export type { RemoveAgentTriggerMutation, RemoveBookingExceptionMutation } from "./graphql/__generated__/graphql"
@@ -312,9 +286,8 @@ export type { RestoreAgentGraphVersionMutation } from "./graphql/__generated__/g
 export type { RetryKnowledgeSourceMutation, ReturnZaloAuthorizationMutation } from "./graphql/__generated__/graphql"
 export type { RevealSepayKeyMutation, RevokeAgentConnectionMutation } from "./graphql/__generated__/graphql"
 export type { RevokeApiKeyMutation, RevokeInviteMutation, RevokeSessionMutation } from "./graphql/__generated__/graphql"
-export type { RotateSepayKeyMutation, RunAutomationNowMutation } from "./graphql/__generated__/graphql"
+export type { RotateSepayKeyMutation } from "./graphql/__generated__/graphql"
 export type { RunCsvImportMutation, RunDocumentImportMutation } from "./graphql/__generated__/graphql"
-export type { SalesActionStatusQuery } from "./graphql/__generated__/graphql"
 export type { SaveAgentGoalMutation, SaveAgentGraphDraftMutation } from "./graphql/__generated__/graphql"
 export type { SaveAgentTriggerMutation, SaveAuthorityRuleMutation } from "./graphql/__generated__/graphql"
 export type { SaveBookingExceptionMutation, SaveBookingHoursMutation } from "./graphql/__generated__/graphql"
@@ -352,7 +325,7 @@ export type { SetMemberStatusMutation, SetModuleLiveMutation } from "./graphql/_
 export type { SetMyAvatarMutation, SetOperatingModeMutation } from "./graphql/__generated__/graphql"
 export type { SetSepayEnvironmentMutation, SetSetupGateMutation } from "./graphql/__generated__/graphql"
 export type { SetWorkspaceAgentWorkMutation } from "./graphql/__generated__/graphql"
-export type { SettleWonDealMutation, SetupStateQuery, SetupVersionsQuery } from "./graphql/__generated__/graphql"
+export type { SetupStateQuery, SetupVersionsQuery } from "./graphql/__generated__/graphql"
 export type { ShareVideoProjectMutation, ShiftsMineQuery, ShiftsWorkbenchQuery } from "./graphql/__generated__/graphql"
 export type { StartAgentChatConversationMutation, StartMoneyConnectionMutation } from "./graphql/__generated__/graphql"
 export type { StartSmtpConnectionMutation, StartTelegramLoginMutation } from "./graphql/__generated__/graphql"
@@ -360,7 +333,6 @@ export type { StartWebhookConnectionMutation, StartZaloConnectionMutation } from
 export type { SubmitContentForApprovalMutation } from "./graphql/__generated__/graphql"
 export type { SubmitShiftsAvailabilityMutation, SubmitTelegramCodeMutation } from "./graphql/__generated__/graphql"
 export type { SubmitTelegramPasswordMutation, SubmitTemplateListingMutation } from "./graphql/__generated__/graphql"
-export type { SuggestLeadOwnerMutation } from "./graphql/__generated__/graphql"
 export type { SyncMcpConnectorMutation, TakeInventoryStockMutation } from "./graphql/__generated__/graphql"
 export type { TakeOverAgentChatConversationMutation } from "./graphql/__generated__/graphql"
 export type { TelegramConnectionEventsQuery, TelegramConnectionPageQuery } from "./graphql/__generated__/graphql"
@@ -376,8 +348,8 @@ export type { UpdatePublicDocumentMutation, UpdateVideoProjectMutation } from ".
 export type { VideoBrandQuery, VideoFiguresQuery } from "./graphql/__generated__/graphql"
 export type { VideoMediaQuery, VideoProjectQuery, VideoProjectsQuery } from "./graphql/__generated__/graphql"
 export type { VideoRenderStatusQuery, VideoScopeQuery, VideoScriptStatusQuery } from "./graphql/__generated__/graphql"
-export type { VideoSourcesQuery, WantConnectorMutation, WorkChainQuery } from "./graphql/__generated__/graphql"
-export type { WorkItemsQuery, WorkThreadQuery, WorkspaceAgentWorkQuery } from "./graphql/__generated__/graphql"
+export type { VideoSourcesQuery, WantConnectorMutation } from "./graphql/__generated__/graphql"
+export type { WorkItemsQuery, WorkspaceAgentWorkQuery } from "./graphql/__generated__/graphql"
 export type { WorkspaceInvitesQuery, WorkspaceMembersQuery, WorkspaceShellQuery } from "./graphql/__generated__/graphql"
 export type { WorkspaceStaffQuery, WritePublicDocumentMutation } from "./graphql/__generated__/graphql"
 export type { ZaloConnectionEventsQuery, ZaloConnectionPageQuery } from "./graphql/__generated__/graphql"

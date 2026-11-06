@@ -6,9 +6,6 @@ import type { ConsoleIconName, ConsoleSessionView, ConsoleWorkspace } from "@/mo
 /** The console route of the Office, the page people come to first. */
 export const OFFICE_ROUTE = "/chat"
 
-/** The leads list, where search and the New menu land. */
-export const LEADS_ROUTE = "/leads"
-
 /** The catalog key that names each role. */
 export const ROLE_LABELS = { owner: "roleOwner", manager: "roleManager", staff: "roleStaff" } as const
 
@@ -18,13 +15,8 @@ export type ConsoleDestination = {
     readonly label:
         | "navOverview"
         | "navOffice"
-        | "navThreads"
         | "navAuthority"
         | "navInbox"
-        | "navLeads"
-        | "navResponsibilities"
-        | "navDecisions"
-        | "navAutomations"
         | "navBrain"
         | "navModules"
         | "navTeam"
@@ -45,27 +37,9 @@ export type ConsoleDestination = {
 export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
     { key: "chat", label: "navOffice", route: OFFICE_ROUTE, icon: "community", group: "work" },
     { key: "overview", label: "navOverview", route: "/dashboard", icon: "overview", group: "work" },
-    { key: "threads", label: "navThreads", route: "/threads", icon: "review", group: "work" },
-    { key: "leads", label: "navLeads", route: LEADS_ROUTE, icon: "account", group: "work" },
-    {
-        key: "responsibilities",
-        label: "navResponsibilities",
-        route: "/responsibilities",
-        icon: "review",
-        group: "work",
-    },
     { key: "inbox", label: "navInbox", route: "/inbox", icon: "email", group: "work" },
     { key: "brain", label: "navBrain", route: "/brain", icon: "brain", group: "operate", also: ["/knowledge"] },
     { key: "authority", label: "navAuthority", route: "/authority", icon: "password", group: "operate" },
-    { key: "decisions", label: "navDecisions", route: "/decisions", icon: "saved", group: "operate" },
-    {
-        key: "automations",
-        label: "navAutomations",
-        route: "/automations",
-        icon: "agentos",
-        group: "operate",
-        managerOnly: true,
-    },
     { key: "modules", label: "navModules", route: "/agents", icon: "apps", group: "setup" },
     { key: "team", label: "navTeam", route: "/team", icon: "talents", group: "setup", managerOnly: true },
     {

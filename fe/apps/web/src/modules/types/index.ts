@@ -14,23 +14,8 @@ export type { AgentGraphAnswerView, AgentGraphDecideEditorView, AgentGraphOption
 export type { AgentGraphDetailView, AgentGraphHeadView, AgentGraphProblemsView } from "./agentGraphView"
 export type { AgentGraphProposalView, AgentGraphProposalsView } from "./agentGraphView"
 export type { AgentGraphRowView, AgentGraphTermView, AgentGraphRunView, AgentGraphVersionsView } from "./agentGraphView"
-export type { AgentRecord, EventRecord, ExecutionRecord, ResponsibilityRecord } from "./leads"
-export type { LeadRecord, LeadListItem, LeadIcon, LeadJourney, LeadStageId, LeadPrimaryAction } from "./leads"
-export type { LeadStepMode, LeadStepValues, StepFormView, StepStatus, FlowEntryView, FlowView } from "./leads"
-export type { LeadApprovalPane } from "./lead-panes"
-export type { LeadApprovalView, LeadContextPane, LeadContextView, LeadCreateDialogProps } from "./lead-panes"
-export type { LeadDetailPaneOn, LeadDetailPaneView, LeadDraftItem } from "./lead-panes"
-export type { LeadFlowPane, LeadHeadLabels, LeadHeadPane, LeadHeadView } from "./lead-panes"
-export type { LeadListPaneView, LeadListView, LeadOutcomePane, LeadOutcomeView, LeadPanesCopy } from "./lead-panes"
-export type {
-    LeadPanesOn,
-    LeadRowView,
-    LeadStepFormLabels,
-    LeadStepPane,
-    LeadStepSectionView,
-    LeadStepView,
-} from "./lead-panes"
-export type { LeadTimelineEntryView, LeadTimelinePane, LeadTimelineView } from "./lead-panes"
+export type { LeadRecord, LeadListItem, LeadStageId } from "./leads"
+export type { StepStatus } from "./leads"
 
 export type {
     BookingAction,
@@ -99,53 +84,7 @@ export type { AdjustInput, AdjustItem, CountInput, StockTakeItem } from "./inven
 export type { DraftLowItem, DraftPoInput, NewPoInput, ImportItem, StarterItem } from "./inventory-commands"
 export type { ItemInput, SavedItem, ReceiveInput, ReceiveItem, RecipeInput } from "./inventory-commands"
 export type { SendItem, TransferInput, SupplierInput } from "./inventory-commands"
-export type {
-    AccountsView,
-    AutomationCardView,
-    AutomationGateKind,
-    AutomationIconWord,
-    AutomationRunStatus,
-    AutomationRunView,
-    AutomationTone,
-    AutomationsBoardView,
-    AutomationsPanesActions,
-    AutomationsPanesCopy,
-    AutomationsPanesView,
-    AutomationsLanguage,
-    AutomationsTranslator,
-    Capability,
-    CardView,
-    ChannelNeed,
-    ConfigValue,
-    ConnectionNeed,
-    ContentMode,
-    DetailView,
-    FieldDef,
-    GateAction,
-    GateView,
-    GoogleAccount,
-    BilingualLabel,
-    MessageView,
-    Missing,
-    PipelineConfig,
-    PreviewSample,
-    Requires,
-    RunRowView,
-    RunStep,
-    SettingFieldView,
-    ShopContext,
-    TemplateDef,
-    TemplateExecutor,
-    TemplatePack,
-} from "./automations"
-export type {
-    DeciderKind,
-    DecisionKind,
-    DecisionOutcome,
-    DecisionRecord,
-    GateReason,
-    DecisionHistoryRowView,
-} from "./decisions"
+export type { DecisionKind, DecisionOutcome } from "./decisions"
 
 export type {
     LeadGenComment,
@@ -272,27 +211,9 @@ export type { CreditsData, CreditsOverviewView, CreditsHistoryRow, PayOrder, Pay
 export type { GraphQLResponse } from "./outcome"
 export type { SetupWriteDraft } from "./setup-write-draft"
 export type { ModuleIconName } from "./module-icon"
-export type {
-    ApprovalExpiryView,
-    ThreadApprovalCardView,
-    BodySegment,
-    ChainPanelView,
-    ComposerOption,
-    StatusTone,
-    ThreadApprovalLabels,
-    ThreadChainLabels,
-    ThreadFeedView,
-    ThreadMessageView,
-    ThreadRailForm,
-    ThreadRowView,
-    WorkThreadBoardHandlers,
-    WorkThreadBoardView,
-} from "./work-threads"
 export type { ProfileRegionBaseProps } from "./agent-profile"
 export type { AdminBadgeView, AdminCardView, AdminInviteRef, AdminRowView, AdminWorkspaceRowView } from "./admin"
 export type { BillingPlanView, BillingRowView, BillingTone, PlanCardView, PlanGroupView } from "./billing"
-export type { OwnerGroupView, ResponsibilityRowView, RowStatus } from "./responsibilities"
-export type { ResponsibilitiesBoardCopy, ResponsibilityOpenedView } from "./responsibilities"
 export type {
     SetupGatesCardProps,
     SetupSideGate,

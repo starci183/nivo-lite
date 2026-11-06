@@ -1,4 +1,4 @@
-import { unstable_serialize, type SWRInfiniteKeyedMutator } from "swr/infinite"
+import { type SWRInfiniteKeyedMutator } from "swr/infinite"
 import type { SWRInfiniteResponse } from "swr/infinite"
 
 /** One forward page of a workspace list. */
@@ -36,10 +36,6 @@ export const connectionReadParameters = (key: ConnectionPageKey, workspaceHeader
         headers: { [workspaceHeader]: workspaceId },
     }
 }
-
-/** The aggregate key used when a write refreshes every loaded page of a connection. */
-export const connectionCacheKey = (name: string, workspaceId: string): string =>
-    unstable_serialize(() => [name, workspaceId, null])
 
 /** Stops a cursor chain at its terminal page or until its workspace is known. */
 export const connectionPageKey = (

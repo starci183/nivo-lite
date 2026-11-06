@@ -3,7 +3,6 @@ export const APP_ROUTES = {
     home: "/",
     login: "/login",
     dashboard: "/dashboard",
-    automations: "/automations",
     chat: "/chat",
     account: "/account",
     profile: "/profile",
@@ -11,7 +10,6 @@ export const APP_ROUTES = {
 } as const
 
 export { safeNext } from "./safe-next-path"
-export { LEADS_ROUTES, leadPath, newLeadPath } from "./leads-routes"
 export {
     AUTH_ROUTES,
     invitePath,
@@ -50,7 +48,7 @@ export {
     zaloConnectionHref,
     zaloReturnPath,
 } from "./console-routes"
-export { AUTOMATION_ROUTES, automationFocusPath, newModulePath } from "./automations-routes"
+export { AUTOMATION_ROUTES, newModulePath } from "./automations-routes"
 export {
     BRAIN_PARTS,
     BRAIN_PART_TABS,

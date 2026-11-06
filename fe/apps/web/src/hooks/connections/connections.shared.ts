@@ -42,7 +42,6 @@ export const attentionConnections = (items: ReadonlyArray<Connection>): Readonly
 export const CONNECTION_ROUTES = {
     dashboard: "/dashboard",
     chat: "/chat",
-    automations: "/automations",
     connections: "/connections",
 } as const
 

@@ -8,7 +8,7 @@ import type { ReadResponse } from "@/hooks/workspaceread"
 import type { ResponsibilitiesQuery } from "@/modules/api"
 
 /** The SWR key of {@link useQueryResponsibilitiesSwr}. */
-export const QUERY_RESPONSIBILITIES_SWR_KEY = "QUERY_RESPONSIBILITIES_SWR"
+const QUERY_RESPONSIBILITIES_SWR_KEY = "QUERY_RESPONSIBILITIES_SWR"
 
 /** The back end `responsibilities` query. */
 export const useQueryResponsibilitiesSwr = (

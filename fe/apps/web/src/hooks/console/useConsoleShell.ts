@@ -6,7 +6,7 @@ import { useQueryWorkspaceShellSwr } from "@/hooks/swr"
 import { FOUNDING_OFFER } from "@/modules/promo"
 import { workspaceHref } from "@/modules/routes"
 import type { ConsolePending } from "@/modules/types"
-import { LEADS_ROUTE, OFFICE_ROUTE } from "./console.shared"
+import { OFFICE_ROUTE } from "./console.shared"
 
 const SUMMARY_MAX = 60
 
@@ -35,10 +35,7 @@ export const useConsoleShell = (workspaceId: string): ConsoleShellView => {
             id: approval.id,
             leadName: approval.contactName ?? t("unknownLead"),
             summary: clip(approval.nextAction || approval.draft),
-            href: workspaceHref(
-                workspaceId,
-                approval.leadId === null ? LEADS_ROUTE : `${LEADS_ROUTE}/${approval.leadId}`,
-            ),
+            href: workspaceHref(workspaceId, OFFICE_ROUTE),
         }))
         // Exceptions with no approval card of their own (an approval card is already in the list above).
         const exceptions = data.exceptions.map((item): ConsolePending => ({
