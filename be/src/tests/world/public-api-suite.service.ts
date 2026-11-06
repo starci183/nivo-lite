@@ -4,7 +4,7 @@ import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
 import { ModulesService } from "@modules/domain/modules"
 import { PUBLIC_API_QUEUE } from "@modules/queues/public-api"
 import type { PublicApiIdentity } from "../fixtures/builders/public-api.builder"
-import { apiDealWon, apiInbox, apiOutbox, apiSource } from "./public-api-database.service"
+import { apiInbox, apiOutbox, apiSource } from "./public-api-database.service"
 import type { LiteWorld } from "./lite-world.service"
 import { PublicApiProofAccess } from "./public-api-capabilities.options"
 import { openPublicApiProof } from "./public-api-proof.service"
@@ -28,8 +28,6 @@ const observations = (world: LiteWorld) => ({
         apiSource(world.db.primary, workspaceId, id),
     inbox: (workspaceId: string): Promise<Array<PublicApiInboxState>> => apiInbox(world.db.primary, workspaceId),
     outbox: (workspaceId: string): Promise<Array<PublicApiOutboxState>> => apiOutbox(world.db.primary, workspaceId),
-    dealsWon: (workspaceId: string): Promise<Array<Readonly<Record<string, unknown>>>> =>
-        apiDealWon(world.db.primary, workspaceId),
 })
 
 type PreparePublicApiProofResultFixtureShape = {
@@ -40,7 +38,6 @@ type PreparePublicApiProofResultShape = {
     source: (workspaceId: string, id: string) => Promise<Array<PublicApiSourceState>>
     inbox: (workspaceId: string) => Promise<Array<PublicApiInboxState>>
     outbox: (workspaceId: string) => Promise<Array<PublicApiOutboxState>>
-    dealsWon: (workspaceId: string) => Promise<Array<Readonly<Record<string, unknown>>>>
     registered: () => RegisteredPublicApi
     fixture: () => Promise<PublicApiIdentity & PreparePublicApiProofResultFixtureShape>
     deliver: (payload: object, job?: string) => Promise<void>

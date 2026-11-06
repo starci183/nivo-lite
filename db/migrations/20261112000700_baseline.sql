@@ -17100,49 +17100,11 @@ CREATE INDEX IF NOT EXISTS knowledge_chunks_installation ON public.knowledge_chu
 -- Declares the event bus consumer queues of platform/event-bus/event-bus.queue.ts with literal names: each queue, its dead-letter
 -- queue and its topic binding. Every call is idempotent (pgmq.create skips an existing queue, pgmq.bind_topic upserts the binding).
 
-select pgmq.create('bank_credit_booked__accounting');
-select pgmq.create('bank_credit_booked__accounting__dead');
-select pgmq.bind_topic('bank_credit_booked', 'bank_credit_booked__accounting');
-
-select pgmq.create('payment_reconciled__contracts');
-select pgmq.create('payment_reconciled__contracts__dead');
-select pgmq.bind_topic('payment_reconciled', 'payment_reconciled__contracts');
-
-select pgmq.create('payment_reconciled__automations');
-select pgmq.create('payment_reconciled__automations__dead');
-select pgmq.bind_topic('payment_reconciled', 'payment_reconciled__automations');
-
-select pgmq.create('payment_reconciled__payment_receipts');
-select pgmq.create('payment_reconciled__payment_receipts__dead');
-select pgmq.bind_topic('payment_reconciled', 'payment_reconciled__payment_receipts');
-
-select pgmq.create('lead_captured__automations');
-select pgmq.create('lead_captured__automations__dead');
-select pgmq.bind_topic('lead_captured', 'lead_captured__automations');
-
-select pgmq.create('deal_won__automations');
-select pgmq.create('deal_won__automations__dead');
-select pgmq.bind_topic('deal_won', 'deal_won__automations');
-
-select pgmq.create('order_confirmed__automations');
-select pgmq.create('order_confirmed__automations__dead');
-select pgmq.bind_topic('order_confirmed', 'order_confirmed__automations');
 
 select pgmq.create('order_confirmed__inventory');
 select pgmq.create('order_confirmed__inventory__dead');
 select pgmq.bind_topic('order_confirmed', 'order_confirmed__inventory');
 
-select pgmq.create('order_shipped__automations');
-select pgmq.create('order_shipped__automations__dead');
-select pgmq.bind_topic('order_shipped', 'order_shipped__automations');
-
-select pgmq.create('decision_made__automations');
-select pgmq.create('decision_made__automations__dead');
-select pgmq.bind_topic('decision_made', 'decision_made__automations');
-
-select pgmq.create('approval_resolved__thread_outcomes');
-select pgmq.create('approval_resolved__thread_outcomes__dead');
-select pgmq.bind_topic('approval_resolved', 'approval_resolved__thread_outcomes');
 
 select pgmq.create('booking_status_changed__booking_effects');
 select pgmq.create('booking_status_changed__booking_effects__dead');

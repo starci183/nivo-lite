@@ -1,15 +1,9 @@
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { bankFeedInboxEntities } from "@modules/domain/bank-feed-inbox"
-import { inboundEventsEntities } from "@modules/domain/inbound-events"
-import { invoicesEntities } from "@modules/domain/invoices"
-import { inboxEntities } from "@modules/platform/inbox"
 import { jobsEntities } from "@modules/platform/jobs"
 
 const [BankFeedInboxEntity] = bankFeedInboxEntities
-const [InboundEventEntity] = inboundEventsEntities
-const [InvoiceEntity] = invoicesEntities
-const [InboxEntity] = inboxEntities
 const [JobEntity, JobOutboxEntity] = jobsEntities
 
 /** The bank-feed receipts of one connection are the queue rows whose delivery id starts with the connection id. */
@@ -40,29 +34,6 @@ export const feedDeliveries = async (manager: EntityManager, connectionId: strin
         .addOrderBy("o.id")
         .getMany()
     return rows.map(({ id, queue, name, payload }) => ({ id, queue, name, payload }))
-}
-
-/** Removes the claims the money reactors made for the facts of a workspace, before the workspace goes. */
-export const cleanEventClaims = async (manager: EntityManager, workspaceId: string): Promise<void> => {
-    const credits = manager
-        .createQueryBuilder(InboundEventEntity, "e")
-        .select("e.id::text")
-        .where("e.workspace_id = :workspaceId")
-        .getQuery()
-    const invoices = manager
-        .createQueryBuilder(InvoiceEntity, "v")
-        .select("v.id::text")
-        .where("v.workspace_id = :workspaceId")
-        .getQuery()
-    await manager
-        .createQueryBuilder(InboxEntity, "t")
-        .delete()
-        .where(
-            `(source = 'bank_credit_booked__accounting' AND delivery_id IN (${credits}))
-             OR (source = 'payment_reconciled__contracts' AND delivery_id IN (${invoices}))`,
-            { workspaceId },
-        )
-        .execute()
 }
 
 /** Removes the bank-feed receipts of one connection and their queue rows, which no workspace owns. */
