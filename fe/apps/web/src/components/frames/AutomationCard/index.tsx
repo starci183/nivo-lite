@@ -1,47 +1,9 @@
-import { Cluster, Stack, Badge, Icon, IconTile, Link, Switch, Text, TextAction } from "@starci/grammar/common"
-import type { IconSource } from "@starci/grammar/common"
+import { Cluster, Stack, Badge, Icon, Link, Switch, Text, TextAction } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 
-import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
-
-/** The icon word of a template. */
-type AutomationIconWord =
-    | "payment"
-    | "leads"
-    | "report"
-    | "review"
-    | "debt"
-    | "winback"
-    | "moon"
-    | "sheet"
-    | "calendar"
-    | "cart"
-    | "contract"
-    | "truck"
-    | "receipt"
-    | "ledger"
-
-/** Template icon word -> the app glyph names. */
-const ICONS: Record<AutomationIconWord, IconName> = {
-    payment: "wallet",
-    leads: "account",
-    report: "overview",
-    review: "review",
-    debt: "credit",
-    winback: "retry",
-    moon: "dark",
-    sheet: "blog",
-    calendar: "streak",
-    cart: "cart",
-    contract: "saved",
-    truck: "servers",
-    receipt: "wallet",
-    ledger: "saved",
-}
-
-/** The glyph of an automation's template, for the places that draw its mark. */
-export const automationIconOf = (word: AutomationIconWord): IconSource =>
-    nivoIconSource(ICONS[word] ?? "apps", "leading")
+import { AutomationMark } from "@/components/composites/AutomationMark"
+import { nivoIconSource } from "@/components/leaves/Icon"
+import type { AutomationIconWord } from "@/modules/types"
 
 /** The tone of a status badge. */
 type CardTone = "success" | "neutral" | "warning" | "danger"
@@ -84,7 +46,7 @@ export const AutomationCard = (props: AutomationCardProps) => (
     <div data-automation={props.dataKey}>
         <Stack gap="row">
             <Cluster gap="row" align="start">
-                <IconTile source={nivoIconSource(ICONS[props.icon] ?? "apps", "leading")} tone="neutral" />
+                <AutomationMark icon={props.icon} />
                 <Stack gap="identity">
                     <Cluster gap="inline">
                         <Badge isDot tone={props.statusTone}>

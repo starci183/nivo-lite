@@ -1,8 +1,11 @@
-import { Alert, Button, EmptyNotice, Section, Stack } from "@starci/grammar/common"
+import { Alert, Button, EmptyNotice, PaneSection, Section, Stack } from "@starci/grammar/common"
 import { AutomationAccountPicker } from "@/components/composites/AutomationAccountPicker"
 import { AutomationCard } from "@/components/frames/AutomationCard"
-import { AutomationsPanesDrawing } from "./panes"
-import type { AutomationsPanesView } from "./panes"
+import { AutomationPanes } from "@/components/frames/AutomationPanes"
+import { AutomationsDetailBody } from "@/components/frames/AutomationsDetailBody"
+import { AutomationsDetailHead } from "@/components/frames/AutomationsDetailHead"
+import { AutomationsListPane } from "@/components/frames/AutomationsListPane"
+import { PaneHead } from "@/components/composites/PaneHead"
 import { AutomationDetailFrame } from "@/components/frames/AutomationDetailFrame"
 import { AutomationFilters } from "@/components/composites/AutomationFilters"
 import { AutomationGate } from "@/components/composites/AutomationGate"
@@ -11,7 +14,7 @@ import { AutomationMessage } from "@/components/composites/AutomationMessage"
 import { AutomationRuns } from "@/components/composites/AutomationRuns"
 import { AutomationSettings } from "@/components/composites/AutomationSettings"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import type { AutomationsBoardView, CardView, DataSlot, SlotLabels } from "@/modules/types"
+import type { AutomationsBoardView, AutomationsPanesView, CardView, DataSlot, SlotLabels } from "@/modules/types"
 
 /** The words that belong to no data. */
 export interface AutomationsBoardLabels {
@@ -191,9 +194,38 @@ const renderAutomationsBoardView = (
                     />
                 </>
             ) : (
-                <AutomationsPanesDrawing view={view} isLoading={isLoading} panes={props.props.panes} on={on} />
+                renderAutomationPanes(view, isLoading, props)
             )}
         </>
+    )
+}
+
+/** The three panes of the page layout, drawn from the board's view. */
+const renderAutomationPanes = (view: AutomationsBoardView, isLoading: boolean, props: AutomationsBoardBaseProps) => {
+    const { panes } = props.props
+    const { on } = props
+    const card = view.cards.find((item) => item.isSelected)
+    const open = view.detail
+    return (
+        <AutomationPanes
+            label={panes.copy.grid}
+            isOpen={card !== undefined}
+            list={<AutomationsListPane view={view} isLoading={isLoading} panes={panes} on={on} card={card} />}
+            head={
+                card === undefined ? (
+                    <PaneHead
+                        title={panes.copy.pickTitle}
+                        headingLevel={1}
+                        back={{ label: panes.copy.back, onPress: on.close }}
+                    />
+                ) : (
+                    <AutomationsDetailHead view={view} isLoading={isLoading} panes={panes} on={on} card={card} />
+                )
+            }
+            main={<AutomationsDetailBody view={view} isLoading={isLoading} copy={panes.copy} on={on} card={card} />}
+            runsHead={<PaneHead title={panes.copy.runsTitle} />}
+            runs={<PaneSection>{open === undefined ? null : <AutomationRuns {...open.runs} isHeadless />}</PaneSection>}
+        />
     )
 }
 

@@ -1,6 +1,5 @@
 import { Pane, PaneGrid, PaneSection, Text } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import { COLUMNS, ROWS, areasOf } from "./layout"
 import { AgentWorkAddButton } from "@/components/composites/AgentWorkAddButton"
 import { AgentWorkPhoneTabs } from "@/components/composites/AgentWorkPhoneTabs"
 import { AgentWorkClockForm } from "@/components/composites/AgentWorkClockForm"
@@ -11,7 +10,14 @@ import { AgentWorkTasks } from "@/components/composites/AgentWorkTasks"
 import { AgentWorkStatus } from "@/components/composites/AgentWorkStatus"
 import { AgentWorkTurns } from "@/components/composites/AgentWorkTurns"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import type { AgentWorkGoalView, AgentWorkTriggerView, AgentWorkView, DataSlot, SlotLabels } from "@/modules/types"
+import type {
+    AgentWorkGoalView,
+    AgentWorkTriggerView,
+    AgentWorkView,
+    DataSlot,
+    PaneGridLayout,
+    SlotLabels,
+} from "@/modules/types"
 
 /** The words of the Work tab that do not come from the data. */
 export interface AgentWorkCopy {
@@ -72,6 +78,7 @@ export interface AgentWorkPanesBaseProps {
         readonly slotLabels: SlotLabels
         readonly draft: AgentWorkDraft
         readonly isSaving: boolean
+        readonly grid: PaneGridLayout
     }
     readonly on: {
         readonly goalTitle: (value: string) => void
@@ -253,9 +260,9 @@ const turnsOf = (base: AgentWorkPanesBaseProps) =>
  * the schedule with the form that adds a time, the open tasks, and the recent turns. Every band is a PaneSection.
  */
 export const AgentWorkPanesBase = (props: AgentWorkPanesBaseProps) => {
-    const { copy } = props.props
+    const { copy, grid } = props.props
     return (
-        <PaneGrid label={copy.paneLabel} areas={areasOf(props.props.draft.phoneView)} columns={COLUMNS} rows={ROWS}>
+        <PaneGrid label={copy.paneLabel} areas={grid.areas} columns={grid.columns} rows={grid.rows}>
             <Pane area="status" surface>
                 <PaneSection align="center" gap="inline">
                     {partOf(props, (view, isLoading) => (

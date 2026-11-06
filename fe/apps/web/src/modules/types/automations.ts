@@ -363,3 +363,45 @@ export interface GoogleAccount {
     readonly name: string
     readonly status: "connected" | "error"
 }
+
+/** The words of the automations panes that belong to no data. */
+export interface AutomationsPanesCopy {
+    readonly grid: string
+    readonly list: string
+    readonly search: string
+    readonly searchPlaceholder: string
+    readonly clearSearch: string
+    readonly back: string
+    readonly moreActions: string
+    readonly runsTitle: string
+    readonly moreFilters: (count: number) => string
+    readonly pickTitle: string
+    readonly pickBody: string
+    readonly emptyFiltered: string
+}
+
+/** The panes' words and the text in the search field. */
+export interface AutomationsPanesView {
+    readonly copy: AutomationsPanesCopy
+    readonly query: string
+}
+
+/** The commands of the panes. */
+export interface AutomationsPanesActions {
+    readonly select: (key: string) => void
+    readonly toggle: (key: string, next: boolean) => void
+    readonly setFilter: (id: string) => void
+    readonly search: (value: string) => void
+    readonly close: () => void
+    readonly dismiss: () => void
+    readonly restore: (key: string) => void
+    readonly pickAccount: (key: string, connectionId: string) => void
+    readonly runNow: () => void
+    readonly changeSetting: (key: string, value: string | number | boolean) => void
+    readonly saveSettings: () => void
+    readonly changeBody: (value: string) => void
+    readonly enable: () => void
+    readonly saveBody: () => void
+    readonly compose: () => void
+    readonly answerTrust: (accept: boolean) => void
+}
