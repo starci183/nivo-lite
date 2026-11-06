@@ -35,10 +35,7 @@
             "id": "runs-pane",
             "block": "core.list-pane",
             "props": {
-              "search": false,
-              "title": {
-                "key": "runs_title"
-              }
+              "search": false
             },
             "children": [
               {

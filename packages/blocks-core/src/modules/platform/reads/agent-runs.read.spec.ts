@@ -101,4 +101,9 @@ describe("platform.agent-runs", () => {
         expect(agentRunsRead.permission).toBe("platform.view")
         expect(agentRunsRead.shape).toBe("list")
     })
+
+    it("tells a host it is a list paged by a cursor, newest first, one page of the default size", () => {
+        expect(agentRunsRead.listing).toMatchObject({ kind: "list", defaultSort: "recent" })
+        expect(agentRunsRead.listing?.kind === "list" ? agentRunsRead.listing.shape.page.size : 0).toBe(RUNS_PAGE)
+    })
 })

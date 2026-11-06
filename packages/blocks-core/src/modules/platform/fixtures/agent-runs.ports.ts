@@ -7,7 +7,7 @@ import type {
     RecordRow,
 } from "@nivo-lite/agent-sdk/entity/port"
 import type { PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
-import { agentGraphs, agentRunSteps, agentRuns } from "../ports"
+import { agentGraphs, agentRuns } from "../ports"
 
 /** The viewer and the instant of the runs reads in the specs. */
 export const RUNS_CONTEXT: RunContext = {

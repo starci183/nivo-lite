@@ -1,5 +1,5 @@
 import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import type { ListShape, ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { q } from "@nivo-lite/agent-sdk/query"
 import type { FilterExpr } from "@nivo-lite/agent-sdk/query"
 import { z } from "zod"
@@ -7,7 +7,7 @@ import { MAX_ID } from "../../../bounds"
 import { ALL_RUNS, RUN_FIELDS, RUN_FILTERS, runRowOf, statusesOf } from "../agent-runs"
 import type { AgentRunRow, RunFilter } from "../agent-runs"
 import { PLATFORM_VIEW } from "../constants"
-import { agentGraphs, agentRuns } from "../ports"
+import { agentGraphs, agentRuns, agentRunsList } from "../ports"
 import { agentOfInstallation } from "./agent-run-scope"
 
 /** The most runs a page lists when the read names no limit. */
@@ -30,11 +30,24 @@ const whereOf = (agent: string, filter: RunFilter | undefined): FilterExpr => {
     return filter === undefined ? ofAgent : q.and(ofAgent, q.in("status", statusesOf(filter)))
 }
 
+/** What the list says about itself, so a host pages it: the rows are the runs, newest first, `RUNS_PAGE` a page, narrowed by the status filter. */
+const RUNS_SHAPE: ListShape = {
+    filters: { status: { field: "status", op: "eq", of: RUN_FILTERS } },
+    sort: {
+        recent: [
+            ["startedAt", "desc"],
+            ["id", "desc"],
+        ],
+    },
+    page: { size: RUNS_PAGE },
+    row: { id: "id", title: "trigger", description: "when" },
+}
+
 /**
  * `platform.agent-runs`: the runs of the agent an installation runs, newest first, narrowed by the status filter, one cursor page at a
  * time. A row carries the `agent.run` id that `platform.resume-run` takes. An installation the workspace does not have lists nothing.
  */
-export const agentRunsRead: ReadDefinition = defineRead({
+const runsRead: ReadDefinition = defineRead({
     id: "platform.agent-runs",
     dataKind: "platform-agent-runs",
     shape: "list",
@@ -65,3 +78,9 @@ export const agentRunsRead: ReadDefinition = defineRead({
         return { rows: page.rows.map((listed) => runRowOf(listed.row, where)), cursor: page.next }
     },
 })
+
+/** The read, declared as a list that a host pages by its cursor. */
+export const agentRunsRead: ReadDefinition = {
+    ...runsRead,
+    listing: { kind: "list", shape: RUNS_SHAPE, defaultSort: "recent", source: agentRunsList },
+}
