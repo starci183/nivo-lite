@@ -5,12 +5,13 @@ import { CHATBOT_CHANNELS, INBOX_STATUSES } from "../../../rules/chatbot"
 import type { ThreadRow } from "../chatbot.types"
 import { THREADS_LIST } from "../ports"
 
-/** The inbox list: searched by name and last words, narrowed by status and channel, newest activity first. */
+/** The inbox list: searched by name and last words, narrowed by status, channel and the conversations that moved today, newest activity first. */
 export const THREADS_SHAPE: ListShape = {
     search: { fields: ["name", "lastText"] },
     filters: {
         status: { field: "status", op: "eq", of: INBOX_STATUSES },
         channel: { field: "channel", op: "eq", of: CHATBOT_CHANNELS },
+        moved: { field: "lastAt", op: "within", of: ["$today"] },
     },
     sort: { recent: [["lastAt", "desc"]] },
     page: { size: 30 },

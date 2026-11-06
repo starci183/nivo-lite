@@ -21,6 +21,11 @@
       "of": ["list", "queue"],
       "url": "pane",
       "default": "list"
+    },
+    "moved": {
+      "type": "enum",
+      "of": ["$today"],
+      "url": "moved"
     }
   },
   "views": [
@@ -310,6 +315,7 @@
         "props": {
           "searchParam": "q",
           "statusParam": "status",
+          "periodParam": "moved",
           "selectParam": "selected"
         },
         "bind": {
@@ -317,7 +323,8 @@
             "read": "chatbot.threads",
             "variables": {
               "q": "$q",
-              "status": "$status"
+              "status": "$status",
+              "moved": "$moved"
             }
           },
           "counts": {

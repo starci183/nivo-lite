@@ -111,6 +111,18 @@ describe("paramProblems", () => {
         ])
     })
 
+    it("refuses a name that is a time token without its dollar sign", () => {
+        const problems = paramProblems(
+            {
+                today: { type: "string", url: "a" },
+                thisWeek: { type: "string", url: "b" },
+                week: { type: "string", url: "c" },
+            },
+            READS,
+        )
+        expect(problems.map((problem) => problem.at)).toEqual(["params.today", "params.thisWeek"])
+    })
+
     it("refuses a name a $variable cannot spell, and the installation variable", () => {
         const problems = paramProblems(
             {
@@ -197,5 +209,32 @@ describe("paramHandleOf set", () => {
         const source = sourceOf({})
         paramHandleOf(source).set("nope", "x")
         expect(source.writes).toEqual([])
+    })
+})
+
+describe("paramHandleOf setMany", () => {
+    const params = {
+        status: { type: "string", url: "status" },
+        moved: { type: "string", url: "moved" },
+        cursor: { type: "string", url: "cursor" },
+    } as const
+
+    it("writes several params in one step and resets the cursor in it", () => {
+        const source = sourceOf(params)
+        paramHandleOf(source).setMany({ status: null, moved: "$today" })
+        expect(source.writes).toEqual([{ status: null, moved: "$today", cursor: null }])
+    })
+
+    it("leaves a name the spec does not declare out, and writes nothing when none is declared", () => {
+        const source = sourceOf(params)
+        paramHandleOf(source).setMany({ status: "needs", nope: "x" })
+        paramHandleOf(source).setMany({ nope: "x" })
+        expect(source.writes).toEqual([{ status: "needs", cursor: null }])
+    })
+
+    it("does not reset the cursor it is told to write", () => {
+        const source = sourceOf(params)
+        paramHandleOf(source).setMany({ cursor: "c2" })
+        expect(source.writes).toEqual([{ cursor: "c2" }])
     })
 })

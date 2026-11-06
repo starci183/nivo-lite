@@ -3,15 +3,9 @@ import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import { Avatar, Badge, Button, Cluster, ListBox, RelativeTime, Stack, Tabs, Text } from "@starci/grammar/common"
 import type { BadgeTone, ListBoxItem } from "@starci/grammar/common"
 import type { inboxBlock } from "../../blocks/chatbot/inbox.block"
-import {
-    countsView,
-    EMPTY_TAB_COUNTS,
-    selectedTab,
-    tabEntriesOf,
-    TAB_COUNTS_PLACEHOLDER,
-    tabParamValue,
-} from "../../rows/filter-tabs"
+import { countsView, EMPTY_TAB_COUNTS, tabEntriesOf, TAB_COUNTS_PLACEHOLDER } from "../../rows/filter-tabs"
 import type { TabCounts, TabSpec } from "../../rows/filter-tabs"
+import { tabOf, paramsOfTab } from "../../rows/chatbot/inbox-tabs"
 import { INBOX_TABS, threadRowsOf } from "../../rows/chatbot/thread-rows"
 import type { ThreadListRow, ThreadStatus } from "../../rows/chatbot/thread-rows"
 import { chosenRow, moreStateOf, recordsView, selectionOf } from "../../rows/rows"
@@ -80,9 +74,22 @@ const InboxTabs = (props: InboxListProps): ReactNode => {
             moreLabel={() => words({ key: "filtersOverflow" })}
             overflowLabel={words({ key: "filtersOverflow" })}
             inset="none"
-            selectedKey={selectedTab(props.params.value(props.props.statusParam), specs)}
-            items={tabEntriesOf(words({ key: "filter_all" }), specs, view)}
-            onSelect={(key) => props.params.set(props.props.statusParam, tabParamValue(key))}
+            selectedKey={tabOf(
+                props.params.value(props.props.statusParam),
+                props.params.value(props.props.periodParam),
+            )}
+            items={tabEntriesOf(words({ key: "filter_all" }), specs, view).map((entry) =>
+                view !== null && entry.id === "today" && !("today" in view.counts)
+                    ? { id: entry.id, label: entry.label }
+                    : entry,
+            )}
+            onSelect={(key) => {
+                const chosen = paramsOfTab(key)
+                props.params.setMany({
+                    [props.props.statusParam]: chosen.status,
+                    [props.props.periodParam]: chosen.period,
+                })
+            }}
         />
     )
     if ("isError" in counts) return tabs(null)

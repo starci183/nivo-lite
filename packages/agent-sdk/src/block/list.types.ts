@@ -1,5 +1,13 @@
 import type { PortDefinition } from "../port/port.types"
 
+/** A span of time as the server resolves a time token: ISO instants, `from` inclusive and `to` exclusive. */
+export interface TimeWindow {
+    /** The first instant inside the window. */
+    readonly from: string
+    /** The first instant after the window. */
+    readonly to: string
+}
+
 /** How a filter case compares a field. */
 export type FilterOp = "eq" | "in" | "lt" | "lte" | "gt" | "gte"
 
@@ -20,9 +28,13 @@ export type ListFilter =
     | {
           /** The row field the filter compares. */
           readonly field: string
-          /** `eq`: the field equals the chosen value; `in`: the field is among the chosen values. */
-          readonly op: "eq" | "in"
-          /** The values the filter takes. */
+          /**
+           * `eq`: the field equals the chosen value; `in`: the field is among the chosen values; `within`: the field, a timestamp,
+           * falls inside the window the chosen time token names (`$today`, `$thisWeek`, `$thisMonth`), which the server resolves
+           * from the clock of the run and hands the source as `ListQuery.windows`.
+           */
+          readonly op: "eq" | "in" | "within"
+          /** The values the filter takes; for `within`, the time tokens it accepts. */
           readonly of: ReadonlyArray<string>
       }
     | {
@@ -72,8 +84,13 @@ export interface ListShape {
 export interface ListQuery {
     /** The search text, trimmed; null for no search. */
     readonly q: string | null
-    /** The chosen value of each filter that is not `"all"`, by filter name. */
+    /** The chosen value of each filter that is not `"all"` and is not a `within` filter, by filter name. */
     readonly filters: Readonly<Record<string, string>>
+    /**
+     * The window of each `within` filter whose chosen value is a time token, by filter name; the field is the filter's. A query a
+     * list read builds has it only when a window was chosen.
+     */
+    readonly windows?: Readonly<Record<string, TimeWindow>>
     /** The chosen sort key. */
     readonly sort: string
     /** The opaque cursor of the page to load; null for the first. */

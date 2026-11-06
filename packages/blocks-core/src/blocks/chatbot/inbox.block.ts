@@ -4,12 +4,13 @@ import { z } from "zod"
 import { paramName } from "../param-name"
 import type { OptionalAction, RequiredRead } from "../schema-types"
 
-/** The params the inbox writes: the search text, the tab, and the conversation that is open. */
+/** The params the inbox writes: the search text, the status and the period the tabs choose, and the conversation that is open. */
 const props: z.ZodObject<{
     searchParam: z.ZodString
     statusParam: z.ZodString
+    periodParam: z.ZodString
     selectParam: z.ZodString
-}> = z.object({ searchParam: paramName, statusParam: paramName, selectParam: paramName })
+}> = z.object({ searchParam: paramName, statusParam: paramName, periodParam: paramName, selectParam: paramName })
 
 /**
  * The slots of the inbox: the conversations with their counts per tab, the open conversation with its lines, and what a person may
@@ -46,6 +47,6 @@ export const inboxBlock: BlockDefinition<typeof props, typeof slots> = defineBlo
     title: { key: "block_inbox" },
     props,
     slots,
-    params: ["searchParam", "statusParam", "selectParam"],
+    params: ["searchParam", "statusParam", "periodParam", "selectParam"],
     children: { max: 1, accepts: ["chatbot.approval-card"] },
 })

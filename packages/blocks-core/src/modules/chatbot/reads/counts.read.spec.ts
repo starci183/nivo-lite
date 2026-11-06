@@ -16,7 +16,7 @@ describe("the chatbot counts reads", () => {
     })
 
     it("take the search and the other filter of the list, never the sort or the cursor", () => {
-        expect(Object.keys(THREAD_COUNTS.variables.shape).toSorted()).toEqual(["channel", "q"])
-        expect(Object.keys(CHANNEL_COUNTS.variables.shape).toSorted()).toEqual(["q", "status"])
+        expect(Object.keys(THREAD_COUNTS.variables.shape).toSorted()).toEqual(["channel", "moved", "q"])
+        expect(Object.keys(CHANNEL_COUNTS.variables.shape).toSorted()).toEqual(["moved", "q", "status"])
     })
 })

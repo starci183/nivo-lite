@@ -9,6 +9,7 @@ describe("the chatbot.threads read", () => {
         expect(THREADS_SHAPE.filters).toEqual({
             status: { field: "status", op: "eq", of: INBOX_STATUSES },
             channel: { field: "channel", op: "eq", of: CHATBOT_CHANNELS },
+            moved: { field: "lastAt", op: "within", of: ["$today"] },
         })
         expect(THREADS_SHAPE.sort).toEqual({ recent: [["lastAt", "desc"]] })
         expect(THREADS_SHAPE.row).toEqual({ id: "id", title: "name", description: "lastText" })
@@ -24,6 +25,21 @@ describe("the chatbot.threads read", () => {
         expect(result).toEqual({ ok: true, data: { rows: THREAD_ROWS, cursor: null } })
         expect(world.queries).toEqual([
             { q: "Minh", filters: { status: "needs" }, sort: "recent", cursor: null, size: 30 },
+        ])
+    })
+
+    it("narrows to the conversations that moved today, the window resolved from the clock of the run", async () => {
+        const world = memoryWorld()
+        await THREADS.execute?.(memoryProvider(world), { moved: "$today" }, STAFF_CONTEXT)
+        expect(world.queries).toEqual([
+            {
+                q: null,
+                filters: {},
+                windows: { moved: { from: "2026-11-05T00:00:00.000Z", to: "2026-11-06T00:00:00.000Z" } },
+                sort: "recent",
+                cursor: null,
+                size: 30,
+            },
         ])
     })
 

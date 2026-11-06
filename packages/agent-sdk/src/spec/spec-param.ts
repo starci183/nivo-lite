@@ -1,5 +1,6 @@
 import { z } from "zod"
 import type { ParamHandle, ReadDefinition } from "../block/block.types"
+import { isTimeToken } from "../block/time-token"
 import type { PropsSchema } from "../schema/schema.types"
 import type { SpecParam, SpecProblem } from "./spec.types"
 
@@ -49,7 +50,7 @@ export const allowedValuesOf = (
 
 /** Whether a param is unsound: a bad name, `of` that does not fit the type, an `of` that names nothing, or a default outside it. */
 const isUnsound = (name: string, param: SpecParam, reads: ReadonlyArray<ReadDefinition> | undefined): boolean => {
-    if (!PARAM_NAME.test(name) || name === INSTALLATION_NAME) return true
+    if (!PARAM_NAME.test(name) || name === INSTALLATION_NAME || isTimeToken("$" + name)) return true
     if ((param.type === "enum") !== (param.of !== undefined)) return true
     const allowed = allowedValuesOf(param, reads)
     if (allowed === undefined) return true
@@ -84,6 +85,17 @@ export interface ParamSource {
     readonly setQueryValues: (entries: Readonly<Record<string, string | null>>) => void
 }
 
+/** Writes the URL keys of the given params in one step, with the `cursor` param dropped; a name the spec does not declare is left out. */
+const setParams = (source: ParamSource, entries: Readonly<Record<string, string | null>>): void => {
+    const keys = Object.entries(entries).flatMap(([name, value]) => {
+        const param = source.params[name]
+        return param === undefined ? [] : [[param.url, value] as const]
+    })
+    if (keys.length === 0) return
+    const cursor = Object.keys(entries).includes(CURSOR_PARAM) ? undefined : source.params[CURSOR_PARAM]
+    source.setQueryValues({ ...Object.fromEntries(keys), ...(cursor === undefined ? {} : { [cursor.url]: null }) })
+}
+
 /**
  * The handle blocks reach the spec params by: a value is the URL value of the param's key when the param allows it, else its
  * default, else null (an empty URL value counts as absent). Writing a param writes its URL key and, in the same step, drops the
@@ -99,10 +111,6 @@ export const paramHandleOf = (source: ParamSource): ParamHandle => ({
             raw !== null && raw !== "" && (allowed === null || allowed === undefined || allowed.includes(raw))
         return usable ? raw : (param.default ?? null)
     },
-    set: (name, value) => {
-        const param = source.params[name]
-        if (param === undefined) return
-        const cursor = name === CURSOR_PARAM ? undefined : source.params[CURSOR_PARAM]
-        source.setQueryValues({ [param.url]: value, ...(cursor === undefined ? {} : { [cursor.url]: null }) })
-    },
+    set: (name, value) => setParams(source, { [name]: value }),
+    setMany: (entries) => setParams(source, entries),
 })

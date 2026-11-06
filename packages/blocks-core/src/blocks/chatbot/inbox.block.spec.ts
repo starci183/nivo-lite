@@ -3,7 +3,7 @@ import { chatbotBlocks } from "./chatbot-blocks"
 import { inboxBlock } from "./inbox.block"
 import { rulesBlock } from "./rules.block"
 
-const PARAMS = { searchParam: "q", statusParam: "status", selectParam: "selected" }
+const PARAMS = { searchParam: "q", statusParam: "status", periodParam: "moved", selectParam: "selected" }
 
 describe("inboxBlock", () => {
     it("is the Chatbot's own block, named for the module", () => {
@@ -13,10 +13,10 @@ describe("inboxBlock", () => {
 
     it("takes one child, the approval card, and names the params it writes", () => {
         expect(inboxBlock.children).toEqual({ max: 1, accepts: ["chatbot.approval-card"] })
-        expect(inboxBlock.params).toEqual(["searchParam", "statusParam", "selectParam"])
+        expect(inboxBlock.params).toEqual(["searchParam", "statusParam", "periodParam", "selectParam"])
     })
 
-    it("takes the three param names and nothing about paths, words or proposals", () => {
+    it("takes the four param names and nothing about paths, words or proposals", () => {
         expect(inboxBlock.props.safeParse(PARAMS).success).toBe(true)
         expect(inboxBlock.props.safeParse({ ...PARAMS, selectParam: "" }).success).toBe(false)
         expect(inboxBlock.props.safeParse({ ...PARAMS, statusParam: undefined }).success).toBe(false)
@@ -24,6 +24,7 @@ describe("inboxBlock", () => {
         expect(Object.keys(inboxBlock.props.parse({ ...PARAMS, textPath: "text" }))).toEqual([
             "searchParam",
             "statusParam",
+            "periodParam",
             "selectParam",
         ])
     })

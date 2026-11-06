@@ -86,6 +86,15 @@ describe("sampleParamHandle", () => {
         ])
         expect(sampleParamHandle().value("q")).toBeNull()
     })
+
+    it("records the writes of several params in the order given", () => {
+        const handle = sampleParamHandle()
+        handle.setMany({ status: null, moved: "$today" })
+        expect(handle.writes()).toEqual([
+            ["status", null],
+            ["moved", "$today"],
+        ])
+    })
 })
 
 describe("sampleWorkbenchHost", () => {

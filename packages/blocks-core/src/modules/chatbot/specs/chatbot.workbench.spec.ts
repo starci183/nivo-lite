@@ -3,8 +3,8 @@ import { CHATBOT_WORKBENCH_SPEC } from "./chatbot.workbench"
 describe("CHATBOT_WORKBENCH_SPEC", () => {
     it("keeps search, the status filter and the chosen thread in the URL, each under its own key", () => {
         const params = CHATBOT_WORKBENCH_SPEC.params ?? {}
-        expect(Object.keys(params)).toEqual(["q", "status", "selected", "pane"])
-        expect(Object.values(params).map((param) => param.url)).toEqual(["q", "status", "thread", "pane"])
+        expect(Object.keys(params)).toEqual(["q", "status", "selected", "pane", "moved"])
+        expect(Object.values(params).map((param) => param.url)).toEqual(["q", "status", "thread", "pane", "moved"])
     })
 
     it("has no channel tab row: the channel is a chip on each row", () => {

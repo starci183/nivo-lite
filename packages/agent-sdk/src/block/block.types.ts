@@ -53,7 +53,10 @@ export interface BlockConfig<P extends PropsSchema, S extends BlockSlots> {
     readonly slots: S
     /** Whether the block holds child blocks, and how many of which ids. */
     readonly children: BlockChildren
-    /** The names of the props whose string value names a spec param (`searchParam`, `selectParam`); a spec is refused when one names no param. */
+    /**
+     * The names of the props whose string value names a spec param (`searchParam`, `selectParam`; a dotted name reaches into an
+     * object prop, `sort.param`); a spec is refused when one names no param.
+     */
     readonly params?: ReadonlyArray<string>
 }
 
@@ -315,6 +318,12 @@ export interface ParamHandle {
     readonly value: (name: string) => string | null
     /** Writes the URL key of the param (replace, no scroll); null removes it. It also resets the `cursor` param when the spec has one. */
     readonly set: (name: string, value: string | null) => void
+    /**
+     * Writes several params in one step, by param name (null removes one), and resets the `cursor` param like `set`. A change that
+     * moves more than one param (a tab that chooses a status and clears a period) uses this: two `set` calls in a row would each start
+     * from the query as it was.
+     */
+    readonly setMany: (entries: Readonly<Record<string, string | null>>) => void
 }
 
 /** The ports a block may use; the renderer's provider implements them. */
