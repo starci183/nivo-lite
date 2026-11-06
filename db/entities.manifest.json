@@ -98,6 +98,8 @@
       "indexes": [
         "records_chat_conversation_channel_external_key",
         "records_chat_conversation_channel_recent",
+        "records_chat_conversation_connection_recent",
+        "records_chat_conversation_customer",
         "records_chat_conversation_key",
         "records_chat_conversation_last_text_trgm_idx",
         "records_chat_conversation_name_trgm_idx",
@@ -123,9 +125,12 @@
         "records_chat_message_text_chk"
       ],
       "indexes": [
+        "records_chat_message_channel_ref",
         "records_chat_message_channel_ref_key",
         "records_chat_message_conversation_sent",
-        "records_chat_message_reply_once_key"
+        "records_chat_message_reply_of",
+        "records_chat_message_reply_once_key",
+        "records_chat_message_role_recent"
       ]
     },
     {

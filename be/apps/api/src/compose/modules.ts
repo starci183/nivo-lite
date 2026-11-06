@@ -1,5 +1,5 @@
 import type { DynamicModule } from "@nestjs/common"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { BookingChatLookupService } from "@modules/domain/bookings"
 import { LeadFlowStoreService } from "@modules/domain/lead-flows"
 import { LeadRecordsService } from "@modules/domain/leads"
@@ -29,7 +29,7 @@ export const modulesModules = (): Array<DynamicModule> => [
         ports: {
             recordSources: [
                 WorkItemsService,
-                AgentConversationsService,
+                ChatConversationsService,
                 BookingChatLookupService,
                 LeadFlowStoreService,
                 LeadRecordsService,

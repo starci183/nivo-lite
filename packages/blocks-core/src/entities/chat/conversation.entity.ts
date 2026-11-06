@@ -72,6 +72,8 @@ export const conversationEntity: EntityDefinition<ConversationFields> = defineEn
         { name: "channel_recent", on: ["channel", { desc: "lastAt" }, { desc: "id" }] },
         { name: "status_recent", on: ["status", { desc: "lastAt" }, { desc: "id" }] },
         { name: "status_channel_recent", on: ["status", "channel", { desc: "lastAt" }, { desc: "id" }] },
+        { name: "customer", on: ["channel", "connectionId", "externalId", "id"] },
+        { name: "connection_recent", on: ["channel", "connectionId", { desc: "lastAt" }, { desc: "id" }] },
     ],
     constraints: [
         {
@@ -82,4 +84,5 @@ export const conversationEntity: EntityDefinition<ConversationFields> = defineEn
             refusal: "conversation-exists",
         },
     ],
+    matchKeys: [{ name: "channel_external", on: ["channel", "connectionId", "externalId"] }],
 })

@@ -1,4 +1,5 @@
 import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
+import { parseEntityEngineConfig } from "@modules/domain/entity-engine"
 import { parseMcpGatewayConfig } from "@modules/domain/mcp-gateway"
 import { parseAiConfig } from "@modules/integrations/ai"
 import { parseMcpConfig } from "@modules/integrations/mcp"
@@ -21,6 +22,8 @@ export interface McpAppOptions {
     readonly queue: ReturnType<typeof parseQueueConfig>
     /** The connection key that opens the credential each remote connector has sealed in its row (CHANNEL_TOKEN_KEY). */
     readonly connectionSecrets: ReturnType<typeof parseConnectionSecretsConfig>
+    /** The key that signs entity-engine cursors. */
+    readonly entityEngine: ReturnType<typeof parseEntityEngineConfig>
     /** The gateway settings (the per-call time limit). */
     readonly mcpGateway: ReturnType<typeof parseMcpGatewayConfig>
     /** The AI endpoint that embeds a Brain question; every key is optional, and without them the search reads words. */
@@ -36,6 +39,7 @@ export const readMcpEnv = (env: EnvSource): McpAppOptions => ({
     database: parsePrimaryDatabaseConfig(env),
     queue: parseQueueConfig(env),
     connectionSecrets: parseConnectionSecretsConfig(env),
+    entityEngine: parseEntityEngineConfig(env),
     mcpGateway: parseMcpGatewayConfig(env, parseMcpConfig(env)),
     ai: parseAiConfig(env),
     sepay: parseSepayConfig(env),

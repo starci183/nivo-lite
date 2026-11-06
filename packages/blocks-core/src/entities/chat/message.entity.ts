@@ -40,7 +40,12 @@ export const messageEntity: EntityDefinition<MessageFields> = defineEntity({
     dataKind: "message",
     fields: messageFields,
     relations: { conversation: { kind: "toOne", target: "chat.conversation", required: true, onDelete: "cascade" } },
-    indexes: [{ name: "conversation_sent", on: ["conversationId", { desc: "sentAt" }, { desc: "id" }] }],
+    indexes: [
+        { name: "conversation_sent", on: ["conversationId", { desc: "sentAt" }, { desc: "id" }] },
+        { name: "channel_ref", on: ["channelRef", "id"] },
+        { name: "reply_of", on: ["conversationId", "inReplyTo", { desc: "sentAt" }, { desc: "id" }] },
+        { name: "role_recent", on: ["role", { desc: "sentAt" }, { desc: "id" }] },
+    ],
     constraints: [
         {
             kind: "unique",

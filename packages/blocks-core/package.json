@@ -12,6 +12,10 @@
       "types": "./dist/entities/index.d.ts",
       "default": "./dist/entities/index.js"
     },
+    "./rules/chatbot": {
+      "types": "./dist/rules/chatbot/index.d.ts",
+      "default": "./dist/rules/chatbot/index.js"
+    },
     "./modules": {
       "types": "./dist/modules/index.d.ts",
       "default": "./dist/modules/index.js"
