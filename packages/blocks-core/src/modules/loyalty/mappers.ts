@@ -104,6 +104,7 @@ export const rewardViewOf = (reward: RewardRow): RewardView => ({
 export const programViewOf = (program: ProgramRow): ProgramView => ({
     name: program.name,
     enabled: program.enabled,
+    state: program.enabled ? "active" : "paused",
     slug: program.slug,
     publicPath: program.slug === "" ? "" : `/l/${program.slug}`,
     perThousandVnd: program.config.earn.perThousandVnd,

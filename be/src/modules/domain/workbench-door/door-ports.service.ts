@@ -37,6 +37,8 @@ export interface DoorRun {
     readonly memberId: string | null
     /** The language of the viewer. */
     readonly locale: Locale
+    /** The fields the read declares (`fields`): the only record fields a list of the run carries; empty for an action. */
+    readonly fields: ReadonlyArray<string>
 }
 
 /** A row as a screen reads it: the declared fields, then the system fields `id`, `version`, `createdAt` and `updatedAt`. */
@@ -134,9 +136,13 @@ export class DoorPortsService {
         }
     }
 
-    /** A list source over one entity: a row carries every declared field of the record, so a block draws a column the shape's row does not name. */
+    /**
+     * A list source over one entity: a row carries the fields the READ declares (beyond the shape's row fields), so a block draws a column
+     * the shape's row does not name, and a field the read did not declare never leaves the door, whatever the entity holds.
+     */
     private listSource(run: DoorRun, entity: string): ListSource<unknown> {
-        const select = Object.keys(this.engine.catalog.get(entity)?.fields ?? {})
+        const held = Object.keys(this.engine.catalog.get(entity)?.fields ?? {})
+        const select = run.fields.filter((field) => held.includes(field))
         return {
             page: async (shape, query): Promise<ListPage<unknown>> => {
                 const found = await run.runIn((tx) =>

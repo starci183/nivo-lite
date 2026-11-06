@@ -124,16 +124,16 @@ describe("loyalty.tiers", () => {
 })
 
 describe("loyalty.members and loyalty.member-counts", () => {
-    it("lists the members newest purchase first with the tier by name and the activity, those who never bought on top as the engine sorts a missing time", async () => {
+    it("lists the members newest purchase first, those who never bought last, with the tier by name and the activity", async () => {
         const page = await run(membersRead, {})
         expect(page).toMatchObject({
             cursor: null,
             rows: [
-                { id: "m-4", tier: "", contact: "ha@example.com", activity: "new" },
                 { id: "m-1", tier: "V\u00e0ng", contact: "84912345678", activity: "active" },
                 { id: "m-3", tier: "\u0110\u1ed3ng", activity: "active" },
                 { id: "m-2", tier: "B\u1ea1c", activity: "at_risk" },
                 { id: "m-5", tier: "\u0110\u1ed3ng", activity: "at_risk" },
+                { id: "m-4", tier: "", contact: "ha@example.com", activity: "new" },
             ],
         })
     })
@@ -419,7 +419,7 @@ describe("loyalty.pending-waiting", () => {
                 {
                     id: "d-1",
                     title: "G\u1eedi khuy\u1ebfn m\u00e3i cho th\u00e0nh vi\u00ean h\u1ea1ng B\u1ea1c l\u00e2u ch\u01b0a quay l\u1ea1i",
-                    description: "1 member",
+                    description: "1 h\u1ed9i vi\u00ean",
                     href: "?tab=pending",
                 },
                 {
