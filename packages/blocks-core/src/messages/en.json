@@ -47,7 +47,6 @@
   "nodeOrderCompleteTitle": "Is the order complete?",
   "nodeOrderConfirmTitle": "Confirm the order",
   "nodeOrderNeedsApprovalTitle": "Does the owner decide?",
-  "nodeOrderRecordTitle": "Record the order",
   "nodePaymentClaimAckTitle": "Record and acknowledge a payment claim",
   "nodePaymentRequestTitle": "Send the payment request",
   "answerGap": "I do not have information on this yet.",
@@ -76,7 +75,6 @@
   "nodeAccountingLedgerAppendTitle": "Write to the ledger",
   "nodeAccountingLedgerReadyTitle": "Is there a ledger to write to",
   "accountingLedgerReconnectTitle": "Connect Google again (with Sheets access) to keep the ledger",
-  "nodeLeadEnsureTitle": "Make sure the customer is known",
   "nodePaymentEntryTitle": "A credit arrived or a customer says they paid",
   "blockBoard": "Board",
   "boardMoveFailed": "The card could not be moved",
@@ -144,5 +142,7 @@
   "conversationContact": "Customer",
   "detailClose": "Close",
   "conversationContactClose": "Close",
-  "conversationProposalMore": "More"
+  "conversationProposalMore": "More",
+  "nodeSalesLeadFromMessageTitle": "Find the customer from the message",
+  "nodeSalesOrderFromChatTitle": "Record the order from the chat"
 }

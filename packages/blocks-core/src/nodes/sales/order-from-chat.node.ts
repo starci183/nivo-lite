@@ -2,16 +2,16 @@ import { defineNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import { z } from "zod"
-import { mergedItems, recordedItemsOf, resolvedItems, totalOf } from "./order.policy"
-import type { CatalogueRow } from "./order.policy"
-import { addressSchema, orderItemsSchema } from "./order.schema"
+import { mergedItems, recordedItemsOf, resolvedItems, totalOf } from "../order/order.policy"
+import type { CatalogueRow } from "../order/order.policy"
+import { addressSchema, orderItemsSchema } from "../order/order.schema"
 import type { NodeSchema } from "../node-schema.types"
-import type { OrderItem } from "./order.schema"
+import type { OrderItem } from "../order/order.schema"
 import { MAX_ID } from "../../bounds"
 import { bilingualOf, sampleOf } from "../../messages/catalog"
 
 /** What the intent of the conversation gave: who orders, the items, the address and a note. */
-export interface OrderRecordInput {
+export interface OrderFromChatInput {
     /** The customer. */
     readonly leadId: string
     /** The lines asked for. */
@@ -23,7 +23,7 @@ export interface OrderRecordInput {
 }
 
 /** The draft that was recorded. */
-export interface OrderRecordOutput {
+export interface OrderFromChatOutput {
     /** The id of the recorded order. */
     readonly orderId: string
     /** The lines, equal names merged and the catalogue's names and prices put in. */
@@ -45,24 +45,24 @@ const EXAMPLE_GRANT: RightsGrant = {
 
 const params: z.ZodObject<Record<string, never>> = z.object({})
 
-const input: NodeSchema<OrderRecordInput> = z.object({
+const input: NodeSchema<OrderFromChatInput> = z.object({
     leadId: z.string().max(MAX_ID).min(1),
     items: orderItemsSchema,
     address: addressSchema,
     note: z.string().max(500).nullable(),
 })
 
-const output: NodeSchema<OrderRecordOutput> = z.object({
+const output: NodeSchema<OrderFromChatOutput> = z.object({
     orderId: z.string().max(MAX_ID),
     items: orderItemsSchema,
     amountVnd: z.number().nullable(),
 })
 
-/** `order.record`: records the order the conversation asked for (items, quantity, price from the catalogue, address); nothing is confirmed. */
-export const orderRecordNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
-    id: "order.record",
+/** `sales.order-from-chat`: records the order the conversation asked for (items, quantity, price from the catalogue, address); nothing is confirmed. */
+export const salesOrderFromChatNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
+    id: "sales.order-from-chat",
     role: "output",
-    title: bilingualOf("nodeOrderRecordTitle"),
+    title: bilingualOf("nodeSalesOrderFromChatTitle"),
     params,
     input,
     output,

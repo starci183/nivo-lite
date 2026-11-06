@@ -1,4 +1,4 @@
-import { contactParts, normaliseContact } from "./contact"
+import { contactParts, normaliseContact, phoneInText } from "./contact"
 
 describe("normaliseContact", () => {
     it("gives nothing for a blank or missing contact", () => {
@@ -41,5 +41,21 @@ describe("contactParts", () => {
 
     it("holds nothing for nothing", () => {
         expect(contactParts("")).toEqual({ phone: null, email: null })
+    })
+})
+
+describe("phoneInText", () => {
+    it("finds a phone number inside a sentence and drops its separators", () => {
+        expect(phoneInText("my number is 0912 000 701, call me")).toBe("0912000701")
+        expect(phoneInText("call +84 912.000.701")).toBe("+84912000701")
+    })
+
+    it("gives nothing for a message with no phone number", () => {
+        expect(phoneInText("two tea sets please")).toBeNull()
+        expect(phoneInText("")).toBeNull()
+    })
+
+    it("does not take a short run of digits for a phone", () => {
+        expect(phoneInText("order 12345")).toBeNull()
     })
 })

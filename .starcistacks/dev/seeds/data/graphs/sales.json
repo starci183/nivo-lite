@@ -21,7 +21,7 @@
     {
       "key": "record",
       "kind": "output",
-      "step": "order.record",
+      "step": "sales.order-from-chat",
       "input": {
         "leadId": { "$ref": "trigger.leadId" },
         "items": { "$ref": "trigger.context.items" },

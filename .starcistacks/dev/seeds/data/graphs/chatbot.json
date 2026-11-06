@@ -208,7 +208,7 @@
     {
       "key": "ensure-lead-claim",
       "kind": "output",
-      "step": "lead.ensure",
+      "step": "sales.lead-from-message",
       "input": {
         "conversationId": {
           "$ref": "trigger.conversationId"
@@ -298,7 +298,7 @@
     {
       "key": "ensure-lead-order",
       "kind": "output",
-      "step": "lead.ensure",
+      "step": "sales.lead-from-message",
       "input": {
         "conversationId": {
           "$ref": "trigger.conversationId"

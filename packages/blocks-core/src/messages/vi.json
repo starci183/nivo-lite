@@ -47,7 +47,6 @@
   "nodeOrderCompleteTitle": "Đơn đã đủ thông tin?",
   "nodeOrderConfirmTitle": "Xác nhận đơn hàng",
   "nodeOrderNeedsApprovalTitle": "Cần chủ duyệt?",
-  "nodeOrderRecordTitle": "Ghi đơn hàng",
   "nodePaymentClaimAckTitle": "Ghi nhận và phản hồi khách báo đã chuyển khoản",
   "nodePaymentRequestTitle": "Gửi yêu cầu thanh toán",
   "answerGap": "Em chưa có thông tin về nội dung này ạ.",
@@ -76,7 +75,6 @@
   "nodeAccountingLedgerAppendTitle": "Ghi sổ kế toán",
   "nodeAccountingLedgerReadyTitle": "Có sổ kế toán để ghi không",
   "accountingLedgerReconnectTitle": "Kết nối lại Google (có quyền Sheets) để ghi sổ kế toán",
-  "nodeLeadEnsureTitle": "Xác định khách hàng",
   "nodePaymentEntryTitle": "Tiền về hay khách báo đã chuyển",
   "blockBoard": "Bảng cột",
   "boardMoveFailed": "Không chuyển được thẻ",
@@ -144,5 +142,7 @@
   "conversationContact": "Khách hàng",
   "detailClose": "Đóng",
   "conversationContactClose": "Đóng",
-  "conversationProposalMore": "Thêm"
+  "conversationProposalMore": "Thêm",
+  "nodeSalesLeadFromMessageTitle": "Xác định khách từ tin nhắn",
+  "nodeSalesOrderFromChatTitle": "Ghi đơn hàng từ cuộc trò chuyện"
 }

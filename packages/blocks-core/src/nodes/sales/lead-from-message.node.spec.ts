@@ -1,16 +1,16 @@
 import { runNode } from "@nivo-lite/agent-sdk/node"
 import { EXAMPLE_TURN, fakeNodePorts } from "@nivo-lite/agent-sdk/testing"
 import { coreEffects } from "../../vocabulary/effects"
-import { leadEnsureNode } from "./ensure.node"
+import { salesLeadFromMessageNode } from "./lead-from-message.node"
 
-describe("lead.ensure", () => {
+describe("sales.lead-from-message", () => {
     it("asks once per conversation across runs: the dedupe key is the conversation", async () => {
         const fake = fakeNodePorts()
-        const [example] = leadEnsureNode.examples
+        const [example] = salesLeadFromMessageNode.examples
 
         await runNode(
             {
-                node: leadEnsureNode,
+                node: salesLeadFromMessageNode,
                 params: example.params,
                 input: example.input,
                 turn: EXAMPLE_TURN,

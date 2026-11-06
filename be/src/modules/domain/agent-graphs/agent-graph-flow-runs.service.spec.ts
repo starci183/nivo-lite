@@ -38,7 +38,7 @@ const FLOW: GraphSpec = {
     trigger: { kind: "tag", sources: ["agent"] },
     grant: { rights: [], tools: [], effects: ["order.record"] },
     nodes: [
-        { key: "keep", kind: "output", step: "order.record", next: "end" },
+        { key: "keep", kind: "output", step: "sales.order-from-chat", next: "end" },
         { key: "end", kind: "output", step: "stop" },
     ],
 }
