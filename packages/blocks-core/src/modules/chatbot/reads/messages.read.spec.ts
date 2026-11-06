@@ -38,7 +38,7 @@ describe("the chatbot.messages read", () => {
                 rows: [
                     { text: "Ha took over", side: "notice", who: "" },
                     { text: "line 2", side: "outgoing", who: "AI", mark: "AI" },
-                    { text: "line 1", side: "incoming", who: "L\u00ea B\u1ea3o Tr\u00e2n" },
+                    { text: "line 1", side: "incoming", who: "Bao Tran Le" },
                 ],
             },
         })
