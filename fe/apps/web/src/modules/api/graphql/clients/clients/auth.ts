@@ -1,10 +1,12 @@
 import { ApolloClient, ApolloLink, InMemoryCache } from "@apollo/client"
+import { isPrototypeMode } from "@/modules/config"
 import type { GraphQLHeaders } from "../../types"
 import {
     createAttachAccessTokenLink,
     createAttachLocaleLink,
     createAttachWorkspaceIdLink,
     createErrorLink,
+    createFixtureLink,
     createHttpLink,
     createRefreshOnUnauthenticatedLink,
     createRetryLink,
@@ -55,7 +57,7 @@ export const createAuthApolloClient = ({
             createAttachAccessTokenLink(),
             createAttachWorkspaceIdLink(),
             createAttachLocaleLink(),
-            createHttpLink({ uri, headers, signal }),
+            isPrototypeMode() ? createFixtureLink() : createHttpLink({ uri, headers, signal }),
         ]),
         cache: new InMemoryCache(),
         ...(cache ? { defaultOptions } : {}),

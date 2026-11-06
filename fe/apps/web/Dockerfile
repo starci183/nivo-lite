@@ -31,6 +31,8 @@ ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=
 ARG NEXT_PUBLIC_GOOGLE_PICKER_API_KEY=
 # NEXT_PUBLIC_LOCAL_API_URL is a dev-tunnel value only (the console opened on localhost keeps its local api); a deployed image leaves it empty.
 ARG NEXT_PUBLIC_LOCAL_API_URL=
+# 1 builds a prototype that answers from fixtures; a deployed image keeps 0 (the fixtures are never in a deployed bundle).
+ARG NEXT_PUBLIC_NIVO_PROTOTYPE=0
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_DEVELOPER_API_URL=$NEXT_PUBLIC_DEVELOPER_API_URL \
     NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
