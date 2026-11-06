@@ -2,6 +2,7 @@
 
 import { useLocale } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { slotOfReads } from "@/hooks/slot"
 import { MODULE_KEYS, MODULE_REGISTRY, pickCopy, pickCopyList } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
@@ -16,6 +17,7 @@ import {
     isSetupPending,
     instancesOf,
 } from "@/modules/installations"
+import { workspaceHref } from "@/modules/routes"
 import type { DataSlot } from "@/modules/types"
 import { useInstallations } from "./useInstallations"
 import { useInstanceChannels } from "./useInstanceChannels"
@@ -84,6 +86,7 @@ export const useCatalogEntries = (): {
     readonly reload: () => void
 } => {
     const locale = useLocale() === "en" ? "en" : "vi"
+    const workspaceId = useWorkspaceId()
     const { read: installationsRead, installations, reload: reloadInstallations } = useInstallations()
     const catalog = useModuleCatalog()
     const channelsOf = useInstanceChannels()
@@ -100,7 +103,10 @@ export const useCatalogEntries = (): {
                 categoryKey: def.category,
                 installed: installation !== undefined,
                 installedCount: instances.length,
-                addHref: installation !== undefined && def.multiInstance ? agentListHref(key) : null,
+                addHref:
+                    installation !== undefined && def.multiInstance
+                        ? workspaceHref(workspaceId, agentListHref(key))
+                        : null,
                 isEarly: def.status === "early",
                 searchText: foldText(
                     [
@@ -120,7 +126,8 @@ export const useCatalogEntries = (): {
                 description: copy === undefined ? "" : pickCopy(copy.description, locale),
                 points: copy === undefined ? [] : pickCopyList(copy.points, locale),
                 mascot: def.mascot,
-                openHref: installation === undefined ? null : agentHref(key, installation.id),
+                openHref:
+                    installation === undefined ? null : workspaceHref(workspaceId, agentHref(key, installation.id)),
             },
         ]
     })
@@ -135,7 +142,10 @@ export const useCatalogEntries = (): {
             roleName: copy === undefined ? "" : pickCopy(copy.name, locale),
             lifecycle,
             tone: agentLifecycleTone(lifecycle),
-            href: agentHref(installation.moduleKey, installation.id, isSetupPending(lifecycle) ? "setup" : "workbench"),
+            href: workspaceHref(
+                workspaceId,
+                agentHref(installation.moduleKey, installation.id, isSetupPending(lifecycle) ? "setup" : "workbench"),
+            ),
             channels: channelsOf(installation.agentId),
             setupProgress: installation.setupProgress,
         }

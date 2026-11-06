@@ -5,7 +5,11 @@ import { AgentTemplatesPage, agentTemplatesMetadataOf } from "@/features/pages/A
 /** The document title of this page. */
 export const generateMetadata: () => Promise<Metadata> = agentTemplatesMetadataOf("marketplace")
 
+type PageProps = { readonly params: Promise<{ workspaceId: string }> }
+
 /** The marketplace slot. */
-const Page = (): ReactElement => <AgentTemplatesPage view="marketplace" />
+const Page = async (props: PageProps): Promise<ReactElement> => (
+    <AgentTemplatesPage view="marketplace" workspaceId={(await props.params).workspaceId} />
+)
 
 export default Page

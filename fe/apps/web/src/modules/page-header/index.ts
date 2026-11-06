@@ -1,8 +1,10 @@
 import type { BreadcrumbItem, PageHeaderContent } from "@starci/grammar/common"
-import { AGENTS_ROUTE, APP_ROUTES } from "@/modules/routes"
+import { AGENTS_ROUTE, APP_ROUTES, workspaceHref } from "@/modules/routes"
 
 /** The words of the trail of a page under the agents page. */
 interface AgentsSubpageLabels {
+    /** The workspace the trail links within. */
+    readonly workspaceId: string
     /** The dashboard. */
     readonly home: string
     /** The agents page. */
@@ -13,13 +15,15 @@ interface AgentsSubpageLabels {
 
 /** The trail of a page under the agents page: the dashboard, the agents and the page itself. */
 export const agentsSubpageCrumbsOf = (labels: AgentsSubpageLabels): ReadonlyArray<BreadcrumbItem> => [
-    { id: "home", label: labels.home, href: APP_ROUTES.dashboard },
-    { id: "agents", label: labels.agents, href: AGENTS_ROUTE },
+    { id: "home", label: labels.home, href: workspaceHref(labels.workspaceId, APP_ROUTES.dashboard) },
+    { id: "agents", label: labels.agents, href: workspaceHref(labels.workspaceId, AGENTS_ROUTE) },
     { id: "current", label: labels.current },
 ]
 
 /** What the header of the two personal pages (profile, account) says. */
 interface AccountHeadingInput {
+    /** The workspace the tabs link within. */
+    readonly workspaceId: string
     readonly title: string
     readonly description: string
     /** The accessible name of the tab strip. */
@@ -39,8 +43,8 @@ export const accountHeadingOf = (input: AccountHeadingInput): PageHeaderContent 
         selectedKey: input.selected,
         labelVisibility: "always",
         items: [
-            { id: "profile", label: input.profileLabel, href: APP_ROUTES.profile },
-            { id: "account", label: input.accountLabel, href: APP_ROUTES.account },
+            { id: "profile", label: input.profileLabel, href: workspaceHref(input.workspaceId, APP_ROUTES.profile) },
+            { id: "account", label: input.accountLabel, href: workspaceHref(input.workspaceId, APP_ROUTES.account) },
         ],
     },
 })
@@ -50,6 +54,8 @@ type AgentPageTab = "running" | "marketplace" | "templates"
 
 /** The words of the three tabs. */
 interface AgentPageTabsInput {
+    /** The workspace the tabs link within. */
+    readonly workspaceId: string
     readonly label: string
     readonly selected: AgentPageTab
     readonly runningLabel: string
@@ -63,8 +69,16 @@ export const agentPageTabsOf = (input: AgentPageTabsInput): NonNullable<PageHead
     labelVisibility: "always",
     selectedKey: input.selected,
     items: [
-        { id: "running", label: input.runningLabel, href: AGENTS_ROUTE },
-        { id: "marketplace", label: input.marketplaceLabel, href: `${AGENTS_ROUTE}/marketplace` },
-        { id: "templates", label: input.templatesLabel, href: `${AGENTS_ROUTE}/templates` },
+        { id: "running", label: input.runningLabel, href: workspaceHref(input.workspaceId, AGENTS_ROUTE) },
+        {
+            id: "marketplace",
+            label: input.marketplaceLabel,
+            href: workspaceHref(input.workspaceId, `${AGENTS_ROUTE}/marketplace`),
+        },
+        {
+            id: "templates",
+            label: input.templatesLabel,
+            href: workspaceHref(input.workspaceId, `${AGENTS_ROUTE}/templates`),
+        },
     ],
 })

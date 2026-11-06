@@ -26,6 +26,7 @@ export {
     workspacesPath,
 } from "./auth-routes"
 export { ADMIN_ROUTES, adminListPath, adminWorkspacePath } from "./admin-routes"
+export { workspaceHref } from "./workspace-href"
 export { creditsPath, workspacePaymentPath, workspaceRenewalPaymentPath } from "./workspace-routes"
 export {
     AGENTS_ROUTE,

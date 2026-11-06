@@ -189,7 +189,7 @@ namespaces:
     - key: "pipeline"
       reason: 'Read as the string "pipeline" in components/blocks/HiringFigures/index.tsx, features/pages/SalesWorkbenchPage/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "source"
-      reason: 'Read as the string "source" in app/[locale]/(console)/knowledge/[id]/error.tsx, components/blocks/CsvImportWizard/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+      reason: 'Read as the string "source" in app/[locale]/workspaces/[workspaceId]/(console)/knowledge/[id]/error.tsx, components/blocks/CsvImportWizard/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   promoAds:
     - suffix: "Title"
       reason: "Key family built at run time as `${kind}Title` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."

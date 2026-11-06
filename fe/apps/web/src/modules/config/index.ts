@@ -70,6 +70,9 @@ export const landingUrl = (): string => {
  */
 export const isPrototypeMode = (): boolean => process.env.NEXT_PUBLIC_NIVO_PROTOTYPE === "1"
 
+/** The workspace a prototype build opens without a session: `/workspaces/fixture-ws/...` answers from fixtures, on the same address shape as a live workspace. */
+export const PROTOTYPE_WORKSPACE_ID = "fixture-ws"
+
 /** The public origin of the site (providers call back to it); `undefined` when it is not set. */
 export const webSiteOrigin = (): string | undefined => process.env.NEXT_PUBLIC_SITE_URL
 

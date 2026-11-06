@@ -1,6 +1,6 @@
 "use client"
 
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useActiveWorkspace, useWorkspaceId } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryAgentDashboardSwr } from "@/hooks/swr"
@@ -20,6 +20,7 @@ export const useAgentDashboard = (
     readonly reload: () => void
 } => {
     const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const report = useGraphQLWithToast()
     const read = useQueryAgentDashboardSwr(isActive ? activeWorkspaceId : undefined, { module, installationId })
     const reload = () => {
@@ -27,7 +28,7 @@ export const useAgentDashboard = (
     }
     return {
         read,
-        slot: mapSlot(slotOfSwr(read), (wire) => toAgentDashboard(wire, module, installationId)),
+        slot: mapSlot(slotOfSwr(read), (wire) => toAgentDashboard(wire, module, installationId, workspaceId)),
         reload,
     }
 }

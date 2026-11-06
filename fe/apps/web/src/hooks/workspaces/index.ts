@@ -14,6 +14,7 @@ export {
 export type { WorkspaceBusinessType, WorkspaceState } from "./workspaces.shared"
 export { useCreateWorkspace } from "./useCreateWorkspace"
 export { useOpenWorkspace } from "./useOpenWorkspace"
+export { useWorkspaceId } from "./useWorkspaceId"
 export { useActiveWorkspace } from "./useActiveWorkspace"
 export { useSyncActiveWorkspace } from "./useSyncActiveWorkspace"
 export { useWorkspaceCards } from "./useWorkspaceCards"

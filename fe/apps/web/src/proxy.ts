@@ -1,6 +1,6 @@
 import { createProxy } from "@starci/next-i18n/proxy"
 import { NextRequest, NextResponse } from "next/server"
-import { isPrototypeMode, sessionCookieOptions } from "./modules/config"
+import { PROTOTYPE_WORKSPACE_ID, isPrototypeMode, sessionCookieOptions } from "./modules/config"
 import { checkSession, onPublicOrigin } from "./modules/auth-session"
 import { i18n } from "./modules/i18n"
 
@@ -28,9 +28,17 @@ const PUBLIC_PATHS = [
     "/j",
     "/l",
     "/health",
-    // A prototype build answers the agent pages from fixtures, with no back end to sign in to (the url with or without its locale).
-    ...(isPrototypeMode() ? ["/agents", ...i18n.locales.map((locale) => `/${locale}/agents`)] : []),
+    // A prototype build answers the fixture workspace from fixtures, with no back end to sign in to (the url with or without its locale).
+    ...(isPrototypeMode()
+        ? [
+              `/workspaces/${PROTOTYPE_WORKSPACE_ID}`,
+              ...i18n.locales.map((locale) => `/${locale}/workspaces/${PROTOTYPE_WORKSPACE_ID}`),
+          ]
+        : []),
 ] // /b/<slug> and /api/b/<slug>: the public booking page (rate limited, honeypot, gate)
+
+// /workspaces/<company>/jobs/<job>: the public job page, which names the company by its public slug (the proxy cannot load the routes barrel, so it spells the shape again).
+const PUBLIC_JOB_PAGE = /^(?:\/[a-z]{2})?\/workspaces\/[^/]+\/jobs\/[^/]+$/u
 
 // Every path is served from /<locale>/... while the URL stays unprefixed (localePrefix "never"; the NIVO_LOCALE cookie decides);
 // the shared proxy leaves handlers, liveness and framework files (its default roots) alone.
@@ -38,7 +46,7 @@ const negotiateLocale = createProxy(i18n)
 
 /** Segment-aware prefix match, so "/auth" never swallows "/authority". */
 const isPublicPath = (pathname: string): boolean =>
-    PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+    PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`)) || PUBLIC_JOB_PAGE.test(pathname)
 
 /** Only same-site paths may come back through `?next=`. */
 const safeNext = (value: string | null): string | null =>

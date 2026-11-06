@@ -13,7 +13,7 @@ import { VideoWorkbenchPage as WorkbenchVideo } from "@/features/pages/VideoWork
 export { agentWorkbenchMetadata as generateMetadata } from "@/features/pages/AgentWorkbenchPage"
 
 type PageProps = {
-    readonly params: Promise<{ module: string; installation: string }>
+    readonly params: Promise<{ workspaceId: string; module: string; installation: string }>
     readonly searchParams: Promise<{
         tab?: string | string[]
         focus?: string | string[]
@@ -37,9 +37,10 @@ const first = (value: string | string[] | undefined): string | null =>
 
 /** The workbench slot of one agent instance; the tab and focus of the query are the deep link contract of the agent dashboard frame. */
 const Page = async (props: PageProps): Promise<ReactElement> => {
-    const [{ module, installation }, query] = await Promise.all([props.params, props.searchParams])
+    const [{ workspaceId, module, installation }, query] = await Promise.all([props.params, props.searchParams])
     return (
         <AgentWorkbenchPage
+            workspaceId={workspaceId}
             module={module}
             installationId={installation}
             tab={first(query.tab)}

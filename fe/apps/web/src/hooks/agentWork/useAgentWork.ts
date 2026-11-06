@@ -5,7 +5,8 @@ import { useMemo, useState } from "react"
 import { useAgentInstallation, useAgentRights } from "@/hooks/agentSettings"
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryAgentWorkSwr, useQueryWorkspaceAgentWorkSwr } from "@/hooks/swr"
-import { workItemHref } from "@/modules/routes"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { workItemHref, workspaceHref } from "@/modules/routes"
 import type { AgentWorkView, DataSlot } from "@/modules/types"
 import { WORK_POLL_BUSY_MS, WORK_POLL_IDLE_MS, toWorkView } from "@/modules/agentWork"
 
@@ -28,6 +29,7 @@ export const useAgentWork = (module: string, installationId: string): AgentWorkV
     const tAgent = useTranslations("modulesCore")
     const format = useFormatter()
     const { canEdit } = useAgentRights()
+    const workspaceId = useWorkspaceId()
     const { installation } = useAgentInstallation(installationId, module)
     const [now, setNow] = useState(() => Date.now())
     const read = useQueryAgentWorkSwr(
@@ -55,9 +57,9 @@ export const useAgentWork = (module: string, installationId: string): AgentWorkV
                       lifecycleLabel,
                       isWorkspaceOff,
                       canEdit,
-                      hrefOfWorkItem: (workItemId) => workItemHref(module, workItemId),
+                      hrefOfWorkItem: (workItemId) => workspaceHref(workspaceId, workItemHref(module, workItemId)),
                   }),
-        [data, t, format, now, lifecycle, lifecycleLabel, isWorkspaceOff, canEdit, module],
+        [data, t, format, now, lifecycle, lifecycleLabel, isWorkspaceOff, canEdit, module, workspaceId],
     )
     const slot = slotOfSwr<AgentWorkView>({ data: view, error: read.error, isLoading: read.isLoading })
     return { slot, reload: () => void mutate() }
