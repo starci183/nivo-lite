@@ -7,10 +7,11 @@ import type {
     ChatSendResult,
     LeadFacts,
     MessageRecord,
+    SavedSettings,
     ThreadRow,
     UpdateOutcome,
 } from "../chatbot.types"
-import { CONVERSATIONS, DOOR, LEADS, MEMBERS, MESSAGES, OUTBOX, THREADS_LIST } from "../ports"
+import { CONVERSATIONS, DOOR, LEADS, MEMBERS, MESSAGES, OUTBOX, SETTINGS, THREADS_LIST } from "../ports"
 import type {
     ChatDoor,
     ChatOutbox,
@@ -19,6 +20,7 @@ import type {
     LeadDirectory,
     MemberDirectory,
     MessageStore,
+    SettingsStore,
     ThreadsList,
 } from "../ports"
 import { THREAD_ROWS } from "./chatbot.fixtures"
@@ -54,6 +56,8 @@ export interface MemoryWorld {
     readonly queries: Array<ListQuery>
     /** What the door answers. */
     door: ChatSendResult
+    /** The saved rules of the Chatbot; null before the first save. */
+    settings: SavedSettings | null
 }
 
 /** A world holding the fixture conversations, a staff member and a manager, one customer and no lines. */
@@ -81,6 +85,7 @@ export const memoryWorld = (): MemoryWorld => ({
     sends: [],
     queries: [],
     door: { ok: true },
+    settings: null,
 })
 
 /** The next version token of a record. */
@@ -176,6 +181,15 @@ const outbox = (world: MemoryWorld): ChatOutbox => ({
     },
 })
 
+/** The saved rules over a world. */
+export const settingsStore = (world: MemoryWorld): SettingsStore => ({
+    get: () => Promise.resolve(world.settings),
+    save: (settings) => {
+        world.settings = settings
+        return Promise.resolve(settings)
+    },
+})
+
 /** The door over a world: records what it was asked and answers what the world says. */
 export const chatDoor = (world: MemoryWorld): ChatDoor => ({
     call: (_tool, input) => {
@@ -194,6 +208,7 @@ export const memoryProvider = (world: MemoryWorld): PortProvider => ({
         if (port.id === LEADS.id) return leadDirectory(world)
         if (port.id === OUTBOX.id) return outbox(world)
         if (port.id === DOOR.id) return chatDoor(world)
+        if (port.id === SETTINGS.id) return settingsStore(world)
         return unprovided(port)
     },
 })

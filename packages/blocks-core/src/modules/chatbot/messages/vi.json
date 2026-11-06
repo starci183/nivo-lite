@@ -65,5 +65,7 @@
   "unanswered_section": "Chưa trả lời được",
   "action_approve_and_send": "Duyệt và gửi",
   "action_reject_proposal": "Từ chối bản AI soạn",
-  "proposal_closed": "Bản soạn này đã được xử lý hoặc không còn."
+  "proposal_closed": "Bản soạn này đã được xử lý hoặc không còn.",
+  "tab_rules": "Quy tắc",
+  "action_save_settings": "Lưu quy tắc"
 }

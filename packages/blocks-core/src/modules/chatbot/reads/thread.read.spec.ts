@@ -10,6 +10,7 @@ describe("the chatbot.thread read", () => {
                 id: "c1",
                 name: "Nguy\u1ec5n Minh Anh",
                 channelName: "Zalo",
+                leadId: "l1",
                 status: "needs",
                 handledBy: "",
                 stage: "qualified",

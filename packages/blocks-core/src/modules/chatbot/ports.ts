@@ -9,6 +9,7 @@ import type {
     MessagePatch,
     MessageRecord,
     NewMessage,
+    SavedSettings,
     ProposalPatch,
     ThreadPatch,
     ThreadRow,
@@ -103,3 +104,14 @@ export const OUTBOX: PortDefinition<ChatOutbox> = definePort<ChatOutbox>("chatbo
 
 /** The port of the door. */
 export const DOOR: PortDefinition<ChatDoor> = definePort<ChatDoor>("chatbot.door")
+
+/** The saved rules of the Chatbot (`chatbot.settings` of the workspace). */
+export interface SettingsStore {
+    /** The saved rules; null before the first save. */
+    readonly get: () => Promise<SavedSettings | null>
+    /** Saves the rules; the rules as saved. */
+    readonly save: (settings: SavedSettings) => Promise<SavedSettings>
+}
+
+/** The port of the saved rules. */
+export const SETTINGS: PortDefinition<SettingsStore> = definePort<SettingsStore>("chatbot.settings-store")

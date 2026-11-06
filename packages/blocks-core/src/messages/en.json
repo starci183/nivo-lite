@@ -128,6 +128,5 @@
   "runTimelineIdle": "Choose a run to see its steps",
   "detailClose": "Close",
   "effectChatMessagePropose": "Draft a reply for approval",
-  "nodeChatbotDraftReplyTitle": "Draft a reply for approval",
-  "nodeChatbotSendApprovedTitle": "Send the approved reply"
+  "nodeChatbotDraftReplyTitle": "Draft a reply for approval"
 }

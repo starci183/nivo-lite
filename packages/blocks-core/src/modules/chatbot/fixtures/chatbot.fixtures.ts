@@ -103,6 +103,7 @@ export const WAITING_VIEW: ThreadView = {
     id: "c1",
     name: "Nguy\u1ec5n Minh Anh",
     channelName: "Zalo",
+    leadId: "l1",
     status: "needs",
     handledBy: "",
     stage: "qualified",
@@ -117,6 +118,7 @@ export const HANDLED_VIEW: ThreadView = {
     id: "c2",
     name: "L\u00ea B\u1ea3o Tr\u00e2n",
     channelName: "Telegram",
+    leadId: "l2",
     status: "handled",
     handledBy: "L\u00ea Thu H\u00e0",
     stage: "proposal",
@@ -226,6 +228,9 @@ export const CHATBOT_FIXTURES: ModuleFixtures = {
             },
             empty: null,
         },
+        "chatbot.settings": {
+            ready: { openclawTimeoutSec: 25, holdingMessage: "Please wait a moment.", updatedBy: "Thu Ha" },
+        },
         "chatbot.thread": { ready: HANDLED_VIEW, waiting: WAITING_VIEW },
         "chatbot.messages": {
             ready: { rows: READY_LINES, cursor: null },
@@ -239,6 +244,7 @@ export const CHATBOT_FIXTURES: ModuleFixtures = {
         "chatbot.release": { ok: true, data: { handledBy: null } },
         "chatbot.approve-and-send": { ok: true, data: { messageId: "m8" } },
         "chatbot.reject-proposal": { ok: true },
+        "chatbot.save-settings": { ok: true },
         "chatbot.decide": { ok: true, data: { handledBy: "L\u00ea Thu H\u00e0" } },
     },
 }

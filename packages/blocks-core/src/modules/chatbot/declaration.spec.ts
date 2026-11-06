@@ -27,6 +27,7 @@ describe("the Chatbot module declaration", () => {
             "chatbot.figures",
             "chatbot.decisions",
             "chatbot.proposals",
+            "chatbot.settings",
         ])
         expect(chatbotModule.actions.map((action) => action.id)).toEqual([
             "chatbot.reply",
@@ -35,6 +36,7 @@ describe("the Chatbot module declaration", () => {
             "chatbot.decide",
             "chatbot.approve-and-send",
             "chatbot.reject-proposal",
+            "chatbot.save-settings",
         ])
     })
 
@@ -42,10 +44,12 @@ describe("the Chatbot module declaration", () => {
         expect(chatbotModule.actions.some((action) => action.id.endsWith("close"))).toBe(false)
     })
 
-    it("gates every read on viewing and every action on replying, both declared", () => {
-        expect(CHATBOT_PERMISSIONS).toEqual(["chatbot.view", "chatbot.reply"])
+    it("gates every read on viewing, every action on replying and the rules on managing, all declared", () => {
+        expect(CHATBOT_PERMISSIONS).toEqual(["chatbot.view", "chatbot.reply", "chatbot.manage"])
         expect(new Set(chatbotModule.reads.map((read) => read.permission))).toEqual(new Set(["chatbot.view"]))
-        expect(new Set(chatbotModule.actions.map((action) => action.permission))).toEqual(new Set(["chatbot.reply"]))
+        expect(new Set(chatbotModule.actions.map((action) => action.permission))).toEqual(
+            new Set(["chatbot.reply", "chatbot.manage"]),
+        )
     })
 
     it("runs every read and action in the package, so the door and a graph node run the same code", () => {
@@ -67,10 +71,10 @@ describe("the Chatbot seed spec", () => {
         expect(seedSpecProblems(chatbotModule, coreBlocks)).toEqual([])
     })
 
-    it("holds the customers, the unanswered and the inbox views and names the module of the declaration", () => {
+    it("holds the customers, the unanswered, the inbox and the rules views and names the module of the declaration", () => {
         const [spec] = chatbotModule.specs
         expect(spec?.module).toBe(CHATBOT_MODULE_KEY)
-        expect(spec?.views.map((view) => view.id)).toEqual(["customers", "unanswered", "inbox"])
+        expect(spec?.views.map((view) => view.id)).toEqual(["customers", "unanswered", "inbox", "rules"])
     })
 
     it("places the core blocks and the Chatbot's own: the inbox with the approval card inside it", () => {
@@ -94,7 +98,7 @@ describe("the Chatbot seed spec", () => {
     it("words the action labels and refusals with catalogue keys too", () => {
         const known = new Set(chatbotCopyKeys("en"))
         const labels = chatbotModule.actions.flatMap((action) => keysIn(action.label))
-        expect(labels).toHaveLength(6)
+        expect(labels).toHaveLength(7)
         expect(labels.filter((key) => !known.has(key))).toEqual([])
     })
 

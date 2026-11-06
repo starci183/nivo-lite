@@ -1,3 +1,4 @@
+import type { ChatbotSettings } from "../../rules/chatbot/settings"
 import type { ChatbotChannel, ConversationState, InboxStatus, MessageRole } from "../../rules/chatbot"
 
 /**
@@ -105,6 +106,8 @@ export interface ThreadView {
     readonly name: string
     /** The proper name of the channel. */
     readonly channelName: string
+    /** The customer record behind the conversation; empty while the customer was not captured. */
+    readonly leadId: string
     /** Where the conversation stands in the inbox. */
     readonly status: InboxStatus
     /** The person who holds the conversation; empty while the AI answers. */
@@ -155,4 +158,10 @@ export interface ProposalView {
     readonly text: string
     /** A note under the reply. */
     readonly note: string
+}
+
+/** The rules of the Chatbot as the workspace saved them, with who saved them last. */
+export interface SavedSettings extends ChatbotSettings {
+    /** The name of the member who saved them last. */
+    readonly updatedBy: string
 }

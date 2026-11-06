@@ -1,5 +1,5 @@
 import { REPLY_MAX } from "../../rules/chatbot/reply"
-import { DRAFT_PURPOSE, approvedKeyOf, draftAsk, draftKeyOf, draftTextOf } from "./draft.policy"
+import { DRAFT_PURPOSE, draftAsk, draftKeyOf, draftTextOf } from "./draft.policy"
 
 describe("draftAsk", () => {
     it("asks for a reply for the owner to approve, with the question and the grounded answer as data", () => {
@@ -38,10 +38,9 @@ describe("draftTextOf", () => {
     })
 })
 
-describe("the keys", () => {
-    it("make a draft once per turn and conversation, and an approved send once per stored line", () => {
+describe("draftKeyOf", () => {
+    it("makes a draft once per turn and conversation", () => {
         expect(draftKeyOf("t1", "c1")).toBe("draft:t1:c1")
         expect(draftKeyOf("t1", "c1")).not.toBe(draftKeyOf("t2", "c1"))
-        expect(approvedKeyOf("m1")).toBe("approved:m1")
     })
 })

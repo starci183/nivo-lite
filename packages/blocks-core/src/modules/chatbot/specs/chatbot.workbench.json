@@ -371,6 +371,25 @@
           }
         ]
       }
+    },
+    {
+      "id": "rules",
+      "label": {
+        "key": "tab_rules"
+      },
+      "root": {
+        "id": "rules-root",
+        "block": "chatbot.rules",
+        "props": {},
+        "bind": {
+          "settings": {
+            "read": "chatbot.settings"
+          },
+          "save": {
+            "action": "chatbot.save-settings"
+          }
+        }
+      }
     }
   ],
   "aside": {

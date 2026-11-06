@@ -65,5 +65,7 @@
   "unanswered_section": "Unanswered",
   "action_approve_and_send": "Approve and send",
   "action_reject_proposal": "Reject the AI draft",
-  "proposal_closed": "This draft was already handled or is gone."
+  "proposal_closed": "This draft was already handled or is gone.",
+  "tab_rules": "Rules",
+  "action_save_settings": "Save rules"
 }

@@ -31,6 +31,3 @@ export const draftTextOf = (written: string, grounded: string | null): string | 
 
 /** The key that makes a draft once per turn and conversation: a retry of the step stores nothing twice. */
 export const draftKeyOf = (turnId: string, conversationId: string): string => `draft:${turnId}:${conversationId}`
-
-/** The key that makes sending an approved line once, whatever path approved it: the id of the stored line. */
-export const approvedKeyOf = (messageId: string): string => `approved:${messageId}`

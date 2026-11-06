@@ -4,8 +4,6 @@ import { coreEffects } from "../../vocabulary/effects"
 import { chatbotDraftReplyNode } from "./draft-reply.node"
 import { draftKeyOf } from "./draft.policy"
 import { chatMessageProposeEffect } from "./propose.effect"
-import { chatbotSendApprovedNode } from "./send-approved.node"
-import { approvedKeyOf } from "./draft.policy"
 
 const effects = new Map(coreEffects.map((effect) => [effect.id, effect]))
 
@@ -52,35 +50,5 @@ describe("chat-message.propose", () => {
         expect(chatMessageProposeEffect.payload.safeParse({ conversationId: "c1", text: "", asked: "Q" }).success).toBe(
             false,
         )
-    })
-})
-
-describe("chatbot.send-approved", () => {
-    const [example] = chatbotSendApprovedNode.examples
-
-    it("holds its example", async () => {
-        await expect(nodeExampleMismatches(chatbotSendApprovedNode, example, coreEffects)).resolves.toEqual([])
-    })
-
-    it("sends under the key of the stored line, so two paths of approval send once", async () => {
-        const fake = fakeNodePorts()
-
-        await runNode(
-            {
-                node: chatbotSendApprovedNode,
-                params: {},
-                input: example.input,
-                turn: EXAMPLE_TURN,
-                grant: example.grant ?? { rights: [] },
-                effects,
-                tools: new Map(),
-                key: "k",
-            },
-            fake.ports,
-        )
-
-        expect(fake.executed.map((effect) => [effect.id, effect.dedupeKey])).toEqual([
-            ["channel.send", approvedKeyOf("m1")],
-        ])
     })
 })
