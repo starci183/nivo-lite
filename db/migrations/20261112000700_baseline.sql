@@ -14283,54 +14283,6 @@ GRANT SELECT,DELETE ON TABLE public.zalo_wizard_drafts TO app_be;
 
 SET search_path = public, extensions;
 
--- pgmq queues and what the back end may do with them.
-SELECT pgmq.create('agents');
-SELECT pgmq.create('automation');
-SELECT pgmq.create('bank_credit_received');
-SELECT pgmq.create('booking_status');
-SELECT pgmq.create('connection_commands');
-SELECT pgmq.create('connection_health');
-SELECT pgmq.create('content_tick');
-SELECT pgmq.create('data_sync');
-SELECT pgmq.create('decisions');
-SELECT pgmq.create('hiring_tick');
-SELECT pgmq.create('inventory_order');
-SELECT pgmq.create('inventory_replenish');
-SELECT pgmq.create('invite_command');
-SELECT pgmq.create('knowledge');
-SELECT pgmq.create('lead_gen');
-SELECT pgmq.create('meta_inbound');
-SELECT pgmq.create('n8n');
-SELECT pgmq.create('payment_order_requested');
-SELECT pgmq.create('public_api');
-SELECT pgmq.create('render_request');
-SELECT pgmq.create('shifts_alerts');
-SELECT pgmq.create('video_render');
-SELECT pgmq.create('zalo_authorization');
-SELECT pgmq.create('zalo_refresh');
-SELECT pgmq.create('zalo_wizard');
-grant DELETE, INSERT, SELECT, UPDATE on table pgmq.a_connection_commands to app_be;
-grant DELETE, INSERT, SELECT, UPDATE on table pgmq.a_lead_gen to app_be;
-grant DELETE, INSERT, SELECT, UPDATE on table pgmq.a_meta_inbound to app_be;
-grant DELETE, INSERT, SELECT, UPDATE on table pgmq.q_bank_credit_received to app_be;
-grant DELETE, INSERT, SELECT, UPDATE on table pgmq.q_connection_commands to app_be;
-grant DELETE, INSERT, SELECT, UPDATE on table pgmq.q_lead_gen to app_be;
-grant DELETE, INSERT, SELECT, UPDATE on table pgmq.q_meta_inbound to app_be;
-grant DELETE, INSERT, SELECT, UPDATE on table pgmq.q_payment_order_requested to app_be;
-grant INSERT, SELECT on table pgmq.a_bank_credit_received to app_be;
-grant INSERT, SELECT on table pgmq.a_payment_order_requested to app_be;
-
--- Realtime.
-
--- Scheduled jobs: the queue ticks are declared by 20261026000300_job-ticks.sql (a cron command is one pgmq.send; the pruning and reaping jobs of the old
--- baseline run as queue jobs of the back end, not as cron SQL).
-
--- Storage buckets (private, size and type bounded) and their object policies.
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('hiring', 'hiring', false, 5242880, ARRAY['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png']) ON CONFLICT (id) DO NOTHING;
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('knowledge-uploads', 'knowledge-uploads', false, 12582912, ARRAY['text/plain', 'text/markdown', 'text/x-markdown', 'text/csv', 'application/csv', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip', 'application/x-zip-compressed', 'application/octet-stream']) ON CONFLICT (id) DO NOTHING;
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('media', 'media', false, 52428800, ARRAY['video/mp4', 'audio/mpeg', 'image/png', 'image/webp', 'image/jpeg', 'video/webm', 'video/quicktime']) ON CONFLICT (id) DO NOTHING;
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('videos', 'videos', false, 52428800, ARRAY['video/mp4', 'image/jpeg']) ON CONFLICT (id) DO NOTHING;
-
 -- Reference data the product ships with.
 --
 -- PostgreSQL database dump
@@ -15010,46 +14962,6 @@ REVOKE EXECUTE ON FUNCTION public.video_touch() FROM PUBLIC, anon, authenticated
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon, authenticated;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
-
--- ---- from 20261026000500_webhook-receipt-queues.sql ----
--- Deferred webhook receipt queues. pgmq and job_enqueue share the receipt transaction.
--- Workers use the existing backend-only public.job_* functions; schema/function access stays closed.
-
-SELECT pgmq.create('meta-delivery');
-REVOKE ALL ON TABLE pgmq."q_meta-delivery", pgmq."a_meta-delivery" FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."q_meta-delivery" TO app_be;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."a_meta-delivery" TO app_be;
-REVOKE ALL ON SEQUENCE pgmq."q_meta-delivery_msg_id_seq" FROM PUBLIC, anon, authenticated, app_be;
-
-SELECT pgmq.create('telegram-delivery');
-REVOKE ALL ON TABLE pgmq."q_telegram-delivery", pgmq."a_telegram-delivery" FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."q_telegram-delivery" TO app_be;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."a_telegram-delivery" TO app_be;
-REVOKE ALL ON SEQUENCE pgmq."q_telegram-delivery_msg_id_seq" FROM PUBLIC, anon, authenticated, app_be;
-
-SELECT pgmq.create('zalo-delivery');
-REVOKE ALL ON TABLE pgmq."q_zalo-delivery", pgmq."a_zalo-delivery" FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."q_zalo-delivery" TO app_be;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."a_zalo-delivery" TO app_be;
-REVOKE ALL ON SEQUENCE pgmq."q_zalo-delivery_msg_id_seq" FROM PUBLIC, anon, authenticated, app_be;
-
-SELECT pgmq.create('sepay-delivery');
-REVOKE ALL ON TABLE pgmq."q_sepay-delivery", pgmq."a_sepay-delivery" FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."q_sepay-delivery" TO app_be;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."a_sepay-delivery" TO app_be;
-REVOKE ALL ON SEQUENCE pgmq."q_sepay-delivery_msg_id_seq" FROM PUBLIC, anon, authenticated, app_be;
-
-SELECT pgmq.create('vietcombank-delivery');
-REVOKE ALL ON TABLE pgmq."q_vietcombank-delivery", pgmq."a_vietcombank-delivery" FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."q_vietcombank-delivery" TO app_be;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."a_vietcombank-delivery" TO app_be;
-REVOKE ALL ON SEQUENCE pgmq."q_vietcombank-delivery_msg_id_seq" FROM PUBLIC, anon, authenticated, app_be;
-
-SELECT pgmq.create('bank-feed-delivery');
-REVOKE ALL ON TABLE pgmq."q_bank-feed-delivery", pgmq."a_bank-feed-delivery" FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."q_bank-feed-delivery" TO app_be;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."a_bank-feed-delivery" TO app_be;
-REVOKE ALL ON SEQUENCE pgmq."q_bank-feed-delivery_msg_id_seq" FROM PUBLIC, anon, authenticated, app_be;
 CREATE TABLE IF NOT EXISTS public.bank_feed_inbox (
     id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
     provider text NOT NULL,
@@ -15116,67 +15028,6 @@ BEGIN
     END IF;
 END;
 $policies$;
-
--- ---- from 20261026000600_webhook-receipt-backfill.sql ----
--- Restore jobs for receipts committed before deferred consumers were composed.
--- The outbox dedupe keys make this safe to repeat alongside live intake.
--- Legacy Telegram/Zalo rows without rawBody need operator recovery; see webhook-receipts.md.
--- Successful/completed receipts and existing outbox jobs are preserved.
-
-SELECT public.job_enqueue(
-    NULL::uuid, 'meta-delivery', 'meta-delivery',
-    jsonb_build_object('deliveryId', delivery_id), 'meta-delivery:' || delivery_id
-)
-FROM public.meta_inbox
-WHERE processed_at IS NULL
-ORDER BY received_at, id;
-
-SELECT public.job_enqueue(
-    NULL::uuid, 'telegram-delivery', 'telegram-delivery',
-    jsonb_build_object('deliveryId', delivery_id), 'telegram-delivery:' || delivery_id
-)
-FROM public.telegram_inbox
-WHERE processed_at IS NULL
-    AND jsonb_typeof(payload -> 'rawBody') = 'string'
-    AND jsonb_typeof(payload -> 'connection') = 'string'
-    AND length(payload ->> 'connection') > 0
-ORDER BY received_at, id;
-
-SELECT public.job_enqueue(
-    NULL::uuid, 'zalo-delivery', 'zalo-delivery',
-    jsonb_build_object('deliveryId', delivery_id), 'zalo-delivery:' || delivery_id
-)
-FROM public.zalo_inbox
-WHERE processed_at IS NULL
-    AND jsonb_typeof(payload -> 'rawBody') = 'string'
-    AND jsonb_typeof(payload -> 'connection') = 'string'
-    AND length(payload ->> 'connection') > 0
-ORDER BY received_at, id;
-
-SELECT public.job_enqueue(
-    NULL::uuid, 'sepay-delivery', 'sepay-delivery',
-    jsonb_build_object('deliveryId', sepay_id::text), 'sepay-delivery:' || sepay_id::text
-)
-FROM public.sepay_transactions
-WHERE processed_at IS NULL
-ORDER BY received_at, id;
-
-SELECT public.job_enqueue(
-    NULL::uuid, 'bank-feed-delivery', 'bank-feed-delivery',
-    jsonb_build_object('provider', provider, 'deliveryId', delivery_id),
-    'bank-feed-delivery:' || provider || ':' || delivery_id
-)
-FROM public.bank_feed_inbox
-WHERE processed_at IS NULL
-ORDER BY received_at, id;
-
--- ---- from 20261026000700_video-captions-vtt.sql ----
--- Add the renderer's WebVTT sidecar without changing other videos bucket restrictions.
-UPDATE storage.buckets
-SET allowed_mime_types = array_append(allowed_mime_types, 'text/vtt')
-WHERE id = 'videos'
-  AND allowed_mime_types IS NOT NULL
-  AND NOT ('text/vtt' = ANY (allowed_mime_types));
 
 -- ---- from 20261101000100_hub-rooms.sql ----
 -- Hub rooms and agent result cards (N17, card frame of N3/N6/N8/N11/N15).
@@ -15533,13 +15384,6 @@ INSERT INTO public.authority_actions (action, module_key, sort_order, default_mo
     ('gateway_call', 'chatbot', 40, 'ask', NULL, '{}', false, NULL, '{"en": "Connector call needing approval", "vi": "Lệnh kết nối cần duyệt"}')
 ON CONFLICT DO NOTHING;
 
--- ---- from 20261101000500_accounting-desk.sql ----
--- AI Ke toan (HAKUEN demo, PLAN N14 / N15 / N16 / N23): the morning run of the accounting agent. One queue and one tick at 06:30
--- Vietnam time (23:30 UTC): the agent reads the day's e-invoices and bank credits through the MCP gateway, checks them, matches
--- folio payments, and posts the daily summary card and the due-date reminders into the Ke toan room. No table: the sources stay
--- behind the gateway and the tax profile is Second Brain knowledge.
-SELECT pgmq.create('accounting_desk');
-
 -- ---- from 20261101000700_workspace-branding.sql ----
 -- Workspace branding read by the console header and the Hub: a display name (falls back to workspaces.name) and a logo
 -- address (app-relative path such as /brand/<file> or an https URL). Written by `cli seed-workspace profile` and owners.
@@ -15637,16 +15481,6 @@ CREATE POLICY content_weekly_reports_app_be_all ON public.content_weekly_reports
 
 REVOKE ALL ON TABLE public.content_weekly_reports FROM anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.content_weekly_reports TO app_be;
-
--- The AI Marketing tick (be/src/features/jobs/run-marketing-tick): every quarter hour it publishes the Zalo OA articles whose
--- moment has come and posts the weekly report cards that are due.
-SELECT pgmq.create('marketing_tick');
-
-DELETE FROM public.job_outbox WHERE queue = 'vietcombank-delivery';
-DELETE FROM public.job_slots WHERE queue = 'vietcombank-delivery';
-DELETE FROM public.jobs WHERE kind = 'vietcombank-delivery';
-
-SELECT pgmq.drop_queue('vietcombank-delivery');
 
 -- ---- from 20261101000907_workspace-footprint.sql ----
 -- The footprint of one workspace: how many rows each table that cascades from public.workspaces (ON DELETE CASCADE on its
@@ -15859,17 +15693,6 @@ end $$;
 ALTER TABLE public.decisions
     ADD COLUMN decided_by_member_id uuid REFERENCES public.workspace_members(id) ON DELETE SET NULL;
 
-UPDATE public.decisions d
-SET decided_by_member_id = m.id
-FROM (
-    SELECT workspace_id, display_name, (array_agg(id))[1] AS id
-    FROM public.workspace_members
-    GROUP BY workspace_id, display_name
-    HAVING count(*) = 1
-) m
-WHERE d.decider_kind IN ('owner', 'staff') AND d.decided_by_member_id IS NULL
-  AND m.workspace_id = d.workspace_id AND m.display_name = d.decided_by;
-
 CREATE INDEX decisions_decided_by_member_idx ON public.decisions USING btree (decided_by_member_id) WHERE (decided_by_member_id IS NOT NULL);
 
 -- ---- from 20261102000200_authority-rule-bands.sql ----
@@ -16031,12 +15854,6 @@ $$;
 
 CREATE TRIGGER agents_default_ownership BEFORE INSERT OR UPDATE ON public.agents
     FOR EACH ROW EXECUTE FUNCTION public.agents_default_ownership();
-
--- Existing agents belong to their workspace owner.
-UPDATE public.agents a
-SET owner_member_id = public.workspace_owner_member(a.workspace_id),
-    fallback_member_id = public.workspace_owner_member(a.workspace_id)
-WHERE a.owner_member_id IS NULL OR a.fallback_member_id IS NULL;
 
 -- Required from now on. NOT VALID keeps a legacy agent of an ownerless workspace readable until a person is named for it.
 ALTER TABLE public.agents
@@ -16235,13 +16052,6 @@ ALTER TABLE public.public_api ADD COLUMN need_supplied boolean;
 
 COMMENT ON COLUMN public.public_api.need_supplied IS
     'Nonempty need explicitly supplied by the API caller. NULL means historical admission; default-text need is omitted.';
-
--- ---- from 20261104235900_queue-cutover.sql ----
--- Expand before the BullMQ contract migration. Only job queues are drained; the event bus stays on pgmq.
--- Keep the empty queues and redirect late legacy sends, including cron commands already executing at cutover.
--- All adoption, fencing and deletion below commits atomically. A bad envelope or conflicting identity aborts it.
-SET LOCAL lock_timeout = '15s';
-LOCK TABLE public.job_outbox, public.job_slots, public.jobs IN ACCESS EXCLUSIVE MODE;
 ALTER TABLE public.job_outbox ADD COLUMN IF NOT EXISTS run_lease_until timestamptz;
 
 -- Old producers switch first. The following contract migration installs this same outbox-only entry point.
@@ -16291,9 +16101,6 @@ ALTER TABLE public.job_outbox ADD COLUMN lease_token uuid;
 ALTER TABLE public.job_outbox ADD COLUMN retry_requested_at timestamptz;
 ALTER TABLE public.job_outbox ADD COLUMN reconcile_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.job_outbox ADD COLUMN reconcile_checks integer NOT NULL DEFAULT 0;
-
--- No legacy pgmq sent marker proves that Redis received the corresponding job.
-UPDATE public.job_outbox SET sent_at = NULL, msg_id = NULL WHERE state IN ('queued', 'running');
 
 CREATE OR REPLACE FUNCTION public.job_enqueue(p_workspace uuid, p_queue text, p_name text, p_payload jsonb, p_dedupe text) RETURNS uuid
     LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
@@ -16513,45 +16320,6 @@ CREATE OR REPLACE FUNCTION public.job_stats() RETURNS jsonb
   );
 $$;
 
--- Refuse the destructive contract step unless every job queue was drained and its late-send bridge is installed.
--- (a queue cutover block of the former chain: a no-op on a clean database, left out)
-
--- Every drained job queue leaves pgmq: the broker of a job queue is BullMQ on Redis, so the empty pgmq
--- table and its late-send redirect go away with it. The event-bus queues are not in this list and stay.
-SELECT pgmq.drop_queue('accounting_desk');
-SELECT pgmq.drop_queue('agents');
-SELECT pgmq.drop_queue('automation');
-SELECT pgmq.drop_queue('bank_credit_received');
-SELECT pgmq.drop_queue('booking_status');
-SELECT pgmq.drop_queue('connection_commands');
-SELECT pgmq.drop_queue('connection_health');
-SELECT pgmq.drop_queue('content_tick');
-SELECT pgmq.drop_queue('data_sync');
-SELECT pgmq.drop_queue('decisions');
-SELECT pgmq.drop_queue('hiring_tick');
-SELECT pgmq.drop_queue('inventory_order');
-SELECT pgmq.drop_queue('inventory_replenish');
-SELECT pgmq.drop_queue('invite_command');
-SELECT pgmq.drop_queue('knowledge');
-SELECT pgmq.drop_queue('lead_gen');
-SELECT pgmq.drop_queue('marketing_tick');
-SELECT pgmq.drop_queue('meta_inbound');
-SELECT pgmq.drop_queue('n8n');
-SELECT pgmq.drop_queue('payment_order_requested');
-SELECT pgmq.drop_queue('public_api');
-SELECT pgmq.drop_queue('render_request');
-SELECT pgmq.drop_queue('shifts_alerts');
-SELECT pgmq.drop_queue('video_render');
-SELECT pgmq.drop_queue('zalo_authorization');
-SELECT pgmq.drop_queue('zalo_refresh');
-SELECT pgmq.drop_queue('zalo_wizard');
-SELECT pgmq.drop_queue('meta-delivery');
-SELECT pgmq.drop_queue('telegram-delivery');
-SELECT pgmq.drop_queue('zalo-delivery');
-SELECT pgmq.drop_queue('sepay-delivery');
-SELECT pgmq.drop_queue('vietcombank-delivery');
-SELECT pgmq.drop_queue('bank-feed-delivery');
-
 CREATE INDEX job_outbox_pending ON public.job_outbox (created_at) WHERE sent_at IS NULL AND state IN ('queued', 'running');
 CREATE INDEX job_outbox_reconcile_due ON public.job_outbox (reconcile_at, queue) WHERE state IN ('queued', 'running');
 
@@ -16741,29 +16509,6 @@ ALTER TABLE public.module_installations ADD COLUMN removed_by text;
 ALTER TABLE public.module_installations
     ADD CONSTRAINT module_installations_removed_check
     CHECK (((status = 'removed'::text) = (removed_at IS NOT NULL)));
-
--- ---- from 20261107000200_running-gate-ready-to-live.sql ----
--- Only a running agent answers customers (owner ruling, v0.3.6): the customer-turn gate now needs status `live`, live_enabled, an
--- applied context version and its required connections, where it used to accept `ready` as well. Today every `ready` installation
--- with an applied version answers on any path (channel, website chat, public API), so this forward-only data step keeps exactly that
--- set answering: every such installation becomes live and live_enabled. An agent with no bound connection is not special-cased; it
--- behaves as it does today. Idempotent and guarded: it touches only `ready` rows with an applied version, and after one run none
--- matches. No other data changes.
---
--- Count queries, to print before and after the deploy (the full count is the rows this step moves and must be 0 afterwards; the
--- channel-scoped count is the subset that has a bound channel connection, kept for comparison):
---   full:    select count(*) from public.module_installations i
---            where i.status = 'ready' and i.active_context_version_id is not null;
---   channel: select count(*) from public.module_installations i
---            where i.status = 'ready' and i.active_context_version_id is not null
---              and exists (select 1 from public.agent_connections ac join public.connections c on c.id = ac.connection_id
---                          where ac.agent_id = i.agent_id and ac.purpose in ('inbound_chat', 'outbound_chat')
---                            and c.status <> 'disconnected');
-
-update public.module_installations i
-set status = 'live', live_enabled = true
-where i.status = 'ready'
-  and i.active_context_version_id is not null;
 
 -- ---- from 20261107000300_invoice_contract_renewal.sql ----
 -- Contract renewal invoices: a renewal bills the customer for the next term of a contract, so an invoice can now name the contract
@@ -17348,11 +17093,6 @@ GRANT EXECUTE ON FUNCTION public.be_auth_delete_user(uuid) TO app_be;
 -- A passage carries the agent instance of its source, so the passage search filters by instance without reading the sources table.
 ALTER TABLE public.knowledge_chunks ADD COLUMN IF NOT EXISTS installation_id uuid;
 
-UPDATE public.knowledge_chunks c
-SET installation_id = s.installation_id
-FROM public.knowledge_sources s
-WHERE s.id = c.source_id AND s.installation_id IS NOT NULL AND c.installation_id IS DISTINCT FROM s.installation_id;
-
 CREATE INDEX IF NOT EXISTS knowledge_chunks_installation ON public.knowledge_chunks (workspace_id, installation_id)
     WHERE installation_id IS NOT NULL;
 
@@ -17448,11 +17188,6 @@ BEGIN
     END IF;
 END
 $$;
-
--- Pasted notes and Q&A lists are their own raw text; the size of an uploaded file before this column is not known and stays 0.
-UPDATE public.knowledge_sources
-SET size_bytes = octet_length(content)
-WHERE kind IN ('text', 'faq') AND size_bytes = 0;
 
 -- ---- from 20261109100202_entity-base-set-updated-at.sql ----
 -- entity-base-set-updated-at: forward-only; immutable once on origin/main.
@@ -17852,7 +17587,6 @@ CREATE TRIGGER zalo_wizard_drafts_set_updated_at BEFORE UPDATE ON public.zalo_wi
 -- work_items: updated_at doubled as the claim lease (free when updated_at = created_at or older than the lease), which an updated_at stamped by the
 -- database for every change cannot be. The lease gets its own column: NULL = free, otherwise the instant a worker last held the item.
 ALTER TABLE public.work_items ADD COLUMN leased_at timestamptz;
-UPDATE public.work_items SET leased_at = updated_at WHERE updated_at <> created_at;
 CREATE TRIGGER work_items_set_updated_at BEFORE UPDATE ON public.work_items FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ---- from 20261109100218_brain-dossiers.sql ----
@@ -19013,26 +18747,10 @@ GRANT SELECT, INSERT, UPDATE ON TABLE public.supplier_payables TO app_be;
 -- A source records the SHA-256 of the extracted text whose passages and facts are complete, so the same text never pays for that work twice. The column is null while the work on a text is unfinished.
 ALTER TABLE public.knowledge_sources ADD COLUMN IF NOT EXISTS content_hash text;
 
--- A source that went all the way already: the worker stores the text trimmed, so the hash of the stored text is the hash the worker computes. A note, a failure or a reading that did not finish leaves it null, and such a source goes through the full work once.
-UPDATE public.knowledge_sources AS s
-SET content_hash = encode(sha256(convert_to(s.content, 'UTF8')), 'hex')
-WHERE s.content_hash IS NULL
-    AND s.status = 'ready'
-    AND s.error IS NULL
-    AND s.content <> ''
-    AND EXISTS (SELECT 1 FROM public.brain_extractions AS e WHERE e.source_id = s.id AND e.status = 'done');
-
 -- ---- from 20261110100200_knowledge-chunk-content-hash.sql ----
 -- knowledge-chunk-content-hash: forward-only; immutable once on origin/main. Expand step: one nullable column, nothing is dropped or tightened.
 -- A passage records the SHA-256 of its normalised text and the model of its vector, so a passage that moved in its source keeps its vector and nothing is charged. A passage with no vector has no hash; a null hash behaves as before the column.
 ALTER TABLE public.knowledge_chunks ADD COLUMN IF NOT EXISTS content_hash text;
-
--- Computed from the stored text, which the worker stored normalised; no vector is touched and nothing is embedded. Same value as passageHashOf.
-UPDATE public.knowledge_chunks
-SET content_hash = encode(sha256(convert_to(content || E'\n' || embedding_model, 'UTF8')), 'hex')
-WHERE content_hash IS NULL
-    AND embedding IS NOT NULL
-    AND embedding_model IS NOT NULL;
 
 -- ---- from 20261110100300_brain-extraction-passages.sql ----
 -- brain-extraction-passages: forward-only; immutable once on origin/main. Expand step: two columns with defaults, nothing is dropped or tightened.
@@ -19108,7 +18826,6 @@ REVOKE ALL ON TABLE public.office_file_attachments FROM PUBLIC, anon, authentica
 GRANT SELECT, INSERT, UPDATE ON TABLE public.office_file_attachments TO app_be;
 
 ALTER TABLE public.agent_wakes ADD COLUMN background boolean NOT NULL DEFAULT false;
-UPDATE public.agent_wakes SET background = true WHERE source IN ('internal', 'schedule');
 
 ALTER TABLE public.agent_triggers ADD COLUMN sources text[] NOT NULL DEFAULT '{}'::text[];
 
@@ -19340,21 +19057,6 @@ REVOKE ALL ON TABLE public.identity_sessions FROM PUBLIC;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.identity_sessions TO app_be;
 CREATE POLICY identity_sessions_app_be_all ON public.identity_sessions
     FOR ALL TO app_be USING (current_user = 'app_be') WITH CHECK (current_user = 'app_be');
-
--- Nobody opens a token while the sessions move.
-LOCK TABLE public.identity_refresh_tokens IN SHARE ROW EXCLUSIVE MODE;
-
--- Backfill: the session of every refresh token (the live sign-ins). GoTrue sessions that no refresh token hangs on cannot sign anyone in and stay
--- in auth.sessions, untouched.
-INSERT INTO public.identity_sessions (id, user_id, created_at, refreshed_at, user_agent, ip)
-SELECT s.id,
-       s.user_id,
-       coalesce(s.created_at, now()),
-       coalesce(s.refreshed_at AT TIME ZONE 'utc', s.updated_at, s.created_at, now()),
-       s.user_agent,
-       host(s.ip)
-  FROM auth.sessions s
- WHERE s.id IN (SELECT t.session_id FROM public.identity_refresh_tokens t);
 
 ALTER TABLE public.identity_refresh_tokens
     ADD CONSTRAINT identity_refresh_tokens_session_id_fkey
@@ -19670,20 +19372,6 @@ grant select, insert, update, delete on table public.identity_email_tokens to ap
 create policy identity_email_tokens_app_be_all on public.identity_email_tokens
     for all to app_be using (current_user = 'app_be') with check (current_user = 'app_be');
 
--- The links still waiting to be spent keep working: a person who was mailed a link before the release can still follow it.
-insert into public.identity_email_tokens (id, user_id, purpose, token_hash, expires_at, used_at, created_at)
-select t.id,
-       t.user_id,
-       case when t.purpose = 'confirm' then 'confirm' else 'reset' end,
-       t.token_hash,
-       t.expires_at,
-       t.used_at,
-       t.created_at
-  from public.identity_password_tokens t
- where t.used_at is null
-   and t.expires_at > now()
-   and length(t.token_hash) = 64;
-
 create table public.identity_attempts (
     key varchar(128) primary key,
     hits integer not null,
@@ -19721,7 +19409,6 @@ select pgmq.bind_topic('connection_ready', 'connection_ready__bank_feed_poll');
 -- processing attempt that threw (the queue retries it and a success turns it `handled`); `expired` is a polled message past the reply window or the
 -- stale age, kept for the owner and never answered by an agent. A row processed before this column existed was handled by the flow that processed it.
 ALTER TABLE public.zalo_inbox ADD COLUMN state text NOT NULL DEFAULT 'received';
-UPDATE public.zalo_inbox SET state = 'handled' WHERE processed_at IS NOT NULL;
 ALTER TABLE public.zalo_inbox ADD CONSTRAINT zalo_inbox_state_check CHECK (state IN ('received', 'handled', 'failed', 'expired'));
 CREATE INDEX zalo_inbox_unanswered_idx ON public.zalo_inbox (received_at) WHERE state <> 'handled';
 
@@ -19809,9 +19496,6 @@ CREATE TRIGGER workspaces_add_governance AFTER INSERT ON public.workspaces
 -- Only the trigger and this migration call them: no role executes them directly.
 REVOKE ALL ON FUNCTION public.ensure_workspace_governance(uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.workspaces_add_governance() FROM PUBLIC, anon, authenticated;
-
-SELECT public.ensure_workspace_governance(w.id) FROM public.workspaces w
-WHERE NOT EXISTS (SELECT 1 FROM public.authority s WHERE s.workspace_id = w.id);
 
 -- ---- from 20261111101400_connection-poll-schedule.sql ----
 -- The poll plan of every polled connection, one row each, so a tick wakes only the connections that are due instead of scanning all of them.
