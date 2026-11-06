@@ -3,7 +3,7 @@ import type { OnModuleInit } from "@nestjs/common"
 import { SepayConnectionService } from "@modules/domain/channel-connections"
 import { FeedWebhookRegistryService } from "@modules/domain/provider-registry"
 import type { FeedWebhookPort, FeedWebhookReading } from "@modules/domain/provider-registry"
-import { isSepayPing, presentedApiKey, readSepayPayload } from "./sepay-webhook.policy"
+import { isSepayPing, occurredAtOf, presentedApiKey, readSepayPayload } from "./sepay-webhook.policy"
 import type { IntakeRun, OptionalApiKey, OptionalRawBody } from "./sepay-payload.contracts"
 import type { SepayBody } from "./sepay-webhook.policy"
 
@@ -48,6 +48,7 @@ export class SepayFeedWebhookService implements FeedWebhookPort, OnModuleInit {
         const payload = readSepayPayload(body)
         if (payload === undefined) return { kind: "invalid" }
         const amount = payload.transferAmount
+        const occurredAt = occurredAtOf(payload.transactionDate)
         const moves = payload.transferType === "in" || payload.transferType === "out"
         if (!moves || amount === undefined || amount <= 0) return { kind: "ignored" }
         return {
@@ -58,6 +59,8 @@ export class SepayFeedWebhookService implements FeedWebhookPort, OnModuleInit {
                 eventId: `sepay:${payload.id}`,
                 fallbackBankName: payload.gateway ?? "SePay",
                 ...(payload.transferType === "out" ? { direction: "debit" as const } : {}),
+                ...(payload.accountNumber === undefined ? {} : { account: payload.accountNumber }),
+                ...(occurredAt === undefined ? {} : { occurredAt }),
             },
         }
     }

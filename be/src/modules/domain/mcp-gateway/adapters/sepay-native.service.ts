@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common"
-import { TransactionsService } from "@modules/domain/transactions"
+import { Injectable, Optional } from "@nestjs/common"
+import { PaymentTransactionsService } from "@modules/domain/payment-transactions"
 import { McpGatewayError, McpGatewayErrorCode } from "../errors/mcp-gateway.error"
 import type { GatewayJson, NativeAdapter, NativeConnectorManifest } from "../mcp-gateway.contracts"
 import { SEPAY_BANK_MOVE_INPUT_SCHEMA, SEPAY_BANK_MOVE_SCHEMA } from "./sepay-native.schema"
@@ -43,40 +43,38 @@ export const SEPAY_MANIFEST: NativeConnectorManifest = {
 
 @Injectable()
 /**
- * Runs the SePay tools for a workspace, through the gateway like any other connector. The credits and debits are read through the
- * owner of public.transactions (`TransactionsService.listBankCredits` / `listBankDebits`), never by SQL of the gateway's own.
+ * Runs the SePay tools for a workspace, through the gateway like any other connector. The credits and debits are the workspace's
+ * `payment.transaction` records, read through their owner (`PaymentTransactionsService.list`), never by SQL of the gateway's own. An app
+ * without the entity engine (the cli) has no records to read and answers the tool as unknown.
  */
 export class SepayNativeService implements NativeAdapter {
     readonly manifest: NativeConnectorManifest = SEPAY_MANIFEST
 
-    constructor(private readonly transactions: TransactionsService) {}
+    constructor(@Optional() private readonly transactions?: PaymentTransactionsService) {}
 
     /** Runs one SePay tool. */
     async invoke(workspaceId: string, tool: string, args: GatewayJson): Promise<GatewayJson> {
-        if (tool !== "transactions.list" && tool !== "transactions.debits") {
+        if (this.transactions === undefined || (tool !== "transactions.list" && tool !== "transactions.debits")) {
             throw new McpGatewayError({ code: McpGatewayErrorCode.UnknownTool, params: { tool } })
         }
         const parsed = SEPAY_BANK_MOVE_SCHEMA.safeParse(args)
         if (!parsed.success) {
             throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool } })
         }
-        const query = {
-            workspaceId,
+        const rows = await this.transactions.list(workspaceId, {
+            direction: tool === "transactions.list" ? "credit" : "debit",
             status: parsed.data.status ?? null,
             since: parsed.data.since === undefined ? null : new Date(parsed.data.since).toISOString(),
             limit: parsed.data.limit,
-        }
-        const credits = await (tool === "transactions.list"
-            ? this.transactions.listBankCredits(query)
-            : this.transactions.listBankDebits(query))
+        })
         return {
-            transactions: credits.map((credit) => ({
-                id: credit.id,
-                amountVnd: credit.amount_vnd,
-                reference: credit.reference,
-                payer: credit.payer,
-                status: credit.status,
-                occurredAt: credit.occurred_at,
+            transactions: rows.map((row) => ({
+                id: row.id,
+                amountVnd: row.amountVnd,
+                reference: row.reference,
+                payer: row.payer,
+                status: row.status,
+                occurredAt: row.occurredAt,
             })),
         }
     }

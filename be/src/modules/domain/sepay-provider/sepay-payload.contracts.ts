@@ -29,4 +29,8 @@ export interface SepayPayload {
     readonly code: string | null
     /** The SePay description line. */
     readonly description: string | null
+    /** The bank account number the transfer belongs to. */
+    readonly accountNumber: string | undefined
+    /** When the bank booked the transfer, as SePay writes it (`2026-11-05 14:02:37`, Vietnam time). */
+    readonly transactionDate: string | undefined
 }

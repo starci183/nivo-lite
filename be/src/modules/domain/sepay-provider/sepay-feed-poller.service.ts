@@ -39,7 +39,7 @@ export class SepayFeedPollerService implements BankFeedPoller {
         return {
             kind: "page",
             items: rows.flatMap((row) => {
-                const credit = sepayPolledCredit(connection.id, row)
+                const credit = sepayPolledCredit(connection.id, row, account)
                 return credit === undefined ? [] : [credit]
             }),
             fetched: rows.length,

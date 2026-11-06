@@ -19,6 +19,7 @@ import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from 
 import { McpCallLogModule } from "@modules/domain/mcp-call-log"
 import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
 import { CUSTOMER_TOOL_ADAPTERS, NATIVE_TOOL_ADAPTERS } from "@modules/domain/native-tools"
+import { PaymentTransactionsModule } from "@modules/domain/payment-transactions"
 import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
 import { ProviderRegistryModule } from "@modules/domain/provider-registry"
 import { SepayProviderModule } from "@modules/domain/sepay-provider"
@@ -107,6 +108,7 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
     AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     InboundEventsModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
+    PaymentTransactionsModule.register({ isGlobal: true }),
     ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
     DataRecordsModule.register({ isGlobal: true }),
     AgentGraphsModule.register({ isGlobal: true, rightsOnly: true }),

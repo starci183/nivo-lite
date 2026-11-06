@@ -1,10 +1,11 @@
+import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import type { EntityManager } from "typeorm"
 import { entityEngineEntities } from "@modules/domain/entity-engine"
 
 const [RecordEntity, RecordLinkEntity, EntitySequenceEntity] = entityEngineEntities
 
-/** The declared fields a proof writes: scalars only. */
-export type RecordData = Record<string, string | number | boolean | null>
+/** The declared fields a proof writes: scalars and the JSON a jsonb field holds. */
+export type RecordData = Record<string, JsonValue>
 
 /** One end of a link: the entity and the id of a record. */
 export interface RecordRef {

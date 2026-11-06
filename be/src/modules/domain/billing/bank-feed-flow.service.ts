@@ -2,7 +2,8 @@ import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { IncomingCredit } from "@modules/domain/bank-feed-inbox"
 import { AgentTagService } from "@modules/domain/agent-work"
-import { TransactionsService } from "@modules/domain/transactions"
+import { PaymentTransactionsService } from "@modules/domain/payment-transactions"
+import type { OptionalRecordedMovement, PaymentMovement, RecordedMovement } from "@modules/domain/payment-transactions"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { InjectBankFeedFlow } from "./billing.decorators"
@@ -15,6 +16,17 @@ const RECORD_LOCALE = "vi"
 /** What a tag of the bound agent says started it: the bank feed. */
 const BANK_FEED_TAG_SOURCE = "bank_feed"
 
+/** The movement of a credit or debit the bank feed handed over, as the `payment.transaction` record keeps it. */
+const movementOf = (credit: IncomingCredit, direction: PaymentMovement["direction"]): PaymentMovement => ({
+    direction,
+    amountVnd: Math.round(credit.amount),
+    reference: credit.content === "" ? null : credit.content,
+    payer: credit.payer ?? null,
+    externalRef: credit.eventId,
+    account: credit.account ?? null,
+    occurredAt: credit.occurredAt ?? null,
+})
+
 @Injectable()
 /**
  * What the bank feed hands to the bound accounting agent besides the booking path: a new credit of an agent whose live version has a
@@ -24,7 +36,7 @@ const BANK_FEED_TAG_SOURCE = "bank_feed"
 export class BankFeedFlowService {
     constructor(
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        private readonly transactions: TransactionsService,
+        private readonly transactions: PaymentTransactionsService,
         private readonly tags: AgentTagService,
         @Optional() @InjectBankFeedFlow() private readonly flow: BankFeedFlow | null = null,
     ) {}
@@ -35,28 +47,26 @@ export class BankFeedFlowService {
     }
 
     /**
-     * A new credit of an agent whose live version has a flow reaches that agent: the transaction is recorded and the agent is tagged with
-     * it, once per transaction (the wake is keyed by the connection and the provider transaction id). Exactly one path takes a credit:
-     * the flow's, or with no flow the booking path alone.
+     * Records a credit of the bank feed as a `payment.transaction` record, once per provider transaction, inside the transaction of the
+     * receipt; null when the engine refused it. A repeat of the same transaction answers the same record with `created` false.
+     */
+    record(tx: EntityManager, connection: ProvenConnection, credit: IncomingCredit): Promise<OptionalRecordedMovement> {
+        return this.transactions.record(tx, connection.workspaceId, movementOf(credit, "credit"))
+    }
+
+    /**
+     * A new credit of an agent whose live version has a flow reaches that agent: the agent is tagged with the recorded transaction, once
+     * per transaction (the wake is keyed by the connection and the provider transaction id). Exactly one path takes a credit: the flow's,
+     * or with no flow the booking path alone.
      */
     async tag(
         tx: EntityManager,
         connection: ProvenConnection,
         agentId: string,
         credit: IncomingCredit,
-        inboundEventId: string,
+        recorded: RecordedMovement,
     ): Promise<void> {
         const amountVnd = Math.round(credit.amount)
-        const transaction = await this.transactions.open(
-            {
-                workspaceId: connection.workspaceId,
-                inboundEventId,
-                amountVnd,
-                reference: credit.content === "" ? null : credit.content,
-                payer: null,
-            },
-            tx,
-        )
         await this.tags.tagAgent(
             {
                 source: BANK_FEED_TAG_SOURCE,
@@ -67,7 +77,7 @@ export class BankFeedFlowService {
                     { amount: amountVnd, content: credit.content },
                     RECORD_LOCALE,
                 ),
-                subject: `bank-transaction:${transaction.id}`,
+                subject: `bank-transaction:${recorded.id}`,
                 eventKey: `bank-feed:${connection.connectionId}:${credit.eventId}`,
             },
             tx,
@@ -79,17 +89,7 @@ export class BankFeedFlowService {
      * supplier payment is not matched against the workspace's invoices. The receipt claim already made it once per delivery.
      */
     async debit(tx: EntityManager, connection: ProvenConnection, credit: IncomingCredit): Promise<FeedCreditAnswer> {
-        await this.transactions.open(
-            {
-                workspaceId: connection.workspaceId,
-                inboundEventId: null,
-                amountVnd: Math.round(credit.amount),
-                reference: credit.content === "" ? null : credit.content,
-                payer: null,
-                direction: "debit",
-            },
-            tx,
-        )
+        await this.transactions.record(tx, connection.workspaceId, movementOf(credit, "debit"))
         return { status: "debited" }
     }
 }

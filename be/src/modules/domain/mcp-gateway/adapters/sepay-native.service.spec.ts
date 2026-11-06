@@ -1,26 +1,27 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { TransactionsService } from "@modules/domain/transactions"
-import type { BankCreditRow } from "@modules/domain/transactions"
+import { PaymentTransactionsService } from "@modules/domain/payment-transactions"
+import type { MovementRow } from "@modules/domain/payment-transactions"
 import { summaryOf } from "../audit-mask.policy"
 import { McpGatewayErrorCode } from "../errors/mcp-gateway.error"
 import { SEPAY_MANIFEST, SepayNativeService } from "./sepay-native.service"
 
-const CREDIT: BankCreditRow = {
+const CREDIT: MovementRow = {
     id: "tx-1",
-    amount_vnd: 3600000,
+    amountVnd: 3600000,
     reference: "HAKUEN F7K2Q9",
     payer: "NGUYEN VAN A",
     status: "unmatched",
-    occurred_at: "2026-10-20T02:00:00.000Z",
+    occurredAt: "2026-10-20T02:00:00.000Z",
 }
 
 const build = async () => {
-    const transactions = mock<TransactionsService>()
-    transactions.listBankCredits.mockResolvedValue([CREDIT])
-    transactions.listBankDebits.mockResolvedValue([{ ...CREDIT, id: "tx-2", payer: "SUPPLIER CO" }])
+    const transactions = mock<PaymentTransactionsService>()
+    transactions.list.mockImplementation((_workspace, query) =>
+        Promise.resolve(query.direction === "credit" ? [CREDIT] : [{ ...CREDIT, id: "tx-2", payer: "SUPPLIER CO" }]),
+    )
     const moduleRef = await Test.createTestingModule({
-        providers: [SepayNativeService, { provide: TransactionsService, useValue: transactions }],
+        providers: [SepayNativeService, { provide: PaymentTransactionsService, useValue: transactions }],
     }).compile()
     return { sepay: moduleRef.get(SepayNativeService), transactions }
 }
@@ -67,7 +68,7 @@ describe("SepayNativeService audit", () => {
 })
 
 describe("SepayNativeService credits", () => {
-    it("lists the bank credits through the transactions owner with the given filters", async () => {
+    it("reads the credit records through their owner with the given filters", async () => {
         const { sepay, transactions } = await build()
 
         await expect(
@@ -88,8 +89,8 @@ describe("SepayNativeService credits", () => {
                 },
             ],
         })
-        expect(transactions.listBankCredits).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
+        expect(transactions.list).toHaveBeenCalledWith("ws-1", {
+            direction: "credit",
             status: "unmatched",
             since: "2026-10-01T00:00:00.000Z",
             limit: 5,
@@ -101,8 +102,8 @@ describe("SepayNativeService credits", () => {
 
         await sepay.invoke("ws-1", "transactions.list", {})
 
-        expect(transactions.listBankCredits.mock.calls).toEqual([
-            [{ workspaceId: "ws-1", status: null, since: null, limit: 20 }],
+        expect(transactions.list.mock.calls).toEqual([
+            ["ws-1", { direction: "credit", status: null, since: null, limit: 20 }],
         ])
     })
 })
@@ -120,26 +121,21 @@ describe("SepayNativeService invalid arguments", () => {
             await expect(sepay.invoke("ws-1", tool, { status: 3 })).rejects.toMatchObject({
                 code: McpGatewayErrorCode.InvalidArguments,
             })
-            expect(transactions.listBankCredits).not.toHaveBeenCalled()
-            expect(transactions.listBankDebits).not.toHaveBeenCalled()
+            expect(transactions.list).not.toHaveBeenCalled()
         },
     )
 })
 
 describe("SepayNativeService debits", () => {
-    it("lists the bank debits through the transactions owner with the same filters", async () => {
+    it("reads the debit records with the same filters", async () => {
         const { sepay, transactions } = await build()
 
         await expect(sepay.invoke("ws-1", "transactions.debits", { limit: 3 })).resolves.toMatchObject({
             transactions: [{ id: "tx-2", payer: "SUPPLIER CO", amountVnd: 3600000 }],
         })
-        expect(transactions.listBankDebits).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            status: null,
-            since: null,
-            limit: 3,
-        })
-        expect(transactions.listBankCredits).not.toHaveBeenCalled()
+        expect(transactions.list.mock.calls).toEqual([
+            ["ws-1", { direction: "debit", status: null, since: null, limit: 3 }],
+        ])
     })
 })
 
@@ -151,6 +147,14 @@ describe("SepayNativeService unknown tools", () => {
             code: McpGatewayErrorCode.UnknownTool,
             params: { tool: "transactions.delete" },
         })
-        expect(transactions.listBankCredits).not.toHaveBeenCalled()
+        expect(transactions.list).not.toHaveBeenCalled()
+    })
+
+    it("answers every tool as unknown in an app that has no entity engine to read the records from", async () => {
+        const moduleRef = await Test.createTestingModule({ providers: [SepayNativeService] }).compile()
+
+        await expect(moduleRef.get(SepayNativeService).invoke("ws-1", "transactions.list", {})).rejects.toMatchObject({
+            code: McpGatewayErrorCode.UnknownTool,
+        })
     })
 })

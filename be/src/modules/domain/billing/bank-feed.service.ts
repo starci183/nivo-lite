@@ -151,6 +151,7 @@ export class BankFeedService {
         const [agent] = await this.bindings.agentsFor(connection.connectionId, "bank_feed", { modules: ["accounting"] })
         if (agent === undefined) return { status: "unbound" }
         if (credit.direction === "debit") return this.flows.debit(tx, connection, credit)
+        const recorded = await this.flows.record(tx, connection, credit)
         const flowOwns = await this.flows.owns(connection.workspaceId, agent.id)
         const booking = {
             workspaceId: connection.workspaceId,
@@ -162,7 +163,7 @@ export class BankFeedService {
         }
         const booked = await this.book(tx, booking, !flowOwns)
         if (booked === null) return { status: "duplicate" }
-        if (flowOwns) await this.flows.tag(tx, connection, agent.id, credit, booked)
+        if (flowOwns && recorded?.created === true) await this.flows.tag(tx, connection, agent.id, credit, recorded)
         return { status: "booked" }
     }
 

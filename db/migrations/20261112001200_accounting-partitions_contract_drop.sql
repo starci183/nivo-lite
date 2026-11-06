@@ -29,3 +29,10 @@ ALTER TABLE public."records_payment_claim" VALIDATE CONSTRAINT "records_payment_
 CREATE INDEX "records_payment_claim_lead_claimed" ON public."records_payment_claim" USING btree (workspace_id, ((data->>'leadId')::uuid), (data->>'claimedAt') DESC, id DESC);
 -- create_index public.records_payment_claim:index:records_payment_claim_conversation_claimed: on workspace_id, data->>'conversationid', data->>'claimedat'desc, iddesc using btree
 CREATE INDEX "records_payment_claim_conversation_claimed" ON public."records_payment_claim" USING btree (workspace_id, ((data->>'conversationId')::uuid), (data->>'claimedAt') DESC, id DESC);
+-- add_check public.records_payment_transaction:constraint:records_payment_transaction_account_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_transaction" ADD CONSTRAINT "records_payment_transaction_account_chk" CHECK ((data->>'account') IS NULL OR (jsonb_typeof(data->'account') = 'string' AND char_length((data->>'account')) <= 200)) NOT VALID;
+ALTER TABLE public."records_payment_transaction" VALIDATE CONSTRAINT "records_payment_transaction_account_chk";
+-- create_index public.records_payment_transaction:index:records_payment_transaction_direction_occurred: on workspace_id, data->>'direction', data->>'occurredat'desc, iddesc using btree
+CREATE INDEX "records_payment_transaction_direction_occurred" ON public."records_payment_transaction" USING btree (workspace_id, (data->>'direction'), (data->>'occurredAt') DESC, id DESC);
+-- create_index public.records_payment_transaction:index:records_payment_transaction_direction_status_occurred: on workspace_id, data->>'direction', data->>'status', data->>'occurredat'desc, iddesc using btree
+CREATE INDEX "records_payment_transaction_direction_status_occurred" ON public."records_payment_transaction" USING btree (workspace_id, (data->>'direction'), (data->>'status'), (data->>'occurredAt') DESC, id DESC);

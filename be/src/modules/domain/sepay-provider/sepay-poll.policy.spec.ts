@@ -29,13 +29,15 @@ describe("sepayPolledCredit", () => {
     it("maps a real transfer to the credit and the delivery key the webhook uses for the same transaction", async () => {
         const subject = await build()
 
-        expect(subject.sepayPolledCredit("conn-1", REAL)).toEqual({
+        expect(subject.sepayPolledCredit("conn-1", REAL, "0123456789")).toEqual({
             deliveryId: "conn-1:sepay:95958515",
             credit: {
                 amount: 5000,
                 content: "BUI NGUYEN DINH Test sepay Chuyen tien dat chau hoa- Ma GD ACSP/ 7o940",
                 eventId: "sepay:95958515",
                 fallbackBankName: "MBBank",
+                account: "0123456789",
+                occurredAt: "2026-11-03T18:06:00.000Z",
             },
         })
     })
@@ -43,7 +45,9 @@ describe("sepayPolledCredit", () => {
     it("maps money out to a debit", async () => {
         const subject = await build()
 
-        expect(subject.sepayPolledCredit("conn-1", { ...REAL, amountIn: 0, amountOut: 120 })?.credit).toMatchObject({
+        expect(
+            subject.sepayPolledCredit("conn-1", { ...REAL, amountIn: 0, amountOut: 120 }, "0123456789")?.credit,
+        ).toMatchObject({
             amount: 120,
             direction: "debit",
         })
@@ -53,18 +57,21 @@ describe("sepayPolledCredit", () => {
         const subject = await build()
 
         expect(
-            subject.sepayPolledCredit("conn-1", { ...REAL, content: "", code: "DH7", bank: null })?.credit,
+            subject.sepayPolledCredit("conn-1", { ...REAL, content: "", code: "DH7", bank: null }, "0123456789")
+                ?.credit,
         ).toMatchObject({
             content: "DH7",
             fallbackBankName: "SePay",
         })
-        expect(subject.sepayPolledCredit("conn-1", { ...REAL, content: "", code: null })?.credit.content).toBe("")
+        expect(
+            subject.sepayPolledCredit("conn-1", { ...REAL, content: "", code: null }, "0123456789")?.credit.content,
+        ).toBe("")
     })
 
     it("maps a row that moved no money to nothing", async () => {
         const subject = await build()
 
-        expect(subject.sepayPolledCredit("conn-1", { ...REAL, amountIn: 0 })).toBeUndefined()
+        expect(subject.sepayPolledCredit("conn-1", { ...REAL, amountIn: 0 }, "0123456789")).toBeUndefined()
     })
 })
 
