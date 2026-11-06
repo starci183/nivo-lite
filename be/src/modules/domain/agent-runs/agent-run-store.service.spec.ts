@@ -5,6 +5,7 @@ import { EntityEngineService } from "@modules/domain/entity-engine"
 import type { ScopedTx } from "@modules/domain/entity-engine"
 import { CLOCK } from "@modules/platform/clock"
 import { AgentStepQueue } from "@modules/queues/agent-step"
+import { ModuleJobsQueue } from "@modules/queues/module-jobs"
 import { AgentRunRecordsService } from "./agent-run-records.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { OPEN, WHEN, runRecordOf, runRowOf, stepRecordOf } from "@tests/fixtures/builders/agent-runs.builder"
@@ -27,6 +28,7 @@ const build = async () => {
     engine.within.mockImplementation((_manager, _ws, work) => work(scoped))
     const records = mock<AgentRunRecordsService>()
     const queue = mock<AgentStepQueue>()
+    const jobs = mock<ModuleJobsQueue>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentRunStoreService,
@@ -34,9 +36,10 @@ const build = async () => {
             { provide: EntityEngineService, useValue: engine },
             { provide: AgentRunRecordsService, useValue: records },
             { provide: AgentStepQueue, useValue: queue },
+            { provide: ModuleJobsQueue, useValue: jobs },
         ],
     }).compile()
-    return { store: moduleRef.get(AgentRunStoreService), engine, records, queue, em }
+    return { store: moduleRef.get(AgentRunStoreService), engine, records, queue, jobs, em }
 }
 
 describe("AgentRunStoreService open", () => {
@@ -316,6 +319,48 @@ describe("AgentRunStoreService scope, patchRunWith and settleIn", () => {
         records.run.mockResolvedValue(runRecordOf({ status: "parked", stepSeq: 4 }))
         await store.settleIn(scoped, "run-1", false)
         expect(records.patchRun).toHaveBeenLastCalledWith(scoped, expect.anything(), { stepSeq: 4 })
+    })
+})
+
+describe("AgentRunStoreService report on the end of a run", () => {
+    it("enqueues the declared report job once, in the transaction of the final status, when the run ends done", async () => {
+        const { store, records, jobs } = await build()
+        const done = runRecordOf({ status: "done" })
+        records.run.mockResolvedValue(runRecordOf())
+        records.stepsOf.mockResolvedValue([stepRecordOf()])
+        records.patchRun.mockResolvedValue(done)
+        await store.settleIn(scoped, "run-1", false)
+        expect(jobs.enqueue).toHaveBeenCalledTimes(1)
+        expect(jobs.enqueue).toHaveBeenCalledWith(
+            {
+                workspaceId: "ws-1",
+                job: "platform.post-report",
+                input: { runId: done.id, agentId: done.agentId, trigger: done.trigger },
+            },
+            scoped.manager,
+            { dedupeKey: `platform.post-report:${done.id}` },
+        )
+    })
+
+    it("enqueues nothing while the run goes on, and nothing when a run that was done is written again", async () => {
+        const { store, records, jobs } = await build()
+        records.run.mockResolvedValue(runRecordOf())
+        records.stepsOf.mockResolvedValue([stepRecordOf()])
+        records.patchRun.mockResolvedValue(runRecordOf({ status: "running" }))
+        await store.settleIn(scoped, "run-1", true)
+        expect(jobs.enqueue).not.toHaveBeenCalled()
+        records.run.mockResolvedValue(runRecordOf({ status: "done" }))
+        records.patchRun.mockResolvedValue(runRecordOf({ status: "done" }))
+        await store.patchRunWith(scoped, "run-1", () => ({ stepSeq: 9 }))
+        expect(jobs.enqueue).not.toHaveBeenCalled()
+    })
+
+    it("enqueues it for any write that takes the run to done, not only the settle of a step", async () => {
+        const { store, records, jobs } = await build()
+        records.run.mockResolvedValue(runRecordOf({ status: "running" }))
+        records.patchRun.mockResolvedValue(runRecordOf({ status: "done" }))
+        await store.patchRunWith(scoped, "run-1", () => ({ status: "done" }))
+        expect(jobs.enqueue).toHaveBeenCalledTimes(1)
     })
 })
 

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { InjectWorkAgentDirectory } from "./work-engine.decorators"
 import type { OptionalAgentIdentity, WorkAgentDirectory, WorkLine, WorkLineScope } from "./work-lines.contracts"
@@ -12,7 +12,7 @@ import type { OptionalAgentIdentity, WorkAgentDirectory, WorkLine, WorkLineScope
  */
 export class WorkLinesService {
     constructor(
-        private readonly chat: TeamChatService,
+        private readonly chat: TeamChatRoomsService,
         private readonly workspaces: WorkspacesService,
         @InjectWorkAgentDirectory() private readonly agents: WorkAgentDirectory,
     ) {}

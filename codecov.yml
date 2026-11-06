@@ -139,6 +139,7 @@ component_management:
         - "be/src/modules/domain/sepay-transactions/**"
         - "be/src/modules/domain/shifts/**"
         - "be/src/modules/domain/supplier-payables/**"
+        - "be/src/modules/domain/team-chat/**"
         - "be/src/modules/domain/telegram-inbox/**"
         - "be/src/modules/domain/template-marketplace/**"
         - "be/src/modules/domain/video-project-versions/**"

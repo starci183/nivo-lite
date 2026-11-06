@@ -9,6 +9,7 @@ export class ChatRoomsInput {
     @Field(() => ChatRoomKind, { nullable: true })
     @IsOptional()
     @IsIn(["direct", "group"])
+    @MaxLength(10)
     kind: string | null = null
 
     /** Only the rooms the viewer shares with this agent or person, by id (kind direct and this id: the viewer direct room with them, or nothing). */

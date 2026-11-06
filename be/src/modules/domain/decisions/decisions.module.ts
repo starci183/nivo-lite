@@ -45,7 +45,7 @@ import { WorkPerformersService } from "./work-performers.service"
 import { WorkRecorderService } from "./work-recorder.service"
 import { DurableWorkService } from "./durable-work.service"
 
-const decisionOwners = (options: typeof OPTIONS_TYPE): Array<DynamicModule> => [
+const decisionOwners = (): Array<DynamicModule> => [
     AuthorityModule.register({ isGlobal: false }),
     AuthorityRulesModule.register({ isGlobal: false }),
     MemberGrantsModule.register({ isGlobal: false }),
@@ -63,7 +63,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
-        const owners = decisionOwners(options)
+        const owners = decisionOwners()
         return {
             ...base,
             imports: [...(base.imports ?? []), ...owners, DecisionsQueueModule.register({})],

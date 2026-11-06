@@ -1,14 +1,14 @@
 import assert from "node:assert/strict"
-import { TeamChatService } from "@modules/domain/team-chat"
-import type { MemberRef, TeamChatResult } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
+import type { ChatMemberRef, TeamChatResult } from "@modules/domain/team-chat"
 import { eachInOrder } from "@modules/platform/primitives"
-import { persistApprovalRequest, persistTeamChat, teamChatIdentity } from "../../fixtures/builders/team-chat.builder"
+import { openApprovalRequest, persistTeamChat, teamChatIdentity } from "../../fixtures/builders/team-chat.builder"
 import type { TeamChatIdentity } from "../../fixtures/builders/team-chat.builder"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
-import { TeamChatProofModule } from "../../world/team-chat-proof.module"
+import { TEAM_CHAT_PROOF_MODULES } from "../../world/team-chat-capabilities.options"
 import { useTestWorld } from "../../world/use-test-world"
 
-const world = useTestWorld({ modules: [TeamChatProofModule.register()] })
+const world = useTestWorld({ modules: TEAM_CHAT_PROOF_MODULES })
 
 const seed = async (): Promise<TeamChatIdentity> => {
     const identity = teamChatIdentity(() => world.id())
@@ -21,8 +21,8 @@ const seed = async (): Promise<TeamChatIdentity> => {
     return identity
 }
 
-const chat = (): TeamChatService => world.resolve(TeamChatService)
-const user = (memberId: string): MemberRef => ({ memberKind: "user", memberId })
+const chat = (): TeamChatRoomsService => world.resolve(TeamChatRoomsService)
+const user = (memberId: string): ChatMemberRef => ({ memberKind: "user", memberId })
 
 const valueOf = <V>(result: TeamChatResult<V>): V => {
     assert(result.ok, "expected a value, got a refusal")
@@ -42,9 +42,13 @@ describe("the approval card of an ask", () => {
                 await chat().createRoom(workspaceId, ownerId, { kind: "group", name: "B", members: [user(second)] }),
             ),
         ]
-        const decisionId = await persistApprovalRequest(world.db.primary, identity, {
+        const decisionId = await openApprovalRequest(world.db.primary, {
             id: world.id(),
             chainStepId: world.id(),
+            workspaceId,
+            seatIds: [],
+            agentId,
+            department: "sales",
         })
 
         expect(await chat().cardRooms(workspaceId, decisionId)).toBe(0)
@@ -62,7 +66,9 @@ describe("the approval card of an ask", () => {
         expect(await chat().cardRooms(workspaceId, decisionId)).toBe(2)
         expect(await chat().cardRooms(identity.foreignWorkspaceId, decisionId)).toBe(0)
     })
+})
 
+describe("the ask line next to the approval card", () => {
     it("holds one message per room for an ask: where the card stands the engine says no line, an unposted decision keeps its one line", async () => {
         const identity = await seed()
         const { workspaceId, agentId, ownerId } = identity
@@ -70,9 +76,13 @@ describe("the approval card of an ask", () => {
         const room = valueOf(
             await chat().createRoom(workspaceId, ownerId, { kind: "group", name: "Sales", members: [user(first)] }),
         )
-        const carded = await persistApprovalRequest(world.db.primary, identity, {
+        const carded = await openApprovalRequest(world.db.primary, {
             id: world.id(),
             chainStepId: world.id(),
+            workspaceId,
+            seatIds: [],
+            agentId,
+            department: "sales",
         })
         await chat().postApproval(workspaceId, {
             decisionId: carded,
@@ -81,9 +91,13 @@ describe("the approval card of an ask", () => {
             roomIds: [room.id],
             approverSeatIds: [],
         })
-        const unposted = await persistApprovalRequest(world.db.primary, identity, {
+        const unposted = await openApprovalRequest(world.db.primary, {
             id: world.id(),
             chainStepId: world.id(),
+            workspaceId,
+            seatIds: [],
+            agentId,
+            department: "sales",
         })
 
         await eachInOrder([carded, unposted], async (decisionId) => {

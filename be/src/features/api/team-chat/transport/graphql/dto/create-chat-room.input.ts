@@ -10,6 +10,7 @@ export class CreateChatRoomInput {
     /** Direct or group. */
     @Field(() => ChatRoomKind)
     @IsIn(["direct", "group"])
+    @MaxLength(10)
     kind!: string
 
     /** The name of a group, one to eighty characters; null for a direct room. */

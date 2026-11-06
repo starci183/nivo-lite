@@ -22,8 +22,8 @@ export class ChatMemberType {
     role!: string
 
     /** Where the member last read. */
-    @Field(() => Date, { nullable: true })
-    lastReadAt!: Date | null
+    @Field(() => String, { nullable: true })
+    lastReadAt!: string | null
 
     /** Whether the member muted the room. */
     @Field(() => Boolean)

@@ -1,16 +1,19 @@
 import { BODY_MAX, FILES_MAX, MENTIONS_MAX, PAGE_DEFAULT, PAGE_MAX } from "./team-chat.contracts"
-import type { MemberRef } from "./team-chat.contracts"
+import type { ChatDone, ChatMemberRef, ChatRefused, StoredMention } from "./team-chat.contracts"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
 
 /** The longest name of a group. */
 export const GROUP_NAME_MAX = 80
 
-const sameMember = (left: MemberRef, right: MemberRef): boolean =>
+const sameMember = (left: ChatMemberRef, right: ChatMemberRef): boolean =>
     left.memberKind === right.memberKind && left.memberId === right.memberId
 
 /** The members once each, in the order first named, without `except`. */
-export const uniqueMembers = (members: ReadonlyArray<MemberRef>, except: MemberRef | null): Array<MemberRef> =>
-    members.reduce<Array<MemberRef>>(
+export const uniqueMembers = (
+    members: ReadonlyArray<ChatMemberRef>,
+    except: ChatMemberRef | null,
+): Array<ChatMemberRef> =>
+    members.reduce<Array<ChatMemberRef>>(
         (kept, member) =>
             (except !== null && sameMember(member, except)) || kept.some((held) => sameMember(held, member))
                 ? kept
@@ -19,7 +22,7 @@ export const uniqueMembers = (members: ReadonlyArray<MemberRef>, except: MemberR
     )
 
 /** The key of a direct room: the two members as `kind:id`, sorted, so the same pair is the same key whoever asks. */
-export const directKeyOf = (first: MemberRef, second: MemberRef): string =>
+export const directKeyOf = (first: ChatMemberRef, second: ChatMemberRef): string =>
     [first, second]
         .map((member) => `${member.memberKind}:${member.memberId}`)
         .toSorted((left, right) => left.localeCompare(right))
@@ -65,3 +68,29 @@ export const positionOf = (cursor: string): ThreadPosition | null => {
         ? { at, id }
         : null
 }
+
+/** The postgres error code of a unique violation: a retry or a race reached a row that already exists. */
+const UNIQUE_VIOLATION = "23505"
+
+/** The longest body a card or a line keeps; the database check on the body column holds the same bound. */
+export const CARD_BODY_MAX = 20000
+
+/** Whether the failure is the unique violation of a row a retry or a race wrote first. */
+export const isUniqueViolation = (cause: unknown): boolean =>
+    typeof cause === "object" && cause !== null && Reflect.get(cause, "code") === UNIQUE_VIOLATION
+
+/** Whether the text is the shape of an id, so a name that is not one is read as a module key instead. */
+export const isUuid = (text: string): boolean => UUID.test(text.toLowerCase())
+
+/** The refusal an operation answers as data. */
+export const chatRefusal = (refusal: TeamChatErrorCode): ChatRefused => ({ ok: false, refusal })
+
+/** The success an operation answers as data. */
+export const chatDone = <V>(value: V): ChatDone<V> => ({ ok: true, value })
+
+/** The mentions as a message row keeps them. */
+export const storedMentionsOf = (mentions: ReadonlyArray<ChatMemberRef>): Array<StoredMention> =>
+    mentions.map((member) => ({ kind: member.memberKind, id: member.memberId }))
+
+/** The body of a card or a line, cut to what the database keeps. */
+export const cardBodyOf = (body: string): string => body.slice(0, CARD_BODY_MAX)

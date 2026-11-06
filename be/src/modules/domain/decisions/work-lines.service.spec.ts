@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { WORK_AGENT_DIRECTORY } from "./work-engine.decorators"
 import type { WorkAgentDirectory } from "./work-lines.contracts"
@@ -10,7 +10,7 @@ const SCOPE = { workspaceId: "ws-1" }
 const SALES = { id: "agent-sales", name: "Sales AI" }
 
 const build = async (owner: string | null = "user-owner", agent: typeof SALES | null = SALES) => {
-    const chat = mock<TeamChatService>()
+    const chat = mock<TeamChatRoomsService>()
     chat.postMessage.mockResolvedValue({ roomId: "room-1", messageId: "m1" })
     const workspaces = mock<WorkspacesService>()
     workspaces.ownerIdOf.mockResolvedValue(owner)
@@ -18,7 +18,7 @@ const build = async (owner: string | null = "user-owner", agent: typeof SALES | 
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkLinesService,
-            { provide: TeamChatService, useValue: chat },
+            { provide: TeamChatRoomsService, useValue: chat },
             { provide: WorkspacesService, useValue: workspaces },
             { provide: WORK_AGENT_DIRECTORY, useValue: mock<WorkAgentDirectory>({ agentOfDepartment }) },
         ],
@@ -78,5 +78,13 @@ describe("WorkLinesService", () => {
             toUserId: null,
             key: null,
         })
+    })
+
+    it("says a line in a named room with no key as the agent, and makes none", async () => {
+        const { service, chat } = await build()
+
+        await service.say(SCOPE, { body: "Hi", agentId: "agent-9", roomIds: ["r1"] })
+
+        expect(chat.postMessage.mock.calls[0]?.[1]).toMatchObject({ authorAgentId: "agent-9", roomId: "r1", key: null })
     })
 })
