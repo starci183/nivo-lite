@@ -12,7 +12,7 @@ registers. NIVO core never names a connector or one of its tools; flows find too
 - The rows live in their own capabilities, each the one writer of its table: `be/src/modules/domain/mcp-connectors`
   (`mcp_connectors`), `be/src/modules/domain/mcp-tool-grants` (`mcp_tool_grants`, also the seed's batch `upsert`) and
   `be/src/modules/domain/mcp-call-log` (`mcp_call_log`). The SePay connector reads bank credits and debits through
-  `TransactionsService.listBankCredits` and `listBankDebits` of `be/src/modules/domain/transactions`.
+  `PaymentTransactionsService.list` of `be/src/modules/domain/payment-transactions` (the `transactions.list` and `transactions.debits` tools).
 - Native adapters. `sepay` and `einvoice` are built in; an app adds more with `McpGatewayModule.register({ natives: [AdapterClass] })`
   (the api and the mcp app do, the cli passes none). Each class is a provider of a global module of the app, and the gateway injects
   it from the global container beside the two built-in ones. `NativeAdapter.invoke(workspaceId, tool, args, caller)` gets the caller,
