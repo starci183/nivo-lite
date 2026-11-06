@@ -44,7 +44,7 @@ export const INVOICE: InvoiceRecord = {
     issuedAt: "2026-11-01T03:00:00.000Z",
     paidAt: null,
     createdAt: "2026-11-01T02:00:00.000Z",
-    customer: "Nguyen Van Dinh",
+    customer: "Nguy\u1ec5n V\u0103n \u0110\u1ecbnh",
 }
 
 /** A correction to the invoice: 1,800,000 VND instead. */
@@ -52,7 +52,7 @@ export const ADJUSTMENT: AdjustmentRecord = {
     id: "00000000-0000-4000-8000-0000000000a2",
     targetType: "invoice",
     targetId: INVOICE.id,
-    note: "Discount agreed by phone",
+    note: "Gi\u1ea3m gi\u00e1 \u0111\u00e3 th\u1ecfa thu\u1eadn qua \u0111i\u1ec7n tho\u1ea1i",
     correctedAmountVnd: 1_800_000,
     createdBy: "Lan",
     createdAt: "2026-11-02T04:00:00.000Z",

@@ -9,9 +9,9 @@ const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/u
 export const DEFAULT_CONFIG: LoyaltyConfig = {
     earn: { perThousandVnd: 1, perVisit: 0, categories: [], trigger: "payment", minOrderVnd: 0 },
     tiers: [
-        { key: "dong", name: "Bronze", minSpendVnd: 0, multiplier: 1, winbackDays: 60, benefit: "" },
-        { key: "bac", name: "Silver", minSpendVnd: 3_000_000, multiplier: 1.2, winbackDays: 45, benefit: "" },
-        { key: "vang", name: "Gold", minSpendVnd: 10_000_000, multiplier: 1.5, winbackDays: 30, benefit: "" },
+        { key: "dong", name: "\u0110\u1ed3ng", minSpendVnd: 0, multiplier: 1, winbackDays: 60, benefit: "" },
+        { key: "bac", name: "B\u1ea1c", minSpendVnd: 3_000_000, multiplier: 1.2, winbackDays: 45, benefit: "" },
+        { key: "vang", name: "V\u00e0ng", minSpendVnd: 10_000_000, multiplier: 1.5, winbackDays: 30, benefit: "" },
     ],
     expiry: { months: 12, warnDays: 30 },
     birthday: { enabled: true, points: 100, rewardKey: "", note: "" },

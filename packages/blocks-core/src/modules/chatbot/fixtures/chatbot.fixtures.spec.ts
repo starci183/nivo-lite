@@ -71,6 +71,6 @@ describe("the Chatbot fixtures", () => {
 
     it("show the customer pane of a conversation a person holds when ready", () => {
         expect(CHATBOT_FIXTURES.reads["chatbot.thread"]?.ready).toBe(HANDLED_VIEW)
-        expect(HANDLED_VIEW).toMatchObject({ status: "handled", handledBy: "Thu Ha Le" })
+        expect(HANDLED_VIEW).toMatchObject({ status: "handled", handledBy: "L\u00ea Thu H\u00e0" })
     })
 })

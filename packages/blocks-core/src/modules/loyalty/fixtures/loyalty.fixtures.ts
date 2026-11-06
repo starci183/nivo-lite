@@ -127,7 +127,7 @@ export const LOYALTY_FIXTURES: ModuleFixtures = {
         "loyalty.save-program": { ok: true, data: { slug: SAMPLE_PROGRAM.slug } },
         "loyalty.sync-members": { ok: true, data: { created: 2, linked: 3 } },
         "loyalty.draft-campaign": { ok: true, data: { campaignId: "c-3", status: "waiting", recipients: 0 } },
-        "loyalty.preview-segment": { ok: true, data: { total: 2, reachable: 2, sample: ["Nguyen Thi Lan"] } },
+        "loyalty.preview-segment": { ok: true, data: { total: 2, reachable: 2, sample: ["Nguy\u1ec5n Th\u1ecb Lan"] } },
         "loyalty.decide": { ok: true, data: { id: "d-1" } },
     },
 }

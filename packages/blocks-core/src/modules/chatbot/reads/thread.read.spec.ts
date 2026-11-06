@@ -8,13 +8,13 @@ describe("the chatbot.thread read", () => {
             ok: true,
             data: {
                 id: "c1",
-                name: "Minh Anh Nguyen",
+                name: "Nguy\u1ec5n Minh Anh",
                 channelName: "Zalo",
                 status: "needs",
                 handledBy: "",
                 stage: "qualified",
                 need: "Two flower pots",
-                company: "Lotus Studio",
+                company: "Hoa Sen Studio",
                 phone: "0901234567",
                 email: "minh@example.com",
             },
@@ -23,7 +23,10 @@ describe("the chatbot.thread read", () => {
 
     it("names the holder of a conversation a person holds", async () => {
         const result = await THREAD.execute?.(memoryProvider(memoryWorld()), { id: "c2" }, STAFF_CONTEXT)
-        expect(result).toMatchObject({ ok: true, data: { handledBy: "Thu Ha Le", channelName: "Telegram", stage: "" } })
+        expect(result).toMatchObject({
+            ok: true,
+            data: { handledBy: "L\u00ea Thu H\u00e0", channelName: "Telegram", stage: "" },
+        })
     })
 
     it("answers nothing for a conversation the workspace does not have, and for a customer not yet captured", async () => {

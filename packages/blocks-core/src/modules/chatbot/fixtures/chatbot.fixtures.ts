@@ -11,14 +11,14 @@ const AT = "2026-11-03T09:00:00.000Z"
 export const WAITING_ROW: ThreadRow = {
     id: "c1",
     version: "3",
-    name: "Minh Anh Nguyen",
+    name: "Nguy\u1ec5n Minh Anh",
     channel: "zalo",
     externalId: "84901234567",
     status: "needs",
     waiting: true,
     handledBy: null,
     handledAt: null,
-    lastText: "Does this pot come with a root warranty?",
+    lastText: "Ch\u1eadu n\u00e0y c\u00f3 b\u1ea3o h\u00e0nh r\u1ec5 kh\u00f4ng \u1ea1?",
     lastRole: "user",
     lastAt: "2026-11-04T01:09:00.000Z",
     unanswered: true,
@@ -30,14 +30,14 @@ export const WAITING_ROW: ThreadRow = {
 export const HANDLED_ROW: ThreadRow = {
     id: "c2",
     version: "7",
-    name: "Bao Tran Le",
+    name: "L\u00ea B\u1ea3o Tr\u00e2n",
     channel: "telegram",
     externalId: "55501",
     status: "handled",
     waiting: false,
-    handledBy: "Thu Ha Le",
+    handledBy: "L\u00ea Thu H\u00e0",
     handledAt: "2026-11-04T00:30:00.000Z",
-    lastText: "I will send the invoice this afternoon.",
+    lastText: "Chi\u1ec1u nay em s\u1ebd g\u1eedi h\u00f3a \u0111\u01a1n cho ch\u1ecb \u1ea1.",
     lastRole: "agent",
     lastAt: "2026-11-04T00:45:00.000Z",
     unanswered: false,
@@ -49,14 +49,14 @@ const AI_ROWS: ReadonlyArray<ThreadRow> = [
     {
         id: "c3",
         version: "2",
-        name: "Quang Huy Pham",
+        name: "Ph\u1ea1m Quang Huy",
         channel: "website",
         externalId: null,
         status: "ai",
         waiting: false,
         handledBy: null,
         handledAt: null,
-        lastText: "Yes, we deliver to Da Nang in two days.",
+        lastText: "D\u1ea1 b\u00ean em giao \u0110\u00e0 N\u1eb5ng trong hai ng\u00e0y \u1ea1.",
         lastRole: "agent",
         lastAt: "2026-11-03T14:02:40.000Z",
         unanswered: false,
@@ -73,7 +73,7 @@ const AI_ROWS: ReadonlyArray<ThreadRow> = [
         waiting: false,
         handledBy: null,
         handledAt: null,
-        lastText: "Hello, how much is the small pot?",
+        lastText: "Ch\u00e0o shop, ch\u1eadu nh\u1ecf gi\u00e1 bao nhi\u00eau \u1ea1?",
         lastRole: "user",
         lastAt: AT,
         unanswered: false,
@@ -101,12 +101,12 @@ export const CHANNEL_COUNTS_DATA: CountsResult = { counts: { zalo: 1, telegram: 
 /** The customer pane of a conversation that waits for a person. */
 export const WAITING_VIEW: ThreadView = {
     id: "c1",
-    name: "Minh Anh Nguyen",
+    name: "Nguy\u1ec5n Minh Anh",
     channelName: "Zalo",
     status: "needs",
     handledBy: "",
     stage: "qualified",
-    need: "Two flower pots, delivered tomorrow",
+    need: "Hai ch\u1eadu hoa, giao ng\u00e0y mai",
     company: "",
     phone: "0901234567",
     email: "",
@@ -115,13 +115,13 @@ export const WAITING_VIEW: ThreadView = {
 /** The customer pane of a conversation a person holds. */
 export const HANDLED_VIEW: ThreadView = {
     id: "c2",
-    name: "Bao Tran Le",
+    name: "L\u00ea B\u1ea3o Tr\u00e2n",
     channelName: "Telegram",
     status: "handled",
-    handledBy: "Thu Ha Le",
+    handledBy: "L\u00ea Thu H\u00e0",
     stage: "proposal",
-    need: "Ten office plants every month",
-    company: "Lotus Studio",
+    need: "M\u01b0\u1eddi ch\u1eadu c\u00e2y v\u0103n ph\u00f2ng m\u1ed7i th\u00e1ng",
+    company: "Hoa Sen Studio",
     phone: "0912345678",
     email: "tran@example.com",
 }
@@ -145,26 +145,50 @@ const line = (
 
 /** The thread of a conversation the AI and a person answered. */
 export const READY_LINES: ReadonlyArray<ThreadLine> = [
-    line("m1", "incoming", "Hi, I would like two flower pots like last time.", "2026-11-03T14:02:00.000Z", {
-        who: "Bao Tran Le",
-    }),
-    line("m2", "outgoing", "Hello, we have five pots left. Same address as before?", "2026-11-03T14:02:40.000Z", {
-        who: "AI",
-        state: "sent",
-        mark: "AI",
-    }),
-    line("m3", "notice", "Thu Ha Le took over the conversation.", "2026-11-04T00:30:00.000Z", {}),
-    line("m4", "outgoing", "I will send the invoice this afternoon.", "2026-11-04T00:45:00.000Z", {
-        who: "Thu Ha Le",
-        state: "queued",
-    }),
+    line(
+        "m1",
+        "incoming",
+        "Ch\u00e0o shop, m\u00ecnh mu\u1ed1n l\u1ea5y hai ch\u1eadu hoa nh\u01b0 l\u1ea7n tr\u01b0\u1edbc.",
+        "2026-11-03T14:02:00.000Z",
+        {
+            who: "L\u00ea B\u1ea3o Tr\u00e2n",
+        },
+    ),
+    line(
+        "m2",
+        "outgoing",
+        "D\u1ea1 shop c\u00f2n n\u0103m ch\u1eadu \u1ea1. Giao \u0111\u1ecba ch\u1ec9 nh\u01b0 l\u1ea7n tr\u01b0\u1edbc nh\u00e9?",
+        "2026-11-03T14:02:40.000Z",
+        {
+            who: "AI",
+            state: "sent",
+            mark: "AI",
+        },
+    ),
+    line("m3", "notice", "L\u00ea Thu H\u00e0 took over the conversation.", "2026-11-04T00:30:00.000Z", {}),
+    line(
+        "m4",
+        "outgoing",
+        "Chi\u1ec1u nay em s\u1ebd g\u1eedi h\u00f3a \u0111\u01a1n cho ch\u1ecb \u1ea1.",
+        "2026-11-04T00:45:00.000Z",
+        {
+            who: "L\u00ea Thu H\u00e0",
+            state: "queued",
+        },
+    ),
 ]
 
 /** The thread of a conversation whose last question waits for the owner. */
 export const WAITING_LINES: ReadonlyArray<ThreadLine> = [
-    line("m5", "incoming", "Does this pot come with a root warranty?", "2026-11-04T01:09:00.000Z", {
-        who: "Minh Anh Nguyen",
-    }),
+    line(
+        "m5",
+        "incoming",
+        "Ch\u1eadu n\u00e0y c\u00f3 b\u1ea3o h\u00e0nh r\u1ec5 kh\u00f4ng \u1ea1?",
+        "2026-11-04T01:09:00.000Z",
+        {
+            who: "Nguy\u1ec5n Minh Anh",
+        },
+    ),
 ]
 
 /** The Chatbot reads in the states a prototype draws (ready, empty, and what waits for the owner) and the answer of each action. Loading and error need no data. */
@@ -202,8 +226,8 @@ export const CHATBOT_FIXTURES: ModuleFixtures = {
     },
     actions: {
         "chatbot.reply": { ok: true, data: { messageId: "m9" } },
-        "chatbot.handoff": { ok: true, data: { handledBy: "Thu Ha Le" } },
+        "chatbot.handoff": { ok: true, data: { handledBy: "L\u00ea Thu H\u00e0" } },
         "chatbot.release": { ok: true, data: { handledBy: null } },
-        "chatbot.decide": { ok: true, data: { handledBy: "Thu Ha Le" } },
+        "chatbot.decide": { ok: true, data: { handledBy: "L\u00ea Thu H\u00e0" } },
     },
 }

@@ -15,7 +15,10 @@ describe("lineage", () => {
             ["payment", "NGUYEN VAN DINH", 5_000_000],
             ["adjustment", "Lan", 1_800_000],
         ])
-        expect(steps[3]).toMatchObject({ detail: "Discount agreed by phone", status: null })
+        expect(steps[3]).toMatchObject({
+            detail: "Gi\u1ea3m gi\u00e1 \u0111\u00e3 th\u1ecfa thu\u1eadn qua \u0111i\u1ec7n tho\u1ea1i",
+            status: null,
+        })
         expect(steps.map((step) => step.id)).toEqual([ORDER.id, INVOICE.id, TRANSACTION.id, ADJUSTMENT.id])
     })
 

@@ -5,8 +5,8 @@ describe("the chatbot.decide action", () => {
     it("takes the waiting conversation over under the member name", async () => {
         const world = memoryWorld()
         const result = await DECIDE.execute?.(memoryProvider(world), { id: "c1", command: "handoff" }, STAFF_CONTEXT)
-        expect(result).toEqual({ ok: true, data: { handledBy: "Thu Ha Le" } })
-        expect(world.conversations.get("c1")).toMatchObject({ handledBy: "Thu Ha Le" })
+        expect(result).toEqual({ ok: true, data: { handledBy: "L\u00ea Thu H\u00e0" } })
+        expect(world.conversations.get("c1")).toMatchObject({ handledBy: "L\u00ea Thu H\u00e0" })
     })
 
     it("refuses a command it does not know", async () => {

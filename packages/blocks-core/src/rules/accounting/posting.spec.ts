@@ -54,7 +54,7 @@ describe("posting", () => {
                 sourceId: INVOICE.id,
                 entryDate: "2026-11-01",
                 amountVnd: 2_000_000,
-                note: "INV-202611-0001 / Nguyen Van Dinh",
+                note: "INV-202611-0001 / Nguy\u1ec5n V\u0103n \u0110\u1ecbnh",
             },
         ])
     })
@@ -110,7 +110,7 @@ describe("posting", () => {
                 sourceId: INVOICE.id,
                 entryDate: "2026-11-01",
                 amountVnd: -2_000_000,
-                note: "INV-202611-0001 / Nguyen Van Dinh",
+                note: "INV-202611-0001 / Nguy\u1ec5n V\u0103n \u0110\u1ecbnh",
             },
         ])
     })
@@ -128,7 +128,7 @@ describe("posting", () => {
             sourceId: ADJUSTMENT.id,
             entryDate: "2026-11-02",
             amountVnd: 1_800_000,
-            note: "Lan / Discount agreed by phone",
+            note: "Lan / Gi\u1ea3m gi\u00e1 \u0111\u00e3 th\u1ecfa thu\u1eadn qua \u0111i\u1ec7n tho\u1ea1i",
         })
     })
 

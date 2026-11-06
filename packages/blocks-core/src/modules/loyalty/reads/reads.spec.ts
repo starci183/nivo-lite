@@ -87,9 +87,9 @@ describe("loyalty.tiers", () => {
     it("lists the ladder with the members who hold each tier", async () => {
         expect(await run(tiersRead, {})).toEqual({
             rows: [
-                { key: "dong", name: "Bronze", minSpendVnd: 0, multiplier: 1, benefit: "", count: 2 },
-                { key: "bac", name: "Silver", minSpendVnd: 3_000_000, multiplier: 1.2, benefit: "", count: 1 },
-                { key: "vang", name: "Gold", minSpendVnd: 10_000_000, multiplier: 1.5, benefit: "", count: 1 },
+                { key: "dong", name: "\u0110\u1ed3ng", minSpendVnd: 0, multiplier: 1, benefit: "", count: 2 },
+                { key: "bac", name: "B\u1ea1c", minSpendVnd: 3_000_000, multiplier: 1.2, benefit: "", count: 1 },
+                { key: "vang", name: "V\u00e0ng", minSpendVnd: 10_000_000, multiplier: 1.5, benefit: "", count: 1 },
             ],
         })
     })
@@ -106,10 +106,10 @@ describe("loyalty.members and loyalty.member-counts", () => {
         expect(page).toMatchObject({
             cursor: null,
             rows: [
-                { id: "m-1", tier: "Gold", contact: "84912345678", activity: "active" },
-                { id: "m-3", tier: "Bronze", activity: "active" },
-                { id: "m-2", tier: "Silver", activity: "at_risk" },
-                { id: "m-5", tier: "Bronze", activity: "at_risk" },
+                { id: "m-1", tier: "V\u00e0ng", contact: "84912345678", activity: "active" },
+                { id: "m-3", tier: "\u0110\u1ed3ng", activity: "active" },
+                { id: "m-2", tier: "B\u1ea1c", activity: "at_risk" },
+                { id: "m-5", tier: "\u0110\u1ed3ng", activity: "at_risk" },
                 { id: "m-4", tier: "", contact: "ha@example.com", activity: "new" },
             ],
         })
@@ -150,7 +150,7 @@ describe("loyalty.members and loyalty.member-counts", () => {
 
     it("names the tiers from the starter rules before the programme is saved", async () => {
         expect(await run(membersRead, { q: "lan" }, sampleState({ program: null }))).toMatchObject({
-            rows: [{ id: "m-1", tier: "Gold" }],
+            rows: [{ id: "m-1", tier: "V\u00e0ng" }],
         })
     })
 
@@ -176,14 +176,14 @@ describe("loyalty.member", () => {
     it("answers one member with the tier progress", async () => {
         expect(await run(memberRead, { id: "m-1" })).toMatchObject({
             id: "m-1",
-            name: "Nguyen Thi Lan",
-            tier: "Gold",
+            name: "Nguy\u1ec5n Th\u1ecb Lan",
+            tier: "V\u00e0ng",
             points: 1450,
             nextTier: "",
             missingVnd: 0,
             birthday: "1990-11-20",
         })
-        expect(await run(memberRead, { id: "m-3" })).toMatchObject({ nextTier: "Silver", missingVnd: 2_050_000 })
+        expect(await run(memberRead, { id: "m-3" })).toMatchObject({ nextTier: "B\u1ea1c", missingVnd: 2_050_000 })
     })
 
     it("tells the points that expire in the warning window and when", async () => {
@@ -209,7 +209,7 @@ describe("loyalty.member", () => {
             birthday: "",
             lastVisitAt: "",
             tier: "",
-            nextTier: "Silver",
+            nextTier: "B\u1ea1c",
         })
         expect(await run(memberRead, { id: "m-2" })).toMatchObject({ email: "" })
     })
@@ -309,12 +309,16 @@ describe("loyalty.pending", () => {
             rows: [
                 {
                     id: "d-1",
-                    title: "Send the promotion to quiet silver members",
+                    title: "G\u1eedi khuy\u1ebfn m\u00e3i cho th\u00e0nh vi\u00ean h\u1ea1ng B\u1ea1c l\u00e2u ch\u01b0a quay l\u1ea1i",
                     badges: [{ label: "1d" }],
                     primary: { id: "approve" },
                     menu: [{ id: "reject", isDanger: true }],
                 },
-                { id: "d-2", badges: [{ label: "5h" }], proposal: "Add 200 points for a missed purchase" },
+                {
+                    id: "d-2",
+                    badges: [{ label: "5h" }],
+                    proposal: "C\u1ed9ng 200 \u0111i\u1ec3m cho l\u1ea7n mua ch\u01b0a \u0111\u01b0\u1ee3c t\u00edch",
+                },
             ],
         })
     })
@@ -356,14 +360,14 @@ describe("loyalty.pending-waiting", () => {
             rows: [
                 {
                     id: "d-1",
-                    title: "Send the promotion to quiet silver members",
+                    title: "G\u1eedi khuy\u1ebfn m\u00e3i cho th\u00e0nh vi\u00ean h\u1ea1ng B\u1ea1c l\u00e2u ch\u01b0a quay l\u1ea1i",
                     description: "1 member",
                     href: "?tab=pending",
                 },
                 {
                     id: "d-2",
-                    title: "Add 200 points for a missed purchase",
-                    description: "Nguyen Thi Lan",
+                    title: "C\u1ed9ng 200 \u0111i\u1ec3m cho l\u1ea7n mua ch\u01b0a \u0111\u01b0\u1ee3c t\u00edch",
+                    description: "Nguy\u1ec5n Th\u1ecb Lan",
                     href: "?tab=pending",
                 },
             ],

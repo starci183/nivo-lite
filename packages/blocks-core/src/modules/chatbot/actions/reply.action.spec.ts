@@ -21,7 +21,7 @@ describe("the chatbot.reply action", () => {
                 text: "Invoice is on its way.",
                 sentAt: "2026-11-05T03:00:00.000Z",
                 authorKind: "human",
-                authorName: "Thu Ha Le",
+                authorName: "L\u00ea Thu H\u00e0",
                 authorUserId: "member-staff",
                 deliveryStatus: null,
                 deliveryError: null,
