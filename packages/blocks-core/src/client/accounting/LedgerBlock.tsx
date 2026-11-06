@@ -1,11 +1,11 @@
 import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { Cluster, DataTable, EmptyNotice, Heading, Section, Stack, Text } from "@starci/grammar/common"
+import { Cluster, DataTable, EmptyNotice, Heading, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import type { accountingLedgerBlock } from "../../blocks/accounting/ledger.block"
 import { bookPeriodOf } from "../../rules/accounting/book-view"
 import type { Ledger } from "../../rules/accounting/ledger"
 import { bandOf, ledgerCardOf, ledgerRecord, sectionsOf } from "../../rules/accounting/ledger-view"
-import type { LedgerCardWords, LedgerRow, LedgerSection } from "../../rules/accounting/ledger-view"
+import type { LedgerRow, LedgerSection } from "../../rules/accounting/ledger-view"
 import { parsedSlot } from "../../slots/slots"
 import { PeriodControl } from "./PeriodControl"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
@@ -59,7 +59,7 @@ interface DayProps {
     readonly empty: string
     readonly isLoading: boolean
     readonly isPhone: boolean
-    readonly cardWords: LedgerCardWords
+    readonly cardWords: { readonly income: string; readonly expense: string }
 }
 
 /** One day: its date and closing balance over the lines of the day. */
@@ -125,7 +125,7 @@ export const LedgerBlock = (props: RenderOf<typeof accountingLedgerBlock>): Reac
         expense: words({ key: "ledger_out" }),
         balance: words({ key: "ledger_col_balance" }),
     }
-    const cardWords: LedgerCardWords = { income: words({ key: "ledger_in" }), expense: words({ key: "ledger_out" }) }
+    const cardWords = { income: words({ key: "ledger_in" }), expense: words({ key: "ledger_out" }) }
     return (
         <Stack gap="row">
             <Cluster gap="inline" justify="between" align="center">
@@ -142,30 +142,16 @@ export const LedgerBlock = (props: RenderOf<typeof accountingLedgerBlock>): Reac
                 onRetry={read.retry}
                 render={(ledger, isLoading) => (
                     <Stack gap="section">
-                        {isPhone ? (
-                            <Section
-                                kind="list"
-                                ariaLabel={words(props.props.title)}
-                                isLoading={isLoading}
-                                items={bandCells(ledger).map((cell) => ({
-                                    id: cell.id,
-                                    title: cell.term,
-                                    meta: { text: cell.value },
-                                }))}
-                                empty={<EmptyNotice message={labels.empty} />}
-                            />
-                        ) : (
-                            <Section
-                                kind="figures"
-                                ariaLabel={words(props.props.title)}
-                                isLoading={isLoading}
-                                items={bandCells(ledger).map((cell) => ({
-                                    id: cell.id,
-                                    term: cell.term,
-                                    value: cell.value,
-                                }))}
-                            />
-                        )}
+                        <SurfaceCard
+                            kind="figures"
+                            ariaLabel={words(props.props.title)}
+                            isLoading={isLoading}
+                            items={bandCells(ledger).map((cell) => ({
+                                id: cell.id,
+                                term: cell.term,
+                                value: cell.value,
+                            }))}
+                        />
                         {sectionsOf(ledger, kindWord).map((section) => (
                             <Day
                                 key={section.day}

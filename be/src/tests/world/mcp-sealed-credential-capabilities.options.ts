@@ -12,7 +12,6 @@ import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from 
 import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
 import { DataRecordsModule } from "@modules/domain/data-records"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
-import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { MCP_ERROR_KINDS, MCP_MESSAGES } from "@modules/integrations/mcp"
@@ -39,7 +38,6 @@ export const MCP_SEALED_CREDENTIAL_MODULES: Array<DynamicModule> = [
             MCP_GATEWAY_MESSAGES,
             MCP_GATEWAY_RECEIPTS_MESSAGES,
             MCP_MESSAGES,
-            TRANSACTIONS_MESSAGES,
         ],
     }),
     ErrorsModule.register({
@@ -50,7 +48,6 @@ export const MCP_SEALED_CREDENTIAL_MODULES: Array<DynamicModule> = [
             MCP_GATEWAY_ERROR_KINDS,
             MCP_GATEWAY_RECEIPTS_ERROR_KINDS,
             MCP_ERROR_KINDS,
-            TRANSACTIONS_ERROR_KINDS,
         ],
     }),
     ...QUEUE_MODULES,
@@ -59,7 +56,6 @@ export const MCP_SEALED_CREDENTIAL_MODULES: Array<DynamicModule> = [
     StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),
-    TransactionsModule.register({ isGlobal: true }),
     AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     ConnectionSecretsModule.register({ isGlobal: true, tokenKey: SEALED_PROOF_TOKEN_KEY }),
     ConnectionsModule.register({

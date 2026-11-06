@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
-import { Section, SurfaceCard } from "@starci/grammar/common"
+import { SurfaceCard } from "@starci/grammar/common"
 import type { recordListBlock } from "../../blocks/record-list.block"
 import { RECORD_ROWS_PLACEHOLDER, recordsView, rowsOf } from "../../rows/rows"
 import { queryOf } from "../../rows/search"
@@ -21,7 +21,13 @@ interface FramedProps {
 
 /** What a selectable list is drawn in: its own rows, or the one surface card that holds them. */
 const Framed = (props: FramedProps): ReactNode =>
-    props.isCard ? <SurfaceCard ariaLabel={props.label}>{props.children}</SurfaceCard> : props.children
+    props.isCard ? (
+        <SurfaceCard label={props.label} headingLevel={3}>
+            {props.children}
+        </SurfaceCard>
+    ) : (
+        props.children
+    )
 
 /** The action that clears the search an empty list answers with; none when nothing is searched. */
 const clearSearchOf = (
@@ -66,7 +72,15 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
             labels={labels}
             placeholder={RECORD_ROWS_PLACEHOLDER}
             onRetry={read.retry}
-            {...(isCard ? { frame: (notice: ReactNode) => <SurfaceCard ariaLabel={label}>{notice}</SurfaceCard> } : {})}
+            {...(isCard
+                ? {
+                      frame: (notice: ReactNode) => (
+                          <SurfaceCard label={label} headingLevel={3}>
+                              {notice}
+                          </SurfaceCard>
+                      ),
+                  }
+                : {})}
             {...clearSearch}
             render={(items, isLoading) =>
                 selectParam === undefined ? (
@@ -101,11 +115,5 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
             }
         />
     )
-    return isCard ? (
-        <Section title={label} headingLevel={3}>
-            {list}
-        </Section>
-    ) : (
-        list
-    )
+    return list
 }

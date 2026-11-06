@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactElement, ReactNode } from "react"
 import { Alert, EmptyNotice } from "@starci/grammar/common"
 import type { IconSource } from "@starci/grammar/common"
 import type { DataSlot, SlotLabels } from "../slot/slot.types"
@@ -85,9 +85,9 @@ const errorNotice = (
  * Composite: the ONE recipe for a slot's data status. No block writes its own
  * loading / forbidden / error / empty branch; each one renders through here.
  */
-export const SlotView = <T,>(props: SlotViewProps<T>): ReactNode => {
+export const SlotView = <T,>(props: SlotViewProps<T>): ReactElement => {
     const { slot, labels } = props
-    const framed = (notice: ReactNode): ReactNode => (props.frame === undefined ? notice : props.frame(notice))
+    const framed = (notice: ReactNode): ReactElement => <>{props.frame === undefined ? notice : props.frame(notice)}</>
     if ("isLoading" in slot) return <>{props.render(props.placeholder, true)}</>
     if ("isForbidden" in slot)
         return (

@@ -72,6 +72,15 @@ describe("attentionEntriesOf", () => {
         ])
     })
 
+    it("names a step and a failure the list has words for by their message keys, and keeps the raw words of others", () => {
+        const [known, unknown] = parkedEntriesOf([
+            { id: "a", step: "confirm", errorCode: "DELIVERY_FAILED", errorWords: "x" },
+            { id: "b", step: "other", errorCode: "OTHER", errorWords: "y" },
+        ])
+        expect(known).toMatchObject({ titleKey: "failed_step_confirm", descriptionKey: "failed_reason_delivery" })
+        expect(unknown).toEqual({ id: "b", kind: "failed", title: "other", description: "y", at: "" })
+    })
+
     it("leaves out a record with no id and draws a record with missing words as empty ones", () => {
         const entries = attentionEntriesOf([{ title: "No id" }, { id: 5, reason: "owner" }])
         expect(entries).toEqual([{ id: "5", kind: "owner", title: "", description: "", at: "" }])
@@ -94,13 +103,13 @@ describe("parkedEntriesOf", () => {
     it("draws a parked run by its step, what the error says and when it was parked, under the id of the run", () => {
         expect(
             parkedEntriesOf([
-                { id: "run-1", step: "invoice", errorWords: "no service", parkedAt: "2026-11-06T07:55:00.000Z" },
+                { id: "run-1", step: "invoice-x", errorWords: "no service", parkedAt: "2026-11-06T07:55:00.000Z" },
             ]),
         ).toEqual([
             {
                 id: "run-1",
                 kind: "failed",
-                title: "invoice",
+                title: "invoice-x",
                 description: "no service",
                 at: "2026-11-06T07:55:00.000Z",
             },

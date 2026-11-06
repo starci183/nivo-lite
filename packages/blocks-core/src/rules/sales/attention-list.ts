@@ -87,7 +87,27 @@ export interface AttentionEntry {
     readonly description: string
     /** Since when the row waits, ISO text; empty when the read does not say. */
     readonly at: string
+    /** The message key of the name, when the name is a step the list has words for; the raw name is the fallback. */
+    readonly titleKey?: string
+    /** The message key of the line, when it is a failure the list has words for; the raw line is the fallback. */
+    readonly descriptionKey?: string
 }
+
+/** The steps of Sales a run can park at, with the message that names each. */
+export const PARKED_STEP_KEYS: ReadonlyMap<string, string> = new Map<string, string>([
+    ["confirm", "failed_step_confirm"],
+    ["notify", "failed_step_notify"],
+    ["invoice", "failed_step_invoice"],
+    ["order.complete", "failed_step_order_complete"],
+    ["order.ask-missing", "failed_step_order_ask_missing"],
+])
+
+/** The failures of those steps, by the code the engine keeps, with the message that says each. */
+export const PARKED_REASON_KEYS: ReadonlyMap<string, string> = new Map<string, string>([
+    ["DELIVERY_FAILED", "failed_reason_delivery"],
+    ["invoice_unreachable", "failed_reason_invoice"],
+    ["TIMEOUT", "failed_reason_timeout"],
+])
 
 /** The kind each reason code of the three reads names; a code the list does not know asks the owner for a reply. */
 const REASON_KINDS: ReadonlyMap<string, AttentionKind> = new Map<string, AttentionKind>([
@@ -134,6 +154,8 @@ export const parkedEntriesOf = (records: ReadonlyArray<unknown>): ReadonlyArray<
     records.flatMap((record) => {
         const id = textOf(valueAt(record, "id"))
         if (id === "") return []
+        const step = PARKED_STEP_KEYS.get(textOf(valueAt(record, "step")))
+        const reason = PARKED_REASON_KEYS.get(textOf(valueAt(record, "errorCode")))
         return [
             {
                 id,
@@ -141,6 +163,8 @@ export const parkedEntriesOf = (records: ReadonlyArray<unknown>): ReadonlyArray<
                 title: textOf(valueAt(record, "step")),
                 description: textOf(valueAt(record, "errorWords")),
                 at: textOf(valueAt(record, "parkedAt")),
+                ...(step === undefined ? {} : { titleKey: step }),
+                ...(reason === undefined ? {} : { descriptionKey: reason }),
             },
         ]
     })

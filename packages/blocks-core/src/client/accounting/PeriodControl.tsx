@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { ChoiceChips } from "@starci/grammar/common"
+import { Tabs } from "@starci/grammar/common"
 import type { BookPeriod } from "../../rules/accounting/book-view"
 import { useBlockWords } from "../composites/useBlockWords"
 
@@ -11,20 +11,19 @@ interface PeriodControlProps {
     readonly onChange: (period: BookPeriod) => void
 }
 
-/** The switch between this month and last month that heads the weekly chart and the cash book. */
+/** The switch between this month and last month that heads the weekly chart and the cash book: the tabs of the block, not joined buttons. */
 export const PeriodControl = (props: PeriodControlProps): ReactNode => {
     const words = useBlockWords()
     return (
-        <ChoiceChips
+        <Tabs
             label={words({ key: "ledger_period" })}
-            isLabelHidden
-            empty={null}
-            options={[
-                { value: "this", label: words({ key: "book_period_this" }) },
-                { value: "last", label: words({ key: "book_period_last" }) },
+            items={[
+                { id: "this", label: words({ key: "book_period_this" }) },
+                { id: "last", label: words({ key: "book_period_last" }) },
             ]}
-            value={props.period}
-            onValueChange={(value) => props.onChange(value === "last" ? "last" : "this")}
+            selectedKey={props.period}
+            onSelect={(id) => props.onChange(id === "last" ? "last" : "this")}
+            inset="none"
         />
     )
 }

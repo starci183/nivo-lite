@@ -5104,22 +5104,6 @@ type ShellAgentType {
   status: String!
 }
 
-type ShellApprovalType {
-  contactName: String
-  draft: String!
-  id: ID!
-  leadId: ID
-  nextAction: String
-}
-
-type ShellExceptionType {
-  contactName: String
-  error: String
-  id: ID!
-  leadId: ID
-  summary: String
-}
-
 input ShellWindowInput {
   foundingFrom: String! @inputBounds(maxLength: 40)
   foundingTo: String! @inputBounds(maxLength: 40)
@@ -5710,13 +5694,8 @@ enum WorkspaceRole {
 
 type WorkspaceShellType {
   agents: [ShellAgentType!]!
-  approvals: [ShellApprovalType!]!
-  exceptions: [ShellExceptionType!]!
   hasChatbot: Boolean!
   isFoundingMember: Boolean!
-  leadCount: Int!
-  openResponsibilityCount: Int!
-  pendingDecisions: Int!
 }
 
 type WorkspaceType {
