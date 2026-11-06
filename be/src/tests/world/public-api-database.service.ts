@@ -197,21 +197,6 @@ export const apiOutbox = (manager: EntityManager, workspaceId: string): Promise<
         .addOrderBy("o.id")
         .getRawMany<PublicApiOutboxState>()
 
-/** The `deal_won` envelopes published on the event bus for one workspace (the automations consumer reacts to them). */
-export const apiDealWon = async (
-    manager: EntityManager,
-    workspaceId: string,
-): Promise<Array<Readonly<Record<string, unknown>>>> => {
-    const rows = await manager
-        .createQueryBuilder()
-        .select("q.message", "message")
-        .from("pgmq.q_deal_won__automations", "q")
-        .where("q.message->'payload'->>'workspaceId' = :workspaceId", { workspaceId })
-        .orderBy("q.msg_id")
-        .getRawMany<{ readonly message: Readonly<Record<string, unknown>> }>()
-    return rows.map((row) => row.message)
-}
-
 /** Inbox receipts of public API and manual inbound inputs in this workspace. */
 export const apiInbox = (manager: EntityManager, workspaceId: string): Promise<Array<PublicApiInboxState>> => {
     const keys = manager

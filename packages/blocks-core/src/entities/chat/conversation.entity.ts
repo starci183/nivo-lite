@@ -71,6 +71,7 @@ export const conversationEntity: EntityDefinition<ConversationFields> = defineEn
     indexes: [
         { name: "key", on: ["id"] },
         { name: "recent", on: [{ desc: "lastAt" }, { desc: "id" }] },
+        { name: "lead_created", on: ["leadId", { desc: "createdAt" }, { desc: "id" }] },
         { name: "lead_recent", on: ["leadId", { desc: "lastAt" }, { desc: "id" }] },
         { name: "channel_recent", on: ["channel", { desc: "lastAt" }, { desc: "id" }] },
         { name: "status_recent", on: ["status", { desc: "lastAt" }, { desc: "id" }] },

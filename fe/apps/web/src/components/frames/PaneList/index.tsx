@@ -82,8 +82,9 @@ export const PaneList = (props: PaneListProps) => {
                 selectedIds={props.selectedId === null ? [] : [props.selectedId]}
                 onAction={props.onSelect}
                 onSelectionChange={(ids) => {
-                    const id = ids[0]
-                    if (id !== undefined) props.onSelect(id)
+                    // Pressing the open row clears the selection: it is the row's own press, so it opens that row again (a phone shows its pane).
+                    const id = ids[0] ?? props.selectedId
+                    if (id !== null) props.onSelect(id)
                 }}
                 isLoading={isLoading}
                 {...(props.error === undefined ? {} : { error: props.error })}

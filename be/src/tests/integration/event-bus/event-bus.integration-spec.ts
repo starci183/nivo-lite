@@ -1,6 +1,7 @@
 import {
-    LEAD_CAPTURED_AUTOMATIONS_TOPIC_QUEUE,
-    PAYMENT_RECONCILED_AUTOMATIONS_TOPIC_QUEUE,
+    BANK_CREDIT_BOOKED_AGENT_WAKES_TOPIC_QUEUE,
+    KNOWLEDGE_SOURCE_INDEXED_AGENT_WAKES_TOPIC_QUEUE,
+    KNOWLEDGE_SOURCE_INDEXED_BRAIN_TOPIC_QUEUE,
 } from "@modules/platform/event-bus"
 import { InboxService } from "@modules/platform/inbox"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -17,12 +18,15 @@ import { useTestWorld } from "../../world/use-test-world"
 const world = useTestWorld({ modules: [] })
 
 const RUN = world.prefix
-const PAYMENT_QUEUES = ["contracts", "automations", "payment_receipts"].map(
-    (consumer) => `payment_reconciled__${consumer}`,
-)
-const ALL_QUEUES = [...PAYMENT_QUEUES, LEAD_CAPTURED_AUTOMATIONS_TOPIC_QUEUE]
-const LEAD_QUEUE = `q_${LEAD_CAPTURED_AUTOMATIONS_TOPIC_QUEUE}`
-const LEAD_ARCHIVE = `a_${LEAD_CAPTURED_AUTOMATIONS_TOPIC_QUEUE}`
+const FANOUT_TOPIC = "knowledge_source_indexed"
+const SINGLE_TOPIC = "bank_credit_booked"
+/** The live fan-out: one `knowledge_source_indexed` event reaches the brain and the agent wakes consumers. */
+const FANOUT_QUEUES = [KNOWLEDGE_SOURCE_INDEXED_BRAIN_TOPIC_QUEUE, KNOWLEDGE_SOURCE_INDEXED_AGENT_WAKES_TOPIC_QUEUE]
+/** A topic with one live consumer: `bank_credit_booked` reaches the agent wakes consumer alone. */
+const SINGLE_QUEUE = BANK_CREDIT_BOOKED_AGENT_WAKES_TOPIC_QUEUE
+const ALL_QUEUES = [...FANOUT_QUEUES, SINGLE_QUEUE]
+const SINGLE_Q = `q_${SINGLE_QUEUE}`
+const SINGLE_ARCHIVE = `a_${SINGLE_QUEUE}`
 
 /** The proof opened by `beforeAll`. */
 interface OpenedProof {
@@ -55,7 +59,7 @@ describe("event-bus publishing", () => {
         const publishWithWrite = (key: string, fail: boolean): Promise<void> =>
             app.transaction(async (manager) => {
                 await publisher.publish(
-                    new SpecEvent("lead_captured", "e", { dedupeKey: key, subjectId: "1" }),
+                    new SpecEvent(SINGLE_TOPIC, "e", { dedupeKey: key, subjectId: "1" }),
                     manager,
                     "request-1",
                 )
@@ -68,7 +72,7 @@ describe("event-bus publishing", () => {
         await publishWithWrite(keptKey, false)
         await expect(publishWithWrite(lostKey, true)).rejects.toMatchObject({ code: TestWorldErrorCode.ProviderDown })
 
-        expect(await count(LEAD_QUEUE)).toBe(1)
+        expect(await count(SINGLE_Q)).toBe(1)
         await expect(app.transaction((manager) => inbox.claim("atomic-proof", keptKey, manager))).resolves.toBe(false)
         await expect(app.transaction((manager) => inbox.claim("atomic-proof", lostKey, manager))).resolves.toBe(true)
     })
@@ -79,46 +83,40 @@ describe("event-bus publishing", () => {
         const publishOnce = (key: string, fail: boolean): Promise<void> =>
             app.transaction(async (manager) => {
                 await publisher.publish(
-                    new SpecEvent("lead_captured", "e", { dedupeKey: key, subjectId: "1" }),
+                    new SpecEvent(SINGLE_TOPIC, "e", { dedupeKey: key, subjectId: "1" }),
                     manager,
                     "request-1",
                 )
-                seen.push(await count(LEAD_QUEUE))
+                seen.push(await count(SINGLE_Q))
                 if (fail) throw new TestWorldError({ code: TestWorldErrorCode.ProviderDown })
             })
 
         await expect(publishOnce(`rb:${RUN}`, true)).rejects.toMatchObject({ code: TestWorldErrorCode.ProviderDown })
-        expect(await count(LEAD_QUEUE)).toBe(0)
+        expect(await count(SINGLE_Q)).toBe(0)
         await publishOnce(`cm:${RUN}`, false)
 
         expect(seen).toEqual([0, 0])
-        expect(await count(LEAD_QUEUE)).toBe(1)
+        expect(await count(SINGLE_Q)).toBe(1)
     })
 
     it("event-bus/commit: one publish reaches two consumers, each exactly once, then is archived", async () => {
         const { publish, runnerOf, door, count } = bus()
         const effects: Array<string> = []
         const runner = runnerOf()
-        await publish("payment_reconciled", `pay:${RUN}`)
-        expect(await Promise.all(PAYMENT_QUEUES.map((queue) => count(`q_${queue}`)))).toEqual([1, 1, 1])
+        await publish(FANOUT_TOPIC, `src:${RUN}`)
+        expect(await Promise.all(FANOUT_QUEUES.map((queue) => count(`q_${queue}`)))).toEqual([1, 1])
 
-        await eachInOrder(PAYMENT_QUEUES.slice(0, 2), async (queue) => {
+        await eachInOrder(FANOUT_QUEUES, async (queue) => {
             await expect(runner.drain({ queue, consumer: door(effects), maxDeliveries: 5 })).resolves.toBe(1)
             await expect(runner.drain({ queue, consumer: door(effects), maxDeliveries: 5 })).resolves.toBe(0)
         })
 
-        expect(effects).toEqual([
-            `payment_reconciled__contracts:pay:${RUN}:1`,
-            `payment_reconciled__automations:pay:${RUN}:1`,
-        ])
-        expect(await count("a_payment_reconciled__contracts")).toBe(1)
-        expect(await count("a_payment_reconciled__automations")).toBe(1)
-        expect(await count("q_payment_reconciled__payment_receipts")).toBe(1)
+        expect(effects).toEqual(FANOUT_QUEUES.map((queue) => `${queue}:src:${RUN}:1`))
+        expect(await Promise.all(FANOUT_QUEUES.map((queue) => count(`a_${queue}`)))).toEqual([1, 1])
     })
 
     it("event-bus/no-direct-pgmq: the application role cannot reach the pgmq schema", async () => {
         await expect(bus().appIsRefusedPgmq()).resolves.toBe(true)
-        expect(PAYMENT_RECONCILED_AUTOMATIONS_TOPIC_QUEUE).toBe("payment_reconciled__automations")
     })
 })
 
@@ -129,21 +127,21 @@ describe("event-bus delivery", () => {
         const state = { failing: true }
         const runner = runnerOf({ visibilitySeconds: 1 })
         const subscription = {
-            queue: LEAD_CAPTURED_AUTOMATIONS_TOPIC_QUEUE,
+            queue: SINGLE_QUEUE,
             consumer: door(effects, () => state.failing),
             maxDeliveries: 5,
         }
-        await publish("lead_captured", `rd:${RUN}`)
+        await publish(SINGLE_TOPIC, `rd:${RUN}`)
 
         await runner.drain(subscription)
-        expect(await count(LEAD_ARCHIVE)).toBe(0)
+        expect(await count(SINGLE_ARCHIVE)).toBe(0)
         await expect(runner.drain(subscription)).resolves.toBe(0)
         state.failing = false
         await pause(1200)
         await runner.drain(subscription)
 
-        expect(effects).toEqual([`lead_captured__automations:rd:${RUN}:2`])
-        expect(await count(LEAD_ARCHIVE)).toBe(1)
+        expect(effects).toEqual([`${SINGLE_QUEUE}:rd:${RUN}:2`])
+        expect(await count(SINGLE_ARCHIVE)).toBe(1)
         expect(logger.error).toHaveBeenCalledTimes(1)
     })
 
@@ -151,15 +149,13 @@ describe("event-bus delivery", () => {
         const { publish, runnerOf, door, count } = bus()
         const effects: Array<string> = []
         const runner = runnerOf()
-        await publish("lead_captured", `same:${RUN}`)
-        await publish("lead_captured", `same:${RUN}`)
+        await publish(SINGLE_TOPIC, `same:${RUN}`)
+        await publish(SINGLE_TOPIC, `same:${RUN}`)
 
-        await expect(
-            runner.drain({ queue: LEAD_CAPTURED_AUTOMATIONS_TOPIC_QUEUE, consumer: door(effects), maxDeliveries: 5 }),
-        ).resolves.toBe(2)
+        await expect(runner.drain({ queue: SINGLE_QUEUE, consumer: door(effects), maxDeliveries: 5 })).resolves.toBe(2)
 
-        expect(effects).toEqual([`lead_captured__automations:same:${RUN}:1`])
-        expect(await count(LEAD_ARCHIVE)).toBe(2)
+        expect(effects).toEqual([`${SINGLE_QUEUE}:same:${RUN}:1`])
+        expect(await count(SINGLE_ARCHIVE)).toBe(2)
     })
 })
 
@@ -169,11 +165,11 @@ describe("event-bus dead letters", () => {
         const effects: Array<string> = []
         const runner = runnerOf({ visibilitySeconds: 1 })
         const subscription = {
-            queue: LEAD_CAPTURED_AUTOMATIONS_TOPIC_QUEUE,
+            queue: SINGLE_QUEUE,
             consumer: door(effects, () => true),
             maxDeliveries: 2,
         }
-        await publish("lead_captured", `poison:${RUN}`)
+        await publish(SINGLE_TOPIC, `poison:${RUN}`)
 
         await drainRounds(3, async () => {
             await runner.drain(subscription)
@@ -183,15 +179,15 @@ describe("event-bus dead letters", () => {
         expect(logger.error).toHaveBeenCalledTimes(2)
         expect(logger.warn).toHaveBeenCalledWith(
             "event-bus.delivery.dead",
-            expect.objectContaining({ consumer: LEAD_CAPTURED_AUTOMATIONS_TOPIC_QUEUE, reason: "max-deliveries" }),
+            expect.objectContaining({ consumer: SINGLE_QUEUE, reason: "max-deliveries" }),
         )
-        expect(await count(LEAD_QUEUE)).toBe(0)
-        const dead = await publisher.deadLetters(LEAD_CAPTURED_AUTOMATIONS_TOPIC_QUEUE, 10)
+        expect(await count(SINGLE_Q)).toBe(0)
+        const dead = await publisher.deadLetters(SINGLE_QUEUE, 10)
         expect(dead).toHaveLength(1)
         expect(dead[0]).toMatchObject({ reason: "max-deliveries", readCount: 3 })
 
-        await expect(publisher.requeue(LEAD_CAPTURED_AUTOMATIONS_TOPIC_QUEUE, dead[0]?.id ?? "")).resolves.toBe(true)
-        expect(await count(LEAD_QUEUE)).toBe(1)
-        expect(await count(`${LEAD_QUEUE}__dead`)).toBe(0)
+        await expect(publisher.requeue(SINGLE_QUEUE, dead[0]?.id ?? "")).resolves.toBe(true)
+        expect(await count(SINGLE_Q)).toBe(1)
+        expect(await count(`${SINGLE_Q}__dead`)).toBe(0)
     })
 })

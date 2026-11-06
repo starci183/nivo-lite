@@ -2,6 +2,7 @@ import { defineModule } from "@nivo-lite/agent-sdk/module"
 import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
 import { PLATFORM_MODULE_KEY, PLATFORM_VIEW } from "./constants"
 import { resumeRunAction } from "./actions/resume-run.action"
+import { CHAT_POST_APPROVAL_TOOL, CHAT_POST_REPORT_TOOL } from "./jobs/team-chat.jobs"
 import { agentRunCountsRead } from "./reads/agent-run-counts.read"
 import { agentRunRead } from "./reads/agent-run.read"
 import { agentRunsRead } from "./reads/agent-runs.read"
@@ -31,5 +32,6 @@ export const platformModule: ModuleDeclaration = defineModule({
         agentRunRead,
     ],
     actions: [resumeRunAction],
+    tools: [CHAT_POST_REPORT_TOOL, CHAT_POST_APPROVAL_TOOL],
     specs: [AGENT_RUNS_SPEC],
 })

@@ -6,6 +6,8 @@ import type { DoorCallResult } from "@nivo-lite/agent-sdk/mutation"
  */
 export const DOOR_GRANTS: ReadonlyArray<string> = [
     "chat.send",
+    "team-chat.post-report",
+    "team-chat.post-approval",
     "ledger.append",
     "ledger.status",
     "ai.agent.turn",

@@ -1,5 +1,9 @@
 {
   "action_resume_run": "Chạy lại",
+  "parked_error_delivery_failed": "Không gửi được tin nhắn",
+  "parked_error_timeout": "Kênh không phản hồi",
+  "parked_step_confirm": "Xác nhận đơn hàng",
+  "parked_step_notify": "Báo cho khách",
   "refusal_forbidden": "Chỉ chủ, quản lý hoặc người quản lý module này mới chạy lại được",
   "refusal_missing": "Không tìm thấy lượt chạy này",
   "refusal_not_parked": "Lượt chạy này không đang dừng, không có gì để chạy lại",

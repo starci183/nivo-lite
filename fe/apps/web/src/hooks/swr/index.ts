@@ -255,4 +255,7 @@ export {
 } from "./api"
 export { useMutateWorkbenchActionSwr, useQueryWorkbenchMoreSwr, useQueryWorkbenchReadSwr } from "./api"
 export { QUERY_CHAT_ROOMS_SWR_KEY, useQueryChatMessagesSwr, useQueryChatRoomsSwr, useQueryChatUnreadSwr } from "./api"
-export type { ChatRoomsFilter } from "./api"
+export { useMutateCreateChatRoomSwr, useMutateDecideChatApprovalSwr, useMutateMarkChatRoomReadSwr } from "./api"
+export { useMutatePinChatMessageSwr, useMutateRequestChatFileUploadSwr, useMutateSendChatMessageSwr } from "./api"
+export { useMutateSetChatRoomMutedSwr, useMutateSetChatTypingSwr, useMutateUnpinChatMessageSwr } from "./api"
+export { useSubscribeChatTypingSwr } from "./api"

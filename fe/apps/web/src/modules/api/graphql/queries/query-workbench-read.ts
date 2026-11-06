@@ -8,10 +8,9 @@ interface WorkbenchReadData {
     readonly workbenchRead: { readonly data: string }
 }
 
-/** The variables of the generic read operation: the read name and the literal variables of the binding, as JSON text. */
+/** The variables of the generic read operation: the `WorkbenchReadInput` of the door, the read name and the literal variables of the binding as JSON text (`vars`). */
 interface WorkbenchReadVariables {
-    readonly name: string
-    readonly variables: string
+    readonly input: { readonly name: string; readonly vars: string }
 }
 
 /**
@@ -20,8 +19,8 @@ interface WorkbenchReadVariables {
  * it with the other queries.
  */
 const query1: TypedDocumentNode<WorkbenchReadData, WorkbenchReadVariables> = gql`
-    query WorkbenchRead($name: String!, $variables: String!) {
-        workbenchRead(name: $name, variables: $variables) {
+    query WorkbenchRead($input: WorkbenchReadInput!) {
+        workbenchRead(input: $input) {
             data
         }
     }
@@ -42,5 +41,5 @@ export const queryWorkbenchRead = async ({
     signal,
 }: QueryWorkbenchReadParams): Promise<ApolloClient.QueryResult<WorkbenchReadData>> => {
     const apollo = createAuthApolloClient({ signal })
-    return apollo.query({ query: query1, variables: { name, variables: JSON.stringify(variables) } })
+    return apollo.query({ query: query1, variables: { input: { name, vars: JSON.stringify(variables) } } })
 }

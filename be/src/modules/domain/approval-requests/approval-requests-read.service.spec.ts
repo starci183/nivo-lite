@@ -73,3 +73,74 @@ describe("ApprovalRequestsReadService", () => {
         })
     })
 })
+
+describe("ApprovalRequestsReadService card reads", () => {
+    describe("cardOf", () => {
+        it("answers what the request asks and the group it kept", async () => {
+            const request = Object.assign(new ApprovalRequestEntity(), {
+                id: "r1",
+                action: "refund",
+                amount: 200000,
+                unit: "vnd",
+                requestedByAgentId: "a1",
+                approverGroup: { roles: ["owner"], rooms: [], members: [] },
+            })
+            const em = mockEntityManager({ findOne: [ApprovalRequestEntity, request] })
+
+            await expect((await build(em)).cardOf("ws-1", "r1")).resolves.toEqual({
+                id: "r1",
+                action: "refund",
+                amount: 200000,
+                unit: "vnd",
+                requestedByAgentId: "a1",
+                approverGroup: { roles: ["owner"], rooms: [], members: [] },
+            })
+            expect(em.findOne).toHaveBeenCalledWith(
+                ApprovalRequestEntity,
+                expect.objectContaining({ where: { id: "r1", workspaceId: "ws-1" } }),
+            )
+        })
+
+        it("answers nothing for a request the workspace does not have", async () => {
+            const em = mockEntityManager({ findOne: [ApprovalRequestEntity, null] })
+
+            await expect((await build(em)).cardOf("ws-1", "r1")).resolves.toBeNull()
+        })
+    })
+
+    describe("standingOf", () => {
+        it("asks for nothing when no request is given", async () => {
+            const em = mockEntityManager()
+
+            await expect((await build(em)).standingOf("ws-1", [])).resolves.toEqual([])
+            expect(em.find).not.toHaveBeenCalled()
+        })
+
+        it("answers the state, the settler and the asked seats of each request of the workspace", async () => {
+            const resolvedAt = new Date("2026-11-06T10:00:00.000Z")
+            const em = mockEntityManager({
+                find: [
+                    ApprovalRequestEntity,
+                    [
+                        Object.assign(new ApprovalRequestEntity(), {
+                            id: "r1",
+                            status: "approved",
+                            resolvedAt,
+                            resolvedBy: "m1",
+                            approvers: [{ memberId: "m1" }, { memberId: "m2" }],
+                        }),
+                    ],
+                ],
+            })
+
+            await expect((await build(em)).standingOf("ws-1", ["r1"])).resolves.toEqual([
+                { id: "r1", status: "approved", resolvedAt, resolvedBy: "m1", askedSeatIds: ["m1", "m2"] },
+            ])
+            expect(em.find).toHaveBeenCalledWith(ApprovalRequestEntity, {
+                select: { id: true, status: true, resolvedAt: true, resolvedBy: true, approvers: true },
+                where: { id: In(["r1"]), workspaceId: "ws-1" },
+                take: 1,
+            })
+        })
+    })
+})

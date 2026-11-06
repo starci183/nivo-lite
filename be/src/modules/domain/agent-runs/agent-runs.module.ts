@@ -16,6 +16,7 @@ import { AgentRunWorkspacesService } from "./agent-run-workspaces.service"
 import { AgentRunParkStoreService } from "./agent-run-park-store.service"
 import { AgentRunResumeService } from "./agent-run-resume.service"
 import { AgentRunStepsService } from "./agent-run-steps.service"
+import { AgentRunReportService } from "./agent-run-report.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentRunSweepService } from "./agent-run-sweep.service"
 import { AgentRunTraceService } from "./agent-run-trace.service"
@@ -51,6 +52,7 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                 AgentRunRecordsService,
                 AgentRunWorkspacesService,
                 AgentRunDueService,
+                AgentRunReportService,
                 AgentRunStoreService,
                 AgentRunParkStoreService,
                 AgentRunResumeService,

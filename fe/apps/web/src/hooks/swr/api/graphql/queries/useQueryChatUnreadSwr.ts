@@ -6,7 +6,7 @@ import { argumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import type { ChatUnreadQuery } from "@/modules/api"
 
 /** The identity of the unread cache. */
-const QUERY_CHAT_UNREAD_SWR_KEY = "QUERY_CHAT_UNREAD_SWR"
+export const QUERY_CHAT_UNREAD_SWR_KEY = "QUERY_CHAT_UNREAD_SWR"
 
 /** How often the unread counts are read again. */
 const UNREAD_REFRESH_MS = 10000

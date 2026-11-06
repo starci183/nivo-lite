@@ -7,7 +7,7 @@ import { agentHref } from "@/modules/installations"
 import { workspaceHref } from "@/modules/routes"
 
 /**
- * Where the report of one agent run opens: the work tab of the agent that wrote it, on that run. Null while the installed agents are
+ * Where the report of one agent run opens: the work tab of the agent that wrote it, whose runs view shows the run (`?run=`). Null while the installed agents are
  * read, or when no installed agent has that id (an agent that was removed).
  */
 export const useTeamChatReportHref = (): ((agentId: string, runId: string) => string | null) => {
