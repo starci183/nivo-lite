@@ -21,8 +21,10 @@ import { tableBlock } from "./table.block"
 import { graphBlock } from "./graph.block"
 import { runTimelineBlock } from "./run-timeline.block"
 import { waitingBlock } from "./waiting.block"
+import { loyaltyBlocks } from "./loyalty/loyalty-blocks"
+import { salesBlocks } from "./sales/sales-blocks"
 
-/** The definitions of every core block, React-free so the back end validates specs against them without loading React. */
+/** The definitions of every core block and every agent's own blocks, React-free so the back end validates specs against them without loading React. */
 export const coreBlocks: ReadonlyArray<BlockDefinition> = [
     stackBlock,
     cardGridBlock,
@@ -46,4 +48,6 @@ export const coreBlocks: ReadonlyArray<BlockDefinition> = [
     explanationBlock,
     graphBlock,
     runTimelineBlock,
+    ...salesBlocks,
+    ...loyaltyBlocks,
 ]

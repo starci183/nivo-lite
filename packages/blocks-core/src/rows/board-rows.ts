@@ -41,14 +41,22 @@ export interface BoardColumnSpec {
     readonly label: string
 }
 
+/** Where a card sits: its key and the column its record says. */
+export interface Placed {
+    /** The key of the record. */
+    readonly id: string
+    /** The value of the grouping field. */
+    readonly column: string
+}
+
 /** One column as drawn: its cards, and how many it holds when every card is known. */
-export interface BoardColumnView {
+export interface BoardColumnView<C extends Placed = BoardCard> {
     /** The value of the grouping field the column holds. */
     readonly value: string
     /** The words on the column head. */
     readonly label: string
     /** The cards of the column, in the order of the read. */
-    readonly cards: ReadonlyArray<BoardCard>
+    readonly cards: ReadonlyArray<C>
     /** How many cards the column holds; absent while more cards may still load. */
     readonly count: number | undefined
 }
@@ -90,12 +98,12 @@ export const boardCardsOf = (
 }
 
 /** The columns of a board: one per declared value, each with the cards that are in it now (a pending move counts). */
-export const boardColumnsOf = (
-    cards: ReadonlyArray<BoardCard>,
+export const boardColumnsOf = <C extends Placed>(
+    cards: ReadonlyArray<C>,
     specs: ReadonlyArray<BoardColumnSpec>,
     moved: BoardMoves,
     hasMore: boolean,
-): ReadonlyArray<BoardColumnView> =>
+): ReadonlyArray<BoardColumnView<C>> =>
     specs.map((spec) => {
         const inColumn = cards.filter((card) => (moved[card.id] ?? card.column) === spec.value)
         return { value: spec.value, label: spec.label, cards: inColumn, count: hasMore ? undefined : inColumn.length }
@@ -109,7 +117,7 @@ export const withoutMove = (moved: BoardMoves, id: string): BoardMoves =>
     Object.fromEntries(Object.entries(moved).filter(([key]) => key !== id))
 
 /** The pending moves the read has not caught up with: a move whose card the read now puts in the same column is settled. */
-export const unsettledMoves = (moved: BoardMoves, cards: ReadonlyArray<BoardCard>): BoardMoves =>
+export const unsettledMoves = (moved: BoardMoves, cards: ReadonlyArray<Placed>): BoardMoves =>
     Object.fromEntries(
         Object.entries(moved).filter(([id, column]) => cards.some((card) => card.id === id && card.column !== column)),
     )

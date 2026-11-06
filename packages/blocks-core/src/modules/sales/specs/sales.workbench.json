@@ -105,8 +105,8 @@
             "children": []
           },
           {
-            "id": "attention-orders",
-            "block": "core.record-list",
+            "id": "attention-card",
+            "block": "sales.attention-card",
             "props": {
               "label": {
                 "key": "attention_orders"
@@ -114,28 +114,22 @@
               "empty": {
                 "key": "attention_empty"
               },
-              "idPath": "id",
-              "titlePath": "title",
-              "descriptionPath": "description",
-              "badgePath": "reason",
-              "labels": {
-                "reason": {
-                  "owner": {
-                    "key": "reason_owner"
-                  }
-                }
-              },
-              "avatar": true,
-              "badgeTones": {
-                "owner": "warning"
-              }
+              "selectParam": "selected"
             },
             "bind": {
-              "rows": {
+              "attention": {
                 "read": "sales.attention",
                 "path": "rows"
               },
-              "open": {
+              "awaitingReply": {
+                "read": "sales.awaiting-reply",
+                "path": "rows"
+              },
+              "failedSteps": {
+                "read": "sales.failed-steps",
+                "path": "rows"
+              },
+              "review": {
                 "action": "sales.confirm-order"
               }
             },
@@ -157,11 +151,17 @@
         },
         "children": [
           {
-            "id": "lead-board",
-            "block": "core.board",
+            "id": "lead-pipeline",
+            "block": "sales.pipeline",
             "props": {
               "label": {
-                "key": "leads"
+                "key": "pipeline_label"
+              },
+              "searchLabel": {
+                "key": "pipeline_search"
+              },
+              "countLabel": {
+                "key": "pipeline_count"
               },
               "emptyColumn": {
                 "key": "board_empty_column"
@@ -169,43 +169,6 @@
               "emptySearch": {
                 "key": "leads_empty_search"
               },
-              "idPath": "id",
-              "titlePath": "contactName",
-              "descriptionPath": "need",
-              "metaPath": "company",
-              "groupBy": "stage",
-              "columns": [
-                {
-                  "value": "new",
-                  "label": {
-                    "key": "stage_new"
-                  }
-                },
-                {
-                  "value": "qualified",
-                  "label": {
-                    "key": "stage_qualified"
-                  }
-                },
-                {
-                  "value": "proposal",
-                  "label": {
-                    "key": "stage_proposal"
-                  }
-                },
-                {
-                  "value": "won",
-                  "label": {
-                    "key": "stage_won"
-                  }
-                },
-                {
-                  "value": "lost",
-                  "label": {
-                    "key": "stage_lost"
-                  }
-                }
-              ],
               "selectParam": "selected",
               "searchParam": "q"
             },
@@ -217,10 +180,17 @@
                   "sort": "$sort"
                 }
               },
+              "counts": {
+                "read": "sales.lead-counts",
+                "variables": {
+                  "q": "$q"
+                }
+              },
               "move": {
                 "action": "sales.move-stage"
               }
-            }
+            },
+            "children": []
           },
           {
             "id": "lead-detail",

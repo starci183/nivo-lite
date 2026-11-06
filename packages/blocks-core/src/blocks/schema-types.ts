@@ -17,6 +17,16 @@ export interface RequiredRead<S extends "record" | "list"> {
     readonly required: true
 }
 
+/** A read slot of the given shape that a spec may leave unbound; the block then draws as if the read had nothing. */
+export interface OptionalRead<S extends "record" | "list"> {
+    /** Marks the slot as one a spec binds to a read. */
+    readonly kind: "read"
+    /** Whether the bound read yields one record or a list of them. */
+    readonly shape: S
+    /** A spec may leave the slot unbound. */
+    readonly required: false
+}
+
 /** An action slot that a spec may leave unbound. */
 export interface OptionalAction {
     /** Marks the slot as one a spec binds to a command. */

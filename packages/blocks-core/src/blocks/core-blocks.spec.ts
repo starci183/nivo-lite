@@ -3,6 +3,8 @@ import { conversationBlock } from "./conversation.block"
 import { filterTabsBlock } from "./filter-tabs.block"
 import { formBlock } from "./form.block"
 import { listEditorBlock } from "./list-editor.block"
+import { loyaltyBlocks } from "./loyalty/loyalty-blocks"
+import { salesBlocks } from "./sales/sales-blocks"
 import { listPaneBlock } from "./list-pane.block"
 import { tabbedPanelBlock } from "./tabbed-panel.block"
 import { tableBlock } from "./table.block"
@@ -42,10 +44,11 @@ const EXPLANATION_WORDS = [
 ]
 
 describe("coreBlocks", () => {
-    it("lists every core block once, under an id of the core namespace", () => {
+    it("lists every block once: the 22 core blocks and each agent's own, under the namespace of the agent", () => {
         const ids = coreBlocks.map((block) => block.id)
-        expect(new Set(ids).size).toBe(22)
-        expect(ids.every((id) => id.startsWith("core."))).toBe(true)
+        expect(new Set(ids).size).toBe(ids.length)
+        expect(ids.filter((id) => id.startsWith("core."))).toHaveLength(22)
+        expect(ids.filter((id) => !id.startsWith("core.")).every((id) => /^(sales|loyalty)\./.test(id))).toBe(true)
     })
 
     it("carries the JSON Schema of every block's props", () => {
@@ -76,6 +79,8 @@ describe("coreBlocks", () => {
             explanationBlock,
             graphBlock,
             runTimelineBlock,
+            ...salesBlocks,
+            ...loyaltyBlocks,
         ])
     })
 })

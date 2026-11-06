@@ -17,7 +17,7 @@
       "type": "enum",
       "of": "loyalty.members.sort",
       "url": "sort",
-      "default": "recent"
+      "default": "points"
     },
     "member": {
       "type": "string",
@@ -38,6 +38,10 @@
       "of": ["list", "queue"],
       "url": "pane",
       "default": "list"
+    },
+    "tier": {
+      "type": "string",
+      "url": "tier"
     }
   },
   "views": [
@@ -307,90 +311,64 @@
         },
         "children": [
           {
-            "id": "member-pane",
-            "block": "core.list-pane",
+            "id": "member-list",
+            "block": "loyalty.members",
             "props": {
-              "search": true,
-              "searchParam": "q",
+              "label": {
+                "key": "members_label"
+              },
               "searchLabel": {
                 "key": "search_members"
-              }
+              },
+              "all": {
+                "key": "filter_all"
+              },
+              "atRisk": {
+                "key": "activity_at_risk"
+              },
+              "sortLabel": {
+                "key": "members_sort_label"
+              },
+              "empty": {
+                "key": "members_empty"
+              },
+              "emptySearch": {
+                "key": "members_empty_search"
+              },
+              "searchParam": "q",
+              "tierParam": "tier",
+              "activityParam": "activity",
+              "sortParam": "sort",
+              "selectParam": "member"
             },
-            "children": [
-              {
-                "id": "member-tabs",
-                "block": "core.filter-tabs",
-                "props": {
-                  "param": "activity",
-                  "label": {
-                    "key": "activity_label"
-                  },
-                  "all": {
-                    "key": "filter_all"
-                  },
-                  "items": [
-                    {
-                      "value": "active",
-                      "label": {
-                        "key": "activity_active"
-                      }
-                    },
-                    {
-                      "value": "at_risk",
-                      "label": {
-                        "key": "activity_at_risk"
-                      }
-                    },
-                    {
-                      "value": "new",
-                      "label": {
-                        "key": "activity_new"
-                      }
-                    }
-                  ]
-                },
-                "bind": {
-                  "counts": {
-                    "read": "loyalty.member-counts",
-                    "variables": {
-                      "q": "$q"
-                    }
-                  }
+            "bind": {
+              "rows": {
+                "read": "loyalty.members",
+                "variables": {
+                  "q": "$q",
+                  "activity": "$activity",
+                  "tier": "$tier",
+                  "sort": "$sort"
                 }
               },
-              {
-                "id": "member-rows",
-                "block": "core.record-list",
-                "props": {
-                  "label": {
-                    "key": "members_label"
-                  },
-                  "empty": {
-                    "key": "members_empty"
-                  },
-                  "emptySearch": {
-                    "key": "members_empty_search"
-                  },
-                  "idPath": "id",
-                  "titlePath": "name",
-                  "descriptionPath": "contact",
-                  "badgePath": "tier",
-                  "selectParam": "member",
-                  "searchParam": "q",
-                  "avatar": true
-                },
-                "bind": {
-                  "rows": {
-                    "read": "loyalty.members",
-                    "variables": {
-                      "q": "$q",
-                      "activity": "$activity",
-                      "sort": "$sort"
-                    }
-                  }
+              "tiers": {
+                "read": "loyalty.tiers",
+                "path": "rows"
+              },
+              "tierCounts": {
+                "read": "loyalty.tier-counts",
+                "variables": {
+                  "q": "$q"
+                }
+              },
+              "activityCounts": {
+                "read": "loyalty.member-counts",
+                "variables": {
+                  "q": "$q"
                 }
               }
-            ]
+            },
+            "children": []
           },
           {
             "id": "member-side",

@@ -46,6 +46,8 @@ import { RecordListBlock } from "./blocks/RecordListBlock"
 import { SectionBlock } from "./blocks/SectionBlock"
 import { StackBlock } from "./blocks/StackBlock"
 import { WaitingBlock } from "./blocks/WaitingBlock"
+import { loyaltyRenderers } from "./loyalty/loyalty-renderers"
+import { salesRenderers } from "./sales/sales-renderers"
 
 /** The components of every core block, one per definition of the root export; the app hands them to the spec renderer. */
 export const coreBlocks: ReadonlyArray<BlockRenderer> = [
@@ -71,4 +73,6 @@ export const coreBlocks: ReadonlyArray<BlockRenderer> = [
     defineRenderer(explanationBlock, ExplanationBlock),
     defineRenderer(graphBlock, GraphBlock),
     defineRenderer(runTimelineBlock, RunTimelineBlock),
+    ...salesRenderers,
+    ...loyaltyRenderers,
 ]

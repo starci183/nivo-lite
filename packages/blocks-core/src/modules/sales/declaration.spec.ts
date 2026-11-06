@@ -1,6 +1,10 @@
 import { seedSpecProblems } from "@nivo-lite/agent-sdk/module"
 import type { SpecNode } from "@nivo-lite/agent-sdk/spec"
 import { coreBlocks } from "../../blocks/core-blocks"
+import { salesBlocks } from "../../blocks/sales/sales-blocks"
+import { ATTENTION_COUNT_KEY, ATTENTION_KINDS, ATTENTION_KIND_VIEWS } from "../../rules/sales/attention-list"
+import { PIPELINE_WORD_KEYS, stageKeyOf } from "../../rules/sales/pipeline"
+import { LEAD_STAGES } from "../../rules/sales/stage"
 import { salesModule } from "./declaration"
 import { SALES_FIXTURES } from "./fixtures/sales.fixtures"
 import { SALES_MESSAGES } from "./sales-messages"
@@ -120,6 +124,14 @@ describe("the messages of the Sales module", () => {
             ...keysIn(SALES_WORKBENCH_SPEC),
             ...salesModule.actions.flatMap((action) => keysIn(action.label)),
             ...refusals.flatMap((reason) => keysIn(refusedWith(reason))),
+            ...salesBlocks.flatMap((block) => keysIn(block.title)),
+            ATTENTION_COUNT_KEY,
+            ...ATTENTION_KINDS.flatMap((kind) => [
+                ATTENTION_KIND_VIEWS[kind].chipKey,
+                ATTENTION_KIND_VIEWS[kind].commandKey,
+            ]),
+            ...Object.values(PIPELINE_WORD_KEYS),
+            ...LEAD_STAGES.map(stageKeyOf),
             "refusal_conflict",
             "refusal_order_waits_owner",
         ]),

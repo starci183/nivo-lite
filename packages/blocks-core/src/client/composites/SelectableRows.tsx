@@ -63,13 +63,13 @@ const itemOf = (row: RecordRow, hasAvatar: boolean): ListBoxItem => ({
 })
 
 /** What the paging control takes. */
-interface LoadMoreProps {
+export interface LoadMoreProps {
     readonly page: ReadPage
     readonly words: SelectableRowsWords
 }
 
 /** The control under the rows that loads the next page, with the line and the retry of a failed load. */
-const LoadMore = (props: LoadMoreProps): ReactNode => {
+export const LoadMore = (props: LoadMoreProps): ReactNode => {
     const state = moreStateOf(props.page)
     if (state === "none") return null
     return (
