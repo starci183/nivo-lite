@@ -28,6 +28,7 @@ import {
 import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { ApprovalRequestsModule } from "@modules/domain/approval-requests"
 import { ChatRoomDirectoryModule, ChatRoomDirectoryService } from "@modules/domain/chat-room-directory"
+import { teamChatEntities } from "@modules/domain/team-chat"
 import { DECISIONS_ERROR_KINDS, DECISIONS_MESSAGES, DecisionsModule } from "@modules/domain/decisions"
 import {
     OPENCLAW_AGENT_SYNC_ERROR_KINDS,
@@ -65,7 +66,7 @@ export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
         },
         syncFreshMs: AGENTS_SYNC_FRESH_MS,
     }),
-    ChatRoomDirectoryModule.register({ isGlobal: true }),
+    ChatRoomDirectoryModule.register({ isGlobal: true, rooms: teamChatEntities[0], seats: teamChatEntities[1] }),
     AgentProfileModule.register({ isGlobal: true }),
     AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
     AiGenerationsModule.register({

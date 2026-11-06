@@ -17,7 +17,13 @@ import type { ResumeAnswer, RunStepView } from "./agent-runs-engine.contracts"
 const failedStep = (errorCode: string | null = "boom"): RunStepView =>
     runStepViewOf({ stepKey: "turn", status: "failed", attempt: 3, errorCode, fence: 4 })
 
-const RESUMED: ResumeAnswer = { kind: "resumed", stepKey: "turn", workspaceId: "ws-1", errorCode: "boom", at: 9 }
+const RESUMED: ResumeAnswer = {
+    kind: "resumed",
+    stepKey: "turn",
+    workspaceId: "ws-1",
+    errorCode: "boom",
+    effectKey: "resume-2",
+}
 
 const REF = { runId: "run-1", workspaceId: "ws-1" }
 

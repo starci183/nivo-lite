@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { CHAT_ROOM_DIRECTORY } from "./chat-room-directory.decorators"
+import { CHAT_ROOM_DIRECTORY, CHAT_ROOM_DIRECTORY_OPTIONS } from "./chat-room-directory.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./chat-room-directory.module-definition"
 import { ChatRoomDirectoryService } from "./chat-room-directory.service"
 
@@ -14,6 +14,7 @@ export class ChatRoomDirectoryModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
+                { provide: CHAT_ROOM_DIRECTORY_OPTIONS, useValue: options },
                 ChatRoomDirectoryService,
                 { provide: CHAT_ROOM_DIRECTORY, useExisting: ChatRoomDirectoryService },
             ],

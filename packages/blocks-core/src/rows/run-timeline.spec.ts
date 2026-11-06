@@ -131,6 +131,21 @@ describe("runStepsOf", () => {
         expect(rows.map((row) => row.canResume)).toEqual([false, false, false, true, false])
         expect(runStepsOf({ id: "r", status: "done", steps: [] }, CONTEXT)).toEqual([])
     })
+
+    it("offers to run again on a failed step the read marked resumable, and on no other failed step", () => {
+        const failed = runStepsOf(
+            {
+                id: "r",
+                status: "failed",
+                steps: [
+                    { id: "x", node: "n", label: "X", state: "failed", canResume: true },
+                    { id: "y", node: "n", label: "Y", state: "failed" },
+                ],
+            },
+            CONTEXT,
+        )
+        expect(failed.map((row) => row.canResume)).toEqual([true, false])
+    })
 })
 
 describe("RUN_PLACEHOLDER and runWithSteps", () => {
