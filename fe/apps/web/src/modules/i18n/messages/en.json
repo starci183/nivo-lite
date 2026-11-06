@@ -3432,6 +3432,9 @@
     "kindCustomer": "Customer"
   },
   "agentWork": {
+    "viewsLabel": "Agent work",
+    "viewWork": "Work",
+    "viewRuns": "Runs",
     "saved": "Saved",
     "paneLabel": "Agent work",
     "emptyWork": "This agent has no work to show yet.",

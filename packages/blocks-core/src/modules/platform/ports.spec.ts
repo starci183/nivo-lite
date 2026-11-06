@@ -1,5 +1,7 @@
 import {
     agentConnectionsPort,
+    agentGraphs,
+    agentRunSteps,
     agentRuns,
     parkedRunsPort,
     agentKnowledgePort,
@@ -15,6 +17,8 @@ describe("the ports of the platform module", () => {
         expect(rightsPort.id).toBe("platform.rights")
         expect(parkedRunsPort.id).toBe("platform.parked-runs")
         expect(agentRuns.id).toBe("engine.entity.agent.run")
+        expect(agentRunSteps.id).toBe("engine.entity.agent.run-step")
+        expect(agentGraphs.id).toBe("engine.entity.agent.graph")
         expect(agentConnectionsPort.id).toBe("platform.agent-connections")
         expect(agentKnowledgePort.id).toBe("platform.agent-knowledge")
     })

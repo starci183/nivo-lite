@@ -17,12 +17,13 @@ type SpecWorkbenchFrameProps = {
     readonly tab: string | null
 }
 
-/** The connected workbench: finds the declaration of the module, whose reads and actions the spec binds, and draws the spec on the installation of the url when the module is enabled for the workspace. */
+/** The connected workbench: finds the declaration of the module, whose reads and actions the spec binds, and draws the spec on the installation of the url when the module is enabled for the workspace (the platform module is always there). */
 export const SpecWorkbenchFrame = (props: SpecWorkbenchFrameProps) => {
     const declaration = useWorkbenchDeclaration(props.module)
     const platform = useWorkbenchDeclaration(PLATFORM_MODULE_KEY)
     const enabled = useEnabledModules()
-    if (declaration === null || platform === null || !enabled.includes(props.module)) return null
+    const isPlatform = props.module === PLATFORM_MODULE_KEY
+    if (declaration === null || platform === null || !(isPlatform || enabled.includes(props.module))) return null
     return (
         <SpecWorkbenchFrameBase
             props={{

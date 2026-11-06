@@ -3437,6 +3437,9 @@
     "kindCustomer": "Khách hàng"
   },
   "agentWork": {
+    "viewsLabel": "Công việc của trợ lý",
+    "viewWork": "Việc đang làm",
+    "viewRuns": "Lượt chạy",
     "saved": "Đã lưu",
     "paneLabel": "Công việc của trợ lý",
     "emptyWork": "Trợ lý này chưa có công việc nào để hiển thị.",
