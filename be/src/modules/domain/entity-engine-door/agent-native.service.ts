@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { McpGatewayError, McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
-import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
+import { RoutedNativeAdapter, argumentsOf, invalidArguments } from "@modules/domain/mcp-gateway"
+import type { GatewayJson, NativeConnectorManifest, NativeToolHandler } from "@modules/domain/mcp-gateway"
 import {
     agentIdFor,
     InjectOpenclawGateway,
@@ -56,33 +56,32 @@ export const AGENT_MANIFEST: NativeConnectorManifest = {
 
 @Injectable()
 /** Runs the tools of the agent connector over the OpenClaw gateway; the agent is always one of the calling workspace. */
-export class AgentNativeService implements NativeAdapter {
+export class AgentNativeService extends RoutedNativeAdapter {
     readonly manifest: NativeConnectorManifest = AGENT_MANIFEST
 
     constructor(
         @InjectOpenclawGateway() private readonly gateway: GatewayClient,
         @InjectOpenclawGatewayHistory() private readonly history: GatewayHistoryClient,
-    ) {}
-
-    /** Runs one agent tool. */
-    async invoke(workspaceId: string, tool: string, args: GatewayJson, _caller: NativeCaller): Promise<GatewayJson> {
-        if (tool === "turn") return this.turn(workspaceId, args)
-        if (tool === "history") return this.read(workspaceId, args)
-        throw new McpGatewayError({ code: McpGatewayErrorCode.UnknownTool, params: { tool } })
+    ) {
+        super()
     }
 
+    protected readonly handlers: ReadonlyMap<string, NativeToolHandler> = new Map([
+        ["turn", (workspaceId, args) => this.turn(workspaceId, args)],
+        ["history", (workspaceId, args) => this.read(workspaceId, args)],
+    ])
+
     private async turn(workspaceId: string, args: GatewayJson): Promise<GatewayJson> {
-        const parsed = AGENT_TURN_SCHEMA.safeParse(args)
-        if (!parsed.success || parsed.data.idempotencyKey === undefined)
-            throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool: "turn" } })
-        const agentId = agentIdFor(workspaceId, parsed.data.agentKey)
+        const parsed = argumentsOf("turn", AGENT_TURN_SCHEMA, args)
+        if (parsed.idempotencyKey === undefined) throw invalidArguments("turn")
+        const agentId = agentIdFor(workspaceId, parsed.agentKey)
         const result = await this.gateway.runTurn(
             {
                 agentId,
-                threadKey: threadKeyFor(agentId, parsed.data.sessionKey),
-                message: parsed.data.message,
-                idempotencyKey: parsed.data.idempotencyKey,
-                timeoutMs: parsed.data.timeoutMs ?? TURN_TIMEOUT_MS,
+                threadKey: threadKeyFor(agentId, parsed.sessionKey),
+                message: parsed.message,
+                idempotencyKey: parsed.idempotencyKey,
+                timeoutMs: parsed.timeoutMs ?? TURN_TIMEOUT_MS,
             },
             new AbortController().signal,
         )
@@ -90,12 +89,10 @@ export class AgentNativeService implements NativeAdapter {
     }
 
     private async read(workspaceId: string, args: GatewayJson): Promise<GatewayJson> {
-        const parsed = AGENT_HISTORY_SCHEMA.safeParse(args)
-        if (!parsed.success)
-            throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool: "history" } })
-        const agentId = agentIdFor(workspaceId, parsed.data.agentKey)
+        const parsed = argumentsOf("history", AGENT_HISTORY_SCHEMA, args)
+        const agentId = agentIdFor(workspaceId, parsed.agentKey)
         const turns = await this.history.read(
-            { threadKey: threadKeyFor(agentId, parsed.data.sessionKey), timeoutMs: HISTORY_TIMEOUT_MS },
+            { threadKey: threadKeyFor(agentId, parsed.sessionKey), timeoutMs: HISTORY_TIMEOUT_MS },
             new AbortController().signal,
         )
         return {

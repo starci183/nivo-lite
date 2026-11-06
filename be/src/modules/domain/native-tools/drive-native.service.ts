@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import type { OriginSource } from "@modules/domain/knowledge-sources"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
+import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
 import {
     DRIVE_SOURCES_LIST_INPUT_SCHEMA,
     DRIVE_SOURCES_LIST_SCHEMA,
@@ -10,7 +11,7 @@ import {
 } from "./drive-native.schema"
 import type { DriveSourcesListInput } from "./drive-native.schema"
 import { emailMasked } from "./native-masking.policy"
-import { argumentsOf, nativeRefusal, unknownTool } from "./native-refusal.policy"
+import { nativeRefusal } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
 import { ProviderToolsService } from "./provider-tools.service"
 
