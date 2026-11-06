@@ -14,16 +14,12 @@ import { ResponsibilitiesModule } from "@modules/domain/responsibilities"
 import { WorkItemsModule } from "@modules/domain/work-items"
 import { DecisionsQueueModule } from "@modules/queues/decisions"
 import { INBOX, InboxService } from "@modules/platform/inbox"
-import { AuthorityGrantsService } from "./authority-grants.service"
-import { DecisionJobsService } from "./decision-jobs.service"
 import { ApprovalRequesterService } from "./approval-requester.service"
 import { CommandBusService } from "./command-bus.service"
 import { CommandPlannerService } from "./command-planner.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./decisions.module-definition"
-import { DecisionHistoryService } from "./decision-history.service"
 import { DecisionLogReadService } from "./decision-log-read.service"
 import { DecisionsService } from "./decisions.service"
-import { DecisionsFiguresService } from "./decisions-figures.service"
 import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
@@ -34,7 +30,6 @@ import { WorkItemRaiseExecutorService } from "./work-item-raise-executor.service
 import { WorkItemWithdrawExecutorService } from "./work-item-withdraw-executor.service"
 import { WorkChainService } from "./work-chain.service"
 import { WorkDecisionService } from "./work-decision.service"
-import { WorkDrainService } from "./work-drain.service"
 import { WorkPlacementService } from "./work-placement.service"
 import { WorkEngineService } from "./work-engine.service"
 import { WorkIntakeService } from "./work-intake.service"
@@ -45,9 +40,6 @@ import {
     LEAD_GEN_FLOW,
     MODULE_CATALOG_SOURCE,
     OUTBOUND_ACCESS_GATE,
-    THREAD_WORK_HISTORY,
-    WORK_CHAINS_HISTORY,
-    WORK_THREADS_HISTORY,
 } from "./work-engine.decorators"
 import { WorkPerformersService } from "./work-performers.service"
 import { WorkRecorderService } from "./work-recorder.service"
@@ -89,33 +81,25 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 { provide: LEAD_GEN_FLOW, useExisting: options.ports.leadGenFlow },
                 { provide: MODULE_CATALOG_SOURCE, useExisting: options.ports.moduleCatalog },
                 { provide: OUTBOUND_ACCESS_GATE, useClass: options.ports.outboundAccessGate },
-                { provide: THREAD_WORK_HISTORY, useExisting: options.ports.threadWorkHistory },
-                { provide: WORK_CHAINS_HISTORY, useExisting: options.ports.workChainsHistory },
-                { provide: WORK_THREADS_HISTORY, useExisting: options.ports.workThreadsHistory },
                 ApprovalRequesterService,
-                AuthorityGrantsService,
                 CommandBusService,
-                DecisionJobsService,
                 CommandPlannerService,
-                DecisionHistoryService,
                 DecisionLogReadService,
                 AgentRunItemVerdictsService,
                 AgentRunParkedAlertsService,
                 DecisionsService,
-                DecisionsFiguresService,
                 EvidenceService,
                 DurableWorkService,
                 ModuleCatalogService,
                 WorkApprovalService,
+                WorkChainService,
                 WorkBranchService,
                 WorkItemClosedService,
                 WorkItemRaiseExecutorService,
                 WorkItemWithdrawExecutorService,
-                WorkChainService,
                 WorkDecisionService,
                 WorkDecisionTimeoutService,
                 GraphWorkDecisionService,
-                WorkDrainService,
                 WorkItemViewsService,
                 WorkPlacementService,
                 WorkEngineService,
@@ -130,19 +114,14 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 DecisionsQueueModule,
                 WORK_PERFORMER_REGISTRY,
                 ApprovalRequesterService,
-                AuthorityGrantsService,
                 CommandBusService,
-                DecisionJobsService,
-                DecisionHistoryService,
                 DecisionLogReadService,
                 DecisionsService,
-                DecisionsFiguresService,
                 EvidenceService,
                 DurableWorkService,
                 ModuleCatalogService,
                 WorkDecisionService,
                 WorkDecisionTimeoutService,
-                WorkDrainService,
                 WorkItemViewsService,
                 WorkPlacementService,
                 WorkEngineService,

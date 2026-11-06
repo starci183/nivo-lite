@@ -10,7 +10,6 @@ import { AgentPageResolver } from "./agent-page.resolver"
 import { ConfigurableModuleClass } from "./agents-graphql.module-definition"
 import { AgentsResolver } from "./agents.resolver"
 import { AskGuideResolver } from "./ask-guide.resolver"
-import { AssignAgentWorkResolver } from "./assign-agent-work.resolver"
 import { CreateAgentResolver } from "./create-agent.resolver"
 import { GrantAgentConnectionResolver } from "./grant-agent-connection.resolver"
 import { RenameAgentResolver } from "./rename-agent.resolver"
@@ -27,7 +26,6 @@ import { SetAgentTextsResolver } from "./set-agent-texts.resolver"
         AgentsResolver,
         AgentDashboardResolver,
         AgentPageResolver,
-        AssignAgentWorkResolver,
         SetAgentOwnershipResolver,
         AgentEngineStatusResolver,
         AgentConnectionCandidatesResolver,

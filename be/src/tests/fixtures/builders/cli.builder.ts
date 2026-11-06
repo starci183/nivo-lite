@@ -76,7 +76,6 @@ const options = {
     ai: wiringSettings.ai,
     channelConnections: wiringSettings.channelConnections,
     channelSetup: wiringSettings.channelSetup,
-    n8nHost: { host: undefined, user: "wiring", sshKey: undefined, knownHosts: undefined, container: "wiring" },
     channelProvisioning: { telegramToken: undefined, print: refuseWiringOperation },
     workspaceSeed: { input: undefined, profileInput: undefined },
     mcpGateway: { remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 1000 },
@@ -192,14 +191,6 @@ type BuildWiringProofResultOptionsChannelProvisioningShape = {
     print: () => never
 }
 
-type BuildWiringProofResultOptionsN8nHostShape = {
-    host: undefined
-    user: string
-    sshKey: undefined
-    knownHosts: undefined
-    container: string
-}
-
 type BuildWiringProofResultOptionsChannelSetupShape = {
     zaloOauthBase: undefined
     siteUrl: string
@@ -282,7 +273,6 @@ type BuildWiringProofResultOptionsShape = {
     ai: BuildWiringProofResultOptionsAiShape
     channelConnections: BuildWiringProofResultOptionsChannelConnectionsShape
     channelSetup: BuildWiringProofResultOptionsChannelSetupShape
-    n8nHost: BuildWiringProofResultOptionsN8nHostShape
     channelProvisioning: BuildWiringProofResultOptionsChannelProvisioningShape
     workspaceSeed: BuildWiringProofResultOptionsWorkspaceSeedShape
     mcpGateway: BuildWiringProofResultOptionsMcpGatewayShape

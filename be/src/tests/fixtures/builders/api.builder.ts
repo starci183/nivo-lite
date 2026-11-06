@@ -188,12 +188,6 @@ const options = {
     },
     channelSetup: wiringSettings.channelSetup,
     webhookDelivery: { timeoutMs: 1000 },
-    n8n: {
-        signingSecret: new Secret("wiring-fixture"),
-        webhookBase: undefined,
-        allowedHosts: [],
-        timeoutMs: 1000,
-    },
     ffmpeg: { nice: false },
     tts: { provider: "none" as const, cacheDir: "wiring-fixture/cache", workDir: "wiring-fixture/work", minGapMs: 0 },
     video: {

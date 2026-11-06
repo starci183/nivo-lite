@@ -246,24 +246,3 @@ describe("EvidenceService", () => {
         })
     })
 })
-
-describe("EvidenceService accounting", () => {
-    describe("listAccounting", () => {
-        it("answers the newest accounting decisions, five hundred by default", async () => {
-            const em = mockEntityManager()
-            const [first, second] = queueQueryBuilders(em, [{ getRawMany: [] }, { getRawMany: [] }])
-            const { service } = await build(em)
-
-            await expect(service.listAccounting("ws-1")).resolves.toEqual([])
-            await expect(service.listAccounting("ws-1", 10)).resolves.toEqual([])
-
-            expect(first?.callsOf("limit")).toEqual([[500]])
-            expect(second?.callsOf("limit")).toEqual([[10]])
-            expect(first?.callsOf("where")).toEqual([
-                ["d.workspaceId = :workspaceId AND d.department = 'accounting'", { workspaceId: "ws-1" }],
-            ])
-            expect(first?.callsOf("orderBy")).toEqual([["d.createdAt", "DESC"]])
-            expect(first?.callsOf("addOrderBy")).toEqual([["d.id", "DESC"]])
-        })
-    })
-})

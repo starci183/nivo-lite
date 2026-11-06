@@ -2,8 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { WorkEngineService } from "@modules/domain/decisions"
 import { EmailMessagesService, WorkspaceMailService } from "@modules/domain/email-messages"
-import type { CustomerEmail } from "@modules/domain/n8n-runs"
-import { renderEmail } from "@modules/integrations/mail"
+import type { CustomerEmail } from "./workspace-mailer.contracts"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { WorkspaceMailerService } from "./workspace-mailer.service"
@@ -66,24 +65,6 @@ describe("WorkspaceMailerService", () => {
             status: "no_smtp",
             emailMessageId: "e9",
         })
-    })
-
-    it("mails an owner with the files the workflow attached", async () => {
-        const { mailer, mail } = await build(true, "done")
-        const sent = await mailer.sendOwnerEmail({
-            workspaceId: WS,
-            to: "owner@example.com",
-            subject: "Ledger",
-            shopName: "Shop",
-            text: "See attached",
-            attachments: [{ filename: "ledger.csv", content: "a,b", contentType: "text/csv", encoding: "utf8" }],
-            purpose: "month_ledger",
-            refs: {},
-        })
-        expect(sent).toMatchObject({ status: "sent", emailMessageId: "e1" })
-        expect(mail.send.mock.calls[0]?.[0].attachments).toEqual([
-            { filename: "ledger.csv", content: "a,b", contentType: "text/csv", encoding: "utf8" },
-        ])
     })
 
     it("refuses an invalid recipient before checking SMTP or asking the gate", async () => {
@@ -241,58 +222,5 @@ describe("WorkspaceMailerService", () => {
         expect(log.isWaitingFor).toHaveBeenCalledWith(WS, "w1")
         expect(log.record).not.toHaveBeenCalled()
         expect(mail.send).not.toHaveBeenCalled()
-    })
-})
-
-describe("WorkspaceMailerService", () => {
-    it("renders an owner's email and returns the sender's message and error", async () => {
-        const { mailer, mail, catalog, engine, log } = await build(true, "done")
-        mail.send.mockResolvedValue({
-            status: "failed",
-            via: "workspace",
-            emailMessageId: "e2",
-            messageId: "smtp-2",
-            error: "Delivery failed",
-        })
-        const rendered = renderEmail({
-            shopName: "Shop",
-            title: "Daily report",
-            body: "Today's sales",
-            footer: "performers.emailFooter",
-            lang: "vi",
-        })
-
-        await expect(
-            mailer.sendOwnerEmail({
-                workspaceId: WS,
-                to: "owner@example.com",
-                subject: "Daily report",
-                shopName: "Shop",
-                text: "Today's sales",
-                attachments: [],
-                purpose: "daily_report",
-                refs: { date: "2026-10-14" },
-            }),
-        ).resolves.toEqual({
-            status: "failed",
-            via: "workspace",
-            emailMessageId: "e2",
-            messageId: "smtp-2",
-            error: "Delivery failed",
-        })
-        expect(catalog.get).toHaveBeenCalledWith("performers.emailFooter", { shop: "Shop" }, "vi")
-        expect(mail.send).toHaveBeenCalledWith({
-            workspaceId: WS,
-            to: "owner@example.com",
-            subject: "Daily report",
-            html: rendered.html,
-            text: rendered.text,
-            purpose: "daily_report",
-            refs: { date: "2026-10-14" },
-            audience: "owner",
-            attachments: [],
-        })
-        expect(engine.runWork).not.toHaveBeenCalled()
-        expect(log.record).not.toHaveBeenCalled()
     })
 })

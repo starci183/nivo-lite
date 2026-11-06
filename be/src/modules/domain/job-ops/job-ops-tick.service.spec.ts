@@ -13,12 +13,10 @@ const EXPECTED = [
     ["accounting-desk-morning", "accounting_desk", "accounting_desk.morning", {}, 1440],
     ["agent-work-sweep", "agent_turn", "agent-turn.sweep", {}, 1],
     ["agents-sync-all", "agents", "agents.sync", {}, 5],
-    ["automation-tick", "automation", "automation.tick", {}, 1],
     ["connection-health-tick", "connection_health", "connection_health", { silentAfterHours: 72 }, 15],
     ["connection-poll-due-tick", "connection-poll", "poll-due-connections", {}, 1],
     ["content-tick", "content_tick", "content_tick", {}, 15],
     ["data-sync-tick", "data_sync", "data_sync", { tick: true }, 1],
-    ["decisions-drain-work", "decisions", "decisions.drain-work", {}, 1],
     ["marketing-tick", "marketing_tick", "marketing_tick", {}, 15],
     ["realtime-retention-tick", "realtime_retention", "realtime_retention", { tick: true }, 1],
     ["shifts-tick", "shifts_alerts", "shifts.tick", { kind: "tick" }, 1],
@@ -95,13 +93,13 @@ describe("JobOpsTickService", () => {
             .mockReturnValueOnce(new Date(60_000))
             .mockReturnValueOnce(new Date(119_999))
             .mockReturnValueOnce(new Date(120_000))
-        await ticks.tick("automation-tick")
-        await ticks.tick("automation-tick")
-        await ticks.tick("automation-tick")
+        await ticks.tick("data-sync-tick")
+        await ticks.tick("data-sync-tick")
+        await ticks.tick("data-sync-tick")
         expect(write.mock.calls.map((call) => call[3]?.dedupeKey)).toEqual([
-            "jobs.tick:automation-tick:1",
-            "jobs.tick:automation-tick:1",
-            "jobs.tick:automation-tick:2",
+            "jobs.tick:data-sync-tick:1",
+            "jobs.tick:data-sync-tick:1",
+            "jobs.tick:data-sync-tick:2",
         ])
     })
 

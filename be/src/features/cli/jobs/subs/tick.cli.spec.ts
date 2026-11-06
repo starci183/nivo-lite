@@ -13,7 +13,7 @@ const build = async () => {
 
 describe("TickJobsCli", () => {
     it.each([
-        { params: ["automation-tick"], id: "automation-tick" },
+        { params: ["data-sync-tick"], id: "data-sync-tick" },
         { params: [], id: "" },
     ])("delegates the id for validation: $id", async ({ params, id }) => {
         const { cli, ticks } = await build()

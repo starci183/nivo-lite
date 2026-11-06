@@ -12,11 +12,6 @@ export enum WorkEngineLogEvent {
     OfficeFailed = "decisions.office_failed",
     /** The status of an inbound event could not be set; the work goes on. */
     InboundStatusFailed = "decisions.inbound_status_failed",
-    /** The `decision.made` event could not be published; the decision stands. */
-    /** A command subject label could not be read; the Office line goes without it. */
-    SubjectLabelUnreadable = "decisions.subject_label_unreadable",
     /** The receiving instance of a command could not be resolved; the database trigger still attributes the item. */
     InstanceUnresolved = "decisions.instance_unresolved",
-    /** The background drain of one workspace's queued steps failed; the other workspaces still ran. */
-    DrainFailed = "decisions.drain_failed",
 }

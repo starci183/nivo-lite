@@ -1,9 +1,8 @@
 import type { BoundConnection } from "@modules/domain/agent-connections"
-import type { AgentPage, AssignmentThread } from "@modules/domain/agent-profile"
+import type { AgentPage } from "@modules/domain/agent-profile"
 import type { GenerationRequested, GenerationStatus } from "@modules/domain/ai-generations"
 import type { AgentDashboardData, AgentSummary, EngineStatus } from "@modules/domain/agents"
 import type { Locale } from "@modules/platform/i18n"
-import type { AssignAgentWorkRequest } from "../../application/assign-agent-work.contracts"
 import type { CreateAgentRequest } from "../../application/create-agent.contracts"
 import type { GetAgentPageRequest } from "../../application/get-agent-page.contracts"
 import type { SetAgentOwnershipRequest } from "../../application/set-agent-ownership.contracts"
@@ -20,9 +19,7 @@ import type { RevokeAgentConnectionRequest } from "../../application/revoke-agen
 import type { SetAgentStatusRequest } from "../../application/set-agent-status.contracts"
 import type { SetAgentTextsRequest } from "../../application/set-agent-texts.contracts"
 import type { AgentAckType } from "./dto/agent-ack.type"
-import type { AgentAssignmentType } from "./dto/agent-assignment.type"
 import type { AgentPageType } from "./dto/agent-page.type"
-import type { AssignAgentWorkInput } from "./dto/assign-agent-work.input"
 import type { SetAgentOwnershipInput } from "./dto/set-agent-ownership.input"
 import type { AgentConnectionType } from "./dto/agent-connection.type"
 import type { AgentDashboardInput } from "./dto/agent-dashboard.input"
@@ -156,15 +153,6 @@ export const toAgentPageRequest = (workspaceId: string, input: AgentIdInput): Ge
 
 /** Maps the agent page to the GraphQL type. */
 export const toAgentPageType = (page: AgentPage): AgentPageType => ({ ...page })
-
-/** Maps the assignment of the GraphQL input, with the workspace it names, to the command request. */
-export const toAssignAgentWorkRequest = (workspaceId: string, input: AssignAgentWorkInput): AssignAgentWorkRequest => ({
-    workspaceId,
-    ...input,
-})
-
-/** Maps the thread an assignment opened to the GraphQL type. */
-export const toAgentAssignmentType = (thread: AssignmentThread): AgentAssignmentType => ({ ...thread })
 
 /** Maps the ownership of the GraphQL input, with the workspace it names, to the command request. */
 export const toSetAgentOwnershipRequest = (

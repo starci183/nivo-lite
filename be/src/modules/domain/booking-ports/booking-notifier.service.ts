@@ -3,8 +3,8 @@ import type { BookingNotice, BookingNoticeResult, BookingNotifier } from "@modul
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
 import { EventsService } from "@modules/domain/events"
-import { InjectN8nMailer } from "@modules/domain/n8n-runs"
-import type { N8nMailer } from "@modules/domain/n8n-runs"
+import { InjectWorkspaceMailer } from "@modules/domain/work-performers"
+import type { WorkspaceMailer } from "@modules/domain/work-performers"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
@@ -31,7 +31,7 @@ export class BookingNotifierService implements BookingNotifier {
     constructor(
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
-        @InjectN8nMailer() private readonly mailer: N8nMailer,
+        @InjectWorkspaceMailer() private readonly mailer: WorkspaceMailer,
         private readonly conversations: ChatConversationsService,
         private readonly messages: ChatMessagesService,
         private readonly channels: ChannelDeliveryService,

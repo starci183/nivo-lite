@@ -27,7 +27,6 @@ import { parseWorkspacesConfig } from "@modules/domain/workspaces"
 import { parseDocumentsConfig } from "@modules/integrations/documents"
 import { parseAiGatewayConfig } from "@modules/integrations/ai-gateway"
 import { parseAiConfig } from "@modules/integrations/ai"
-import { parseN8nConfig } from "@modules/integrations/n8n"
 import { parseRedisConfig } from "@modules/integrations/redis"
 import { parseRemoteFilesConfig } from "@modules/integrations/remote-files"
 import { parseAiTasksConfig } from "@modules/domain/ai-tasks"
@@ -133,8 +132,6 @@ export interface ApiOptions {
     readonly channelSetup: ReturnType<typeof parseChannelSetupConfig>
     /** Deliveries to tenant-supplied webhook addresses. */
     readonly webhookDelivery: ReturnType<typeof parseWebhookDeliveryConfig>
-    /** The signing secret and the webhook base of the shared n8n workflows. */
-    readonly n8n: ReturnType<typeof parseN8nConfig>
     /** The knowledge capability: the demo pacing knob of indexing (`KNOWLEDGE_INDEX_CHUNK_DELAY_MS`, 0 unless a demo asks). */
     readonly knowledge: ReturnType<typeof parseKnowledgeConfig>
     /** How ffmpeg is run. */
@@ -188,7 +185,6 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     meta: parseMetaConfig(env),
     channelSetup: parseChannelSetupConfig(env),
     webhookDelivery: parseWebhookDeliveryConfig(env),
-    n8n: parseN8nConfig(env),
     knowledge: parseKnowledgeConfig(env),
     ffmpeg: parseFfmpegConfig(env),
     tts: parseTtsConfig(env),

@@ -58,13 +58,6 @@ export type BuildWiringProofResultOptionsTtsShape = {
 }
 /** The build wiring proof result options ffmpeg record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsFfmpegShape = { nice: boolean }
-/** The build wiring proof result options n8n record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsN8nShape = {
-    signingSecret: Secret
-    webhookBase: undefined
-    allowedHosts: Array<never>
-    timeoutMs: number
-}
 /** The build wiring proof result options webhook delivery record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsWebhookDeliveryShape = { timeoutMs: number }
 /** The build wiring proof result options channel setup record the builders hand out and the specs expect. */
@@ -331,7 +324,6 @@ export type BuildWiringProofResultOptionsShape = {
     meta: BuildWiringProofResultOptionsMetaShape
     channelSetup: BuildWiringProofResultOptionsChannelSetupShape
     webhookDelivery: BuildWiringProofResultOptionsWebhookDeliveryShape
-    n8n: BuildWiringProofResultOptionsN8nShape
     ffmpeg: BuildWiringProofResultOptionsFfmpegShape
     tts: BuildWiringProofResultOptionsTtsShape
     video: BuildWiringProofResultOptionsVideoShape

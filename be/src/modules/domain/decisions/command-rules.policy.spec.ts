@@ -7,7 +7,6 @@ import {
     isSubjectType,
     isUuid,
     missingPayload,
-    shownSubject,
     splitPayload,
     tooDeep,
 } from "./command-rules.policy"
@@ -21,7 +20,6 @@ type PolicySubject = {
     tooDeep: typeof tooDeep
     defaultDedupeKey: typeof defaultDedupeKey
     instanceLabel: typeof instanceLabel
-    shownSubject: typeof shownSubject
     isUuid: typeof isUuid
 }
 
@@ -37,7 +35,6 @@ const buildSubject = async () => {
                     tooDeep,
                     defaultDedupeKey,
                     instanceLabel,
-                    shownSubject,
                     isUuid,
                 },
             },
@@ -141,21 +138,6 @@ describe("command rules policy", () => {
 })
 
 describe("command rules policy", () => {
-    describe("shownSubject", () => {
-        it("prefixes an order number once", async () => {
-            const { subject } = await buildSubject()
-
-            expect(subject.shownSubject("order", "DH-1")).toBe("#DH-1")
-            expect(subject.shownSubject("order", "#DH-1")).toBe("#DH-1")
-        })
-
-        it("shows any other label as it is", async () => {
-            const { subject } = await buildSubject()
-
-            expect(subject.shownSubject("lead", "Lan")).toBe("Lan")
-        })
-    })
-
     describe("isUuid", () => {
         it("recognises a UUID", async () => {
             const { subject } = await buildSubject()

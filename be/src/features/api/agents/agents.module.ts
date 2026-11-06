@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common"
 import { ConfigurableModuleClass } from "./agents.module-definition"
 import { AgentConnectionCandidatesHandler } from "./application/agent-connection-candidates.handler"
 import { AskGuideHandler } from "./application/ask-guide.handler"
-import { AssignAgentWorkHandler } from "./application/assign-agent-work.handler"
 import { CreateAgentHandler } from "./application/create-agent.handler"
 import { GenerateTextHandler } from "./application/generate-text.handler"
 import { GetAgentDashboardHandler } from "./application/get-agent-dashboard.handler"
@@ -26,7 +25,6 @@ import { SetAgentTextsHandler } from "./application/set-agent-texts.handler"
     providers: [
         AgentConnectionCandidatesHandler,
         AskGuideHandler,
-        AssignAgentWorkHandler,
         CreateAgentHandler,
         GenerateTextHandler,
         GetAgentDashboardHandler,

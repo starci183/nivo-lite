@@ -162,7 +162,7 @@ describe("CredentialGuard posting admission", () => {
 })
 
 describe("CredentialGuard credential owners", () => {
-    const kinds: Array<CredentialMetadata["kind"]> = ["api-key", "run-token", "tool-token", "link-token", "posting"]
+    const kinds: Array<CredentialMetadata["kind"]> = ["api-key", "tool-token", "link-token", "posting"]
 
     it.each(kinds)("stamps a valid %s identity", async (kind) => {
         const { guard, context, request, authenticator } = await build({ kind }, "Bearer raw")

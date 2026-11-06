@@ -3,7 +3,7 @@ import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { In, LessThanOrEqual } from "typeorm"
 import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { buildPipelineRow } from "@tests/fixtures/builders/automations.builder"
+import { buildPipelineRow } from "@tests/fixtures/builders/automation-pipelines.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import {
     CANCELLED_BOOKING_DONE,

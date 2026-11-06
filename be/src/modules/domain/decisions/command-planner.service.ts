@@ -1,10 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { InvoicesLedgerService } from "@modules/domain/invoices"
-import { LeadReadService } from "@modules/domain/leads"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import { OrdersLabelReadService } from "@modules/domain/orders"
 import { WorkItemsChainReadService } from "@modules/domain/work-items"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
@@ -17,7 +14,6 @@ import {
     isSubjectType,
     isUuid,
     missingPayload,
-    shownSubject,
     splitPayload,
     tooDeep,
 } from "./command-rules.policy"
@@ -70,9 +66,6 @@ export class CommandPlannerService {
         private readonly agents: AgentDirectoryService,
         private readonly installations: InstallationRecordsService,
         private readonly chains: WorkItemsChainReadService,
-        private readonly orders: OrdersLabelReadService,
-        private readonly leads: LeadReadService,
-        private readonly invoices: InvoicesLedgerService,
     ) {}
 
     /**
@@ -191,11 +184,10 @@ export class CommandPlannerService {
 
     /** The Office mirror line and the `command.sent` evidence of a command that became a work item. */
     private async announce(parts: AcceptedCommandParts, row: WorkItem, manager: EntityManager): Promise<void> {
-        const { ctx, input, accepted, address, instance } = parts
-        const subject = await this.subjectPhrase(ctx, address)
+        const { ctx, input, accepted, instance } = parts
         const toName = instanceLabel(await this.modules.nameOf(input.to, ctx.locale), instance?.name ?? null)
-        const params = { to: toName, from: parts.sender, what: accepted.description[ctx.locale], subject }
-        const body = this.catalog.get(subject === "" ? "command.mirror" : "command.mirror.subject", params, ctx.locale)
+        const params = { to: toName, from: parts.sender, what: accepted.description[ctx.locale] }
+        const body = this.catalog.get("command.mirror", params, ctx.locale)
         await this.safely(
             () => this.office.post(ctx, { command: true, body, lead_id: row.lead_id, work_item_id: row.id }, manager),
             WorkEngineLogEvent.OfficeFailed,
@@ -345,33 +337,6 @@ export class CommandPlannerService {
         if (row === null) return null
         if (row.moduleKey !== input.to) return null
         return { id: row.id, via: "given", name: row.name }
-    }
-
-    /** "order #DH-1" / "customer Lan"; empty when the subject has no readable label. A label is a courtesy: it never blocks a command. */
-    private async subjectPhrase(ctx: WorkContext, address: SplitPayload): Promise<string> {
-        const subjectId = address.subjectId
-        if (subjectId === null) return ""
-        const label = await this.labelOf(ctx, address, subjectId)
-        if (label === null) return ""
-        const shown = shownSubject(address.subjectType, label)
-        const key = `command.subject.${address.subjectType}`
-        const word = this.catalog.get(key, {}, ctx.locale)
-        return word === key ? shown : `${word} ${shown}`
-    }
-
-    private async labelOf(ctx: WorkContext, address: SplitPayload, subjectId: string): Promise<string | null> {
-        try {
-            if (address.subjectType === "order")
-                return (await this.orders.numbersOf(ctx.workspaceId, [subjectId]))[0]?.orderNo ?? null
-            if (address.subjectType === "lead")
-                return (await this.leads.cardsOf(ctx.workspaceId, [subjectId]))[0]?.contactName ?? null
-            if (address.subjectType === "invoice")
-                return (await this.invoices.receiptInvoice(ctx.workspaceId, subjectId))?.invoiceNo ?? null
-            return null
-        } catch (cause) {
-            this.logger.error(WorkEngineLogEvent.SubjectLabelUnreadable, cause, { subjectType: address.subjectType })
-            return null
-        }
     }
 
     private async safely(run: () => Promise<void>, event: WorkEngineLogEvent): Promise<void> {

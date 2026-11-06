@@ -1,13 +1,10 @@
 import type { DynamicModule } from "@nestjs/common"
-import { AutomationsGraphqlModule } from "@features/api/automations"
 import { FlowsGraphqlModule } from "@features/api/flows"
-import { N8nPipelinesHttpModule } from "@features/api/n8n-pipelines"
 import { ApiKeysGraphqlModule } from "@features/api/api-keys"
 import { DataHubGraphqlModule } from "@features/api/data-hub"
 import { HiringGraphqlModule } from "@features/api/hiring"
 import { InventoryGraphqlModule } from "@features/api/inventory"
 import { ShiftsGraphqlModule } from "@features/api/shifts"
-import { OverviewGraphqlModule } from "@features/api/overview"
 import { AdminGraphqlModule } from "@features/api/admin"
 import { WorkspacesGraphqlModule } from "@features/api/workspaces"
 import { InboxGraphqlModule } from "@features/api/inbox"
@@ -43,7 +40,6 @@ export const apiModules = (): Array<DynamicModule> => [
     InventoryGraphqlModule.register({}),
     ShiftsGraphqlModule.register({}),
     HiringGraphqlModule.register({}),
-    OverviewGraphqlModule.register({}),
     AccountGraphqlModule.register({}),
     ShellGraphqlModule.register({}),
     ConnectionsGraphqlModule.register({}),
@@ -68,9 +64,7 @@ export const apiModules = (): Array<DynamicModule> => [
     GoogleConnectionsHttpModule.register({}),
     MetaConnectionsHttpModule.register({}),
     MetaHttpModule.register({}),
-    AutomationsGraphqlModule.register({}),
     FlowsGraphqlModule.register({}),
-    N8nPipelinesHttpModule.register({}),
     AdminGraphqlModule.register({}),
 ]
 

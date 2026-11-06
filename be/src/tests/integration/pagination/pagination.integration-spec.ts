@@ -1,19 +1,18 @@
 import { LeadReadService } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
-import { WorkThreadsService } from "@modules/domain/work-threads"
 import { normalizePage } from "@modules/platform/pagination"
 import type { Connection, PageRequest } from "@modules/platform/pagination"
 import { eachInOrder } from "@modules/platform/primitives"
 import { persistPaginationChange, persistPaginationRows } from "../../fixtures/builders/pagination.builder"
-import type { PaginationFixture, PaginationIdentity } from "../../fixtures/builders/pagination.builder"
+import type { PaginationIdentity } from "../../fixtures/builders/pagination.builder"
 import { PaginationProofModule } from "../../world/pagination-proof.module"
 import { useTestWorld } from "../../world/use-test-world"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 
 const world = useTestWorld({ modules: [PaginationProofModule.register()] })
 
-/** The three main list owners share connection semantics over their own SQL statements. */
-type ListName = "leadBoard" | "salesOrders" | "workThreads"
+/** The main list owners share connection semantics over their own SQL statements. */
+type ListName = "leadBoard" | "salesOrders"
 
 /** The row identity common to every list. */
 interface ListedId {
@@ -22,14 +21,12 @@ interface ListedId {
 
 const pageOf = (list: ListName, workspaceId: string, request: PageRequest): Promise<Connection<ListedId>> => {
     if (list === "leadBoard") return world.resolve(LeadReadService).listPage(workspaceId, request)
-    if (list === "salesOrders") return world.resolve(OrdersService).listPage(workspaceId, request)
-    return world.resolve(WorkThreadsService).list(workspaceId, null, request)
+    return world.resolve(OrdersService).listPage(workspaceId, request)
 }
 
-const scopeOf = (list: ListName, workspaceId: string): string =>
-    list === "workThreads" ? `${workspaceId}:workThreads:all` : `${list}:${workspaceId}`
+const scopeOf = (list: ListName, workspaceId: string): string => `${list}:${workspaceId}`
 
-const seed = (): Promise<PaginationFixture> => {
+const seed = (): Promise<PaginationIdentity> => {
     const identity: PaginationIdentity = {
         userId: world.id(),
         workspaceId: world.id(),
@@ -51,7 +48,7 @@ const seed = (): Promise<PaginationFixture> => {
 }
 
 const registerPageWalk = (): void => {
-    it.each<ListName>(["leadBoard", "salesOrders", "workThreads"])(
+    it.each<ListName>(["leadBoard", "salesOrders"])(
         "%s crosses tied microsecond instants once, even when a newer row arrives",
         async (list) => {
             const identity = await seed()
@@ -96,7 +93,7 @@ const registerPageWalk = (): void => {
 }
 
 const registerPageBounds = (): void => {
-    it.each<ListName>(["leadBoard", "salesOrders", "workThreads"])(
+    it.each<ListName>(["leadBoard", "salesOrders"])(
         "%s bounds pages and isolates empty and foreign workspace results",
         async (list) => {
             const identity = await seed()
@@ -122,7 +119,7 @@ const registerPageBounds = (): void => {
 }
 
 const registerCursorScopes = (): void => {
-    it("rejects cursors from another list, workspace or thread filter", async () => {
+    it("rejects cursors from another list or workspace", async () => {
         const identity = await seed()
         const leads = await pageOf("leadBoard", identity.workspaceId, { first: 1 })
         const request = { first: 1, after: leads.pageInfo.endCursor }
@@ -131,16 +128,6 @@ const registerCursorScopes = (): void => {
         })
         await expect(pageOf("salesOrders", identity.workspaceId, request)).rejects.toMatchObject({
             code: "HTTP_SECURITY_REQUEST_INVALID",
-        })
-        const threads = world.resolve(WorkThreadsService)
-        const filtered = await threads.list(identity.workspaceId, identity.rowIds[0], { first: 1 })
-        expect(filtered.nodes.map((node) => node.id)).toEqual([identity.rowIds[3]])
-        await expect(
-            threads.list(identity.workspaceId, null, { first: 1, after: filtered.pageInfo.endCursor }),
-        ).rejects.toMatchObject({ code: "HTTP_SECURITY_REQUEST_INVALID" })
-        await expect(threads.list(identity.workspaceId, identity.rowIds[1], { first: 1 })).resolves.toEqual({
-            nodes: [],
-            pageInfo: { hasNextPage: false, endCursor: null },
         })
     })
 }

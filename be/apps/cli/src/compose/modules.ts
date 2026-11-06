@@ -11,7 +11,6 @@ import { ConnectionGrantsModule } from "@modules/domain/connection-grants"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { ConnectionsModule } from "@modules/domain/connections"
 import { AutomationTemplatesModule } from "@modules/domain/automation-templates"
-import { N8nHostModule } from "@modules/integrations/n8n-host"
 import { DataRecordsModule } from "@modules/domain/data-records"
 import { EmailMessagesModule } from "@modules/domain/email-messages"
 import { EntityPlannerModule } from "@modules/domain/entity-planner"
@@ -104,7 +103,6 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
         folders: [CORE_FOLDER, ...MODULE_KNOWLEDGE_FOLDERS],
     }),
     AutomationTemplatesModule.register({ isGlobal: true }),
-    N8nHostModule.register({ isGlobal: true, ...options.n8nHost }),
     MailModule.register({ isGlobal: true, ...options.mail }),
     PassportModule.register({ isGlobal: true, ...options.passport, authenticator: IDENTITY_AUTHENTICATOR }),
     IdentityModule.register({ isGlobal: true, ownTokens: true, auth: options.identityAuth }),

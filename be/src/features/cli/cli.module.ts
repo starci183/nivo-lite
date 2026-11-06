@@ -12,14 +12,12 @@ import { SeedModule } from "./seed/seed.module"
 import { SeedAgentGraphsModule } from "./seed-agent-graphs/seed-agent-graphs.module"
 import { SeedCatalogueModule } from "./seed-catalogue/seed-catalogue.module"
 import { SeedKnowledgeModule } from "./seed-knowledge/seed-knowledge.module"
-import { SeedAutomationsModule } from "./seed-automations/seed-automations.module"
 import { SeedManagementModule } from "./seed-management/seed-management.module"
 import { SeedMediaModule } from "./seed-media/seed-media.module"
 import { SeedModulesModule } from "./seed-modules/seed-modules.module"
 import { SeedTestAccountsModule } from "./seed-test-accounts/seed-test-accounts.module"
 import { SeedWorkspaceModule } from "./seed-workspace/seed-workspace.module"
 import { StorageCliModule } from "./storage/storage.module"
-import { SyncN8nModule } from "./sync-n8n/sync-n8n.module"
 
 @Module({
     imports: [
@@ -40,9 +38,7 @@ import { SyncN8nModule } from "./sync-n8n/sync-n8n.module"
         SeedModulesModule.register({}),
         SeedTestAccountsModule.register({}),
         SeedWorkspaceModule.register({}),
-        SeedAutomationsModule.register({}),
         StorageCliModule.register({}),
-        SyncN8nModule.register({}),
     ],
 })
 /** The cli feature root: every command group of the back end, compiled only into apps/cli. */
