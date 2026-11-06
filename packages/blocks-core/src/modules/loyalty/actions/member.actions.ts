@@ -9,7 +9,16 @@ import { earnEvidence, pointsFor } from "../../../rules/loyalty/points"
 import { redeemBlock, redeemCode, redeemKeyParts } from "../../../rules/loyalty/redeem"
 import { configOf } from "../config-store"
 import { LOYALTY_MANAGE, LOYALTY_VIEW } from "../constants"
-import { loyaltyLedger, loyaltyMembers, loyaltyProgram, loyaltyRewards } from "../ports"
+import { rewardById, takeOne } from "../loyalty-catalogue-data"
+import {
+    ensureMemberByPhone,
+    hasRef,
+    memberById,
+    postLedger,
+    redeemedCounts,
+    updateMember,
+} from "../loyalty-member-data"
+import { LEDGER, MEMBERS, PROGRAM, REWARDS } from "../ports"
 import { CONFLICT, refusedWith } from "../refusals"
 
 const MAX_NOTE = 500
@@ -49,16 +58,16 @@ export const adjustPointsAction: ActionDefinition = defineAction({
     permission: LOYALTY_MANAGE,
     label: { key: "action_adjust_points" },
     input: adjustInput,
-    ports: { members: loyaltyMembers, ledger: loyaltyLedger },
+    ports: { members: MEMBERS, ledger: LEDGER },
     transactional: true,
     run: async ({ members, ledger }, { id, points, reason, token }, context) => {
-        const member = await members.get(id)
+        const member = await memberById(members, id)
         if (member === null) return refusedWith("member_missing")
         const stamp = `${id}:${context.now.toISOString()}`
         const moved = Math.round(points)
         if (moved === 0) return refusedWith("points_required")
         if (reason.trim() === "") return refusedWith("reason_required")
-        const entry = await ledger.post({
+        const entry = await postLedger(members, ledger, {
             customerId: member.id,
             kind: "adjust",
             points: moved,
@@ -94,15 +103,15 @@ export const updateMemberAction: ActionDefinition = defineAction({
     permission: LOYALTY_MANAGE,
     label: { key: "action_update_member" },
     input: updateInput,
-    ports: { members: loyaltyMembers },
+    ports: { members: MEMBERS },
     transactional: true,
     run: async ({ members }, { id, name, birthday, note }) => {
-        const member = await members.get(id)
+        const member = await memberById(members, id)
         if (member === null) return refusedWith("member_missing")
         const wanted = birthday === undefined || birthday === null || birthday === "" ? null : birthday
         const day = customerBirthday(wanted)
         if (wanted !== null && day === null) return refusedWith("birthday_invalid")
-        const written = await members.update(id, member.version, {
+        const written = await updateMember(members, id, member.version, {
             name,
             birthday: day,
             note: note ?? member.note,
@@ -129,26 +138,29 @@ export const redeemRewardAction: ActionDefinition = defineAction({
     permission: LOYALTY_VIEW,
     label: { key: "action_redeem_reward" },
     input: redeemInput,
-    ports: { members: loyaltyMembers, ledger: loyaltyLedger, rewards: loyaltyRewards, program: loyaltyProgram },
+    ports: { members: MEMBERS, ledger: LEDGER, rewards: REWARDS, program: PROGRAM },
     transactional: true,
     run: async ({ members, ledger, rewards, program }, { id, token }, context) => {
         const parts = redeemKeyParts(id)
         if (parts === null) return refusedWith("redeem_key_invalid")
-        const [member, reward] = await Promise.all([members.get(parts.memberId), rewards.get(parts.rewardId)])
+        const [member, reward] = await Promise.all([
+            memberById(members, parts.memberId),
+            rewardById(rewards, parts.rewardId),
+        ])
         if (member === null) return refusedWith("member_missing")
         if (reward === null) return refusedWith("reward_missing")
         const stamp = `${id}:${context.now.toISOString()}`
         const ref = `redeem:${token ?? stamp}`
         const code = redeemCode(ref)
-        if (await ledger.hasRef(ref)) return { ok: true, data: { code, posted: false } }
-        const [config, counts] = await Promise.all([configOf(program), ledger.redeemedCounts(member.id)])
+        if (await hasRef(ledger, ref)) return { ok: true, data: { code, posted: false } }
+        const [config, counts] = await Promise.all([configOf(program), redeemedCounts(ledger, member.id)])
         const block = redeemBlock(config, reward, {
             points: member.points,
             tierKey: member.tierKey,
             redeemedBefore: counts[reward.id] ?? 0,
         })
         if (block !== null) return refusedWith(`not_redeemable_${block.code}`)
-        const entry = await ledger.post({
+        const entry = await postLedger(members, ledger, {
             customerId: member.id,
             kind: "redeem",
             points: -reward.pointsCost,
@@ -160,7 +172,7 @@ export const redeemRewardAction: ActionDefinition = defineAction({
             expiresAt: null,
             occurredAt: context.now.toISOString(),
         })
-        if (entry !== null) await rewards.takeOne(reward.id)
+        if (entry !== null) await takeOne(rewards, reward.id)
         return { ok: true, data: { code, posted: entry !== null } }
     },
     refreshes: [...POINT_READS, "loyalty.rewards"],
@@ -190,17 +202,18 @@ export const recordPurchaseAction: ActionDefinition = defineAction({
     permission: LOYALTY_MANAGE,
     label: { key: "action_record_purchase" },
     input: purchaseInput,
-    ports: { members: loyaltyMembers, ledger: loyaltyLedger, program: loyaltyProgram },
+    ports: { members: MEMBERS, ledger: LEDGER, program: PROGRAM },
     transactional: true,
     run: async ({ members, ledger, program }, { phone, name, amountVnd, items, ref }, context) => {
         const normalised = toLoyaltyPhone(phone)
         if (normalised === null) return refusedWith("phone_invalid")
         const config = await configOf(program)
-        const member = await members.ensureByPhone(normalised, name?.trim() || normalised)
+        const member = await ensureMemberByPhone(members, normalised, name?.trim() || normalised)
+        if (member === null) return CONFLICT
         const tier = tierByKey(config, member.tierKey) ?? tierFor(config, member.lifetimeSpendVnd)
         const calc = pointsFor(config, { amountVnd, items: items ?? "" }, tier)
         if (calc.points <= 0) return { ok: true, data: { status: "no_points", points: 0 } }
-        const entry = await ledger.post({
+        const entry = await postLedger(members, ledger, {
             customerId: member.id,
             kind: "earn",
             points: calc.points,
@@ -213,10 +226,10 @@ export const recordPurchaseAction: ActionDefinition = defineAction({
             occurredAt: context.now.toISOString(),
         })
         if (entry === null) return { ok: true, data: { status: "duplicate", points: 0 } }
-        const fresh = await members.get(member.id)
+        const fresh = await memberById(members, member.id)
         const earned = fresh === null ? null : tierFor(config, fresh.lifetimeSpendVnd)
         if (fresh !== null && earned !== null && tierRank(config, fresh.tierKey) < tierRank(config, earned.key))
-            await members.update(fresh.id, fresh.version, { tierKey: earned.key })
+            await updateMember(members, fresh.id, fresh.version, { tierKey: earned.key, tier: earned.name })
         return { ok: true, data: { status: "done", points: calc.points } }
     },
     refreshes: POINT_READS,

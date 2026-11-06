@@ -21,19 +21,24 @@
       "view": "v_records_accounting_book_entry",
       "checks": [
         "records_accounting_book_entry_amount_vnd_chk",
+        "records_accounting_book_entry_counterparty_chk",
         "records_accounting_book_entry_entry_date_chk",
         "records_accounting_book_entry_kind_chk",
         "records_accounting_book_entry_note_chk",
         "records_accounting_book_entry_source_entity_chk",
-        "records_accounting_book_entry_source_id_chk"
+        "records_accounting_book_entry_source_id_chk",
+        "records_accounting_book_entry_status_chk"
       ],
       "indexes": [
         "records_accounting_book_entry_amount",
         "records_accounting_book_entry_date",
         "records_accounting_book_entry_kind_amount",
         "records_accounting_book_entry_kind_date",
+        "records_accounting_book_entry_kind_day",
         "records_accounting_book_entry_note_trgm_idx",
-        "records_accounting_book_entry_source_key"
+        "records_accounting_book_entry_source_key",
+        "records_accounting_book_entry_status_amount",
+        "records_accounting_book_entry_status_date"
       ]
     },
     {
@@ -61,6 +66,31 @@
         "records_accounting_invoice_recent",
         "records_accounting_invoice_status_recent"
       ]
+    },
+    {
+      "entity": "accounting.question",
+      "partition": "records_accounting_question",
+      "checks": [
+        "records_accounting_question_answer_chk",
+        "records_accounting_question_answered_by_chk",
+        "records_accounting_question_source_chk",
+        "records_accounting_question_status_chk",
+        "records_accounting_question_text_chk"
+      ],
+      "indexes": ["records_accounting_question_status_created"]
+    },
+    {
+      "entity": "accounting.settings",
+      "partition": "records_accounting_settings",
+      "checks": [
+        "records_accounting_settings_post_expenses_chk",
+        "records_accounting_settings_post_outgoing_chk",
+        "records_accounting_settings_post_unmatched_chk",
+        "records_accounting_settings_scope_chk",
+        "records_accounting_settings_vat_period_chk",
+        "records_accounting_settings_void_mode_chk"
+      ],
+      "indexes": ["records_accounting_settings_scope", "records_accounting_settings_scope_key"]
     },
     {
       "entity": "agent.graph",
@@ -212,6 +242,7 @@
       ],
       "indexes": [
         "records_agent_run_agent_started",
+        "records_agent_run_agent_status_ended",
         "records_agent_run_status_dead_lettered",
         "records_agent_run_status_resume",
         "records_agent_run_wake",
@@ -337,6 +368,150 @@
       ]
     },
     {
+      "entity": "chat.settings",
+      "partition": "records_chat_settings",
+      "checks": [
+        "records_chat_settings_holding_message_chk",
+        "records_chat_settings_openclaw_timeout_sec_chk",
+        "records_chat_settings_scope_chk",
+        "records_chat_settings_updated_by_chk"
+      ],
+      "indexes": ["records_chat_settings_key", "records_chat_settings_scope", "records_chat_settings_scope_key"]
+    },
+    {
+      "entity": "loyalty.campaign",
+      "partition": "records_loyalty_campaign",
+      "checks": [
+        "records_loyalty_campaign_created_by_chk",
+        "records_loyalty_campaign_draft_chk",
+        "records_loyalty_campaign_failed_chk",
+        "records_loyalty_campaign_name_chk",
+        "records_loyalty_campaign_recipients_chk",
+        "records_loyalty_campaign_segment_chk",
+        "records_loyalty_campaign_sent_chk",
+        "records_loyalty_campaign_status_chk",
+        "records_loyalty_campaign_work_item_id_chk"
+      ],
+      "indexes": ["records_loyalty_campaign_recent", "records_loyalty_campaign_status_recent"]
+    },
+    {
+      "entity": "loyalty.decision",
+      "partition": "records_loyalty_decision",
+      "checks": [
+        "records_loyalty_decision_action_chk",
+        "records_loyalty_decision_amount_vnd_chk",
+        "records_loyalty_decision_customer_chk",
+        "records_loyalty_decision_draft_chk",
+        "records_loyalty_decision_reason_chk",
+        "records_loyalty_decision_status_chk",
+        "records_loyalty_decision_summary_chk"
+      ],
+      "indexes": ["records_loyalty_decision_status_created"]
+    },
+    {
+      "entity": "loyalty.ledger-entry",
+      "partition": "records_loyalty_ledger_entry",
+      "checks": [
+        "records_loyalty_ledger_entry_amount_vnd_chk",
+        "records_loyalty_ledger_entry_by_chk",
+        "records_loyalty_ledger_entry_evidence_chk",
+        "records_loyalty_ledger_entry_expires_at_chk",
+        "records_loyalty_ledger_entry_kind_chk",
+        "records_loyalty_ledger_entry_member_id_chk",
+        "records_loyalty_ledger_entry_occurred_at_chk",
+        "records_loyalty_ledger_entry_points_chk",
+        "records_loyalty_ledger_entry_ref_chk",
+        "records_loyalty_ledger_entry_reward_id_chk"
+      ],
+      "indexes": [
+        "records_loyalty_ledger_entry_kind_occurred",
+        "records_loyalty_ledger_entry_member_kind",
+        "records_loyalty_ledger_entry_member_occurred",
+        "records_loyalty_ledger_entry_occurred",
+        "records_loyalty_ledger_entry_ref",
+        "records_loyalty_ledger_entry_ref_key",
+        "records_loyalty_ledger_entry_reward"
+      ]
+    },
+    {
+      "entity": "loyalty.member",
+      "partition": "records_loyalty_member",
+      "checks": [
+        "records_loyalty_member_activity_chk",
+        "records_loyalty_member_birthday_chk",
+        "records_loyalty_member_contact_chk",
+        "records_loyalty_member_email_chk",
+        "records_loyalty_member_joined_at_chk",
+        "records_loyalty_member_last_visit_at_chk",
+        "records_loyalty_member_lead_id_chk",
+        "records_loyalty_member_lifetime_spend_vnd_chk",
+        "records_loyalty_member_name_chk",
+        "records_loyalty_member_note_chk",
+        "records_loyalty_member_phone_chk",
+        "records_loyalty_member_points_chk",
+        "records_loyalty_member_tier_chk",
+        "records_loyalty_member_tier_key_chk",
+        "records_loyalty_member_visits_chk"
+      ],
+      "indexes": [
+        "records_loyalty_member_activity_name",
+        "records_loyalty_member_activity_points",
+        "records_loyalty_member_activity_recent",
+        "records_loyalty_member_activity_spend",
+        "records_loyalty_member_contact_trgm_idx",
+        "records_loyalty_member_email",
+        "records_loyalty_member_email_key",
+        "records_loyalty_member_lead",
+        "records_loyalty_member_name",
+        "records_loyalty_member_name_trgm_idx",
+        "records_loyalty_member_phone",
+        "records_loyalty_member_phone_key",
+        "records_loyalty_member_points",
+        "records_loyalty_member_recent",
+        "records_loyalty_member_spend",
+        "records_loyalty_member_tier_name",
+        "records_loyalty_member_tier_points",
+        "records_loyalty_member_tier_recent",
+        "records_loyalty_member_tier_spend"
+      ]
+    },
+    {
+      "entity": "loyalty.program",
+      "partition": "records_loyalty_program",
+      "checks": [
+        "records_loyalty_program_config_chk",
+        "records_loyalty_program_enabled_chk",
+        "records_loyalty_program_name_chk",
+        "records_loyalty_program_scope_chk",
+        "records_loyalty_program_slug_chk"
+      ],
+      "indexes": ["records_loyalty_program_scope", "records_loyalty_program_scope_key"]
+    },
+    {
+      "entity": "loyalty.reward",
+      "partition": "records_loyalty_reward",
+      "checks": [
+        "records_loyalty_reward_active_chk",
+        "records_loyalty_reward_key_chk",
+        "records_loyalty_reward_kind_chk",
+        "records_loyalty_reward_min_tier_key_chk",
+        "records_loyalty_reward_name_chk",
+        "records_loyalty_reward_note_chk",
+        "records_loyalty_reward_per_customer_limit_chk",
+        "records_loyalty_reward_percent_chk",
+        "records_loyalty_reward_points_cost_chk",
+        "records_loyalty_reward_stock_chk",
+        "records_loyalty_reward_value_vnd_chk"
+      ],
+      "indexes": [
+        "records_loyalty_reward_active_recent",
+        "records_loyalty_reward_key",
+        "records_loyalty_reward_key_key",
+        "records_loyalty_reward_name_trgm_idx",
+        "records_loyalty_reward_recent"
+      ]
+    },
+    {
       "entity": "payment.claim",
       "partition": "records_payment_claim",
       "checks": [
@@ -392,6 +567,7 @@
       "entity": "sales.lead",
       "partition": "records_sales_lead",
       "checks": [
+        "records_sales_lead_awaiting_since_chk",
         "records_sales_lead_channel_chk",
         "records_sales_lead_closed_reason_chk",
         "records_sales_lead_company_chk",
@@ -399,16 +575,26 @@
         "records_sales_lead_context_summary_chk",
         "records_sales_lead_email_chk",
         "records_sales_lead_need_chk",
+        "records_sales_lead_needs_chk",
+        "records_sales_lead_next_due_at_chk",
+        "records_sales_lead_next_step_chk",
+        "records_sales_lead_note_chk",
+        "records_sales_lead_order_vnd_chk",
+        "records_sales_lead_owner_chk",
         "records_sales_lead_phone_chk",
+        "records_sales_lead_quote_vnd_chk",
         "records_sales_lead_stage_chk"
       ],
       "indexes": [
+        "records_sales_lead_awaiting",
         "records_sales_lead_company_trgm_idx",
         "records_sales_lead_contact_name_trgm_idx",
+        "records_sales_lead_due",
         "records_sales_lead_email_key",
         "records_sales_lead_email_trgm_idx",
         "records_sales_lead_name",
         "records_sales_lead_need_trgm_idx",
+        "records_sales_lead_needs",
         "records_sales_lead_phone_key",
         "records_sales_lead_phone_trgm_idx",
         "records_sales_lead_recent",
@@ -445,6 +631,18 @@
         "records_sales_order_status_amount",
         "records_sales_order_status_recent"
       ]
+    },
+    {
+      "entity": "sales.settings",
+      "partition": "records_sales_settings",
+      "checks": [
+        "records_sales_settings_approval_threshold_vnd_chk",
+        "records_sales_settings_closed_deals_can_flip_chk",
+        "records_sales_settings_draft_without_total_needs_approval_chk",
+        "records_sales_settings_key_chk",
+        "records_sales_settings_reopen_needs_approval_chk"
+      ],
+      "indexes": ["records_sales_settings_key", "records_sales_settings_key_key"]
     }
   ]
 }

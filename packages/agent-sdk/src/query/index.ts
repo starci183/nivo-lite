@@ -44,4 +44,4 @@ export type {
     ListRow,
     ListSearch,
     ListShape,
-} from "./list-shape.mirror.types"
+} from "../block/list.types"

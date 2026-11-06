@@ -786,6 +786,15 @@
         "objects": ["public.records_accounting_adjustment:index:records_accounting_adjustment_target"],
         "reason": "the Accounting move ends the target index of accounting.adjustment with id so the lineage query is index-prefixed; no data is carried over (owner 2026-11-05 \"không care prod\")",
         "date": "2026-11-06"
+      },
+      {
+        "migration": "db/migrations/20261112001500_entity-engine-partitions_contract_drop.sql",
+        "objects": [
+          "public.records_accounting_book_entry:constraint:records_accounting_book_entry_kind_chk",
+          "public.v_records_accounting_book_entry"
+        ],
+        "reason": "the Accounting join widens accounting.book-entry (the kinds expense and reversal, the fields the book and its questions read): its kind check and typed view are replaced by the wider ones; no data is carried over (owner 2026-11-05 \"không care prod\")",
+        "date": "2026-11-06"
       }
     ]
   }

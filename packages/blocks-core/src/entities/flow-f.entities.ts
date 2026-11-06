@@ -10,6 +10,12 @@ import { agentGraphProposalEntity } from "./agent/graph-proposal.entity"
 import { agentGraphSourceEntity } from "./agent/graph-source.entity"
 import { agentGraphVersionEntity } from "./agent/graph-version.entity"
 import { agentGraphEntity } from "./agent/graph.entity"
+import { loyaltyMemberEntity } from "./loyalty/member.entity"
+import { loyaltyLedgerEntryEntity } from "./loyalty/ledger-entry.entity"
+import { loyaltyRewardEntity } from "./loyalty/reward.entity"
+import { loyaltyProgramEntity } from "./loyalty/program.entity"
+import { loyaltyCampaignEntity } from "./loyalty/campaign.entity"
+import { loyaltyDecisionEntity } from "./loyalty/decision.entity"
 import { agentNodeEffectEntity } from "./agent/node-effect.entity"
 import { agentRunStepEntity } from "./agent/run-step.entity"
 import { agentRunEntity } from "./agent/run.entity"
@@ -38,6 +44,12 @@ export const FLOW_F_ENTITIES: ReadonlyArray<AnyEntityDefinition> = [
     bookEntryEntity,
     accountingQuestionEntity,
     accountingSettingsEntity,
+    loyaltyMemberEntity,
+    loyaltyLedgerEntryEntity,
+    loyaltyRewardEntity,
+    loyaltyProgramEntity,
+    loyaltyCampaignEntity,
+    loyaltyDecisionEntity,
     turnEntity,
     agentRunEntity,
     agentRunStepEntity,

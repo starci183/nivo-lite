@@ -24,6 +24,7 @@ export const matches = (row: RecordRow, where: FilterExpr | undefined): boolean 
     if (where.op === "and") return where.of.every((part) => matches(row, part))
     if (where.op === "in") return new Set<unknown>(where.values).has(valueOf(row, where.field))
     if (where.op === "gte") return signOf(valueOf(row, where.field), where.value) >= 0
+    if (where.op === "notNull") return !isNil(valueOf(row, where.field))
     if (where.op === "lt") return signOf(valueOf(row, where.field), where.value) < 0
     return where.op === "eq" && valueOf(row, where.field) === where.value
 }

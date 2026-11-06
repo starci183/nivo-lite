@@ -48,6 +48,8 @@ export interface MemberPatch {
     readonly note?: string
     /** The held tier, when a purchase lifted it. */
     readonly tierKey?: string
+    /** The name of the held tier, kept with the key so the list sorts and filters on stored fields. */
+    readonly tier?: string
 }
 
 /** One row of the members list: what the list draws, with the tier written by name and the activity worked out. */

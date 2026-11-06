@@ -1,6 +1,6 @@
 import { z } from "zod"
 import type { EntityDefinition } from "../entity/entity.types"
-import type { ListShape } from "./list-shape.mirror.types"
+import type { ListShape } from "../block/list.types"
 
 const shape = z.record(z.string().max(40), z.string().max(200)).refine((entries) => Object.keys(entries).length <= 20)
 

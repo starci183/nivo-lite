@@ -1,5 +1,5 @@
 import { countsOf, listQueryOf } from "./list-query"
-import type { FilterCase, ListQuery, ListShape } from "./list-shape.mirror.types"
+import type { FilterCase, ListQuery, ListShape } from "../block/list.types"
 import { q } from "./q"
 import { QueryBuildError } from "./query-error"
 import { queryProblems } from "./query-problems"
@@ -61,6 +61,33 @@ describe("listQueryOf", () => {
     it("does not search without text or without searchable fields", () => {
         expect(listQueryOf(LEAD, LEAD_SHAPE, query({ q: "   " })).where).toBeUndefined()
         expect(listQueryOf(LEAD, PLAIN_SHAPE, query({ q: "dinh" })).where).toBeUndefined()
+    })
+
+    it("turns a chosen time window into a half-open range on the field, and refuses a window for a filter that names none", () => {
+        const shape: ListShape = {
+            ...LEAD_SHAPE,
+            filters: { ...LEAD_SHAPE.filters, when: { field: "updatedAt", op: "within", of: ["$today"] } },
+        }
+        const window = { from: "2026-11-06T00:00:00.000Z", to: "2026-11-07T00:00:00.000Z" }
+        expect(listQueryOf(LEAD, shape, query({ windows: { when: window } })).where).toEqual(
+            q.and(q.gte("updatedAt", window.from), q.lt("updatedAt", window.to)),
+        )
+        expect(codeOf(() => listQueryOf(LEAD, shape, query({ windows: { stage: window } })))).toBe(
+            "LIST_FILTER_VALUE_UNKNOWN: stage is not a window filter",
+        )
+        expect(codeOf(() => listQueryOf(LEAD, shape, query({ windows: { cases: window } })))).toBe(
+            "LIST_FILTER_UNKNOWN: cases",
+        )
+    })
+
+    it("takes any value of an open filter, not only the values it lists", () => {
+        const shape: ListShape = {
+            ...LEAD_SHAPE,
+            filters: { ...LEAD_SHAPE.filters, tier: { field: "channel", op: "eq", of: ["gold"], open: true } },
+        }
+        expect(listQueryOf(LEAD, shape, query({ filters: { tier: "platinum" } })).where).toEqual(
+            q.eq("channel", "platinum"),
+        )
     })
 
     it("turns the chosen filters into equalities and memberships typed by their field", () => {

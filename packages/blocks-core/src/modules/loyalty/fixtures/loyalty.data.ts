@@ -1,9 +1,18 @@
 import { DEFAULT_CONFIG } from "../../../rules/loyalty/config"
-import type { MemoryState, StoredEntry } from "../memory"
-import type { CampaignRow, DecisionItem, MemberRow, ProgramRow, RewardRow } from "../loyalty.types"
+import type { CampaignRow, DecisionItem, LedgerRow, MemberRow, ProgramRow, RewardRow } from "../loyalty.types"
 
 /** The instant the sample data is drawn at: noon in Vietnam, 5 November 2026. */
 export const SAMPLE_NOW = "2026-11-05T05:00:00.000Z"
+
+/** A ledger entry of the sample: what the timeline shows, with the customer, the key and the reward behind it. */
+export interface StoredEntry extends LedgerRow {
+    /** The customer whose points moved. */
+    readonly customerId: string
+    /** The idempotency key of the entry. */
+    readonly ref: string
+    /** The reward behind a redeem, or null. */
+    readonly rewardId: string | null
+}
 
 const DAY = 86_400_000
 const ago = (days: number): string => new Date(Date.parse(SAMPLE_NOW) - days * DAY).toISOString()
@@ -261,17 +270,3 @@ export const SAMPLE_DECISIONS: ReadonlyArray<DecisionItem> = [
         customer: "Nguy\u1ec5n Th\u1ecb Lan",
     },
 ]
-
-/** A memory state over the sample data, with `patch` laid over it. */
-export const sampleState = (patch: Partial<MemoryState> = {}): MemoryState => ({
-    members: SAMPLE_MEMBERS.map((member) => ({ ...member })),
-    entries: SAMPLE_ENTRIES.map((entry) => ({ ...entry })),
-    rewards: SAMPLE_REWARDS.map((reward) => ({ ...reward })),
-    program: SAMPLE_PROGRAM,
-    campaigns: [...SAMPLE_CAMPAIGNS],
-    decisions: [...SAMPLE_DECISIONS],
-    reachable: ["m-1", "m-2", "m-3"],
-    synced: { created: 2, linked: 3 },
-    now: SAMPLE_NOW,
-    ...patch,
-})

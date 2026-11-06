@@ -1,7 +1,6 @@
 import type { ListSource } from "@nivo-lite/agent-sdk/block"
 import type {
     AggregateRow,
-    EngineResult,
     EntityAggregate,
     EntityApi,
     EntityQuery,
@@ -9,18 +8,13 @@ import type {
     ListPage as EnginePage,
     PageRow,
     RecordRow,
-    WriteLinks,
-    WriteValues,
 } from "@nivo-lite/agent-sdk/entity/port"
 import { doorPort, outboxPort } from "@nivo-lite/agent-sdk/mutation"
-import type { DoorApi, DoorCallResult, OutboxApi } from "@nivo-lite/agent-sdk/mutation"
+import type { DoorApi, OutboxApi } from "@nivo-lite/agent-sdk/mutation"
 import { unprovided } from "@nivo-lite/agent-sdk/port"
-import type { PortDefinition, PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
+import type { PortDefinition, PortProvider } from "@nivo-lite/agent-sdk/port"
 import { queryProblems } from "@nivo-lite/agent-sdk/query"
-import type { Aggregate, EntityCatalog, MeasureSpec } from "@nivo-lite/agent-sdk/query"
-import type { UniqueConstraint } from "@nivo-lite/agent-sdk/entity"
-import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
-import { FLOW_F_ENTITIES } from "../../../entities/flow-f.entities"
+import type { Aggregate, MeasureSpec } from "@nivo-lite/agent-sdk/query"
 import type {
     AdjustmentRecord,
     BookEntryRecord,
@@ -29,123 +23,20 @@ import type {
     OrderRecord,
     TransactionRecord,
 } from "../../../rules/accounting/accounting.types"
-import type { MemberDirectory, MemberFacts } from "../../platform/platform.types"
+import type { MemberDirectory } from "../../platform/platform.types"
 import { membersPort } from "../../platform/ports"
 import type { EntryRow } from "../accounting.types"
 import { bookEntryOf } from "../accounting-records"
 import { ENTRIES_LIST } from "../ports"
-import { compareBy, isNil, matches, pick, valueOf } from "./accounting.memory-rows"
+import { compareBy, matches, pick, valueOf } from "./accounting.memory-rows"
+import { CATALOG, putRecord, rowsOf } from "./accounting.memory-world"
+import type { MemoryWorld } from "./accounting.memory-world"
+import { deleted, ensured, inserted, linked, updated, upserted } from "./accounting.memory-writes"
 
-/** The member of the fake workspace who is an accountant. */
-export const ACCOUNTANT_ID = "00000000-0000-4000-8000-0000000000aa"
-
-/** A request scope of the accountant at a fixed instant. */
-export const ACCOUNTANT_CONTEXT: RunContext = {
-    workspaceId: "w1",
-    memberId: ACCOUNTANT_ID,
-    now: new Date("2026-11-04T12:00:00.000Z"),
-    timeZone: "Asia/Ho_Chi_Minh",
-}
-
-/** A request scope no seat of the workspace acts in (the graph, a job). */
-export const SYSTEM_CONTEXT: RunContext = {
-    workspaceId: "w1",
-    memberId: null,
-    now: ACCOUNTANT_CONTEXT.now,
-    timeZone: "Asia/Ho_Chi_Minh",
-}
-
-/** The instant every fake record that no spec dated was created and last written at. */
-const CREATED = "2026-11-03T09:00:00.000Z"
-
-/** The entities the fake engine knows, the way the planner checks a query against them. */
-const CATALOG: EntityCatalog = new Map(FLOW_F_ENTITIES.map((entity) => [entity.name, entity]))
-
-/** One link the fake engine holds: a record of an entity linked to another over a relation. */
-export interface MemoryLink {
-    /** The entity of the record that is linked. */
-    readonly entity: string
-    /** The id of the record that is linked. */
-    readonly id: string
-    /** The relation. */
-    readonly relation: string
-    /** The id of the target record. */
-    readonly to: string
-}
-
-/** One job the fake outbox was asked to enqueue. */
-export interface MemoryJob {
-    /** The job name. */
-    readonly job: string
-    /** Its input. */
-    readonly input: unknown
-    /** The key that makes a repeat the same job, when the caller gave one. */
-    readonly dedupeKey: string | undefined
-}
-
-/** One call the fake door was given. */
-export interface MemoryCall {
-    /** The door tool. */
-    readonly tool: string
-    /** The input of the call. */
-    readonly input: Readonly<Record<string, JsonValue>>
-}
-
-/** Everything the fake ports read and record, so a spec can set it up and look at it. */
-export interface MemoryWorld {
-    /** The records of each entity, by entity name. */
-    readonly tables: Map<string, Array<RecordRow>>
-    /** The links between records. */
-    readonly links: Array<MemoryLink>
-    /** The members by id. */
-    readonly members: Map<string, MemberFacts>
-    /** The jobs the outbox was asked for. */
-    readonly jobs: Array<MemoryJob>
-    /** What the door was asked for. */
-    readonly calls: Array<MemoryCall>
-    /** What the door answers for a tool; a tool it does not name is unknown. */
-    readonly answers: Map<string, DoorCallResult>
-}
-
-/** An empty world holding the accountant. */
-export const memoryWorld = (): MemoryWorld => ({
-    tables: new Map(),
-    links: [],
-    members: new Map([[ACCOUNTANT_ID, { displayName: "Lan", isManager: false }]]),
-    jobs: [],
-    calls: [],
-    answers: new Map(),
-})
-
-/** The records of an entity of a world. */
-export const rowsOf = (world: MemoryWorld, entity: string): Array<RecordRow> => {
-    const found = world.tables.get(entity)
-    if (found !== undefined) return found
-    const created: Array<RecordRow> = []
-    world.tables.set(entity, created)
-    return created
-}
-
-/** Stores a record of an entity, with the links it carries, and answers it. */
-export const putRecord = (
-    world: MemoryWorld,
-    entity: string,
-    id: string,
-    data: Readonly<Record<string, unknown>>,
-    options: { readonly version?: string; readonly createdAt?: string; readonly links?: WriteLinks } = {},
-): RecordRow => {
-    const row: RecordRow = {
-        id,
-        workspaceId: "w1",
-        version: options.version ?? "1",
-        createdAt: options.createdAt ?? CREATED,
-        updatedAt: options.createdAt ?? CREATED,
-        data,
-    }
-    rowsOf(world, entity).push(row)
-    for (const [relation, to] of Object.entries(options.links ?? {})) world.links.push({ entity, id, relation, to })
-    return row
-}
+export { ACCOUNTANT_CONTEXT, ACCOUNTANT_ID, SYSTEM_CONTEXT, memoryWorld } from "./accounting.memory-world"
+export type { MemoryCall, MemoryJob, MemoryLink } from "./accounting.memory-world"
+export { putRecord, rowsOf }
+export type { MemoryWorld }
 
 /** Stores a transaction, linked to the order it paid when it paid one. */
 export const putTransaction = (world: MemoryWorld, record: TransactionRecord): RecordRow => {
@@ -293,88 +184,6 @@ const aggregated = (world: MemoryWorld, entity: string, aggregate: EntityAggrega
     })
 }
 
-/** The uuid-shaped id the fake mints for the n-th record of an entity. */
-const idOf = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`
-
-/** The next id the fake mints: past every id of the world, so two entities never share one. */
-const nextId = (world: MemoryWorld): string =>
-    idOf(1_000_000 + [...world.tables.values()].reduce((count, rows) => count + rows.length, 0))
-
-/** The unique constraints an entity declares. */
-const uniquesOf = (entity: string): ReadonlyArray<UniqueConstraint> =>
-    (CATALOG.get(entity)?.constraints ?? []).flatMap((declared) => (declared.kind === "unique" ? [declared] : []))
-
-/** The unique constraint an insert or update of a record would break, if any: the same non-null values on another record. */
-const clashOf = (entity: string, rows: ReadonlyArray<RecordRow>, row: RecordRow): EngineResult | null => {
-    const constraint = uniquesOf(entity).find(
-        (declared) =>
-            declared.on.every((field) => !isNil(valueOf(row, field))) &&
-            rows.some(
-                (other) => other.id !== row.id && declared.on.every((f) => valueOf(other, f) === valueOf(row, f)),
-            ),
-    )
-    return constraint === undefined
-        ? null
-        : { ok: false, reason: "taken", constraint: constraint.name, refusal: constraint.refusal }
-}
-
-/** Stores a record and the links it carries; refuses it when it would break a unique constraint. */
-const inserted = (world: MemoryWorld, entity: string, values: WriteValues, links: WriteLinks = {}): EngineResult => {
-    const row: RecordRow = {
-        id: nextId(world),
-        workspaceId: "w1",
-        version: "1",
-        createdAt: ACCOUNTANT_CONTEXT.now.toISOString(),
-        updatedAt: ACCOUNTANT_CONTEXT.now.toISOString(),
-        data: values,
-    }
-    const clash = clashOf(entity, rowsOf(world, entity), row)
-    if (clash !== null) return clash
-    rowsOf(world, entity).push(row)
-    for (const [relation, to] of Object.entries(links)) world.links.push({ entity, id: row.id, relation, to })
-    return { ok: true, row, version: row.version, created: true }
-}
-
-/** Sets fields of a record whose version is the expected one; refuses a write that would break a unique constraint. */
-const updated = (
-    world: MemoryWorld,
-    entity: string,
-    key: string,
-    expected: string,
-    values: WriteValues,
-): EngineResult => {
-    const rows = rowsOf(world, entity)
-    const index = rows.findIndex((row) => row.id === key)
-    const row = rows[index]
-    if (row === undefined) return { ok: false, reason: "missing" }
-    if (row.version !== expected) return { ok: false, reason: "stale" }
-    const next: RecordRow = { ...row, version: String(Number(row.version) + 1), data: { ...row.data, ...values } }
-    const clash = clashOf(entity, rows, next)
-    if (clash !== null) return clash
-    rows[index] = next
-    return { ok: true, row: next, version: next.version }
-}
-
-/** Writes the values to the record the unique constraint `on` names (the one with the same values), or inserts them. */
-const upserted = (world: MemoryWorld, entity: string, on: string, values: WriteValues): EngineResult => {
-    const constraint = uniquesOf(entity).find((declared) => declared.name === on)
-    if (constraint === undefined) return { ok: false, reason: "invalid" }
-    const existing = rowsOf(world, entity).find((row) =>
-        constraint.on.every((field) => valueOf(row, field) === values[field]),
-    )
-    return existing === undefined
-        ? inserted(world, entity, values)
-        : updated(world, entity, existing.id, existing.version, values)
-}
-
-/** Links a record to another over a relation. */
-const linked = (world: MemoryWorld, entity: string, key: string, relation: string, to: string): EngineResult => {
-    const row = rowsOf(world, entity).find((candidate) => candidate.id === key)
-    if (row === undefined) return { ok: false, reason: "missing" }
-    world.links.push({ entity, id: key, relation, to })
-    return { ok: true, row, version: row.version }
-}
-
 /** What the fake engine does not do. */
 const unsupported = (): Promise<never> => Promise.reject(new Error("The fake engine does not run this call."))
 
@@ -398,8 +207,8 @@ export const entityApi = (world: MemoryWorld, entity: string): EntityApi => ({
     update: (key, expected, values) => Promise.resolve(updated(world, entity, key, expected, values)),
     upsert: (on, values) => Promise.resolve(upserted(world, entity, on, values)),
     link: (key, relation, to) => Promise.resolve(linked(world, entity, key, relation, to)),
-    ensure: unsupported,
-    delete: unsupported,
+    ensure: (match, values) => Promise.resolve(ensured(world, entity, match, values)),
+    delete: (key, expected) => Promise.resolve(deleted(world, entity, key, expected)),
     unlink: unsupported,
 })
 

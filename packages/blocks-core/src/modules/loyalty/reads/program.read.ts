@@ -4,7 +4,8 @@ import { z } from "zod"
 import { programOf } from "../config-store"
 import { CAMPAIGNS_SHOWN, LOYALTY_VIEW } from "../constants"
 import { campaignViewOf, programViewOf } from "../mappers"
-import { loyaltyCampaigns, loyaltyProgram } from "../ports"
+import { campaignsList } from "../loyalty-catalogue-data"
+import { CAMPAIGNS, PROGRAM } from "../ports"
 import type { CampaignRowView, ProgramView } from "../views.types"
 
 const PROGRAM_FIELDS: ReadonlyArray<keyof ProgramView> = [
@@ -37,7 +38,7 @@ export const programRead: ReadDefinition = defineRead({
     paths: {},
     variables: z.object({}),
     permission: LOYALTY_VIEW,
-    ports: { program: loyaltyProgram },
+    ports: { program: PROGRAM },
     run: async ({ program }): Promise<ProgramView> => programViewOf(await programOf(program)),
 })
 
@@ -50,8 +51,8 @@ export const campaignsRead: ReadDefinition = defineRead({
     paths: { rows: "list" },
     variables: z.object({}),
     permission: LOYALTY_VIEW,
-    ports: { campaigns: loyaltyCampaigns },
+    ports: { campaigns: CAMPAIGNS },
     run: async ({ campaigns }): Promise<{ readonly rows: ReadonlyArray<CampaignRowView> }> => ({
-        rows: (await campaigns.list(CAMPAIGNS_SHOWN)).map(campaignViewOf),
+        rows: (await campaignsList(campaigns, CAMPAIGNS_SHOWN)).map(campaignViewOf),
     }),
 })

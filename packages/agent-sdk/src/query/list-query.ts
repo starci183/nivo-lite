@@ -1,5 +1,5 @@
 import type { EntityDefinition, FieldKind } from "../entity/entity.types"
-import type { FilterCase, FilterOp, ListFilter, ListQuery, ListShape } from "./list-shape.mirror.types"
+import type { FilterCase, FilterOp, ListFilter, ListQuery, ListShape, TimeWindow } from "../block/list.types"
 import { ownEntry } from "./own"
 import { q } from "./q"
 import { QueryBuildError } from "./query-error"
@@ -97,11 +97,19 @@ const filterExpr = (entity: Entity, name: string, filter: ListFilter, chosen: st
         }
         return caseExpr(`${name}=${chosen}`, filterCase)
     }
-    if (!filter.of.includes(chosen)) {
+    if (filter.open !== true && !filter.of.includes(chosen)) {
         throw new QueryBuildError("LIST_FILTER_VALUE_UNKNOWN", `${name}=${chosen}`)
     }
     const value = scalarOf(entity, filter.field, chosen)
     return filter.op === "eq" ? q.eq(filter.field, value) : q.in(filter.field, [value])
+}
+
+/** The expression of a `within` filter: the field falls in the window the server resolved for the chosen time token (`from` inclusive, `to` exclusive). */
+const windowExpr = (name: string, filter: ListFilter, window: TimeWindow): FilterExpr => {
+    if ("cases" in filter || filter.op !== "within") {
+        throw new QueryBuildError("LIST_FILTER_VALUE_UNKNOWN", `${name} is not a window filter`)
+    }
+    return q.allOf(q.gte(filter.field, window.from), q.lt(filter.field, window.to)) ?? q.isNull(filter.field)
 }
 
 const filterOf = (shape: ListShape, name: string): ListFilter => {
@@ -119,7 +127,10 @@ const whereOf = (entity: Entity, shape: ListShape, query: ListQuery, skip: strin
     const filters = Object.entries(query.filters)
         .filter(([name]) => name !== skip)
         .map(([name, chosen]) => filterExpr(entity, name, filterOf(shape, name), chosen))
-    return q.allOf(search, ...filters)
+    const windows = Object.entries(query.windows ?? {})
+        .filter(([name]) => name !== skip)
+        .map(([name, window]) => windowExpr(name, filterOf(shape, name), window))
+    return q.allOf(search, ...filters, ...windows)
 }
 
 /** The chosen sort made total: it ends with the entity key, the way keyset paging needs. */

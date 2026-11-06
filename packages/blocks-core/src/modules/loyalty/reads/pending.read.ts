@@ -6,16 +6,17 @@ import type { DecisionQueueView, ItemsRegionView } from "../../../views/views.ty
 import { DECISIONS_LIMIT, LOYALTY_DECIDE, WAITING_SHOWN } from "../constants"
 import { decisionQueueOf, loyaltyDecisionsOf, waitingRegionOf } from "../mappers"
 import type { DecisionItem } from "../loyalty.types"
-import { loyaltyDecisions } from "../ports"
+import { decisionsWaiting } from "../loyalty-catalogue-data"
+import { DECISIONS } from "../ports"
 import type { PendingCount } from "../views.types"
 
 const variables: z.ZodObject<Record<string, never>> = z.object({})
 
-const ports = { decisions: loyaltyDecisions }
+const ports = { decisions: DECISIONS }
 
 /** The loyalty decisions that wait for a person. */
 const waitingOf = async (held: PortsOf<typeof ports>): Promise<ReadonlyArray<DecisionItem>> =>
-    loyaltyDecisionsOf(await held.decisions.waiting(DECISIONS_LIMIT))
+    loyaltyDecisionsOf(await decisionsWaiting(held.decisions, DECISIONS_LIMIT))
 
 /** `loyalty.pending`: the decisions about points, rewards and promotions that wait for a person, oldest first. */
 export const pendingRead: ReadDefinition = defineRead({

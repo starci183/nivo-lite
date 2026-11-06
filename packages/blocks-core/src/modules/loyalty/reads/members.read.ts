@@ -11,7 +11,9 @@ import { configOf } from "../config-store"
 import { LOYALTY_VIEW, TIMELINE_ROWS } from "../constants"
 import { ledgerViewOf, memberDetailOf } from "../mappers"
 import type { MemberListRow } from "../loyalty.types"
-import { loyaltyLedger, loyaltyMembers, loyaltyMembersList, loyaltyProgram, loyaltyRewards } from "../ports"
+import { rewardsList } from "../loyalty-catalogue-data"
+import { ledgerExpiryEntries, ledgerTimeline, memberById, redeemedCounts } from "../loyalty-member-data"
+import { LEDGER, MEMBERS, PROGRAM, REWARDS, loyaltyMembersList } from "../ports"
 import type { LedgerRowView, MemberDetail, RedeemableRowView } from "../views.types"
 
 /** The activities a members list can be narrowed to. */
@@ -76,7 +78,7 @@ export const withKnownTiers = (read: ListReadDefinition): ListReadDefinition => 
     execute: async (provider, raw, context) => {
         const asked = askedTierOf(raw)
         if (asked !== null) {
-            const { program } = portsOf(provider, { program: loyaltyProgram })
+            const { program } = portsOf(provider, { program: PROGRAM })
             const ladder = (await configOf(program)).tiers.map((tier) => tier.key)
             if (!ladder.includes(asked)) return refusedAt("tier")
         }
@@ -127,11 +129,11 @@ export const memberRead: ReadDefinition = defineRead({
     paths: {},
     variables: byId,
     permission: LOYALTY_VIEW,
-    ports: { members: loyaltyMembers, ledger: loyaltyLedger, program: loyaltyProgram },
+    ports: { members: MEMBERS, ledger: LEDGER, program: PROGRAM },
     run: async ({ members, ledger, program }, { id }, context): Promise<MemberDetail | null> => {
-        const member = await members.get(id)
+        const member = await memberById(members, id)
         if (member === null) return null
-        const [config, entries] = await Promise.all([configOf(program), ledger.expiryEntries(id)])
+        const [config, entries] = await Promise.all([configOf(program), ledgerExpiryEntries(ledger, id)])
         return memberDetailOf(member, config, entries, context.now.getTime())
     },
 })
@@ -145,17 +147,17 @@ export const memberRewardsRead: ReadDefinition = defineRead({
     paths: { rows: "list" },
     variables: byId,
     permission: LOYALTY_VIEW,
-    ports: { members: loyaltyMembers, ledger: loyaltyLedger, rewards: loyaltyRewards, program: loyaltyProgram },
+    ports: { members: MEMBERS, ledger: LEDGER, rewards: REWARDS, program: PROGRAM },
     run: async (
         { members, ledger, rewards, program },
         { id },
     ): Promise<{ readonly rows: ReadonlyArray<RedeemableRowView> }> => {
-        const member = await members.get(id)
+        const member = await memberById(members, id)
         if (member === null) return { rows: [] }
         const [config, catalogue, counts] = await Promise.all([
             configOf(program),
-            rewards.list(true),
-            ledger.redeemedCounts(id),
+            rewardsList(rewards, true),
+            redeemedCounts(ledger, id),
         ])
         return {
             rows: catalogue
@@ -186,8 +188,8 @@ export const memberLedgerRead: ReadDefinition = defineRead({
     paths: { rows: "list" },
     variables: byId,
     permission: LOYALTY_VIEW,
-    ports: { ledger: loyaltyLedger },
+    ports: { ledger: LEDGER },
     run: async ({ ledger }, { id }): Promise<{ readonly rows: ReadonlyArray<LedgerRowView> }> => ({
-        rows: (await ledger.timeline(id, TIMELINE_ROWS)).map(ledgerViewOf),
+        rows: (await ledgerTimeline(ledger, id, TIMELINE_ROWS)).map(ledgerViewOf),
     }),
 })

@@ -1,9 +1,11 @@
 import type { ReadDefinition, ReadRunResult } from "@nivo-lite/agent-sdk/block"
 import type { PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
-import { MEMBER_GOLD, sampleState, SAMPLE_NOW, SAMPLE_PROGRAM } from "../fixtures/loyalty.data"
+import type { MemoryWorld } from "../../accounting/fixtures/accounting.memory"
+import { rowsOf } from "../../accounting/fixtures/accounting.memory"
+import { MEMBER_GOLD, SAMPLE_NOW, SAMPLE_PROGRAM } from "../fixtures/loyalty.data"
+import type { StoredEntry } from "../fixtures/loyalty.data"
+import { loyaltyProvider, putDecision, putEntry, putMember, sampleWorld } from "../fixtures/loyalty.memory"
 import type { DecisionItem } from "../loyalty.types"
-import { memoryProvider } from "../memory"
-import type { MemoryState, StoredEntry } from "../memory"
 import { figuresRead, statsRead, tiersRead } from "./board.read"
 import {
     memberCountsRead,
@@ -40,6 +42,13 @@ const expiringEntry: StoredEntry = {
     rewardId: null,
 }
 
+/** A world with none of the rows of an entity. */
+const without = (entity: string, program = SAMPLE_PROGRAM): MemoryWorld => {
+    const world = sampleWorld(program)
+    rowsOf(world, entity).splice(0)
+    return world
+}
+
 const decisionOf = (patch: Partial<DecisionItem>): DecisionItem => ({
     id: "x",
     action: "send_promo",
@@ -59,8 +68,8 @@ const notRunnable = (): Promise<ReadRunResult> => Promise.resolve({ ok: false, p
 const run = async (
     read: ReadDefinition,
     raw: unknown,
-    state: MemoryState = sampleState(),
-    provider: PortProvider = memoryProvider(state),
+    world: MemoryWorld = sampleWorld(),
+    provider: PortProvider = loyaltyProvider(world),
 ): Promise<unknown> => {
     expect(read.execute).toBeDefined()
     const result = await (read.execute ?? notRunnable)(provider, raw, context)
@@ -108,22 +117,22 @@ describe("loyalty.tiers", () => {
     })
 
     it("lists the starter ladder before the programme is saved", async () => {
-        const result = await run(tiersRead, {}, sampleState({ program: null }))
+        const result = await run(tiersRead, {}, sampleWorld(null))
         expect(result).toMatchObject({ rows: [{ key: "dong" }, { key: "bac" }, { key: "vang" }] })
     })
 })
 
 describe("loyalty.members and loyalty.member-counts", () => {
-    it("lists the members newest purchase first with the tier by name and the activity", async () => {
+    it("lists the members newest purchase first with the tier by name and the activity, those who never bought on top as the engine sorts a missing time", async () => {
         const page = await run(membersRead, {})
         expect(page).toMatchObject({
             cursor: null,
             rows: [
+                { id: "m-4", tier: "", contact: "ha@example.com", activity: "new" },
                 { id: "m-1", tier: "V\u00e0ng", contact: "84912345678", activity: "active" },
                 { id: "m-3", tier: "\u0110\u1ed3ng", activity: "active" },
                 { id: "m-2", tier: "B\u1ea1c", activity: "at_risk" },
                 { id: "m-5", tier: "\u0110\u1ed3ng", activity: "at_risk" },
-                { id: "m-4", tier: "", contact: "ha@example.com", activity: "new" },
             ],
         })
     })
@@ -146,14 +155,10 @@ describe("loyalty.members and loyalty.member-counts", () => {
     })
 
     it("keeps members that tie on every sort key in the order they have, and writes a member with no contact as empty", async () => {
-        const state = sampleState()
-        state.members.splice(
-            0,
-            state.members.length,
-            { ...MEMBER_GOLD, id: "a", phone: null, email: null },
-            { ...MEMBER_GOLD, id: "b" },
-        )
-        expect(await run(membersRead, { sort: "name" }, state)).toMatchObject({
+        const world = without("loyalty.member")
+        putMember(world, { ...MEMBER_GOLD, id: "a", phone: null, email: null })
+        putMember(world, { ...MEMBER_GOLD, id: "b" })
+        expect(await run(membersRead, { sort: "name" }, world)).toMatchObject({
             rows: [
                 { id: "a", contact: "" },
                 { id: "b", contact: "84912345678" },
@@ -161,19 +166,19 @@ describe("loyalty.members and loyalty.member-counts", () => {
         })
     })
 
-    it("names the tiers from the starter rules before the programme is saved", async () => {
-        expect(await run(membersRead, { q: "lan" }, sampleState({ program: null }))).toMatchObject({
+    it("lists the members of a workspace that never saved a programme with the tier names kept on them", async () => {
+        expect(await run(membersRead, { q: "lan" }, sampleWorld(null))).toMatchObject({
             rows: [{ id: "m-1", tier: "V\u00e0ng" }],
         })
     })
 
     it("pages by a cursor", async () => {
-        const state = sampleState()
+        const world = sampleWorld()
         for (let index = 0; index < 30; index += 1)
-            state.members.push({ ...MEMBER_GOLD, id: `p-${index}`, name: `Extra ${index}` })
-        const first = await run(membersRead, { sort: "name" }, state)
+            putMember(world, { ...MEMBER_GOLD, id: `p-${index}`, name: `Extra ${index}`, phone: null, email: null })
+        const first = await run(membersRead, { sort: "name" }, world)
         expect(first).toMatchObject({ cursor: "30" })
-        expect(await run(membersRead, { sort: "name", cursor: "30" }, state)).toMatchObject({ cursor: null })
+        expect(await run(membersRead, { sort: "name", cursor: "30" }, world)).toMatchObject({ cursor: null })
     })
 
     it("counts the members of each activity under the same search", async () => {
@@ -193,16 +198,15 @@ describe("the tier filter of loyalty.members and loyalty.tier-counts", () => {
     })
 
     it("takes any tier of the ladder the workspace saved, a renamed one included", async () => {
-        const state = sampleState()
-        state.program = {
+        const world = sampleWorld({
             ...SAMPLE_PROGRAM,
             config: {
                 ...SAMPLE_PROGRAM.config,
                 tiers: SAMPLE_PROGRAM.config.tiers.map((tier) => ({ ...tier, key: `${tier.key}-2` })),
             },
-        }
-        expect(await run(membersRead, { tier: "dong-2" }, state)).toEqual({ rows: [], cursor: null })
-        expect(await run(membersRead, { tier: "dong" }, state)).toEqual({
+        })
+        expect(await run(membersRead, { tier: "dong-2" }, world)).toEqual({ rows: [], cursor: null })
+        expect(await run(membersRead, { tier: "dong" }, world)).toEqual({
             refused: [{ code: "INPUT_INVALID", at: "tier" }],
         })
     })
@@ -243,9 +247,9 @@ describe("loyalty.member", () => {
     })
 
     it("tells the points that expire in the warning window and when", async () => {
-        const state = sampleState()
-        state.entries.push(expiringEntry)
-        expect(await run(memberRead, { id: "m-3" }, state)).toMatchObject({
+        const world = sampleWorld()
+        putEntry(world, expiringEntry)
+        expect(await run(memberRead, { id: "m-3" }, world)).toMatchObject({
             expiringPoints: 60,
             expiringAt: "2026-11-20T00:00:00.000Z",
         })
@@ -253,9 +257,9 @@ describe("loyalty.member", () => {
 
     it("sees no expiry in a programme whose points never expire", async () => {
         const never = { ...SAMPLE_PROGRAM, config: { ...SAMPLE_PROGRAM.config, expiry: { months: 0, warnDays: 30 } } }
-        const state = sampleState({ program: never })
-        state.entries.push(expiringEntry)
-        expect(await run(memberRead, { id: "m-3" }, state)).toMatchObject({ expiringPoints: 0, expiringAt: "" })
+        const world = sampleWorld(never)
+        putEntry(world, expiringEntry)
+        expect(await run(memberRead, { id: "m-3" }, world)).toMatchObject({ expiringPoints: 0, expiringAt: "" })
     })
 
     it("writes what a member lacks as empty", async () => {
@@ -300,9 +304,9 @@ describe("loyalty.member-ledger", () => {
     })
 
     it("writes a missing note as empty", async () => {
-        const state = sampleState()
-        state.entries.push(expiringEntry)
-        expect(await run(memberLedgerRead, { id: "m-3" }, state)).toMatchObject({ rows: [{ id: "e-9", evidence: "" }] })
+        const world = sampleWorld()
+        putEntry(world, expiringEntry)
+        expect(await run(memberLedgerRead, { id: "m-3" }, world)).toMatchObject({ rows: [{ id: "e-9", evidence: "" }] })
     })
 })
 
@@ -338,7 +342,7 @@ describe("loyalty.program and loyalty.campaigns", () => {
     })
 
     it("answers the starter rules, switched off, before the first save", async () => {
-        expect(await run(programRead, {}, sampleState({ program: null }))).toMatchObject({
+        expect(await run(programRead, {}, sampleWorld(null))).toMatchObject({
             name: "",
             enabled: false,
             slug: "",
@@ -350,8 +354,8 @@ describe("loyalty.program and loyalty.campaigns", () => {
     it("lists the newest promotions first", async () => {
         expect(await run(campaignsRead, {})).toMatchObject({
             rows: [
-                { id: "c-2", status: "done", sent: 1 },
                 { id: "c-1", status: "waiting_decision", recipients: 1 },
+                { id: "c-2", status: "done", sent: 1 },
             ],
         })
     })
@@ -380,32 +384,29 @@ describe("loyalty.pending", () => {
     })
 
     it("counts in minutes for a decision raised a moment ago and leaves out what is not about loyalty", async () => {
-        const state = sampleState()
-        state.decisions.push(
-            decisionOf({ id: "d-3", action: "award_points", amountVnd: 90_000 }),
-            decisionOf({ id: "d-4", action: "order_confirm" }),
-        )
-        expect(await run(pendingRead, {}, state)).toMatchObject({
+        const world = sampleWorld()
+        putDecision(world, decisionOf({ id: "d-3", action: "award_points", amountVnd: 90_000 }))
+        putDecision(world, decisionOf({ id: "d-4", action: "order_confirm" }))
+        expect(await run(pendingRead, {}, world)).toMatchObject({
             count: "3",
             rows: [{ id: "d-1" }, { id: "d-2" }, { id: "d-3", amount: "90000", badges: [{ label: "0m" }] }],
         })
-        expect(await run(pendingCountRead, {}, state)).toEqual({ count: 3 })
+        expect(await run(pendingCountRead, {}, world)).toEqual({ count: 3 })
     })
 
     it("has no count when nothing waits", async () => {
-        expect(await run(pendingRead, {}, sampleState({ decisions: [] }))).toEqual({
+        expect(await run(pendingRead, {}, without("loyalty.decision"))).toEqual({
             count: null,
             more: null,
             rows: [],
         })
-        expect(await run(pendingCountRead, {}, sampleState({ decisions: [] }))).toEqual({ count: 0 })
+        expect(await run(pendingCountRead, {}, without("loyalty.decision"))).toEqual({ count: 0 })
     })
 
     it("proposes the draft of a promotion in place of its summary", async () => {
-        const state = sampleState({
-            decisions: [decisionOf({ id: "d-5", summary: "Promote", draft: "Hello {ten_khach}" })],
-        })
-        expect(await run(pendingRead, {}, state)).toMatchObject({ rows: [{ proposal: "Hello {ten_khach}" }] })
+        const world = without("loyalty.decision")
+        putDecision(world, decisionOf({ id: "d-5", summary: "Promote", draft: "Hello {ten_khach}" }))
+        expect(await run(pendingRead, {}, world)).toMatchObject({ rows: [{ proposal: "Hello {ten_khach}" }] })
     })
 })
 
@@ -434,12 +435,13 @@ describe("loyalty.pending-waiting", () => {
     })
 
     it("says how many more wait than the region shows, and nothing when none waits", async () => {
-        const many = Array.from({ length: 7 }, (_, index) => decisionOf({ id: `x-${index}` }))
-        expect(await run(pendingWaitingRead, {}, sampleState({ decisions: many }))).toMatchObject({
+        const many = without("loyalty.decision")
+        for (let index = 0; index < 7; index += 1) putDecision(many, decisionOf({ id: `x-${index}` }))
+        expect(await run(pendingWaitingRead, {}, many)).toMatchObject({
             count: "7",
             more: "2",
         })
-        expect(await run(pendingWaitingRead, {}, sampleState({ decisions: [] }))).toMatchObject({
+        expect(await run(pendingWaitingRead, {}, without("loyalty.decision"))).toMatchObject({
             count: null,
             rows: [],
         })

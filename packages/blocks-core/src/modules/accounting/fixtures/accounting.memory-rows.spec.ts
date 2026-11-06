@@ -60,6 +60,11 @@ describe("matches", () => {
         expect(matches(A, q.and(q.eq("kind", "income"), q.gte("amountVnd", 10)))).toBe(false)
     })
 
+    it("matches a record that has a value for notNull", () => {
+        expect(matches(A, q.notNull("kind"))).toBe(true)
+        expect(matches(A, q.notNull("missing"))).toBe(false)
+    })
+
     it("matches nothing for an operator the module never writes", () => {
         expect(matches(A, q.ne("kind", "invoice"))).toBe(false)
     })

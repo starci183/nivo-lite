@@ -4,7 +4,8 @@ import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { LOYALTY_VIEW } from "../constants"
 import { rewardViewOf } from "../mappers"
-import { loyaltyRewards } from "../ports"
+import { rewardById, rewardsList } from "../loyalty-catalogue-data"
+import { REWARDS } from "../ports"
 import type { RewardView } from "../views.types"
 
 const REWARD_FIELDS: ReadonlyArray<keyof RewardView> = [
@@ -31,9 +32,9 @@ export const rewardsRead: ReadDefinition = defineRead({
     paths: { rows: "list" },
     variables: z.object({}),
     permission: LOYALTY_VIEW,
-    ports: { rewards: loyaltyRewards },
+    ports: { rewards: REWARDS },
     run: async ({ rewards }): Promise<{ readonly rows: ReadonlyArray<RewardView> }> => ({
-        rows: (await rewards.list(false)).map(rewardViewOf),
+        rows: (await rewardsList(rewards, false)).map(rewardViewOf),
     }),
 })
 
@@ -46,9 +47,9 @@ export const rewardRead: ReadDefinition = defineRead({
     paths: {},
     variables: z.object({ id: z.string().min(1).max(MAX_ID) }),
     permission: LOYALTY_VIEW,
-    ports: { rewards: loyaltyRewards },
+    ports: { rewards: REWARDS },
     run: async ({ rewards }, { id }): Promise<RewardView | null> => {
-        const reward = await rewards.get(id)
+        const reward = await rewardById(rewards, id)
         return reward === null ? null : rewardViewOf(reward)
     },
 })
