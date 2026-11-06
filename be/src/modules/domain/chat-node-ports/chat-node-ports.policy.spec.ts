@@ -7,9 +7,10 @@ import {
     cutFields,
     limitOf,
     matchesWhere,
+    handledByOf,
     textWithLinks,
 } from "./chat-node-ports.policy"
-import { channelSendSchema } from "./chat-node-ports.schema"
+import { channelSendSchema, proposeReplySchema } from "./chat-node-ports.schema"
 
 const SUBJECT = Symbol("chat-node-ports.policy")
 
@@ -26,6 +27,7 @@ const build = async () => {
                     limitOf,
                     matchesWhere,
                     textWithLinks,
+                    handledByOf,
                 },
             },
         ],
@@ -100,5 +102,17 @@ describe("chat-node-ports policy recipients and links", () => {
         expect(channelSendSchema.safeParse({ conversationId: "c", text: "t" }).success).toBe(true)
         expect(channelSendSchema.safeParse({ conversationId: "", text: "t" }).success).toBe(false)
         expect(channelSendSchema.safeParse({ conversationId: "c" }).success).toBe(false)
+    })
+
+    it("reads who holds a conversation record: a name, else nobody", () => {
+        expect(policy.handledByOf({ handledBy: "Thu Ha" })).toBe("Thu Ha")
+        expect(policy.handledByOf({ handledBy: null })).toBeNull()
+        expect(policy.handledByOf({})).toBeNull()
+    })
+
+    it("admits a draft of a conversation id, words and what was asked, and refuses anything else", () => {
+        expect(proposeReplySchema.safeParse({ conversationId: "c", text: "t", asked: "q" }).success).toBe(true)
+        expect(proposeReplySchema.safeParse({ conversationId: "c", text: "", asked: "q" }).success).toBe(false)
+        expect(proposeReplySchema.safeParse({ conversationId: "c", text: "t" }).success).toBe(false)
     })
 })

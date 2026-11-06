@@ -13,6 +13,7 @@ export const CHAT_NODE_PORTS_MESSAGES: MessageBundle = {
             "Khách nhắn lần cuối trên Zalo đã quá 48 giờ, nên không thể gửi tin trả lời.",
         "errors.CHAT_NODE_PORTS_DELIVERY_REJECTED": "Kênh chat từ chối tin nhắn.",
         "errors.CHAT_NODE_PORTS_DELIVERY_UNCONFIRMED": "Kênh chat chưa xác nhận đã nhận tin nhắn.",
+        "errors.CHAT_NODE_PORTS_PROPOSAL_REFUSED": "Không lưu được bản trả lời AI soạn. Hãy thử lại.",
     },
     en: {
         "errors.CHAT_NODE_PORTS_INVALID_PAYLOAD": "A message to the customer needs a conversation id and a text.",
@@ -25,5 +26,6 @@ export const CHAT_NODE_PORTS_MESSAGES: MessageBundle = {
             "The customer last wrote on Zalo more than 48 hours ago, so a reply cannot be sent.",
         "errors.CHAT_NODE_PORTS_DELIVERY_REJECTED": "The chat channel refused the message.",
         "errors.CHAT_NODE_PORTS_DELIVERY_UNCONFIRMED": "The chat channel did not confirm it took the message.",
+        "errors.CHAT_NODE_PORTS_PROPOSAL_REFUSED": "The reply the AI drafted could not be stored. Try again.",
     },
 }

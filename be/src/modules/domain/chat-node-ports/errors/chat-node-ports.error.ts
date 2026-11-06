@@ -19,6 +19,8 @@ export enum ChatNodePortsErrorCode {
     DeliveryRejected = "CHAT_NODE_PORTS_DELIVERY_REJECTED",
     /** The channel did not say whether it took the message. */
     DeliveryUnconfirmed = "CHAT_NODE_PORTS_DELIVERY_UNCONFIRMED",
+    /** The engine refused to store the proposed reply (the conversation or the line moved, or a proposal was stored at the same moment). */
+    ProposalRefused = "CHAT_NODE_PORTS_PROPOSAL_REFUSED",
 }
 
 /** How each chat-node-ports code travels. */
@@ -31,6 +33,7 @@ export const CHAT_NODE_PORTS_ERROR_KINDS: Record<ChatNodePortsErrorCode, ErrorKi
     [ChatNodePortsErrorCode.ZaloWindowExpired]: "conflict",
     [ChatNodePortsErrorCode.DeliveryRejected]: "unavailable",
     [ChatNodePortsErrorCode.DeliveryUnconfirmed]: "unavailable",
+    [ChatNodePortsErrorCode.ProposalRefused]: "conflict",
 }
 
 /** The one error class of the chat-node-ports capability. */
