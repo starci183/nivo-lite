@@ -9,7 +9,6 @@ import {
     useQueryPaymentOrderSwr,
     useQueryPaymentOrdersSwr,
 } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
 import { dayjs } from "@/modules/dayjs"
 import { navigation } from "@/modules/i18n"
 import { useRequestPaymentOrder } from "./useRequestPaymentOrder"
@@ -122,7 +121,6 @@ export interface WorkspacePaymentView {
 export const useWorkspacePayment = (selectors: WorkspacePaymentSelectors): WorkspacePaymentView => {
     const t = useTranslations("onboarding")
     const router = navigation.useRouter()
-    const { select } = useActiveWorkspace()
     const workspaces = useQueryBillingWorkspacesSwr()
     const workspaceId = selectors.workspaceId
     const workspace = workspaces.data?.find((item) => item.id === workspaceId)
@@ -146,10 +144,9 @@ export const useWorkspacePayment = (selectors: WorkspacePaymentSelectors): Works
 
     useEffect(() => {
         if (!paid || !workspaceId) return
-        select(workspaceId)
         const timer = setTimeout(() => router.replace(returnTo), 1800)
         return () => clearTimeout(timer)
-    }, [paid, returnTo, router, select, workspaceId])
+    }, [paid, returnTo, router, workspaceId])
 
     const regenerate = () => {
         if (!planCode || plan.data?.isCustom) return

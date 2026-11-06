@@ -1,5 +1,5 @@
 import { useQueryLeadFlowSwr } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import type { SWRResponse } from "swr"
 
 /** The work flow of one lead (steps, decisions, orders, invoices, transactions) read through the shared SWR cache; `undefined` pauses it. */
@@ -122,6 +122,6 @@ export const useLeadFlow = (
         } | null
     }>
 }> => {
-    const { activeWorkspaceId } = useActiveWorkspace()
-    return useQueryLeadFlowSwr(activeWorkspaceId, leadId)
+    const workspaceId = useWorkspaceId()
+    return useQueryLeadFlowSwr(workspaceId, leadId)
 }

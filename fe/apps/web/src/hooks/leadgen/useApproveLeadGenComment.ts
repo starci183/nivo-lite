@@ -10,7 +10,7 @@ import {
     type MutateApproveLeadGenCommentRequest,
 } from "@/hooks/swr"
 
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useLeadGenApprovalStore } from "@/hooks/zustand/leadgen"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
@@ -38,16 +38,16 @@ export interface ApproveLeadGenCommentView {
 export const useApproveLeadGenComment = (isActive = true): ApproveLeadGenCommentView => {
     const t = useTranslations("workbenchLeadGen")
     const runGraphQL = useGraphQLWithToast()
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const { data: user } = useQueryAuthUserSwr()
-    const scopeId = activeWorkspaceId && user ? `${activeWorkspaceId}:${user.id}` : undefined
+    const scopeId = workspaceId && user ? `${workspaceId}:${user.id}` : undefined
     const { mutate } = useSWRConfig()
     const { trigger, isMutating } = useMutateApproveLeadGenCommentSwr()
     const approval = useLeadGenApprovalStore((state) => (scopeId ? state.approvals[scopeId] : undefined))
     const workItemId = !isActive || approval?.requesting ? undefined : approval?.jobId
 
     const settle = (progress: ApprovalProgress) => {
-        if (!activeWorkspaceId || !scopeId || !workItemId) return
+        if (!workspaceId || !scopeId || !workItemId) return
         if (progress.status !== "succeeded" && progress.status !== "failed") return
         const result = progress.status === "failed" ? "failed" : "succeeded"
         if (!useLeadGenApprovalStore.getState().finish(scopeId, workItemId, result)) return
@@ -55,7 +55,7 @@ export const useApproveLeadGenComment = (isActive = true): ApproveLeadGenComment
         void runGraphQL(() => (result === "failed" ? Promise.reject(new Error(message)) : Promise.resolve(progress)), {
             successMessage: message,
         })
-        void mutate((key: unknown) => Array.isArray(key) && key[1] === activeWorkspaceId && REFRESHED_KEYS.has(key[0]))
+        void mutate((key: unknown) => Array.isArray(key) && key[1] === workspaceId && REFRESHED_KEYS.has(key[0]))
     }
 
     const reportReadError = (error: unknown) => {
@@ -64,7 +64,7 @@ export const useApproveLeadGenComment = (isActive = true): ApproveLeadGenComment
         void runGraphQL(() => Promise.reject(error))
     }
 
-    const status = useQueryLeadGenCommentStatusSwr(activeWorkspaceId, workItemId, {
+    const status = useQueryLeadGenCommentStatusSwr(workspaceId, workItemId, {
         onSuccess: settle,
         onError: reportReadError,
     })
@@ -73,20 +73,20 @@ export const useApproveLeadGenComment = (isActive = true): ApproveLeadGenComment
     const approve = useCallback(
         async (request: MutateApproveLeadGenCommentRequest) => {
             const requestedItemId = String(request.workItemId)
-            if (!activeWorkspaceId || !scopeId || !useLeadGenApprovalStore.getState().claim(scopeId, requestedItemId))
+            if (!workspaceId || !scopeId || !useLeadGenApprovalStore.getState().claim(scopeId, requestedItemId))
                 return false
             const approved = await runGraphQL(() => trigger(request), { successMessage: t("commentQueued") })
             if (!approved) {
                 useLeadGenApprovalStore.getState().refused(scopeId, requestedItemId)
                 return false
             }
-            await mutate([QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY, activeWorkspaceId, approved.id], approved, {
+            await mutate([QUERY_LEAD_GEN_COMMENT_STATUS_SWR_KEY, workspaceId, approved.id], approved, {
                 revalidate: false,
             })
             useLeadGenApprovalStore.getState().accepted(scopeId, requestedItemId, approved.id)
             return true
         },
-        [activeWorkspaceId, scopeId, runGraphQL, trigger, t, mutate],
+        [workspaceId, scopeId, runGraphQL, trigger, t, mutate],
     )
 
     return {

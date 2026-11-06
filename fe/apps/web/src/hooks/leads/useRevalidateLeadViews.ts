@@ -10,30 +10,25 @@ import {
     QUERY_LEAD_FLOW_SWR_KEY,
     QUERY_LEAD_GEN_WORKBENCH_SWR_KEY,
     QUERY_LEAD_JOURNEY_SWR_KEY,
-    QUERY_LEAD_WAIT_SWR_KEY,
-    QUERY_PROMO_CHATBOT_STATE_SWR_KEY,
 } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 
 const LEAD_VIEW_KEYS: ReadonlySet<string> = new Set([
     QUERY_LEAD_JOURNEY_SWR_KEY,
     QUERY_LEAD_FLOW_SWR_KEY,
-    QUERY_LEAD_WAIT_SWR_KEY,
     QUERY_LEAD_GEN_WORKBENCH_SWR_KEY,
-    QUERY_PROMO_CHATBOT_STATE_SWR_KEY,
     QUERY_AGENT_DASHBOARD_SWR_KEY,
 ])
 
 /** Reads again every lead-derived view of the active workspace (board, journey, flow, workbenches, dashboards) after a write. */
 export const useRevalidateLeadViews = (): (() => Promise<unknown[]>) => {
     const { mutate } = useSWRConfig()
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     return useCallback(() => {
-        if (activeWorkspaceId === undefined) return Promise.resolve([])
         return Promise.all([
-            mutate((key) => Array.isArray(key) && key[1] === activeWorkspaceId && LEAD_VIEW_KEYS.has(String(key[0]))),
-            mutate(connectionCacheKey(QUERY_LEAD_BOARD_SWR_KEY, activeWorkspaceId)),
-            mutate(connectionCacheKey(QUERY_LEAD_DIRECTORY_SWR_KEY, activeWorkspaceId)),
+            mutate((key) => Array.isArray(key) && key[1] === workspaceId && LEAD_VIEW_KEYS.has(String(key[0]))),
+            mutate(connectionCacheKey(QUERY_LEAD_BOARD_SWR_KEY, workspaceId)),
+            mutate(connectionCacheKey(QUERY_LEAD_DIRECTORY_SWR_KEY, workspaceId)),
         ])
-    }, [activeWorkspaceId, mutate])
+    }, [workspaceId, mutate])
 }

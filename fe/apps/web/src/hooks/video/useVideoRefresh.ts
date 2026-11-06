@@ -8,7 +8,7 @@ import {
     QUERY_VIDEO_PROJECT_SWR_KEY,
     QUERY_VIDEO_PROJECTS_SWR_KEY,
 } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import { useGraphQLWithToast } from "@/modules/toast"
 const VIDEO_KEYS: ReadonlySet<unknown> = new Set([
@@ -41,7 +41,7 @@ type UseVideoRefreshResult = {
 /** Existing command owner: standard feedback and exact cache refresh precede current-origin completion and pending settlement. */
 export const useVideoRefresh = (owner?: VideoOwner): UseVideoRefreshResult => {
     const runGraphQL = useGraphQLWithToast()
-    const { activeWorkspaceId: workspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const isActive = owner?.isActive ?? true,
         scope = owner?.scope ?? JSON.stringify([workspaceId])
     const lifetime = useFeatureLifetime(isActive, scope)

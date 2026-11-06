@@ -3,7 +3,7 @@
 import { answeredData, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
 import type { SWRConfiguration } from "swr"
-import { useAppSelector } from "@/redux"
+import { useOpenWorkspaceId } from "@/hooks/workspaceKey"
 import { queryMentionDirectory } from "@/modules/api/graphql/queries/query-mention-directory"
 import type { MentionDirectoryQuery } from "@/modules/api"
 
@@ -14,7 +14,7 @@ export const QUERY_MENTION_DIRECTORY_SWR_KEY = "QUERY_MENTION_DIRECTORY_SWR"
 export const useQueryMentionDirectorySwr = (
     config?: SWRConfiguration,
 ): ReadResponse<MentionDirectoryQuery["mentionDirectory"]> => {
-    const workspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
+    const workspaceId = useOpenWorkspaceId()
     return useSWR(
         workspaceId === undefined ? null : ([QUERY_MENTION_DIRECTORY_SWR_KEY, workspaceId] as const),
         async () => answeredData(await queryMentionDirectory(), QUERY_MENTION_DIRECTORY_SWR_KEY).mentionDirectory,

@@ -1,3 +1,4 @@
+export { useOpenWorkspaceId } from "./useOpenWorkspaceId"
 export { useWorkspaceKey } from "./useWorkspaceKey"
 
 export { useWorkspaceParamsKey } from "./useWorkspaceParamsKey"

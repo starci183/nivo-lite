@@ -2,7 +2,7 @@
 
 import { useQueryLeadActionStatusSwr } from "@/hooks/swr"
 import type { LeadActionQueuedType, LeadActionStatusType } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback, useRef, useState } from "react"
@@ -44,13 +44,13 @@ export const useLeadAction = (): LeadActionView => {
     const t = useTranslations("lead")
     const withToast = useGraphQLWithToast()
     const revalidate = useRevalidateLeadViews()
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const [pending, setPending] = useState<PendingAction>()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [hasSubmitFailed, setHasSubmitFailed] = useState(false)
     const settled = useRef<string | undefined>(undefined)
     const reportedError = useRef<string | undefined>(undefined)
-    const jobId = pending?.workspaceId === activeWorkspaceId ? pending?.id : undefined
+    const jobId = pending?.workspaceId === workspaceId ? pending?.id : undefined
 
     const settle = useCallback(
         (data: LeadActionStatusType) => {
@@ -73,12 +73,11 @@ export const useLeadAction = (): LeadActionView => {
         },
         [jobId, withToast],
     )
-    const status = useQueryLeadActionStatusSwr(activeWorkspaceId, jobId, { onSuccess: settle, onError: reportError })
+    const status = useQueryLeadActionStatusSwr(workspaceId, jobId, { onSuccess: settle, onError: reportError })
     const terminal = status.data !== undefined && isTerminal(status.data.status)
 
     const run = useCallback(
         async (action: () => Promise<LeadActionQueuedType>) => {
-            if (activeWorkspaceId === undefined) return undefined
             setHasSubmitFailed(false)
             setPending(undefined)
             setIsSubmitting(true)
@@ -88,13 +87,13 @@ export const useLeadAction = (): LeadActionView => {
                     setHasSubmitFailed(true)
                     return undefined
                 }
-                setPending({ id: queued.id, workspaceId: activeWorkspaceId })
+                setPending({ id: queued.id, workspaceId })
                 return queued
             } finally {
                 setIsSubmitting(false)
             }
         },
-        [activeWorkspaceId, t, withToast],
+        [workspaceId, t, withToast],
     )
 
     const hasFailed = hasSubmitFailed || status.data?.status === "failed" || status.error !== undefined

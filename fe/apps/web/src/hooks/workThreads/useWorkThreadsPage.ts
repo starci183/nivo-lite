@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { usePaneCopy, usePanePhone } from "@/hooks/paneFrame"
 import { useSlotLabels } from "@/hooks/slot"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import type { WorkThreadBoardHandlers, WorkThreadBoardView } from "@/modules/types"
 import { useThreadActions } from "./useThreadActions"
 import { useThreadComposer } from "./useThreadComposer"
@@ -118,14 +118,14 @@ export const useWorkThreadsPage = (): {
     const [isChainDocked, setChainDocked] = useState(true)
     const [isChainDrawerOpen, setChainDrawerOpen] = useState(false)
     const slotLabels = useSlotLabels()
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const [selection, setSelection] = useState<{
         readonly workspaceId: string | undefined
         readonly id: string
     } | null>(null)
-    const selectedId = selection !== null && selection.workspaceId === activeWorkspaceId ? selection.id : null
+    const selectedId = selection !== null && selection.workspaceId === workspaceId ? selection.id : null
     const selectThread = (id: string) => {
-        setSelection({ workspaceId: activeWorkspaceId, id })
+        setSelection({ workspaceId: workspaceId, id })
         phone.showMain()
     }
     const board = useWorkThreadBoard(selectedId)

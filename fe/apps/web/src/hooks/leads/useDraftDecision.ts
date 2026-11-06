@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
 import { useMutateDecideSalesDraftSwr, useQuerySalesActionStatusSwr } from "@/hooks/swr"
 import type { DecideSalesDraftRequest, SalesActionType } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
 import type { DraftDecision } from "@/hooks/approval"
 import { isTerminal } from "./leads.shared"
@@ -14,7 +14,7 @@ import { useRevalidateLeadViews } from "./useRevalidateLeadViews"
 export const useDraftDecision = (): DraftDecision<SalesActionType> => {
     const t = useTranslations("approval")
     const runGraphQL = useGraphQLWithToast()
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const revalidate = useRevalidateLeadViews()
     const draft = useMutateDecideSalesDraftSwr()
     const [pendingId, setPendingId] = useState<string>()
@@ -26,7 +26,7 @@ export const useDraftDecision = (): DraftDecision<SalesActionType> => {
         },
         [t],
     )
-    useQuerySalesActionStatusSwr(pendingId === undefined ? undefined : activeWorkspaceId, pendingId, {
+    useQuerySalesActionStatusSwr(pendingId === undefined ? undefined : workspaceId, pendingId, {
         onSuccess: (result: SalesActionType) => {
             if (!isTerminal(result.status)) return
             report(result)

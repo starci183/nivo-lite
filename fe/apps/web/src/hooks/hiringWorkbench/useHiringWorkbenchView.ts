@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl"
 import { useAgentDashboardFrame, useAgentWorkbenchTabs } from "@/hooks/agentDashboard"
 import { useHiringWorkbench } from "@/hooks/hiring"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 import type { HiringWorkbenchData } from "@/hooks/hiringWire"
 
@@ -53,8 +53,8 @@ export const useHiringWorkbenchView = (input: HiringWorkbenchInput): HiringAssem
     const labels = useSlotLabels()
     const runGraphQL = useGraphQLWithToast()
     const copy = useHiringWorkbenchCopy()
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const scope = JSON.stringify([activeWorkspaceId, input.installationId])
+    const workspaceId = useWorkspaceId()
+    const scope = JSON.stringify([workspaceId, input.installationId])
     const tabs = useAgentWorkbenchTabs({ ids: HIRING_TABS, initialTab: input.initialTab, scope })
     const frame = useAgentDashboardFrame({ module: "hiring", installationId: input.installationId, hasOwnGaps: false })
     const isActive = frame.why.workItemId === null

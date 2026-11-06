@@ -10,7 +10,7 @@ import { useAgentWorkbenchShell } from "@/hooks/agentDashboard"
 import { useShiftsBenchData, useShiftsMineData } from "@/hooks/shifts"
 import { useSlotLabels } from "@/hooks/slot"
 import { useShiftsWeekStore } from "@/hooks/zustand/shiftsWeek"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useShiftsFiguresView } from "./useShiftsFiguresView"
 import { useShiftsWeekBarView } from "./useShiftsWeekBarView"
 import { useShiftsWeekStatsView } from "./useShiftsWeekStatsView"
@@ -41,9 +41,9 @@ type UseShiftsWorkbenchViewResult = {
 
 /** Owns the actual dashboard and three independent transport scopes, without replacing the persistent week selection. */
 export const useShiftsWorkbenchView = (input: ShiftsWorkbenchInput): UseShiftsWorkbenchViewResult => {
-    const { activeWorkspaceId } = useActiveWorkspace(),
+    const workspaceId = useWorkspaceId(),
         labels = useSlotLabels()
-    const scope = JSON.stringify([activeWorkspaceId, input.installationId])
+    const scope = JSON.stringify([workspaceId, input.installationId])
     const { tabs, dashboard, isNormal } = useAgentWorkbenchShell({
         module: "shifts",
         installationId: input.installationId,

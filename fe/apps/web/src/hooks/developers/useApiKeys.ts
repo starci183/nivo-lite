@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useMutateCreateApiKeySwr, useMutateRevokeApiKeySwr, useQueryApiKeysSwr } from "@/hooks/swr"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useGraphQLWithToast } from "@/modules/toast"
 
 /** The view `useApiKeys` returns. */
@@ -31,8 +31,8 @@ export interface ApiKeysView {
 export const useApiKeys = (): ApiKeysView => {
     const t = useTranslations("developers")
     const runGraphQL = useGraphQLWithToast()
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const keys = useQueryApiKeysSwr(activeWorkspaceId)
+    const workspaceId = useWorkspaceId()
+    const keys = useQueryApiKeysSwr(workspaceId)
     const creation = useMutateCreateApiKeySwr()
     const revocation = useMutateRevokeApiKeySwr()
     const { mutate } = keys

@@ -1,4 +1,4 @@
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { useQueryWorkspaceMembersSwr, useQueryWorkspaceStaffSwr } from "@/hooks/swr"
 import { isManager, useMember } from "@/hooks/member"
 import { slotOfSwr } from "@/hooks/slot"
@@ -20,9 +20,9 @@ export const useAuthorityStaff = (): {
     readonly reload: () => void
 } => {
     const canInvite = isManager(useMember())
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const staff = useQueryWorkspaceStaffSwr(activeWorkspaceId)
-    const members = useQueryWorkspaceMembersSwr(canInvite ? activeWorkspaceId : undefined)
+    const workspaceId = useWorkspaceId()
+    const staff = useQueryWorkspaceStaffSwr(workspaceId)
+    const members = useQueryWorkspaceMembersSwr(canInvite ? workspaceId : undefined)
     const linked = new Set(members.data?.map((member) => member.staffId))
     const rows: ReadonlyArray<StaffRow> | undefined = staff.data?.map((one) => ({
         id: one.id,

@@ -4,9 +4,9 @@ import { PROTOTYPE_WORKSPACE_ID, isPrototypeMode, sessionCookieOptions } from ".
 import { checkSession, onPublicOrigin } from "./modules/auth-session"
 import { i18n } from "./modules/i18n"
 
-// The two destinations the proxy redirects to; the proxy cannot evaluate the routes barrel, so it names them itself.
+// The two destinations the proxy redirects to (the sign-in page, and the front address, which forwards a signed-in person into the workspace opened last or to the workspaces page); the proxy cannot evaluate the routes barrel, so it names them itself.
 const LOGIN_PATH = "/login"
-const DASHBOARD_PATH = "/dashboard"
+const HOME_PATH = "/"
 
 // Reachable without a session. Webhooks (Telegram, bank connection) are each verified by their own secret header; /api/n8n by a per-run bearer token (hash stored with an expiry).
 const PUBLIC_PATHS = [
@@ -111,7 +111,7 @@ export const proxy = async (original: NextRequest): Promise<NextResponse> => {
     if (pathname === LOGIN_PATH && request.nextUrl.searchParams.get("reason") !== "disabled") {
         const url = request.nextUrl.clone()
         const next = safeNext(request.nextUrl.searchParams.get("next"))
-        url.pathname = DASHBOARD_PATH
+        url.pathname = HOME_PATH
         url.search = ""
         return redirectTo(next ? new URL(next, request.nextUrl.origin) : url)
     }

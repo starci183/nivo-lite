@@ -5,7 +5,7 @@ import { loadingSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryDossierFindingsSwr, useQueryWorkspaceMembersSwr } from "@/hooks/swr"
 import type { DossierFindingsFilter } from "@/hooks/swr"
 import { useViewerKeyId } from "@/hooks/workspaceKey"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { findingViewOf, memberOptionsOf } from "@/modules/brain"
 import type { FindingsQuery, FindingView, MemberOption } from "@/modules/brain"
 import type { DataSlot } from "@/modules/types"
@@ -47,15 +47,15 @@ interface DossierFindings {
  * (a review run ending) reads the findings again.
  */
 export const useDossierFindings = (query: FindingsQuery, isEnabled = true, revision = ""): DossierFindings => {
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useWorkspaceId()
     const viewerId = useViewerKeyId()
     const filter = filterOf(query, viewerId)
     const read = useQueryDossierFindingsSwr(
-        filter === null || !isEnabled ? undefined : activeWorkspaceId,
+        filter === null || !isEnabled ? undefined : workspaceId,
         filter ?? {},
         revision,
     )
-    const people = useQueryWorkspaceMembersSwr(activeWorkspaceId)
+    const people = useQueryWorkspaceMembersSwr(workspaceId)
     const members = useMemo(
         () => (people.data === undefined ? NO_MEMBERS : memberOptionsOf(people.data)),
         [people.data],

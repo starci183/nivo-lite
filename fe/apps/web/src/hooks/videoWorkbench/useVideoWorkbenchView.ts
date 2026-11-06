@@ -8,7 +8,7 @@ import type { VideoWorkbenchCopy } from "@/modules/video"
 import { useAgentDashboardFrame, useAgentWorkbenchTabs } from "@/hooks/agentDashboard"
 import { useVideoEditor, useVideoLibrary } from "@/hooks/video"
 import { mapSlot, slotOfReads, useSlotLabels } from "@/hooks/slot"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { editorHref } from "@/modules/video"
 
 import { useGraphQLWithToast } from "@/modules/toast"
@@ -89,8 +89,8 @@ export const useVideoWorkbenchView = (input: VideoWorkbenchInput): VideoWorkbenc
         copy = useVideoWorkbenchCopy(),
         labels = useSlotLabels(),
         report = useGraphQLWithToast(),
-        { activeWorkspaceId } = useActiveWorkspace(),
-        identity = JSON.stringify([activeWorkspaceId, input.installationId]),
+        workspaceId = useWorkspaceId(),
+        identity = JSON.stringify([workspaceId, input.installationId]),
         scope = input.isEditor ? JSON.stringify([identity, input.focus]) : identity,
         tabs = useAgentWorkbenchTabs({
             ids: VIDEO_TABS,

@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useAppSelector } from "@/redux"
+import { useOpenWorkspaceId } from "@/hooks/workspaceKey"
 import { useAgentWorkbenchShell, type AgentWorkbenchFrame } from "@/hooks/agentDashboard"
 import { useBookingBoard } from "@/hooks/bookingBoard"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
@@ -85,7 +85,7 @@ export interface BookingWorkbenchView {
 export const useBookingWorkbenchView = (input: BookingWorkbenchViewInput): BookingWorkbenchView => {
     const t = useTranslations("workbenchBooking")
     const labels = useSlotLabels()
-    const workspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
+    const workspaceId = useOpenWorkspaceId()
     const scope = JSON.stringify([workspaceId ?? null, input.installationId])
     const {
         tabs,

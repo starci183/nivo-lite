@@ -58,6 +58,13 @@ export const agentChatConversationHref = (agentId: string, tab: string, conversa
 /** The profile page of one agent: who answers for it, who may give it work, whom it may tag. */
 export const agentProfileHref = (agentId: string): string => `/agents/profile/${agentId}`
 
+/** The page inside a workspace that takes the return of a Zalo OA authorization, with the query Zalo appended. */
+export const zaloReturnPath = (query: Readonly<Record<string, string | undefined>>): string => {
+    const search = new URLSearchParams()
+    for (const [name, value] of Object.entries(query)) if (value !== undefined) search.set(name, value)
+    return search.size === 0 ? "/connections/zalo/callback" : `/connections/zalo/callback?${search.toString()}`
+}
+
 /** The page of one Zalo OA connection, on a tab when one is named. */
 export const zaloConnectionHref = (connectionId: string, tab?: string): string =>
     tab === undefined ? `/connections/zalo/${connectionId}` : `/connections/zalo/${connectionId}?tab=${tab}`

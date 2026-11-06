@@ -1,7 +1,7 @@
 "use client"
 
 import { useFormatter, useNow, useTranslations } from "next-intl"
-import { useActiveWorkspace, useWorkspaceId } from "@/hooks/workspaces"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { CONSOLE_ROUTES, leadHref, workspaceHref } from "@/modules/routes"
 import { isWaitingOf, mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryInboundEventsSwr } from "@/hooks/swr"
@@ -55,8 +55,7 @@ export const useInboxFeed = (): InboxFeedView => {
     const g = useTranslations("governance")
     const format = useFormatter()
     const now = useNow({ updateInterval: 60_000 })
-    const { activeWorkspaceId } = useActiveWorkspace()
-    const swrRead = useQueryInboundEventsSwr(activeWorkspaceId)
+    const swrRead = useQueryInboundEventsSwr(workspaceId)
     const { mutate } = swrRead
     const minutesSince = (iso: string): number =>
         Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 60_000))

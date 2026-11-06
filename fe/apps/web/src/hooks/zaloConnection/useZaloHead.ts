@@ -64,8 +64,9 @@ export const useZaloHead = (connectionId: string): UseZaloHeadResult => {
         const result = await settle(() => triggerAuthorize({ connectionId }))
         if (result.kind !== "ok") return setNotice(labelOf(result.code, result.message))
         LocalStorage.set(StorageId.ZaloReturn, connectionId)
+        LocalStorage.set(StorageId.ZaloOAuthWorkspace, workspaceId)
         window.location.assign(result.value.url)
-    }, [settle, labelOf, triggerAuthorize, connectionId])
+    }, [settle, labelOf, triggerAuthorize, connectionId, workspaceId])
 
     const disconnect = useCallback(async (): Promise<void> => {
         setNotice("")

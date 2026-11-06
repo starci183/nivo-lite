@@ -5,7 +5,7 @@ import { useConsoleSessionRead } from "@/hooks/console"
 import { isManager } from "@/hooks/member"
 import { useQueryAuthUserSwr, useQueryWorkspaceMembersSwr } from "@/hooks/swr"
 import type { StoredRule } from "@/modules/authority"
-import { useActiveWorkspace } from "@/hooks/workspaces"
+import { useOpenWorkspaceId } from "@/hooks/workspaceKey"
 
 /** How the workspace answers a customer today: asks first, sends alone, or may not send; unknown while the rules load. */
 export type OnboardingApproval = "ask" | "auto" | "never" | "unknown"
@@ -34,9 +34,9 @@ const REPLY_ACTION = "reply_customer"
 
 /** Reads the real settings the handover step shows: the workspace owner and the `chatbot/reply_customer` rule, and writes that rule's mode. */
 export const useOnboardingHandover = (): OnboardingHandoverState => {
-    const { activeWorkspaceId } = useActiveWorkspace()
+    const workspaceId = useOpenWorkspaceId()
     const user = useQueryAuthUserSwr()
-    const members = useQueryWorkspaceMembersSwr(activeWorkspaceId)
+    const members = useQueryWorkspaceMembersSwr(workspaceId)
     const { slot } = useAuthoritySheet()
     const session = useConsoleSessionRead()
     const isLocked = !isManager(session?.member ?? null)

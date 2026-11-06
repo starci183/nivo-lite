@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import type { ReactNode } from "react"
-import { useActiveWorkspace, useWorkspaceCards, useWorkspaceId } from "@/hooks/workspaces"
+import { useWorkspaceCards, useWorkspaceId } from "@/hooks/workspaces"
 import { APP_ROUTES, AUTOMATION_ROUTES, CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { AutomationsHeadingBase } from "./component"
 
@@ -15,9 +15,8 @@ type AutomationsHeadingProps = {
 export const AutomationsHeading = (props: AutomationsHeadingProps) => {
     const workspaceId = useWorkspaceId()
     const t = useTranslations("automations")
-    const { activeWorkspaceId } = useActiveWorkspace()
     const { cards, status } = useWorkspaceCards()
-    const workspaceName = cards.find((card) => card.id === activeWorkspaceId)?.name
+    const workspaceName = cards.find((card) => card.id === workspaceId)?.name
     return (
         <AutomationsHeadingBase
             children={props.children}

@@ -5,7 +5,7 @@ import useSWR from "swr"
 import type { KeyedMutator, SWRConfiguration } from "swr"
 import useSWRMutation from "swr/mutation"
 import type { SWRMutationResponse } from "swr/mutation"
-import { useAppSelector } from "@/redux"
+import { useOpenWorkspaceId } from "@/hooks/workspaceKey"
 import { OFFICE_PAGE_SIZE } from "@/modules/office"
 import {
     queryOfficeMessages,
@@ -42,7 +42,7 @@ export const useQueryOfficeMessagesSwr = (
     request: QueryOfficeMessagesRequest | null,
     config?: SWRConfiguration<OfficeMessagesPage>,
 ): OfficeMessagesRead => {
-    const workspaceId = useAppSelector((state) => state.workspace.activeWorkspaceId)
+    const workspaceId = useOpenWorkspaceId()
     const latest = useSWR(
         request === null || workspaceId === undefined
             ? null
