@@ -63,7 +63,7 @@
     "@starci/eslint-canon-fe": "9.15.1",
     "@starci/eslint-grammar-core": "0.23.1",
     "@starci/eslint-grammar-offset-pop": "0.23.1",
-    "@starci/hfs": "5.13.2",
+    "@starci/hfs": "5.13.5",
     "@starci/jest-preset": "2.7.1",
     "@starci/prettier-config": "1.1.0",
     "@starci/stylelint-canon": "2.6.0",
