@@ -6,9 +6,13 @@ import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { Test } from "@nestjs/testing"
 import type { EntityManager } from "typeorm"
 import * as typingContract from "@modules/domain/chat-typing"
-import { ChatTypingModule, ChatTypingService } from "@modules/domain/chat-typing"
-import { CHAT_MARKERS_ERROR_KINDS, CHAT_MARKERS_MESSAGES } from "@modules/domain/chat-markers"
-import type { ChatTarget } from "@modules/domain/chat-markers"
+import {
+    CHAT_TYPING_ERROR_KINDS,
+    CHAT_TYPING_MESSAGES,
+    ChatTypingModule,
+    ChatTypingService,
+} from "@modules/domain/chat-typing"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import {
     AuthGuard,
     IDENTITY_ERROR_KINDS,
@@ -30,8 +34,8 @@ import { ok } from "@modules/platform/primitives"
 import { RetryModule } from "@modules/platform/retry"
 import * as realtimeContract from "@modules/platform/realtime"
 import { RealtimeModule } from "@modules/platform/realtime"
-import type { ChatMarkersIdentity } from "../fixtures/builders/chat-markers.builder"
-import { ChatMarkersProofModule } from "./chat-markers-proof.module"
+import type { TeamChatIdentity } from "../fixtures/builders/team-chat.builder"
+import { TeamChatProofModule } from "./team-chat-proof.module"
 import type { LiteWorld } from "./lite-world.service"
 import { CHAT_ACTIVITY_PROOF_MODULES } from "./chat-activity-proof.module"
 import { redisProofOptions } from "./redis-capabilities.options"
@@ -49,7 +53,7 @@ interface ProofHub {
 }
 
 interface TypingTopicContract {
-    chatTypingTopic(recipientId: string, workspaceId: string, target: ChatTarget): ProofTopic
+    chatTypingTopic(recipientId: string, workspaceId: string, roomId: string): ProofTopic
 }
 
 interface RetryRegistration {
@@ -84,23 +88,23 @@ const isHub = (value: unknown): value is ProofHub =>
     "subscriberCount" in value &&
     typeof value.subscriberCount === "function"
 
-/** Real membership and target services share the same disposable database as the persisted fixtures. */
+/** The real team chat shares the same disposable database as the persisted fixtures. */
 @Module({})
 class TypingProofDatabaseModule {
     static register(manager: EntityManager): DynamicModule {
         return {
             module: TypingProofDatabaseModule,
             global: true,
-            imports: [ChatMarkersProofModule.register()],
+            imports: [TeamChatProofModule.register()],
             providers: [{ provide: PRIMARY_ENTITY_MANAGER, useFactory: () => manager }],
-            exports: [PRIMARY_ENTITY_MANAGER, ChatMarkersProofModule],
+            exports: [PRIMARY_ENTITY_MANAGER, TeamChatProofModule],
         }
     }
 }
 
 /** Only the verifier boundary is deterministic; the actual default-deny and production membership guards run. */
-const verifierFor = (identity: ChatMarkersIdentity): VerifyAccessToken => {
-    const ids = [identity.ownerId, ...identity.readerIds, identity.outsiderId, identity.foreignOwnerId]
+const verifierFor = (identity: TeamChatIdentity): VerifyAccessToken => {
+    const ids = [identity.ownerId, ...identity.staffIds, identity.outsiderId]
     const principals = new Map(ids.map((id) => [`proof-${id}`, id]))
     return (token) => {
         const id = principals.get(token)
@@ -141,7 +145,7 @@ const platformModules = (retry: RetryContract): Array<DynamicModule> => [
             ERRORS_MESSAGES,
             IDENTITY_MESSAGES,
             WORKSPACE_MEMBERS_MESSAGES,
-            CHAT_MARKERS_MESSAGES,
+            CHAT_TYPING_MESSAGES,
             HTTP_SECURITY_MESSAGES,
         ],
     }),
@@ -150,7 +154,7 @@ const platformModules = (retry: RetryContract): Array<DynamicModule> => [
         kinds: [
             IDENTITY_ERROR_KINDS,
             WORKSPACE_MEMBERS_ERROR_KINDS,
-            CHAT_MARKERS_ERROR_KINDS,
+            CHAT_TYPING_ERROR_KINDS,
             HTTP_SECURITY_ERROR_KINDS,
         ],
     }),
@@ -159,7 +163,7 @@ const platformModules = (retry: RetryContract): Array<DynamicModule> => [
 type Contracts = ReturnType<typeof loadContracts>
 
 /** The testing module of one replica: real hub over the shared Redis, typing publisher, SSE door and default-deny guard. */
-const compileReplica = (world: LiteWorld, identity: ChatMarkersIdentity, prefix: string, contracts: Contracts) => {
+const compileReplica = (world: LiteWorld, identity: TeamChatIdentity, prefix: string, contracts: Contracts) => {
     const redis = redisProofOptions(prefix)
     const login = redis.redisPassword === undefined ? "" : `:${encodeURIComponent(redis.redisPassword.reveal())}@`
     const options: RedisHubOptions = {
@@ -190,7 +194,8 @@ type StartTypingReplicaResultShape = {
     hub: ProofHub
     origin: string
     typing: typingContract.ChatTypingService
-    topic: (recipientId: string, target: ChatTarget) => realtimeContract.RealtimeTopic<ChatTypingFrame>
+    team: TeamChatRoomsService
+    topic: (recipientId: string, roomId: string) => realtimeContract.RealtimeTopic<ChatTypingFrame>
     open: (streamOptions: TypingStreamOptions) => Promise<TypingStreamClient>
     close: () => Promise<void>
 }
@@ -198,7 +203,7 @@ type StartTypingReplicaResultShape = {
 /** An independently composed API replica with the actual Redis hub, typing publisher and SSE door. */
 export const startTypingReplica = async (
     world: LiteWorld,
-    identity: ChatMarkersIdentity,
+    identity: TeamChatIdentity,
     prefix: string,
 ): Promise<StartTypingReplicaResultShape> => {
     const contracts = loadContracts()
@@ -214,8 +219,9 @@ export const startTypingReplica = async (
             hub,
             origin,
             typing: app.get(ChatTypingService),
-            topic: (recipientId: string, target: ChatTarget) =>
-                contracts.topicOf(recipientId, identity.workspaceId, target),
+            team: app.get(TeamChatRoomsService),
+            topic: (recipientId: string, roomId: string) =>
+                contracts.topicOf(recipientId, identity.workspaceId, roomId),
             open: async (streamOptions: TypingStreamOptions): Promise<TypingStreamClient> => {
                 const stream = await openTypingStream(origin, streamOptions)
                 streams.add(stream)
@@ -238,7 +244,7 @@ export const startTypingReplica = async (
 /** Two real application lifecycles, independent hubs and one private Redis namespace; always close clients before apps. */
 export const withTypingReplicas = async (
     world: LiteWorld,
-    identity: ChatMarkersIdentity,
+    identity: TeamChatIdentity,
     prove: (
         a: Awaited<ReturnType<typeof startTypingReplica>>,
         b: Awaited<ReturnType<typeof startTypingReplica>>,

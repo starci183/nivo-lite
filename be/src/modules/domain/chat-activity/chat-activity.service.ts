@@ -35,38 +35,33 @@ export class ChatActivityService {
     ) {}
 
     /** A line arrived in a target: every active member is told, and every member but its author has more unread. */
-    message(
-        workspaceId: string,
-        roomOrConversation: string,
-        authorId: AuthorId,
-        manager?: EntityManager,
-    ): Promise<void> {
+    message(workspaceId: string, roomId: string, authorId: AuthorId, manager?: EntityManager): Promise<void> {
         return this.announce(workspaceId, manager, async (recipients) => {
-            await this.push(workspaceId, recipients, "message", roomOrConversation)
+            await this.push(workspaceId, recipients, "message", roomId)
             await this.push(
                 workspaceId,
                 recipients.filter((id) => id !== authorId),
                 "unread",
-                roomOrConversation,
+                roomId,
             )
         })
     }
 
     /** A delivered or seen cursor moved: every active member is told, because each shows who has seen a line. */
-    receipt(workspaceId: string, roomOrConversation: string, manager?: EntityManager): Promise<void> {
+    receipt(workspaceId: string, roomId: string, manager?: EntityManager): Promise<void> {
         return this.announce(workspaceId, manager, (recipients) =>
-            this.push(workspaceId, recipients, "receipt", roomOrConversation),
+            this.push(workspaceId, recipients, "receipt", roomId),
         )
     }
 
     /** One member's unread counts or room list changed (they read a target): only that member is told. */
-    unread(workspaceId: string, roomOrConversation: string, memberId: string, manager?: EntityManager): Promise<void> {
+    unread(workspaceId: string, roomId: string, memberId: string, manager?: EntityManager): Promise<void> {
         return this.announce(workspaceId, manager, (recipients) =>
             this.push(
                 workspaceId,
                 recipients.filter((id) => id === memberId),
                 "unread",
-                roomOrConversation,
+                roomId,
             ),
         )
     }
@@ -91,12 +86,12 @@ export class ChatActivityService {
         workspaceId: string,
         recipients: ReadonlyArray<string>,
         kind: ChatActivityKind,
-        roomOrConversation: string,
+        roomId: string,
     ): Promise<void> {
         const at = this.clock.now().toISOString()
         await Promise.all(
             recipients.map((recipientId) => {
-                const frame: ChatActivityFrame = { id: `${kind}:${this.ids.next()}`, kind, roomOrConversation, at }
+                const frame: ChatActivityFrame = { id: `${kind}:${this.ids.next()}`, kind, roomId, at }
                 return this.hub.publish(chatActivityTopic(recipientId, workspaceId), frame)
             }),
         )

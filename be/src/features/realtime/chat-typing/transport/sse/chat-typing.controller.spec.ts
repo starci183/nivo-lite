@@ -5,11 +5,12 @@ import { Observable } from "rxjs"
 import { chatTypingTopic } from "@modules/domain/chat-typing"
 import type { Principal } from "@modules/platform/cqrs"
 import type { RealtimeHub, RealtimeTopic } from "@modules/platform/realtime"
-import { ChatTypingController } from "./chat-typing.controller"
+import { validate } from "class-validator"
+import { ChatTypingController, ChatTypingStreamQuery } from "./chat-typing.controller"
 
 const principal: Principal = { id: "person-1", role: "authenticated" }
 const WS = "ws-1"
-const ROOM = { room: "sales" }
+const ROOM = "room-1"
 const EVENT: MessageEvent = { id: "a:t", data: { id: "a:t", actorId: "a", actorName: "An", state: "start", at: "t" } }
 
 /** A recording hub whose event stream yields one event and records the topic, the resume point and the release. */
@@ -38,11 +39,11 @@ const hubAnswering = () => {
 const build = (hub: RealtimeHub) => Promise.resolve(new ChatTypingController(hub))
 
 describe("ChatTypingController", () => {
-    it("streams the topic built from the authenticated principal, workspace and target", async () => {
+    it("streams the topic built from the authenticated principal, workspace and room", async () => {
         const { hub, streamed } = hubAnswering()
         const door = await build(hub)
 
-        door.stream(principal, WS, { room: "sales" }, undefined).subscribe().unsubscribe()
+        door.stream(principal, WS, { roomId: ROOM }, undefined).subscribe().unsubscribe()
 
         expect(streamed).toEqual([{ topic: chatTypingTopic(principal.id, WS, ROOM).name, after: undefined }])
     })
@@ -51,7 +52,9 @@ describe("ChatTypingController", () => {
         const { hub, streamed } = hubAnswering()
         const door = await build(hub)
 
-        door.stream({ id: "person-2", role: "authenticated" }, WS, ROOM, undefined).subscribe().unsubscribe()
+        door.stream({ id: "person-2", role: "authenticated" }, WS, { roomId: ROOM }, undefined)
+            .subscribe()
+            .unsubscribe()
 
         expect(streamed.map((entry) => entry.topic)).toEqual([chatTypingTopic("person-2", WS, ROOM).name])
         expect(streamed.map((entry) => entry.topic)).not.toContain(chatTypingTopic(principal.id, WS, ROOM).name)
@@ -61,7 +64,7 @@ describe("ChatTypingController", () => {
         const { hub, streamed } = hubAnswering()
         const door = await build(hub)
 
-        door.stream(principal, WS, ROOM, "a:t0").subscribe().unsubscribe()
+        door.stream(principal, WS, { roomId: ROOM }, "a:t0").subscribe().unsubscribe()
 
         expect(streamed).toEqual([{ topic: chatTypingTopic(principal.id, WS, ROOM).name, after: "a:t0" }])
     })
@@ -71,7 +74,7 @@ describe("ChatTypingController", () => {
         const door = await build(hub)
         const received: Array<MessageEvent> = []
 
-        door.stream(principal, WS, ROOM, undefined)
+        door.stream(principal, WS, { roomId: ROOM }, undefined)
             .subscribe((event) => received.push(event))
             .unsubscribe()
 
@@ -82,7 +85,7 @@ describe("ChatTypingController", () => {
         const { hub, released } = hubAnswering()
         const door = await build(hub)
 
-        door.stream(principal, WS, ROOM, undefined).subscribe().unsubscribe()
+        door.stream(principal, WS, { roomId: ROOM }, undefined).subscribe().unsubscribe()
 
         expect(released).toEqual([chatTypingTopic(principal.id, WS, ROOM).name])
     })
@@ -95,5 +98,15 @@ describe("ChatTypingController", () => {
         expect(Reflect.getMetadata(METHOD_METADATA, door.stream)).toBe(RequestMethod.GET)
         expect(Reflect.getMetadata(PATH_METADATA, ChatTypingController)).toBe("realtime/chat-typing")
         expect(Object.getOwnPropertyNames(ChatTypingController.prototype)).toEqual(["constructor", "stream"])
+    })
+})
+
+describe("ChatTypingStreamQuery", () => {
+    it("accepts only a uuid as the room", async () => {
+        const good = Object.assign(new ChatTypingStreamQuery(), { roomId: "3f2b8c1e-5a47-4d2e-9b61-0c7d8e9f1a23" })
+        const bad = Object.assign(new ChatTypingStreamQuery(), { roomId: "sales" })
+
+        await expect(validate(good)).resolves.toEqual([])
+        await expect(validate(bad)).resolves.toHaveLength(1)
     })
 })

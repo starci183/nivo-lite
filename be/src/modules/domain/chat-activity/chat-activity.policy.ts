@@ -1,8 +1,5 @@
 import type { RealtimeTopic } from "@modules/platform/realtime"
-import type { ChatActivityFrame, ChatActivityTarget } from "./chat-activity.contracts"
-
-/** The frame name of a room; the general Office is `room:office`, as the typing channel names it. */
-export const chatActivityTarget = (target: ChatActivityTarget): string => `room:${target.room ?? "office"}`
+import type { ChatActivityFrame } from "./chat-activity.contracts"
 
 const isChatActivityFrame = (value: unknown): value is ChatActivityFrame =>
     typeof value === "object" &&
@@ -11,8 +8,8 @@ const isChatActivityFrame = (value: unknown): value is ChatActivityFrame =>
     typeof value.id === "string" &&
     "kind" in value &&
     (value.kind === "message" || value.kind === "receipt" || value.kind === "unread") &&
-    "roomOrConversation" in value &&
-    typeof value.roomOrConversation === "string" &&
+    "roomId" in value &&
+    typeof value.roomId === "string" &&
     "at" in value &&
     typeof value.at === "string"
 

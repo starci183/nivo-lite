@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { IsNull, MoreThanOrEqual } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
+import { ChatActivityService } from "@modules/domain/chat-activity"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { MessagesScope, OfficeLineInput, OptionalAgentIdentity } from "./office-lines.contracts"
 import { InjectAgentDirectory } from "./office-lines.decorators"
@@ -50,7 +50,7 @@ export class OfficeLinesService {
             workItemId: line.work_item_id,
             ...(line.room === undefined ? {} : { room: line.room }),
         })
-        await this.activity.message(ctx.workspaceId, chatActivityTarget({ room: line.room ?? null }), null, manager)
+        await this.activity.message(ctx.workspaceId, `room:${line.room ?? "office"}`, null, manager)
     }
 
     private alreadySaid(

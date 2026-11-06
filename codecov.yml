@@ -83,7 +83,6 @@ component_management:
         - "be/src/modules/domain/channels/**"
         - "be/src/modules/domain/chat-activity/**"
         - "be/src/modules/domain/chat-files/**"
-        - "be/src/modules/domain/chat-markers/**"
         - "be/src/modules/domain/chat-node-ports/**"
         - "be/src/modules/domain/chat-records/**"
         - "be/src/modules/domain/chat-room-directory/**"

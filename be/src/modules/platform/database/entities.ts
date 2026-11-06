@@ -34,7 +34,6 @@ import { brainLessonsEntities } from "@modules/domain/brain-lessons"
 import { channelConnectionsEntities } from "@modules/domain/channel-connections"
 import { channelReceiptsEntities } from "@modules/domain/channel-receipts"
 import { chatFilesEntities } from "@modules/domain/chat-files"
-import { chatMarkersEntities } from "@modules/domain/chat-markers"
 import { teamChatEntities } from "@modules/domain/team-chat"
 import { connectionCommandsEntities } from "@modules/domain/connection-commands"
 import { connectionSecretsEntities } from "@modules/domain/connection-secrets"
@@ -158,7 +157,6 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...channelConnectionsEntities,
     ...channelReceiptsEntities,
     ...chatFilesEntities,
-    ...chatMarkersEntities,
     ...teamChatEntities,
     ...connectionCommandsEntities,
     ...connectionSecretsEntities,

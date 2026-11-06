@@ -1,5 +1,7 @@
 export { ChatTypingModule } from "./chat-typing.module"
 export { ChatTypingService } from "./chat-typing.service"
 export { chatTypingTopic } from "./chat-typing.policy"
+export { CHAT_TYPING_ERROR_KINDS } from "./errors/chat-typing.error"
+export { CHAT_TYPING_MESSAGES } from "./messages/chat-typing.messages"
 export type { ChatTypingSignal, TypingAgent } from "./chat-typing.contracts"
 export type { ChatTypingFrame } from "./chat-typing.contracts"

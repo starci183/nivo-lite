@@ -1,22 +1,19 @@
 import { Controller, Headers, Query, Sse } from "@nestjs/common"
 import type { MessageEvent } from "@nestjs/common"
-import { IsIn, IsOptional, MaxLength } from "class-validator"
+import { IsUUID } from "class-validator"
 import type { Observable } from "rxjs"
 import { chatTypingTopic } from "@modules/domain/chat-typing"
 import { CurrentPrincipal } from "@modules/domain/identity"
-import { OFFICE_ROOM_KEYS } from "@modules/domain/messages"
 import { WorkspaceId } from "@modules/domain/workspace-members"
 import type { Principal } from "@modules/platform/cqrs"
 import { InjectRealtimeHub } from "@modules/platform/realtime"
 import type { RealtimeHub } from "@modules/platform/realtime"
 
-/** The target of one typing stream: a department room, or none for the general Office. */
+/** The room of one typing stream. */
 export class ChatTypingStreamQuery {
-    /** A department room key. */
-    @IsOptional()
-    @IsIn(OFFICE_ROOM_KEYS)
-    @MaxLength(20)
-    room: string | null = null
+    /** The team-chat room. */
+    @IsUUID()
+    roomId!: string
 }
 
 @Controller("realtime/chat-typing")
@@ -36,6 +33,6 @@ export class ChatTypingController {
         @Query() query: ChatTypingStreamQuery,
         @Headers("last-event-id") lastEventId?: string,
     ): Observable<MessageEvent> {
-        return this.hub.stream(chatTypingTopic(principal.id, workspaceId, { room: query.room }), { after: lastEventId })
+        return this.hub.stream(chatTypingTopic(principal.id, workspaceId, query.roomId), { after: lastEventId })
     }
 }

@@ -3,10 +3,8 @@ import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./office-rooms.module-definition"
 import { OfficeRoomDirectoryModule } from "./office-room-directory.module"
 import { OfficeRoomMembersService } from "./office-room-members.service"
-import { OfficeRoomReadersService } from "./office-room-readers.service"
 import { OfficeRoomReadsService } from "./office-room-reads.service"
 import { OfficeRoomsService } from "./office-rooms.service"
-import { OfficeReadMarkersService } from "./office-read-markers.service"
 
 @Module({})
 /** The Hub rooms: the department rooms of a workspace, who sits in them, their pins and each person's read marker. */
@@ -27,17 +25,10 @@ export class OfficeRoomsModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 OfficeRoomsService,
-                OfficeReadMarkersService,
                 OfficeRoomReadsService,
-                OfficeRoomReadersService,
                 OfficeRoomMembersService,
             ],
-            exports: [
-                OfficeRoomDirectoryModule,
-                OfficeRoomsService,
-                OfficeReadMarkersService,
-                OfficeRoomReadersService,
-            ],
+            exports: [OfficeRoomDirectoryModule, OfficeRoomsService],
         }
     }
 }

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
-import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
+import { ChatActivityService } from "@modules/domain/chat-activity"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -103,7 +103,7 @@ export class OfficeCardsService {
         manager: EntityManager,
     ): Promise<PostedCard> {
         const posted = row ?? { id: "", room }
-        await this.activity.message(workspaceId, chatActivityTarget({ room: posted.room }), null, manager)
+        await this.activity.message(workspaceId, `room:${posted.room ?? "office"}`, null, manager)
         return posted
     }
 }

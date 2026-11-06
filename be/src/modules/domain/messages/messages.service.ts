@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
+import { ChatActivityService } from "@modules/domain/chat-activity"
 import type { SystemMessage } from "./messages.contracts"
 import { MessageEntity } from "./persistence/entities"
 
@@ -17,6 +17,6 @@ export class MessagesService {
             authorName: "NIVO",
             body: message.body,
         })
-        await this.activity.message(message.workspaceId, chatActivityTarget({ room: null }), null, message.manager)
+        await this.activity.message(message.workspaceId, "room:office", null, message.manager)
     }
 }

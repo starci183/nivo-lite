@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
-import type { ChatTarget } from "@modules/domain/chat-markers"
+import type { ChatRoomView, TeamChatResult } from "@modules/domain/team-chat"
 import { eachInOrder } from "@modules/platform/primitives"
-import { chatMarkersIdentity, persistChatMarkers } from "../../fixtures/builders/chat-markers.builder"
+import { persistTeamChat, teamChatIdentity } from "../../fixtures/builders/team-chat.builder"
 import { waitForProof } from "../../world/redis-proof.service"
 import { useTestWorld } from "../../world/use-test-world"
 import { withTypingReplicas } from "../../world/chat-typing-sse-proof.service"
@@ -9,8 +9,11 @@ import type { TypingStreamClient, TypingStreamFrame } from "../../world/realtime
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 
 const world = useTestWorld({ modules: [] })
-const identity = chatMarkersIdentity(() => world.id())
-const OFFICE: ChatTarget = { room: null }
+const identity = teamChatIdentity(() => world.id())
+const [first, second, third] = identity.staffIds
+
+/** The rooms of the proof: one with the three staff, one with the first staff only, one in the other workspace. */
+const rooms = { shared: "", narrow: "", foreign: "" }
 
 /** The wire contract is independent of the GraphQL mutation's response shape. */
 interface TypingFrame {
@@ -64,38 +67,64 @@ const received = async (stream: TypingStreamClient, count: number): Promise<void
     expect(stream.raw).not.toMatch(/^event:/m)
 }
 
+const member = (memberId: string) => ({ memberKind: "user" as const, memberId })
+
+const roomIdOf = (result: TeamChatResult<ChatRoomView>): string => {
+    assert(result.ok, "the room must be created")
+    return result.value.id
+}
+
 beforeAll(async () => {
     world.cleanup(async () => {
         await eachInOrder([identity.workspaceId, identity.foreignWorkspaceId], async (workspaceId) => {
             await removeWorkspace(world.db.primary, workspaceId)
         })
-        await removeAuthUsers(world.db.primary, [
-            identity.ownerId,
-            ...identity.readerIds,
-            identity.outsiderId,
-            identity.foreignOwnerId,
-        ])
+        await removeAuthUsers(world.db.primary, [identity.ownerId, ...identity.staffIds, identity.outsiderId])
     })
-    await persistChatMarkers(world.db.primary, identity)
+    await persistTeamChat(world.db.primary, identity)
+    await withTypingReplicas(world, identity, async (a) => {
+        const chat = a.team
+        rooms.shared = roomIdOf(
+            await chat.createRoom(identity.workspaceId, identity.ownerId, {
+                kind: "group",
+                name: "Shared",
+                members: identity.staffIds.map(member),
+            }),
+        )
+        rooms.narrow = roomIdOf(
+            await chat.createRoom(identity.workspaceId, identity.ownerId, {
+                kind: "group",
+                name: "Narrow",
+                members: [member(first)],
+            }),
+        )
+        rooms.foreign = roomIdOf(
+            await chat.createRoom(identity.foreignWorkspaceId, identity.outsiderId, {
+                kind: "group",
+                name: "Foreign",
+                members: [],
+            }),
+        )
+    })
 })
 
 describe("chat typing SSE delivery over private PostgreSQL and shared Redis", () => {
     it("realtime/subscriber-receives-push: a member receives another member's start and stop as default SSE messages", async () => {
         await withTypingReplicas(world, identity, async (a) => {
             const stream = await a.open({
-                principalId: identity.readerIds[0],
+                principalId: first,
                 workspaceId: identity.workspaceId,
-                target: OFFICE,
+                roomId: rooms.shared,
             })
             await opened(stream)
-            await a.typing.set(identity.ownerId, identity.workspaceId, OFFICE, true)
+            await a.typing.set(identity.ownerId, identity.workspaceId, rooms.shared, true)
             await received(stream, 1)
-            await a.typing.set(identity.ownerId, identity.workspaceId, OFFICE, false)
+            await a.typing.set(identity.ownerId, identity.workspaceId, rooms.shared, false)
             await received(stream, 2)
             const start = typingFrame(stream.frames[0])
             const stop = typingFrame(stream.frames[1])
-            expect(start).toMatchObject({ actorId: identity.ownerId, actorName: "Shared name", state: "start" })
-            expect(stop).toMatchObject({ actorId: identity.ownerId, actorName: "Shared name", state: "stop" })
+            expect(start).toMatchObject({ actorId: identity.ownerId, actorName: "Owner", state: "start" })
+            expect(stop).toMatchObject({ actorId: identity.ownerId, actorName: "Owner", state: "stop" })
             expect(stop.id).not.toBe(start.id)
             expect(stream.frames).toHaveLength(2)
         })
@@ -104,15 +133,15 @@ describe("chat typing SSE delivery over private PostgreSQL and shared Redis", ()
     it("realtime/push-crosses-replicas: publishing on one app reaches a member's real stream on the other", async () => {
         await withTypingReplicas(world, identity, async (a, b) => {
             const stream = await b.open({
-                principalId: identity.readerIds[1],
+                principalId: second,
                 workspaceId: identity.workspaceId,
-                target: OFFICE,
+                roomId: rooms.shared,
             })
             await opened(stream)
-            const topic = b.topic(identity.readerIds[1], OFFICE)
+            const topic = b.topic(second, rooms.shared)
             expect(a.hub.subscriberCount(topic)).toBe(0)
             expect(b.hub.subscriberCount(topic)).toBe(1)
-            await a.typing.set(identity.ownerId, identity.workspaceId, OFFICE, true)
+            await a.typing.set(identity.ownerId, identity.workspaceId, rooms.shared, true)
             await received(stream, 1)
             expect(typingFrame(stream.frames[0])).toMatchObject({ actorId: identity.ownerId, state: "start" })
             expect(stream.frames).toHaveLength(1)
@@ -121,22 +150,18 @@ describe("chat typing SSE delivery over private PostgreSQL and shared Redis", ()
 })
 
 describe("chat typing SSE admission and isolation", () => {
-    it("realtime/foreign-topic-is-isolated: non-members, disabled members and foreign members open but never receive a typing frame", async () => {
+    it("realtime/foreign-topic-is-isolated: people outside the room, and people of another workspace, open but never receive a typing frame", async () => {
         await withTypingReplicas(world, identity, async (a, b) => {
-            const member = await b.open({
-                principalId: identity.readerIds[0],
-                workspaceId: identity.workspaceId,
-                target: OFFICE,
-            })
+            const member = await b.open({ principalId: first, workspaceId: identity.workspaceId, roomId: rooms.narrow })
             const strangers = await Promise.all(
-                [identity.outsiderId, identity.readerIds[4], identity.foreignOwnerId].map((principalId) =>
-                    b.open({ principalId, workspaceId: identity.workspaceId, target: OFFICE }),
+                [second, third, identity.outsiderId].map((principalId) =>
+                    b.open({ principalId, workspaceId: identity.workspaceId, roomId: rooms.narrow }),
                 ),
             )
             await opened(member)
             await eachInOrder(strangers, opened)
-            await a.typing.set(identity.ownerId, identity.workspaceId, OFFICE, true)
-            await a.typing.set(identity.ownerId, identity.workspaceId, OFFICE, false)
+            await a.typing.set(identity.ownerId, identity.workspaceId, rooms.narrow, true)
+            await a.typing.set(identity.ownerId, identity.workspaceId, rooms.narrow, false)
             await received(member, 2)
             expect(member.frames.map(typingFrame)).toEqual([
                 expect.objectContaining({ actorId: identity.ownerId, state: "start" }),
@@ -150,25 +175,37 @@ describe("chat typing SSE admission and isolation", () => {
             })
         })
     })
+
+    it("realtime/typing-refused: a person who does not sit in the room, and a room of another workspace, cannot type", async () => {
+        await withTypingReplicas(world, identity, async (a) => {
+            await expect(a.typing.set(second, identity.workspaceId, rooms.narrow, true)).rejects.toMatchObject({
+                code: "CHAT_TYPING_ROOM_NOT_FOUND",
+            })
+            await expect(
+                a.typing.set(identity.outsiderId, identity.workspaceId, rooms.shared, true),
+            ).rejects.toMatchObject({
+                code: "CHAT_TYPING_ROOM_NOT_FOUND",
+            })
+            await expect(
+                a.typing.set(identity.ownerId, identity.workspaceId, rooms.foreign, true),
+            ).rejects.toMatchObject({
+                code: "CHAT_TYPING_ROOM_NOT_FOUND",
+            })
+        })
+    })
 })
 
-describe("chat typing SSE target isolation", () => {
+describe("chat typing SSE room isolation", () => {
     it("realtime/foreign-topic-is-isolated: a room stream excludes other rooms and workspaces through a sentinel", async () => {
         await withTypingReplicas(world, identity, async (a, b) => {
-            const room: ChatTarget = { room: "sales" }
-            const stream = await b.open({
-                principalId: identity.readerIds[0],
-                workspaceId: identity.workspaceId,
-                target: room,
-            })
+            const stream = await b.open({ principalId: first, workspaceId: identity.workspaceId, roomId: rooms.shared })
             await opened(stream)
-            await a.typing.set(identity.ownerId, identity.workspaceId, { room: "marketing" }, true)
-            await a.typing.set(identity.ownerId, identity.workspaceId, OFFICE, true)
-            await a.typing.set(identity.foreignOwnerId, identity.foreignWorkspaceId, OFFICE, true)
-            await a.typing.set(identity.ownerId, identity.workspaceId, room, false)
+            await a.typing.set(identity.ownerId, identity.workspaceId, rooms.narrow, true)
+            await a.typing.set(identity.outsiderId, identity.foreignWorkspaceId, rooms.foreign, true)
+            await a.typing.set(identity.ownerId, identity.workspaceId, rooms.shared, false)
             await received(stream, 1)
             expect(stream.frames.map(typingFrame)).toEqual([
-                expect.objectContaining({ actorId: identity.ownerId, actorName: "Shared name", state: "stop" }),
+                expect.objectContaining({ actorId: identity.ownerId, actorName: "Owner", state: "stop" }),
             ])
         })
     })
@@ -178,7 +215,7 @@ describe("chat typing SSE target isolation", () => {
             await eachInOrder([undefined, `proof-${identity.ownerId}`], async (queryToken) => {
                 const stream = await a.open({
                     workspaceId: identity.workspaceId,
-                    target: OFFICE,
+                    roomId: rooms.shared,
                     ...(queryToken === undefined ? {} : { queryToken }),
                 })
                 expect(stream.status).toBe(401)
@@ -197,35 +234,35 @@ describe("chat typing SSE target isolation", () => {
 describe("chat typing SSE resume and release", () => {
     it("realtime/resume-after-reconnect: Last-Event-ID replays missed frames on another replica and then resumes live", async () => {
         await withTypingReplicas(world, identity, async (a, b) => {
-            const principalId = identity.readerIds[2]
-            const initial = await a.open({ principalId, workspaceId: identity.workspaceId, target: OFFICE })
+            const principalId = third
+            const initial = await a.open({ principalId, workspaceId: identity.workspaceId, roomId: rooms.shared })
             await opened(initial)
-            await a.typing.set(identity.ownerId, identity.workspaceId, OFFICE, true)
+            await a.typing.set(identity.ownerId, identity.workspaceId, rooms.shared, true)
             await received(initial, 1)
             const cursor = typingFrame(initial.frames[0]).id
             await initial.disconnect()
             await waitForProof(
-                () => Promise.resolve(a.hub.subscriberCount(a.topic(principalId, OFFICE))),
+                () => Promise.resolve(a.hub.subscriberCount(a.topic(principalId, rooms.shared))),
                 (count) => count === 0,
             )
-            await a.typing.set(identity.ownerId, identity.workspaceId, OFFICE, false)
-            await a.typing.set(identity.readerIds[0], identity.workspaceId, OFFICE, true)
+            await a.typing.set(identity.ownerId, identity.workspaceId, rooms.shared, false)
+            await a.typing.set(first, identity.workspaceId, rooms.shared, true)
             const resumed = await b.open({
                 principalId,
                 workspaceId: identity.workspaceId,
-                target: OFFICE,
+                roomId: rooms.shared,
                 after: cursor,
             })
             await opened(resumed)
             await received(resumed, 2)
             expect(resumed.frames.map(typingFrame)).toEqual([
                 expect.objectContaining({ actorId: identity.ownerId, state: "stop" }),
-                expect.objectContaining({ actorId: identity.readerIds[0], state: "start" }),
+                expect.objectContaining({ actorId: first, state: "start" }),
             ])
             expect(resumed.frames.map((frame) => frame.id)).not.toContain(cursor)
-            await a.typing.set(identity.readerIds[0], identity.workspaceId, OFFICE, false)
+            await a.typing.set(first, identity.workspaceId, rooms.shared, false)
             await received(resumed, 3)
-            expect(typingFrame(resumed.frames[2])).toMatchObject({ actorId: identity.readerIds[0], state: "stop" })
+            expect(typingFrame(resumed.frames[2])).toMatchObject({ actorId: first, state: "stop" })
             expect(new Set(resumed.frames.map((frame) => frame.id)).size).toBe(3)
             expect(resumed.frames).toHaveLength(3)
         })
@@ -233,11 +270,11 @@ describe("chat typing SSE resume and release", () => {
 
     it("realtime/disconnect-releases-subscription: closing one stream releases it and leaves the other stream live", async () => {
         await withTypingReplicas(world, identity, async (a, b) => {
-            const principalId = identity.readerIds[3]
-            const topic = b.topic(principalId, OFFICE)
+            const principalId = second
+            const topic = b.topic(principalId, rooms.shared)
             const before = b.hub.subscriberCount(topic)
-            const closing = await b.open({ principalId, workspaceId: identity.workspaceId, target: OFFICE })
-            const survivor = await b.open({ principalId, workspaceId: identity.workspaceId, target: OFFICE })
+            const closing = await b.open({ principalId, workspaceId: identity.workspaceId, roomId: rooms.shared })
+            const survivor = await b.open({ principalId, workspaceId: identity.workspaceId, roomId: rooms.shared })
             await opened(closing)
             await opened(survivor)
             await waitForProof(
@@ -251,7 +288,7 @@ describe("chat typing SSE resume and release", () => {
                 () => Promise.resolve(b.hub.subscriberCount(topic)),
                 (count) => count === before + 1,
             )
-            await a.typing.set(identity.ownerId, identity.workspaceId, OFFICE, true)
+            await a.typing.set(identity.ownerId, identity.workspaceId, rooms.shared, true)
             await received(survivor, 1)
             expect(typingFrame(survivor.frames[0])).toMatchObject({ actorId: identity.ownerId, state: "start" })
             expect(closing.frames).toHaveLength(0)

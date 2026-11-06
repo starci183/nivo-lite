@@ -1,27 +1,15 @@
 import { Test } from "@nestjs/testing"
-import { chatActivityTarget as realTarget, chatActivityTopic as realTopic } from "./chat-activity.policy"
+import { chatActivityTopic as realTopic } from "./chat-activity.policy"
 
-const frame = { id: "message:1", kind: "message", roomOrConversation: "room:sales", at: "2026-10-26T01:00:00.000Z" }
+const frame = { id: "message:1", kind: "message", roomId: "room-sales", at: "2026-10-26T01:00:00.000Z" }
 
 const SUBJECT = Symbol("chat-activity.policy")
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { chatActivityTarget: realTarget, chatActivityTopic: realTopic } }],
+        providers: [{ provide: SUBJECT, useValue: { chatActivityTopic: realTopic } }],
     }).compile()
     return moduleRef.get<typeof import("./chat-activity.policy")>(SUBJECT)
 }
-
-describe("chatActivityTarget", () => {
-    it("names a department room by its key", async () => {
-        const { chatActivityTarget } = await buildSubject()
-        expect(chatActivityTarget({ room: "sales" })).toBe("room:sales")
-    })
-
-    it("names the general Office when no room is given", async () => {
-        const { chatActivityTarget } = await buildSubject()
-        expect(chatActivityTarget({ room: null })).toBe("room:office")
-    })
-})
 
 describe("chatActivityTopic", () => {
     it("names the topic by recipient and lower-cased workspace", async () => {
@@ -46,7 +34,7 @@ describe("chatActivityTopic", () => {
         const { accepts } = (await buildSubject()).chatActivityTopic("U1", "ws")
         expect(accepts({ ...frame, kind: "typing" })).toBe(false)
         expect(accepts({ ...frame, id: 1 })).toBe(false)
-        expect(accepts({ ...frame, roomOrConversation: 1 })).toBe(false)
+        expect(accepts({ ...frame, roomId: 1 })).toBe(false)
         expect(accepts({ ...frame, at: 1 })).toBe(false)
         expect(accepts({ id: "x" })).toBe(false)
         expect(accepts({ id: "x", kind: "message" })).toBe(false)

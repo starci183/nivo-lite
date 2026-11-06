@@ -3,10 +3,10 @@ import type { SetChatTypingRequest } from "../../application/chat-typing.contrac
 import type { ChatTypingSignalType } from "./dto/chat-typing-signal.type"
 import type { SetChatTypingInput } from "./dto/set-chat-typing.input"
 
-/** Copies validated selectors and the caller's boolean hint into the command request. */
+/** Copies the validated room id and the caller's boolean hint into the command request. */
 export const toSetChatTypingRequest = (workspaceId: string, input: SetChatTypingInput): SetChatTypingRequest => ({
     workspaceId,
-    target: { room: input.target.room },
+    roomId: input.roomId,
     typing: input.typing,
 })
 
