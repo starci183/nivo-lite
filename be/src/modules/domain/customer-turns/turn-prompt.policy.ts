@@ -1,5 +1,4 @@
-import type { TurnConversation } from "@modules/domain/agent-conversations"
-import type { TranscriptLine } from "@modules/domain/agent-messages"
+import type { ChatTranscriptLine, ChatTurnConversation } from "@modules/domain/chat-records"
 import type { CustomerChannel } from "./customer-turns.contracts"
 
 /** How many earlier messages a turn carries. */
@@ -20,14 +19,14 @@ export interface TurnSystemParts {
 }
 
 /** The name the agent answers under: its own with its handle, or the front agent's name alone after a hand-over. */
-const nameLineOf = (agent: TurnConversation["agent"], speaksAs: TurnConversation["speaksAs"]): string =>
+const nameLineOf = (agent: ChatTurnConversation["agent"], speaksAs: ChatTurnConversation["speaksAs"]): string =>
     speaksAs === null ? agent.name + " (@" + agent.handle + ")" : speaksAs
 
 /**
  * The persona section of a customer-facing agent. After a hand-over the speaker keeps its own role and instructions but answers under
  * the name of the agent that opened the door (`speaksAs`), so the customer sees one name; the handle then stays out.
  */
-export const personaOf = (agent: TurnConversation["agent"], speaksAs: TurnConversation["speaksAs"]): string =>
+export const personaOf = (agent: ChatTurnConversation["agent"], speaksAs: ChatTurnConversation["speaksAs"]): string =>
     `You are ${nameLineOf(agent, speaksAs)}, role: ${agent.role}.
 Instructions: ${agent.instructions}
 Business knowledge: ${agent.knowledge.trim() === "" ? "(none)" : agent.knowledge}
@@ -49,7 +48,11 @@ export const turnSystemOf = (parts: TurnSystemParts): string =>
  * The text sent into the OpenClaw thread. The transcript is included every turn (the thread may be new), and the context is
  * authoritative: it is the public, owner-approved view of the business.
  */
-export const turnMessageOf = (system: string, transcript: ReadonlyArray<TranscriptLine>, latest: string): string => {
+export const turnMessageOf = (
+    system: string,
+    transcript: ReadonlyArray<ChatTranscriptLine>,
+    latest: string,
+): string => {
     const earlier = transcript
         .slice(-HISTORY_TURNS)
         .slice(0, -1)

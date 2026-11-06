@@ -201,7 +201,7 @@ export class AutomationCareExecutorsService {
             context.workspaceId,
             textOf(payload.lead_id) || conversation.lead_id || "",
         )
-        const name = lead?.contact_name ?? conversation.visitor_name ?? say("customer")
+        const name = lead?.contact_name ?? say("customer")
         const dedupe = textOf(payload.dedupe)
         const sent =
             lead === null

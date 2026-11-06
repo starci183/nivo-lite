@@ -95,9 +95,9 @@ export class AutomationRenewalPaymentService {
      * A warning step when the customer writes on Zalo and last wrote more than 48 hours ago: Zalo refuses a message the shop writes
      * first, so the owner learns it before approving. None otherwise, a customer who never wrote included (delivery lets it try).
      */
-    async zaloWindowSteps(conversation: ConversationRead): Promise<ReadonlyArray<RunStep>> {
+    async zaloWindowSteps(workspaceId: string, conversation: ConversationRead): Promise<ReadonlyArray<RunStep>> {
         if (conversation.channel !== "zalo") return []
-        const last = await this.reads.lastCustomerMessage(conversation.id)
+        const last = await this.reads.lastCustomerMessage(workspaceId, conversation.id)
         if (last === undefined || this.clock.now().getTime() - instantOf(last.created_at) <= ZALO_WINDOW_MS) return []
         const say = this.messages.say.bind(this.messages)
         return [{ label: say("renewal.zaloWindow"), status: "skipped", detail: say("renewal.zaloWindowDetail") }]

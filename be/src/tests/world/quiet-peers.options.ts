@@ -1,6 +1,5 @@
 import type { Provider } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
-import { InboundFilesService } from "@modules/domain/chat-files"
 import { AgentRunsService } from "../../modules/domain/agent-runs/agent-runs.service"
 import { AgentRunSweepService } from "../../modules/domain/agent-runs/agent-run-sweep.service"
 import { AGENTS_INSTALLATIONS } from "@modules/domain/agents"
@@ -31,13 +30,12 @@ export const QUIET_AGENT_TAGS: Provider = {
         mock<AgentTagService>({ tagAgent: jest.fn().mockResolvedValue({ tagged: true, wakeId: "quiet" }) }),
 }
 
-/** The customer intake of the conversations: the message is stored and no turn or wake starts. */
+/** The customer intake of the conversations: the message is stored and no wake starts. */
 export const QUIET_CUSTOMER_INTAKE: Provider = {
     provide: CustomerIntakeService,
     useFactory: () =>
         mock<CustomerIntakeService>({
             answer: jest.fn().mockResolvedValue(undefined),
-            answerChat: jest.fn().mockResolvedValue(undefined),
         }),
 }
 
@@ -51,16 +49,6 @@ export const QUIET_INSTALLATIONS: Provider = {
             ofAgent: jest.fn().mockResolvedValue(null),
             onOpenclaw: jest.fn().mockResolvedValue([]),
             contextVersionOf: jest.fn().mockResolvedValue(null),
-        }),
-}
-
-/** The files a channel brings in: nothing is downloaded and none is kept. */
-export const QUIET_INBOUND_FILES: Provider = {
-    provide: InboundFilesService,
-    useFactory: () =>
-        mock<InboundFilesService>({
-            download: jest.fn().mockResolvedValue(null),
-            keep: jest.fn().mockResolvedValue(false),
         }),
 }
 

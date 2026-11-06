@@ -2,8 +2,8 @@ import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import type { EntityManager } from "typeorm"
-import { AgentConversationReadService, AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import type { WorkContext } from "@modules/domain/decisions"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
@@ -24,17 +24,16 @@ const ACTOR = "NIVO"
 
 @Injectable()
 /**
- * The executor of the `lead.ensure` effect: the customer of a conversation is the lead it is already tied to, else the lead of the same
- * channel contact (another conversation of the same Zalo user or Telegram chat), else a lead the chat's own facts match (the same phone, or
- * a name the customer gave on the same channel), else a new one; the conversation is tied to it and somebody owes it a follow-up. A
- * display name the conversation carries, and the guest placeholder every anonymous sender shares, names a new lead but never matches one. It lives here and not with the leads, because tying the conversation needs the conversations capability, which imports leads.
+ * The executor of the `lead.ensure` effect: the customer of a conversation is the lead it is already tied to, else a lead the chat's own
+ * facts match (the same phone, or a name the customer gave on the same channel), else a new one; the conversation is tied to it and
+ * somebody owes it a follow-up. A display name the conversation carries, and the guest placeholder every anonymous sender shares, names a
+ * new lead but never matches one. It lives here and not with the leads, because tying the conversation needs the chat records capability.
  * It is a pivot: a lead other records point at is not taken back.
  */
 export class LeadEnsureExecutorService implements OnModuleInit {
     constructor(
         private readonly kit: PerformerKitService,
-        private readonly conversations: AgentConversationsService,
-        private readonly contacts: AgentConversationReadService,
+        private readonly conversations: ChatConversationsService,
         private readonly leads: LeadRecordsService,
         private readonly responsibilities: ResponsibilityJournalService,
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
@@ -49,8 +48,8 @@ export class LeadEnsureExecutorService implements OnModuleInit {
 
     private async ensure(turn: NodeTurn, payload: EffectPayload): Promise<SubjectRef> {
         const given = ensurePayload.parse(payload)
-        const found = await this.conversations.turnOf(given.conversationId)
-        if (found.kind !== "ok" || found.value.workspaceId !== turn.workspaceId) {
+        const found = await this.conversations.turnOf(turn.workspaceId, given.conversationId)
+        if (found.kind !== "ok") {
             throw new WorkPerformersError({ code: WorkPerformersErrorCode.ConversationUnavailable })
         }
         const subject = (leadId: string): SubjectRef => ({ kind: "sales-lead", id: leadId })
@@ -63,19 +62,13 @@ export class LeadEnsureExecutorService implements OnModuleInit {
     }
 
     /**
-     * The lead of the same channel contact, else the lead the chat's facts match, else a new one captured with `lead_captured` published
-     * in the same transaction.
+     * The lead the chat's facts match, else a new one captured with `lead_captured` published in the same transaction.
      */
     private async leadOf(
         ctx: WorkContext,
         given: EnsurePayload,
-        conversation: TurnConversation,
-    ): Promise<LeadRecordRow | { readonly id: string }> {
-        const contactLead =
-            conversation.externalId === null
-                ? null
-                : await this.contacts.leadOfContact(ctx.workspaceId, conversation.channel, conversation.externalId)
-        if (contactLead !== null) return { id: contactLead }
+        conversation: ChatTurnConversation,
+    ): Promise<LeadRecordRow> {
         const phone = contactParts(given.phone ?? null).phone
         const name = given.name ?? conversation.visitorName ?? this.kit.text(ctx, "notShared")
         const channel = this.kit.text(ctx, `channel.${given.channel}`)

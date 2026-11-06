@@ -6,7 +6,6 @@ import { BankCreditSettlementMessageModule } from "@features/reactors/bank-credi
 import { BankFeedPollMessageModule } from "@features/reactors/bank-feed-poll"
 import { BookingEffectsMessageModule } from "@features/reactors/booking-effects"
 import { ContentDraftingMessageModule } from "@features/reactors/content-drafting"
-import { ConversationHandbackMessageModule } from "@features/reactors/conversation-handback"
 import { ContractRenewalMessageModule } from "@features/reactors/contract-renewal"
 import { InventoryDeductionMessageModule } from "@features/reactors/inventory-deduction"
 import { PaymentReceiptsMessageModule } from "@features/reactors/payment-receipts"
@@ -27,7 +26,6 @@ export const API_REACTORS: Array<DynamicModule> = [
     BookingEffectsMessageModule.register({}),
     ContentDraftingMessageModule.register({}),
     ContractRenewalMessageModule.register({}),
-    ConversationHandbackMessageModule.register({}),
     InventoryDeductionMessageModule.register({}),
     PaymentReceiptsMessageModule.register({}),
     SourceFactsMessageModule.register({}),

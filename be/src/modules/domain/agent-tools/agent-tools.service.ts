@@ -18,7 +18,6 @@ import {
     InjectBookingTools,
     InjectConversationLeads,
     InjectGatewayTools,
-    InjectHandoffTool,
     InjectKnowledgeSearch,
     InjectLeadWriter,
     InjectToolTokens,
@@ -29,13 +28,12 @@ import type {
     BookingTools,
     ConversationLeads,
     GatewayTools,
-    HandoffTool,
     KnowledgeSearch,
     LeadWriter,
     ToolTokens,
 } from "./agent-tools.port"
 import { AgentToolsError, AgentToolsErrorCode } from "./errors/agent-tools.error"
-import { agentHandoffOf, approvalOf, clipText, handoffReasonOf, leadOf, queryOf } from "./tool-args.policy"
+import { agentHandoffOf, approvalOf, clipText, leadOf, queryOf } from "./tool-args.policy"
 import { BridgeCallsService } from "./bridge-calls.service"
 import { bearerTokenOf, isBridgeToken } from "./tool-bearer.policy"
 import { isBookingTool, isGatewayTool, isReadTool, isToolName, TOOL_MANIFEST } from "./tool-manifest.policy"
@@ -68,7 +66,6 @@ export class AgentToolsService {
         @InjectLeadWriter() private readonly leads: LeadWriter,
         @InjectBookingTools() private readonly booking: BookingTools,
         @InjectApprovalRequester() private readonly approvals: ApprovalRequester,
-        @InjectHandoffTool() private readonly handoffs: HandoffTool,
         @InjectConversationLeads() private readonly conversations: ConversationLeads,
         @InjectGatewayTools() private readonly gatewayTools: GatewayTools,
         @InjectAgentHandoff() private readonly agentHandoff: AgentHandoff,
@@ -177,8 +174,7 @@ export class AgentToolsService {
         if (tool === "conversation.handOff") return this.handToAgent(ctx, args)
         if (isReadTool(tool)) return this.readInConversation(ctx, tool, args, agentId)
         if (tool === "lead.create_or_update") return this.createLead(ctx, args)
-        if (tool === "approval.request") return this.requestApproval(ctx, args)
-        return this.handOff(ctx, args)
+        return this.requestApproval(ctx, args)
     }
 
     private async readInConversation(
@@ -227,18 +223,6 @@ export class AgentToolsService {
             result.workItemId,
         )
         return { work_item_id: result.workItemId, status: result.status }
-    }
-
-    private async handOff(ctx: ToolContext, args: ToolArgs): Promise<JsonResult> {
-        const reason = handoffReasonOf(args)
-        await this.handoffs.handoff(ctx, reason)
-        await this.trace(
-            ctx,
-            "handoff.to_person",
-            "Conversation handed to a person",
-            reason === "" ? ctx.jobId : reason,
-        )
-        return { status: "handed_to_person" }
     }
 
     private async callGateway(ctx: ToolContext, tool: GatewayToolName, args: ToolArgs): Promise<JsonResult> {

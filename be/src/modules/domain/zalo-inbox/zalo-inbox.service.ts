@@ -9,13 +9,7 @@ import { Injectable } from "@nestjs/common"
 import { IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { ZaloWebhookGateService } from "@modules/domain/channels"
-import type { DownloadedChatFile } from "@modules/domain/chat-files"
-import {
-    ConversationsService,
-    isZaloAttachmentEvent,
-    readZaloEvent,
-    zaloAttachmentShapeOf,
-} from "@modules/domain/conversations"
+import { ConversationsService, readZaloEvent } from "@modules/domain/conversations"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { zaloEventNameOf } from "@modules/integrations/zalo"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -76,9 +70,6 @@ export class ZaloInboxService {
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
-    /** Whether the shape of a picture or file event that could not be read was already logged: it is logged once per process. */
-    private shapeLogged = false
-
     /** A redelivered message is acknowledged without being processed again; every event type has its own id, so a follow event is claimed once and never overwrites another. */
     async acceptZaloDelivery(rawBody: ZaloRawDelivery, connection: string): Promise<void> {
         // A connection that holds no OA secret key yet proved nothing: the call is acknowledged and closed, never read as an event.
@@ -129,15 +120,8 @@ export class ZaloInboxService {
      * marked `failed` before the error goes back to the queue.
      */
     async processRecordedDelivery(message: ZaloDeliveryRecorded): Promise<void> {
-        const files = await this.filesOf(message).catch((cause: unknown): ReadonlyArray<DownloadedChatFile> => {
-            this.logger.warn(ZaloInboxLogEvent.FilesUnread, {
-                deliveryId: message.deliveryId,
-                error: cause instanceof Error ? cause.name : typeof cause,
-            })
-            return []
-        })
         await this.entityManager
-            .transaction((manager) => this.process(manager, message, files))
+            .transaction((manager) => this.process(manager, message))
             .catch(async (cause: unknown) => {
                 await this.entityManager.update(
                     ZaloInboxEntity,
@@ -148,36 +132,7 @@ export class ZaloInboxService {
             })
     }
 
-    /**
-     * The pictures and files of a pending receipt, read before the transaction that stores the message so no download runs while a row is locked. A
-     * picture or file event from which no attachment can be read logs the names of its fields once, and is dropped like any event nothing answers.
-     */
-    private async filesOf(message: ZaloDeliveryRecorded): Promise<ReadonlyArray<DownloadedChatFile>> {
-        const pending = await this.entityManager.findOne(ZaloInboxEntity, {
-            where: { provider: "zalo", deliveryId: message.deliveryId, processedAt: IsNull() },
-        })
-        if (pending === null) return []
-        const rawBody = Buffer.from(pending.payload.rawBody, "utf8")
-        const imported = pending.payload.source === "manual_import"
-        const inbound = readZaloEvent(rawBody, { allowLocalPath: imported })
-        if (inbound.kind !== "ok") {
-            this.logUnknownShape(rawBody)
-            return []
-        }
-        return this.conversations.readFiles(inbound.value.attachments, imported, inbound.value.messageId)
-    }
-
-    private logUnknownShape(rawBody: Buffer): void {
-        if (this.shapeLogged || !isZaloAttachmentEvent(rawBody)) return
-        this.shapeLogged = true
-        this.logger.warn(ZaloInboxLogEvent.AttachmentShapeUnknown, { shape: zaloAttachmentShapeOf(rawBody) })
-    }
-
-    private async process(
-        manager: EntityManager,
-        message: ZaloDeliveryRecorded,
-        files: ReadonlyArray<DownloadedChatFile>,
-    ): Promise<void> {
+    private async process(manager: EntityManager, message: ZaloDeliveryRecorded): Promise<void> {
         const pending = await manager.findOne(ZaloInboxEntity, {
             where: { provider: "zalo", deliveryId: message.deliveryId, processedAt: IsNull() },
             lock: { mode: "pessimistic_write" },
@@ -194,7 +149,7 @@ export class ZaloInboxService {
         }
         const answered =
             inbound.kind === "ok"
-                ? await this.conversations.acceptZalo(pending.payload.connection, inbound.value, manager, files)
+                ? await this.conversations.acceptZalo(pending.payload.connection, inbound.value, manager)
                 : true
         await manager.update(
             ZaloInboxEntity,

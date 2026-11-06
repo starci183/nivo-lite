@@ -29,7 +29,6 @@ import { WorkItemsDecisionsReadService } from "@modules/domain/work-items"
 import { MemberRosterService, WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { HiringDataService } from "./hiring-data.service"
 import {
@@ -58,7 +57,6 @@ const seatOf = (userId: string, displayName: string) => ({
 const seats = mock<WorkspaceMemberSeatsService>()
 const roster = mock<MemberRosterService>()
 const decisions = mock<WorkItemsDecisionsReadService>()
-const conversations = mock<AgentConversationsReadService>()
 
 const build = async (entityManager: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -68,7 +66,6 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: WorkspaceMemberSeatsService, useValue: seats },
             { provide: MemberRosterService, useValue: roster },
             { provide: WorkItemsDecisionsReadService, useValue: decisions },
-            { provide: AgentConversationsReadService, useValue: conversations },
         ],
     }).compile()
     return moduleRef.get(HiringDataService)
@@ -197,15 +194,6 @@ describe("HiringDataService", () => {
 })
 
 describe("HiringDataService", () => {
-    it("reads the channel of a conversation, and null when there is no conversation", async () => {
-        const service = await build(mockEntityManager())
-        conversations.channelOf.mockResolvedValueOnce("telegram").mockResolvedValueOnce(null)
-
-        await expect(service.conversationChannel("conversation-1")).resolves.toBe("telegram")
-        await expect(service.conversationChannel("conversation-3")).resolves.toBeNull()
-        expect(conversations.channelOf.mock.calls).toEqual([["conversation-1"], ["conversation-3"]])
-    })
-
     it("counts the asks of a prefix with the prefix wildcard", async () => {
         const service = await build(mockEntityManager())
         decisions.countWithKeyPrefix.mockResolvedValueOnce(3).mockResolvedValueOnce(2).mockResolvedValueOnce(0)

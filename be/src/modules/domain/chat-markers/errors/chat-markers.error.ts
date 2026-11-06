@@ -3,7 +3,7 @@ import type { ErrorKind } from "@modules/platform/errors"
 
 /** Stable refusals of chat state admission and receipt acknowledgement. */
 export enum ChatMarkersErrorCode {
-    /** The selected room or conversation is not available in this workspace. */
+    /** The selected room is not available in this workspace. */
     TargetNotFound = "CHAT_MARKERS_TARGET_NOT_FOUND",
     /** The supplied message was not persisted in the selected target. */
     MessageNotFound = "CHAT_MARKERS_MESSAGE_NOT_FOUND",

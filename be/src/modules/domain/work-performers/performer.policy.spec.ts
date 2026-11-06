@@ -8,6 +8,7 @@ import {
     historyLine,
     firstText,
     renewalNoticeOf,
+    conversationIdOf,
 } from "./performer.policy"
 
 const SUBJECT = Symbol("performer.policy")
@@ -20,6 +21,7 @@ type Subject = {
     historyLine: typeof historyLine
     firstText: typeof firstText
     renewalNoticeOf: typeof renewalNoticeOf
+    conversationIdOf: typeof conversationIdOf
 }
 
 const buildSubject = async () => {
@@ -36,6 +38,7 @@ const buildSubject = async () => {
                     historyLine,
                     firstText,
                     renewalNoticeOf,
+                    conversationIdOf,
                 },
             },
         ],
@@ -223,4 +226,30 @@ describe("renewalNoticeOf", () => {
             expect(subject.renewalNoticeOf(partial)).toBeUndefined()
         },
     )
+})
+
+describe("conversationIdOf", () => {
+    it("takes the conversation the proposal names before the one the item is about", async () => {
+        const { subject } = await buildSubject()
+
+        expect(
+            subject.conversationIdOf(
+                { subject_type: "conversation", subject_id: "conv-2" },
+                { conversation_id: "conv-1" },
+            ),
+        ).toBe("conv-1")
+    })
+
+    it("takes the conversation the item is about when the proposal names none", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.conversationIdOf({ subject_type: "conversation", subject_id: "conv-2" }, {})).toBe("conv-2")
+    })
+
+    it("answers null when neither names a conversation", async () => {
+        const { subject } = await buildSubject()
+
+        expect(subject.conversationIdOf({ subject_type: "lead", subject_id: "lead-1" }, {})).toBeNull()
+        expect(subject.conversationIdOf({ subject_type: "conversation", subject_id: null }, {})).toBeNull()
+    })
 })

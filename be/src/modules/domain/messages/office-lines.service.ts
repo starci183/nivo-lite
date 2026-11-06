@@ -50,12 +50,7 @@ export class OfficeLinesService {
             workItemId: line.work_item_id,
             ...(line.room === undefined ? {} : { room: line.room }),
         })
-        await this.activity.message(
-            ctx.workspaceId,
-            chatActivityTarget({ room: line.room ?? null, conversationId: null }),
-            null,
-            manager,
-        )
+        await this.activity.message(ctx.workspaceId, chatActivityTarget({ room: line.room ?? null }), null, manager)
     }
 
     private alreadySaid(

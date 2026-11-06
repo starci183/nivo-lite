@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import { channelKeyOf, personaOf, turnMessageOf, turnSystemOf } from "./turn-prompt.policy"
 const SUBJECT = Symbol("turn-prompt.policy")
 
@@ -10,7 +10,7 @@ const build = async () => {
     return moduleRef.get<typeof import("./turn-prompt.policy")>(SUBJECT)
 }
 
-const agent: TurnConversation["agent"] = {
+const agent: ChatTurnConversation["agent"] = {
     id: "a1",
     name: "Bot",
     handle: "bot",

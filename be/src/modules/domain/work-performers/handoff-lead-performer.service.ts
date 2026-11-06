@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { ContractsService } from "@modules/domain/contracts"
 import { EvidenceService } from "@modules/domain/decisions"
 import type { Performed, Prepared, Proposal, WorkContext, WorkItem, WorkPerformer } from "@modules/domain/decisions"
@@ -14,7 +14,6 @@ import { LeadCapturedEvent, whenPresent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
-import { LeadHandoverService } from "./lead-handover.service"
 import { PerformerKitService } from "./performer-kit.service"
 import { leadHref, textOf } from "./performer.policy"
 
@@ -25,13 +24,12 @@ export class HandoffLeadPerformerService implements WorkPerformer {
         private readonly kit: PerformerKitService,
         private readonly leads: LeadRecordsService,
         private readonly agents: AgentsService,
-        private readonly conversations: AgentConversationsService,
+        private readonly conversations: ChatConversationsService,
         private readonly inbound: InboundEventsService,
         private readonly responsibilities: ResponsibilityJournalService,
         private readonly evidence: EvidenceService,
         private readonly apiCompletion: PublicLeadCompletionService,
         private readonly contracts: ContractsService,
-        private readonly handover: LeadHandoverService,
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectEventBus() private readonly bus: EventBus,
     ) {}
@@ -81,7 +79,6 @@ export class HandoffLeadPerformerService implements WorkPerformer {
             await this.inbound.mark(ctx.workspaceId, item.inbound_event_id, null, lead.id)
         if (textOf(fields.conversation_id) !== "") {
             await this.conversations.attachLead(ctx.workspaceId, textOf(fields.conversation_id), lead.id)
-            await this.handover.toSales(ctx, textOf(fields.conversation_id), lead.contact_name)
         }
         // The lead now carries its contact, so a contract of this customer finds it for the renewal.
         await this.contracts.linkCustomers(ctx.workspaceId)

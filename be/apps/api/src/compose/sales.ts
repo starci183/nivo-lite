@@ -11,11 +11,7 @@ import { SalesWorkbenchModule } from "@modules/domain/sales-workbench"
 import { LeadViewsModule } from "@modules/domain/lead-views"
 import { PromoGraphqlModule } from "@features/api/promo"
 import { LeadGenGraphqlModule } from "@features/api/leadgen"
-import { ChatbotGraphqlModule } from "@features/api/chatbot"
-import { ChatReplyGraphqlModule } from "@features/api/chatreply"
 import { PromoModule } from "@modules/domain/promo"
-import { ChatbotWorkbenchModule } from "@modules/domain/chatbot-workbench"
-import { CHATREPLY_ERROR_KINDS, CHATREPLY_MESSAGES, ChatReplyModule } from "@modules/domain/chatreply"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 /** The sales area of the API, in registration order. */
@@ -31,19 +27,12 @@ export const salesModules = (): Array<DynamicModule> => [
     SalesModule.register({ isGlobal: true }),
     SalesWorkbenchModule.register({ isGlobal: true }),
     PromoModule.register({ isGlobal: true }),
-    ChatReplyModule.register({ isGlobal: true }),
     PromoGraphqlModule.register({}),
     LeadGenGraphqlModule.register({}),
-    ChatbotWorkbenchModule.register({ isGlobal: true }),
-    ChatbotGraphqlModule.register({}),
-    ChatReplyGraphqlModule.register({}),
 ]
 
 /** The error kinds of the capabilities this group registers, in registration order. */
-export const salesErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
-    CHATREPLY_ERROR_KINDS,
-    LEAD_ACTIONS_ERROR_KINDS,
-]
+export const salesErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [LEAD_ACTIONS_ERROR_KINDS]
 
 /** The message bundles of the capabilities this group registers, in registration order. */
-export const salesMessages: ReadonlyArray<MessageBundle> = [CHATREPLY_MESSAGES, LEAD_ACTIONS_MESSAGES]
+export const salesMessages: ReadonlyArray<MessageBundle> = [LEAD_ACTIONS_MESSAGES]

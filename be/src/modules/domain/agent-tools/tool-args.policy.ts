@@ -35,9 +35,6 @@ export const approvalOf = (args: ToolArgs): ApprovalRequest => {
     }
 }
 
-/** The handoff reason of a call; may be empty. */
-export const handoffReasonOf = (args: ToolArgs): string => clipText(args.reason, 300)
-
 /** The agent hand-off of a call: both the target agent and the note are required. */
 export const agentHandoffOf = (args: ToolArgs): AgentHandoffRequest => ({
     to: requiredText(args, "to", 120),

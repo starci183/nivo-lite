@@ -2,8 +2,6 @@ import { accountingAdjustmentsEntities } from "@modules/domain/accounting-adjust
 import { appErrorsEntities } from "@modules/domain/app-errors"
 import { agentAccessLogEntities } from "@modules/domain/agent-access-log"
 import { agentConnectionsEntities } from "@modules/domain/agent-connections"
-import { agentConversationsEntities } from "@modules/domain/agent-conversations"
-import { agentMessagesEntities } from "@modules/domain/agent-messages"
 import { agentsEntities } from "@modules/domain/agents"
 import { aiGenerationsEntities } from "@modules/domain/ai-generations"
 import { aiQuotaOverridesEntities } from "@modules/domain/ai-quota-overrides"
@@ -53,7 +51,6 @@ import { contentPlansEntities } from "@modules/domain/content-plans"
 import { contentSettingsEntities } from "@modules/domain/content-settings"
 import { contentWeeklyReportsEntities } from "@modules/domain/content-weekly-reports"
 import { contractsEntities } from "@modules/domain/contracts"
-import { conversationOwnershipEventsEntities } from "@modules/domain/conversation-ownership-events"
 import { creditsEntities } from "@modules/domain/credits"
 import { dataRecordsEntities } from "@modules/domain/data-records"
 import { dataSyncRunsEntities } from "@modules/domain/data-sync-runs"
@@ -154,8 +151,6 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...appErrorsEntities,
     ...agentAccessLogEntities,
     ...agentConnectionsEntities,
-    ...agentConversationsEntities,
-    ...agentMessagesEntities,
     ...agentsEntities,
     ...aiGenerationsEntities,
     ...aiQuotaOverridesEntities,
@@ -206,7 +201,6 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...contentSettingsEntities,
     ...contentWeeklyReportsEntities,
     ...contractsEntities,
-    ...conversationOwnershipEventsEntities,
     ...creditsEntities,
     ...dataRecordsEntities,
     ...dataSyncRunsEntities,

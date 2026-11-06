@@ -1,6 +1,6 @@
 import type { ChatFileFacts, ChatFileScope, ChatFileView } from "./chat-files.contracts"
 
-/** The private bucket: a chat file sits in a subfolder of the workspace, which the media library never lists. */
+/** The private bucket: an Office file sits in a subfolder of the workspace, which the media library never lists. */
 export const CHAT_FILE_BUCKET = "media"
 
 /** The largest chat file, in bytes. */
@@ -37,16 +37,14 @@ export const isAcceptedChatFile = (file: ChatFileFacts): boolean =>
     file.sizeBytes <= CHAT_FILE_MAX_BYTES &&
     EXTENSION_OF[file.contentType] !== undefined
 
-/** The folder of the files of the Office, which is no conversation. */
-const OFFICE_FOLDER = "office"
+/** The folder of the files of the Office inside its workspace. */
+const folderOf = (scope: ChatFileScope): string => `${scope.workspaceId}/chat/office`
 
-const folderOf = (scope: ChatFileScope): string => `${scope.workspaceId}/chat/${scope.conversationId ?? OFFICE_FOLDER}`
-
-/** The object path of a new file, inside the folder of its workspace and conversation. */
+/** The object path of a new file, inside the Office folder of its workspace. */
 export const chatFilePathOf = (scope: ChatFileScope, objectId: string, contentType: string): string =>
     `${folderOf(scope)}/${objectId}.${EXTENSION_OF[contentType] ?? ""}`
 
-/** Whether a path a browser hands back is a file of this conversation: nothing else may be attached to it. */
+/** Whether a path a browser hands back is a file of the Office of this workspace: nothing else may be attached to it. */
 export const isChatFilePath = (scope: ChatFileScope, path: string): boolean => {
     const folder = `${folderOf(scope)}/`
     return path.startsWith(folder) && FILE_NAME.test(path.slice(folder.length))
@@ -58,39 +56,6 @@ export const sniffChatFile = (bytes: Uint8Array): string | null => {
     if (startsWith(bytes, JPEG_SIGNATURE)) return "image/jpeg"
     if (startsWith(bytes, PDF_SIGNATURE)) return "application/pdf"
     return startsWith(bytes, RIFF_SIGNATURE) && startsWith(bytes, WEBP_SIGNATURE, WEBP_OFFSET) ? "image/webp" : null
-}
-
-/** The extension an accepted type is stored under; empty for a type that is not accepted. */
-export const chatFileExtensionOf = (contentType: string): string => EXTENSION_OF[contentType] ?? ""
-
-const GIF_SIGNATURES: ReadonlyArray<ReadonlyArray<number>> = [
-    [0x47, 0x49, 0x46, 0x38, 0x37, 0x61],
-    [0x47, 0x49, 0x46, 0x38, 0x39, 0x61],
-]
-const FTYP_MARK: ReadonlyArray<number> = [0x66, 0x74, 0x79, 0x70]
-/** Where the `ftyp` mark and the brand sit in an ISO media file (HEIC, HEIF, AVIF). */
-const FTYP_OFFSET = 4
-const BRAND_OFFSET = 8
-const BRAND_LENGTH = 4
-const MODERN_IMAGE_BRANDS: ReadonlySet<string> = new Set([
-    "heic",
-    "heix",
-    "hevc",
-    "hevx",
-    "heim",
-    "heis",
-    "mif1",
-    "msf1",
-    "avif",
-    "avis",
-])
-
-/** A picture format the bytes prove that the store does not accept (GIF, HEIC, HEIF, AVIF), or null for anything else. */
-export const sniffUnsupportedImage = (bytes: Uint8Array): string | null => {
-    if (GIF_SIGNATURES.some((signature) => startsWith(bytes, signature))) return "image/gif"
-    if (!startsWith(bytes, FTYP_MARK, FTYP_OFFSET)) return null
-    const brand = String.fromCodePoint(...bytes.slice(BRAND_OFFSET, BRAND_OFFSET + BRAND_LENGTH))
-    return MODERN_IMAGE_BRANDS.has(brand) ? "image/heif" : null
 }
 
 /** The files of one message among those of a thread. */

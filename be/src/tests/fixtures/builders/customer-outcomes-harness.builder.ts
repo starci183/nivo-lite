@@ -3,7 +3,7 @@ import type { MockOf } from "@starci/jest-preset"
 import type { AgentDirectoryService } from "@modules/domain/agents"
 import type { AgentBindingsService } from "@modules/domain/agent-connections"
 import type { AuthorityRulesService } from "@modules/domain/authority-rules"
-import type { AgentConversationsService } from "@modules/domain/agent-conversations"
+import type { ChatConversationsService } from "@modules/domain/chat-records"
 import type { KnowledgeGapNotesService } from "@modules/domain/agent-knowledge"
 import type { CommandBusService, EvidenceService, WorkEngineService, WorkItem } from "@modules/domain/decisions"
 import type { HiringPublicService } from "@modules/domain/hiring"
@@ -22,7 +22,7 @@ interface CustomerOutcomeDoubles {
     readonly purchases: MockOf<Dependencies[13]>
     readonly gaps: MockOf<KnowledgeGapNotesService>
     readonly modules: MockOf<Dependencies[16]>
-    readonly conversations: MockOf<AgentConversationsService>
+    readonly conversations: MockOf<ChatConversationsService>
     readonly evidence: MockOf<EvidenceService>
     readonly items: MockOf<WorkItemsService>
     readonly bindings: MockOf<AgentBindingsService>

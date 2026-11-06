@@ -239,7 +239,7 @@ describe("OfficeTagHandlerService > prepare: a turn", () => {
         expect(commands.propose).toHaveBeenCalledTimes(1)
         expect(runtime.agentFor).toHaveBeenCalledWith("ws-1", "accounting", expect.objectContaining({ id: "inst-1" }))
         expect(context.messageOf).toHaveBeenCalledWith(TAG_TRANSCRIPT_CONTEXT)
-        expect(typing.setAgent).toHaveBeenCalledWith("ws-1", { room: null, conversationId: null }, KE_TOAN, true)
+        expect(typing.setAgent).toHaveBeenCalledWith("ws-1", { room: null }, KE_TOAN, true)
     })
 
     it("reads the line from its own table when it has scrolled out of the page", async () => {
@@ -335,12 +335,7 @@ describe("OfficeTagHandlerService > settle", () => {
             ABORT,
         )
         expect(lines.post.mock.calls).toEqual(TAG_REPLY_POSTS)
-        expect(typing.setAgent).toHaveBeenCalledWith(
-            "ws-1",
-            { room: "accounting", conversationId: null },
-            KE_TOAN,
-            false,
-        )
+        expect(typing.setAgent).toHaveBeenCalledWith("ws-1", { room: "accounting" }, KE_TOAN, false)
     })
 
     it("says nothing when the proposal has no reply", async () => {
@@ -422,7 +417,7 @@ describe("OfficeTagHandlerService > settle: edges", () => {
         settler.settle.mockRejectedValue(failure)
 
         await expect(handler.settle(turnOf(), {}, ABORT)).rejects.toBe(failure)
-        expect(typing.setAgent).toHaveBeenCalledWith("ws-1", { room: null, conversationId: null }, KE_TOAN, false)
+        expect(typing.setAgent).toHaveBeenCalledWith("ws-1", { room: null }, KE_TOAN, false)
     })
 })
 
@@ -439,7 +434,7 @@ describe("OfficeTagHandlerService > holdOver", () => {
 
         expect(lines.post.mock.calls.map(([, line]) => line.body)).toEqual([body])
         expect(lines.post.mock.calls[0]?.[1]).not.toHaveProperty("agent_id")
-        expect(typing.setAgent).toHaveBeenCalledWith("ws-1", { room: null, conversationId: null }, KE_TOAN, false)
+        expect(typing.setAgent).toHaveBeenCalledWith("ws-1", { room: null }, KE_TOAN, false)
     })
 
     it("skips a wake whose agent is gone", async () => {

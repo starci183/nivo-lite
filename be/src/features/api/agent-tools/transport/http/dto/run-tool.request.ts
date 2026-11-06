@@ -53,7 +53,7 @@ export class RunToolRequest {
     @MaxLength(6000)
     proposed_answer?: string
 
-    /** approval.request, handoff.to_person: why. */
+    /** approval.request: why. */
     @IsOptional()
     @IsString()
     @MaxLength(1200)

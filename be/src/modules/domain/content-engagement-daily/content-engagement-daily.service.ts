@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { And, LessThan, MoreThanOrEqual } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { EngagementDayRecord, MessagesDay, ReportedDay } from "./content-engagement-daily.contracts"
+import type { EngagementDayRecord, ReportedDay } from "./content-engagement-daily.contracts"
 import { ContentEngagementDailyEntity } from "./persistence/entities"
 
 @Injectable()
@@ -21,23 +21,6 @@ export class ContentEngagementDailyService {
                 day: day.day,
                 reach: day.reach,
                 engagements: day.engagements,
-                syncedAt: () => "now()",
-            })),
-            ["workspaceId", "channel", "day"],
-        )
-        return days.length
-    }
-
-    /** Upserts the new customer messages of channel days in one statement; answers how many days were given. */
-    async upsertMessages(workspaceId: string, days: ReadonlyArray<MessagesDay>): Promise<number> {
-        if (days.length === 0) return 0
-        await this.entityManager.upsert(
-            ContentEngagementDailyEntity,
-            days.map((day) => ({
-                workspaceId,
-                channel: day.channel,
-                day: day.day,
-                messages: day.messages,
                 syncedAt: () => "now()",
             })),
             ["workspaceId", "channel", "day"],

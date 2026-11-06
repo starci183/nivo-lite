@@ -1,14 +1,16 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { AgentConversationsModule } from "@modules/domain/agent-conversations"
+import { ChatRecordsModule } from "@modules/domain/chat-records"
 import { AgentConnectionsModule } from "@modules/domain/agent-connections"
 import { AGENTS_INSTALLATIONS, AgentDirectoryService, AgentsModule } from "@modules/domain/agents"
-import { AgentMessagesModule } from "@modules/domain/agent-messages"
 import { ZaloCredentialsService, ZaloWebhookGateService } from "@modules/domain/channels"
 import { CHANNELS_OPTIONS } from "../../modules/domain/channels/channels.decorators"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { ConnectionsModule } from "@modules/domain/connections"
 import { ConversationsService } from "@modules/domain/conversations"
+import { EntityEngineModule, ReadOnlyEngineAlertsService } from "@modules/domain/entity-engine"
+import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
+import { MODULE_JOBS } from "@nivo-lite/blocks-core/modules"
 import { CustomerHearingService } from "../../modules/domain/conversations/customer-hearing.service"
 import { EventsModule } from "@modules/domain/events"
 import { StaffModule } from "@modules/domain/staff"
@@ -26,8 +28,7 @@ import { ZaloModule } from "@modules/integrations/zalo"
 import { Secret } from "@modules/platform/config"
 import { I18nModule } from "@modules/platform/i18n"
 import { INBOX, InboxService } from "@modules/platform/inbox"
-import { ChatTurnQueue } from "@modules/queues/chat-turn"
-import { QUIET_CUSTOMER_INTAKE, QUIET_INBOUND_FILES, QUIET_INSTALLATIONS } from "./quiet-peers.options"
+import { QUIET_CUSTOMER_INTAKE, QUIET_INSTALLATIONS } from "./quiet-peers.options"
 import { ZaloDeliveryQueue } from "../../modules/queues/zalo-delivery/zalo-delivery.queue"
 
 const tokenKey = new Secret(Buffer.alloc(32, 7).toString("base64"))
@@ -42,7 +43,6 @@ const billingOptions = (): BillingOptions => ({
         { provide: CHANNELS_OPTIONS, useFactory: () => ({ siteUrl }) },
         { provide: BILLING_OPTIONS, useFactory: billingOptions },
         { provide: INBOX, useClass: InboxService },
-        ChatTurnQueue,
         ZaloDeliveryQueue,
         ZaloCredentialsService,
         ZaloWebhookGateService,
@@ -50,7 +50,6 @@ const billingOptions = (): BillingOptions => ({
         CustomerHearingService,
         QUIET_CUSTOMER_INTAKE,
         QUIET_INSTALLATIONS,
-        QUIET_INBOUND_FILES,
         InboundEventsService,
         PaymentSecretsService,
         PaymentProofService,
@@ -78,10 +77,16 @@ export class ReceiptDomainProofModule {
 export const RECEIPT_DOMAIN_MODULES: ReadonlyArray<DynamicModule> = [
     ConnectionSecretsModule.register({ isGlobal: true, tokenKey }),
     ConnectionsModule.register({ isGlobal: true, channelTokenKey: tokenKey, siteUrl, publicSiteUrl: undefined }),
-    AgentConversationsModule.register({ isGlobal: true }),
+    EntityEngineModule.register({
+        isGlobal: true,
+        alerts: ReadOnlyEngineAlertsService,
+        entities: FLOW_F_ENTITIES,
+        jobs: MODULE_JOBS,
+        cursorKey: tokenKey,
+    }),
+    ChatRecordsModule.register({ isGlobal: true }),
     AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
-    AgentMessagesModule.register({ isGlobal: true }),
     I18nModule.register({ isGlobal: true, bundles: [] }),
     ZaloModule.register({
         isGlobal: true,

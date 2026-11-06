@@ -1,14 +1,12 @@
 import { Test } from "@nestjs/testing"
-import { checksOf, eventsOf, maskTail, recipientsOf, sendBlockOf, tokenViewOf } from "./zalo-page.policy"
+import { checksOf, maskTail, recipientsOf, sendBlockOf, tokenViewOf } from "./zalo-page.policy"
 import type { ZaloSecret } from "./channels.contracts"
 
 const SUBJECT = Symbol("zalo-page.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [
-            { provide: SUBJECT, useValue: { checksOf, eventsOf, maskTail, recipientsOf, sendBlockOf, tokenViewOf } },
-        ],
+        providers: [{ provide: SUBJECT, useValue: { checksOf, maskTail, recipientsOf, sendBlockOf, tokenViewOf } }],
     }).compile()
     return moduleRef.get<typeof import("./zalo-page.policy")>(SUBJECT)
 }
@@ -83,31 +81,28 @@ describe("sendBlockOf", () => {
 describe("checksOf", () => {
     const token = { state: "valid", expiresAt: null, expiredMinutesAgo: null, canRefresh: true } as const
 
-    it("judges the webhook from the inbox and the permissions from the last real send", async () => {
+    it("judges the webhook from the inbox", async () => {
         const subject = await build()
         const rows = subject.checksOf({
             appSaved: true,
             oaSecretSaved: true,
             token,
             inbox: { last_at: "2026-10-28T09:00:00.000Z", has_text: true, has_follow: false },
-            lastReply: { delivery_status: "failed", delivery_error: "zalo_not_permitted" },
         })
         expect(rows.map((row) => [row.key, row.state, row.code])).toEqual([
             ["app", "ok", "app_saved"],
             ["token", "ok", "token_valid"],
             ["webhook", "ok", "webhook_receiving"],
-            ["permissions", "fail", "permissions_send_denied"],
         ])
         expect(rows[2]?.names).toEqual(["user_send_text"])
     })
 
     it("refuses to call the webhook fine without an OA secret key and says nothing arrived yet", async () => {
         const subject = await build()
-        const base = { appSaved: false, token, inbox: null, lastReply: null }
+        const base = { appSaved: false, token, inbox: null }
         expect(subject.checksOf({ ...base, oaSecretSaved: false })[2]?.code).toBe("webhook_no_secret")
         expect(subject.checksOf({ ...base, oaSecretSaved: true })[2]?.code).toBe("webhook_silent")
         expect(subject.checksOf({ ...base, oaSecretSaved: true })[0]?.code).toBe("app_missing")
-        expect(subject.checksOf({ ...base, oaSecretSaved: true })[3]?.code).toBe("permissions_unknown")
     })
 })
 
@@ -115,60 +110,13 @@ describe("recipientsOf", () => {
     it("keeps one row per Zalo user, strips the archive suffix and sorts newest first", async () => {
         const subject = await build()
         const rows = subject.recipientsOf([
-            { external_id: "u1:1700000000", visitor_name: "An", last_at: "2026-10-28T08:00:00.000Z" },
-            { external_id: "u2", visitor_name: null, last_at: "2026-10-28T09:00:00.000Z" },
-            { external_id: "u1", visitor_name: "An", last_at: "2026-10-28T07:00:00.000Z" },
-            { external_id: null, visitor_name: "x", last_at: "2026-10-28T09:30:00.000Z" },
+            { conversationId: "c1", externalId: "u1:1700000000", name: "An", lastAt: "2026-10-28T08:00:00.000Z" },
+            { conversationId: "c2", externalId: "u2", name: "", lastAt: "2026-10-28T09:00:00.000Z" },
+            { conversationId: "c3", externalId: "u1", name: "An", lastAt: "2026-10-28T07:00:00.000Z" },
+            { conversationId: "c4", externalId: ":1700", name: "x", lastAt: "2026-10-28T09:30:00.000Z" },
         ])
         expect(rows.map((row) => row.userId)).toEqual(["u2", "u1"])
-        expect(rows[1]?.name).toBe("An")
-    })
-})
-
-describe("eventsOf", () => {
-    const expired = { state: "expired", expiresAt: null, expiredMinutesAgo: 10, canRefresh: false } as const
-
-    it("lists customer texts, failed replies with their reason, renewal QRs and follows, newest first", async () => {
-        const subject = await build()
-        const events = subject.eventsOf(
-            [
-                {
-                    id: "m1",
-                    role: "user",
-                    body: "Hello",
-                    created_at: "2026-10-28T08:00:00.000Z",
-                    delivery_status: null,
-                    delivery_error: null,
-                    visitor_name: "An",
-                },
-                {
-                    id: "m2",
-                    role: "agent",
-                    body: "Hi there",
-                    created_at: "2026-10-28T08:01:00.000Z",
-                    delivery_status: "failed",
-                    delivery_error: "zalo_error",
-                    visitor_name: "An",
-                },
-                {
-                    id: "m3",
-                    role: "agent",
-                    body: "Scan https://qr.sepay.vn/img?acc=1&bank=VCB",
-                    created_at: "2026-10-28T07:00:00.000Z",
-                    delivery_status: "sent",
-                    delivery_error: null,
-                    visitor_name: "Binh",
-                },
-            ],
-            [{ id: "f1", received_at: "2026-10-28T06:00:00.000Z" }],
-            expired,
-        )
-        expect(events.map((event) => [event.kind, event.outcome, event.reason])).toEqual([
-            ["agent_reply", "not_sent", "token_expired"],
-            ["user_send_text", "received", null],
-            ["renewal_qr", "sent", null],
-            ["follow", "received", null],
-        ])
+        expect(rows[1]).toEqual({ userId: "u1", name: "An", lastMessageAt: "2026-10-28T08:00:00.000Z" })
     })
 })
 
@@ -192,75 +140,25 @@ describe("edge cases of the token", () => {
     })
 })
 
-describe("edge cases of the checks and events", () => {
+describe("edge cases of the checks", () => {
     const base = { state: "valid", expiresAt: null, expiredMinutesAgo: null, canRefresh: true } as const
 
-    it("words a webhook that has a row but no arrival time, and a failed send that is not a permission refusal", async () => {
+    it("words a webhook that has a row but no arrival time", async () => {
         const subject = await build()
         const rows = subject.checksOf({
             appSaved: true,
             oaSecretSaved: true,
             token: base,
             inbox: { last_at: null, has_text: false, has_follow: true },
-            lastReply: { delivery_status: "failed", delivery_error: "zalo_quota" },
         })
         expect(rows[2]).toMatchObject({ code: "webhook_silent", names: ["follow"] })
-        expect(rows[3]?.code).toBe("permissions_unknown")
     })
 
-    it("judges a renewable token as fine, a missing one as failing, and cuts a long text", async () => {
+    it("judges a renewable token as fine and a missing one as failing", async () => {
         const subject = await build()
         const checks = (state: "renewable" | "none") =>
-            subject.checksOf({
-                appSaved: true,
-                oaSecretSaved: true,
-                token: { ...base, state },
-                inbox: null,
-                lastReply: null,
-            })[1]
+            subject.checksOf({ appSaved: true, oaSecretSaved: true, token: { ...base, state }, inbox: null })[1]
         expect(checks("renewable")?.code).toBe("token_renewable")
         expect(checks("none")?.code).toBe("token_none")
-        const events = subject.eventsOf(
-            [
-                {
-                    id: "m",
-                    role: "user",
-                    body: "x".repeat(200),
-                    created_at: "2026-10-28T08:00:00.000Z",
-                    delivery_status: null,
-                    delivery_error: null,
-                    visitor_name: null,
-                },
-                {
-                    id: "n",
-                    role: "agent",
-                    body: "Hi",
-                    created_at: "2026-10-28T08:01:00.000Z",
-                    delivery_status: "failed",
-                    delivery_error: null,
-                    visitor_name: null,
-                },
-            ],
-            [],
-            base,
-        )
-        expect(events[1]?.text.length).toBe(121)
-        expect(events[0]?.reason).toBe("delivery_failed")
-        const rejected = subject.eventsOf(
-            [
-                {
-                    id: "r",
-                    role: "agent",
-                    body: "Hi",
-                    created_at: "2026-10-28T08:01:00.000Z",
-                    delivery_status: "failed",
-                    delivery_error: "zalo_token",
-                    visitor_name: null,
-                },
-            ],
-            [],
-            { ...base, state: "expired" },
-        )
-        expect(rejected[0]?.reason).toBe("token_expired")
     })
 })

@@ -137,6 +137,7 @@ describe("RedeemRewardPerformerService", () => {
         expect(delivery.inConversation).toHaveBeenCalledWith(
             "ws-1",
             "v1",
+            "item-1",
             "rewardCustomer|Mai|Voucher|QT-ITEM-1|500|100",
         )
     })
@@ -179,7 +180,12 @@ describe("RedeemRewardPerformerService", () => {
         await expect(service.perform(ctx, itemOf(), proposalOf(), { name: "Owner" })).resolves.toMatchObject({
             summary: "rewardRedeemed|Mai|Voucher|QT-ITEM-1|500",
         })
-        expect(delivery.inConversation).toHaveBeenCalledWith("ws-1", "v1", "rewardCustomer|Mai|Voucher|QT-ITEM-1|500|0")
+        expect(delivery.inConversation).toHaveBeenCalledWith(
+            "ws-1",
+            "v1",
+            "item-1",
+            "rewardCustomer|Mai|Voucher|QT-ITEM-1|500|0",
+        )
     })
 
     it("logs a failed chat notice and preserves the successful redemption", async () => {

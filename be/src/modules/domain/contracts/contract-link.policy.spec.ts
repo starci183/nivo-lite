@@ -44,7 +44,6 @@ const leadOf = (lead: Partial<LinkLead>): LinkLead => ({
     id: "lead-1",
     phone: null,
     email: null,
-    reachable: false,
     ...lead,
 })
 
@@ -170,13 +169,13 @@ describe("planLink", () => {
         expect(policy.planLink(null, [], CUSTOMER)).toEqual({ kind: "create" })
     })
 
-    it("attaches a contract without a lead to the lead that holds the phone, a conversation first", async () => {
+    it("attaches a contract without a lead to the first lead that holds the phone", async () => {
         const policy = await subjectOf()
         const plain = leadOf({ id: "plain", phone: CUSTOMER.phone })
-        const chatting = leadOf({ id: "chat", phone: CUSTOMER.phone, reachable: true })
+        const other = leadOf({ id: "other", phone: CUSTOMER.phone })
 
         expect(policy.planLink(null, [plain], CUSTOMER)).toEqual({ kind: "move", leadId: "plain" })
-        expect(policy.planLink(null, [plain, chatting], CUSTOMER)).toEqual({ kind: "move", leadId: "chat" })
+        expect(policy.planLink(null, [plain, other], CUSTOMER)).toEqual({ kind: "move", leadId: "plain" })
     })
 
     it("fills the contract's own lead without a contact when nobody holds it", async () => {
@@ -191,14 +190,13 @@ describe("planLink", () => {
         expect(policy.planLink(leadOf({ id: "own" }), [holder], CUSTOMER)).toEqual({ kind: "move", leadId: "holder" })
     })
 
-    it("keeps a lead that already holds the contact, unless a conversation reaches another holder", async () => {
+    it("keeps a lead that already holds the contact, whoever else holds it", async () => {
         const policy = await subjectOf()
         const own = leadOf({ id: "own", phone: CUSTOMER.phone, email: CUSTOMER.email })
-        const chatting = leadOf({ id: "chat", phone: CUSTOMER.phone, reachable: true })
+        const other = leadOf({ id: "other", phone: CUSTOMER.phone })
 
         expect(policy.planLink(own, [own], CUSTOMER)).toEqual({ kind: "keep" })
-        expect(policy.planLink(own, [own, chatting], CUSTOMER)).toEqual({ kind: "move", leadId: "chat" })
-        expect(policy.planLink({ ...own, reachable: true }, [own, chatting], CUSTOMER)).toEqual({ kind: "keep" })
+        expect(policy.planLink(own, [own, other], CUSTOMER)).toEqual({ kind: "keep" })
     })
 
     it("fills the missing email of a lead that holds the phone", async () => {

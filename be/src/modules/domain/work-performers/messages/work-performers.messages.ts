@@ -3,7 +3,6 @@ import type { MessageBundle } from "@modules/platform/i18n"
 /** Display text of the lines the performers write into the workspace (summaries, evidence, replies), Vietnamese and English. */
 export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
     vi: {
-        "performers.needsHuman": "Câu trả lời chi tiết cần người duyệt — NIVO đã gửi đề xuất cho chủ doanh nghiệp",
         "performers.emailFooter": "Email này được gửi bởi {{shop}}.",
         "performers.emailRequestSummary": "Gửi email tới {{to}}: {{subject}}",
         "performers.cancelBookingSummary": "Yêu cầu hủy lịch {{service}} của {{name}} lúc {{start}}",
@@ -15,8 +14,6 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.notShared": "(chưa cho biết)",
         "performers.handoffSummary": "Chuyển {{name}} cho Sales AI: {{need}}",
         "performers.handoffDone": "Đã chuyển {{name}} cho Sales AI",
-        "performers.handoffOwnership":
-            "Đã ghi nhận nhu cầu của {{name}}, Sales AI trả lời tiếp trong cùng cuộc trò chuyện.",
         "performers.leadMatched": "Khớp với khách hàng đã có {{name}} (không tạo trùng)",
         "performers.classifySummary": "Phân loại {{name}}: {{stage}} (độ chắc chắn {{pct}}%)",
         "performers.classified": "Đã phân loại {{name}}: {{stage}} · Bước tiếp theo: {{next}}",
@@ -55,7 +52,6 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.orderSummary": "Xác nhận đơn {{no}} của {{name}}: {{items}} · {{amount}}",
         "performers.orderNoAmount": "chưa có số tiền",
         "performers.orderConfirmed": "Đã xác nhận đơn {{no}} · {{amount}}",
-        "performers.handedOver": "Đã chuyển hội thoại cho {{name}}",
         "performers.runResumed": "Chạy lại từ bước lỗi",
         "performers.orderCancelled": "Đã hủy đơn {{no}}",
         "performers.invoiceSummary": "Xuất hóa đơn cho {{name}} · {{amount}}",
@@ -145,8 +141,6 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.chatBooking.briefService": "- {{name}}: {{minutes}} phút, giá {{price}} đ",
     },
     en: {
-        "performers.needsHuman":
-            "The detailed answer needs a person: NIVO sent its proposed answer to the owner to approve",
         "performers.emailFooter": "This email was sent by {{shop}}.",
         "performers.emailRequestSummary": "Email to {{to}}: {{subject}}",
         "performers.cancelBookingSummary": "Request to cancel {{service}} for {{name}} at {{start}}",
@@ -158,8 +152,6 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.notShared": "(not shared)",
         "performers.handoffSummary": "Hand {{name}} to Sales AI: {{need}}",
         "performers.handoffDone": "Handed {{name}} to Sales AI",
-        "performers.handoffOwnership":
-            "{{name}}'s need is on record, so Sales AI answers next in the same conversation.",
         "performers.leadMatched": "Matched existing customer {{name}} (no duplicate created)",
         "performers.classifySummary": "Classify {{name}}: {{stage}} (confidence {{pct}}%)",
         "performers.classified": "Classified {{name}}: {{stage}} · Next step: {{next}}",
@@ -200,7 +192,6 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.orderSummary": "Confirm order {{no}} from {{name}}: {{items}} · {{amount}}",
         "performers.orderNoAmount": "no amount yet",
         "performers.orderConfirmed": "Confirmed order {{no}} · {{amount}}",
-        "performers.handedOver": "Conversation handed to {{name}}",
         "performers.runResumed": "Run again from the failed step",
         "performers.orderCancelled": "Order {{no}} cancelled",
         "performers.invoiceSummary": "Issue the invoice for {{name}} · {{amount}}",

@@ -1,14 +1,17 @@
 import { builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { AgentsService } from "@modules/domain/agents"
 import type { AgentProfile } from "@modules/domain/agents"
+import { ChatConversationsService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import { EvidenceService, formatVnd } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
 import type { InvoiceRow } from "@modules/domain/invoices"
 import { LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
 import { OrdersService } from "@modules/domain/orders"
+import { ok, refused } from "@modules/platform/primitives"
+import { turnConversation } from "@tests/fixtures/builders/chat-features.builder"
 import { CustomerDeliveryService } from "./customer-delivery.service"
 import { PaymentInstructionsService } from "./payment-instructions.service"
 import { PerformerKitService } from "./performer-kit.service"
@@ -32,7 +35,7 @@ const item: WorkItem = {
     reason: null,
     reasons: [],
     missing_fields: [],
-    proposal: { summary: "Invoice", fields: {} },
+    proposal: { summary: "Invoice", fields: { conversation_id: "conv-1" } },
     result: null,
     error: null,
     evidence_state: "pending",
@@ -82,14 +85,14 @@ const profileOf = (knowledge: string): AgentProfile => ({
     module: "chatbot",
 })
 
-const conversation = { id: "conv-1", agentId: "agent-1", channel: "telegram", visitorName: "Khach" }
+const turnOf = (patch: Partial<ChatTurnConversation> = {}) => ok(turnConversation({ visitorName: "Khach", ...patch }))
 
 const build = async () => {
     const kit = mock<PerformerKitService>()
     kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
     kit.department.mockResolvedValue("Accounting")
-    const conversations = mock<AgentConversationsService>()
-    conversations.latestOfLead.mockResolvedValue(conversation)
+    const conversations = mock<ChatConversationsService>()
+    conversations.turnOf.mockResolvedValue(turnOf())
     const agents = mock<AgentsService>()
     const leads = mock<LeadRecordsService>()
     const orders = mock<OrdersService>()
@@ -99,7 +102,7 @@ const build = async () => {
         providers: [
             PaymentInstructionsService,
             { provide: PerformerKitService, useValue: kit },
-            { provide: AgentConversationsService, useValue: conversations },
+            { provide: ChatConversationsService, useValue: conversations },
             { provide: AgentsService, useValue: agents },
             { provide: LeadRecordsService, useValue: leads },
             { provide: OrdersService, useValue: orders },
@@ -129,9 +132,9 @@ describe("PaymentInstructionsService", () => {
 
         await expect(service.send(ctx, item, invoiceOf())).resolves.toBe("payInstructionsSent|INV-1|Lan")
 
-        expect(conversations.latestOfLead).toHaveBeenCalledWith("ws-1", "lead-1", "telegram")
+        expect(conversations.turnOf).toHaveBeenCalledWith("ws-1", "conv-1")
         expect(agents.profileOf).toHaveBeenCalledWith("ws-1", "agent-1")
-        expect(delivery.inConversation).toHaveBeenCalledWith("ws-1", "conv-1", text)
+        expect(delivery.inConversation).toHaveBeenCalledWith("ws-1", "conv-1", "inv-1", text)
         expect(evidence.log).toHaveBeenCalledWith(ctx, {
             lead_id: "lead-1",
             work_item_id: "item-1",
@@ -156,13 +159,13 @@ describe("PaymentInstructionsService", () => {
 
         expect(orders.labelsOf).not.toHaveBeenCalled()
         expect(agents.profileOfDepartment).toHaveBeenCalledWith("ws-1", "chatbot")
-        expect(delivery.inConversation).toHaveBeenCalledWith("ws-1", "conv-1", text)
+        expect(delivery.inConversation).toHaveBeenCalledWith("ws-1", "conv-1", "inv-1", text)
         expect(evidence.log.mock.calls[0]?.[1].kind).toBe("invoice.instructions_failed")
     })
 
     it("names the order as a dash when it lists no goods and the customer as a dash when nobody is named", async () => {
         const { service, conversations, agents, leads, orders, delivery } = await build()
-        conversations.latestOfLead.mockResolvedValue({ ...conversation, visitorName: null })
+        conversations.turnOf.mockResolvedValue(turnOf({ visitorName: null }))
         leads.find.mockResolvedValue(null)
         orders.labelsOf.mockResolvedValue([{ id: "ord-1", order_no: "SO-1", items: "" }])
         agents.profileOf.mockResolvedValue(null)
@@ -171,7 +174,7 @@ describe("PaymentInstructionsService", () => {
 
         await expect(service.send(ctx, item, invoiceOf())).resolves.toBe("payInstructionsSent|INV-1|—")
 
-        expect(delivery.inConversation.mock.calls[0]?.[2]).toBe(
+        expect(delivery.inConversation.mock.calls[0]?.[3]).toBe(
             `payInstructions|—|${formatVnd(450000, "en")}|INV-1|payTransferLater`,
         )
     })
@@ -181,14 +184,28 @@ describe("PaymentInstructionsService", () => {
 
         await expect(service.send(ctx, item, invoiceOf({ lead_id: null }))).resolves.toBeNull()
 
-        expect(conversations.latestOfLead).not.toHaveBeenCalled()
+        expect(conversations.turnOf).not.toHaveBeenCalled()
     })
 })
 
 describe("PaymentInstructionsService", () => {
-    it("sends nothing when the customer has no Telegram conversation", async () => {
+    it("sends nothing when the work names no conversation", async () => {
         const { service, conversations, delivery } = await build()
-        conversations.latestOfLead.mockResolvedValue(null)
+
+        await expect(
+            service.send(ctx, { ...item, proposal: { summary: "Invoice", fields: {} } }, invoiceOf()),
+        ).resolves.toBeNull()
+
+        expect(conversations.turnOf).not.toHaveBeenCalled()
+        expect(delivery.inConversation).not.toHaveBeenCalled()
+    })
+
+    it.each([
+        ["gone", refused(ChatRecordsErrorCode.NotFound)],
+        ["not on Telegram", turnOf({ channel: "zalo" })],
+    ])("sends nothing when the conversation is %s", async (_name, answer) => {
+        const { service, conversations, delivery } = await build()
+        conversations.turnOf.mockResolvedValue(answer)
 
         await expect(service.send(ctx, item, invoiceOf())).resolves.toBeNull()
 

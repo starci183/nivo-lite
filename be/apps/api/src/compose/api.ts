@@ -11,14 +11,12 @@ import { OverviewGraphqlModule } from "@features/api/overview"
 import { AdminGraphqlModule } from "@features/api/admin"
 import { WorkspacesGraphqlModule } from "@features/api/workspaces"
 import { InboxGraphqlModule } from "@features/api/inbox"
-import { AgentChatGraphqlModule } from "@features/api/agentchat"
 import { AgentWorkGraphqlModule } from "@features/api/agent-work"
 import { AgentRunsGraphqlModule } from "@features/api/agent-runs"
 import { ChatMarkersGraphqlModule } from "@features/api/chatmarkers"
 import { ChattypingGraphqlModule } from "@features/api/chattyping"
-import { AGENT_CHAT_ERROR_KINDS, AGENT_CHAT_MESSAGES, AgentChatModule } from "@modules/domain/agent-chat"
 import { CHAT_FILES_ERROR_KINDS, CHAT_FILES_MESSAGES, ChatFilesModule } from "@modules/domain/chat-files"
-import { STORAGE_ASSETS, STORAGE_OBJECTS } from "@modules/integrations/object-storage"
+import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
 import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
 import { KnowledgeGraphqlModule } from "@features/api/knowledge"
@@ -36,11 +34,10 @@ import { ConnectionsGraphqlModule } from "@features/api/connections"
 import { SepayConnectionGraphqlModule } from "@features/api/sepay-connection"
 import { ZaloConnectionPageGraphqlModule } from "@features/api/zalo-connection-page"
 import { TelegramConnectionPageGraphqlModule } from "@features/api/telegram-connection-page"
-import type { ApiOptions } from "../api.options"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 /** The api area of the API, in registration order. */
-export const apiModules = (options: ApiOptions): Array<DynamicModule> => [
+export const apiModules = (): Array<DynamicModule> => [
     WorkspacesGraphqlModule.register({}),
     ApiKeysGraphqlModule.register({}),
     InventoryGraphqlModule.register({}),
@@ -55,18 +52,11 @@ export const apiModules = (options: ApiOptions): Array<DynamicModule> => [
     TelegramConnectionPageGraphqlModule.register({}),
     DataHubGraphqlModule.register({}),
     InboxGraphqlModule.register({}),
-    AgentChatGraphqlModule.register({}),
     AgentWorkGraphqlModule.register({}),
     AgentRunsGraphqlModule.register({}),
     ChatMarkersGraphqlModule.register({}),
     ChattypingGraphqlModule.register({}),
-    ChatFilesModule.register({
-        isGlobal: true,
-        storage: STORAGE_OBJECTS,
-        assets: STORAGE_ASSETS,
-        importRoot: options.chatFilesImportRoot,
-    }),
-    AgentChatModule.register({ isGlobal: true }),
+    ChatFilesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
     KnowledgeGraphqlModule.register({}),
     PublicDocumentsGraphqlModule.register({}),
     DossierReviewGraphqlModule.register({}),
@@ -85,10 +75,7 @@ export const apiModules = (options: ApiOptions): Array<DynamicModule> => [
 ]
 
 /** The error kinds of the capabilities this group registers, in registration order. */
-export const apiErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
-    AGENT_CHAT_ERROR_KINDS,
-    CHAT_FILES_ERROR_KINDS,
-]
+export const apiErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [CHAT_FILES_ERROR_KINDS]
 
 /** The message bundles of the capabilities this group registers, in registration order. */
-export const apiMessages: ReadonlyArray<MessageBundle> = [AGENT_CHAT_MESSAGES, CHAT_FILES_MESSAGES]
+export const apiMessages: ReadonlyArray<MessageBundle> = [CHAT_FILES_MESSAGES]

@@ -1,20 +1,10 @@
-import type { ZaloFollowEventRow, ZaloInboxFactsRow } from "./channels.port"
-import { sepayQrUrlOf } from "./qr-image.policy"
-import type {
-    ZaloCheckRow,
-    ZaloPageEvent,
-    ZaloRecipient,
-    ZaloSendBlock,
-    ZaloTokenState,
-    ZaloAccessView,
-} from "./zalo-page.contracts"
-import type { LastReplyRow, MessageEventRow, RecipientRow } from "./persistence/zalo-page.rows"
+import type { ZaloInboxFactsRow } from "./channels.port"
+import type { ChatFollower } from "@modules/domain/chat-records"
+import type { ZaloCheckRow, ZaloRecipient, ZaloSendBlock, ZaloTokenState, ZaloAccessView } from "./zalo-page.contracts"
 import type { ZaloSecret } from "./channels.contracts"
 
 const MINUTE_MS = 60_000
-const EXCERPT = 120
 const MASK = "\u2022".repeat(4)
-const ELLIPSIS = "\u2026"
 
 /** A secret shown as dots and its last four characters, or null when none is saved. */
 export const maskTail = (secret: string): string | null => {
@@ -84,8 +74,6 @@ export interface ZaloCheckFacts {
     readonly token: ZaloAccessView
     /** What the inbox holds. */
     readonly inbox: ZaloInboxFactsRow | null
-    /** The latest reply the agent tried to send. */
-    readonly lastReply: LastReplyRow | null
 }
 
 const tokenRow = (token: ZaloAccessView): ZaloCheckRow => {
@@ -109,17 +97,7 @@ const webhookRow = (facts: ZaloCheckFacts): ZaloCheckRow => {
     return { ...base, state: "ok", code: "webhook_receiving", names }
 }
 
-const permissionsRow = (lastReply: LastReplyRow | null): ZaloCheckRow => {
-    const base = { key: "permissions", at: null } as const
-    if (lastReply === null) return { ...base, state: "warn", code: "permissions_unknown", names: [] }
-    if (lastReply.delivery_status === "sent") return { ...base, state: "ok", code: "permissions_send_ok", names: [] }
-    if (lastReply.delivery_error === "zalo_not_permitted") {
-        return { ...base, state: "fail", code: "permissions_send_denied", names: ["message_send"] }
-    }
-    return { ...base, state: "warn", code: "permissions_unknown", names: [] }
-}
-
-/** The four rows of the check list. Zalo does not list the permissions granted, so that row is judged from the last real send. */
+/** The three rows of the check list. */
 export const checksOf = (facts: ZaloCheckFacts): ReadonlyArray<ZaloCheckRow> => [
     {
         key: "app",
@@ -130,78 +108,15 @@ export const checksOf = (facts: ZaloCheckFacts): ReadonlyArray<ZaloCheckRow> => 
     },
     tokenRow(facts.token),
     webhookRow(facts),
-    permissionsRow(facts.lastReply),
 ]
 
 /** The followers who wrote lately, one per Zalo user, newest first. */
-export const recipientsOf = (rows: ReadonlyArray<RecipientRow>): ReadonlyArray<ZaloRecipient> => {
+export const recipientsOf = (followers: ReadonlyArray<ChatFollower>): ReadonlyArray<ZaloRecipient> => {
     const byUser = new Map<string, ZaloRecipient>()
-    for (const row of rows) {
-        if (row.external_id === null) continue
-        const userId = zaloUserIdOf(row.external_id)
+    for (const follower of followers) {
+        const userId = zaloUserIdOf(follower.externalId)
         if (userId === "" || byUser.has(userId)) continue
-        byUser.set(userId, {
-            userId,
-            name: row.visitor_name ?? "",
-            lastMessageAt: new Date(row.last_at).toISOString(),
-        })
+        byUser.set(userId, { userId, name: follower.name, lastMessageAt: new Date(follower.lastAt).toISOString() })
     }
     return [...byUser.values()].sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt))
-}
-
-const excerpt = (text: string): string => (text.length > EXCERPT ? `${text.slice(0, EXCERPT)}${ELLIPSIS}` : text)
-
-/** A failure the delivery path stored as a generic error reads as an expired token when the token cannot work now. */
-const reasonOf = (stored: string | null, token: ZaloAccessView): string => {
-    const failure = stored ?? "delivery_failed"
-    if (!tokenUsable(token) && (failure === "zalo_error" || failure === "zalo_token")) return "token_expired"
-    return failure
-}
-
-const messageEvent = (row: MessageEventRow, token: ZaloAccessView): ZaloPageEvent => {
-    const at = new Date(row.created_at).toISOString()
-    const who = row.visitor_name ?? ""
-    if (row.role === "user") {
-        return {
-            id: row.id,
-            kind: "user_send_text",
-            outcome: "received",
-            at,
-            who,
-            text: excerpt(row.body),
-            reason: null,
-        }
-    }
-    const kind = sepayQrUrlOf(row.body) === null ? "agent_reply" : "renewal_qr"
-    const failed = row.delivery_status === "failed"
-    return {
-        id: row.id,
-        kind,
-        outcome: failed ? "not_sent" : "sent",
-        at,
-        who,
-        text: kind === "renewal_qr" ? "" : excerpt(row.body),
-        reason: failed ? reasonOf(row.delivery_error, token) : null,
-    }
-}
-
-/** The live panel: customer texts, follows, agent replies and renewal QRs, newest first. */
-export const eventsOf = (
-    messages: ReadonlyArray<MessageEventRow>,
-    follows: ReadonlyArray<ZaloFollowEventRow>,
-    token: ZaloAccessView,
-): ReadonlyArray<ZaloPageEvent> => {
-    const lines: Array<ZaloPageEvent> = [
-        ...messages.map((row) => messageEvent(row, token)),
-        ...follows.map((row): ZaloPageEvent => ({
-            id: row.id,
-            kind: "follow",
-            outcome: "received",
-            at: new Date(row.received_at).toISOString(),
-            who: "",
-            text: "",
-            reason: null,
-        })),
-    ]
-    return lines.toSorted((a, b) => b.at.localeCompare(a.at)).slice(0, 40)
 }

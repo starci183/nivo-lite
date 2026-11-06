@@ -286,17 +286,6 @@ export class AgentDirectoryService {
             .getRawMany<AgentSeat>()
     }
 
-    /** The ids of the agents of the workspace in id order, bounded. */
-    async idsOf(workspaceId: string, limit: number): Promise<Array<string>> {
-        const agents = await this.entityManager.find(AgentEntity, {
-            select: { id: true },
-            where: { workspaceId },
-            order: { id: "ASC" },
-            take: limit,
-        })
-        return agents.map((agent) => agent.id)
-    }
-
     /** The active agents of the workspace holding one of the handles, in handle order, bounded. */
     async activeByHandles(
         workspaceId: string,

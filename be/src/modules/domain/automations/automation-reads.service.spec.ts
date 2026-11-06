@@ -1,7 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
-import { AgentConversationsAutomationReadService } from "@modules/domain/agent-conversations"
-import { AgentMessagesAutomationReadService } from "@modules/domain/agent-messages"
+import { ChatConversationsService, ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
 import { ContractsReadService } from "@modules/domain/contracts"
 import { EventsActivityReadService } from "@modules/domain/events"
 import { InvoicesAutomationReadService } from "@modules/domain/invoices"
@@ -9,13 +8,15 @@ import { LeadAutomationReadService } from "@modules/domain/leads"
 import { OrdersAutomationReadService } from "@modules/domain/orders"
 import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { ok, refused } from "@modules/platform/primitives"
+import { humanConversation } from "@tests/fixtures/builders/chat-features.builder"
 import { AutomationReadsService } from "./automation-reads.service"
 
 const build = async () => {
     const transaction = fakeTransaction(mockEntityManager())
     const leads = mock<LeadAutomationReadService>()
-    const conversations = mock<AgentConversationsAutomationReadService>()
-    const messages = mock<AgentMessagesAutomationReadService>()
+    const conversations = mock<ChatConversationsService>()
+    const messages = mock<ChatMessagesService>()
     const events = mock<EventsActivityReadService>()
     const orders = mock<OrdersAutomationReadService>()
     const invoices = mock<InvoicesAutomationReadService>()
@@ -26,8 +27,8 @@ const build = async () => {
             AutomationReadsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: transaction.em },
             { provide: LeadAutomationReadService, useValue: leads },
-            { provide: AgentConversationsAutomationReadService, useValue: conversations },
-            { provide: AgentMessagesAutomationReadService, useValue: messages },
+            { provide: ChatConversationsService, useValue: conversations },
+            { provide: ChatMessagesService, useValue: messages },
             { provide: EventsActivityReadService, useValue: events },
             { provide: OrdersAutomationReadService, useValue: orders },
             { provide: InvoicesAutomationReadService, useValue: invoices },
@@ -59,40 +60,64 @@ describe("AutomationReadsService lead and conversation reads", () => {
         expect(leads.lead).toHaveBeenCalledWith("ws-1", "lead-1")
     })
 
-    it("reads one conversation and the latest conversation of a lead from the conversations owner", async () => {
+    it("reads one conversation by id, and the newest conversation of a lead", async () => {
         const { reads, conversations } = await build()
-        conversations.conversation.mockResolvedValue(undefined)
-        conversations.latestOfLead.mockResolvedValue(undefined)
+        conversations.humanOf.mockResolvedValueOnce(null).mockResolvedValueOnce(humanConversation({ handledBy: "Lan" }))
+        conversations.ofLeads
+            .mockResolvedValueOnce([])
+            .mockResolvedValueOnce([
+                humanConversation({ id: "conv-9", channel: "zalo", leadId: "lead-1" }),
+                humanConversation({ id: "conv-1", leadId: "lead-1" }),
+            ])
 
         await expect(reads.conversation("ws-1", "conv-1")).resolves.toBeUndefined()
+        await expect(reads.conversation("ws-1", "conv-1")).resolves.toEqual({
+            id: "conv-1",
+            channel: "telegram",
+            handled_by: "Lan",
+            lead_id: null,
+        })
         await expect(reads.latestConversation("ws-1", "lead-1")).resolves.toBeUndefined()
+        await expect(reads.latestConversation("ws-1", "lead-1")).resolves.toEqual({
+            id: "conv-9",
+            channel: "zalo",
+            handled_by: null,
+            lead_id: "lead-1",
+        })
 
-        expect(conversations.conversation).toHaveBeenCalledWith("ws-1", "conv-1")
-        expect(conversations.latestOfLead).toHaveBeenCalledWith("ws-1", "lead-1")
+        expect(conversations.humanOf).toHaveBeenCalledWith("ws-1", "conv-1")
+        expect(conversations.ofLeads).toHaveBeenCalledWith("ws-1", ["lead-1"])
     })
 
-    it("scans the leads and finds the ones that have a chat", async () => {
+    it("scans the leads and finds the ones that have a chat, each once", async () => {
         const { reads, leads, conversations } = await build()
         const scanned: Awaited<ReturnType<AutomationReadsService["scanLeads"]>> = []
-        const chatting: Awaited<ReturnType<AutomationReadsService["leadsWithChat"]>> = []
         leads.scanLeads.mockResolvedValue(scanned)
-        conversations.leadsWithChat.mockResolvedValue(chatting)
+        conversations.ofLeads.mockResolvedValue([
+            humanConversation({ id: "conv-1", leadId: "lead-1" }),
+            humanConversation({ id: "conv-2", leadId: "lead-1" }),
+            humanConversation({ id: "conv-3", leadId: null }),
+        ])
         const query = { workspaceId: "ws-1", since: "2026-10-01T00:00:00.000Z", stages: null, except: null, limit: 10 }
 
         await expect(reads.scanLeads(query)).resolves.toBe(scanned)
-        await expect(reads.leadsWithChat("ws-1", ["lead-1"])).resolves.toBe(chatting)
+        await expect(reads.leadsWithChat("ws-1", ["lead-1", "lead-2"])).resolves.toEqual([{ lead_id: "lead-1" }])
 
         expect(leads.scanLeads).toHaveBeenCalledWith(query)
-        expect(conversations.leadsWithChat).toHaveBeenCalledWith("ws-1", ["lead-1"])
+        expect(conversations.ofLeads).toHaveBeenCalledWith("ws-1", ["lead-1", "lead-2"])
     })
 
     it("reads when the customer last wrote in a conversation", async () => {
         const { reads, messages } = await build()
-        messages.lastCustomerMessage.mockResolvedValue(undefined)
+        const at = new Date("2026-10-10T09:59:00.000Z")
+        messages.lastCustomerAt
+            .mockResolvedValueOnce(refused(ChatRecordsErrorCode.NotFound))
+            .mockResolvedValueOnce(ok(at))
 
-        await expect(reads.lastCustomerMessage("conv-1")).resolves.toBeUndefined()
+        await expect(reads.lastCustomerMessage("ws-1", "conv-1")).resolves.toBeUndefined()
+        await expect(reads.lastCustomerMessage("ws-1", "conv-1")).resolves.toEqual({ created_at: at })
 
-        expect(messages.lastCustomerMessage).toHaveBeenCalledWith("conv-1")
+        expect(messages.lastCustomerAt).toHaveBeenCalledWith("ws-1", "conv-1")
     })
 })
 

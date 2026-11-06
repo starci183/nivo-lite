@@ -14,7 +14,7 @@ export class ChatActivityController {
     constructor(@InjectRealtimeHub() private readonly hub: RealtimeHub) {}
 
     /**
-     * The message, receipt and unread notifications of every room and conversation of the selected workspace, as server-sent
+     * The message, receipt and unread notifications of every room of the selected workspace, as server-sent
      * events. The topic starts with the authenticated principal, and the publisher pushes a copy only to active members, so a
      * non-member's stream stays silent; a `Last-Event-ID` header only resumes after that frame inside the caller's own topic.
      */

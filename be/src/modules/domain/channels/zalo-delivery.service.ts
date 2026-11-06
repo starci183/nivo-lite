@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import type { ConversationTarget } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
+import { ChatMessagesService } from "@modules/domain/chat-records"
+import type { ChatConversationTarget } from "@modules/domain/chat-records"
 import { ConnectionsService } from "@modules/domain/connections"
 import { InjectZalo, isZaloMessageRefusal, isZaloTokenRejection, zaloFailureOf } from "@modules/integrations/zalo"
 import type { ZaloClient, ZaloFailure } from "@modules/integrations/zalo"
@@ -34,7 +34,7 @@ export class ZaloDeliveryService {
         @InjectClock() private readonly clock: Clock,
         @InjectZalo() private readonly zalo: ZaloClient,
         @InjectLogger() private readonly logger: Logger,
-        private readonly messages: AgentMessagesService,
+        private readonly messages: ChatMessagesService,
         private readonly credentials: ZaloCredentialsService,
         private readonly connections: ConnectionsService,
     ) {}
@@ -43,11 +43,15 @@ export class ZaloDeliveryService {
      * Sends the reply to the customer of a Zalo conversation. A closed window, a conversation without the customer's Zalo id, or Zalo
      * itself saying the window is closed turn to ZNS when the request carries a notice. Never throws, except a busy token refresh.
      */
-    async send(target: ConversationTarget, userId: string | null, request: DeliveryRequest): Promise<DeliveryResult> {
+    async send(
+        target: ChatConversationTarget,
+        userId: string | null,
+        request: DeliveryRequest,
+    ): Promise<DeliveryResult> {
         const connectionId = target.connectionId
         if (connectionId === null) return { delivered: false, failure: "zalo_not_connected", outcome: "rejected" }
         if (userId === null) return this.outsideWindow(target, connectionId, request, "zalo_not_connected")
-        if (await this.windowClosed(target.id))
+        if (await this.windowClosed(target.workspaceId, target.id))
             return this.outsideWindow(target, connectionId, request, "zalo_window_expired")
         const { text } = request
         return this.withToken(connectionId, (token) => this.zalo.sendCsText(token, userId, text)).then(
@@ -72,14 +76,14 @@ export class ZaloDeliveryService {
     }
 
     /** True when the customer last wrote longer ago than the free window; a conversation they never wrote in is open. */
-    private async windowClosed(conversationId: string): Promise<boolean> {
-        const last = await this.messages.lastCustomerAt(conversationId)
+    private async windowClosed(workspaceId: string, conversationId: string): Promise<boolean> {
+        const last = await this.messages.lastCustomerAt(workspaceId, conversationId)
         return last.kind === "ok" && this.clock.now().getTime() - last.value.getTime() > ZALO_FREE_WINDOW_MS
     }
 
     /** Sends the SePay QR of a delivered text as an image; the text already carries the link, so a refusal only leaves a note. */
     private followWithQr(
-        target: ConversationTarget,
+        target: ChatConversationTarget,
         connectionId: string,
         userId: string,
         text: string,
@@ -100,7 +104,7 @@ export class ZaloDeliveryService {
 
     /** The ZNS fallback: only with a notice, a ZNS template on the connection and a phone that reads as a Vietnamese mobile. */
     private async outsideWindow(
-        target: ConversationTarget,
+        target: ChatConversationTarget,
         connectionId: string,
         request: DeliveryRequest,
         refusal: ZaloFailure,
@@ -151,7 +155,7 @@ export class ZaloDeliveryService {
     }
 
     /** Logs a Zalo failure and names it for the workbench; a busy token refresh is thrown back so the caller retries. */
-    private failed(target: ConversationTarget, cause: unknown): ZaloFailure {
+    private failed(target: ChatConversationTarget, cause: unknown): ZaloFailure {
         if (cause instanceof ChannelsError && cause.code === ChannelsErrorCode.ZaloRefreshBusy) throw cause
         const failure = zaloFailureOf(cause)
         this.logger.error(ChannelsLogEvent.DeliveryFailed, cause, {

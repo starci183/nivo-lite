@@ -191,20 +191,6 @@ describe("AgentDirectoryService > handles, seats and ids", () => {
             expect(read?.argsOf("andWhere")).toContainEqual(["a.id IN (:...agentIds)", { agentIds: ["a1"] }])
         })
     })
-
-    describe("idsOf", () => {
-        it("lists the ids of the workspace agents in id order, bounded", async () => {
-            const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf()]] })
-
-            await expect((await build(em)).idsOf("w1", 100)).resolves.toEqual(["a1"])
-            expect(em.find).toHaveBeenCalledWith(AgentEntity, {
-                select: { id: true },
-                where: { workspaceId: "w1" },
-                order: { id: "ASC" },
-                take: 100,
-            })
-        })
-    })
 })
 
 describe("AgentDirectoryService > handle, module count and identities", () => {

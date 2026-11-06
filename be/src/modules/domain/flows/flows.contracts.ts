@@ -2,16 +2,7 @@ import type { WorkspaceMember } from "@modules/domain/workspace-members"
 
 /** The operations of the operating flow a member can ask for. */
 export type FlowCommandKind =
-    | "save_authority"
-    | "save_rule"
-    | "save_staff"
-    | "decide"
-    | "hold"
-    | "assign"
-    | "take_over"
-    | "send_as_human"
-    | "authority_from_chat"
-    | "owner_chat"
+    "save_authority" | "save_rule" | "save_staff" | "decide" | "hold" | "assign" | "authority_from_chat" | "owner_chat"
 
 /** The operations only an owner or manager may ask for. */
 export const MANAGER_COMMANDS: ReadonlyArray<FlowCommandKind> = [

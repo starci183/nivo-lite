@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
-import { AgentMessageCursorsService } from "@modules/domain/agent-messages"
 import { isOfficeRoomKey, MessageCursorsService } from "@modules/domain/messages"
 import { OfficeReadMarkersService, OfficeRoomReadersService } from "@modules/domain/office-rooms"
 import type { RoomReaderStanding } from "@modules/domain/office-rooms"
@@ -55,20 +54,18 @@ export class ChatMarkersService {
         private readonly activity: ChatActivityService,
         private readonly seats: WorkspaceMemberSeatsService,
         private readonly roomMessages: MessageCursorsService,
-        private readonly conversationMessages: AgentMessageCursorsService,
         private readonly roomReaders: OfficeRoomReadersService,
     ) {}
 
     /** The same target admission used by receipt writes and typing broadcasts. */
     async requireTarget(principalId: string, workspaceId: string, target: ChatTarget): Promise<WorkspaceMember> {
         const member = await this.members.require(principalId, workspaceId)
-        if (target.room !== null && (target.conversationId !== null || !isOfficeRoomKey(target.room)))
+        if (target.room !== null && !isOfficeRoomKey(target.room))
             throw new ChatMarkersError({ code: ChatMarkersErrorCode.TargetNotFound })
         const [row] = await callDbFunction<ChatTargetRow>(this.entityManager, "be_access.chat_target_member", [
             workspaceId,
             member.userId,
             target.room,
-            target.conversationId,
         ])
         if (row?.chat_target_member !== true) throw new ChatMarkersError({ code: ChatMarkersErrorCode.TargetNotFound })
         return member
@@ -86,7 +83,7 @@ export class ChatMarkersService {
         const member = await this.requireTarget(principalId, workspaceId, target)
         return this.entityManager.transaction(async (manager) => {
             const marker = await manager.findOne(ChatMarkerEntity, {
-                where: { workspaceId, userId: member.userId, targetKey: target.conversationId ?? target.room ?? "" },
+                where: { workspaceId, userId: member.userId, targetKey: target.room ?? "" },
                 select: { muted: true },
             })
             const own = await this.ownMessage(manager, workspaceId, member.userId, target)
@@ -113,11 +110,10 @@ export class ChatMarkersService {
                 workspaceId: params[0],
                 userId: params[1],
                 room: params[2],
-                conversationId: params[3],
                 deliveredAt: () => ":at::timestamptz",
-                deliveredMessageId: params[5],
+                deliveredMessageId: params[4],
             })
-            .setParameter("at", params[4])
+            .setParameter("at", params[3])
             .orUpdate(["delivered_at", "delivered_message_id"], MARKER_KEY, {
                 overwriteCondition: { where: DELIVERED_AHEAD },
             })
@@ -137,24 +133,22 @@ export class ChatMarkersService {
                         workspaceId: params[0],
                         userId: params[1],
                         room: params[2],
-                        conversationId: params[3],
                         deliveredAt: () => ":at::timestamptz",
-                        deliveredMessageId: params[5],
+                        deliveredMessageId: params[4],
                         readAt: () => ":at::timestamptz",
-                        readMessageId: params[5],
+                        readMessageId: params[4],
                     })
             await insert()
-                .setParameter("at", params[4])
+                .setParameter("at", params[3])
                 .orUpdate(["delivered_at", "delivered_message_id"], MARKER_KEY, {
                     overwriteCondition: { where: DELIVERED_AHEAD },
                 })
                 .execute()
             await insert()
-                .setParameter("at", params[4])
+                .setParameter("at", params[3])
                 .orUpdate(["read_at", "read_message_id"], MARKER_KEY, { overwriteCondition: { where: READ_AHEAD } })
                 .execute()
-            if (target.conversationId === null)
-                await this.roomReads.advance(workspaceId, params[1], target.room ?? "", params[4], manager)
+            await this.roomReads.advance(workspaceId, params[1], target.room ?? "", params[3], manager)
         })
         await this.activity.receipt(workspaceId, chatActivityTarget(target))
         await this.activity.unread(workspaceId, chatActivityTarget(target), params[1])
@@ -170,7 +164,6 @@ export class ChatMarkersService {
                 workspaceId,
                 userId: member.userId,
                 room: target.room ?? "",
-                conversationId: target.conversationId,
                 muted,
             })
             .orUpdate(["muted"], ["workspace_id", "user_id", "target_key"])
@@ -185,9 +178,7 @@ export class ChatMarkersService {
         userId: string,
         target: ChatTarget,
     ): Promise<OwnMessage | null> {
-        return target.conversationId === null
-            ? this.roomMessages.newestAuthored(workspaceId, userId, target.room, manager)
-            : this.conversationMessages.newestAuthored(workspaceId, userId, target.conversationId, manager)
+        return this.roomMessages.newestAuthored(workspaceId, userId, target.room, manager)
     }
 
     /** The receipt beneath one message: seen by active readers, else delivered to another member, else sent. */
@@ -234,7 +225,7 @@ export class ChatMarkersService {
         return { id: own.id, status: "seen", seenBy, seenByCount: everyReader.length }
     }
 
-    /** Which of the given accounts have a read cursor that reaches the message, in the room or the conversation of the target. */
+    /** Which of the given accounts have a read cursor that reaches the message, in the room of the target. */
     private async readerIds(
         manager: EntityManager,
         workspaceId: string,
@@ -243,18 +234,6 @@ export class ChatMarkersService {
         own: OwnMessage,
     ): Promise<Set<string>> {
         if (userIds.length === 0) return new Set()
-        const cursor = { workspaceId, userIds: [...userIds], createdAt: own.createdAt, ownId: own.id }
-        if (target.conversationId !== null) {
-            const rows: ReadonlyArray<unknown> = await manager
-                .createQueryBuilder(ChatMarkerEntity, "s")
-                .select("s.user_id", "userId")
-                .where("s.workspace_id = :workspaceId AND s.user_id IN (:...userIds)", cursor)
-                .andWhere("s.conversation_id = :conversationId::uuid", { conversationId: target.conversationId })
-                .andWhere("(s.read_at, s.read_message_id) >= (:createdAt::timestamptz, :ownId::uuid)", cursor)
-                .limit(userIds.length)
-                .getRawMany()
-            return userIdsOf(rows)
-        }
         const standings = await this.roomReaders.readersAt(workspaceId, target.room, userIds, own.createdAt, manager)
         const passed = new Set(
             standings.filter((one: RoomReaderStanding) => one.standing === "later").map((one) => one.userId),
@@ -266,7 +245,7 @@ export class ChatMarkersService {
             .createQueryBuilder(ChatMarkerEntity, "s")
             .select("s.user_id", "userId")
             .where("s.workspace_id = :workspaceId AND s.user_id IN (:...level)", { workspaceId, level })
-            .andWhere("s.conversation_id IS NULL AND s.room = COALESCE(:room::text, '')", { room: target.room })
+            .andWhere("s.room = COALESCE(:room::text, '')", { room: target.room })
             .andWhere(
                 "s.read_at = :createdAt::timestamptz AND NOT COALESCE(s.read_message_id >= :ownId::uuid, false)",
                 {
@@ -295,7 +274,7 @@ export class ChatMarkersService {
             .where("s.workspace_id = :workspaceId AND s.user_id IN (:...userIds) AND s.target_key = :targetKey", {
                 workspaceId,
                 userIds: [...userIds],
-                targetKey: target.conversationId ?? target.room ?? "",
+                targetKey: target.room ?? "",
             })
             .andWhere("(s.delivered_at, s.delivered_message_id) >= (:createdAt::timestamptz, :ownId::uuid)", {
                 createdAt: own.createdAt,
@@ -311,19 +290,16 @@ export class ChatMarkersService {
         workspaceId: string,
         target: ChatTarget,
         messageId: string,
-    ): Promise<[string, string, string, string | null, string, string]> {
+    ): Promise<[string, string, string, string, string]> {
         const member = await this.requireTarget(principalId, workspaceId, target)
         const created = await this.createdAtOf(workspaceId, target, messageId)
         if (created === undefined) throw new ChatMarkersError({ code: ChatMarkersErrorCode.MessageNotFound })
-        return [workspaceId, member.userId, target.room ?? "", target.conversationId, created, messageId]
+        return [workspaceId, member.userId, target.room ?? "", created, messageId]
     }
 
-    /** The creation instant, as the database words it, of a message inside the proven target; undefined when the target holds no such message. */
+    /** The creation instant, as the database words it, of a message inside the proven room; undefined when the room holds no such message. */
     private async createdAtOf(workspaceId: string, target: ChatTarget, messageId: string): Promise<string | undefined> {
-        const created =
-            target.conversationId === null
-                ? await this.roomMessages.createdAtOf(workspaceId, target.room, messageId)
-                : await this.conversationMessages.createdAtOf(workspaceId, target.conversationId, messageId)
+        const created = await this.roomMessages.createdAtOf(workspaceId, target.room, messageId)
         return created ?? undefined
     }
 }

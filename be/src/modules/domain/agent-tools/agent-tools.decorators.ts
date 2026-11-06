@@ -7,7 +7,6 @@ import type {
     BridgeTurns,
     ConversationLeads,
     GatewayTools,
-    HandoffTool,
     InternalTools,
     KnowledgeSearch,
     LeadWriter,
@@ -25,9 +24,6 @@ export const BOOKING_TOOLS: unique symbol = Symbol("domain.agent-tools.booking-t
 
 /** Token of the approval requester port. */
 export const APPROVAL_REQUESTER: unique symbol = Symbol("domain.agent-tools.approval-requester")
-
-/** Token of the handoff port. */
-export const HANDOFF_TOOL: unique symbol = Symbol("domain.agent-tools.handoff-tool")
 
 /** Token of the conversation leads port. */
 export const CONVERSATION_LEADS: unique symbol = Symbol("domain.agent-tools.conversation-leads")
@@ -57,9 +53,6 @@ export const InjectBookingTools = (): TypedParameterDecorator<BookingTools> => i
 /** Injects the approval requester port. Parameter type: ApprovalRequester. */
 export const InjectApprovalRequester = (): TypedParameterDecorator<ApprovalRequester> =>
     injector<ApprovalRequester>(APPROVAL_REQUESTER)
-
-/** Injects the handoff port. Parameter type: HandoffTool. */
-export const InjectHandoffTool = (): TypedParameterDecorator<HandoffTool> => injector<HandoffTool>(HANDOFF_TOOL)
 
 /** Injects the conversation leads port. Parameter type: ConversationLeads. */
 export const InjectConversationLeads = (): TypedParameterDecorator<ConversationLeads> =>

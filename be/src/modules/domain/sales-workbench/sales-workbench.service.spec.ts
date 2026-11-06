@@ -1,7 +1,5 @@
 import { Test } from "@nestjs/testing"
 import { builder, FakeClock, mock } from "@starci/jest-preset"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ContractsService } from "@modules/domain/contracts"
 import { EvidenceService } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
@@ -74,10 +72,6 @@ const build = async () => {
     orders.listForWorkbench.mockResolvedValue([])
     const invoices = mock<InvoicesService>()
     invoices.listForWorkbench.mockResolvedValue([])
-    const conversations = mock<AgentConversationsService>()
-    conversations.listCustomerLeadConversations.mockResolvedValue([])
-    const messages = mock<AgentMessagesService>()
-    messages.listForConversations.mockResolvedValue([])
     const executions = mock<ExecutionsService>()
     executions.list.mockResolvedValue([])
     const staff = mock<StaffDirectoryService>()
@@ -100,8 +94,6 @@ const build = async () => {
             { provide: ResponsibilityJournalService, useValue: responsibilities },
             { provide: OrdersService, useValue: orders },
             { provide: InvoicesService, useValue: invoices },
-            { provide: AgentConversationsService, useValue: conversations },
-            { provide: AgentMessagesService, useValue: messages },
             { provide: ExecutionsService, useValue: executions },
             { provide: StaffDirectoryService, useValue: staff },
             { provide: EventsService, useValue: events },
@@ -114,8 +106,6 @@ const build = async () => {
         workbench: moduleRef.get(SalesWorkbenchService),
         members,
         leads,
-        conversations,
-        messages,
         staff,
         events,
         items,
@@ -162,18 +152,6 @@ describe("SalesWorkbenchService", () => {
                 ["ws-1", { kind: "outcome.recorded", limit: 600 }],
                 ["ws-1", { kind: "work.auto_done", workItemIds: ["item-1"], limit: 200 }],
             ])
-        })
-
-        it("reads the messages of the customer conversations", async () => {
-            const { workbench, conversations, messages } = await build()
-            conversations.listCustomerLeadConversations.mockResolvedValue([
-                { id: "conv-1", lead_id: "lead-1", handled_by: null },
-                { id: "conv-2", lead_id: null, handled_by: "Lan" },
-            ])
-
-            await workbench.read("user-1", "ws-1")
-
-            expect(messages.listForConversations).toHaveBeenCalledWith("ws-1", ["conv-1", "conv-2"], { limit: 800 })
         })
     })
 })

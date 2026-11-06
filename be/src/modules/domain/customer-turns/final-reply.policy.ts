@@ -1,4 +1,4 @@
-import type { TranscriptLine } from "@modules/domain/agent-messages"
+import type { ChatTranscriptLine } from "@modules/domain/chat-records"
 import type { AuthorityOutputStep } from "@modules/domain/authority-rules"
 import { parseJsonLoose } from "./reply-reading.policy"
 
@@ -20,7 +20,7 @@ export interface FinalReplyInput {
     /** What the agent or the approver planned to say before the calls ran. */
     readonly planned: string
     /** The conversation. */
-    readonly transcript: ReadonlyArray<TranscriptLine>
+    readonly transcript: ReadonlyArray<ChatTranscriptLine>
 }
 
 /** The tool's text with what could close its block taken out, bounded: it is data, however it is worded. */

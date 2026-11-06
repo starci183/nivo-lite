@@ -54,7 +54,7 @@ export class RedeemRewardPerformerService implements WorkPerformer {
         const name = textOf(proposal.fields.customer)
         const params = { name, reward: out.reward.name, code: out.code, cost: out.reward.pointsCost }
         const conversationId = textOf(proposal.fields.conversation_id)
-        if (out.posted && conversationId !== "") await this.tell(ctx, conversationId, customerId, params)
+        if (out.posted && conversationId !== "") await this.tell(ctx, conversationId, customerId, item.id, params)
         return {
             summary: this.kit.text(ctx, out.posted ? "rewardRedeemed" : "rewardRedeemedBefore", params),
             evidence: "captured",
@@ -67,11 +67,12 @@ export class RedeemRewardPerformerService implements WorkPerformer {
         ctx: WorkContext,
         conversationId: string,
         customerId: string,
+        key: string,
         params: Readonly<Record<string, string | number>>,
     ): Promise<void> {
         const member = await this.ledger.member(ctx.workspaceId, customerId)
         const text = this.kit.text(ctx, "rewardCustomer", { ...params, points: member?.points ?? 0 })
-        await this.delivery.inConversation(ctx.workspaceId, conversationId, text).catch((cause: unknown) => {
+        await this.delivery.inConversation(ctx.workspaceId, conversationId, key, text).catch((cause: unknown) => {
             this.logger.error(WorkPerformersLogEvent.RedeemNoticeFailed, cause, {
                 workspaceId: ctx.workspaceId,
                 conversationId,

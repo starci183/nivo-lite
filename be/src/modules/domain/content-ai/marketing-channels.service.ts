@@ -1,5 +1,4 @@
 import { Injectable } from "@nestjs/common"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ZaloCredentialsService } from "@modules/domain/channels"
 import { ConnectionsService } from "@modules/domain/connections"
 import { ContentEngagementDailyService } from "@modules/domain/content-engagement-daily"
@@ -28,9 +27,8 @@ type OptionalToken = string | null
 
 @Injectable()
 /**
- * What the marketing report reads from the channels (layer 1): the daily Page insights of Meta and the messages customers wrote on
- * Facebook and Zalo OA (counted from the conversations NIVO received) go into `content_engagement_daily`; the posts the Page and the
- * OA published in a week come live from Meta (engagements) and Zalo (views and shares). A channel that is not connected adds
+ * What the marketing report reads from the channels (layer 1): the daily Page insights of Meta go into `content_engagement_daily`;
+ * the posts the Page and the OA published in a week come live from Meta (engagements) and Zalo (views and shares). A channel that is not connected adds
  * nothing; a channel that fails is logged and adds nothing, so the report never shows invented figures.
  */
 export class MarketingChannelsService {
@@ -42,24 +40,15 @@ export class MarketingChannelsService {
         private readonly connections: ConnectionsService,
         private readonly zaloCredentials: ZaloCredentialsService,
         private readonly daily: ContentEngagementDailyService,
-        private readonly messages: AgentMessagesService,
     ) {}
 
-    /** Reads the last fifteen days of Page insights and customer messages into the daily table; answers how many channel days were stored. */
+    /** Reads the last fifteen days of Page insights into the daily table; answers how many channel days were stored. */
     async sync(workspaceId: string): Promise<number> {
         const today = this.clock.now().getTime()
         const since = dayText(today - SYNC_DAYS * DAY_MS)
         const page = await this.pageOf(workspaceId)
-        const insights =
-            page === null
-                ? 0
-                : await this.daily.upsert(
-                      workspaceId,
-                      "facebook",
-                      await this.meta.pageInsights(page, since, dayText(today)),
-                  )
-        const written = await this.messages.customerMessagesPerDay(workspaceId, since, dayText(today + DAY_MS))
-        return insights + (await this.daily.upsertMessages(workspaceId, written))
+        if (page === null) return 0
+        return this.daily.upsert(workspaceId, "facebook", await this.meta.pageInsights(page, since, dayText(today)))
     }
 
     /** True when the workspace has a live Page or a live Zalo OA: a report about no channel is not posted. */

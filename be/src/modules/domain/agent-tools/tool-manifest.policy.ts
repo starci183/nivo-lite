@@ -35,11 +35,6 @@ export const TOOL_MANIFEST: ReadonlyArray<ToolManifestEntry> = [
         args: { question: "string", proposed_answer: "string?", reason: "over_authority|unclear_outcome" },
     },
     {
-        name: "handoff.to_person",
-        description: "Hand the conversation to a person; the AI stays quiet afterwards.",
-        args: { reason: "string" },
-    },
-    {
         name: "conversation.handOff",
         description:
             "Hand this conversation to another agent of the business (its id or department) when your knowledge says that agent takes it from here.",

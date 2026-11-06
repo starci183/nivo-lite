@@ -1,13 +1,11 @@
 import type { MockOf } from "@starci/jest-preset"
-import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
-import { AgentMessagesErrorCode, AgentMessagesService } from "@modules/domain/agent-messages"
+import { ChatConversationsService, ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import { ChannelReceiptsService } from "@modules/domain/channel-receipts"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord, InstallationSettings } from "@modules/domain/module-installations"
-
-import type { ChatTurnRuntime, CustomerOutcomes } from "@modules/domain/conversations"
+import type { CustomerOutcomes } from "@modules/domain/conversations"
 
 /** The installation of the conversation agent, carrying the given settings. */
 const installationOf = (settings: InstallationSettings): InstallationRecord => ({
@@ -29,7 +27,7 @@ const installationOf = (settings: InstallationSettings): InstallationRecord => (
 export const NOW: number = Date.parse("2026-10-12T10:00:00.000Z")
 
 /** Shared typed fixture setup for these behavior proofs. */
-export const conversation = (patch: Partial<TurnConversation> = {}): TurnConversation => ({
+export const conversation = (patch: Partial<ChatTurnConversation> = {}): ChatTurnConversation => ({
     id: "conv-1",
     workspaceId: "ws-1",
     channel: "telegram",
@@ -55,7 +53,7 @@ export const conversation = (patch: Partial<TurnConversation> = {}): TurnConvers
 })
 
 interface Setup {
-    readonly conversation?: TurnConversation | null
+    readonly conversation?: ChatTurnConversation | null
     readonly message?: boolean
     readonly setting?: InstallationSettings
     readonly retry?: boolean
@@ -66,23 +64,17 @@ interface Setup {
 
 /** What the spec plugs into a turn, and when. */
 interface Plugged {
-    /** The AI step, once plugged. */
-    runtime?: ChatTurnRuntime
     /** The outcome handler, once plugged. */
     outcomes?: CustomerOutcomes
 }
 
 /**
- * The extensions a spec can plug a runtime and an outcome handler into at any point, like the app root does at start.
+ * The extensions a spec can plug an outcome handler into at any point, like the app root does at start.
  */
 export const chatTurnExtensionsOf = () => {
     const plugged: Plugged = {}
     return {
-        runtime: (): ChatTurnRuntime | undefined => plugged.runtime,
         outcomes: (): CustomerOutcomes | undefined => plugged.outcomes,
-        useRuntime: (runtime: ChatTurnRuntime): void => {
-            plugged.runtime = runtime
-        },
         useOutcomes: (outcomes: CustomerOutcomes): void => {
             plugged.outcomes = outcomes
         },
@@ -91,8 +83,8 @@ export const chatTurnExtensionsOf = () => {
 
 interface ChatTurnDoubles {
     readonly installations: MockOf<InstallationRecordsService>
-    readonly conversations: MockOf<AgentConversationsService>
-    readonly messages: MockOf<AgentMessagesService>
+    readonly conversations: MockOf<ChatConversationsService>
+    readonly messages: MockOf<ChatMessagesService>
     readonly receipts: MockOf<ChannelReceiptsService>
     readonly delivery: MockOf<ChannelDeliveryService>
 }
@@ -103,18 +95,18 @@ export const arrangeChatTurn = (doubles: ChatTurnDoubles, setup: Setup = {}): vo
     installations.ofAgent.mockResolvedValue(setup.setting === undefined ? null : installationOf(setup.setting))
     conversations.turnOf.mockResolvedValue(
         setup.conversation === null
-            ? { kind: "refused", code: AgentConversationsErrorCode.NotFound }
+            ? { kind: "refused", code: ChatRecordsErrorCode.NotFound }
             : { kind: "ok", value: setup.conversation ?? conversation() },
     )
     conversations.rename.mockResolvedValue(undefined)
     messages.find.mockResolvedValue(
         setup.message === false
-            ? { kind: "refused", code: AgentMessagesErrorCode.NotFound }
+            ? { kind: "refused", code: ChatRecordsErrorCode.NotFound }
             : { kind: "ok", value: { id: "msg-1", role: "user", body: "Price?", deliveryStatus: null } },
     )
     messages.transcript.mockResolvedValue([{ role: "user", body: "Price?" }])
-    messages.storeReply.mockImplementation((_ws, _conv, body) =>
-        Promise.resolve({ id: "reply-1", body, sent: setup.sent === true }),
+    messages.storeAgentLine.mockImplementation((line) =>
+        Promise.resolve({ id: "reply-1", body: line.body, sent: setup.sent === true }),
     )
     messages.storeLine.mockResolvedValue(undefined)
     messages.replyExists.mockResolvedValue(setup.retry === true)

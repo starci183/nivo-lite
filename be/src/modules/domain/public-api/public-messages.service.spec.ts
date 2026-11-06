@@ -72,7 +72,7 @@ describe("PublicMessagesService / acceptMessage", () => {
         })
 
         expect(keys.authenticate).toHaveBeenCalledWith("messages:write", AUTH)
-        expect(chats.find).toHaveBeenCalledWith("workspace-1", "conv-1", expect.anything())
+        expect(chats.find).toHaveBeenCalledWith("workspace-1", "conv-1")
         expect(ledgerWritten(tx.write)).toEqual(
             ledgerExpected({
                 workspaceId: "workspace-1",
@@ -103,7 +103,7 @@ describe("PublicMessagesService / acceptMessage", () => {
 
         await service.acceptMessage({ authorization: AUTH, text: "hello", leadId: "lead-1" })
 
-        expect(chats.ofLead).toHaveBeenCalledWith("workspace-1", "lead-1", expect.anything())
+        expect(chats.ofLead).toHaveBeenCalledWith("workspace-1", "lead-1")
         expect(ledgerWritten(tx.write)).toEqual(
             ledgerExpected({
                 workspaceId: "workspace-1",

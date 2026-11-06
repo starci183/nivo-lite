@@ -173,7 +173,7 @@ describe("ReplyCommentPublicPerformerService", () => {
             { workspaceId: "ws-1", connectionId: "connection-1", platform: "facebook", commentId: "comment-1" },
             "Thanks for asking!",
         )
-        expect(transcript.markDelivery).toHaveBeenCalledWith("item-1", true, null)
+        expect(transcript.markDelivery).toHaveBeenCalledWith("ws-1", "item-1", true, null)
     })
 })
 
@@ -298,7 +298,7 @@ describe("ReplyCommentPublicPerformerService", () => {
             code: LeadFlowsErrorCode.MetaRefused,
             params: { failure: "error" },
         })
-        expect(transcript.markDelivery).toHaveBeenCalledWith("line-1", false, null)
+        expect(transcript.markDelivery).toHaveBeenCalledWith("ws-1", "line-1", false, null)
         expect(kit.metaRefused).toHaveBeenCalledWith(null)
         expect(kit.done).not.toHaveBeenCalled()
     })

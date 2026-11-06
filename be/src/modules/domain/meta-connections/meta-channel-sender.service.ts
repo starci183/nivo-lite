@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import { InjectChannelSenderRegistry } from "@modules/domain/channels"
 import type { ChannelSender, ChannelSenderRegistry } from "@modules/domain/channels"
-import type { ConversationTarget } from "@modules/domain/agent-conversations"
+import type { ChatConversationTarget } from "@modules/domain/chat-records"
 import { ConnectionsService } from "@modules/domain/connections"
 import { InjectMetaClient } from "@modules/integrations/meta"
 import type { MetaClient } from "@modules/integrations/meta"
@@ -42,7 +42,7 @@ export class MetaChannelSender implements ChannelSender, OnModuleInit {
     }
 
     /** Pushes the text to the customer; false when the Page is gone, the credential is unreadable or Meta refused. Never throws. */
-    async send(conversation: ConversationTarget, text: string): Promise<boolean> {
+    async send(conversation: ChatConversationTarget, text: string): Promise<boolean> {
         const platform = conversation.channel === "instagram" ? "instagram" : "facebook"
         if (conversation.connectionId === null || conversation.externalId === null) return false
         const connectionId = conversation.connectionId

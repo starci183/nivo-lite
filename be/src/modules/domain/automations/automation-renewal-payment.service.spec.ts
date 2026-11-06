@@ -45,7 +45,7 @@ const QR = "https://qr.sepay.vn/img?acc=0123456789&bank=VCB&amount=1620000&des=I
 /** The dong sign, from its code point so the source stays ASCII. */
 const MONEY = `1.620.000${String.fromCodePoint(0x111)}`
 const BODY = "Chao {ten_khach}, hop dong {ten_goi} het han {ngay_het_han}."
-const ZALO = { id: "cv-1", channel: "zalo", handled_by: null, visitor_name: null, lead_id: "l-1" }
+const ZALO = { id: "cv-1", channel: "zalo", handled_by: null, lead_id: "l-1" }
 
 /** The Vietnamese text of a key as the catalog renders it. */
 const vi = (key: string, params: TextParams = {}): string =>
@@ -166,13 +166,13 @@ describe("AutomationRenewalPaymentService zaloWindowSteps", () => {
     const stepsAfter = async (last: { created_at: string } | undefined) => {
         const { service, reads } = await build()
         reads.lastCustomerMessage.mockResolvedValue(last)
-        return { reads, steps: await service.zaloWindowSteps(ZALO) }
+        return { reads, steps: await service.zaloWindowSteps("ws-1", ZALO) }
     }
 
     it("warns that Zalo will not let the message out when the customer wrote more than 48 hours ago", async () => {
         const { reads, steps } = await stepsAfter({ created_at: "2026-10-10T09:59:00.000Z" })
 
-        expect(reads.lastCustomerMessage).toHaveBeenCalledWith("cv-1")
+        expect(reads.lastCustomerMessage).toHaveBeenCalledWith("ws-1", "cv-1")
         expect(steps).toEqual([
             { label: vi("renewal.zaloWindow"), status: "skipped", detail: vi("renewal.zaloWindowDetail") },
         ])
@@ -188,7 +188,7 @@ describe("AutomationRenewalPaymentService zaloWindowSteps", () => {
     it("does not look at a conversation on another channel", async () => {
         const { service, reads } = await build()
 
-        await expect(service.zaloWindowSteps({ ...ZALO, channel: "telegram" })).resolves.toEqual([])
+        await expect(service.zaloWindowSteps("ws-1", { ...ZALO, channel: "telegram" })).resolves.toEqual([])
         expect(reads.lastCustomerMessage).not.toHaveBeenCalled()
     })
 })

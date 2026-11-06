@@ -1,17 +1,16 @@
 import { createHash } from "node:crypto"
 import type { EntityManager } from "typeorm"
 import { publicApiEntities } from "@modules/domain/public-api"
-import { agentConversationsEntities } from "@modules/domain/agent-conversations"
 import { agentsEntities } from "@modules/domain/agents"
 import { apiKeysEntities } from "@modules/domain/api-keys"
 import { authorityRulesEntities } from "@modules/domain/authority-rules"
+import type { ChatConversationsService } from "@modules/domain/chat-records"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
 import { knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
 import { leadsEntities } from "@modules/domain/leads"
 import { workspacesEntities } from "@modules/domain/workspaces"
 
 const [AgentEntity] = agentsEntities
-const [AgentConversationEntity] = agentConversationsEntities
 const [AuthorityRuleEntity] = authorityRulesEntities
 
 const [PublicApiEntity] = publicApiEntities
@@ -97,21 +96,21 @@ export const persistPublicApiLead = async (manager: EntityManager, workspaceId: 
     })
 }
 
-/** Every message scenario gets its own conversation and customer. */
+/** Every message scenario gets its own conversation, opened as the chat records open it; the answer is its id. */
 export const persistPublicApiConversation = async (
-    manager: EntityManager,
+    chats: ChatConversationsService,
     identity: PublicApiIdentity,
-    conversationId: string,
-    leadId: string,
-): Promise<void> => {
-    await persistPublicApiLead(manager, identity.workspaceId, leadId)
-    await manager.insert(AgentConversationEntity, {
-        id: conversationId,
+    customerId: string,
+): Promise<string> => {
+    const met = await chats.meet({
         workspaceId: identity.workspaceId,
         agentId: identity.agentId,
-        kind: "customer",
-        leadId: leadId,
+        channel: "website",
+        customerId,
+        visitor: "Public API customer",
+        connectionId: identity.keyId,
     })
+    return met.conversation.id
 }
 
 /** A historical source already admitted by the API before the request ledger existed. */

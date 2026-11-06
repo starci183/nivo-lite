@@ -1,12 +1,13 @@
 import { builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { ConversationTarget } from "@modules/domain/agent-conversations"
-import { AgentMessagesErrorCode, AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import type { RenewalNotification } from "@modules/domain/channels"
+import { ChatConversationsService, ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
+import type { ChatStoredReply } from "@modules/domain/chat-records"
 import { EvidenceService } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
+import { ok, refused } from "@modules/platform/primitives"
+import { chatTarget } from "@tests/fixtures/builders/chat-features.builder"
 import { CustomerDeliveryService } from "./customer-delivery.service"
 import { PerformerKitService } from "./performer-kit.service"
 import type { DeliveryContact, DeliveryCustomer } from "./work-performers.contracts"
@@ -17,19 +18,13 @@ const customer: DeliveryCustomer = { id: "lead-1", contact_name: "Lan", channel:
 
 const contactOf = builder<DeliveryContact>({ id: "lead-1", phone: null, email: null })
 
-const targetOf = (channel: string, workspaceId = "ws-1"): ConversationTarget => ({
-    id: "conv-1",
-    workspaceId,
-    channel,
-    externalId: "ext-1",
-    connectionId: "conn-1",
-})
+const targetOf = (channel: string) => ok(chatTarget({ channel }))
 
-const conversationOf = (channel: string) => ({ id: "conv-1", agentId: "agent-1", channel, visitorName: "Lan" })
-
-const storedOf = (deliveryStatus: string | null): Awaited<ReturnType<AgentMessagesService["find"]>> => ({
-    kind: "ok",
-    value: { id: "msg-1", role: "human", body: "Hello", deliveryStatus },
+const storedOf = (patch: Partial<ChatStoredReply> = {}): ChatStoredReply => ({
+    id: "msg-1",
+    body: "Hello",
+    sent: false,
+    ...patch,
 })
 
 const item: WorkItem = {
@@ -49,7 +44,7 @@ const item: WorkItem = {
     reason: null,
     reasons: [],
     missing_fields: [],
-    proposal: { summary: "Quote", fields: {} },
+    proposal: { summary: "Quote", fields: { conversation_id: "conv-1" } },
     result: null,
     error: null,
     evidence_state: "pending",
@@ -64,10 +59,9 @@ const item: WorkItem = {
 const build = async () => {
     const kit = mock<PerformerKitService>()
     kit.text.mockImplementation((_ctx, key, params = {}) => [key, ...Object.values(params).map(String)].join("|"))
-    const conversations = mock<AgentConversationsService>()
-    const messages = mock<AgentMessagesService>()
-    messages.storeAgentMessage.mockResolvedValue("msg-1")
-    messages.storeHumanMessage.mockResolvedValue("msg-1")
+    const conversations = mock<ChatConversationsService>()
+    const messages = mock<ChatMessagesService>()
+    messages.storeAgentLine.mockResolvedValue(storedOf())
     const channels = mock<ChannelDeliveryService>()
     channels.deliver.mockResolvedValue({ delivered: true, outcome: "acknowledged", failure: null })
     const evidence = mock<EvidenceService>()
@@ -75,8 +69,8 @@ const build = async () => {
         providers: [
             CustomerDeliveryService,
             { provide: PerformerKitService, useValue: kit },
-            { provide: AgentConversationsService, useValue: conversations },
-            { provide: AgentMessagesService, useValue: messages },
+            { provide: ChatConversationsService, useValue: conversations },
+            { provide: ChatMessagesService, useValue: messages },
             { provide: ChannelDeliveryService, useValue: channels },
             { provide: EvidenceService, useValue: evidence },
         ],
@@ -85,58 +79,67 @@ const build = async () => {
 }
 
 describe("CustomerDeliveryService contactOf", () => {
-    it("answers the phone first, then the email", async () => {
-        const { service, conversations } = await build()
+    it("answers the phone first, then the email, else nobody", async () => {
+        const { service } = await build()
 
-        await expect(service.contactOf("ws-1", contactOf({ phone: "84901", email: "a@b.vn" }))).resolves.toBe("84901")
-        await expect(service.contactOf("ws-1", contactOf({ email: "a@b.vn" }))).resolves.toBe("a@b.vn")
-        expect(conversations.latestOfLead).not.toHaveBeenCalled()
-    })
-
-    it("answers website when the customer only chats on the site, else null", async () => {
-        const { service, conversations } = await build()
-        conversations.latestOfLead.mockResolvedValueOnce(conversationOf("website")).mockResolvedValueOnce(null)
-
-        await expect(service.contactOf("ws-1", contactOf())).resolves.toBe("website")
-        await expect(service.contactOf("ws-1", contactOf())).resolves.toBeNull()
-        expect(conversations.latestOfLead).toHaveBeenCalledWith("ws-1", "lead-1", null)
+        expect(service.contactOf(contactOf({ phone: "84901", email: "a@b.vn" }))).toBe("84901")
+        expect(service.contactOf(contactOf({ email: "a@b.vn" }))).toBe("a@b.vn")
+        expect(service.contactOf(contactOf())).toBeNull()
     })
 })
 
 describe("CustomerDeliveryService toCustomer", () => {
-    it("records that nothing was sent when the customer has no conversation", async () => {
+    it("records that nothing was sent when the work names no conversation", async () => {
         const { service, conversations } = await build()
-        conversations.latestOfLead.mockResolvedValue(null)
 
-        await expect(service.toCustomer(ctx, customer, "Hello")).resolves.toEqual({
+        await expect(service.toCustomer(ctx, customer, null, "item-1", "Hello")).resolves.toEqual({
             summary: "recordedNoConversation|zalo",
             real: false,
         })
+        expect(conversations.targetOf).not.toHaveBeenCalled()
     })
 
-    it("stores the message for a website chat without pushing it", async () => {
-        const { service, conversations, messages, channels } = await build()
-        conversations.latestOfLead.mockResolvedValue(conversationOf("website"))
-        conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("website") })
+    it("records that nothing was sent when the conversation is gone", async () => {
+        const { service, conversations, messages } = await build()
+        conversations.targetOf.mockResolvedValue(refused(ChatRecordsErrorCode.NotFound))
 
-        await expect(service.toCustomer(ctx, customer, "Hello")).resolves.toEqual({
+        await expect(service.toCustomer(ctx, customer, "conv-1", "item-1", "Hello")).resolves.toEqual({
+            summary: "recordedNoConversation|zalo",
+            real: false,
+        })
+        expect(messages.storeAgentLine).not.toHaveBeenCalled()
+    })
+
+    it("stores the message for a website chat and marks it delivered without pushing it", async () => {
+        const { service, conversations, messages, channels } = await build()
+        conversations.targetOf.mockResolvedValue(targetOf("website"))
+
+        await expect(service.toCustomer(ctx, customer, "conv-1", "item-1", "Hello")).resolves.toEqual({
             summary: "deliveredWebsite|Lan",
             real: true,
         })
-        expect(messages.storeAgentMessage).toHaveBeenCalledWith("ws-1", "conv-1", "Hello")
+        expect(conversations.targetOf).toHaveBeenCalledWith("ws-1", "conv-1")
+        expect(messages.storeAgentLine).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            conversationId: "conv-1",
+            body: "Hello",
+            key: "item-1",
+            human: undefined,
+        })
+        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", true)
         expect(channels.deliver).not.toHaveBeenCalled()
     })
 
     it("reports the channel push of a Telegram conversation", async () => {
         const { service, conversations, channels } = await build()
-        conversations.latestOfLead.mockResolvedValue(conversationOf("telegram"))
-        conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("telegram") })
+        conversations.targetOf.mockResolvedValue(targetOf("telegram"))
 
-        await expect(service.toCustomer(ctx, customer, "Hello")).resolves.toEqual({
+        await expect(service.toCustomer(ctx, customer, "conv-1", "item-1", "Hello")).resolves.toEqual({
             summary: "deliveredTelegram|Lan",
             real: true,
         })
         expect(channels.deliver).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
             conversationId: "conv-1",
             messageId: "msg-1",
             text: "Hello",
@@ -145,103 +148,134 @@ describe("CustomerDeliveryService toCustomer", () => {
 
     it("reports a failed channel push honestly", async () => {
         const { service, conversations, channels } = await build()
-        conversations.latestOfLead.mockResolvedValue(conversationOf("telegram"))
-        conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("telegram") })
+        conversations.targetOf.mockResolvedValue(targetOf("telegram"))
         channels.deliver.mockResolvedValue({ delivered: false, outcome: "rejected", failure: null })
 
-        await expect(service.toCustomer(ctx, customer, "Hello")).resolves.toEqual({
+        await expect(service.toCustomer(ctx, customer, "conv-1", "item-1", "Hello")).resolves.toEqual({
             summary: "telegramFailed|Lan",
             real: false,
         })
     })
 })
 
+describe("CustomerDeliveryService toCustomer replays", () => {
+    it("does not push a message an earlier attempt already delivered, and does not mark a website chat twice", async () => {
+        const { service, conversations, messages, channels } = await build()
+        messages.storeAgentLine.mockResolvedValue(storedOf({ sent: true }))
+        conversations.targetOf.mockResolvedValueOnce(targetOf("telegram")).mockResolvedValueOnce(targetOf("website"))
+
+        await expect(service.toCustomer(ctx, customer, "conv-1", "item-1", "Hello")).resolves.toEqual({
+            summary: "deliveredTelegram|Lan",
+            real: true,
+        })
+        await expect(service.toCustomer(ctx, customer, "conv-1", "item-1", "Hello")).resolves.toEqual({
+            summary: "deliveredWebsite|Lan",
+            real: true,
+        })
+        expect(channels.deliver).not.toHaveBeenCalled()
+        expect(messages.markDelivery).not.toHaveBeenCalled()
+    })
+})
+
 describe("CustomerDeliveryService inConversation", () => {
     it("pushes nothing when the conversation cannot be read", async () => {
         const { service, conversations, messages, channels } = await build()
-        conversations.targetOf.mockResolvedValue({ kind: "refused", code: AgentConversationsErrorCode.NotFound })
+        conversations.targetOf.mockResolvedValue(refused(ChatRecordsErrorCode.NotFound))
 
-        await expect(service.inConversation("ws-1", "conv-1", "Hello")).resolves.toBe(false)
-        expect(messages.storeAgentMessage).toHaveBeenCalledWith("ws-1", "conv-1", "Hello")
+        await expect(service.inConversation("ws-1", "conv-1", "key-1", "Hello")).resolves.toBe(false)
+        expect(messages.storeAgentLine).not.toHaveBeenCalled()
         expect(channels.deliver).not.toHaveBeenCalled()
+    })
+
+    it("stores the message under its key and answers whether the channel accepted it", async () => {
+        const { service, conversations, messages } = await build()
+        conversations.targetOf.mockResolvedValue(targetOf("telegram"))
+
+        await expect(service.inConversation("ws-1", "conv-1", "key-1", "Hello")).resolves.toBe(true)
+        expect(messages.storeAgentLine.mock.calls[0]?.[0].key).toBe("key-1")
     })
 })
 
 describe("CustomerDeliveryService finalInConversation", () => {
-    it("stores the agent's reply once under its work item and marks a website chat delivered", async () => {
+    it("stores the agent's reply once under its work item and sends it through the channel", async () => {
         const { service, conversations, messages, channels } = await build()
-        conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("website") })
-        messages.storeFinalReply.mockResolvedValue("item-1")
-        messages.find.mockResolvedValue(storedOf(null))
+        conversations.targetOf.mockResolvedValue(targetOf("website"))
 
         await expect(service.finalInConversation("ws-1", "conv-1", "Done", "item-1")).resolves.toBe("acknowledged")
-        expect(messages.storeFinalReply).toHaveBeenCalledWith("ws-1", "conv-1", "Done", "item-1")
-        expect(messages.storeHumanMessage).not.toHaveBeenCalled()
-        expect(channels.deliver).toHaveBeenCalledWith({ conversationId: "conv-1", messageId: "item-1", text: "Hello" })
+        expect(messages.storeAgentLine).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            conversationId: "conv-1",
+            body: "Done",
+            key: "item-1",
+        })
+        expect(channels.deliver).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            conversationId: "conv-1",
+            messageId: "msg-1",
+            text: "Hello",
+        })
     })
 
     it("does not push a reply already sent, so a retry sends nothing twice", async () => {
         const { service, conversations, messages, channels } = await build()
-        conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("telegram") })
-        messages.storeFinalReply.mockResolvedValue("item-1")
-        messages.find.mockResolvedValue(storedOf("sent"))
+        conversations.targetOf.mockResolvedValue(targetOf("telegram"))
+        messages.storeAgentLine.mockResolvedValue(storedOf({ sent: true }))
 
         await expect(service.finalInConversation("ws-1", "conv-1", "Done", "item-1")).resolves.toBe("acknowledged")
         expect(channels.deliver).not.toHaveBeenCalled()
     })
 
-    it("stores nothing for a conversation of another workspace", async () => {
+    it("stores nothing for a conversation it cannot read", async () => {
         const { service, conversations, messages } = await build()
-        conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("telegram", "ws-2") })
+        conversations.targetOf.mockResolvedValue(refused(ChatRecordsErrorCode.NotFound))
 
         await expect(service.finalInConversation("ws-1", "conv-1", "Done", "item-1")).resolves.toBe("rejected")
-        expect(messages.storeFinalReply).not.toHaveBeenCalled()
+        expect(messages.storeAgentLine).not.toHaveBeenCalled()
     })
 })
 
 describe("CustomerDeliveryService approvedInConversation", () => {
-    it("stores nothing for a conversation it cannot read or of another workspace", async () => {
+    it("stores nothing for a conversation it cannot read", async () => {
         const { service, conversations, messages } = await build()
-        conversations.targetOf
-            .mockResolvedValueOnce({ kind: "refused", code: AgentConversationsErrorCode.NotFound })
-            .mockResolvedValueOnce({ kind: "ok", value: targetOf("telegram", "ws-2") })
+        conversations.targetOf.mockResolvedValue(refused(ChatRecordsErrorCode.NotFound))
 
         await expect(service.approvedInConversation("ws-1", "conv-1", "Hello", "Mai", "item-1")).resolves.toBe(false)
-        await expect(service.approvedInConversation("ws-1", "conv-1", "Hello", "Mai", "item-1")).resolves.toBe(false)
-        expect(messages.storeHumanMessage).not.toHaveBeenCalled()
+        expect(messages.storeAgentLine).not.toHaveBeenCalled()
     })
 
-    it("does not push a message already sent again", async () => {
+    it("stores the answer under the member's name and does not push a message already sent again", async () => {
         const { service, conversations, messages, channels } = await build()
-        conversations.targetOf
-            .mockResolvedValueOnce({ kind: "ok", value: targetOf("telegram") })
-            .mockResolvedValueOnce({ kind: "ok", value: targetOf("website") })
-        messages.find.mockResolvedValue(storedOf("sent"))
+        messages.storeAgentLine.mockResolvedValue(storedOf({ sent: true }))
+        conversations.targetOf.mockResolvedValue(targetOf("telegram"))
 
         await expect(service.approvedInConversation("ws-1", "conv-1", "Hello", "Mai", "item-1")).resolves.toBe(true)
-        await expect(service.approvedInConversation("ws-1", "conv-1", "Hello", "Mai", "item-1")).resolves.toBe(false)
-        expect(messages.storeHumanMessage).toHaveBeenCalledWith("ws-1", "conv-1", "Hello", "Mai", undefined, "item-1")
+        expect(messages.storeAgentLine).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            conversationId: "conv-1",
+            body: "Hello",
+            key: "item-1",
+            human: { name: "Mai", userId: null },
+        })
         expect(channels.deliver).not.toHaveBeenCalled()
     })
 
     it("marks a website answer delivered without pushing it", async () => {
         const { service, conversations, messages, channels } = await build()
-        conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("website") })
-        messages.find.mockResolvedValue(storedOf(null))
+        conversations.targetOf.mockResolvedValue(targetOf("website"))
 
         await expect(service.approvedInConversation("ws-1", "conv-1", "Hello", "Mai", "item-1")).resolves.toBe(false)
-        expect(messages.markDelivery).toHaveBeenCalledWith("msg-1", true)
+        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "msg-1", true)
         expect(channels.deliver).not.toHaveBeenCalled()
     })
 
     it("pushes a pending answer to the customer's channel", async () => {
-        const { service, conversations, messages, channels } = await build()
-        conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("telegram") })
-        messages.find.mockResolvedValue({ kind: "refused", code: AgentMessagesErrorCode.NotFound })
+        const { service, conversations, channels } = await build()
+        conversations.targetOf.mockResolvedValue(targetOf("telegram"))
         channels.deliver.mockResolvedValue({ delivered: false, outcome: "rejected", failure: null })
 
         await expect(service.approvedInConversation("ws-1", "conv-1", "Hello", "Mai", "item-1")).resolves.toBe(false)
         expect(channels.deliver).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
             conversationId: "conv-1",
             messageId: "msg-1",
             text: "Hello",
@@ -251,10 +285,12 @@ describe("CustomerDeliveryService approvedInConversation", () => {
 
 describe("CustomerDeliveryService sendAndLog", () => {
     it("leaves the evidence line of its kind and reports that nothing was sent without a conversation", async () => {
-        const { service, evidence, conversations } = await build()
-        conversations.latestOfLead.mockResolvedValue(null)
+        const { service, evidence } = await build()
+        const unnamed: WorkItem = { ...item, proposal: { summary: "Quote", fields: {} } }
 
-        await expect(service.sendAndLog(ctx, item, customer, "Hello", { name: "Mai" }, "quote.sent")).resolves.toEqual({
+        await expect(
+            service.sendAndLog(ctx, unnamed, customer, "Hello", { name: "Mai" }, "quote.sent"),
+        ).resolves.toEqual({
             summary: "recordedNoConversation|zalo",
             evidence: "captured",
             href: "/leads/lead-1",
@@ -269,6 +305,17 @@ describe("CustomerDeliveryService sendAndLog", () => {
             summary: "recordedNoConversation|zalo",
             evidence: "Hello",
         })
+    })
+
+    it("delivers in the conversation the proposal names", async () => {
+        const { service, conversations, channels } = await build()
+        conversations.targetOf.mockResolvedValue(targetOf("telegram"))
+
+        const performed = await service.sendAndLog(ctx, item, customer, "Hello", { name: "Mai" }, "quote.sent")
+
+        expect(performed.summary).toBe("deliveredTelegram|Lan")
+        expect(conversations.targetOf).toHaveBeenCalledWith("ws-1", "conv-1")
+        expect(channels.deliver).toHaveBeenCalledTimes(1)
     })
 })
 
@@ -287,8 +334,7 @@ const renewal: RenewalNotification = {
 
 const onZalo = async () => {
     const built = await build()
-    built.conversations.latestOfLead.mockResolvedValue(conversationOf("zalo"))
-    built.conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("zalo") })
+    built.conversations.targetOf.mockResolvedValue(targetOf("zalo"))
     return built
 }
 
@@ -302,11 +348,12 @@ describe("CustomerDeliveryService toCustomer on Zalo", () => {
             via: "consultation",
         })
 
-        await expect(service.toCustomer(ctx, customer, "Hello", renewal)).resolves.toEqual({
+        await expect(service.toCustomer(ctx, customer, "conv-1", "item-1", "Hello", renewal)).resolves.toEqual({
             summary: "deliveredZalo|Lan",
             real: true,
         })
         expect(channels.deliver).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
             conversationId: "conv-1",
             messageId: "msg-1",
             text: "Hello",
@@ -318,7 +365,7 @@ describe("CustomerDeliveryService toCustomer on Zalo", () => {
         const { service, channels } = await onZalo()
         channels.deliver.mockResolvedValue({ delivered: true, outcome: "acknowledged", failure: null, via: "zns" })
 
-        await expect(service.toCustomer(ctx, customer, "Hello", renewal)).resolves.toEqual({
+        await expect(service.toCustomer(ctx, customer, "conv-1", "item-1", "Hello", renewal)).resolves.toEqual({
             summary: "deliveredZaloZns|Lan",
             real: true,
         })
@@ -334,7 +381,7 @@ describe("CustomerDeliveryService toCustomer on Zalo", () => {
             note: "qr_image_failed",
         })
 
-        await expect(service.toCustomer(ctx, customer, "Hello")).resolves.toEqual({
+        await expect(service.toCustomer(ctx, customer, "conv-1", "item-1", "Hello")).resolves.toEqual({
             summary: "deliveredZaloNoQr|Lan",
             real: true,
         })
@@ -349,23 +396,17 @@ describe("CustomerDeliveryService toCustomer on Zalo", () => {
             note: "zns_not_configured",
         })
 
-        await expect(service.toCustomer(ctx, customer, "Hello", renewal)).resolves.toEqual({
+        await expect(service.toCustomer(ctx, customer, "conv-1", "item-1", "Hello", renewal)).resolves.toEqual({
             summary: "zaloFailed|Lan|zaloFailure.zalo_window_expired zaloNote.zns_not_configured",
             real: false,
         })
     })
 
-    it("names a generic failure when the channel gave no reason or the conversation could not be read", async () => {
-        const { service, channels, conversations } = await onZalo()
+    it("names a generic failure when the channel gave no reason", async () => {
+        const { service, channels } = await onZalo()
         channels.deliver.mockResolvedValue({ delivered: false, outcome: "rejected", failure: null })
 
-        await expect(service.toCustomer(ctx, customer, "Hello")).resolves.toEqual({
-            summary: "zaloFailed|Lan|zaloFailure.zalo_error",
-            real: false,
-        })
-
-        conversations.targetOf.mockResolvedValue({ kind: "refused", code: AgentConversationsErrorCode.NotFound })
-        await expect(service.toCustomer(ctx, customer, "Hello")).resolves.toEqual({
+        await expect(service.toCustomer(ctx, customer, "conv-1", "item-1", "Hello")).resolves.toEqual({
             summary: "zaloFailed|Lan|zaloFailure.zalo_error",
             real: false,
         })
@@ -376,8 +417,9 @@ describe("CustomerDeliveryService notices in a conversation", () => {
     it("passes the notice with a pushed agent message", async () => {
         const { service, channels } = await onZalo()
 
-        await expect(service.inConversation("ws-1", "conv-1", "Hello", renewal)).resolves.toBe(true)
+        await expect(service.inConversation("ws-1", "conv-1", "key-1", "Hello", renewal)).resolves.toBe(true)
         expect(channels.deliver).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
             conversationId: "conv-1",
             messageId: "msg-1",
             text: "Hello",
@@ -386,28 +428,11 @@ describe("CustomerDeliveryService notices in a conversation", () => {
     })
 
     it("passes the notice with an approved answer", async () => {
-        const { service, channels, messages } = await onZalo()
-        messages.find.mockResolvedValue(storedOf(null))
+        const { service, channels } = await onZalo()
 
         await expect(service.approvedInConversation("ws-1", "conv-1", "Hello", "Mai", "item-1", renewal)).resolves.toBe(
             true,
         )
-        expect(channels.deliver).toHaveBeenCalledWith({
-            conversationId: "conv-1",
-            messageId: "msg-1",
-            text: "Hello",
-            notification: renewal,
-        })
-    })
-})
-
-describe("CustomerDeliveryService absent stored final reply", () => {
-    it("rejects delivery when the stored final reply cannot be read and sends nothing", async () => {
-        const { service, conversations, messages, channels } = await build()
-        conversations.targetOf.mockResolvedValue({ kind: "ok", value: targetOf("telegram") })
-        messages.storeFinalReply.mockResolvedValue("item-1")
-        messages.find.mockResolvedValue({ kind: "refused", code: AgentMessagesErrorCode.NotFound })
-        await expect(service.finalInConversation("ws-1", "conv-1", "Done", "item-1")).resolves.toBe("rejected")
-        expect(channels.deliver).not.toHaveBeenCalled()
+        expect(channels.deliver.mock.calls[0]?.[0].notification).toBe(renewal)
     })
 })

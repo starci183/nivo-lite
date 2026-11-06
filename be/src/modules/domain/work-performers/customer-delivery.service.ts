@@ -1,13 +1,19 @@
 import { Injectable } from "@nestjs/common"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import type { DeliveryOutcome, DeliveryRequest, DeliveryResult, RenewalNotification } from "@modules/domain/channels"
+import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
+import type { ChatConversationTarget, HumanAuthor } from "@modules/domain/chat-records"
 import { EvidenceService } from "@modules/domain/decisions"
 import type { Performed, PerformedBy, WorkContext, WorkItem } from "@modules/domain/decisions"
-import type { CustomerDelivery, DeliveryContact, DeliveryCustomer, OptionalContact } from "./work-performers.contracts"
+import type {
+    CustomerDelivery,
+    DeliveryContact,
+    DeliveryCustomer,
+    OptionalContact,
+    OptionalConversationId,
+} from "./work-performers.contracts"
 import { PerformerKitService } from "./performer-kit.service"
-import { leadHref } from "./performer.policy"
+import { conversationIdOf, leadHref } from "./performer.policy"
 
 /** The conversation channel the website chat page reads itself: nothing is pushed. */
 const WEBSITE_CHANNEL = "website"
@@ -18,26 +24,27 @@ const ZALO_CHANNEL = "zalo"
 /** What a conversation that could not be read or pushed counts as. */
 const NOT_PUSHED: DeliveryResult = { delivered: false, failure: null }
 
+/** What a message already stored and delivered counts as. */
+const ALREADY_PUSHED: DeliveryResult = { delivered: true, failure: null }
+
 @Injectable()
 /**
  * Delivers the company's words to a customer with honest labels: stored in their conversation and pushed to the channel they are on;
- * when the customer has no conversation to answer in, nothing is sent and the record says so. A structured notice (a renewal) rides
- * along to the channel, so Zalo can reach the customer by ZNS outside its chat window.
+ * when no conversation is known to answer in, nothing is sent and the record says so. A structured notice (a renewal) rides along to
+ * the channel, so Zalo can reach the customer by ZNS outside its chat window.
  */
 export class CustomerDeliveryService {
     constructor(
         private readonly kit: PerformerKitService,
-        private readonly conversations: AgentConversationsService,
-        private readonly messages: AgentMessagesService,
+        private readonly conversations: ChatConversationsService,
+        private readonly messages: ChatMessagesService,
         private readonly channels: ChannelDeliveryService,
         private readonly evidence: EvidenceService,
     ) {}
 
-    /** How the owner reaches the customer on the card: the phone, else the email, else "website" when they chat on the site. */
-    async contactOf(workspaceId: string, lead: DeliveryContact): Promise<OptionalContact> {
-        if (lead.phone !== null) return lead.phone
-        if (lead.email !== null) return lead.email
-        return (await this.conversations.latestOfLead(workspaceId, lead.id, null)) === null ? null : WEBSITE_CHANNEL
+    /** How the owner reaches the customer on the card: the phone, else the email, else nobody. */
+    contactOf(lead: DeliveryContact): OptionalContact {
+        return lead.phone ?? lead.email
     }
 
     /** Delivers the approved text to the customer, leaves the evidence line of its kind, and reports what was done. */
@@ -49,7 +56,8 @@ export class CustomerDeliveryService {
         by: PerformedBy,
         kind: string,
     ): Promise<Performed> {
-        const sent = await this.toCustomer(ctx, customer, text)
+        const conversationId = conversationIdOf(item, item.proposal.fields)
+        const sent = await this.toCustomer(ctx, customer, conversationId, item.id, text)
         await this.evidence.log(ctx, {
             lead_id: customer.id,
             work_item_id: item.id,
@@ -67,37 +75,42 @@ export class CustomerDeliveryService {
         }
     }
 
-    /** Delivers in the customer's latest conversation; without one nothing is sent and the summary says so. */
+    /** Delivers in the conversation the work names, once under the key; without one nothing is sent and the summary says so. */
     async toCustomer(
         ctx: WorkContext,
         customer: DeliveryCustomer,
+        conversationId: OptionalConversationId,
+        key: string,
         text: string,
         notification?: RenewalNotification,
     ): Promise<CustomerDelivery> {
-        const conversation = await this.conversations.latestOfLead(ctx.workspaceId, customer.id, null)
-        if (conversation === null) {
+        const target =
+            conversationId === null ? null : await this.conversations.targetOf(ctx.workspaceId, conversationId)
+        if (target?.kind !== "ok") {
             return { summary: this.kit.text(ctx, "recordedNoConversation", { channel: customer.channel }), real: false }
         }
-        const sent = (await this.storeAndPush(ctx.workspaceId, conversation.id, text, notification)) ?? NOT_PUSHED
-        if (conversation.channel === WEBSITE_CHANNEL) {
+        const sent = await this.storeAndPush(target.value, text, key, notification)
+        if (target.value.channel === WEBSITE_CHANNEL) {
             return { summary: this.kit.text(ctx, "deliveredWebsite", { name: customer.contact_name }), real: true }
         }
-        if (conversation.channel === ZALO_CHANNEL) {
+        if (target.value.channel === ZALO_CHANNEL) {
             return { summary: this.zaloSummary(ctx, customer.contact_name, sent), real: sent.delivered }
         }
-        const key = sent.delivered ? "deliveredTelegram" : "telegramFailed"
-        return { summary: this.kit.text(ctx, key, { name: customer.contact_name }), real: sent.delivered }
+        const summaryKey = sent.delivered ? "deliveredTelegram" : "telegramFailed"
+        return { summary: this.kit.text(ctx, summaryKey, { name: customer.contact_name }), real: sent.delivered }
     }
 
-    /** Stores the message in the conversation and pushes it to the customer's channel; true when the channel accepted it. */
+    /** Stores the message once under its key in the conversation and pushes it to the customer's channel; true when the channel accepted it. */
     async inConversation(
         workspaceId: string,
         conversationId: string,
+        key: string,
         text: string,
         notification?: RenewalNotification,
     ): Promise<boolean> {
-        const sent = await this.storeAndPush(workspaceId, conversationId, text, notification)
-        return sent?.delivered ?? false
+        const target = await this.conversations.targetOf(workspaceId, conversationId)
+        if (target.kind !== "ok") return false
+        return (await this.storeAndPush(target.value, text, key, notification)).delivered
     }
 
     /** Stores the approved answer once with the deciding member's name and records its real delivery outcome. */
@@ -109,17 +122,10 @@ export class CustomerDeliveryService {
         workItemId: string,
         notification?: RenewalNotification,
     ): Promise<boolean> {
-        const target = await this.conversations.targetOf(conversationId)
-        if (target.kind !== "ok" || target.value.workspaceId !== workspaceId) return false
-        const messageId = await this.messages.storeHumanMessage(
-            workspaceId,
-            conversationId,
-            text,
-            memberName,
-            undefined,
-            workItemId,
-        )
-        return this.pushOnce(target.value.channel, conversationId, messageId, text, notification)
+        const target = await this.conversations.targetOf(workspaceId, conversationId)
+        if (target.kind !== "ok") return false
+        const human: HumanAuthor = { name: memberName, userId: null }
+        return (await this.storeAndPush(target.value, text, workItemId, notification, human)).delivered
     }
 
     /** Stores the output's reply once and returns its acknowledged, refused or unresolved delivery fact. */
@@ -129,54 +135,53 @@ export class CustomerDeliveryService {
         text: string,
         workItemId: string,
     ): Promise<DeliveryOutcome> {
-        const target = await this.conversations.targetOf(conversationId)
-        if (target.kind !== "ok" || target.value.workspaceId !== workspaceId) return "rejected"
-        const messageId = await this.messages.storeFinalReply(workspaceId, conversationId, text, workItemId)
-        const message = await this.messages.find(messageId, conversationId)
-        if (message.kind !== "ok") return "rejected"
-        if (message.value.deliveryStatus === "sent") return "acknowledged"
-        return (await this.channels.deliver({ conversationId, messageId, text: message.value.body })).outcome
+        const target = await this.conversations.targetOf(workspaceId, conversationId)
+        if (target.kind !== "ok") return "rejected"
+        const stored = await this.messages.storeAgentLine({ workspaceId, conversationId, body: text, key: workItemId })
+        if (stored.sent) return "acknowledged"
+        const delivered = await this.channels.deliver({
+            workspaceId,
+            conversationId,
+            messageId: stored.id,
+            text: stored.body,
+        })
+        return delivered.outcome
     }
 
-    /** Pushes a stored message to its channel unless an earlier attempt already did; a website chat reads it itself. */
-    private async pushOnce(
-        channel: string,
-        conversationId: string,
-        messageId: string,
-        text: string,
-        notification: RenewalNotification | undefined,
-    ): Promise<boolean> {
-        const message = await this.messages.find(messageId, conversationId)
-        if (message.kind === "ok" && message.value.deliveryStatus === "sent") return channel !== WEBSITE_CHANNEL
-        if (channel === WEBSITE_CHANNEL) {
-            await this.messages.markDelivery(messageId, true)
-            return false
-        }
-        return (await this.channels.deliver(this.requestOf(conversationId, messageId, text, notification))).delivered
-    }
-
-    /** Stores the agent message and pushes it; null when the conversation cannot be read or is a website chat (nothing is pushed). */
+    /**
+     * Stores the agent message once under its key and pushes it unless an earlier attempt already did; a website chat reads the stored
+     * message itself, so nothing is pushed and it counts as not pushed.
+     */
     private async storeAndPush(
-        workspaceId: string,
-        conversationId: string,
+        target: ChatConversationTarget,
         text: string,
+        key: string,
         notification: RenewalNotification | undefined,
-    ): Promise<DeliveryResult | null> {
-        const messageId = await this.messages.storeAgentMessage(workspaceId, conversationId, text)
-        const target = await this.conversations.targetOf(conversationId)
-        if (target.kind !== "ok" || target.value.channel === WEBSITE_CHANNEL) return null
-        return this.channels.deliver(this.requestOf(conversationId, messageId, text, notification))
+        human?: HumanAuthor,
+    ): Promise<DeliveryResult> {
+        const stored = await this.messages.storeAgentLine({
+            workspaceId: target.workspaceId,
+            conversationId: target.id,
+            body: text,
+            key,
+            human,
+        })
+        if (target.channel === WEBSITE_CHANNEL) {
+            if (!stored.sent) await this.messages.markDelivery(target.workspaceId, stored.id, true)
+            return NOT_PUSHED
+        }
+        if (stored.sent) return ALREADY_PUSHED
+        return this.channels.deliver(this.requestOf(target, stored.id, stored.body, notification))
     }
 
     private requestOf(
-        conversationId: string,
+        target: ChatConversationTarget,
         messageId: string,
         text: string,
         notification: RenewalNotification | undefined,
     ): DeliveryRequest {
-        return notification === undefined
-            ? { conversationId, messageId, text }
-            : { conversationId, messageId, text, notification }
+        const request = { workspaceId: target.workspaceId, conversationId: target.id, messageId, text }
+        return notification === undefined ? request : { ...request, notification }
     }
 
     /** One honest line about a Zalo push: the route it took, a QR that did not follow, or why it did not go out. */

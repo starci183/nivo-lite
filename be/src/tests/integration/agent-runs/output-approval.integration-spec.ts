@@ -3,10 +3,10 @@ import {
     outputApprovalRequestOf,
     persistOutputGraphStop,
     persistOutputProofTurn,
-    setOutputProofChannel,
 } from "../../fixtures/builders/output-approval-world.builder"
+import { outputProofLine, outputProofLines, setOutputProofChannel } from "../../world/output-approval-proof.service"
 import assert from "node:assert/strict"
-import { AgentMessagesService, agentMessagesEntities } from "@modules/domain/agent-messages"
+import { ChatMessagesService } from "@modules/domain/chat-records"
 import { AgentRunsService, AgentRunSweepService, agentRunsEntities } from "@modules/domain/agent-runs"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import {
@@ -39,7 +39,6 @@ const PROOF_ROWS_MAX = 3
 
 const world = useTestWorld({ modules: API_APP_MODULES, sandbox: outputProofSandbox() })
 const scene = sceneOf(world)
-const [MessageEntity] = agentMessagesEntities
 const [MemberEntity] = workspaceMembersEntities
 const [, StepEntity] = agentRunsEntities
 const [, , , , GraphDecisionEntity] = agentGraphsEntities
@@ -333,17 +332,22 @@ describe("output delivery: real database receipts", () => {
         expect(await delivery.finalInConversation(scene.workspaceId, conversationId, "Changed retry", item.id)).toBe(
             "acknowledged",
         )
-        const rows = await em().find(MessageEntity, { where: { id: item.id, conversationId }, take: 2 })
+        const rows = await outputProofLines(em(), `line:${item.id}`)
         expect(rows).toHaveLength(1)
-        expect(rows[0]).toMatchObject({ body: "Original reply", deliveryStatus: "sent" })
+        expect(rows[0]).toMatchObject({ text: "Original reply", deliveryStatus: "sent" })
     })
 
     it("grants one concurrent send and leaves a killed attempt fenced for reconciliation", async () => {
-        const messages = world.resolve(AgentMessagesService)
-        const messageId = await messages.storeAgentMessage(scene.workspaceId, conversationId, "One external reply")
+        const messages = world.resolve(ChatMessagesService)
+        const { id: messageId } = await messages.storeAgentLine({
+            workspaceId: scene.workspaceId,
+            conversationId,
+            body: "One external reply",
+            key: "external-reply",
+        })
         const attempts = await Promise.all([
-            messages.claimDelivery(messageId, conversationId),
-            messages.claimDelivery(messageId, conversationId),
+            messages.claimDelivery(scene.workspaceId, conversationId, messageId),
+            messages.claimDelivery(scene.workspaceId, conversationId, messageId),
         ])
         expect(attempts.sort()).toEqual(["ambiguous", "send"])
         await setOutputProofChannel(em(), conversationId, true)
@@ -351,9 +355,9 @@ describe("output delivery: real database receipts", () => {
             expect(
                 await world
                     .resolve(ChannelDeliveryService)
-                    .deliver({ conversationId, messageId, text: "One external reply" }),
+                    .deliver({ workspaceId: scene.workspaceId, conversationId, messageId, text: "One external reply" }),
             ).toMatchObject({ outcome: "ambiguous", delivered: false })
-            expect(await em().findOneByOrFail(MessageEntity, { id: messageId })).toMatchObject({
+            expect(await outputProofLine(em(), messageId)).toMatchObject({
                 deliveryStatus: "failed",
                 deliveryError: "delivery_outcome_unknown",
             })

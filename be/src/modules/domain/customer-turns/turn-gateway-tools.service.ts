@@ -1,6 +1,6 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import type { GatewayTools, GatewayToolName, JsonResult, ToolArgs, ToolContext } from "@modules/domain/agent-tools"
 import { AgentRunsService } from "@modules/domain/agent-runs"
 import { InjectOutputNodeReader } from "@modules/domain/authority-rules"
@@ -42,8 +42,6 @@ const OUTPUT_STEP_MS = 30_000
 const SEARCH_LIMIT_DEFAULT = 5
 /** The answer of a write in a turn that is not pinned to the intent that owns it: the write waits for a turn of its own. */
 const NEEDS_OWN_TURN: JsonResult = { error: "needs_own_turn" }
-/** The answer of a test chat's write: nothing reaches the connector. */
-const SIMULATION: JsonResult = { error: "simulation", detail: "a test chat runs connector tools read-only" }
 
 /** The nodes of a graph that draws no output. */
 const NO_NODES: OutputNodes = { output: "", approval: "", reply: "" }
@@ -97,16 +95,14 @@ const digestOf = (value: GatewayJson): string => argsHashOf(value).slice(0, 16)
  * the breaker and the audit apply. NIVO names no connector and no tool here: which tools to call and in which order comes from the
  * business knowledge. A call over the agent's limits, and every sequence (the playbook steps a person approves at once), opens the
  * `gateway_call` approval with the exact arguments and the turn's sources, and the agent hears `approval_requested`. A write the agent
- * made posts an `action_done` card and leaves what it came to on its run, which the final reply of the turn reads. An owner's test chat
- * runs read-only: search, describe and read-scope calls run for real, while a write-scope call or sequence is refused with a typed
- * `simulation` answer before it reaches the connector. On the contract pipeline a write or a sequence of an unpinned turn is refused with
+ * made posts an `action_done` card and leaves what it came to on its run, which the final reply of the turn reads. On the contract pipeline a write or a sequence of an unpinned turn is refused with
  * `needs_own_turn`, and a call's result reaches the model as marked data.
  */
 export class TurnGatewayToolsService implements GatewayTools {
     constructor(
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly gateway: McpGatewayService,
-        private readonly conversations: AgentConversationsService,
+        private readonly conversations: ChatConversationsService,
         private readonly approvals: OutputApprovalService,
         private readonly notes: HubNotesService,
         private readonly sources: TurnSourcesService,
@@ -117,10 +113,8 @@ export class TurnGatewayToolsService implements GatewayTools {
 
     /** Runs one meta-tool for the job's own conversation; a conversation of another workspace answers not found. */
     async run(ctx: ToolContext, tool: GatewayToolName, args: ToolArgs): Promise<JsonResult> {
-        const turn = await this.conversations.turnOf(ctx.conversationId)
-        if (turn.kind === "refused" || turn.value.workspaceId !== ctx.workspaceId) {
-            return { error: "conversation_not_found" }
-        }
+        const turn = await this.conversations.turnOf(ctx.workspaceId, ctx.conversationId)
+        if (turn.kind === "refused") return { error: "conversation_not_found" }
         const conversation = turn.value
         const caller: GatewayCaller = {
             workspaceId: ctx.workspaceId,
@@ -152,7 +146,7 @@ export class TurnGatewayToolsService implements GatewayTools {
     /** Calls one tool under the step key of the job; a call that needs a person becomes its approval, a write posts its card. */
     private async call(
         ctx: ToolContext,
-        conversation: TurnConversation,
+        conversation: ChatTurnConversation,
         caller: GatewayCaller,
         args: ToolArgs,
     ): Promise<JsonResult> {
@@ -163,7 +157,6 @@ export class TurnGatewayToolsService implements GatewayTools {
         if (callArgs === null) return { error: "invalid_arguments", detail: "arguments_json is not a JSON object" }
         const described = await this.gateway.describe(caller, name)
         const writes = described?.scope !== "read"
-        if (writes && (await this.conversations.isTestChat(conversation.id))) return SIMULATION
         const gate = await this.pipeline.gateOf(ctx, conversation)
         if (gate.refuses && described !== null && writes) return NEEDS_OWN_TURN
         const stepKey = `${ctx.jobId}:${name}:${digestOf(callArgs)}`
@@ -195,7 +188,7 @@ export class TurnGatewayToolsService implements GatewayTools {
     private async output(
         ctx: ToolContext,
         wakeId: string,
-        conversation: TurnConversation,
+        conversation: ChatTurnConversation,
         gate: PipelineGate,
         call: OutputCallRequest,
     ): Promise<JsonResult> {
@@ -224,7 +217,7 @@ export class TurnGatewayToolsService implements GatewayTools {
     }
 
     /** Where an output of the turn runs, on the nodes of the published graph. */
-    private async scopeOf(ctx: ToolContext, conversation: TurnConversation, planned: string): Promise<OutputScope> {
+    private async scopeOf(ctx: ToolContext, conversation: ChatTurnConversation, planned: string): Promise<OutputScope> {
         const nodes = (await this.nodes?.nodesOf(ctx.workspaceId, conversation.agent.id)) ?? NO_NODES
         return {
             conversationId: conversation.id,
@@ -245,7 +238,7 @@ export class TurnGatewayToolsService implements GatewayTools {
      */
     private async sequence(
         ctx: ToolContext,
-        conversation: TurnConversation,
+        conversation: ChatTurnConversation,
         caller: GatewayCaller,
         args: ToolArgs,
     ): Promise<JsonResult> {
@@ -259,7 +252,6 @@ export class TurnGatewayToolsService implements GatewayTools {
         const unknown = steps.find((_step, index) => described[index] === null)
         if (unknown !== undefined) return { error: "not_granted_or_unknown", detail: unknown.name }
         const writes = described.some((tool) => tool?.scope !== "read")
-        if (writes && (await this.conversations.isTestChat(conversation.id))) return SIMULATION
         if (writes && (await this.pipeline.gateOf(ctx, conversation)).refuses) return NEEDS_OWN_TURN
         const names = steps.map((step) => step.name)
         const reply = parsed.data.reply?.trim() ?? ""
@@ -275,7 +267,7 @@ export class TurnGatewayToolsService implements GatewayTools {
     }
 
     /** Opens the `gateway_call` approval of a held call or sequence with the turn's sources, and tells the agent it was asked. */
-    private async ask(ctx: ToolContext, conversation: TurnConversation, seed: ApprovalSeed): Promise<JsonResult> {
+    private async ask(ctx: ToolContext, conversation: ChatTurnConversation, seed: ApprovalSeed): Promise<JsonResult> {
         const wait =
             ctx.wakeId === undefined
                 ? null
@@ -291,7 +283,7 @@ export class TurnGatewayToolsService implements GatewayTools {
         return { status: "approval_requested", reason: seed.reason, work_item_id: item.id }
     }
 
-    private approvalOf(ctx: ToolContext, conversation: TurnConversation, seed: ApprovalSeed): WorkSpec {
+    private approvalOf(ctx: ToolContext, conversation: ChatTurnConversation, seed: ApprovalSeed): WorkSpec {
         return {
             action: GATEWAY_CALL_ACTION,
             subject_type: "conversation",
@@ -325,7 +317,7 @@ export class TurnGatewayToolsService implements GatewayTools {
     /** The `action_done` card of a write the agent made, in its home room, with the tool and the turn's knowledge as sources. */
     private async postDone(
         ctx: ToolContext,
-        conversation: TurnConversation,
+        conversation: ChatTurnConversation,
         name: string,
         description: string,
         stepKey: string,

@@ -1,4 +1,5 @@
 import type { RenewalNotification } from "@modules/domain/channels"
+import type { WorkItem } from "@modules/domain/decisions"
 import type { ProposalFieldValue } from "@modules/domain/work-items"
 
 /** The stages of a lead the sales AI may move it to. */
@@ -55,4 +56,17 @@ export const renewalNoticeOf = (
             invoiceNumber,
         },
     }
+}
+
+/** The item parts that name a conversation. */
+type ConversationSubject = Pick<WorkItem, "subject_type" | "subject_id">
+
+/** The conversation a piece of work answers in: the one its proposal names, else the one it is about; null when it names none. */
+export const conversationIdOf = (
+    item: ConversationSubject,
+    fields: Readonly<Record<string, ProposalFieldValue>>,
+): string | null => {
+    const named = textOf(fields.conversation_id)
+    if (named !== "") return named
+    return item.subject_type === "conversation" ? item.subject_id : null
 }

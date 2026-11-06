@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { LeadDraft, LeadWriteResult, LeadWriter, ToolContext } from "@modules/domain/agent-tools"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { CommandBusService } from "@modules/domain/decisions"
 import type { WorkContext } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
@@ -18,14 +18,14 @@ const ACTOR = "NIVO engine"
 export class LeadWriterService implements LeadWriter {
     constructor(
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        private readonly conversations: AgentConversationsService,
+        private readonly conversations: ChatConversationsService,
         private readonly inbound: InboundEventsService,
         private readonly bus: CommandBusService,
     ) {}
 
     /** Hands the captured customer to Sales through the gate; answers the lead and how the gate answered. */
     async createOrUpdate(ctx: ToolContext, lead: LeadDraft): Promise<LeadWriteResult> {
-        const turn = await this.conversations.turnOf(ctx.conversationId)
+        const turn = await this.conversations.turnOf(ctx.workspaceId, ctx.conversationId)
         if (turn.kind !== "ok") return { leadId: null, status: "unavailable" }
         if (turn.value.leadId !== null) return { leadId: turn.value.leadId, status: "exists" }
         const work: WorkContext = { workspaceId: ctx.workspaceId, actor: ACTOR, locale: "vi" }
@@ -58,7 +58,7 @@ export class LeadWriterService implements LeadWriter {
                 conversation_id: ctx.conversationId,
             },
         })
-        await this.conversations.rename(ctx.conversationId, lead.contactName)
+        await this.conversations.rename(ctx.workspaceId, ctx.conversationId, lead.contactName)
         if (item.lead_id !== null)
             await this.conversations.attachLead(ctx.workspaceId, ctx.conversationId, item.lead_id)
         return { leadId: item.lead_id, status: item.status }

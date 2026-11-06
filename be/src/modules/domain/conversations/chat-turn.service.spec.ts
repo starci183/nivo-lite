@@ -1,3 +1,4 @@
+import assert from "node:assert/strict"
 import {
     NOW,
     conversation,
@@ -6,8 +7,7 @@ import {
 } from "@tests/fixtures/builders/chat-turn-harness.builder"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import { AgentMessagesErrorCode, AgentMessagesService } from "@modules/domain/agent-messages"
+import { ChatConversationsService, ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
 import { ChannelReceiptsService } from "@modules/domain/channel-receipts"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
@@ -18,21 +18,12 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ChatTurnService } from "./chat-turn.service"
 import { CHAT_TURN_EXTENSIONS } from "./conversations.decorators"
-
-import type { ChatTurnPayload } from "@modules/queues/chat-turn"
-
-import type {
-    CustomerTurn,
-    ChatTurnProposal,
-    ChatTurnRuntime,
-    CustomerOutcomes,
-    ChatTurnExtensions,
-} from "./conversations.contracts"
+import type { ChatTurnExtensions, ChatTurnProposal, CustomerOutcomes, CustomerTurn } from "./conversations.contracts"
 
 const build = async (setup: Parameters<typeof arrangeChatTurn>[1] = {}) => {
     const installations = mock<InstallationRecordsService>()
-    const conversations = mock<AgentConversationsService>()
-    const messages = mock<AgentMessagesService>()
+    const conversations = mock<ChatConversationsService>()
+    const messages = mock<ChatMessagesService>()
     const receipts = mock<ChannelReceiptsService>()
     const delivery = mock<ChannelDeliveryService>()
     const logger = mock<Logger>()
@@ -48,8 +39,8 @@ const build = async (setup: Parameters<typeof arrangeChatTurn>[1] = {}) => {
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: CHAT_TURN_EXTENSIONS, useValue: extensionPort },
             { provide: LOGGER, useValue: logger },
-            { provide: AgentConversationsService, useValue: conversations },
-            { provide: AgentMessagesService, useValue: messages },
+            { provide: ChatConversationsService, useValue: conversations },
+            { provide: ChatMessagesService, useValue: messages },
             { provide: ChannelReceiptsService, useValue: receipts },
             { provide: ChannelDeliveryService, useValue: delivery },
             { provide: InstallationRecordsService, useValue: installations },
@@ -58,408 +49,12 @@ const build = async (setup: Parameters<typeof arrangeChatTurn>[1] = {}) => {
     return { service: moduleRef.get(ChatTurnService), ...doubles }
 }
 
-const registerRunFromJob = () => {
-    describe("runFromJob", () => {
-        it("runs a chat-turn payload", async () => {
-            const { service, conversations, messages, delivery, extensions } = await build()
-            extensions.useRuntime(runtimeAnswering(proposal()))
+type World = Awaited<ReturnType<typeof build>>
 
-            await service.runFromJob(turnPayload)
-
-            expect(conversations.turnOf.mock.calls).toEqual([["conv-1"]])
-            expect(messages.find.mock.calls).toEqual([["msg-1", "conv-1"]])
-            expect(messages.storeReply.mock.calls).toEqual([["ws-1", "conv-1", "Tea is 50k", "msg-1"]])
-            expect(delivery.deliver.mock.calls).toEqual([
-                [{ conversationId: "conv-1", messageId: "reply-1", text: "Tea is 50k" }],
-            ])
-        })
-
-        it.each([
-            undefined,
-            null,
-            false,
-            42,
-            "turn",
-            [],
-            {},
-            { ...turnPayload, kind: "other" },
-            { ...turnPayload, lookupName: "false" },
-        ])("ignores a payload that is not a chat turn: %p", async (payload) => {
-            const { service, conversations, messages, delivery, logger } = await build()
-
-            await service.runFromJob(payload)
-
-            expect(conversations.turnOf.mock.calls).toEqual([])
-            expect(messages.find.mock.calls).toEqual([])
-            expect(messages.storeReply.mock.calls).toEqual([])
-            expect(delivery.deliver.mock.calls).toEqual([])
-            expect(logger.warn.mock.calls).toEqual([])
-        })
-    })
-}
-
-const registerRunADeliverJob = () => {
-    describe("run a deliver job", () => {
-        it("pushes the stored message to the customer", async () => {
-            const { service, messages, delivery } = await build()
-            messages.find.mockResolvedValue({
-                kind: "ok",
-                value: { id: "greet-1", role: "agent", body: "Welcome!", deliveryStatus: null },
-            })
-
-            await service.run(deliverPayload)
-
-            expect(delivery.deliver).toHaveBeenCalledWith({
-                conversationId: "conv-1",
-                messageId: "greet-1",
-                text: "Welcome!",
-            })
-        })
-
-        it("does nothing for a message that is gone or already sent", async () => {
-            const gone = await build({ message: false })
-            const sent = await build()
-            sent.messages.find.mockResolvedValue({
-                kind: "ok",
-                value: { id: "greet-1", role: "agent", body: "Welcome!", deliveryStatus: "sent" },
-            })
-
-            await gone.service.run(deliverPayload)
-            await sent.service.run(deliverPayload)
-
-            expect(gone.delivery.deliver).not.toHaveBeenCalled()
-            expect(sent.delivery.deliver).not.toHaveBeenCalled()
-        })
-    })
-
-    describe("run a turn", () => {
-        registerDeliveryGuards()
-        registerDeliveryFailures()
-    })
-
-    describe("when the AI cannot answer", () => {
-        registerHoldingReplies()
-        registerHoldingFailures()
-    })
-}
-
-const registerDeliveryGuards = () => {
-    it("ends without effect when the conversation or the message is gone", async () => {
-        const noConversation = await build({ conversation: null })
-        const noMessage = await build({ message: false })
-
-        await noConversation.service.run(turnPayload)
-        await noMessage.service.run(turnPayload)
-
-        expect(noConversation.logger.warn).toHaveBeenCalledWith("conversations.turn.target-gone", {
-            conversationId: "conv-1",
-        })
-        expect(noMessage.delivery.showTyping).not.toHaveBeenCalled()
-    })
-
-    it("leaves a conversation a person took over to that person, but answers one the engine itself holds", async () => {
-        const person = await build({ conversation: conversation({ handledBy: "Lan" }) })
-        const engine = await build({ conversation: conversation({ handledBy: "OpenClaw" }) })
-        engine.extensions.useRuntime(runtimeAnswering(proposal()))
-
-        await person.service.run(turnPayload)
-        await engine.service.run(turnPayload)
-
-        expect(person.delivery.showTyping).not.toHaveBeenCalled()
-        expect(engine.delivery.deliver).toHaveBeenCalledTimes(1)
-    })
-
-    it("shows typing, hands the runtime the whole turn and sends the proposed reply once", async () => {
-        const { service, messages, delivery, extensions } = await build()
-        const propose = jest.fn().mockResolvedValue(proposal())
-        extensions.useRuntime({ propose })
-
-        await service.run(turnPayload)
-
-        expect(delivery.showTyping).toHaveBeenCalledWith(conversation())
-        expect(propose).toHaveBeenCalledWith({
-            conversation: conversation(),
-            messageId: "msg-1",
-            body: "Price?",
-            channelEventId: "tg:555:9",
-            transcript: [{ role: "user", body: "Price?" }],
-        } satisfies CustomerTurn)
-        expect(messages.storeReply).toHaveBeenCalledWith("ws-1", "conv-1", "Tea is 50k", "msg-1")
-        expect(delivery.deliver).toHaveBeenCalledWith({
-            conversationId: "conv-1",
-            messageId: "reply-1",
-            text: "Tea is 50k",
-        })
-    })
-
-    registerReplyGateCases()
-}
-
-const registerReplyGateCases = () => {
-    it("names a customer just met and keeps the name on the turn", async () => {
-        const { service, conversations, extensions } = await build({ name: "Minh Tran" })
-        const propose = jest.fn().mockResolvedValue(proposal())
-        extensions.useRuntime({ propose })
-
-        await service.run({ ...turnPayload, lookupName: true })
-
-        expect(conversations.rename).toHaveBeenCalledWith("conv-1", "Minh Tran")
-        expect(propose).toHaveBeenCalledWith(
-            expect.objectContaining({ conversation: conversation({ visitorName: "Minh Tran" }) }),
-        )
-    })
-
-    it("keeps the stored name when the channel will not say one", async () => {
-        const { service, conversations, extensions } = await build()
-        extensions.useRuntime(runtimeAnswering(proposal()))
-
-        await service.run({ ...turnPayload, lookupName: true })
-
-        expect(conversations.rename).not.toHaveBeenCalled()
-    })
-}
-
-const registerDeliveryFailures = () => {
-    it("writes the line that tells the owner a person must approve when the answer needs one", async () => {
-        const { service, messages, extensions } = await build()
-        extensions.useRuntime(runtimeAnswering(proposal({ needsHuman: true, reason: "over_authority" })))
-
-        await service.run(turnPayload)
-
-        expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.chatNeedsHuman>")
-    })
-
-    it("lets the outcome handler decide what leaves and which lines show", async () => {
-        const { service, messages, delivery, extensions } = await build()
-        const outcomes = mock<CustomerOutcomes>()
-        outcomes.settle.mockResolvedValue({ reply: "Fixed price 55k", send: true, lines: ["Lead handed to Sales"] })
-        extensions.useRuntime(runtimeAnswering(proposal()))
-        extensions.useOutcomes(outcomes)
-
-        await service.run(turnPayload)
-
-        expect(outcomes.settle).toHaveBeenCalledWith(expect.objectContaining({ messageId: "msg-1" }), proposal())
-        expect(delivery.deliver).toHaveBeenCalledWith({
-            conversationId: "conv-1",
-            messageId: "reply-1",
-            text: "Fixed price 55k",
-        })
-        expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Lead handed to Sales")
-    })
-
-    it("reads the messages of the burst window in the same turn, oldest first, and leaves out one that is gone", async () => {
-        const { service, messages } = await build()
-        const found = (body: string) => ({
-            kind: "ok" as const,
-            value: { id: body, role: "customer", body, deliveryStatus: null },
-        })
-        messages.find.mockImplementation((id) =>
-            Promise.resolve(
-                id === "msg-gone"
-                    ? { kind: "refused" as const, code: AgentMessagesErrorCode.NotFound }
-                    : found(`body of ${id}`),
-            ),
-        )
-
-        const turn = await service.turnOf({ ...turnPayload, mergedMessageIds: ["msg-2", "msg-gone", "msg-3"] })
-
-        expect(turn?.body).toBe("body of msg-1\nbody of msg-2\nbody of msg-3")
-    })
-
-    registerLateReplies()
-}
-
-const registerLateReplies = () => {
-    it("sends none of the model's text when the final reply is owed, and still shows the lines", async () => {
-        const { service, messages, delivery, extensions } = await build()
-        const outcomes = mock<CustomerOutcomes>()
-        outcomes.settle.mockResolvedValue({ reply: "Will do", send: true, lines: ["Order recorded"] })
-        extensions.useOutcomes(outcomes)
-        const turn = await service.turnOf(turnPayload)
-        assert(turn !== undefined)
-
-        await service.respond({ ...turn, finalOwed: true }, proposal())
-
-        expect(messages.storeReply).not.toHaveBeenCalled()
-        expect(delivery.deliver).not.toHaveBeenCalled()
-        expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Order recorded")
-    })
-
-    it("passes a late reply through the gate, shows its lines and leaves sending to the caller", async () => {
-        const { service, messages, delivery, extensions } = await build()
-        const outcomes = mock<CustomerOutcomes>()
-        outcomes.settleLate.mockResolvedValue({ reply: "Done", send: false, lines: ["Waits for approval"] })
-        extensions.useOutcomes(outcomes)
-        const turn = await service.turnOf(turnPayload)
-        assert(turn !== undefined)
-
-        await expect(service.settleLate(turn, "Done", "w1")).resolves.toMatchObject({ send: false })
-
-        expect(outcomes.settleLate).toHaveBeenCalledWith(turn, "Done", "w1")
-        expect(delivery.deliver).not.toHaveBeenCalled()
-        expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Waits for approval")
-    })
-
-    it("sends nothing when the outcome handler keeps the reply for approval, and still shows its lines", async () => {
-        const { service, messages, delivery, extensions } = await build()
-        const outcomes = mock<CustomerOutcomes>()
-        outcomes.settle.mockResolvedValue({ reply: "draft", send: false, lines: ["Waits for approval"] })
-        extensions.useRuntime(runtimeAnswering(proposal()))
-        extensions.useOutcomes(outcomes)
-
-        await service.run(turnPayload)
-
-        expect(messages.storeReply).not.toHaveBeenCalled()
-        expect(delivery.deliver).not.toHaveBeenCalled()
-        expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Waits for approval")
-    })
-
-    it("never sends a reply twice", async () => {
-        const { service, delivery, extensions } = await build({ sent: true })
-        extensions.useRuntime(runtimeAnswering(proposal()))
-
-        await service.run(turnPayload)
-
-        expect(delivery.deliver).not.toHaveBeenCalled()
-    })
-}
-
-const registerHoldingReplies = () => {
-    it("sends the default holding line, remembers it and tells the owner the AI was late", async () => {
-        const { service, messages, receipts, delivery } = await build()
-
-        await service.run(turnPayload)
-
-        expect(receipts.heldSince).toHaveBeenCalledWith("ws-1", "conv-1", new Date(NOW - 3_600_000))
-        expect(messages.storeReply).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.holdingReply>", "msg-1")
-        expect(delivery.deliver).toHaveBeenCalledWith({
-            conversationId: "conv-1",
-            messageId: "reply-1",
-            text: "<conversations.holdingReply>",
-        })
-        expect(receipts.rememberHolding).toHaveBeenCalledWith("ws-1", "conv-1", new Date(NOW))
-        expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.chatUnavailable>")
-    })
-
-    it(
-        "sends the owner own holding line, trimmed and bounded, and falls back to the default " +
-            "when it is empty or unset",
-        async () => {
-            const custom = await build({ setting: { holdingMessage: `  ${"x".repeat(500)}  ` } })
-            const blank = await build({ setting: { holdingMessage: "   " } })
-            const unset = await build({ setting: { holdingMessage: null } })
-
-            await custom.service.run(turnPayload)
-            await blank.service.run(turnPayload)
-            await unset.service.run(turnPayload)
-
-            expect(custom.messages.storeReply).toHaveBeenCalledWith("ws-1", "conv-1", "x".repeat(400), "msg-1")
-            expect(blank.messages.storeReply).toHaveBeenCalledWith(
-                "ws-1",
-                "conv-1",
-                "<conversations.holdingReply>",
-                "msg-1",
-            )
-            expect(unset.messages.storeReply).toHaveBeenCalledWith(
-                "ws-1",
-                "conv-1",
-                "<conversations.holdingReply>",
-                "msg-1",
-            )
-        },
-    )
-
-    registerHoldingRepeats()
-}
-
-const registerHoldingRepeats = () => {
-    it("does not repeat the holding line within the hour, but still hands the question over", async () => {
-        const { service, messages, delivery, receipts, extensions } = await build({ held: true })
-        const outcomes = mock<CustomerOutcomes>()
-        outcomes.holdOver.mockResolvedValue(["Handed to Lan"])
-        extensions.useOutcomes(outcomes)
-
-        await service.run(turnPayload)
-
-        expect(outcomes.holdOver).toHaveBeenCalledWith(
-            expect.objectContaining({ messageId: "msg-1" }),
-            "openclaw_unavailable",
-        )
-        expect(delivery.deliver).not.toHaveBeenCalled()
-        expect(receipts.rememberHolding).not.toHaveBeenCalled()
-        expect(messages.storeLine).toHaveBeenCalledTimes(1)
-        expect(messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Handed to Lan")
-    })
-
-    it("is silent to the customer while paused, unless the owner wrote a holding message, and notes it once per burst", async () => {
-        const silent = await build()
-        const written = await build({ setting: { holdingMessage: "We are closed" } })
-        const later = await build({ held: true })
-        const turn = async (world: typeof silent) => {
-            const found = await world.service.turnOf(turnPayload)
-            assert(found !== undefined)
-            return found
-        }
-
-        await silent.service.holdOver(await turn(silent), "installation_not_running")
-        await written.service.holdOver(await turn(written), "installation_not_running")
-        await later.service.holdOver(await turn(later), "installation_not_running")
-
-        expect(silent.messages.storeReply).not.toHaveBeenCalled()
-        expect(silent.delivery.deliver).not.toHaveBeenCalled()
-        expect(silent.receipts.rememberHolding).toHaveBeenCalledTimes(1)
-        expect(silent.messages.storeLine).toHaveBeenCalledTimes(1)
-        expect(silent.messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.chatPaused>")
-        expect(written.messages.storeReply).toHaveBeenCalledWith("ws-1", "conv-1", "We are closed", "msg-1")
-        expect(written.messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.chatUnavailable>")
-        expect(later.messages.storeReply).not.toHaveBeenCalled()
-        expect(later.messages.storeLine).not.toHaveBeenCalled()
-    })
-
-    it("finishes delivering the holding line a previous attempt stored, even inside the hour", async () => {
-        const { service, delivery } = await build({ retry: true, held: true })
-
-        await service.run(turnPayload)
-
-        expect(delivery.deliver).toHaveBeenCalledTimes(1)
-    })
-}
-
-const registerHoldingFailures = () => {
-    it("falls back the same way when the AI step throws, and logs it", async () => {
-        const { service, delivery, logger, extensions } = await build()
-        const failure = new Error("gateway down")
-        extensions.useRuntime({ propose: () => Promise.reject(failure) })
-
-        await service.run(turnPayload)
-
-        expect(logger.error).toHaveBeenCalledWith("conversations.runtime.failed", failure, {
-            conversationId: "conv-1",
-        })
-        expect(delivery.deliver).toHaveBeenCalledWith(expect.objectContaining({ text: "<conversations.holdingReply>" }))
-    })
-
-    it("falls back with the reason the AI step gives when it says it cannot answer", async () => {
-        const { service, delivery, extensions } = await build()
-        const outcomes = mock<CustomerOutcomes>()
-        outcomes.holdOver.mockResolvedValue([])
-        extensions.useRuntime(runtimeAnswering("too_slow"))
-        extensions.useOutcomes(outcomes)
-
-        await service.run(turnPayload)
-
-        expect(outcomes.holdOver).toHaveBeenCalledWith(expect.anything(), "too_slow")
-        expect(delivery.deliver).toHaveBeenCalledWith(expect.objectContaining({ text: "<conversations.holdingReply>" }))
-    })
-}
-
-const turnPayload: ChatTurnPayload = {
-    kind: "turn",
-    workspaceId: "ws-1",
+const turnRef = {
     conversationId: "conv-1",
     messageId: "msg-1",
-    channelEventId: "tg:555:9",
-    lookupName: false,
+    channelEventId: "tg:c-1:555:9",
 }
 
 const proposal = (patch: Partial<ChatTurnProposal> = {}): ChatTurnProposal => ({
@@ -471,29 +66,308 @@ const proposal = (patch: Partial<ChatTurnProposal> = {}): ChatTurnProposal => ({
     ...patch,
 })
 
-const runtimeAnswering = (answer: ChatTurnProposal | string): ChatTurnRuntime => ({
-    propose: () => Promise.resolve(answer),
-})
+/** The turn of the stored message, which the setup must have found. */
+const turnOf = async (world: World): Promise<CustomerTurn> => {
+    const turn = await world.service.turnOf("ws-1", turnRef)
+    assert(turn !== undefined)
+    return turn
+}
 
-const deliverPayload: ChatTurnPayload = { ...turnPayload, kind: "deliver", messageId: "greet-1" }
+const registerTurnOf = () => {
+    it("reads the conversation, the message and the transcript of a wake in the workspace of the wake", async () => {
+        const world = await build()
 
-describe("ChatTurnService", () => {
-    registerRunFromJob()
-    registerRunADeliverJob()
-})
-import assert from "node:assert/strict"
+        const turn = await world.service.turnOf("ws-1", turnRef)
 
-describe("ChatTurnService late reply without extensions", () => {
-    it("returns the unchanged late reply when no outcome handler is registered", async () => {
+        expect(world.conversations.turnOf).toHaveBeenCalledWith("ws-1", "conv-1")
+        expect(world.messages.find).toHaveBeenCalledWith("ws-1", "conv-1", "msg-1")
+        expect(turn).toEqual({
+            conversation: conversation(),
+            messageId: "msg-1",
+            body: "Price?",
+            channelEventId: "tg:c-1:555:9",
+            transcript: [{ role: "user", body: "Price?" }],
+        } satisfies CustomerTurn)
+    })
+
+    it("ends without effect when the conversation or the message is gone", async () => {
+        const noConversation = await build({ conversation: null })
+        const noMessage = await build({ message: false })
+
+        await expect(noConversation.service.turnOf("ws-1", turnRef)).resolves.toBeUndefined()
+        await expect(noMessage.service.turnOf("ws-1", turnRef)).resolves.toBeUndefined()
+
+        expect(noConversation.logger.warn).toHaveBeenCalledWith("conversations.turn.target-gone", {
+            conversationId: "conv-1",
+        })
+        expect(noMessage.logger.warn).toHaveBeenCalledTimes(1)
+    })
+
+    it("reads the messages of the burst window in the same turn, oldest first, and leaves out one that is gone", async () => {
         const { service, messages } = await build()
-        const turn = await service.turnOf(turnPayload)
-        assert(turn !== undefined)
-        await expect(service.settleLate(turn, "Finished", "item-1")).resolves.toEqual({
+        const found = (body: string) => ({
+            kind: "ok" as const,
+            value: { id: body, role: "customer", body, deliveryStatus: null },
+        })
+        messages.find.mockImplementation((_workspaceId, _conversationId, id) =>
+            Promise.resolve(
+                id === "msg-gone"
+                    ? { kind: "refused" as const, code: ChatRecordsErrorCode.NotFound }
+                    : found(`body of ${id}`),
+            ),
+        )
+
+        const turn = await service.turnOf("ws-1", { ...turnRef, mergedMessageIds: ["msg-2", "msg-gone", "msg-3"] })
+
+        expect(turn?.body).toBe("body of msg-1\nbody of msg-2\nbody of msg-3")
+    })
+}
+
+const registerReady = () => {
+    it("leaves a conversation a person took over to that person, but answers one the engine itself holds", async () => {
+        const person = await build({ conversation: conversation({ handledBy: "Lan" }) })
+        const engine = await build({ conversation: conversation({ handledBy: "OpenClaw" }) })
+        const free = await build()
+
+        expect(person.service.answeredByPerson(await turnOf(person))).toBe(true)
+        expect(engine.service.answeredByPerson(await turnOf(engine))).toBe(false)
+        expect(free.service.answeredByPerson(await turnOf(free))).toBe(false)
+    })
+
+    it("shows typing on the channel and names a customer just met, keeping the name on the turn", async () => {
+        const world = await build({ name: "Minh Tran" })
+
+        const ready = await world.service.ready(await turnOf(world), true)
+
+        expect(world.delivery.showTyping).toHaveBeenCalledWith(conversation({ visitorName: "Minh Tran" }))
+        expect(world.conversations.rename).toHaveBeenCalledWith("ws-1", "conv-1", "Minh Tran")
+        expect(ready.conversation.visitorName).toBe("Minh Tran")
+    })
+
+    it("keeps the stored name when the channel will not say one, and asks no name when not asked to", async () => {
+        const silent = await build()
+        const unasked = await build({ name: "Minh Tran" })
+
+        const kept = await silent.service.ready(await turnOf(silent), true)
+        await unasked.service.ready(await turnOf(unasked), false)
+
+        expect(kept.conversation).toEqual(conversation())
+        expect(silent.conversations.rename).not.toHaveBeenCalled()
+        expect(unasked.delivery.customerName).not.toHaveBeenCalled()
+        expect(unasked.delivery.showTyping).toHaveBeenCalledTimes(1)
+    })
+}
+
+const registerRespond = () => {
+    it("stores the proposed reply once and delivers it through the channel", async () => {
+        const world = await build()
+
+        await world.service.respond(await turnOf(world), proposal())
+
+        expect(world.messages.storeAgentLine).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            conversationId: "conv-1",
+            body: "Tea is 50k",
+            key: "msg-1",
+            inReplyTo: "msg-1",
+        })
+        expect(world.delivery.deliver).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            conversationId: "conv-1",
+            messageId: "reply-1",
+            text: "Tea is 50k",
+        })
+    })
+
+    it("writes the line that tells the owner a person must approve when the answer needs one", async () => {
+        const world = await build()
+
+        await world.service.respond(await turnOf(world), proposal({ needsHuman: true, reason: "over_authority" }))
+
+        expect(world.messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.chatNeedsHuman>")
+    })
+
+    it("lets the outcome handler decide what leaves and which lines show", async () => {
+        const world = await build()
+        const outcomes = mock<CustomerOutcomes>()
+        outcomes.settle.mockResolvedValue({ reply: "Fixed price 55k", send: true, lines: ["Lead handed to Sales"] })
+        world.extensions.useOutcomes(outcomes)
+
+        await world.service.respond(await turnOf(world), proposal())
+
+        expect(outcomes.settle).toHaveBeenCalledWith(expect.objectContaining({ messageId: "msg-1" }), proposal())
+        expect(world.delivery.deliver).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            conversationId: "conv-1",
+            messageId: "reply-1",
+            text: "Fixed price 55k",
+        })
+        expect(world.messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Lead handed to Sales")
+    })
+}
+
+const registerRespondHeld = () => {
+    it("sends nothing when the outcome handler keeps the reply for approval, and still shows its lines", async () => {
+        const world = await build()
+        const outcomes = mock<CustomerOutcomes>()
+        outcomes.settle.mockResolvedValue({ reply: "draft", send: false, lines: ["Waits for approval"] })
+        world.extensions.useOutcomes(outcomes)
+
+        await world.service.respond(await turnOf(world), proposal())
+
+        expect(world.messages.storeAgentLine).not.toHaveBeenCalled()
+        expect(world.delivery.deliver).not.toHaveBeenCalled()
+        expect(world.messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Waits for approval")
+    })
+
+    it("sends none of the model's text when the final reply is owed, and still shows the lines", async () => {
+        const world = await build()
+        const outcomes = mock<CustomerOutcomes>()
+        outcomes.settle.mockResolvedValue({ reply: "Will do", send: true, lines: ["Order recorded"] })
+        world.extensions.useOutcomes(outcomes)
+
+        await world.service.respond({ ...(await turnOf(world)), finalOwed: true }, proposal())
+
+        expect(world.messages.storeAgentLine).not.toHaveBeenCalled()
+        expect(world.delivery.deliver).not.toHaveBeenCalled()
+        expect(world.messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Order recorded")
+    })
+
+    it("never sends a reply twice", async () => {
+        const world = await build({ sent: true })
+
+        await expect(world.service.sendReply(await turnOf(world), "Tea is 50k")).resolves.toBe("acknowledged")
+
+        expect(world.delivery.deliver).not.toHaveBeenCalled()
+    })
+}
+
+const registerSettleLate = () => {
+    it("passes a late reply through the gate, shows its lines and leaves sending to the caller", async () => {
+        const world = await build()
+        const outcomes = mock<CustomerOutcomes>()
+        outcomes.settleLate.mockResolvedValue({ reply: "Done", send: false, lines: ["Waits for approval"] })
+        world.extensions.useOutcomes(outcomes)
+        const turn = await turnOf(world)
+
+        await expect(world.service.settleLate(turn, "Done", "w1")).resolves.toMatchObject({ send: false })
+
+        expect(outcomes.settleLate).toHaveBeenCalledWith(turn, "Done", "w1")
+        expect(world.delivery.deliver).not.toHaveBeenCalled()
+        expect(world.messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Waits for approval")
+    })
+
+    it("returns the unchanged late reply when no outcome handler is registered", async () => {
+        const world = await build()
+
+        await expect(world.service.settleLate(await turnOf(world), "Finished", "item-1")).resolves.toEqual({
             reply: "Finished",
             send: true,
             lines: [],
         })
-        expect(messages.storeLine).not.toHaveBeenCalled()
-        expect(messages.storeReply).not.toHaveBeenCalled()
+
+        expect(world.messages.storeLine).not.toHaveBeenCalled()
+        expect(world.messages.storeAgentLine).not.toHaveBeenCalled()
     })
+}
+
+const registerHoldOver = () => {
+    it("sends the default holding line, remembers it and tells the owner the AI was late", async () => {
+        const world = await build()
+
+        await world.service.holdOver(await turnOf(world), "openclaw_unavailable")
+
+        expect(world.receipts.heldSince).toHaveBeenCalledWith("ws-1", "conv-1", new Date(NOW - 3_600_000))
+        expect(world.messages.storeAgentLine).toHaveBeenCalledWith(
+            expect.objectContaining({ body: "<conversations.holdingReply>", key: "msg-1", inReplyTo: "msg-1" }),
+        )
+        expect(world.delivery.deliver).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            conversationId: "conv-1",
+            messageId: "reply-1",
+            text: "<conversations.holdingReply>",
+        })
+        expect(world.receipts.rememberHolding).toHaveBeenCalledWith("ws-1", "conv-1", new Date(NOW))
+        expect(world.messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.chatUnavailable>")
+    })
+
+    it("sends the owner own holding line, trimmed and bounded, and falls back to the default when it is empty or unset", async () => {
+        const custom = await build({ setting: { holdingMessage: `  ${"x".repeat(500)}  ` } })
+        const blank = await build({ setting: { holdingMessage: "   " } })
+        const unset = await build({ setting: { holdingMessage: null } })
+
+        await custom.service.holdOver(await turnOf(custom), "openclaw_unavailable")
+        await blank.service.holdOver(await turnOf(blank), "openclaw_unavailable")
+        await unset.service.holdOver(await turnOf(unset), "openclaw_unavailable")
+
+        expect(custom.messages.storeAgentLine).toHaveBeenCalledWith(expect.objectContaining({ body: "x".repeat(400) }))
+        const holding = { body: "<conversations.holdingReply>" }
+        expect(blank.messages.storeAgentLine).toHaveBeenCalledWith(expect.objectContaining(holding))
+        expect(unset.messages.storeAgentLine).toHaveBeenCalledWith(expect.objectContaining(holding))
+    })
+
+    it("does not repeat the holding line within the hour, but still hands the question over", async () => {
+        const world = await build({ held: true })
+        const outcomes = mock<CustomerOutcomes>()
+        outcomes.holdOver.mockResolvedValue(["Handed to Lan"])
+        world.extensions.useOutcomes(outcomes)
+
+        await world.service.holdOver(await turnOf(world), "openclaw_unavailable")
+
+        expect(outcomes.holdOver).toHaveBeenCalledWith(
+            expect.objectContaining({ messageId: "msg-1" }),
+            "openclaw_unavailable",
+        )
+        expect(world.delivery.deliver).not.toHaveBeenCalled()
+        expect(world.receipts.rememberHolding).not.toHaveBeenCalled()
+        expect(world.messages.storeLine).toHaveBeenCalledTimes(1)
+        expect(world.messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "Handed to Lan")
+    })
+}
+
+const registerPaused = () => {
+    it("is silent to the customer while paused, unless the owner wrote a holding message, and notes it once per burst", async () => {
+        const silent = await build()
+        const written = await build({ setting: { holdingMessage: "We are closed" } })
+        const later = await build({ held: true })
+
+        await silent.service.holdOver(await turnOf(silent), "installation_not_running")
+        await written.service.holdOver(await turnOf(written), "installation_not_running")
+        await later.service.holdOver(await turnOf(later), "installation_not_running")
+
+        expect(silent.messages.storeAgentLine).not.toHaveBeenCalled()
+        expect(silent.delivery.deliver).not.toHaveBeenCalled()
+        expect(silent.receipts.rememberHolding).toHaveBeenCalledTimes(1)
+        expect(silent.messages.storeLine).toHaveBeenCalledTimes(1)
+        expect(silent.messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.chatPaused>")
+        expect(written.messages.storeAgentLine).toHaveBeenCalledWith(expect.objectContaining({ body: "We are closed" }))
+        expect(written.messages.storeLine).toHaveBeenCalledWith("ws-1", "conv-1", "<conversations.chatUnavailable>")
+        expect(later.messages.storeAgentLine).not.toHaveBeenCalled()
+        expect(later.messages.storeLine).not.toHaveBeenCalled()
+    })
+
+    it("finishes delivering the holding line a previous attempt stored, even inside the hour", async () => {
+        const world = await build({ retry: true, held: true })
+
+        await world.service.holdOver(await turnOf(world), "openclaw_unavailable")
+
+        expect(world.messages.replyExists).toHaveBeenCalledWith("ws-1", "conv-1", "msg-1")
+        expect(world.delivery.deliver).toHaveBeenCalledTimes(1)
+    })
+}
+
+describe("ChatTurnService", () => {
+    describe("turnOf", registerTurnOf)
+
+    describe("ready", registerReady)
+
+    describe("respond and sendReply", registerRespond)
+
+    describe("respond when the reply is held", registerRespondHeld)
+
+    describe("settleLate", registerSettleLate)
+
+    describe("holdOver", registerHoldOver)
+
+    describe("holdOver while paused or retried", registerPaused)
 })

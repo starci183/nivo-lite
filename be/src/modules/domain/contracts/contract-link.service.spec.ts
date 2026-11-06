@@ -2,7 +2,6 @@ import { Test } from "@nestjs/testing"
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { DataRecordsReadService } from "@modules/domain/data-records"
@@ -36,8 +35,6 @@ const build = async (entityManager: MockEntityManager) => {
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => `${key}:${JSON.stringify(params)}`)
     const leads = mock<LeadRecordsService>()
-    const conversations = mock<AgentConversationsService>()
-    conversations.latestOfLead.mockResolvedValue(null)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ContractLinkService,
@@ -46,10 +43,9 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: DataRecordsReadService, useValue: dataRecords },
             { provide: ConnectionsService, useValue: connections },
             { provide: LeadRecordsService, useValue: leads },
-            { provide: AgentConversationsService, useValue: conversations },
         ],
     }).compile()
-    return { links: moduleRef.get(ContractLinkService), leads, conversations }
+    return { links: moduleRef.get(ContractLinkService), leads }
 }
 
 const PHONE = "84786346888"
@@ -195,17 +191,10 @@ describe("ContractLinkService", () => {
 
 describe("ContractLinkService", () => {
     describe("linkCustomers, the lead it picks", () => {
-        it("moves the contract to the lead a customer conversation reaches, so the renewal finds the chat", async () => {
+        it("moves a contract whose lead has no contact to the lead that holds the customer's phone", async () => {
             const { tx, relinkWheres } = linkRun([contractOf({ leadId: "lead-own" })], [{ id: "contract-1" }])
-            const { links, leads, conversations } = await build(tx.em)
+            const { links, leads } = await build(tx.em)
             leads.matchAllByContact.mockResolvedValue([leadRowOf({ id: "lead-zalo" })])
-            conversations.latestOfLead.mockImplementation((_workspace, leadId) =>
-                Promise.resolve(
-                    leadId === "lead-zalo"
-                        ? { id: "conv-1", agentId: "agent-1", channel: "zalo", visitorName: "L\u01b0u" }
-                        : null,
-                ),
-            )
 
             await expect(links.linkCustomers("ws-1")).resolves.toEqual({ linked: 1, created: 0, unmatched: [] })
 

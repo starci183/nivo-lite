@@ -2,7 +2,6 @@ import {
     CUSTOMER_TURNS_ERROR_KINDS,
     CUSTOMER_TURNS_MESSAGES,
     CustomerOutcomesService,
-    CustomerTurnRuntimeService,
     CustomerTurnsModule,
     customerTurnsOptionsOf,
     GATEWAY_TURNS_MESSAGES,
@@ -21,20 +20,16 @@ import {
     INBOUND_EVENTS_MESSAGES,
     InboundEventsModule,
 } from "@modules/domain/inbound-events"
-import {
-    AGENT_CONVERSATIONS_ERROR_KINDS,
-    AGENT_CONVERSATIONS_MESSAGES,
-    AgentConversationsModule,
-} from "@modules/domain/agent-conversations"
-import {
-    AGENT_MESSAGES_ERROR_KINDS,
-    AGENT_MESSAGES_MESSAGES,
-    AgentMessagesModule,
-} from "@modules/domain/agent-messages"
 import { ChatActivityModule } from "@modules/domain/chat-activity"
+import { CHAT_RECORDS_ERROR_KINDS, CHAT_RECORDS_MESSAGES, ChatRecordsModule } from "@modules/domain/chat-records"
 import { CHAT_MARKERS_ERROR_KINDS, CHAT_MARKERS_MESSAGES, ChatMarkersModule } from "@modules/domain/chat-markers"
 import { ChatTypingModule } from "@modules/domain/chat-typing"
-import { CHANNELS_ERROR_KINDS, CHANNELS_MESSAGES, ChannelsModule } from "@modules/domain/channels"
+import {
+    CHANNELS_ERROR_KINDS,
+    CHANNELS_MESSAGES,
+    ChannelsModule,
+    ChatSendNativeService,
+} from "@modules/domain/channels"
 import { ChannelReceiptsModule } from "@modules/domain/channel-receipts"
 import {
     CONNECTION_SECRETS_ERROR_KINDS,
@@ -60,9 +55,8 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     ZaloModule.register({ isGlobal: true, ...options.zalo }),
     MailModule.register({ isGlobal: true, ...options.mail }),
     ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
-    AgentConversationsModule.register({ isGlobal: true }),
+    ChatRecordsModule.register({ isGlobal: true }),
     ChatActivityModule.register({ isGlobal: true }),
-    AgentMessagesModule.register({ isGlobal: true }),
     ChatMarkersModule.register({ isGlobal: true }),
     ChatTypingModule.register({ isGlobal: true }),
     ChannelReceiptsModule.register({ isGlobal: true }),
@@ -70,7 +64,6 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     ChannelsModule.register({ isGlobal: true, ...options.channels, ports: { inbox: ZaloInboxPageReadService } }),
     ConversationsModule.register({
         isGlobal: true,
-        runtime: CustomerTurnRuntimeService,
         outcomes: CustomerOutcomesService,
     }),
     NativeToolsModule.register({ isGlobal: true, customer: true }),
@@ -79,7 +72,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
         ...options.mcpGateway,
         console: true,
         keyCheck: true,
-        natives: [...NATIVE_TOOL_ADAPTERS, ...CUSTOMER_TOOL_ADAPTERS, AgentNativeService],
+        natives: [...NATIVE_TOOL_ADAPTERS, ...CUSTOMER_TOOL_ADAPTERS, AgentNativeService, ChatSendNativeService],
     }),
     EntityEngineDoorModule.register({ isGlobal: true, agentModule: "nivo" }),
     CustomerTurnsModule.register({ isGlobal: true, ...customerTurnsOptionsOf(options.connections.publicApiUrl) }),
@@ -91,8 +84,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
 
 /** The error kinds of the capabilities this group registers, in registration order. */
 export const messagingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
-    AGENT_CONVERSATIONS_ERROR_KINDS,
-    AGENT_MESSAGES_ERROR_KINDS,
+    CHAT_RECORDS_ERROR_KINDS,
     INBOUND_EVENTS_ERROR_KINDS,
     CHANNELS_ERROR_KINDS,
     CONNECTION_SECRETS_ERROR_KINDS,
@@ -109,8 +101,7 @@ export const messagingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
 
 /** The message bundles of the capabilities this group registers, in registration order. */
 export const messagingMessages: ReadonlyArray<MessageBundle> = [
-    AGENT_CONVERSATIONS_MESSAGES,
-    AGENT_MESSAGES_MESSAGES,
+    CHAT_RECORDS_MESSAGES,
     INBOUND_EVENTS_MESSAGES,
     CHANNELS_MESSAGES,
     CONNECTION_SECRETS_MESSAGES,

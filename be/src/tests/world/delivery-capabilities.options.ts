@@ -14,10 +14,12 @@ import { ConversationsService, CONVERSATIONS_MESSAGES } from "@modules/domain/co
 import { CustomerHearingService } from "../../modules/domain/conversations/customer-hearing.service"
 import { ZaloCredentialsService } from "@modules/domain/channels"
 import { CHANNELS_OPTIONS } from "../../modules/domain/channels/channels.decorators"
-import { AgentConversationsModule } from "@modules/domain/agent-conversations"
+import { ChatRecordsModule } from "@modules/domain/chat-records"
+import { EntityEngineModule, ReadOnlyEngineAlertsService } from "@modules/domain/entity-engine"
+import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
+import { MODULE_JOBS } from "@nivo-lite/blocks-core/modules"
 import { AgentConnectionsModule } from "@modules/domain/agent-connections"
 import { AGENTS_INSTALLATIONS, AgentDirectoryService, AgentsModule } from "@modules/domain/agents"
-import { AgentMessagesModule } from "@modules/domain/agent-messages"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
 import { EventsModule } from "@modules/domain/events"
 import { StaffModule } from "@modules/domain/staff"
@@ -34,13 +36,7 @@ import { TransactionsModule } from "@modules/domain/transactions"
 import { BankFeedInboxModule } from "@modules/domain/bank-feed-inbox"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { MetaInboxModule } from "@modules/domain/meta-inbox"
-import { ChatTurnModule } from "@modules/queues/chat-turn"
-import {
-    QUIET_AGENT_TAGS,
-    QUIET_CUSTOMER_INTAKE,
-    QUIET_INBOUND_FILES,
-    QUIET_INSTALLATIONS,
-} from "./quiet-peers.options"
+import { QUIET_AGENT_TAGS, QUIET_CUSTOMER_INTAKE, QUIET_INSTALLATIONS } from "./quiet-peers.options"
 import { AgentTagService } from "../../modules/domain/agent-work/agent-tag.service"
 import { DEFAULT_POLL_SCHEDULE } from "../../modules/domain/connection-poll/poll-schedule.policy"
 import { worldIds } from "./lite-world.service"
@@ -69,7 +65,6 @@ class DeliveryPeersModule {
         return {
             module: DeliveryPeersModule,
             global: true,
-            imports: [ChatTurnModule.register({})],
             providers: [
                 ConversationsService,
                 CustomerHearingService,
@@ -78,7 +73,6 @@ class DeliveryPeersModule {
                 QUIET_AGENT_TAGS,
                 QUIET_CUSTOMER_INTAKE,
                 QUIET_INSTALLATIONS,
-                QUIET_INBOUND_FILES,
                 { provide: CHANNELS_OPTIONS, useFactory: () => ({ siteUrl: "http://localhost" }) },
                 ZaloCredentialsService,
             ],
@@ -132,10 +126,16 @@ const domainModules = (tokenKey: Secret): Array<DynamicModule> => [
         siteUrl: "http://localhost",
         publicSiteUrl: undefined,
     }),
-    AgentConversationsModule.register({ isGlobal: true }),
+    EntityEngineModule.register({
+        isGlobal: true,
+        alerts: ReadOnlyEngineAlertsService,
+        entities: FLOW_F_ENTITIES,
+        jobs: MODULE_JOBS,
+        cursorKey: tokenKey,
+    }),
+    ChatRecordsModule.register({ isGlobal: true }),
     AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
-    AgentMessagesModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),
     EventsModule.register({ isGlobal: true }),
     StaffModule.register({ isGlobal: true }),

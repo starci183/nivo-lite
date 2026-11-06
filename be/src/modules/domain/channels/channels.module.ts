@@ -5,6 +5,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./channels.module-definit
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 import { ChannelSenderRegistryService } from "./channel-sender-registry.service"
 import { ChannelDeliveryService } from "./channel-delivery.service"
+import { ChatSendNativeService } from "./chat-send-native.service"
 import { ChannelPlanNoticeService } from "./channel-plan-notice.service"
 import { ZaloDeliveryService } from "./zalo-delivery.service"
 import { ConnectionHealthService } from "./connection-health.service"
@@ -29,6 +30,7 @@ export class ChannelsModule extends ConfigurableModuleClass {
                 ZaloCredentialsService,
                 ChannelSenderRegistryService,
                 ChannelDeliveryService,
+                ChatSendNativeService,
                 ChannelPlanNoticeService,
                 ZaloDeliveryService,
                 ConnectionHealthService,
@@ -50,6 +52,7 @@ export class ChannelsModule extends ConfigurableModuleClass {
                 ZaloPageService,
                 TelegramPageService,
                 ChannelDeliveryService,
+                ChatSendNativeService,
                 ConnectionHealthService,
                 CHANNEL_SENDER_REGISTRY,
             ],

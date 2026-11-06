@@ -10,11 +10,11 @@ import type {
     LeadDraft,
     LeadWriteResult,
     OptionalBridgeTurn,
-    OptionalToolLeadId,
     ToolArgs,
     ToolContext,
     BridgeTurn,
     OptionalToolClaims,
+    OptionalToolLeadId,
 } from "./agent-tools.contracts"
 
 /** Reads the PUBLIC customer knowledge of the conversation's own installation (owner: the knowledge lane). */
@@ -65,13 +65,7 @@ export interface AgentHandoff {
     handOff(ctx: ToolContext, request: AgentHandoffRequest): Promise<JsonResult>
 }
 
-/** Hands a conversation to a person (owner: the channels lane). */
-export interface HandoffTool {
-    /** Marks the conversation handled by a person and posts the system line. */
-    handoff(ctx: ToolContext, reason: string): Promise<void>
-}
-
-/** Reads the lead a conversation is tied to (owner: the channels lane), for the evidence trace. */
+/** Reads the lead a conversation is tied to (owner: the chat records), for the evidence trace. */
 export interface ConversationLeads {
     /** The lead of the conversation, or null. */
     leadIdOf(ctx: ToolContext): Promise<OptionalToolLeadId>

@@ -1,8 +1,8 @@
 import { FakeClock, builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
-import { AgentMessagesFeedReadService } from "@modules/domain/agent-messages"
+import { ChatConversationsService } from "@modules/domain/chat-records"
+import type { ChatFollower } from "@modules/domain/chat-records"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
 import { CLOCK } from "@modules/platform/clock"
@@ -11,14 +11,9 @@ import type { Logger } from "@modules/platform/logging"
 import { ok, refused } from "@modules/platform/primitives"
 import { ChannelDeliveryService } from "./channel-delivery.service"
 import { ZALO_INBOX_READS } from "./channels.decorators"
-import type { ZaloFollowEventRow, ZaloInboxFactsRow, ZaloInboxReads } from "./channels.port"
+import type { ZaloInboxFactsRow, ZaloInboxReads } from "./channels.port"
 import type { ZaloSecret } from "./channels.contracts"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
-
-/** The name of each read of the capability, so a spec answers the read it means. */
-const LIST_ZALO_RECIPIENTS = "recipients"
-const FIND_LAST_ZALO_REPLY = "lastReply"
-const LIST_ZALO_MESSAGE_EVENTS = "messages"
 
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 import { ZaloPageService } from "./zalo-page.service"
@@ -52,54 +47,17 @@ const connection = builder<ConnectionRecord>({
     firstEvent: null,
 })
 
-const recipientRow = { external_id: "u-1:99", visitor_name: "An", last_at: "2026-10-28T09:00:00.000Z" }
-
-const messageRow = {
-    id: "m-1",
-    role: "user",
-    body: "Hello",
-    created_at: "2026-10-28T09:00:00.000Z",
-    delivery_status: null,
-    delivery_error: null,
-    visitor_name: "An",
+const follower: ChatFollower = {
+    conversationId: "k-1",
+    externalId: "u-1:99",
+    name: "An",
+    lastAt: "2026-10-28T09:00:00.000Z",
 }
-
-/** Whether a stubbed row is a recipient row. */
-const isRecipientRow = (
-    row: unknown,
-): row is { external_id: string | null; visitor_name: string | null; last_at: string } =>
-    typeof row === "object" && row !== null && "last_at" in row
-
-/** Whether a stubbed row is a message event row. */
-const isMessageRow = (
-    row: unknown,
-): row is {
-    id: string
-    role: string
-    body: string
-    created_at: string
-    delivery_status: string | null
-    delivery_error: string | null
-    visitor_name: string | null
-} => typeof row === "object" && row !== null && "body" in row
-
-/** Whether a stubbed row is a last-reply row. */
-const isLastReplyRow = (row: unknown): row is { delivery_status: string; delivery_error: string | null } =>
-    typeof row === "object" && row !== null && "delivery_status" in row && !("body" in row)
-
-const DEFAULT_ANSWERS: Record<string, ReadonlyArray<unknown>> = {
-    [LIST_ZALO_RECIPIENTS]: [recipientRow],
-    [FIND_LAST_ZALO_REPLY]: [{ delivery_status: "sent", delivery_error: null }],
-    [LIST_ZALO_MESSAGE_EVENTS]: [messageRow],
-}
-
-type Answers = Record<string, ReadonlyArray<unknown>>
 
 const FACTS: ZaloInboxFactsRow = { last_at: "2026-10-28T09:30:00.000Z", has_text: true, has_follow: false }
-const FOLLOW: ZaloFollowEventRow = { id: "f-1", received_at: "2026-10-28T08:00:00.000Z" }
 
 const build = async (
-    answers: Answers = {},
+    followers: ReadonlyArray<ChatFollower> = [follower],
     record: Partial<ConnectionRecord> = {},
     facts: ZaloInboxFactsRow | null = FACTS,
 ) => {
@@ -116,37 +74,9 @@ const build = async (
     const delivery = mock<ChannelDeliveryService>()
     delivery.sendToPerson.mockResolvedValue(undefined)
     const inboxReads = mock<ZaloInboxReads>()
-    inboxReads.followEvents.mockResolvedValue([FOLLOW])
     inboxReads.factsOf.mockResolvedValue(facts)
-    const rows = { ...DEFAULT_ANSWERS, ...answers }
-    const recipients = (rows[LIST_ZALO_RECIPIENTS] ?? []).filter(isRecipientRow)
-    const events = (rows[LIST_ZALO_MESSAGE_EVENTS] ?? []).filter(isMessageRow)
-    const conversations = mock<AgentConversationsReadService>()
-    conversations.onConnection.mockResolvedValue([
-        ...recipients.map((row, at) => ({ id: `r-${at}`, externalId: row.external_id, visitorName: row.visitor_name })),
-        ...events.map((row, at) => ({ id: `m-${at}`, externalId: null, visitorName: row.visitor_name })),
-    ])
-    const feed = mock<AgentMessagesFeedReadService>()
-    feed.lastWritesSince.mockResolvedValue(
-        recipients.map((row, at) => ({ conversationId: `r-${at}`, lastAt: row.last_at })),
-    )
-    feed.recentIn.mockResolvedValue(
-        events.map((row, at) => ({
-            id: row.id,
-            conversationId: `m-${at}`,
-            role: row.role,
-            body: row.body,
-            createdAt: row.created_at,
-            deliveryStatus: row.delivery_status,
-            deliveryError: row.delivery_error,
-        })),
-    )
-    const lastReply = (rows[FIND_LAST_ZALO_REPLY] ?? []).filter(isLastReplyRow)[0]
-    feed.lastDeliveredReplyIn.mockResolvedValue(
-        lastReply === undefined
-            ? null
-            : { deliveryStatus: lastReply.delivery_status, deliveryError: lastReply.delivery_error },
-    )
+    const conversations = mock<ChatConversationsService>()
+    conversations.followersOn.mockResolvedValue(followers)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ZaloPageService,
@@ -156,16 +86,15 @@ const build = async (
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ZALO_INBOX_READS, useValue: inboxReads },
             { provide: ChannelDeliveryService, useValue: delivery },
-            { provide: AgentConversationsReadService, useValue: conversations },
-            { provide: AgentMessagesFeedReadService, useValue: feed },
+            { provide: ChatConversationsService, useValue: conversations },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloPageService), logger, connections, credentials, delivery, conversations, feed }
+    return { service: moduleRef.get(ZaloPageService), logger, connections, credentials, delivery, conversations }
 }
 
 describe("ZaloPageService view", () => {
     it("answers a healthy connection with masked secrets, the paste addresses, the check list and the 48-hour followers", async () => {
-        const { service, conversations, feed } = await build()
+        const { service, conversations } = await build()
 
         const page = await service.view(actor, "c-1")
 
@@ -189,25 +118,19 @@ describe("ZaloPageService view", () => {
             ["app", "ok"],
             ["token", "ok"],
             ["webhook", "ok"],
-            ["permissions", "ok"],
         ])
         expect(JSON.stringify(page)).not.toContain("app-secret-1234")
         expect(JSON.stringify(page)).not.toContain("access-token")
-        expect(conversations.onConnection).toHaveBeenCalledWith("ws-1", "c-1", "zalo", 500)
-        expect(feed.lastWritesSince).toHaveBeenCalledWith(["r-0"], new Date("2026-10-26T10:00:00.000Z"), 40)
-    })
-
-    it("skips a write whose conversation the connection does not list", async () => {
-        const { service, feed } = await build()
-        feed.lastWritesSince.mockResolvedValue([{ conversationId: "elsewhere", lastAt: NOW.toISOString() }])
-
-        const page = await service.view(actor, "c-1")
-
-        expect(page.recipients).toEqual([])
+        expect(conversations.followersOn).toHaveBeenCalledWith("ws-1", {
+            channel: "zalo",
+            connectionId: "c-1",
+            since: new Date("2026-10-26T10:00:00.000Z"),
+            limit: 40,
+        })
     })
 
     it("closes the send and asks for attention when the token ended and nothing can renew it", async () => {
-        const { service, credentials } = await build({ [LIST_ZALO_RECIPIENTS]: [], [FIND_LAST_ZALO_REPLY]: [] })
+        const { service, credentials } = await build([])
         credentials.load.mockResolvedValue(
             ok({
                 secret: { ...secret, renewalToken: undefined },
@@ -223,13 +146,12 @@ describe("ZaloPageService view", () => {
             access: { state: "expired", expiredMinutesAgo: 180 },
             sendBlock: "token_expired",
         })
-        expect(page.checks[3]?.code).toBe("permissions_unknown")
     })
 })
 
 describe("ZaloPageService view fallbacks", () => {
     it("falls back to the stored facts when the credential cannot be read", async () => {
-        const { service, credentials } = await build({}, { meta: { app_id: "999999" } }, null)
+        const { service, credentials } = await build([follower], { meta: { app_id: "999999" } }, null)
         credentials.load.mockResolvedValue(refused(ChannelsErrorCode.SecretUnreadable))
 
         const page = await service.view(actor, "c-1")
@@ -247,7 +169,7 @@ describe("ZaloPageService view fallbacks", () => {
     })
 
     it("shows an empty app id when neither the credential nor the facts name one", async () => {
-        const { service, credentials } = await build({}, { meta: {} })
+        const { service, credentials } = await build([follower], { meta: {} })
         credentials.load.mockResolvedValue(refused(ChannelsErrorCode.ConnectionNotFound))
 
         await expect(service.view(actor, "c-1")).resolves.toMatchObject({ appId: "", oaId: "" })
@@ -256,42 +178,9 @@ describe("ZaloPageService view fallbacks", () => {
 
 describe("ZaloPageService provider guard", () => {
     it("refuses a connection of another provider", async () => {
-        const { service } = await build({}, { provider: "telegram" })
+        const { service } = await build([follower], { provider: "telegram" })
 
         await expect(service.view(actor, "c-1")).rejects.toMatchObject({ code: ConnectionsErrorCode.NotFound })
-    })
-})
-
-describe("ZaloPageService events", () => {
-    it("lists customer texts and follows newest first, and words a failed reply by the token that cannot work", async () => {
-        const { service, credentials, conversations } = await build({
-            [LIST_ZALO_MESSAGE_EVENTS]: [
-                {
-                    id: "m-2",
-                    role: "agent",
-                    body: "Hi",
-                    created_at: "2026-10-28T09:30:00.000Z",
-                    delivery_status: "failed",
-                    delivery_error: "zalo_error",
-                    visitor_name: null,
-                },
-            ],
-        })
-        credentials.load.mockResolvedValue(
-            ok({
-                secret: { ...secret, renewalToken: undefined },
-                expiresAt: NOW.getTime() - HOUR,
-                workspaceId: "ws-1",
-            }),
-        )
-
-        const events = await service.events(actor, "c-1")
-
-        expect(events.map((event) => [event.id, event.kind, event.outcome, event.reason])).toEqual([
-            ["m-2", "agent_reply", "not_sent", "token_expired"],
-            ["f-1", "follow", "received", null],
-        ])
-        expect(conversations.onConnection).toHaveBeenCalledWith("ws-1", "c-1", "zalo", 500)
     })
 })
 
@@ -386,16 +275,13 @@ describe("ZaloPageService sendTest", () => {
 
 describe("ZaloPageService view of the ZNS renewal template", () => {
     it("carries the ZNS renewal template stored on the connection so the owner can edit it", async () => {
-        const { service } = await build(
-            {},
-            {
-                meta: {
-                    app_id: "123456",
-                    zns_renewal_template_id: "345678",
-                    zns_renewal_param_customer_name: "customer_name",
-                },
+        const { service } = await build([follower], {
+            meta: {
+                app_id: "123456",
+                zns_renewal_template_id: "345678",
+                zns_renewal_param_customer_name: "customer_name",
             },
-        )
+        })
 
         const page = await service.view(actor, "c-1")
 

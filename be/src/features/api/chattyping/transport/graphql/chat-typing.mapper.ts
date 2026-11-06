@@ -6,7 +6,7 @@ import type { SetChatTypingInput } from "./dto/set-chat-typing.input"
 /** Copies validated selectors and the caller's boolean hint into the command request. */
 export const toSetChatTypingRequest = (workspaceId: string, input: SetChatTypingInput): SetChatTypingRequest => ({
     workspaceId,
-    target: { room: input.target.room, conversationId: input.target.conversationId },
+    target: { room: input.target.room },
     typing: input.typing,
 })
 

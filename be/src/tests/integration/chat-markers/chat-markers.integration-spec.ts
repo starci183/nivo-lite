@@ -1,4 +1,3 @@
-import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChatMarkersService } from "@modules/domain/chat-markers"
 import type { ChatTarget } from "@modules/domain/chat-markers"
 import { TeamChatService } from "@modules/domain/messages"
@@ -8,7 +7,6 @@ import { eachInOrder } from "@modules/platform/primitives"
 import {
     chatMarkersIdentity,
     persistChatMarkers,
-    persistConversationMarkerLine,
     persistOfficeMarkerLine,
     insertChatMarkerState,
     insertLegacyRoomRead,
@@ -33,9 +31,9 @@ import { useTestWorld } from "../../world/use-test-world"
 const world = useTestWorld({
     modules: [ChatMarkersProofModule.register(), OfficeRoomMembersProofModule.register()],
 })
-const OFFICE: ChatTarget = { room: null, conversationId: null }
-const SALES: ChatTarget = { room: "sales", conversationId: null }
-const MARKETING: ChatTarget = { room: "marketing", conversationId: null }
+const OFFICE: ChatTarget = { room: null }
+const SALES: ChatTarget = { room: "sales" }
+const MARKETING: ChatTarget = { room: "marketing" }
 const FIRST = "2026-10-01T00:00:00+00:00"
 const SECOND = "2026-10-01T00:01:00+00:00"
 const THIRD = "2026-10-01T00:02:00+00:00"
@@ -57,7 +55,6 @@ const seed = async (): Promise<ChatMarkersIdentity> => {
     return identity
 }
 
-const conversation = (id: string): ChatTarget => ({ room: null, conversationId: id })
 const service = (): ChatMarkersService => world.resolve(ChatMarkersService)
 const ownLine = (identity: ChatMarkersIdentity, id: string, at = FIRST) => ({
     id,
@@ -66,42 +63,15 @@ const ownLine = (identity: ChatMarkersIdentity, id: string, at = FIRST) => ({
     at,
 })
 
-it("stores proven account ids through the real team and conversation writers and leaves external customers unattributed", async () => {
+it("stores the proven account id through the real team writer", async () => {
     const identity = await seed()
     const team = await world
         .resolve(TeamChatService)
         .postHuman(identity.ownerId, identity.workspaceId, "Team actor", "sales")
-    const messages = world.resolve(AgentMessagesService)
-    const test = await messages.storeCustomer(
-        identity.workspaceId,
-        identity.conversationIds[0],
-        "Test actor",
-        world.db.primary,
-        identity.ownerId,
-    )
-    const human = await messages.storeHuman(
-        identity.workspaceId,
-        identity.conversationIds[1],
-        "Human actor",
-        "Shared name",
-        world.db.primary,
-        identity.ownerId,
-    )
-    const external = await messages.storeCustomer(
-        identity.workspaceId,
-        identity.conversationIds[1],
-        "External customer",
-        world.db.primary,
-    )
 
-    await expect(chatMessageActors(world.db.primary, [team.id, test, human, external])).resolves.toEqual(
-        [
-            { id: team.id, author_user_id: identity.ownerId },
-            { id: test, author_user_id: identity.ownerId },
-            { id: human, author_user_id: identity.ownerId },
-            { id: external, author_user_id: null },
-        ].sort((left, right) => left.id.localeCompare(right.id)),
-    )
+    await expect(chatMessageActors(world.db.primary, [team.id])).resolves.toEqual([
+        { id: team.id, author_user_id: identity.ownerId },
+    ])
     await expect(service().state(identity.ownerId, identity.workspaceId, SALES)).resolves.toMatchObject({
         lastOwnMessage: { id: team.id, status: "sent" },
     })
@@ -298,36 +268,20 @@ it("bounds reader avatars at three while using current names and uploaded pictur
         ]),
     )
 })
-it.each([0, 1] as const)(
-    "uses message cursors for test/customer conversation %p without future acknowledgement or regression",
-    async (index) => {
+it.each([SALES, OFFICE])(
+    "uses message cursors for the room %p without future acknowledgement or regression",
+    async (target) => {
         const identity = await seed()
-        const target = conversation(identity.conversationIds[index])
         const first = world.id()
         const second = world.id()
         const newer = world.id()
-        await persistConversationMarkerLine(
-            world.db.primary,
-            identity,
-            target.conversationId ?? "",
-            ownLine(identity, first),
-        )
+        await persistOfficeMarkerLine(world.db.primary, identity, target.room, ownLine(identity, first))
         await service().markDelivered(identity.readerIds[0], identity.workspaceId, target, first)
-        await persistConversationMarkerLine(
-            world.db.primary,
-            identity,
-            target.conversationId ?? "",
-            ownLine(identity, second, SECOND),
-        )
+        await persistOfficeMarkerLine(world.db.primary, identity, target.room, ownLine(identity, second, SECOND))
         await expect(service().state(identity.ownerId, identity.workspaceId, target)).resolves.toMatchObject({
             lastOwnMessage: { id: second, status: "sent" },
         })
-        await persistConversationMarkerLine(
-            world.db.primary,
-            identity,
-            target.conversationId ?? "",
-            ownLine(identity, newer, SECOND),
-        )
+        await persistOfficeMarkerLine(world.db.primary, identity, target.room, ownLine(identity, newer, SECOND))
         await service().markRead(identity.readerIds[0], identity.workspaceId, target, second)
         await expect(service().state(identity.ownerId, identity.workspaceId, target)).resolves.toMatchObject({
             lastOwnMessage: { id: newer, status: "sent", seenByCount: 0 },
@@ -339,21 +293,16 @@ it.each([0, 1] as const)(
             lastOwnMessage: { id: newer, status: "seen", seenByCount: 1 },
         })
         await expect(
-            chatMarkerCursor(
-                world.db.primary,
-                identity.workspaceId,
-                identity.readerIds[0],
-                target.conversationId ?? "",
-            ),
+            chatMarkerCursor(world.db.primary, identity.workspaceId, identity.readerIds[0], target.room ?? ""),
         ).resolves.toEqual([{ delivered_message_id: newer, read_message_id: newer }])
     },
 )
 
 it("keeps mute preferences per caller and target without changing persisted receipts", async () => {
     const identity = await seed()
-    const target = conversation(identity.conversationIds[0])
+    const target = MARKETING
     const id = world.id()
-    await persistConversationMarkerLine(world.db.primary, identity, identity.conversationIds[0], ownLine(identity, id))
+    await persistOfficeMarkerLine(world.db.primary, identity, "marketing", ownLine(identity, id))
     await service().markDelivered(identity.readerIds[0], identity.workspaceId, target, id)
     await service().mute(identity.ownerId, identity.workspaceId, target, true)
     await expect(service().state(identity.ownerId, identity.workspaceId, target)).resolves.toMatchObject({
@@ -376,22 +325,10 @@ it("keeps mute preferences per caller and target without changing persisted rece
     })
 })
 
-it("refuses disabled/nonmembers, foreign targets and messages outside their selected room, conversation or workspace", async () => {
+it("refuses disabled/nonmembers, unknown rooms and messages outside their selected room", async () => {
     const identity = await seed()
     const roomMessage = world.id()
-    const conversationMessage = world.id()
-    const foreignMessage = world.id()
     await persistOfficeMarkerLine(world.db.primary, identity, "sales", ownLine(identity, roomMessage))
-    await persistConversationMarkerLine(
-        world.db.primary,
-        identity,
-        identity.conversationIds[0],
-        ownLine(identity, conversationMessage),
-    )
-    await persistConversationMarkerLine(world.db.primary, identity, identity.conversationIds[2], {
-        ...ownLine(identity, foreignMessage),
-        authorId: identity.foreignOwnerId,
-    })
     await eachInOrder([identity.readerIds[4], identity.outsiderId, identity.foreignOwnerId], async (caller) => {
         await expect(service().state(caller, identity.workspaceId, SALES)).rejects.toMatchObject({
             code: "WORKSPACE_MEMBERS_NOT_MEMBER",
@@ -400,33 +337,11 @@ it("refuses disabled/nonmembers, foreign targets and messages outside their sele
             code: "WORKSPACE_MEMBERS_NOT_MEMBER",
         })
     })
-    await expect(
-        service().state(identity.ownerId, identity.workspaceId, conversation(identity.conversationIds[2])),
-    ).rejects.toMatchObject({ code: "CHAT_MARKERS_TARGET_NOT_FOUND" })
-    await expect(
-        service().state(identity.ownerId, identity.workspaceId, {
-            room: "sales",
-            conversationId: identity.conversationIds[0],
-        }),
-    ).rejects.toMatchObject({ code: "CHAT_MARKERS_TARGET_NOT_FOUND" })
+    await expect(service().state(identity.ownerId, identity.workspaceId, { room: "accounting" })).rejects.toMatchObject(
+        { code: "CHAT_MARKERS_TARGET_NOT_FOUND" },
+    )
     await expect(
         service().markDelivered(identity.ownerId, identity.workspaceId, MARKETING, roomMessage),
-    ).rejects.toMatchObject({ code: "CHAT_MARKERS_MESSAGE_NOT_FOUND" })
-    await expect(
-        service().markRead(
-            identity.ownerId,
-            identity.workspaceId,
-            conversation(identity.conversationIds[1]),
-            conversationMessage,
-        ),
-    ).rejects.toMatchObject({ code: "CHAT_MARKERS_MESSAGE_NOT_FOUND" })
-    await expect(
-        service().markDelivered(
-            identity.ownerId,
-            identity.workspaceId,
-            conversation(identity.conversationIds[0]),
-            foreignMessage,
-        ),
     ).rejects.toMatchObject({ code: "CHAT_MARKERS_MESSAGE_NOT_FOUND" })
 })
 it("grants CRUD only to the backend and applies all policies to valid persisted preferences", async () => {
@@ -435,31 +350,26 @@ it("grants CRUD only to the backend and applies all policies to valid persisted 
         { rls: true, backend: true, anonymous: false, browser: false },
     ])
     await withBackendRole(world, async (tx) => {
-        await insertChatMarkerState(tx, identity.workspaceId, identity.ownerId, "sales", null)
+        await insertChatMarkerState(tx, identity.workspaceId, identity.ownerId, "sales")
         await expect(readChatMarkerStates(tx, identity.workspaceId)).resolves.toEqual([
-            { user_id: identity.ownerId, room: "sales", conversation_id: null, muted: true },
+            { user_id: identity.ownerId, room: "sales", muted: true },
         ])
         await unmuteChatMarkerState(tx, identity.workspaceId, identity.ownerId)
         await expect(readChatMarkerStates(tx, identity.workspaceId)).resolves.toEqual([
-            { user_id: identity.ownerId, room: "sales", conversation_id: null, muted: false },
+            { user_id: identity.ownerId, room: "sales", muted: false },
         ])
         await deleteChatMarkerState(tx, identity.workspaceId, identity.ownerId)
         await expect(readChatMarkerStates(tx, identity.workspaceId)).resolves.toEqual([])
     })
 })
 
-it("hides disabled member rows and denies writes for disabled people or foreign conversations", async () => {
+it("hides disabled member rows and denies writes for disabled people", async () => {
     const identity = await seed()
-    await insertChatMarkerState(world.db.primary, identity.workspaceId, identity.readerIds[4], "sales", null)
+    await insertChatMarkerState(world.db.primary, identity.workspaceId, identity.readerIds[4], "sales")
     await withBackendRole(world, async (tx) => {
         await expect(readChatMarkerStates(tx, identity.workspaceId)).resolves.toEqual([])
         await expect(
-            insertChatMarkerState(tx, identity.workspaceId, identity.readerIds[4], "marketing", null),
-        ).rejects.toThrow("row-level security")
-    })
-    await withBackendRole(world, async (tx) => {
-        await expect(
-            insertChatMarkerState(tx, identity.workspaceId, identity.ownerId, "", identity.conversationIds[2]),
+            insertChatMarkerState(tx, identity.workspaceId, identity.readerIds[4], "marketing"),
         ).rejects.toThrow("row-level security")
     })
 })

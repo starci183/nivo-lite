@@ -13,7 +13,9 @@ import {
 } from "@modules/domain/agent-inbound"
 import { ConnectionsService } from "@modules/domain/connections"
 import { workItemsEntities } from "@modules/domain/work-items"
-import { agentMessagesEntities } from "@modules/domain/agent-messages"
+import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
+import type { ChatTranscriptLine } from "@modules/domain/chat-records"
+import { entityEngineEntities } from "@modules/domain/entity-engine"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { jobsEntities } from "@modules/platform/jobs"
 import { genericWebhookKey } from "@modules/queues/generic-webhook"
@@ -36,7 +38,7 @@ import {
     persistInboundScene,
     publishAlternativeInboundVersion,
 } from "../fixtures/builders/backbone-inbound.builder"
-import type { InboundIdentity } from "../fixtures/builders/backbone-inbound.builder"
+import type { InboundIdentity, InboundSceneHolder } from "../fixtures/builders/backbone-inbound.builder"
 import { lapseLease, removeDrainJobs, settleAgentWork, wakeOfFact, wakesOfFact } from "./agent-work-database.service"
 import { removeAuthUsers, removeWorkspace } from "./proof-accounts.service"
 import { removeStepJobs } from "./agent-runs-database.service"
@@ -44,9 +46,8 @@ import type { useTestWorld } from "./use-test-world"
 
 const WorkItemEntity: (typeof workItemsEntities)[0] = workItemsEntities[0]
 type WorkItemEntity = InstanceType<typeof WorkItemEntity>
-const MessageEntity: (typeof agentMessagesEntities)[0] = agentMessagesEntities[0]
+const [RecordEntity, RecordLinkEntity] = entityEngineEntities
 const MemberEntity: (typeof workspaceMembersEntities)[0] = workspaceMembersEntities[0]
-type AgentMessageEntity = InstanceType<typeof MessageEntity>
 type WorkspaceMemberEntity = InstanceType<typeof MemberEntity>
 const JobOutboxEntity: (typeof jobsEntities)[1] = jobsEntities[1]
 type JobOutboxEntity = InstanceType<typeof JobOutboxEntity>
@@ -56,13 +57,18 @@ const NO_ABORT = new AbortController().signal
 
 type World = ReturnType<typeof useTestWorld>
 
-const identityOf = (world: World): InboundIdentity => ({
+/** The ids of the tenant, and the ids of the conversation and customer message the seeded scene holds (empty until it is seeded). */
+const identityOf = (world: World, scene: InboundSceneHolder): InboundIdentity => ({
     workspaceId: world.id(),
     userId: world.id(),
     agentId: world.id(),
     versionId: world.id(),
-    conversationId: world.id(),
-    messageId: world.id(),
+    get conversationId(): string {
+        return scene.current?.conversationId ?? ""
+    },
+    get messageId(): string {
+        return scene.current?.messageId ?? ""
+    },
 })
 
 const eventsOf =
@@ -163,11 +169,12 @@ const readsOf = (world: World, who: InboundIdentity) => ({
     wakes: (event: InboundEvent): Promise<number> => wakesOfFact(world.db.primary, who.agentId, event.idempotencyKey),
     items: (): Promise<Array<WorkItemEntity>> =>
         world.db.primary.find(WorkItemEntity, { where: { workspaceId: who.workspaceId }, take: ROWS_MAX }),
-    replies: (): Promise<Array<AgentMessageEntity>> =>
-        world.db.primary.find(MessageEntity, {
-            where: { conversationId: who.conversationId, role: "agent" },
-            take: ROWS_MAX,
-        }),
+    async replies(): Promise<ReadonlyArray<ChatTranscriptLine>> {
+        const lines = await world.resolve(ChatMessagesService).transcript(who.workspaceId, who.conversationId)
+        return lines.filter((line) => line.role === "agent")
+    },
+    replyTo: (messageId: string): Promise<boolean> =>
+        world.resolve(ChatMessagesService).replyExists(who.workspaceId, who.conversationId, messageId),
 })
 
 interface WebhookState {
@@ -177,6 +184,8 @@ interface WebhookState {
 }
 
 const cleanInbound = async (world: World, who: InboundIdentity, deliveryIds: ReadonlySet<string>): Promise<void> => {
+    await world.db.primary.delete(RecordLinkEntity, { workspaceId: who.workspaceId })
+    await world.db.primary.delete(RecordEntity, { workspaceId: who.workspaceId })
     await settleAgentWork(world.db.primary, who.workspaceId)
     await removeDrainJobs(world.db.primary, who.workspaceId)
     await removeStepJobs(world.db.primary, who.workspaceId)
@@ -225,7 +234,12 @@ const deliverWebhook = async (
     return eventOf(key, { adapter: "generic_webhook", eventType: INBOUND_EVENT, idempotencyKey: deliveryId })
 }
 
-const webhooksOf = (world: World, who: InboundIdentity, eventOf: ReturnType<typeof eventsOf>) => {
+const webhooksOf = (
+    world: World,
+    who: InboundIdentity,
+    scene: InboundSceneHolder,
+    eventOf: ReturnType<typeof eventsOf>,
+) => {
     const state: WebhookState = { endpoint: "", signingKey: "", deliveryIds: new Set<string>() }
     return {
         async seed(): Promise<void> {
@@ -235,8 +249,14 @@ const webhooksOf = (world: World, who: InboundIdentity, eventOf: ReturnType<type
                 who,
                 world.resolve(ConnectionsService),
                 world.resolve(AgentTriggersService),
+                {
+                    conversations: world.resolve(ChatConversationsService),
+                    messages: world.resolve(ChatMessagesService),
+                },
+                { customerId: world.id(), connectionId: world.id() },
                 randomBytes(32).toString("hex"),
             )
+            scene.current = seeded
             state.endpoint = seeded.endpoint
             state.signingKey = seeded.signingKey
         },
@@ -268,7 +288,8 @@ type BackboneInboundOfResultShape = {
     trace(event: InboundEvent): Promise<OptionalRunTrace>
     wakes: (event: InboundEvent) => Promise<number>
     items: () => Promise<Array<WorkItemEntity>>
-    replies: () => Promise<Array<AgentMessageEntity>>
+    replies: () => Promise<ReadonlyArray<ChatTranscriptLine>>
+    replyTo: (messageId: string) => Promise<boolean>
     runtimeDown(turn: AgentTurnView): Promise<AgentHandlerEnding>
     holdAgain: (turn: AgentTurnView) => Promise<AgentHandlerEnding>
     begin: (event: InboundEvent) => Promise<AgentTurnView>
@@ -286,7 +307,8 @@ type BackboneInboundOfResultShape = {
 
 /** Runs real inbound and pipeline services; model answers enter as external data at IntentPipelineService.read's public boundary. */
 export const backboneInboundOf = (world: World): BackboneInboundOfResultShape => {
-    const who = identityOf(world)
+    const scene: InboundSceneHolder = { current: null }
+    const who = identityOf(world, scene)
     const eventOf = eventsOf(world, who)
     return {
         who,
@@ -294,7 +316,7 @@ export const backboneInboundOf = (world: World): BackboneInboundOfResultShape =>
         ...turnsOf(world, who),
         ...runtimeOf(world),
         ...readsOf(world, who),
-        ...webhooksOf(world, who, eventOf),
+        ...webhooksOf(world, who, scene, eventOf),
         /** compile() does not start module lifecycles: register the real capabilities used by these proofs explicitly. */
         initialize(): void {
             world.resolve(CustomerIntentsService).onModuleInit()

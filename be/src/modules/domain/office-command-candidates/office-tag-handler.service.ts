@@ -279,12 +279,7 @@ export class OfficeTagHandlerService implements AgentWorkHandler, OnModuleInit, 
     private async show(turn: AgentWakeView, agent: AgentHeader, working: boolean): Promise<void> {
         if (turn.context.threadId !== undefined) return
         try {
-            await this.typing.setAgent(
-                turn.workspaceId,
-                { room: turn.context.room ?? null, conversationId: null },
-                agent,
-                working,
-            )
+            await this.typing.setAgent(turn.workspaceId, { room: turn.context.room ?? null }, agent, working)
         } catch (cause) {
             this.logger.error(OfficeCommandCandidatesLogEvent.TypingFailed, cause, { agentId: turn.agentId })
         }

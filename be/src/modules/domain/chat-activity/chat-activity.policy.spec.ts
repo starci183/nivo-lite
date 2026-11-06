@@ -14,17 +14,12 @@ const buildSubject = async () => {
 describe("chatActivityTarget", () => {
     it("names a department room by its key", async () => {
         const { chatActivityTarget } = await buildSubject()
-        expect(chatActivityTarget({ room: "sales", conversationId: null })).toBe("room:sales")
+        expect(chatActivityTarget({ room: "sales" })).toBe("room:sales")
     })
 
     it("names the general Office when no room is given", async () => {
         const { chatActivityTarget } = await buildSubject()
-        expect(chatActivityTarget({ room: null, conversationId: null })).toBe("room:office")
-    })
-
-    it("names a conversation by its lower-cased id", async () => {
-        const { chatActivityTarget } = await buildSubject()
-        expect(chatActivityTarget({ room: null, conversationId: "CV-1" })).toBe("conversation:cv-1")
+        expect(chatActivityTarget({ room: null })).toBe("room:office")
     })
 })
 

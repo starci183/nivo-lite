@@ -150,7 +150,7 @@ export interface OverviewPromo {
     readonly firstEvents: Array<OverviewFirstEvent>
     /** Whether a customer talked to an agent. */
     readonly hasCustomerConversation: boolean
-    /** Whether a conversation is tied to a lead. */
+    /** Whether the workspace has captured a lead. */
     readonly hasLeadConversation: boolean
     /** How many drafts were approved. */
     readonly approvedCount: number

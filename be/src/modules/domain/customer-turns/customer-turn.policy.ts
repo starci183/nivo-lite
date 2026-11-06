@@ -1,20 +1,12 @@
 import type { AgentWakeContext } from "@modules/domain/agent-work"
-import type { TranscriptLine } from "@modules/domain/agent-messages"
-import type { ChatFileTurn } from "@modules/domain/chat-files"
-import type { CustomerTurn, TurnRef } from "@modules/domain/conversations"
+import type { ChatTranscriptLine } from "@modules/domain/chat-records"
+import type { TurnRef } from "@modules/domain/conversations"
 
 /** A paid invoice counts as "just confirmed" for a customer's late "I have paid" within this window. */
 export const RECENTLY_PAID_MS: number = 14 * 86_400_000
 
 /** The order statuses that mean the order is still open (not paid, not cancelled). */
 export const OPEN_ORDER_STATUSES: ReadonlySet<string> = new Set(["draft", "confirmed", "invoiced"])
-
-/** The turn as the file read knows it. */
-export const fileTurnOf = (turn: CustomerTurn): ChatFileTurn => ({
-    workspaceId: turn.conversation.workspaceId,
-    messageId: turn.messageId,
-    module: turn.conversation.agent.module,
-})
 
 /** Shortens a text to `max` characters with an ellipsis. */
 export const clipText = (text: string, max: number): string =>
@@ -31,12 +23,12 @@ export const isRecentlyPaid = (paidAt: string | null, now: Date): boolean =>
     paidAt !== null && now.getTime() - Date.parse(paidAt) < RECENTLY_PAID_MS
 
 /** The customer's latest question in the transcript, else the message of the turn. */
-export const latestQuestionOf = (transcript: ReadonlyArray<TranscriptLine>, body: string): string =>
+export const latestQuestionOf = (transcript: ReadonlyArray<ChatTranscriptLine>, body: string): string =>
     transcript.findLast((line) => line.role === "user")?.body ?? body
 
 /** The transcript a lead hand-off carries: the conversation and the reply about to leave, one line each. */
 export const handoffTranscriptOf = (
-    transcript: ReadonlyArray<TranscriptLine>,
+    transcript: ReadonlyArray<ChatTranscriptLine>,
     reply: string,
     customer: string,
     agent: string,
@@ -48,7 +40,7 @@ export const handoffTranscriptOf = (
 /** A customer wake older than this when its turn begins is not answered: the question was asked a long time ago. */
 export const STALE_WAKE_MS: number = 10 * 60_000
 
-/** How the reasons the drain and the executor give map to the ones the outcome handler knows from the legacy road. */
+/** How the reasons the drain and the executor give map to the ones the outcome handler knows. */
 const HOLD_REASONS: Readonly<Record<string, string>> = {
     quota: "quota_exceeded",
     breaker: "openclaw_unavailable",
@@ -61,7 +53,7 @@ const HOLD_REASONS: Readonly<Record<string, string>> = {
 /** True when a wake written at `createdAt` is too old to answer at `now`. */
 export const isStaleWake = (createdAt: Date, now: Date): boolean => now.getTime() - createdAt.getTime() > STALE_WAKE_MS
 
-/** The reason the legacy road would give for a turn the core road could not run; a reason the legacy road knows stays as it is. */
+/** The reason the outcome handler knows for a turn that could not run; a reason it already knows stays as it is. */
 export const holdReasonOf = (reason: string): string => HOLD_REASONS[reason] ?? reason
 
 /** The message a customer wake answers, or null when the wake does not carry one. */

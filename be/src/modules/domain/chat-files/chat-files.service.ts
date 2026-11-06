@@ -42,7 +42,7 @@ interface AllocatedId {
 
 @Injectable()
 /**
- * The files of a conversation. The browser PUTs straight to the private store at an address issued here, and the message names the
+ * The files of the Office. The browser PUTs straight to the private store at an address issued here, and the message names the
  * path: only then the object is read back, and only what the bytes prove is attached. Who may do this is proved by the caller.
  */
 export class ChatFilesService {
@@ -53,7 +53,7 @@ export class ChatFilesService {
         private readonly entitlements: EntitlementsService,
     ) {}
 
-    /** Issues a unique address inside the folder of the conversation, within the storage plan of the workspace. */
+    /** Issues a unique address inside the Office folder of the workspace, within the storage plan of the workspace. */
     async requestUpload(scope: ChatFileScope, file: ChatFileFacts): Promise<ChatFileUpload> {
         if (!isAcceptedChatFile(file)) throw new ChatFilesError({ code: ChatFilesErrorCode.FileInvalid })
         await this.entitlements.requireStorageFor(scope.workspaceId, file.sizeBytes)
@@ -65,7 +65,7 @@ export class ChatFilesService {
         return { path, signedUrl: signed.value.signedUrl }
     }
 
-    /** Proves a stored object is a file of this conversation within the limit; an object that is not is removed from the store. */
+    /** Proves a stored object is a file of the Office of this workspace within the limit; an object that is not is removed from the store. */
     async verify(scope: ChatFileScope, path: string, name: string): Promise<VerifiedChatFile> {
         if (!isChatFilePath(scope, path)) throw new ChatFilesError({ code: ChatFilesErrorCode.PathInvalid })
         const size = await this.storage.sizeOf(CHAT_FILE_BUCKET, path)
@@ -92,7 +92,6 @@ export class ChatFilesService {
     ): Promise<void> {
         await manager.insert(AgentMessageAttachmentEntity, {
             workspaceId: scope.workspaceId,
-            conversationId: scope.conversationId,
             messageId,
             path: file.path,
             name: file.name,

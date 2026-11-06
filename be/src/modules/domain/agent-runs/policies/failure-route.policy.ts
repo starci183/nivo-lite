@@ -1,4 +1,4 @@
-import { DELIVERY_OUTCOME_UNKNOWN } from "@modules/domain/agent-messages"
+import { CHAT_DELIVERY_UNKNOWN } from "@modules/domain/chat-records"
 import type { AgentStepStatus, RunFailureRoute, StepEffect } from "../agent-runs.contracts"
 import { TOOL_OUTCOME_UNKNOWN, DECISION_ACTOR_UNKNOWN, backoffMs } from "./agent-runs.policy"
 
@@ -45,7 +45,7 @@ export const routeFailure = (facts: FailureFacts): RunFailureRoute => {
     const pivotKey = pivots[0]?.stepKey ?? null
     if (
         facts.code === TOOL_OUTCOME_UNKNOWN ||
-        facts.code === DELIVERY_OUTCOME_UNKNOWN ||
+        facts.code === CHAT_DELIVERY_UNKNOWN ||
         facts.code === DECISION_ACTOR_UNKNOWN
     )
         return { kind: "person", pivotKey }

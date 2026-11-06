@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { ConnectionsService } from "@modules/domain/connections"
 import { DataRecordsReadService } from "@modules/domain/data-records"
 import { LeadRecordsService } from "@modules/domain/leads"
@@ -40,16 +39,15 @@ const RENEWAL_STAGE = "qualified"
 const KEPT: LinkStep = { kind: "kept" }
 const LINKED: LinkStep = { kind: "linked" }
 
-const linkLeadOf = (lead: Pick<LeadRecordRow, "id" | "phone" | "email">, reachable: boolean): LinkLead => ({
+const linkLeadOf = (lead: Pick<LeadRecordRow, "id" | "phone" | "email">): LinkLead => ({
     id: lead.id,
     phone: lead.phone,
     email: lead.email,
-    reachable,
 })
 
 @Injectable()
 /**
- * Ties the contracts of a workspace to the leads their customers are reached through, so the renewal finds a conversation: the
+ * Ties the contracts of a workspace to the leads their customers are reached through: the
  * only writer of `contracts.lead_id` for imported contracts, capturing a customer through the leads capability when no lead holds
  * the customer's phone or email.
  */
@@ -60,13 +58,12 @@ export class ContractLinkService {
         private readonly records: DataRecordsReadService,
         private readonly connections: ConnectionsService,
         private readonly leads: LeadRecordsService,
-        private readonly conversations: AgentConversationsService,
     ) {}
 
     /**
      * Links every contract of the workspace to a lead the renewal can reach, on the system's behalf (after an import, or asked for):
      * the contract's customer is found among the data-hub customer records by code or by name, and the contract goes to the lead
-     * that holds the customer's phone or email (the one a customer conversation reaches first), or to its own lead that gains the
+     * that holds the customer's phone or email, or to its own lead that gains the
      * contact, or to a lead created for the customer. One run per workspace at a time, in one transaction; a repeat changes nothing.
      */
     linkCustomers(workspaceId: string): Promise<LinkedCustomers> {
@@ -130,11 +127,7 @@ export class ContractLinkService {
         const found = await this.leads.matchAllByContact(workspaceId, customer, tx)
         const own = { id: contract.leadId ?? "", phone: contract.leadPhone, email: contract.leadEmail }
         const leads = contract.leadId === null || found.some((lead) => lead.id === own.id) ? found : [own, ...found]
-        const linkLeads = await Promise.all(
-            leads.map(async (lead) =>
-                linkLeadOf(lead, (await this.conversations.latestOfLead(workspaceId, lead.id, null)) !== null),
-            ),
-        )
+        const linkLeads = leads.map(linkLeadOf)
         const current = linkLeads.find((lead) => lead.id === contract.leadId) ?? null
         return this.applyLink(tx, workspaceId, contract, customer, planLink(current, linkLeads, customer))
     }

@@ -4,7 +4,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./chat-typing.module-defi
 import { ChatTypingService } from "./chat-typing.service"
 
 @Module({})
-/** Short-lived typing hints for the app's existing room and conversation targets. */
+/** Short-lived typing hints for the app's room targets. */
 export class ChatTypingModule extends ConfigurableModuleClass {
     /** Registers the capability once in the app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {

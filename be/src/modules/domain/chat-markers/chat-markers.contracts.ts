@@ -1,9 +1,7 @@
-/** One department, the aggregate Office (both null), or one agent/customer conversation. */
+/** One department room, or the aggregate Office (null). */
 export interface ChatTarget {
-    /** A department key; null is the aggregate Office when conversationId is also null. */
+    /** A department key; null is the aggregate Office. */
     readonly room: string | null
-    /** An agent/customer conversation id, mutually exclusive with a department room. */
-    readonly conversationId: string | null
 }
 
 /** One other active workspace account that has seen the last authored message. */
@@ -30,7 +28,7 @@ export interface ChatOwnMessage {
     readonly seenByCount: number
 }
 
-/** The caller's conversation preference and last authored message receipt. */
+/** The caller's room preference and last authored message receipt. */
 export interface ChatMarkerState {
     /** True selects the muted dot presentation in the frontend. */
     readonly muted: boolean

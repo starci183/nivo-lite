@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import { EvidenceService, WorkEngineService } from "@modules/domain/decisions"
 import type { WorkContext } from "@modules/domain/decisions"
@@ -36,7 +36,7 @@ export class TurnModulesService {
     ) {}
 
     /** The context blocks of a turn: the loyalty facts when the shop runs a programme, the booking contract when the agent books. */
-    async briefs(conversation: TurnConversation): Promise<ReadonlyArray<string>> {
+    async briefs(conversation: ChatTurnConversation): Promise<ReadonlyArray<string>> {
         const module = conversation.agent.module
         const [loyalty, books, connectors] = await Promise.all([
             this.loyalty.brief(this.refOf(conversation)),
@@ -53,7 +53,7 @@ export class TurnModulesService {
      * The connector block of an agent holding connector grants: the meta-tool clause and, when a connector knows the customer, who they
      * are. What to call and in which order comes from the business knowledge, never from NIVO.
      */
-    private async connectorBrief(conversation: TurnConversation): Promise<ReadonlyArray<string>> {
+    private async connectorBrief(conversation: ChatTurnConversation): Promise<ReadonlyArray<string>> {
         if (!(await this.connectors.servesConnectors(conversation))) return []
         return this.connectors.briefOf(await this.connectors.partyOf(conversation))
     }
@@ -137,7 +137,7 @@ export class TurnModulesService {
     }
 
     /** True when the agent books, or is the front door that hands over to a booking agent on this connection. */
-    private async booksIn(conversation: TurnConversation): Promise<boolean> {
+    private async booksIn(conversation: ChatTurnConversation): Promise<boolean> {
         if (conversation.agent.module === BOOKING) return true
         const handovers = await this.bindings.handoversOf(conversation.connectionId, {
             module: conversation.agent.module,
@@ -145,7 +145,7 @@ export class TurnModulesService {
         return handovers.some((agent) => agent.module === BOOKING)
     }
 
-    private refOf(conversation: TurnConversation): ChatCustomerRef {
+    private refOf(conversation: ChatTurnConversation): ChatCustomerRef {
         return {
             workspaceId: conversation.workspaceId,
             conversationId: conversation.id,

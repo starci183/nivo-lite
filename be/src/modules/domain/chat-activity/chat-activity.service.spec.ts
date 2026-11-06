@@ -129,13 +129,13 @@ describe("ChatActivityService.receipt", () => {
     it("tells every active member that a cursor moved", async () => {
         const { service, hub } = await build()
 
-        await service.receipt(WS, "conversation:cv-1")
+        await service.receipt(WS, "room:sales")
 
         expect(published(hub)).toEqual(
             MEMBERS.map((member) => ({
                 topic: chatActivityTopic(member.userId, WS).name,
                 kind: "receipt",
-                target: "conversation:cv-1",
+                target: "room:sales",
                 at: NOW,
             })),
         )

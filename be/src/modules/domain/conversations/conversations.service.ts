@@ -1,64 +1,52 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentDirectoryService } from "@modules/domain/agents"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import { InboundFilesService } from "@modules/domain/chat-files"
-import type { DownloadedChatFile } from "@modules/domain/chat-files"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { ZaloCredentialsService } from "@modules/domain/channels"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { IntakeConnection } from "@modules/domain/connections"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { eachInOrder } from "@modules/platform/primitives"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { CustomerHearingService } from "./customer-hearing.service"
 import type { Meeting } from "./customer-hearing.contracts"
-import type {
-    FrontAgent,
-    InboundAttachment,
-    MetaInbound,
-    TelegramInbound,
-    ZaloInbound,
-} from "./conversations.contracts"
+import type { FrontAgent, MetaInbound, TelegramInbound, ZaloInbound } from "./conversations.contracts"
 
 const LOCALE = "vi"
 
 @Injectable()
 /**
- * Turns a verified delivery of a messaging channel into the stored conversation and the job or wake that answers it, on the road the
- * workspace is on. It runs inside the transaction of the webhook inbox, so the message and its answer exist together or not at all. A
- * connection with nobody bound only stores the message in the inbox.
+ * Turns a verified delivery of a messaging channel into the stored conversation and the wake that answers it. The wake is written in the
+ * transaction of the webhook inbox; a delivery that is replayed finds the stored message and writes the same wake. A connection with
+ * nobody bound only stores the message in the inbox.
  */
 export class ConversationsService {
     constructor(
         @InjectClock() private readonly clock: Clock,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly connections: ConnectionsService,
-        private readonly conversations: AgentConversationsService,
+        private readonly conversations: ChatConversationsService,
         private readonly inboundEvents: InboundEventsService,
         private readonly zaloCredentials: ZaloCredentialsService,
         private readonly bindings: AgentBindingsService,
-        private readonly agents: AgentDirectoryService,
-        private readonly inboundFiles: InboundFilesService,
         private readonly hearing: CustomerHearingService,
     ) {}
 
-    /** One Telegram message: answered by the front-door agent of the connection, or only stored when none is bound. "/start" opens a new visit with the greeting. */
+    /** One Telegram message: answered by the front-door agent of the connection, or only stored when none is bound. "/start" opens a new visit: the next message starts its conversation. */
     async acceptTelegram(connectionId: string, inbound: TelegramInbound, manager: EntityManager): Promise<void> {
         const connection = await this.connections.intakeOf(connectionId, "telegram", manager)
         if (connection.kind !== "ok") return
-        const channelEventId = `tg:${inbound.chatId}:${inbound.messageId}`
-        const agent = await this.frontAgentOf(connection.value.workspaceId, connectionId)
+        const channelEventId = `tg:${connectionId}:${inbound.chatId}:${inbound.messageId}`
+        const agent = await this.frontAgentOf(connectionId)
         if (agent === undefined) {
             await this.keepUnrouted(
                 connection.value,
                 "telegram",
                 inbound.visitor,
                 inbound.text,
-                `tg:${connectionId}:${inbound.chatId}:${inbound.messageId}`,
+                channelEventId,
                 manager,
             )
             return
@@ -81,26 +69,19 @@ export class ConversationsService {
             connectionId,
             inbound.chatId,
             `${inbound.chatId}:${this.clock.now().getTime()}`,
-            manager,
         )
-        await this.hearing.greet(meeting, channelEventId, manager)
     }
 
     /**
      * One Zalo text message: the connection turns connected on its first event, then the message is answered or only stored like a Telegram one.
      * Answers true when it went to the agent turn of its conversation or to the person who owns it, false when it was only kept or not for this connection.
      */
-    async acceptZalo(
-        connectionId: string,
-        inbound: ZaloInbound,
-        manager: EntityManager,
-        files: ReadonlyArray<DownloadedChatFile> = [],
-    ): Promise<boolean> {
+    async acceptZalo(connectionId: string, inbound: ZaloInbound, manager: EntityManager): Promise<boolean> {
         const words = this.wordsOf(inbound)
         const connection = await this.connections.intakeOf(connectionId, "zalo_oa", manager)
         if (connection.kind !== "ok" || (await this.isOtherApp(connectionId, inbound.appId))) return false
         const workspaceId = connection.value.workspaceId
-        const known = await this.conversations.find(workspaceId, "zalo", connectionId, inbound.userId, manager)
+        const known = await this.conversations.find(workspaceId, "zalo", connectionId, inbound.userId)
         const visitor =
             (known.kind === "ok" ? known.value.visitorName : null) ??
             this.catalog.get("conversations.zaloGuest", {}, LOCALE)
@@ -109,7 +90,7 @@ export class ConversationsService {
             { amount: 0, content: visitor, at: this.clock.now().toISOString(), text: inbound.text.slice(0, 160) },
             manager,
         )
-        const agent = await this.frontAgentOf(connection.value.workspaceId, connectionId)
+        const agent = await this.frontAgentOf(connectionId)
         if (agent === undefined) {
             await this.keepUnrouted(
                 connection.value,
@@ -131,7 +112,6 @@ export class ConversationsService {
                 agent,
                 text: words,
                 channelEventId: `zalo:${inbound.messageId}`,
-                files,
                 sentAt: inbound.sentAt,
             },
             manager,
@@ -139,30 +119,12 @@ export class ConversationsService {
         return true
     }
 
-    /**
-     * Reads the pictures and files of a message before it is stored, so no download happens inside the database transaction that stores it. One that
-     * cannot be read, is too large or is not an accepted type is left out (and logged): the message still reaches its turn. `imported` is true only for a
-     * row of a manual import, the one source whose attachments may name a local file.
-     */
-    async readFiles(
-        attachments: ReadonlyArray<InboundAttachment>,
-        imported: boolean,
-        ref: string,
-    ): Promise<ReadonlyArray<DownloadedChatFile>> {
-        const read: Array<DownloadedChatFile> = []
-        await eachInOrder(attachments, async (attachment, index) => {
-            const file = await this.inboundFiles.download(attachment, imported, ref, index)
-            if (file !== null) read.push(file)
-        })
-        return read
-    }
-
     /** One Facebook or Instagram direct message: answered by the front-door agent of the connection, or only stored when none is bound. */
     async acceptMeta(connectionId: string, inbound: MetaInbound, manager: EntityManager): Promise<void> {
         const connection = await this.connections.intakeOf(connectionId, "meta", manager)
         if (connection.kind !== "ok") return
         const visitor = inbound.visitor ?? this.catalog.get(`conversations.${inbound.platform}Guest`, {}, LOCALE)
-        const agent = await this.frontAgentOf(connection.value.workspaceId, connectionId)
+        const agent = await this.frontAgentOf(connectionId)
         const eventId = `meta:${inbound.eventId}`
         if (agent === undefined) {
             await this.keepUnrouted(
@@ -225,9 +187,9 @@ export class ConversationsService {
         return loaded.kind === "ok" && loaded.value.secret.appId !== appId
     }
 
-    private async frontAgentOf(workspaceId: string, connectionId: string): Promise<FrontAgent | undefined> {
+    private async frontAgentOf(connectionId: string): Promise<FrontAgent | undefined> {
         const { front } = await this.bindings.routeInbound(connectionId)
         if (front === null) return undefined
-        return { id: front.id, greeting: (await this.agents.greetingOf(workspaceId, front.id)) ?? "" }
+        return { id: front.id }
     }
 }

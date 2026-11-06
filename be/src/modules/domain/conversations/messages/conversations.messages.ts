@@ -10,7 +10,6 @@ export const CONVERSATIONS_MESSAGES: MessageBundle = {
         "conversations.zaloGuest": "Khách Zalo",
         "conversations.facebookGuest": "Khách Facebook",
         "conversations.instagramGuest": "Khách Instagram",
-        "conversations.fallbackGreeting": "Xin chào! Mình là trợ lý AI của cửa hàng. Bạn cần tư vấn gì ạ?",
         "conversations.holdingReply": "Dạ em đã ghi nhận, nhân viên sẽ phản hồi anh/chị sớm ạ",
         "conversations.chatUnavailable":
             "AI chưa trả lời kịp: khách đã nhận tin nhắn giữ chỗ và câu hỏi được chuyển cho nhân viên",
@@ -27,7 +26,6 @@ export const CONVERSATIONS_MESSAGES: MessageBundle = {
         "conversations.zaloGuest": "Zalo customer",
         "conversations.facebookGuest": "Facebook customer",
         "conversations.instagramGuest": "Instagram customer",
-        "conversations.fallbackGreeting": "Hello! I am the shop's AI assistant. How can I help you?",
         "conversations.holdingReply": "We have noted your message and the team will get back to you soon",
         "conversations.chatUnavailable":
             "The AI could not answer in time: the customer got the holding message and the question is handed to a person",

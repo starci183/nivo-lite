@@ -56,7 +56,7 @@ describe("PublicMessageFulfillmentService", () => {
 
         expect(await service.fulfill("workspace-1", "request-1", body, RECENT, tx)).toBe("lead-1")
 
-        expect(chats.find).toHaveBeenCalledWith("workspace-1", "conversation-1", tx)
+        expect(chats.find).toHaveBeenCalledWith("workspace-1", "conversation-1")
         expect(work.enqueueWork).toHaveBeenCalledWith(
             ctx,
             {

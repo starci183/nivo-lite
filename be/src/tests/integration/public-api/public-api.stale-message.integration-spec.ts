@@ -2,8 +2,9 @@ import assert from "node:assert/strict"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
 import { WorkEngineService, WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
 import type { WorkPerformer, WorkPerformerRegistry } from "@modules/domain/decisions"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { PublicMessagesService } from "@modules/domain/public-api"
-import { persistPublicApiConversation } from "../../fixtures/builders/public-api.builder"
+import { persistPublicApiConversation, persistPublicApiLead } from "../../fixtures/builders/public-api.builder"
 import { PUBLIC_API_PROOF_MODULES, PublicApiProofAccess } from "../../world/public-api-capabilities.options"
 import type { LiteWorld } from "../../world/lite-world.service"
 import { publicApiWork } from "../../world/public-api-proof.service"
@@ -46,8 +47,11 @@ describe("Public API stale message (persisted local integration)", () => {
 
     it("holds a message admitted more than 24 hours ago for approval under automatic authority", async () => {
         const identity = await fixture()
-        const conversationId = world.id()
-        await persistPublicApiConversation(world.db.primary, identity, conversationId, world.id())
+        const conversationId = await persistPublicApiConversation(
+            world.resolve(ChatConversationsService),
+            identity,
+            world.id(),
+        )
         await world.resolve(PublicMessagesService).acceptMessage({
             authorization: identity.authorization,
             conversationId,
@@ -68,9 +72,13 @@ describe("Public API stale message (persisted local integration)", () => {
 
     it("holds a pre-ledger inline message for approval even when it asked for none", async () => {
         const identity = await fixture()
-        const conversationId = world.id()
+        const conversationId = await persistPublicApiConversation(
+            world.resolve(ChatConversationsService),
+            identity,
+            world.id(),
+        )
         const leadId = world.id()
-        await persistPublicApiConversation(world.db.primary, identity, conversationId, leadId)
+        await persistPublicApiLead(world.db.primary, identity.workspaceId, leadId)
         const perform = automaticSender(world)
 
         await deliver(

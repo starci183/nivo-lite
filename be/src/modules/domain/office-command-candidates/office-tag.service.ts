@@ -54,7 +54,7 @@ export class OfficeTagService {
     async post(principalId: string, workspaceId: string, request: OfficeTagRequest): Promise<PostedMessage> {
         const memberId = await this.members.idOf(principalId, workspaceId)
         const verdicts = await this.verdictsOf(workspaceId, memberId, request.body)
-        const scope = { workspaceId, conversationId: null }
+        const scope = { workspaceId }
         const file = request.file === null ? null : await this.files.verify(scope, request.file.path, request.file.name)
         const body = this.files.wordsOf(request.body, request.locale)
         return this.entityManager.transaction(async (tx) => {
@@ -81,7 +81,7 @@ export class OfficeTagService {
     /** Issues the address a file of an Office line is uploaded to, to a member of the workspace; the bytes are checked when the line is posted. */
     async requestFileUpload(principalId: string, workspaceId: string, file: ChatFileFacts): Promise<ChatFileUpload> {
         await this.members.require(principalId, workspaceId)
-        return this.files.requestUpload({ workspaceId, conversationId: null }, file)
+        return this.files.requestUpload({ workspaceId }, file)
     }
 
     private async verdictsOf(workspaceId: string, memberId: string, body: string): Promise<Array<Verdict>> {

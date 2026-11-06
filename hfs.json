@@ -280,7 +280,7 @@
         },
         {
           "name": "be_access.chat_target_member",
-          "reason": "admits a member to a chat target (room or conversation)"
+          "reason": "admits a member to a chat target (an Office room)"
         },
         {
           "name": "be_access.workspace_member_avatars",

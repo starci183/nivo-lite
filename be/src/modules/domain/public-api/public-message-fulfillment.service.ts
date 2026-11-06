@@ -36,7 +36,7 @@ export class PublicMessageFulfillmentService {
         dedupeKey: string = `api.message:${requestId}`,
         recordEvidence: boolean = true,
     ): Promise<string | null> {
-        const conversation = await this.conversations.find(workspaceId, body.conversationId, manager)
+        const conversation = await this.conversations.find(workspaceId, body.conversationId)
         if (conversation === undefined) throw new PublicApiError({ code: PublicApiErrorCode.ConversationNotFound })
         const ctx: WorkContext = { workspaceId, actor: body.source, locale: "en" }
         const isStale = isStaleMessageAdmission(admittedAt, this.clock.now())

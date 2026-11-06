@@ -1,17 +1,18 @@
 import { Test } from "@nestjs/testing"
 import { builder, FakeClock, mock } from "@starci/jest-preset"
-import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
 import { AgentDirectoryService } from "@modules/domain/agents"
+import { ChatConversationsService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import { McpCallLogService } from "@modules/domain/mcp-call-log"
 import { CLOCK } from "@modules/platform/clock"
+import { refused } from "@modules/platform/primitives"
 import { KnowledgeRecallService } from "./knowledge-recall.service"
 import { KnowledgeSearchToolService } from "./knowledge-search-tool.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const ctx = { workspaceId: WS, conversationId: "c1", agentId: null }
 
-const turnOf = builder<TurnConversation>({
+const turnOf = builder<ChatTurnConversation>({
     id: "c1",
     workspaceId: WS,
     channel: "website",
@@ -35,11 +36,11 @@ const turnOf = builder<TurnConversation>({
     },
 })
 
-const build = async (workspaceId: string) => {
-    const conversations = mock<AgentConversationsService>({
+const build = async () => {
+    const conversations = mock<ChatConversationsService>({
         turnOf: jest.fn().mockResolvedValue({
             kind: "ok",
-            value: turnOf({ workspaceId }),
+            value: turnOf(),
         }),
     })
     const recall = {
@@ -51,7 +52,7 @@ const build = async (workspaceId: string) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             KnowledgeSearchToolService,
-            { provide: AgentConversationsService, useValue: conversations },
+            { provide: ChatConversationsService, useValue: conversations },
             { provide: KnowledgeRecallService, useValue: mock<KnowledgeRecallService>(recall) },
             { provide: AgentDirectoryService, useValue: agents },
             { provide: McpCallLogService, useValue: callLog },
@@ -63,7 +64,7 @@ const build = async (workspaceId: string) => {
 
 describe("KnowledgeSearchToolService", () => {
     it("searches the public view of the conversation's own agent and instance", async () => {
-        const { tool, recall } = await build(WS)
+        const { tool, recall } = await build()
         const found = await tool.search(ctx, "price")
         expect(found).toEqual({ passages: "BRIEF", citations: [{ title: "Menu", topic: "" }] })
         expect(recall.recall).toHaveBeenCalledWith(
@@ -74,7 +75,7 @@ describe("KnowledgeSearchToolService", () => {
     })
 
     it("logs every read in the audit, with the query masked", async () => {
-        const { tool, callLog } = await build(WS)
+        const { tool, callLog } = await build()
         await tool.search({ ...ctx, agentId: "a1" }, "price")
         expect(callLog.append).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -90,13 +91,13 @@ describe("KnowledgeSearchToolService", () => {
     })
 
     it("answers no read it could not audit", async () => {
-        const { tool, callLog } = await build(WS)
+        const { tool, callLog } = await build()
         callLog.append.mockRejectedValue(new Error("log down"))
         await expect(tool.memory(ctx)).rejects.toThrow("log down")
     })
 
     it("reads the memory through the customer view in a conversation and audits it", async () => {
-        const { tool, recall, callLog } = await build(WS)
+        const { tool, recall, callLog } = await build()
         await expect(tool.memory(ctx)).resolves.toBe("### Delivery\n- Days: Sunday")
         expect(recall.standingMemory).toHaveBeenCalledWith({
             workspaceId: WS,
@@ -108,7 +109,7 @@ describe("KnowledgeSearchToolService", () => {
     })
 
     it("reads as its own agent in a turn with no conversation", async () => {
-        const { tool, recall, agents } = await build(WS)
+        const { tool, recall, agents } = await build()
         agents.turnFactsOf.mockResolvedValue(
             mock<NonNullable<Awaited<ReturnType<AgentDirectoryService["turnFactsOf"]>>>>({ module: "sales" }),
         )
@@ -118,9 +119,11 @@ describe("KnowledgeSearchToolService", () => {
         )
     })
 
-    it("never reads another tenant's instance", async () => {
-        const { tool, recall } = await build("22222222-2222-4222-8222-222222222222")
+    it("never reads the instance of a conversation the workspace does not hold", async () => {
+        const { tool, recall, conversations } = await build()
+        conversations.turnOf.mockResolvedValue(refused(ChatRecordsErrorCode.NotFound))
         await tool.search(ctx, "price")
+        expect(conversations.turnOf).toHaveBeenCalledWith(WS, "c1")
         expect(recall.recall).toHaveBeenCalledWith(
             expect.objectContaining({ workspaceId: WS, module: "chatbot", installationId: null }),
             "price",
@@ -131,7 +134,7 @@ describe("KnowledgeSearchToolService", () => {
 
 describe("KnowledgeSearchToolService > read failure audit", () => {
     it("audits a failed search without recording the query and rethrows the actual failure", async () => {
-        const { tool, recall, callLog } = await build(WS)
+        const { tool, recall, callLog } = await build()
         const failure = new Error("recall unavailable")
         recall.recall.mockRejectedValue(failure)
 
@@ -156,7 +159,7 @@ describe("KnowledgeSearchToolService > read failure audit", () => {
     })
 
     it("fails closed when the audit of a failed read also cannot be written", async () => {
-        const { tool, recall, callLog } = await build(WS)
+        const { tool, recall, callLog } = await build()
         const auditFailure = new Error("audit unavailable")
         recall.standingMemory.mockRejectedValue(new Error("memory unavailable"))
         callLog.append.mockRejectedValue(auditFailure)
@@ -177,7 +180,7 @@ describe("KnowledgeSearchToolService > read failure audit", () => {
 
 describe("KnowledgeSearchToolService > missing read identities", () => {
     it("uses the customer default view without looking up an absent agent or conversation", async () => {
-        const { tool, recall, agents, conversations, callLog } = await build(WS)
+        const { tool, recall, agents, conversations, callLog } = await build()
 
         await expect(tool.memory({ workspaceId: WS, conversationId: null, agentId: null })).resolves.toBe(
             "### Delivery\n- Days: Sunday",
@@ -195,7 +198,7 @@ describe("KnowledgeSearchToolService > missing read identities", () => {
     })
 
     it("never widens a search without caller identities to internal knowledge", async () => {
-        const { tool, recall, agents, conversations, callLog } = await build(WS)
+        const { tool, recall, agents, conversations, callLog } = await build()
         await expect(tool.search({ workspaceId: WS, conversationId: null, agentId: null }, "price")).resolves.toEqual({
             passages: "BRIEF",
             citations: [{ title: "Menu", topic: "" }],
@@ -216,8 +219,8 @@ describe("KnowledgeSearchToolService > missing read identities", () => {
     })
 
     it("uses no installation or agent identity when the conversation owner refuses it", async () => {
-        const { tool, recall, conversations, callLog } = await build(WS)
-        conversations.turnOf.mockResolvedValue({ kind: "refused", code: AgentConversationsErrorCode.NotFound })
+        const { tool, recall, conversations, callLog } = await build()
+        conversations.turnOf.mockResolvedValue(refused(ChatRecordsErrorCode.NotFound))
 
         await expect(tool.memory(ctx)).resolves.toBe("### Delivery\n- Days: Sunday")
 

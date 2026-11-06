@@ -142,7 +142,11 @@ describe("CustomerDoorStepService", () => {
             next: [],
         })
 
-        expect(chat.turnOf).toHaveBeenCalledWith({ conversationId: "c1", messageId: "m1", channelEventId: "tg:42:1" })
+        expect(chat.turnOf).toHaveBeenCalledWith("ws-1", {
+            conversationId: "c1",
+            messageId: "m1",
+            channelEventId: "tg:42:1",
+        })
         expect(runtime.proposalFrom).toHaveBeenCalledWith('{"reply":"50k"}')
         expect(chat.respond).toHaveBeenCalledWith(WITH_ORIGIN, expect.objectContaining({ reply: "read" }))
     })
@@ -181,7 +185,9 @@ describe("CustomerDoorStepService", () => {
         expect(split.fire).toHaveBeenCalledWith(expect.objectContaining({ wakeId: "wake-1" }), "reply_customer")
         expect(chat.respond).not.toHaveBeenCalled()
     })
+})
 
+describe("CustomerDoorStepService > a turn that cannot be read", () => {
     it("ends without a reply when the message is gone", async () => {
         const { run, chat } = await build(null)
         const reading = { kind: "picked", contract, resultText: '{"reply":"50k"}', dropped: [] }

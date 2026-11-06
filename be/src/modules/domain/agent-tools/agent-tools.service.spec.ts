@@ -8,7 +8,6 @@ import {
     BOOKING_TOOLS,
     CONVERSATION_LEADS,
     GATEWAY_TOOLS,
-    HANDOFF_TOOL,
     KNOWLEDGE_SEARCH,
     LEAD_WRITER,
     TOOL_TOKENS,
@@ -22,7 +21,6 @@ import type {
     BookingTools,
     ConversationLeads,
     GatewayTools,
-    HandoffTool,
     KnowledgeSearch,
     LeadWriter,
     ToolTokens,
@@ -79,7 +77,6 @@ const build = async (verified: typeof claims | null = claims, admitted: BridgeTu
     const approvals = mock<ApprovalRequester>({
         request: jest.fn(() => Promise.resolve({ workItemId: "wi-1", status: "waiting_decision" })),
     })
-    const handoffs = mock<HandoffTool>({ handoff: jest.fn(() => Promise.resolve()) })
     const conversations = mock<ConversationLeads>({ leadIdOf: jest.fn(() => Promise.resolve("lead-9")) })
     const gatewayTools = mock<GatewayTools>({ run: jest.fn(() => Promise.resolve({ result: { orderId: "o1" } })) })
     const agentHandoff = mock<AgentHandoff>({
@@ -94,7 +91,6 @@ const build = async (verified: typeof claims | null = claims, admitted: BridgeTu
             { provide: LEAD_WRITER, useValue: leads },
             { provide: BOOKING_TOOLS, useValue: booking },
             { provide: APPROVAL_REQUESTER, useValue: approvals },
-            { provide: HANDOFF_TOOL, useValue: handoffs },
             { provide: CONVERSATION_LEADS, useValue: conversations },
             { provide: GATEWAY_TOOLS, useValue: gatewayTools },
             { provide: AGENT_HANDOFF, useValue: agentHandoff },
@@ -109,7 +105,6 @@ const build = async (verified: typeof claims | null = claims, admitted: BridgeTu
         leads,
         booking,
         approvals,
-        handoffs,
         gatewayTools,
         agentHandoff,
         bridge,
@@ -155,9 +150,12 @@ describe("AgentToolsService > runBearerTool", () => {
     it("runs the tool for the job the bearer token names", async () => {
         const { service } = await build()
 
-        const result = await service.runBearerTool("Bearer good", "handoff.to_person", {})
+        const result = await service.runBearerTool("Bearer good", "approval.request", {
+            question: "Discount?",
+            reason: "unclear_outcome",
+        })
 
-        expect(result).toEqual({ status: "handed_to_person" })
+        expect(result).toEqual({ work_item_id: "wi-1", status: "waiting_decision" })
     })
 
     it("refuses a call with no bearer token", async () => {
@@ -263,24 +261,6 @@ describe("AgentToolsService > runTool", () => {
 })
 
 describe("AgentToolsService > runTool", () => {
-    it("hands the conversation to a person and traces the reason", async () => {
-        const { service, handoffs, events } = await build()
-
-        const result = await service.runTool("t", "handoff.to_person", { reason: "angry customer" })
-
-        expect(result).toEqual({ status: "handed_to_person" })
-        expect(handoffs.handoff).toHaveBeenCalledWith(ctx, "angry customer")
-        expect(events.record).toHaveBeenCalledWith(TOOL_AUDITS.handoffReason())
-    })
-
-    it("traces the job when a handoff gives no reason", async () => {
-        const { service, events } = await build()
-
-        await service.runTool("t", "handoff.to_person", {})
-
-        expect(events.record).toHaveBeenCalledWith(TOOL_AUDITS.handoffJob())
-    })
-
     it("leaves the booking tools to their port, which traces itself", async () => {
         const { service, booking, events } = await build()
 

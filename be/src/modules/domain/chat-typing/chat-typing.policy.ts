@@ -27,9 +27,6 @@ export const chatTypingTopic = (
     workspaceId: string,
     target: ChatTarget,
 ): RealtimeTopic<ChatTypingFrame> => ({
-    name:
-        target.conversationId === null
-            ? `chat-typing:${recipientId}:${workspaceId.toLowerCase()}:room:${target.room ?? "office"}`
-            : `chat-typing:${recipientId}:${workspaceId.toLowerCase()}:conversation:${target.conversationId.toLowerCase()}`,
+    name: `chat-typing:${recipientId}:${workspaceId.toLowerCase()}:room:${target.room ?? "office"}`,
     accepts: isChatTypingFrame,
 })

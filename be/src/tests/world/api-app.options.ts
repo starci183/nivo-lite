@@ -103,12 +103,11 @@ const storageProof = {
     timeoutMs: 1000,
 }
 
-/** The poll, import and burst settings of the api, at their defaults with no provider behind them. */
+/** The poll and burst settings of the api, at their defaults with no provider behind them. */
 const pollOptions = (): Pick<
     ApiOptions,
-    "chatFilesImportRoot" | "connectionPoll" | "redis" | "remoteFiles" | "sepay" | "zaloProvider" | "agentWork"
+    "connectionPoll" | "redis" | "remoteFiles" | "sepay" | "zaloProvider" | "agentWork"
 > => ({
-    chatFilesImportRoot: "world-proof/imports",
     connectionPoll: parseConnectionPollConfig(new EnvSource({})),
     redis: parseRedisConfig(new EnvSource({})),
     remoteFiles: parseRemoteFilesConfig(new EnvSource({})),

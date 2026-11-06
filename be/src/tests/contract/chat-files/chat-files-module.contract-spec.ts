@@ -1,10 +1,5 @@
 import type { Provider } from "@nestjs/common"
-import {
-    ChatFileReadsService,
-    ChatFilesModule,
-    ChatFilesService,
-    InboundFilesService,
-} from "@modules/domain/chat-files"
+import { ChatFileReadsService, ChatFilesModule, ChatFilesService } from "@modules/domain/chat-files"
 
 /** What a provider binds its token to: the token it reuses, the value it holds or the name of the class it builds. */
 const targetOf = (provider: object): unknown => {
@@ -22,26 +17,16 @@ const bindingsOf = (providers: ReadonlyArray<Provider> | undefined): Array<[stri
     )
 
 describe("ChatFilesModule", () => {
-    const registered = ChatFilesModule.register({
-        storage: "OBJECTS",
-        assets: "ASSETS",
-        importRoot: "/work/.starciwork",
-    })
+    const registered = ChatFilesModule.register({ storage: "OBJECTS" })
 
-    it("binds the stores the app root names, the import folder and the reader of local files", () => {
+    it("binds the store the app root names", () => {
         expect(bindingsOf(registered.providers)).toEqual(
-            expect.arrayContaining([
-                ["domain.chat-files.storage", "OBJECTS"],
-                ["domain.chat-files.assets", "ASSETS"],
-                ["domain.chat-files.import-root", "/work/.starciwork"],
-                ["domain.chat-files.reader", "InboundFileReaderClient"],
-                ["domain.chat-files.resolver", "HostResolverClient"],
-            ]),
+            expect.arrayContaining([["domain.chat-files.storage", "OBJECTS"]]),
         )
     })
 
-    it("provides and exports the files of a conversation and the files a channel brings in", () => {
-        const services = [ChatFilesService, ChatFileReadsService, InboundFilesService]
+    it("provides and exports the files of the Office", () => {
+        const services = [ChatFilesService, ChatFileReadsService]
 
         expect(registered.providers).toEqual(expect.arrayContaining(services))
         expect(registered.exports).toEqual(services)

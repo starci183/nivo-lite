@@ -42,28 +42,23 @@ const routeOf = (tools: jest.Mocked<ProviderToolsService>): ProviderRoute => {
 }
 
 describe("TelegramNativeService", () => {
-    it("declares a status and an events tool for internal use, the customer masked in the audit", () => {
+    it("declares a status tool for internal use", () => {
         expect(TELEGRAM_MANIFEST.key).toBe("telegram")
         expect(
             TELEGRAM_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.internalOnly, tool.secretFields]),
-        ).toEqual([
-            ["status", "read", true, undefined],
-            ["events", "read", true, ["customerMasked"]],
-        ])
+        ).toEqual([["status", "read", true, undefined]])
     })
 
-    it("runs the tools of the telegram provider on the telegram channel", async () => {
+    it("runs the tools of the telegram provider", async () => {
         const { telegram, tools } = await build()
 
-        await expect(telegram.invoke(WS, "events", { connectionId: "c1" }, CALLER)).resolves.toEqual({
-            connections: [],
-        })
+        await expect(telegram.invoke(WS, "status", {}, CALLER)).resolves.toEqual({ connections: [] })
 
         expect(tools.answer).toHaveBeenCalledWith(
             WS,
-            expect.objectContaining({ provider: "telegram", channel: "telegram" }),
-            "events",
-            { connectionId: "c1" },
+            expect.objectContaining({ provider: "telegram" }),
+            "status",
+            {},
             CALLER,
         )
     })

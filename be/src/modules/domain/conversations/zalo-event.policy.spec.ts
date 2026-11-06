@@ -1,11 +1,11 @@
 import { Test } from "@nestjs/testing"
-import { isZaloAttachmentEvent, readZaloEvent, zaloAttachmentShapeOf } from "./zalo-event.policy"
+import { readZaloEvent } from "./zalo-event.policy"
 
 const SUBJECT = Symbol("zalo-event.policy")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { readZaloEvent, isZaloAttachmentEvent, zaloAttachmentShapeOf } }],
+        providers: [{ provide: SUBJECT, useValue: { readZaloEvent } }],
     }).compile()
     return moduleRef.get<typeof import("./zalo-event.policy")>(SUBJECT)
 }
@@ -183,39 +183,6 @@ describe("readZaloEvent picture refusals and imports", () => {
             kind: "ok",
             value: { attachments: [{ kind: "image", url: "", localPath: "receipts/a.jpg" }] },
         })
-    })
-})
-
-describe("zalo attachment events", () => {
-    it("knows a picture or file event from a text event", async () => {
-        const subject = await buildSubject()
-
-        expect(subject.isZaloAttachmentEvent(imageEvent())).toBe(true)
-        expect(subject.isZaloAttachmentEvent(event({ event_name: "user_send_file" }))).toBe(true)
-        expect(subject.isZaloAttachmentEvent(event())).toBe(false)
-        expect(subject.isZaloAttachmentEvent(Buffer.from("[]"))).toBe(false)
-        expect(subject.isZaloAttachmentEvent()).toBe(false)
-    })
-
-    it("describes the shape by field names only, never by value", async () => {
-        const subject = await buildSubject()
-
-        const shape = subject.zaloAttachmentShapeOf(imageEvent())
-
-        expect(shape).toBe("message[attachments,msg_id,text] attachment[payload,type] payload[thumbnail,url]")
-        expect(shape).not.toContain("cdn.test")
-    })
-
-    it("marks the parts that are missing", async () => {
-        const subject = await buildSubject()
-
-        expect(subject.zaloAttachmentShapeOf(imageEvent({ attachments: [] }, { message: undefined }))).toBe(
-            "message[-] attachment[-] payload[-]",
-        )
-        expect(subject.zaloAttachmentShapeOf(imageEvent({ attachments: ["x"] }))).toBe(
-            "message[attachments,msg_id,text] attachment[-] payload[-]",
-        )
-        expect(subject.zaloAttachmentShapeOf()).toBe("")
     })
 })
 

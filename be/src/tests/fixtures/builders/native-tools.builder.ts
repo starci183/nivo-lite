@@ -114,8 +114,6 @@ type ToolAuditsShape = {
     boundedQuery: (overrides?: Partial<EventEntry>) => EventEntry
     leadWrite: (overrides?: Partial<EventEntry>) => EventEntry
     approval: (overrides?: Partial<EventEntry>) => EventEntry
-    handoffReason: (overrides?: Partial<EventEntry>) => EventEntry
-    handoffJob: (overrides?: Partial<EventEntry>) => EventEntry
     connectorCall: (overrides?: Partial<EventEntry>) => EventEntry
     agentHandoff: (overrides?: Partial<EventEntry>) => EventEntry
     conversationMemory: (overrides?: Partial<EventEntry>) => EventEntry
@@ -155,22 +153,6 @@ export const TOOL_AUDITS: ToolAuditsShape = {
         summary: "Approval requested from the owner (waiting_decision)",
         leadId: "lead-9",
         evidence: "wi-1",
-    }),
-    handoffReason: builder<Parameters<EventsService["record"]>[0]>({
-        workspaceId: "ws-1",
-        kind: "engine.tool.handoff.to_person",
-        actor: "NIVO engine",
-        summary: "Conversation handed to a person",
-        leadId: "lead-9",
-        evidence: "angry customer",
-    }),
-    handoffJob: builder<Parameters<EventsService["record"]>[0]>({
-        workspaceId: "ws-1",
-        kind: "engine.tool.handoff.to_person",
-        actor: "NIVO engine",
-        summary: "Conversation handed to a person",
-        leadId: "lead-9",
-        evidence: "job-1",
     }),
     connectorCall: builder<Parameters<EventsService["record"]>[0]>({
         workspaceId: "ws-1",

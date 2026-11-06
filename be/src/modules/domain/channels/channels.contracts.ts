@@ -1,5 +1,5 @@
 import type { ZaloFailure } from "@modules/integrations/zalo"
-import type { ConversationTarget } from "@modules/domain/agent-conversations"
+import type { ChatConversationTarget } from "@modules/domain/chat-records"
 
 /** A started Zalo authorization. */
 export interface ZaloPkce {
@@ -115,6 +115,8 @@ export interface RenewalNotification {
 
 /** One reply to push to the customer's own channel. */
 export interface DeliveryRequest {
+    /** The workspace the conversation belongs to. */
+    readonly workspaceId: string
     /** The conversation the reply belongs to. */
     readonly conversationId: string
     /** The stored agent message that carries the text, so the verdict lands on it. */
@@ -136,7 +138,7 @@ export type DeliveryNote = "qr_image_failed" | "zns_not_configured" | "zns_no_ph
 
 /** The outcome of a delivery: whether the channel accepted it and, if not, why. */
 export interface DeliveryResult {
-    /** The remote fact when known; legacy senders may omit it, which a false result treats as ambiguous. */
+    /** The remote fact when known; a sender may omit it, which a false result treats as ambiguous. */
     readonly outcome?: DeliveryOutcome
     /** True only when the channel accepted the message. */
     readonly delivered: boolean
@@ -151,7 +153,7 @@ export interface DeliveryResult {
 /** Acknowledgement, a definite refusal before acceptance, or an unknown remote outcome. */
 export type DeliveryOutcome = "acknowledged" | "rejected" | "ambiguous"
 
-/** The delivery boundary always returns an explicit outcome, even for a legacy boolean sender. */
+/** The delivery boundary always returns an explicit outcome, even for a sender that answers a boolean. */
 export interface DeliveryReceipt extends DeliveryResult {
     /** The channel's known outcome. */
     readonly outcome: DeliveryOutcome
@@ -189,7 +191,7 @@ export interface ChannelSender {
     /** The conversation channel keys it sends for. */
     readonly channels: ReadonlyArray<string>
     /** Pushes the text to the customer; false when the channel did not accept it. Never throws. */
-    send(conversation: ConversationTarget, text: string): Promise<boolean>
+    send(conversation: ChatConversationTarget, text: string): Promise<boolean>
 }
 
 /** A sender, or none: the answer of the registry. */

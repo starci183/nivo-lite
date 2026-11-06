@@ -1,7 +1,5 @@
 import { builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
-import { AgentMessagesFeedReadService } from "@modules/domain/agent-messages"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import { TelegramPageService } from "./telegram-page.service"
@@ -30,29 +28,10 @@ const build = async (record: Partial<ConnectionRecord> = {}) => {
     connections.get.mockImplementation((workspaceId, id) => Promise.resolve(connection({ id, workspaceId, ...record })))
     connections.webhookUrl.mockImplementation((provider, id) => `https://hooks.test/${provider}/${id}`)
     connections.agentIds.mockResolvedValue(["agent-1"])
-    const conversations = mock<AgentConversationsReadService>()
-    conversations.onConnection.mockResolvedValue([{ id: "k-1", externalId: "6201234118", visitorName: "An" }])
-    const feed = mock<AgentMessagesFeedReadService>()
-    feed.recentIn.mockResolvedValue([
-        {
-            id: "m-1",
-            conversationId: "k-1",
-            role: "user",
-            body: "private text",
-            createdAt: "2026-10-28T09:00:00.000Z",
-            deliveryStatus: null,
-            deliveryError: null,
-        },
-    ])
     const moduleRef = await Test.createTestingModule({
-        providers: [
-            TelegramPageService,
-            { provide: ConnectionsService, useValue: connections },
-            { provide: AgentConversationsReadService, useValue: conversations },
-            { provide: AgentMessagesFeedReadService, useValue: feed },
-        ],
+        providers: [TelegramPageService, { provide: ConnectionsService, useValue: connections }],
     }).compile()
-    return { service: moduleRef.get(TelegramPageService), connections, conversations, feed }
+    return { service: moduleRef.get(TelegramPageService), connections }
 }
 
 describe("TelegramPageService view", () => {
@@ -103,39 +82,5 @@ describe("TelegramPageService view", () => {
         connections.get.mockRejectedValue(new ConnectionsError({ code: ConnectionsErrorCode.NotFound }))
 
         await expect(service.view(actor, "foreign")).rejects.toMatchObject({ code: ConnectionsErrorCode.NotFound })
-    })
-})
-
-describe("TelegramPageService events", () => {
-    it("lists the events with the chat id hidden and no message text", async () => {
-        const { service, conversations } = await build()
-
-        const events = await service.events(actor, "c-1")
-
-        expect(events).toEqual([
-            {
-                id: "m-1",
-                kind: "user_message",
-                outcome: "received",
-                at: "2026-10-28T09:00:00.000Z",
-                who: "6201…118",
-                reason: null,
-            },
-        ])
-        expect(JSON.stringify(events)).not.toContain("private text")
-        expect(conversations.onConnection).toHaveBeenCalledWith("ws-1", "c-1", "telegram", 500)
-    })
-
-    it("refuses staff", async () => {
-        const { service, connections } = await build()
-        connections.authorize.mockRejectedValue(new ConnectionsError({ code: ConnectionsErrorCode.Forbidden }))
-
-        await expect(service.events(actor, "c-1")).rejects.toMatchObject({ code: ConnectionsErrorCode.Forbidden })
-    })
-
-    it("answers not found for a connection of another provider", async () => {
-        const { service } = await build({ provider: "sepay" })
-
-        await expect(service.events(actor, "c-1")).rejects.toMatchObject({ code: ConnectionsErrorCode.NotFound })
     })
 })

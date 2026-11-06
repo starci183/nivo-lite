@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
 import type { BookingNotice, BookingNoticeResult, BookingNotifier } from "@modules/domain/bookings"
 import { ChannelDeliveryService } from "@modules/domain/channels"
+import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
 import { EventsService } from "@modules/domain/events"
 import { InjectN8nMailer } from "@modules/domain/n8n-runs"
 import type { N8nMailer } from "@modules/domain/n8n-runs"
@@ -25,8 +24,7 @@ const NOWHERE: BookingNoticeResult = { delivered: false, kept: false, via: "none
 
 @Injectable()
 /**
- * Carries a booking notice to the customer the way the old booking performers did: into the conversation the booking came from, else
- * the customer's latest conversation, else by email through the owner's gate. Whatever the outcome, the evidence log gets a
+ * Carries a booking notice to the customer: into the conversation the booking came from, else by email through the owner's gate. Whatever the outcome, the evidence log gets a
  * `booking.notified` line on the customer's timeline.
  */
 export class BookingNotifierService implements BookingNotifier {
@@ -34,8 +32,8 @@ export class BookingNotifierService implements BookingNotifier {
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
         @InjectN8nMailer() private readonly mailer: N8nMailer,
-        private readonly conversations: AgentConversationsService,
-        private readonly messages: AgentMessagesService,
+        private readonly conversations: ChatConversationsService,
+        private readonly messages: ChatMessagesService,
         private readonly channels: ChannelDeliveryService,
         private readonly events: EventsService,
     ) {}
@@ -50,31 +48,37 @@ export class BookingNotifierService implements BookingNotifier {
     }
 
     private async destinationOf(notice: BookingNotice): Promise<Destination | null> {
-        if (notice.conversationId !== null) {
-            const target = await this.conversations.targetOf(notice.conversationId)
-            if (target.kind === "ok" && target.value.workspaceId === notice.workspaceId) {
-                return { id: notice.conversationId, channel: target.value.channel }
-            }
-        }
-        if (notice.leadId === null) return null
-        const latest = await this.conversations.latestOfLead(notice.workspaceId, notice.leadId, null)
-        return latest === null ? null : { id: latest.id, channel: latest.channel }
+        if (notice.conversationId === null) return null
+        const target = await this.conversations.targetOf(notice.workspaceId, notice.conversationId)
+        return target.kind === "ok" ? { id: notice.conversationId, channel: target.value.channel } : null
     }
 
     private async inConversation(notice: BookingNotice, destination: Destination): Promise<BookingNoticeResult> {
-        const messageId = await this.messages.storeAgentMessage(notice.workspaceId, destination.id, notice.text)
-        const delivered = await this.channels
-            .deliver({ conversationId: destination.id, messageId, text: notice.text })
-            .then(
-                (outcome) => outcome.delivered,
-                (cause: unknown) => {
-                    this.logger.error(BookingPortsLogEvent.DeliveryFailed, cause, {
-                        workspaceId: notice.workspaceId,
-                        bookingId: notice.bookingId,
-                    })
-                    return false
-                },
-            )
+        const stored = await this.messages.storeAgentLine({
+            workspaceId: notice.workspaceId,
+            conversationId: destination.id,
+            body: notice.text,
+            key: `booking_notice:${notice.dedupeKey}`,
+        })
+        const delivered = stored.sent
+            ? true
+            : await this.channels
+                  .deliver({
+                      workspaceId: notice.workspaceId,
+                      conversationId: destination.id,
+                      messageId: stored.id,
+                      text: notice.text,
+                  })
+                  .then(
+                      (outcome) => outcome.delivered,
+                      (cause: unknown) => {
+                          this.logger.error(BookingPortsLogEvent.DeliveryFailed, cause, {
+                              workspaceId: notice.workspaceId,
+                              bookingId: notice.bookingId,
+                          })
+                          return false
+                      },
+                  )
         return { delivered, kept: true, via: destination.channel }
     }
 

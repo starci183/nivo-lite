@@ -1,6 +1,4 @@
 import { Injectable } from "@nestjs/common"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ContractsService } from "@modules/domain/contracts"
 import { EvidenceService } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
@@ -15,7 +13,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import type { SalesWorkbenchData } from "./sales-workbench.contracts"
-import { autoDoneItemsOf, buildSalesWorkbench, conversationIdsOf } from "./sales-workbench.mapper"
+import { autoDoneItemsOf, buildSalesWorkbench } from "./sales-workbench.mapper"
 import { viewOfWorkItem } from "./work-item-view.mapper"
 
 @Injectable()
@@ -28,8 +26,6 @@ export class SalesWorkbenchService {
         private readonly responsibilities: ResponsibilityJournalService,
         private readonly orders: OrdersService,
         private readonly invoices: InvoicesService,
-        private readonly conversations: AgentConversationsService,
-        private readonly messages: AgentMessagesService,
         private readonly executions: ExecutionsService,
         private readonly staff: StaffDirectoryService,
         private readonly events: EventsService,
@@ -41,20 +37,18 @@ export class SalesWorkbenchService {
     /** Proves membership before reading every bounded region of the Sales workbench. */
     async read(userId: string, workspaceId: string): Promise<SalesWorkbenchData> {
         await this.members.require(userId, workspaceId)
-        const [leads, steps, orders, invoices, conversations, drafts, staff, outcomes, items, decided, contracts] =
-            await Promise.all([
-                this.leads.list(workspaceId),
-                this.responsibilities.listOpen(workspaceId),
-                this.orders.listForWorkbench(workspaceId),
-                this.invoices.listForWorkbench(workspaceId),
-                this.conversations.listCustomerLeadConversations(workspaceId),
-                this.executions.list(workspaceId, { pendingLegacy: true, limit: 50 }),
-                this.staff.list(workspaceId),
-                this.events.list(workspaceId, { kind: "outcome.recorded", limit: 600 }),
-                this.items.listForWorkbench(workspaceId),
-                this.evidence.listDecisions(workspaceId, { humanDepartment: "sales", limit: 15 }),
-                this.contracts.list(workspaceId, userId),
-            ])
+        const [leads, steps, orders, invoices, drafts, staff, outcomes, items, decided, contracts] = await Promise.all([
+            this.leads.list(workspaceId),
+            this.responsibilities.listOpen(workspaceId),
+            this.orders.listForWorkbench(workspaceId),
+            this.invoices.listForWorkbench(workspaceId),
+            this.executions.list(workspaceId, { pendingLegacy: true, limit: 50 }),
+            this.staff.list(workspaceId),
+            this.events.list(workspaceId, { kind: "outcome.recorded", limit: 600 }),
+            this.items.listForWorkbench(workspaceId),
+            this.evidence.listDecisions(workspaceId, { humanDepartment: "sales", limit: 15 }),
+            this.contracts.list(workspaceId, userId),
+        ])
         const [itemLeads, itemStaff] = await Promise.all([
             this.leads.listByIds(
                 workspaceId,
@@ -66,22 +60,19 @@ export class SalesWorkbenchService {
             ),
         ])
         const views = items.map((item) => viewOfWorkItem(item, itemLeads, itemStaff))
-        const [messages, autoEvidence] = await Promise.all([
-            this.messages.listForConversations(workspaceId, conversationIdsOf(conversations), { limit: 800 }),
-            this.events.list(workspaceId, {
-                kind: "work.auto_done",
-                workItemIds: autoDoneItemsOf(views).map((item) => item.id),
-                limit: 200,
-            }),
-        ])
+        const autoEvidence = await this.events.list(workspaceId, {
+            kind: "work.auto_done",
+            workItemIds: autoDoneItemsOf(views).map((item) => item.id),
+            limit: 200,
+        })
         return buildSalesWorkbench({
             nowMs: this.clock.now().getTime(),
             leads,
             steps,
             orders,
             invoices,
-            conversations,
-            messages,
+            conversations: [],
+            messages: [],
             drafts,
             staff,
             outcomes,

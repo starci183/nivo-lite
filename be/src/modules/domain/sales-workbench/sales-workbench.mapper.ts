@@ -114,10 +114,6 @@ const CONVERSION_WINDOW_DAYS = 90
 const AUTO_ACTIVITY_LIMIT = 40
 const VN_OFFSET_MS = 7 * 3_600_000
 const PRIORITY: Record<AttentionKind, number> = { decision: 0, failed: 1, clarify: 2, overdue: 3, awaiting_reply: 4 }
-/** Conversations whose last message the workbench reads: the ids to ask for. */
-export const conversationIdsOf = (conversations: ReadonlyArray<ConversationSlim>): ReadonlyArray<string> =>
-    conversations.map((conversation) => conversation.id)
-
 /** The sales work done by policy that the activity surface shows, newest first. */
 export const autoDoneItemsOf = (items: ReadonlyArray<WorkItemView>): ReadonlyArray<WorkItemView> =>
     items

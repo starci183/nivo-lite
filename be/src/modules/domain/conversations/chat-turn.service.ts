@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
+import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import type { DeliveryOutcome } from "@modules/domain/channels"
 import { ChannelReceiptsService } from "@modules/domain/channel-receipts"
@@ -13,8 +12,6 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { isChatTurnPayload } from "@modules/queues/chat-turn"
-import type { ChatTurnPayload } from "@modules/queues/chat-turn"
 import { InjectChatTurnExtensions } from "./conversations.decorators"
 import type {
     CustomerTurn,
@@ -35,15 +32,13 @@ const HOLDING_MAX = 400
 const ENGINE_ACTOR = "OpenClaw"
 /** Why a turn is held when the agent or the workspace work is switched off: paused means silent to the customer. */
 const PAUSED = "installation_not_running"
-/** Why a turn falls back to the holding line when the AI step is missing or fails. */
-const UNAVAILABLE = "openclaw_unavailable"
 
 @Injectable()
 /**
  * One customer turn on a real channel. The AI step only PROPOSES the reply; the outcome handler of the flows behind it (lead hand-off, order,
  * payment check, waiting items) decides what leaves, and the reply is stored once per customer message and delivered through the channel the
  * customer wrote on. When the AI step is missing, slow or refused, the customer gets the owner holding line (at most once per hour) and the
- * question is handed to a person. Every write is idempotent per customer message, so a redelivered job repeats nothing.
+ * question is handed to a person. Every write is idempotent per customer message, so a retried wake repeats nothing.
  */
 export class ChatTurnService {
     constructor(
@@ -51,54 +46,35 @@ export class ChatTurnService {
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectChatTurnExtensions() private readonly extensions: ChatTurnExtensions,
         @InjectLogger() private readonly logger: Logger,
-        private readonly conversations: AgentConversationsService,
-        private readonly messages: AgentMessagesService,
+        private readonly conversations: ChatConversationsService,
+        private readonly messages: ChatMessagesService,
         private readonly receipts: ChannelReceiptsService,
         private readonly delivery: ChannelDeliveryService,
         private readonly installations: InstallationRecordsService,
     ) {}
 
-    /** Runs the job payload a worker claimed; a payload that is not a chat turn is ignored. */
-    async runFromJob(payload: unknown): Promise<void> {
-        if (isChatTurnPayload(payload)) await this.run(payload)
-    }
-
-    /** Runs one queued job: a turn to answer, or an already stored message to push to the customer. */
-    async run(payload: ChatTurnPayload): Promise<void> {
-        if (payload.kind === "deliver") {
-            await this.deliverStored(payload.conversationId, payload.messageId)
-            return
-        }
-        const turn = await this.turnOf(payload)
-        if (turn === undefined || this.answeredByPerson(turn)) return
-        const named = await this.ready(turn, payload.lookupName)
-        const answer = await this.propose(named)
-        if (typeof answer === "string") await this.holdOver(named, answer)
-        else await this.respond(named, answer)
-    }
-
-    /** The customer turn a queued job or a wake names, or undefined when its conversation or message is gone. */
-    async turnOf(ref: TurnRef): Promise<OptionalCustomerTurn> {
-        const conversation = await this.conversations.turnOf(ref.conversationId)
-        const message = await this.messages.find(ref.messageId, ref.conversationId)
+    /** The customer turn a wake names, or undefined when its conversation or message is gone. */
+    async turnOf(workspaceId: string, ref: TurnRef): Promise<OptionalCustomerTurn> {
+        const conversation = await this.conversations.turnOf(workspaceId, ref.conversationId)
+        const message = await this.messages.find(workspaceId, ref.conversationId, ref.messageId)
         if (conversation.kind !== "ok" || message.kind !== "ok") {
             this.logger.warn(ConversationsLogEvent.TurnTargetGone, { conversationId: ref.conversationId })
             return undefined
         }
-        const merged = await this.mergedBodies(ref)
+        const merged = await this.mergedBodies(workspaceId, ref)
         return {
             conversation: conversation.value,
             messageId: message.value.id,
             body: [message.value.body, ...merged].join("\n"),
             channelEventId: ref.channelEventId,
-            transcript: await this.messages.transcript(ref.conversationId),
+            transcript: await this.messages.transcript(workspaceId, ref.conversationId),
         }
     }
 
     /** The words of the messages that arrived within the burst window, oldest first; one that is gone is left out. */
-    private async mergedBodies(ref: TurnRef): Promise<ReadonlyArray<string>> {
+    private async mergedBodies(workspaceId: string, ref: TurnRef): Promise<ReadonlyArray<string>> {
         const found = await Promise.all(
-            (ref.mergedMessageIds ?? []).map((id) => this.messages.find(id, ref.conversationId)),
+            (ref.mergedMessageIds ?? []).map((id) => this.messages.find(workspaceId, ref.conversationId, id)),
         )
         return found.flatMap((message) => (message.kind === "ok" ? [message.value.body] : []))
     }
@@ -119,17 +95,8 @@ export class ChatTurnService {
     private async named(turn: CustomerTurn): Promise<CustomerTurn> {
         const name = await this.delivery.customerName(turn.conversation)
         if (name === "") return turn
-        await this.conversations.rename(turn.conversation.id, name)
+        await this.conversations.rename(turn.conversation.workspaceId, turn.conversation.id, name)
         return { ...turn, conversation: { ...turn.conversation, visitorName: name } }
-    }
-
-    private propose(turn: CustomerTurn): Promise<ChatTurnProposal | string> {
-        const runtime = this.extensions.runtime()
-        if (runtime === undefined) return Promise.resolve(UNAVAILABLE)
-        return runtime.propose(turn).catch((cause: unknown) => {
-            this.logger.error(ConversationsLogEvent.RuntimeFailed, cause, { conversationId: turn.conversation.id })
-            return UNAVAILABLE
-        })
     }
 
     /** Puts the proposal through the outcome handler and sends what leaves, once per customer message. */
@@ -171,7 +138,11 @@ export class ChatTurnService {
         const since = new Date(this.clock.now().getTime() - HOLDING_WINDOW_MS)
         const fresh = !(await this.receipts.heldSince(turn.conversation.workspaceId, turn.conversation.id, since))
         // A reply already stored for this message is a retry: finish delivering it.
-        const retry = await this.messages.replyExists(turn.conversation.id, turn.messageId)
+        const retry = await this.messages.replyExists(
+            turn.conversation.workspaceId,
+            turn.conversation.id,
+            turn.messageId,
+        )
         const words = retry || fresh ? await this.holdingText(turn.conversation, reason === PAUSED) : null
         if (words !== null) await this.sendReply(turn, words)
         if (fresh) {
@@ -183,14 +154,16 @@ export class ChatTurnService {
 
     /** Stores the reply once and reports whether the channel accepted it, including a website's persisted reply. */
     async sendReply(turn: CustomerTurn, text: string): Promise<DeliveryOutcome> {
-        const stored = await this.messages.storeReply(
-            turn.conversation.workspaceId,
-            turn.conversation.id,
-            text,
-            turn.messageId,
-        )
+        const stored = await this.messages.storeAgentLine({
+            workspaceId: turn.conversation.workspaceId,
+            conversationId: turn.conversation.id,
+            body: text,
+            key: turn.messageId,
+            inReplyTo: turn.messageId,
+        })
         if (stored.sent) return "acknowledged"
         const result = await this.delivery.deliver({
+            workspaceId: turn.conversation.workspaceId,
             conversationId: turn.conversation.id,
             messageId: stored.id,
             text: stored.body,
@@ -199,7 +172,7 @@ export class ChatTurnService {
     }
 
     /** The owner own words (module settings), else the default holding line; none when paused and the owner wrote none. */
-    private async holdingText(conversation: TurnConversation, paused: boolean): Promise<string | null> {
+    private async holdingText(conversation: ChatTurnConversation, paused: boolean): Promise<string | null> {
         const installation = await this.installations.ofAgent(conversation.workspaceId, conversation.agent.id)
         const holding = installation?.settings.holdingMessage
         const custom = typeof holding === "string" ? holding.trim() : ""
@@ -207,13 +180,7 @@ export class ChatTurnService {
         return paused ? null : this.catalog.get("conversations.holdingReply", {}, LOCALE)
     }
 
-    private async writeLines(conversation: TurnConversation, lines: ReadonlyArray<string>): Promise<void> {
+    private async writeLines(conversation: ChatTurnConversation, lines: ReadonlyArray<string>): Promise<void> {
         await eachInOrder(lines, (line) => this.messages.storeLine(conversation.workspaceId, conversation.id, line))
-    }
-
-    private async deliverStored(conversationId: string, messageId: string): Promise<void> {
-        const message = await this.messages.find(messageId, conversationId)
-        if (message.kind !== "ok" || message.value.deliveryStatus === "sent") return
-        await this.delivery.deliver({ conversationId, messageId, text: message.value.body })
     }
 }

@@ -102,5 +102,5 @@ export interface FlowTriggerMessages {
         messageIds: ReadonlyArray<string>,
     ): Promise<ReadonlyArray<FlowTriggerMessage>>
     /** The conversation's customer and channel, or null when it is gone. */
-    conversationOf(conversationId: string): Promise<FlowTriggerConversationOrNone>
+    conversationOf(workspaceId: string, conversationId: string): Promise<FlowTriggerConversationOrNone>
 }

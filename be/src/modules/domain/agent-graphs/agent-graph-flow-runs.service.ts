@@ -95,7 +95,7 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
         const ids = [messageId, ...(mergedMessageIds === undefined ? [] : mergedMessageIds.split(","))]
         const [said, conversation] = await Promise.all([
             this.messages.messagesOf(turn.workspaceId, conversationId, ids),
-            this.messages.conversationOf(conversationId),
+            this.messages.conversationOf(turn.workspaceId, conversationId),
         ])
         return {
             ...scope,

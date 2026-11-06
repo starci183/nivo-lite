@@ -19,7 +19,7 @@ import { WorkPerformersError, WorkPerformersErrorCode } from "./errors/work-perf
 import { InjectPromptWriter } from "./work-performers.decorators"
 import type { PromptWriter } from "./work-performers.port"
 import { PerformerKitService } from "./performer-kit.service"
-import { leadHref, renewalNoticeOf, textOf } from "./performer.policy"
+import { conversationIdOf, leadHref, renewalNoticeOf, textOf } from "./performer.policy"
 
 @Injectable()
 /**
@@ -43,7 +43,7 @@ export class FollowUpPerformerService implements WorkPerformer {
     async prepare(ctx: WorkContext, item: WorkItem): Promise<Prepared> {
         const lead = await this.leads.require(ctx.workspaceId, this.leadIdOf(item))
         const base = item.proposal.fields
-        const contact = await this.delivery.contactOf(ctx.workspaceId, lead)
+        const contact = this.delivery.contactOf(lead)
         const named = textOf(base.responsibility_id)
         const found = named === "" ? null : await this.responsibilities.find(ctx.workspaceId, named)
         const responsibility = found ?? (await this.responsibilities.ensureFor(ctx, lead.id))
@@ -74,10 +74,11 @@ export class FollowUpPerformerService implements WorkPerformer {
         const text = proposal.draft ?? proposal.summary
         // A renewal also carries its notice, so Zalo can send it as a ZNS template when the 48-hour chat window is closed.
         const notice = renewalNoticeOf(proposal.fields)
+        const conversationId = conversationIdOf(item, proposal.fields)
         const sent =
             notice === undefined
-                ? await this.delivery.toCustomer(ctx, lead, text)
-                : await this.delivery.toCustomer(ctx, lead, text, notice)
+                ? await this.delivery.toCustomer(ctx, lead, conversationId, item.id, text)
+                : await this.delivery.toCustomer(ctx, lead, conversationId, item.id, text, notice)
         const responsibilityId =
             textOf(proposal.fields.responsibility_id) === ""
                 ? (await this.responsibilities.ensureFor(ctx, lead.id)).id

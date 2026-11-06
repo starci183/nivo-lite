@@ -1,149 +1,58 @@
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
-import { InboundDoorService } from "@modules/domain/agent-inbound"
-import { AgentWakeService, AgentWorkSettingsService } from "@modules/domain/agent-work"
-import { ChatTurnQueue } from "@modules/queues/chat-turn"
-import type { CustomerIntake, MessageIntake } from "./conversations.contracts"
+import { AgentWakeService } from "@modules/domain/agent-work"
+import type { CustomerIntake } from "./conversations.contracts"
 import { CustomerIntakeService } from "./customer-intake.service"
 
-const MESSAGE: MessageIntake = {
+const INTAKE: CustomerIntake = {
     workspaceId: "ws-1",
     conversationId: "conv-1",
     messageId: "msg-1",
-    channelEventId: "tg:555:9",
+    channelEventId: "tg:c-1:555:9",
     lookupName: true,
+    agentId: "agent-1",
 }
 
-const INTAKE: CustomerIntake = { ...MESSAGE, agentId: "agent-1" }
-
-const turnConversationOf = (agentId: string): TurnConversation => ({
-    id: "conv-1",
-    workspaceId: "ws-1",
-    channel: "website",
-    externalId: null,
-    connectionId: null,
-    leadId: null,
-    handledBy: null,
-    visitorName: null,
-    installationId: null,
-    agent: {
-        id: agentId,
-        name: "Bot",
-        handle: "bot",
-        role: "Chat",
-        module: "chatbot",
-        instructions: "",
-        knowledge: "",
-        approvalRule: "ask",
-        greeting: "",
-    },
-    speaksAs: null,
-})
-
-const build = async (
-    road: Awaited<ReturnType<AgentWorkSettingsService["roadOf"]>>,
-    agentOfConversation: string | null = "agent-1",
-) => {
-    const settings = mock<AgentWorkSettingsService>()
-    settings.roadOf.mockResolvedValue(road)
+const build = async () => {
     const wakes = mock<AgentWakeService>()
     wakes.wake.mockResolvedValue(true)
-    const door = mock<InboundDoorService>()
-    door.accept.mockResolvedValue({ accepted: true, agentIds: ["agent-1"] })
-    const queue = mock<ChatTurnQueue>()
-    queue.enqueueChatTurn.mockResolvedValue(undefined)
-    const conversations = mock<AgentConversationsService>()
-    conversations.turnOf.mockResolvedValue(
-        agentOfConversation === null
-            ? { kind: "refused", code: AgentConversationsErrorCode.NotFound }
-            : { kind: "ok", value: turnConversationOf(agentOfConversation) },
-    )
     const moduleRef = await Test.createTestingModule({
-        providers: [
-            CustomerIntakeService,
-            { provide: AgentWorkSettingsService, useValue: settings },
-            { provide: AgentWakeService, useValue: wakes },
-            { provide: ChatTurnQueue, useValue: queue },
-            { provide: AgentConversationsService, useValue: conversations },
-            { provide: InboundDoorService, useValue: door },
-        ],
+        providers: [CustomerIntakeService, { provide: AgentWakeService, useValue: wakes }],
     }).compile()
-    return { service: moduleRef.get(CustomerIntakeService), settings, wakes, queue, conversations, door }
+    return { service: moduleRef.get(CustomerIntakeService), wakes }
 }
 
-describe("CustomerIntakeService.answer", () => {
-    it("queues a chat-turn job on the legacy road, and writes no wake", async () => {
+describe("CustomerIntakeService", () => {
+    it("writes one customer wake for the agent that speaks, keyed by the message, in the caller's transaction", async () => {
         const manager = mockEntityManager()
-        const { service, queue, wakes } = await build("legacy")
+        const { service, wakes } = await build()
 
-        await expect(service.answer(INTAKE, manager)).resolves.toBeUndefined()
-
-        expect(queue.enqueueChatTurn).toHaveBeenCalledWith({ kind: "turn", ...MESSAGE }, manager)
-        expect(wakes.wake).not.toHaveBeenCalled()
-    })
-
-    it("writes a customer wake keyed by the message on the core road, and queues no job", async () => {
-        const manager = mockEntityManager()
-        const { service, queue, wakes } = await build("core")
-
-        await expect(service.answer(INTAKE, manager)).resolves.toBeUndefined()
+        await service.answer(INTAKE, manager)
 
         expect(wakes.wake).toHaveBeenCalledWith(manager, {
             workspaceId: "ws-1",
             agentId: "agent-1",
             source: "customer",
             eventKey: "msg-1",
-            context: { conversationId: "conv-1", messageId: "msg-1", channelEventId: "tg:555:9", lookupName: true },
+            context: {
+                conversationId: "conv-1",
+                messageId: "msg-1",
+                channelEventId: "tg:c-1:555:9",
+                lookupName: true,
+            },
             actorMemberId: null,
         })
-        expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
-    })
-})
-
-describe("CustomerIntakeService.answerChat", () => {
-    it("queues a job on the legacy road without reading the conversation", async () => {
-        const manager = mockEntityManager()
-        const { service, queue, conversations } = await build("legacy")
-
-        await expect(service.answerChat(MESSAGE, manager)).resolves.toBeUndefined()
-
-        expect(queue.enqueueChatTurn).toHaveBeenCalledWith({ kind: "turn", ...MESSAGE }, manager)
-        expect(conversations.turnOf).not.toHaveBeenCalled()
     })
 
-    it("sends the message of the agent that speaks in the conversation through the inbound door on the core road, keyed by the message", async () => {
+    it("writes the same wake again for a message delivered twice, which the wake key keeps to one", async () => {
         const manager = mockEntityManager()
-        const { service, wakes, queue, door } = await build("core", "agent-7")
+        const { service, wakes } = await build()
+        wakes.wake.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
 
-        await expect(service.answerChat(MESSAGE, manager)).resolves.toBeUndefined()
+        await service.answer(INTAKE, manager)
+        await service.answer(INTAKE, manager)
 
-        expect(door.accept).toHaveBeenCalledWith(manager, {
-            adapter: "customer",
-            eventType: "customer_message",
-            actor: { kind: "customer", id: null, role: null },
-            chain: null,
-            payload: { conversationId: "conv-1", messageId: "msg-1", channelEventId: "tg:555:9", lookupName: true },
-            attachments: [],
-            evidence: [],
-            idempotencyKey: "msg-1",
-            workspaceId: "ws-1",
-            agentId: "agent-7",
-            scopeKey: null,
-        })
-        expect(wakes.wake).not.toHaveBeenCalled()
-        expect(queue.enqueueChatTurn).not.toHaveBeenCalled()
-    })
-
-    it("falls back to the job when the conversation cannot be read, so the message is never left unanswered", async () => {
-        const manager = mockEntityManager()
-        const { service, wakes, queue, door } = await build("core", null)
-
-        await expect(service.answerChat(MESSAGE, manager)).resolves.toBeUndefined()
-
-        expect(queue.enqueueChatTurn).toHaveBeenCalledTimes(1)
-        expect(wakes.wake).not.toHaveBeenCalled()
-        expect(door.accept).not.toHaveBeenCalled()
+        expect(wakes.wake).toHaveBeenCalledTimes(2)
+        expect(wakes.wake.mock.calls[0]?.[1]).toEqual(wakes.wake.mock.calls[1]?.[1])
     })
 })

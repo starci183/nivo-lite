@@ -22,7 +22,7 @@ import { TransactionsModule } from "@modules/domain/transactions"
 import { AiModule } from "@modules/integrations/ai"
 import { ChannelSetupModule } from "@modules/integrations/channel-setup"
 import { DocumentsModule } from "@modules/integrations/documents"
-import { ObjectStorageModule, STORAGE_ASSETS, STORAGE_OBJECTS } from "@modules/integrations/object-storage"
+import { ObjectStorageModule, STORAGE_OBJECTS } from "@modules/integrations/object-storage"
 import { EnvSource, Secret } from "@modules/platform/config"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { HttpError, HttpErrorCode } from "@modules/platform/http"
@@ -132,12 +132,7 @@ export const AGENT_TAG_MODULES: Array<DynamicModule> = [
     }),
     AiUsageEventsModule.register({ isGlobal: true }),
     RemoteFilesModule.register({ isGlobal: true, ...parseRemoteFilesConfig(new EnvSource({})) }),
-    ChatFilesModule.register({
-        isGlobal: true,
-        storage: STORAGE_OBJECTS,
-        assets: STORAGE_ASSETS,
-        importRoot: "world-proof/imports",
-    }),
+    ChatFilesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
     ChatActivityModule.register({ isGlobal: true }),
     AgentTagProofModule.register(),
     MessagesModule.register({ isGlobal: true, agentDirectory: ProofAgentDirectory }),

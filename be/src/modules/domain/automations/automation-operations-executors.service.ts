@@ -171,7 +171,7 @@ export class AutomationOperationsExecutorsService {
                 detail: say("renewal.notMessagedDetail", { name: lead.contact_name }),
             })
         } else {
-            steps.push(...(await this.renewalPayment.zaloWindowSteps(conversation)))
+            steps.push(...(await this.renewalPayment.zaloWindowSteps(context.workspaceId, conversation)))
             const sent = await this.messages.composeAndSend(context, {
                 action: "send_follow_up",
                 lead,

@@ -2,8 +2,8 @@ import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
 import type { RightScope } from "@nivo-lite/agent-sdk/rights"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import { AgentDirectoryService } from "@modules/domain/agents"
+import { AgentDirectoryService, InjectInstallations } from "@modules/domain/agents"
+import type { InstallationDirectory } from "@modules/domain/agents"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeDataPort, NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
 import { KnowledgeSourcesReadableService } from "@modules/domain/knowledge-sources"
@@ -23,7 +23,7 @@ export class KnowledgeNodePortService implements NodeDataPort, OnModuleInit {
     constructor(
         private readonly sources: KnowledgeSourcesReadableService,
         private readonly agents: AgentDirectoryService,
-        private readonly conversations: AgentConversationsService,
+        @InjectInstallations() private readonly installations: InstallationDirectory,
         @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
 
@@ -36,15 +36,12 @@ export class KnowledgeNodePortService implements NodeDataPort, OnModuleInit {
     async read(turn: NodeTurn, query: NodeQuery, scope: RightScope): Promise<ReadonlyArray<NodeRow>> {
         const agent = await this.agents.turnFactsOf(turn.agentId)
         if (agent === null) return []
-        const installationId =
-            turn.conversationId === null
-                ? null
-                : await this.conversations.installationIdOf(turn.workspaceId, turn.conversationId)
+        const installation = await this.installations.ofAgent(turn.workspaceId, turn.agentId)
         const documents = await this.sources.readableFor(
             {
                 workspaceId: turn.workspaceId,
                 module: agent.module,
-                installationId,
+                installationId: installation?.id ?? null,
                 audience: scope === "workspace" ? "internal" : "customer",
             },
             limitOf(query),

@@ -51,14 +51,6 @@ export interface PolledZaloIntake {
     readonly stale: boolean
 }
 
-/** One follow event of the OA. */
-export interface ZaloFollowEventRow {
-    /** The inbox row id. */
-    readonly id: string
-    /** When it was received. */
-    readonly received_at: string
-}
-
 /** What the inbox knows of a connection; null when the inbox has no row of it. */
 export type OptionalZaloInboxFacts = ZaloInboxFactsRow | null
 

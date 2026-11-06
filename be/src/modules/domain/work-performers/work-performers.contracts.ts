@@ -36,3 +36,6 @@ export interface CareText {
 
 /** How the owner reaches a customer, or null. */
 export type OptionalContact = string | null
+
+/** The conversation a message goes into, or null when the work names none. */
+export type OptionalConversationId = string | null

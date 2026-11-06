@@ -9,8 +9,6 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import { OfficeRoomsError, OfficeRoomsErrorCode } from "./errors/office-rooms.error"
 import type {
-    AgentConversationFacts,
-    AgentConversationView,
     ConversationUnreadFacts,
     ConversationUnreadListView,
     RoomChoice,
@@ -35,16 +33,6 @@ const ENSURE_ROOMS = "public.ensure_office_rooms"
 
 /** Only the conversations with unseen lines, as the badge contract reads them. */
 const withUnread = (rows: ReadonlyArray<ConversationUnreadFacts>) => rows.filter((row) => row.unread > 0)
-
-/** One agent's direct conversation as the row draws it: the unread count and the newest line, even fully read. */
-const agentConversationOf = (row: AgentConversationFacts): AgentConversationView => ({
-    id: row.id,
-    unread: row.unread,
-    last:
-        row.last_at === null
-            ? null
-            : { body: row.last_body ?? "", at: row.last_at, authorId: row.last_author_id, author: row.last_author },
-})
 
 @Injectable()
 /** The Hub rooms: the general Office room first, then the department rooms, each with the caller's unread count. */
@@ -87,14 +75,11 @@ export class OfficeRoomsService {
         return [office, ...rows.map((row): RoomView => ({ ...row, members: memberViews.get(row.key) ?? emptyMembers }))]
     }
 
-    /** The caller's direct conversations: every agent with its unread count and newest line, and the unread customer ones. */
+    /** The caller's direct conversations: the unread customer ones. */
     async unread(principalId: string, workspaceId: string): Promise<ConversationUnreadListView> {
         const member = await this.members.require(principalId, workspaceId)
-        const [agents, leads] = await Promise.all([
-            this.reads.agentConversations(workspaceId, member.userId, member.displayName),
-            this.reads.leadConversations(workspaceId, member.userId, member.displayName),
-        ])
-        return { agents: agents.map(agentConversationOf), leads: withUnread(leads) }
+        const leads = await this.reads.leadConversations(workspaceId, member.userId, member.displayName)
+        return { leads: withUnread(leads) }
     }
 
     /** Marks a direct conversation read by the caller up to now; a wrong kind or an id outside the workspace is refused. */
@@ -120,7 +105,7 @@ export class OfficeRoomsService {
         if (room !== null && !isOfficeRoomKey(room))
             throw new OfficeRoomsError({ code: OfficeRoomsErrorCode.RoomInvalid, params: { room } })
         await callDbFunction(this.entityManager, MARK_READ, [workspaceId, member.userId, room ?? OFFICE_READ_KEY])
-        const target = chatActivityTarget({ room, conversationId: null })
+        const target = chatActivityTarget({ room })
         await this.activity.receipt(workspaceId, target)
         await this.activity.unread(workspaceId, target, member.userId)
     }

@@ -56,7 +56,7 @@ const LEAD: LeadRead = {
     email: null,
 }
 const SENT: RunResult = { status: "waiting_approval", steps: [{ label: "sent", status: "waiting" }], evidence: "wait" }
-const CONVERSATION = { id: "cv-1", channel: "web", handled_by: null, visitor_name: null, lead_id: "l-1" }
+const CONVERSATION = { id: "cv-1", channel: "web", handled_by: null, lead_id: "l-1" }
 const CONTRACT: ContractFacts = {
     id: "c-1",
     customerName: "Binh",
@@ -447,7 +447,7 @@ describe("AutomationOperationsExecutorsService contract_renewal with a payment",
         const result = await run("contract_renewal", { ...context(), body: "Body" }, { contract_id: "c-1" })
 
         expect(renewal.paymentOf).toHaveBeenCalledWith("ws-1", CONTRACT, "l-1", "Body")
-        expect(renewal.zaloWindowSteps).toHaveBeenCalledWith(CONVERSATION)
+        expect(renewal.zaloWindowSteps).toHaveBeenCalledWith("ws-1", CONVERSATION)
         expect(messages.composeAndSend).toHaveBeenCalledWith(
             expect.anything(),
             expect.objectContaining({

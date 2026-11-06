@@ -1,17 +1,14 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import { AgentConversationsErrorCode } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
-import { AgentMessagesErrorCode, AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChannelDeliveryService, ZALO_FREE_WINDOW_MS } from "@modules/domain/channels"
+import { ChatConversationsService, ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ChannelSendExecutorService } from "./channel-send-executor.service"
-import { messageIdOf } from "./chat-node-ports.policy"
 import { ChatNodePortsErrorCode } from "./errors/chat-node-ports.error"
 
 const NOW = new Date("2026-11-04T10:00:00.000Z")
@@ -25,7 +22,7 @@ const TURN: NodeTurn = {
     locale: "vi",
 }
 
-const AGENT: TurnConversation["agent"] = {
+const AGENT: ChatTurnConversation["agent"] = {
     id: "a-1",
     name: "Chatbot",
     handle: "chatbot",
@@ -37,7 +34,7 @@ const AGENT: TurnConversation["agent"] = {
     greeting: "Hi",
 }
 
-const conversation = (overrides: Partial<TurnConversation> = {}): TurnConversation => ({
+const conversation = (overrides: Partial<ChatTurnConversation> = {}): ChatTurnConversation => ({
     id: "c1",
     workspaceId: "ws-1",
     channel: "telegram",
@@ -54,8 +51,8 @@ const conversation = (overrides: Partial<TurnConversation> = {}): TurnConversati
 
 const build = async () => {
     const registry = mock<GraphNodeRegistryService>()
-    const conversations = mock<AgentConversationsService>()
-    const messages = mock<AgentMessagesService>()
+    const conversations = mock<ChatConversationsService>()
+    const messages = mock<ChatMessagesService>()
     const delivery = mock<ChannelDeliveryService>()
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
@@ -64,13 +61,13 @@ const build = async () => {
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: logger },
             { provide: GraphNodeRegistryService, useValue: registry },
-            { provide: AgentConversationsService, useValue: conversations },
-            { provide: AgentMessagesService, useValue: messages },
+            { provide: ChatConversationsService, useValue: conversations },
+            { provide: ChatMessagesService, useValue: messages },
             { provide: ChannelDeliveryService, useValue: delivery },
         ],
     }).compile()
     conversations.turnOf.mockResolvedValue({ kind: "ok", value: conversation() })
-    messages.storeFinalReply.mockResolvedValue("m1")
+    messages.storeAgentLine.mockResolvedValue({ id: "m1", body: "Hello", sent: false })
     delivery.deliver.mockResolvedValue({ delivered: true, failure: null, outcome: "acknowledged" })
     return { executor: moduleRef.get(ChannelSendExecutorService), registry, conversations, messages, delivery, logger }
 }
@@ -92,13 +89,14 @@ describe("ChannelSendExecutorService storing", () => {
         await expect(
             executor.execute(TURN, { ...SEND, attachments: [{ url: "https://x/menu", name: "Menu" }] }, CALL),
         ).resolves.toEqual({ kind: "message", id: "m1" })
-        expect(messages.storeFinalReply).toHaveBeenCalledWith(
-            "ws-1",
-            "c1",
-            "Hello\nMenu: https://x/menu",
-            messageIdOf("run:1"),
-        )
+        expect(messages.storeAgentLine).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            conversationId: "c1",
+            body: "Hello\nMenu: https://x/menu",
+            key: "run:1",
+        })
         expect(delivery.deliver).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
             conversationId: "c1",
             messageId: "m1",
             text: "Hello\nMenu: https://x/menu",
@@ -112,20 +110,17 @@ describe("ChannelSendExecutorService storing", () => {
         })
     })
 
-    it("refuses another conversation than the turn serves, and one that is not in the workspace", async () => {
+    it("refuses another conversation than the turn serves, and one that is not in the workspace of the turn", async () => {
         const { executor, conversations, messages } = await build()
         await expect(executor.execute(TURN, { ...SEND, conversationId: "c2" }, CALL)).rejects.toMatchObject({
             code: ChatNodePortsErrorCode.WrongConversation,
         })
-        conversations.turnOf.mockResolvedValueOnce({ kind: "refused", code: AgentConversationsErrorCode.NotFound })
+        conversations.turnOf.mockResolvedValueOnce({ kind: "refused", code: ChatRecordsErrorCode.NotFound })
         await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
             code: ChatNodePortsErrorCode.ConversationNotFound,
         })
-        conversations.turnOf.mockResolvedValueOnce({ kind: "ok", value: conversation({ workspaceId: "ws-2" }) })
-        await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
-            code: ChatNodePortsErrorCode.ConversationNotFound,
-        })
-        expect(messages.storeFinalReply).not.toHaveBeenCalled()
+        expect(conversations.turnOf).toHaveBeenCalledWith("ws-1", "c1")
+        expect(messages.storeAgentLine).not.toHaveBeenCalled()
     })
 
     it("stays silent once a person took the conversation over, or another agent speaks in it", async () => {
@@ -141,7 +136,7 @@ describe("ChannelSendExecutorService storing", () => {
         await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
             code: ChatNodePortsErrorCode.NotSpeaking,
         })
-        expect(messages.storeFinalReply).not.toHaveBeenCalled()
+        expect(messages.storeAgentLine).not.toHaveBeenCalled()
     })
 })
 
@@ -157,14 +152,14 @@ describe("ChannelSendExecutorService Zalo window and delivery", () => {
         await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
             code: ChatNodePortsErrorCode.ZaloWindowExpired,
         })
-        expect(messages.storeFinalReply).not.toHaveBeenCalled()
+        expect(messages.storeAgentLine).not.toHaveBeenCalled()
 
         messages.lastCustomerAt.mockResolvedValueOnce({
             kind: "ok",
             value: new Date(NOW.getTime() - ZALO_FREE_WINDOW_MS + 1000),
         })
         await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
-        messages.lastCustomerAt.mockResolvedValueOnce({ kind: "refused", code: AgentMessagesErrorCode.NotFound })
+        messages.lastCustomerAt.mockResolvedValueOnce({ kind: "refused", code: ChatRecordsErrorCode.NotFound })
         await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
         expect(delivery.deliver).toHaveBeenCalledTimes(2)
     })
@@ -205,8 +200,8 @@ describe("ChannelSendExecutorService unreachable recipients", () => {
         await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
         await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
 
-        expect(messages.storeFinalReply).toHaveBeenCalledTimes(2)
-        expect(messages.markDelivery).toHaveBeenCalledWith("m1", false, "recipient_not_linked")
+        expect(messages.storeAgentLine).toHaveBeenCalledTimes(2)
+        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "m1", false, "recipient_not_linked")
         expect(messages.lastCustomerAt).not.toHaveBeenCalled()
         expect(delivery.deliver).not.toHaveBeenCalled()
         expect(logger.info).toHaveBeenNthCalledWith(1, "chat_node_ports.undelivered", {
@@ -217,7 +212,7 @@ describe("ChannelSendExecutorService unreachable recipients", () => {
         expect(logger.info).toHaveBeenCalledTimes(2)
     })
 
-    it("stores the message once per effect call: a retry stores under the same id and only pushes again", async () => {
+    it("stores the line under the key of the effect call: a retry stores under the same key and only pushes again", async () => {
         const { executor, messages, delivery } = await build()
         delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: "zalo_quota", outcome: "rejected" })
 
@@ -227,11 +222,7 @@ describe("ChannelSendExecutorService unreachable recipients", () => {
         await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
         await executor.execute(TURN, SEND, { key: "run:2", dedupeKey: "reply:t:abc" })
 
-        const ids = messages.storeFinalReply.mock.calls.map((args) => args[3])
-        expect(ids[0]).toBe(ids[1])
-        expect(ids[0]).toBe(messageIdOf("run:1"))
-        expect(ids[2]).toBe(messageIdOf("reply:t:abc"))
-        expect(ids[2]).not.toBe(ids[0])
+        expect(messages.storeAgentLine.mock.calls.map(([line]) => line.key)).toEqual(["run:1", "run:1", "reply:t:abc"])
         expect(delivery.deliver).toHaveBeenCalledTimes(3)
     })
 
@@ -243,7 +234,7 @@ describe("ChannelSendExecutorService unreachable recipients", () => {
         await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
         await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
 
-        expect(messages.markDelivery).toHaveBeenCalledWith("m1", false, "recipient_not_linked")
+        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "m1", false, "recipient_not_linked")
         expect(logger.info).toHaveBeenCalledTimes(2)
     })
 
@@ -272,7 +263,7 @@ describe("ChannelSendExecutorService placeholders and plans", () => {
 
         await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
 
-        expect(messages.markDelivery).toHaveBeenCalledWith("m1", false, "recipient_not_linked")
+        expect(messages.markDelivery).toHaveBeenCalledWith("ws-1", "m1", false, "recipient_not_linked")
         expect(delivery.deliver).not.toHaveBeenCalled()
         expect(messages.lastCustomerAt).not.toHaveBeenCalled()
     })

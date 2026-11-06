@@ -9,13 +9,10 @@ import { BookingRemindPerformerService } from "./booking-remind-performer.servic
 import { BookingToolsService } from "./booking-tools.service"
 import { CarePerformerService } from "./care-performer.service"
 import { GatewayCallPerformerService } from "./gateway-call-performer.service"
-import { HandOverConversationPerformerService } from "./hand-over-conversation-performer.service"
 import { ResumeRunPerformerService } from "./resume-run-performer.service"
 import { ClassifyLeadPerformerService } from "./classify-lead-performer.service"
 import { ConfirmOrderPerformerService } from "./confirm-order-performer.service"
 import { ConversationLeadsService } from "./conversation-leads.service"
-import { HandoffToolService } from "./handoff-tool.service"
-import { LeadHandoverService } from "./lead-handover.service"
 import { InboundStatusService } from "./inbound-status.service"
 import { LeadEnsureExecutorService } from "./lead-ensure-executor.service"
 import { LeadWriterService } from "./lead-writer.service"
@@ -58,14 +55,12 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 CustomerDeliveryService,
                 PaymentInstructionsService,
                 HandoffLeadPerformerService,
-                LeadHandoverService,
                 LeadEnsureExecutorService,
                 ClassifyLeadPerformerService,
                 FollowUpPerformerService,
                 QuotePerformerService,
                 CarePerformerService,
                 GatewayCallPerformerService,
-                HandOverConversationPerformerService,
                 ResumeRunPerformerService,
                 ConfirmOrderPerformerService,
                 IssueInvoicePerformerService,
@@ -81,7 +76,6 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 RedeemRewardPerformerService,
                 WorkPerformersRegistrarService,
                 ConversationLeadsService,
-                HandoffToolService,
                 InboundStatusService,
                 LeadWriterService,
                 OutboundAccessService,
@@ -95,7 +89,6 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 BookingToolsService,
                 PerformerKitService,
                 ConversationLeadsService,
-                HandoffToolService,
                 InboundStatusService,
                 LeadWriterService,
                 OutboundAccessService,

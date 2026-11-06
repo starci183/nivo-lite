@@ -1,17 +1,10 @@
 import type { EntityManager } from "typeorm"
 import { eachInOrder } from "@modules/platform/primitives"
-import { agentConversationsEntities } from "@modules/domain/agent-conversations"
-import { agentsEntities } from "@modules/domain/agents"
-import { agentMessagesEntities } from "@modules/domain/agent-messages"
 import { messagesEntities } from "@modules/domain/messages"
 import { officeRoomsEntities } from "@modules/domain/office-rooms"
 import { workspacesEntities } from "@modules/domain/workspaces"
 import { chatMarkersEntities } from "@modules/domain/chat-markers"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
-
-const [AgentEntity] = agentsEntities
-const [AgentConversationEntity] = agentConversationsEntities
-const [AgentMessageEntity] = agentMessagesEntities
 
 const [WorkspaceEntity] = workspacesEntities
 const [WorkspaceMemberEntity] = workspaceMembersEntities
@@ -24,7 +17,7 @@ const [OfficeRoomEntity, , , OfficeRoomReadEntity] = officeRoomsEntities
 export interface ChatMarkersIdentity {
     /** The workspace whose members exchange messages. */
     readonly workspaceId: string
-    /** A separate tenant used to prove conversation fencing. */
+    /** A separate tenant used to prove tenant fencing. */
     readonly foreignWorkspaceId: string
     /** The sending account. */
     readonly ownerId: string
@@ -34,10 +27,6 @@ export interface ChatMarkersIdentity {
     readonly outsiderId: string
     /** The foreign workspace owner. */
     readonly foreignOwnerId: string
-    /** One agent in each workspace. */
-    readonly agentIds: readonly [string, string]
-    /** Test, customer and foreign conversations. */
-    readonly conversationIds: readonly [string, string, string]
 }
 
 /** Allocates identifiers that never overlap with another integration fixture. */
@@ -48,8 +37,6 @@ export const chatMarkersIdentity = (next: () => string): ChatMarkersIdentity => 
     readerIds: [next(), next(), next(), next(), next()],
     outsiderId: next(),
     foreignOwnerId: next(),
-    agentIds: [next(), next()],
-    conversationIds: [next(), next(), next()],
 })
 
 /** A persisted message whose actor may be absent for historical messages. */
@@ -64,7 +51,7 @@ export interface ChatMarkerLine {
     readonly at: string
 }
 
-/** Persists the two tenants, members, rooms and conversation kinds of a proof. */
+/** Persists the two tenants, members and rooms of a proof. */
 export const persistChatMarkers = (manager: EntityManager, identity: ChatMarkersIdentity): Promise<void> =>
     manager.transaction(async (tx) => {
         const users = [identity.ownerId, ...identity.readerIds, identity.outsiderId, identity.foreignOwnerId]
@@ -102,26 +89,6 @@ export const persistChatMarkers = (manager: EntityManager, identity: ChatMarkers
                 name: key,
             })
         })
-        await eachInOrder(identity.agentIds, async (id, index) => {
-            await tx.insert(AgentEntity, {
-                id,
-                workspaceId: index === 0 ? identity.workspaceId : identity.foreignWorkspaceId,
-                module: "chatbot",
-                name: "Chat marker agent",
-                handle: `marker-agent-${id}`,
-                role: "Chat receipt proof",
-                instructions: "Exercise persisted chat markers.",
-                status: "active",
-            })
-        })
-        await eachInOrder(identity.conversationIds, async (id, index) => {
-            await tx.insert(AgentConversationEntity, {
-                id,
-                workspaceId: index === 2 ? identity.foreignWorkspaceId : identity.workspaceId,
-                agentId: index === 2 ? identity.agentIds[1] : identity.agentIds[0],
-                kind: index === 0 ? "test" : "customer",
-            })
-        })
     })
 
 /** Appends a room message without invoking any delivery or unread computation. */
@@ -143,36 +110,14 @@ export const persistOfficeMarkerLine = async (
     })
 }
 
-/** Appends an authored conversation message; external customer messages have no account actor. */
-export const persistConversationMarkerLine = async (
-    manager: EntityManager,
-    identity: ChatMarkersIdentity,
-    conversationId: string,
-    line: ChatMarkerLine,
-): Promise<void> => {
-    await manager.insert(AgentMessageEntity, {
-        id: line.id,
-        workspaceId:
-            conversationId === identity.conversationIds[2] ? identity.foreignWorkspaceId : identity.workspaceId,
-        conversationId: conversationId,
-        role: "agent",
-        authorKind: "human",
-        authorUserId: line.authorId,
-        authorName: line.authorName,
-        body: "Persisted conversation receipt proof",
-        createdAt: line.at,
-    })
-}
-
 /** Writes a muted preference, as whichever role the manager runs under. */
 export const insertChatMarkerState = async (
     manager: EntityManager,
     workspaceId: string,
     userId: string,
     room: string,
-    conversationId: string | null,
 ): Promise<void> => {
-    await manager.insert(ChatMarkerEntity, { workspaceId, userId, room, conversationId, muted: true })
+    await manager.insert(ChatMarkerEntity, { workspaceId, userId, room, muted: true })
 }
 
 /** Records an existing room read marker, which must count as seen without a new receipt write. */

@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import { AGENTS_INSTALLATIONS } from "@modules/domain/agents"
 import type { Installation, InstallationDirectory } from "@modules/domain/agents"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
@@ -11,7 +11,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import type { CapturedLead } from "./customer-turns.contracts"
 import { GatewayContextService } from "./gateway-context.service"
 
-const CONVERSATION: TurnConversation = {
+const CONVERSATION: ChatTurnConversation = {
     id: "c1",
     workspaceId: "ws",
     channel: "zalo",
@@ -74,8 +74,7 @@ const build = async () => {
         toolForRole: jest.fn((_ws: string, role: string) => Promise.resolve(role === "identity.find" ? FIND : UPSERT)),
         call: jest.fn().mockResolvedValue(FOUND),
     })
-    const conversations = mock<AgentConversationsService>({
-        isTestChat: jest.fn().mockResolvedValue(false),
+    const conversations = mock<ChatConversationsService>({
         partyOf: jest.fn().mockResolvedValue(null),
         rememberParty: jest.fn().mockResolvedValue(undefined),
     })
@@ -85,7 +84,7 @@ const build = async () => {
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: AGENTS_INSTALLATIONS, useValue: installations },
             { provide: McpGatewayService, useValue: gateway },
-            { provide: AgentConversationsService, useValue: conversations },
+            { provide: ChatConversationsService, useValue: conversations },
         ],
     }).compile()
     return { service: moduleRef.get(GatewayContextService), gateway, conversations, installations }
@@ -128,11 +127,7 @@ describe("GatewayContextService party", () => {
         await expect(service.partyOf(CONVERSATION)).resolves.toEqual({ found: true, partyId: "p1", name: "Lan" })
         expect(gateway.toolForRole).toHaveBeenCalledWith("ws", "identity.find")
         expect(gateway.call).toHaveBeenCalledWith(CALLER, "crm.party.find", { channel: "zalo", externalId: "z1" })
-        expect(conversations.rememberParty).toHaveBeenCalledWith({
-            workspaceId: "ws",
-            conversationId: "c1",
-            party: { partyId: "p1", name: "Lan" },
-        })
+        expect(conversations.rememberParty).toHaveBeenCalledWith("ws", "c1", { partyId: "p1", name: "Lan" })
     })
 
     it.each([
@@ -185,11 +180,7 @@ describe("GatewayContextService remember by channel", () => {
             name: "Lan",
             phone: "0900",
         })
-        expect(conversations.rememberParty).toHaveBeenCalledWith({
-            workspaceId: "ws",
-            conversationId: "c1",
-            party: { partyId: "p9", name: "Lan" },
-        })
+        expect(conversations.rememberParty).toHaveBeenCalledWith("ws", "c1", { partyId: "p9", name: "Lan" })
     })
 
     it("sends no phone the customer did not give, and remembers nothing when the connector refuses", async () => {
@@ -209,11 +200,9 @@ describe("GatewayContextService remember by channel", () => {
         expect(conversations.rememberParty).toHaveBeenCalledTimes(1)
     })
 
-    it("creates nobody for a remembered party, a test chat, without a channel identity or without the role", async () => {
+    it("creates nobody for a remembered party, without a channel identity or without the role", async () => {
         const { service, gateway, conversations } = await build()
         conversations.partyOf.mockResolvedValueOnce({ partyId: "p1", name: "Lan" })
-        await service.remember(CONVERSATION, LEAD, "m1")
-        conversations.isTestChat.mockResolvedValueOnce(true)
         await service.remember(CONVERSATION, LEAD, "m1")
         await service.remember({ ...CONVERSATION, externalId: null }, LEAD, "m1")
         expect(gateway.call).not.toHaveBeenCalled()
@@ -232,11 +221,7 @@ describe("GatewayContextService remember by phone", () => {
         installations.ofAgent.mockResolvedValue(BY_PHONE)
         await service.remember(CONVERSATION, LEAD, "m1")
         expect(gateway.call).toHaveBeenCalledWith(CALLER, "crm.party.find", { channel: "phone", externalId: "0900" })
-        expect(conversations.rememberParty).toHaveBeenCalledWith({
-            workspaceId: "ws",
-            conversationId: "c1",
-            party: { partyId: "p1", name: "Lan" },
-        })
+        expect(conversations.rememberParty).toHaveBeenCalledWith("ws", "c1", { partyId: "p1", name: "Lan" })
     })
 
     it("creates the customer under their phone when no connector knows it, and waits while no phone is given", async () => {

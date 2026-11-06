@@ -1,14 +1,14 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { Proposal } from "@modules/domain/work-items"
-import { buildLeadGenWorkbench, conversionSinceIso } from "./leadgen-workbench.mapper"
+import { buildLeadGenWorkbench, conversionSinceIso, vnDayStart } from "./leadgen-workbench.mapper"
 import type { LeadGenLeadRecord, LeadGenWorkbenchInput, LeadGenWorkItemRecord } from "./leadgen-workbench.contracts"
 
 const SUBJECT = Symbol("leadgen-workbench.mapper")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { conversionSinceIso, buildLeadGenWorkbench } }],
+        providers: [{ provide: SUBJECT, useValue: { conversionSinceIso, buildLeadGenWorkbench, vnDayStart } }],
     }).compile()
     return moduleRef.get<typeof import("./leadgen-workbench.mapper")>(SUBJECT)
 }
@@ -48,8 +48,6 @@ const rows = (patch: Partial<LeadGenWorkbenchInput> = {}): LeadGenWorkbenchInput
     installationId: null,
     leads: [],
     items: [],
-    conversations: [],
-    messages: [],
     isTestRun: (name) => name === "UAT",
     ...patch,
 })
@@ -96,21 +94,6 @@ const detailedWorkbenchRows = rows({
         item("classify-a", "classify_lead", "a", { department: "sales" }),
         item("classify-a-old", "classify_lead", "a", { department: "sales", status: "failed" }),
     ],
-    conversations: [{ id: "talk-a", lead_id: "a" }],
-    messages: [
-        {
-            conversation_id: "talk-a",
-            role: "user",
-            body: "Question",
-            created_at: "2026-10-12T02:40:00.000Z",
-        },
-        {
-            conversation_id: "talk-a",
-            role: "agent",
-            body: "  Latest\n reply  ",
-            created_at: "2026-10-12T02:41:14.000Z",
-        },
-    ],
 })
 
 const expectedWorkbenchLeads = [
@@ -120,8 +103,8 @@ const expectedWorkbenchLeads = [
         stage: "new",
         score: "hot",
         origin: POST,
-        lastText: "Latest reply",
-        lastAt: "2026-10-12T02:41:14.000Z",
+        lastText: "Need advice",
+        lastAt: CREATED,
         createdAt: CREATED,
         href: "/leads/a",
     },
@@ -212,8 +195,8 @@ describe("leadgen-workbench.mapper", () => {
         expect(result.metrics).toEqual({
             newToday: 5,
             hotWaiting: 1,
-            firstReplyP50Min: 1.2,
-            firstReplySample: 1,
+            firstReplyP50Min: null,
+            firstReplySample: 0,
             conversionWindowDays: 90,
             conversionLeads: 5,
             conversionWon: 1,
@@ -422,5 +405,17 @@ describe("leadgen-workbench.mapper", () => {
             conversionLeads: 102,
             conversionWon: 0,
         })
+    })
+})
+
+describe("vnDayStart", () => {
+    it.each([
+        ["2026-10-11T16:59:59.999Z", "2026-10-10T17:00:00.000Z"],
+        ["2026-10-11T17:00:00.000Z", "2026-10-11T17:00:00.000Z"],
+        ["2026-10-12T16:59:59.999Z", "2026-10-11T17:00:00.000Z"],
+    ])("reports Vietnamese midnight for %s", async (now, expected) => {
+        const subject = await buildSubject()
+
+        expect(subject.vnDayStart(Date.parse(now))).toBe(Date.parse(expected))
     })
 })

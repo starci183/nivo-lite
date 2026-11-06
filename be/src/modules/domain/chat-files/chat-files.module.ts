@@ -1,21 +1,12 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ChatFileReadsService } from "./chat-file-reads.service"
-import {
-    CHAT_FILES_ASSETS,
-    CHAT_FILES_IMPORT_ROOT,
-    CHAT_FILES_READER,
-    CHAT_FILES_RESOLVER,
-    CHAT_FILES_STORAGE,
-} from "./chat-files.decorators"
+import { CHAT_FILES_STORAGE } from "./chat-files.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./chat-files.module-definition"
 import { ChatFilesService } from "./chat-files.service"
-import { InboundFileReaderClient } from "./inbound-file.client"
-import { HostResolverClient } from "./host-resolver.client"
-import { InboundFilesService } from "./inbound-files.service"
 
 @Module({})
-/** The files of a conversation: upload addresses, the check of what was stored, their addresses and bytes, and the files a channel brings in. */
+/** The files of the Office: upload addresses, the check of what was stored, their addresses and bytes. */
 export class ChatFilesModule extends ConfigurableModuleClass {
     /** Registers the storage binding and service once per app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
@@ -25,15 +16,10 @@ export class ChatFilesModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 { provide: CHAT_FILES_STORAGE, useExisting: options.storage },
-                { provide: CHAT_FILES_ASSETS, useExisting: options.assets },
-                { provide: CHAT_FILES_IMPORT_ROOT, useValue: options.importRoot },
-                { provide: CHAT_FILES_READER, useClass: InboundFileReaderClient },
-                { provide: CHAT_FILES_RESOLVER, useClass: HostResolverClient },
                 ChatFilesService,
                 ChatFileReadsService,
-                InboundFilesService,
             ],
-            exports: [ChatFilesService, ChatFileReadsService, InboundFilesService],
+            exports: [ChatFilesService, ChatFileReadsService],
         }
     }
 }

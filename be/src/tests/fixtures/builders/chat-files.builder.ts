@@ -9,14 +9,11 @@ export const chatFileAttachmentOf: (overrides?: Partial<AgentMessageAttachmentEn
     builder<InstanceType<typeof AttachmentEntity>>({
         id: "attachment-1",
         workspaceId: "ws-1",
-        conversationId: "conv-1",
         messageId: "m-1",
-        path: "ws-1/chat/conv-1/0f8fad5b-d9cb-469f-a165-70867728950e.png",
+        path: "ws-1/chat/office/0f8fad5b-d9cb-469f-a165-70867728950e.png",
         name: "a.png",
         contentType: "image/png",
         sizeBytes: 9,
-        sourceUrl: null,
-        sourceRef: null,
         read: null,
         createdAt: new Date("2026-11-01T00:00:00.000Z"),
         updatedAt: new Date("2026-11-01T00:00:00.000Z"),
@@ -28,7 +25,7 @@ export const chatFileAttachmentRowsOf = (): Array<AgentMessageAttachmentEntity> 
     chatFileAttachmentOf({
         id: "attachment-2",
         messageId: "m-2",
-        path: "ws-1/chat/conv-1/missing.pdf",
+        path: "ws-1/chat/office/missing.pdf",
         name: "missing.pdf",
     }),
 ]
