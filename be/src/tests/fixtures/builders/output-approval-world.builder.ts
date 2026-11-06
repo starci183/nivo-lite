@@ -55,6 +55,7 @@ export const persistOutputProofTurn = async (manager: EntityManager, who: Output
         data: {
             conversationId: who.conversationId,
             role: "user",
+            status: "posted",
             text: "Place one order after approval",
             sentAt: "2026-11-06T03:00:00.000Z",
         },

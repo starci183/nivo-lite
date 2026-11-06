@@ -31,6 +31,7 @@ import { ChannelSetupModule } from "@modules/integrations/channel-setup"
 import { ConnectionPollModule } from "@modules/domain/connection-poll"
 import { ProviderRegistryModule } from "@modules/domain/provider-registry"
 import { BillingModule, BILLING_MESSAGES } from "@modules/domain/billing"
+import { PaymentTransactionsModule } from "@modules/domain/payment-transactions"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
 import { TransactionsModule } from "@modules/domain/transactions"
 import { BankFeedInboxModule } from "@modules/domain/bank-feed-inbox"
@@ -153,6 +154,7 @@ const domainModules = (tokenKey: Secret): Array<DynamicModule> => [
         sepayApiKey: new Secret("delivery-proof-key"),
         bankAccount: { account: "", bank: "", holder: "" },
     }),
+    PaymentTransactionsModule.register({ isGlobal: true }),
     SepayTransactionsModule.register({ isGlobal: true }),
     DeliveryPeersModule.register(),
     TelegramInboxModule.register({ isGlobal: true }),

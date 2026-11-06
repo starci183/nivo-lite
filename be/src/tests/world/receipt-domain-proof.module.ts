@@ -17,7 +17,9 @@ import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { ProviderRegistryModule } from "@modules/domain/provider-registry"
+import { ConnectionPollModule } from "@modules/domain/connection-poll"
 import { ZaloInboxModule } from "@modules/domain/zalo-inbox"
+import { DEFAULT_POLL_SCHEDULE } from "../../modules/domain/connection-poll/poll-schedule.policy"
 import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import { SepayTransactionsService } from "@modules/domain/sepay-transactions"
 import { PaymentProofService } from "@modules/domain/billing"
@@ -84,6 +86,7 @@ export const RECEIPT_DOMAIN_MODULES: ReadonlyArray<DynamicModule> = [
         jobs: MODULE_JOBS,
         cursorKey: tokenKey,
     }),
+    ConnectionPollModule.register({ isGlobal: true, schedule: DEFAULT_POLL_SCHEDULE, redis: undefined }),
     ChatRecordsModule.register({ isGlobal: true }),
     AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
