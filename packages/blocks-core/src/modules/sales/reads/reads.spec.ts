@@ -1,5 +1,6 @@
 import type { ReadDefinition, ReadRunResult } from "@nivo-lite/agent-sdk/block"
-import type { RunContext } from "@nivo-lite/agent-sdk/port"
+import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
+import type { PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
 import { z } from "zod"
 import { ORDER_WAITING, sampleState, SAMPLE_NOW } from "../fixtures/sales.data"
 import { memoryProvider } from "../memory"
@@ -19,6 +20,38 @@ const page = z.object({
 
 const run = (read: ReadDefinition, raw: unknown, state: MemoryState = sampleState([])): Promise<ReadRunResult> => {
     return read.execute?.(memoryProvider(state), raw, CONTEXT) ?? Promise.resolve({ ok: false, problems: [] })
+}
+
+/** A provider whose entity port under `portId` answers as the given calls say, the rest as the memory does. */
+const overriding = (state: MemoryState, portId: string, calls: Partial<EntityApi>): PortProvider => {
+    const provider = memoryProvider(state)
+    return {
+        implementationOf: (port) => {
+            const implementation = provider.implementationOf(port)
+            if (port.id !== portId || typeof implementation !== "object" || implementation === null)
+                return implementation
+            return { ...implementation, ...calls }
+        },
+    }
+}
+
+const dataFrom = async (read: ReadDefinition, provider: PortProvider, raw: unknown): Promise<unknown> => {
+    const result = (await read.execute?.(provider, raw, CONTEXT)) ?? { ok: false, problems: [] }
+    return result.ok ? result.data : result.problems
+}
+
+const NOT_AN_ORDER = {
+    row: {
+        id: "x",
+        workspaceId: "w1",
+        version: "1",
+        createdAt: SAMPLE_NOW,
+        updatedAt: SAMPLE_NOW,
+        data: { status: "lost" },
+    },
+    joined: {},
+    position: [],
+    included: {},
 }
 
 const dataOf = async (read: ReadDefinition, raw: unknown, state?: MemoryState): Promise<unknown> => {
@@ -96,6 +129,13 @@ describe("sales.lead", () => {
 
     it("refuses a missing id", async () => {
         expect(await run(leadRead, {})).toEqual({ ok: false, problems: [{ code: "INPUT_INVALID", at: "id" }] })
+    })
+
+    it("leaves out a record of its orders that is no order", async () => {
+        const provider = overriding(sampleState([]), "engine.entity.sales.order", {
+            list: () => Promise.resolve({ rows: [NOT_AN_ORDER], next: null }),
+        })
+        expect(await dataFrom(leadRead, provider, { id: "lead-4" })).toMatchObject({ orderCount: 0 })
     })
 })
 
@@ -177,6 +217,20 @@ describe("sales.orders-waiting", () => {
         const state = sampleState([])
         state.orders.splice(0, state.orders.length)
         expect(await dataOf(ordersWaitingRead, {}, state)).toEqual({
+            count: null,
+            rows: [],
+            linkLabel: "",
+            linkHref: "",
+            more: null,
+        })
+    })
+
+    it("leaves out a record that is no order and counts the rows it listed when the engine answers no count", async () => {
+        const provider = overriding(sampleState([]), "engine.entity.sales.order", {
+            list: () => Promise.resolve({ rows: [NOT_AN_ORDER], next: null }),
+            aggregate: () => Promise.resolve([]),
+        })
+        expect(await dataFrom(ordersWaitingRead, provider, {})).toEqual({
             count: null,
             rows: [],
             linkLabel: "",

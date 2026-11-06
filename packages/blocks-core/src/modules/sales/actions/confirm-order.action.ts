@@ -6,8 +6,10 @@ import { DEFAULT_THRESHOLD_VND } from "../../../nodes/order/needs-approval.node"
 import { confirmDecision } from "../../../rules/sales/order-confirm"
 import { stageAfterConfirm } from "../../../rules/sales/stage"
 import { AGENT_NAME, SALES_APPROVE, SALES_MANAGE } from "../constants"
-import { salesLeadStore, salesOrderStore, salesRights } from "../ports"
-import { CONFLICT, refusedWith, waitsForOwnerResult } from "../refusals"
+import { rightsPort } from "../../platform/ports"
+import { salesLeads, salesOrders } from "../ports"
+import { CONFLICT, refusedWith, waitsForOwnerResult, writeRefusal } from "../refusals"
+import { leadRowOf, orderRowOf } from "../sales-records"
 
 const input: z.ZodObject<{ id: z.ZodString }> = z.object({ id: z.string().min(1).max(MAX_ID) })
 
@@ -22,10 +24,11 @@ export const confirmOrderAction: ActionDefinition = defineAction({
     permission: SALES_MANAGE,
     label: { key: "action_confirm_order" },
     input,
-    ports: { orders: salesOrderStore, leads: salesLeadStore, rights: salesRights },
+    ports: { orders: salesOrders, leads: salesLeads, rights: rightsPort },
     transactional: true,
     run: async ({ orders, leads, rights }, { id }, context): Promise<ActionResult> => {
-        const order = await orders.get(id)
+        const found = await orders.get(id)
+        const order = found === null ? null : orderRowOf(found)
         if (order === null) return refusedWith("missing")
         const decision = confirmDecision({
             status: order.status,
@@ -41,8 +44,9 @@ export const confirmOrderAction: ActionDefinition = defineAction({
             confirmedBy: context.memberId ?? AGENT_NAME,
             confirmedAt: context.now.toISOString(),
         })
-        if (!written.ok) return written.reason === "missing" ? refusedWith("missing") : CONFLICT
-        const lead = order.leadId === null ? null : await leads.get(order.leadId)
+        if (!written.ok) return writeRefusal(written)
+        const record = order.leadId === null ? null : await leads.get(order.leadId)
+        const lead = record === null ? null : leadRowOf(record)
         if (lead !== null) {
             const stage = stageAfterConfirm(lead.stage)
             if (stage !== lead.stage) {

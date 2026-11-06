@@ -254,6 +254,7 @@
       "partition": "records_sales_lead",
       "checks": [
         "records_sales_lead_channel_chk",
+        "records_sales_lead_closed_reason_chk",
         "records_sales_lead_company_chk",
         "records_sales_lead_contact_name_chk",
         "records_sales_lead_context_summary_chk",
@@ -267,9 +268,12 @@
         "records_sales_lead_contact_name_trgm_idx",
         "records_sales_lead_email_key",
         "records_sales_lead_email_trgm_idx",
+        "records_sales_lead_name",
+        "records_sales_lead_need_trgm_idx",
         "records_sales_lead_phone_key",
         "records_sales_lead_phone_trgm_idx",
         "records_sales_lead_recent",
+        "records_sales_lead_stage_name",
         "records_sales_lead_stage_recent"
       ]
     },
@@ -279,14 +283,27 @@
       "checks": [
         "records_sales_order_amount_chk",
         "records_sales_order_amount_vnd_chk",
+        "records_sales_order_carrier_chk",
         "records_sales_order_confirmed_at_chk",
         "records_sales_order_confirmed_by_chk",
         "records_sales_order_items_chk",
+        "records_sales_order_lead_id_chk",
         "records_sales_order_note_chk",
         "records_sales_order_order_no_chk",
-        "records_sales_order_status_chk"
+        "records_sales_order_shipped_at_chk",
+        "records_sales_order_status_chk",
+        "records_sales_order_tracking_code_chk"
       ],
-      "indexes": ["records_sales_order_order_no_key", "records_sales_order_recent", "records_sales_order_status_recent"]
+      "indexes": [
+        "records_sales_order_amount",
+        "records_sales_order_items_trgm_idx",
+        "records_sales_order_lead_recent",
+        "records_sales_order_note_trgm_idx",
+        "records_sales_order_order_no_key",
+        "records_sales_order_recent",
+        "records_sales_order_status_amount",
+        "records_sales_order_status_recent"
+      ]
     }
   ]
 }

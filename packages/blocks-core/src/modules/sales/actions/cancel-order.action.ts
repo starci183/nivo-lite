@@ -4,8 +4,9 @@ import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { canCancel } from "../../../rules/sales/order-status"
 import { SALES_MANAGE } from "../constants"
-import { salesOrderStore } from "../ports"
-import { CONFLICT, refusedWith } from "../refusals"
+import { salesOrders } from "../ports"
+import { refusedWith, writeRefusal } from "../refusals"
+import { orderRowOf } from "../sales-records"
 
 const input: z.ZodObject<{ id: z.ZodString }> = z.object({ id: z.string().min(1).max(MAX_ID) })
 
@@ -15,15 +16,15 @@ export const cancelOrderAction: ActionDefinition = defineAction({
     permission: SALES_MANAGE,
     label: { key: "action_cancel_order" },
     input,
-    ports: { orders: salesOrderStore },
+    ports: { orders: salesOrders },
     transactional: true,
     run: async ({ orders }, { id }) => {
-        const order = await orders.get(id)
+        const record = await orders.get(id)
+        const order = record === null ? null : orderRowOf(record)
         if (order === null) return refusedWith("missing")
         if (!canCancel(order.status)) return refusedWith("order_not_cancellable")
         const written = await orders.update(order.id, order.version, { status: "cancelled" })
-        if (written.ok) return { ok: true }
-        return written.reason === "missing" ? refusedWith("missing") : CONFLICT
+        return written.ok ? { ok: true } : writeRefusal(written)
     },
     refreshes: ["sales.orders", "sales.order-counts", "sales.order", "sales.orders-waiting"],
 })

@@ -6,9 +6,9 @@ import { SALES_VIEW } from "../constants"
 import { salesOrdersList } from "../ports"
 import type { OrderRow } from "../sales.types"
 
-/** What the orders list accepts: a search over the number, the items and the note, the status as a filter, two sorts. */
+/** What the orders list accepts: a search over the items and the note (the number is a sequence, which is not searched), the status as a filter, two sorts. */
 export const ORDERS_LIST: ListShape = {
-    search: { fields: ["orderNo", "items", "note"] },
+    search: { fields: ["items", "note"] },
     filters: { status: { field: "status", op: "eq", of: ORDER_STATUSES } },
     sort: { recent: [["createdAt", "desc"]], amount: [["amountVnd", "desc"]] },
     page: { size: 30 },
@@ -29,7 +29,7 @@ export const ORDER_ROW_FIELDS: ReadonlyArray<keyof OrderRow> = [
 /** `sales.orders`: the orders of the workspace, searched, narrowed by status and sorted. */
 export const ordersRead: ListReadDefinition = listRead({
     id: "sales.orders",
-    dataKind: "sales-order",
+    dataKind: "order",
     permission: SALES_VIEW,
     fields: ORDER_ROW_FIELDS,
     list: ORDERS_LIST,
