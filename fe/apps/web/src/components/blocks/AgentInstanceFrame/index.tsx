@@ -43,7 +43,7 @@ interface AgentInstanceFrameProps {
 }
 
 /** The tabs whose body is panes, attached flush under the tab line; the other tabs are card bodies. */
-const PANES_TABS: ReadonlySet<string> = new Set(["setup", "work", "workbench", "chat"])
+const PANES_TABS: ReadonlySet<string> = new Set(["setup", "work", "workbench"])
 
 /** The agents the header's menu can open: every installed agent, the open one checked, and the way to add one for a person who may. */
 const switcherOf = (

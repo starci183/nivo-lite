@@ -9,4 +9,4 @@ export const teamChatMetadata = async (): Promise<Metadata> => {
 }
 
 /** The team chat route: the chat block is its root and draws the one `Page` of rooms and thread panes. */
-export const TeamChatPage = () => <TeamChat kind="page" />
+export const TeamChatPage = () => <TeamChat />

@@ -1,10 +1,11 @@
 import { isManager, useMember } from "@/hooks/member"
+import { useInstanceAgentId } from "./useInstanceAgentId"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import type { ModuleKey } from "@/modules/catalog"
 import { navigation } from "@/modules/i18n"
 import { agentHref } from "@/modules/installations"
 import type { AgentTab } from "@/modules/installations"
-import { workspaceHref } from "@/modules/routes"
+import { chatWithHref, workspaceHref } from "@/modules/routes"
 
 const ALL_TABS: ReadonlyArray<AgentTab> = ["setup", "workbench", "work", "chat", "performance", "settings"]
 
@@ -34,6 +35,11 @@ export const useInstanceTabs = (module: ModuleKey, installationId: string): Inst
         const tab = ALL_TABS.find((entry) => entry === id)
         if (tab !== undefined) router.push(workspaceHref(workspaceId, agentHref(module, installationId, tab)))
     }
-    const hrefOf = (tab: AgentTab) => workspaceHref(workspaceId, agentHref(module, installationId, tab))
+    const agentId = useInstanceAgentId(module, installationId)
+    const hrefOf = (tab: AgentTab) =>
+        workspaceHref(
+            workspaceId,
+            tab === "chat" && agentId !== null ? chatWithHref(agentId) : agentHref(module, installationId, tab),
+        )
     return { tabs, selected, open, hrefOf }
 }

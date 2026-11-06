@@ -148,7 +148,6 @@ export type { InviteAction, InviteRowView, TeamPanesBaseProps } from "./team"
 export type { AccountSignInView, SessionRowView } from "./account"
 export type {
     ZaloCheckLineView,
-    ZaloEventLineView,
     ZaloFactView,
     ZaloHeadView,
     ZaloPasteView,
@@ -204,3 +203,5 @@ export { textFieldsOf, type TextFieldItem } from "./form-fields"
 export type { BookingServiceView, BookingResourceView } from "./booking"
 export type { HiringCandidateDialog, HiringRequestOutcome } from "./hiring-model-workbench-candidate"
 export type { HiringWorkbenchCopy } from "./hiring-model-workbench-copy"
+export type { ChatParty, ChatPartyKind, TeamChatApprovalStatus, TeamChatApprovalView } from "./team-chat"
+export type { TeamChatMessageRow, TeamChatRoomRow, TeamChatVerdict } from "./team-chat"
