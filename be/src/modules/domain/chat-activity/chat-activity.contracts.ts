@@ -10,16 +10,10 @@ export interface ChatActivityFrame {
     readonly id: string
     /** What changed. */
     readonly kind: ChatActivityKind
-    /** The target that changed: `room:<key>` (`room:office` for the general Office), `agent:<id>` or `lead:<id>`. */
-    readonly roomOrConversation: string
+    /** The team-chat room that changed. */
+    readonly roomId: string
     /** ISO 8601 time the change was announced. */
     readonly at: string
-}
-
-/** A room, as the receipt and message writers name it. */
-export interface ChatActivityTarget {
-    /** A department room key; null is the general Office. */
-    readonly room: string | null
 }
 
 /** The member who wrote a line; null for a line the system or an agent wrote. */

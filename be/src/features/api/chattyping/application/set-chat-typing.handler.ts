@@ -7,7 +7,7 @@ import type { Logger } from "@modules/platform/logging"
 import { SetChatTypingCommand } from "./set-chat-typing.command"
 
 @CommandHandler(SetChatTypingCommand)
-/** Publishes a typing hint through the domain's target authorization. */
+/** Publishes a typing hint through the domain's room authorization. */
 export class SetChatTypingHandler extends ICQRSHandler<SetChatTypingCommand, ChatTypingSignal> {
     constructor(
         @InjectLogger() logger: Logger,
@@ -20,7 +20,7 @@ export class SetChatTypingHandler extends ICQRSHandler<SetChatTypingCommand, Cha
         return this.typing.set(
             command.params.principal.id,
             command.params.request.workspaceId,
-            command.params.request.target,
+            command.params.request.roomId,
             command.params.request.typing,
         )
     }

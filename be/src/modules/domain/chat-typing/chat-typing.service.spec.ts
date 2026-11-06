@@ -1,30 +1,49 @@
 import { Test } from "@nestjs/testing"
-import { builder, FakeClock, mock } from "@starci/jest-preset"
-import { ChatMarkersService } from "@modules/domain/chat-markers"
+import { FakeClock, mock } from "@starci/jest-preset"
+import { TeamChatService } from "@modules/domain/team-chat"
+import type { RoomMemberView, RoomView } from "@modules/domain/team-chat"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { REALTIME_HUB } from "@modules/platform/realtime"
 import type { RealtimeHub } from "@modules/platform/realtime"
+import { ChatTypingErrorCode } from "./errors/chat-typing.error"
 import { ChatTypingService } from "./chat-typing.service"
 
-const memberOf = builder<WorkspaceMember>({
-    userId: "user-1",
-    workspaceId: "workspace-1",
-    role: "owner",
-    staffId: null,
-    displayName: "Mai Linh",
-    status: "active",
+const NOW = "2026-10-25T03:00:00.000Z"
+const ROOM = "room-1"
+
+const memberOf = (memberId: string, name: string, memberKind: "user" | "agent" = "user"): RoomMemberView => ({
+    memberKind,
+    memberId,
+    name,
+    role: "member",
+    lastReadAt: new Date(NOW),
+    muted: false,
 })
 
-const OFFICE = { room: null }
-const NOW = "2026-10-25T03:00:00.000Z"
+const roomOf = (members: ReadonlyArray<RoomMemberView>): RoomView => ({
+    id: ROOM,
+    kind: "group",
+    name: "Sales",
+    position: 0,
+    createdBy: "user-1",
+    createdAt: new Date(NOW),
+    members,
+    unreadCount: 0,
+    mentionCount: 0,
+    muted: false,
+    lastMessage: null,
+})
+
+const SITTING = [
+    memberOf("user-1", "Mai Linh"),
+    memberOf("user-2", "An"),
+    memberOf("user-3", "Binh"),
+    memberOf("agent-1", "Ke toan", "agent"),
+]
 
 const build = async () => {
-    const markers = mock<ChatMarkersService>({
-        requireTarget: jest.fn().mockResolvedValue(memberOf()),
-        memberIds: jest.fn().mockResolvedValue(["user-1", "user-2", "user-3"]),
-    })
+    const chat = mock<TeamChatService>({ room: jest.fn().mockResolvedValue(roomOf(SITTING)) })
     const seats = mock<WorkspaceMemberSeatsService>({
         activeUsers: jest.fn().mockResolvedValue([
             { userId: "user-1", displayName: "Mai Linh" },
@@ -37,18 +56,18 @@ const build = async () => {
     const container = await Test.createTestingModule({
         providers: [
             ChatTypingService,
-            { provide: ChatMarkersService, useValue: markers },
+            { provide: TeamChatService, useValue: chat },
             { provide: WorkspaceMemberSeatsService, useValue: seats },
             { provide: REALTIME_HUB, useValue: realtime },
             { provide: CLOCK, useValue: clock },
         ],
     }).compile()
-    return { service: container.get(ChatTypingService), markers, seats, realtime, now }
+    return { service: container.get(ChatTypingService), chat, seats, realtime, now }
 }
 
 describe("ChatTypingService.set", () => {
-    it("authors the admitted account identity and gives a start signal a five-second deadline", async () => {
-        const { service, markers, realtime } = await build()
+    it("authors the seated person's identity and gives a start signal a five-second deadline", async () => {
+        const { service, chat, realtime } = await build()
         const signal = {
             id: "user-1",
             name: "Mai Linh",
@@ -57,54 +76,53 @@ describe("ChatTypingService.set", () => {
             expiresAt: "2026-10-25T03:00:05.000Z",
         }
 
-        await expect(service.set("principal", "workspace-1", OFFICE, true)).resolves.toEqual(signal)
-        expect(markers.requireTarget).toHaveBeenCalledWith("principal", "workspace-1", OFFICE)
+        await expect(service.set("user-1", "workspace-1", ROOM, true)).resolves.toEqual(signal)
+        expect(chat.room).toHaveBeenCalledWith("workspace-1", "user-1", ROOM)
         const frame = { id: `user-1:${NOW}`, actorId: "user-1", actorName: "Mai Linh", state: "start", at: NOW }
-        expect(markers.memberIds).toHaveBeenCalledWith("principal", "workspace-1", OFFICE)
         expect(realtime.publish).toHaveBeenCalledTimes(2)
         expect(realtime.publish).toHaveBeenCalledWith(
-            expect.objectContaining({ name: "chat-typing:user-2:workspace-1:room:office" }),
+            expect.objectContaining({ name: "chat-typing:user-2:workspace-1:room:room-1" }),
             frame,
         )
         expect(realtime.publish).toHaveBeenCalledWith(
-            expect.objectContaining({ name: "chat-typing:user-3:workspace-1:room:office" }),
+            expect.objectContaining({ name: "chat-typing:user-3:workspace-1:room:room-1" }),
             frame,
         )
     })
 
-    it("expires a stop signal immediately and targets only its room", async () => {
+    it("expires a stop signal immediately", async () => {
         const { service, realtime } = await build()
-        const signal = {
-            id: "user-1",
-            name: "Mai Linh",
-            avatarSeed: "user-1",
-            typing: false,
-            expiresAt: NOW,
-        }
+        const signal = { id: "user-1", name: "Mai Linh", avatarSeed: "user-1", typing: false, expiresAt: NOW }
 
-        await expect(service.set("principal", "workspace-1", { room: "sales" }, false)).resolves.toEqual(signal)
+        await expect(service.set("user-1", "workspace-1", ROOM, false)).resolves.toEqual(signal)
         expect(realtime.publish).toHaveBeenCalledWith(
-            expect.objectContaining({ name: "chat-typing:user-2:workspace-1:room:sales" }),
+            expect.objectContaining({ name: "chat-typing:user-2:workspace-1:room:room-1" }),
             { id: `user-1:${NOW}`, actorId: "user-1", actorName: "Mai Linh", state: "stop", at: NOW },
         )
     })
 
-    it("fans out only to the other admitted members, never to the sender or a non-member", async () => {
-        const { service, markers, realtime } = await build()
-        markers.memberIds.mockResolvedValue(["user-1", "user-2"])
+    it("fans out only to the other people of the room, never to the sender or to an agent", async () => {
+        const { service, realtime } = await build()
 
-        await service.set("principal", "workspace-1", OFFICE, true)
+        await service.set("user-1", "workspace-1", ROOM, true)
 
         const topics = realtime.publish.mock.calls.map(([topic]) => topic.name)
-        expect(topics).toEqual(["chat-typing:user-2:workspace-1:room:office"])
+        expect(topics).toEqual([
+            "chat-typing:user-2:workspace-1:room:room-1",
+            "chat-typing:user-3:workspace-1:room:room-1",
+        ])
     })
 
-    it("does not publish when membership or target validation fails", async () => {
-        const { service, markers, realtime, now } = await build()
-        const refusal = new Error("target not admitted")
-        markers.requireTarget.mockRejectedValue(refusal)
+    it("refuses a room the caller cannot see, and a room the caller does not sit in, and publishes nothing", async () => {
+        const { service, chat, realtime, now } = await build()
+        chat.room.mockResolvedValueOnce(null).mockResolvedValueOnce(roomOf([memberOf("user-2", "An")]))
 
-        await expect(service.set("principal", "workspace-1", OFFICE, true)).rejects.toBe(refusal)
+        await expect(service.set("user-1", "workspace-1", ROOM, true)).rejects.toMatchObject({
+            code: ChatTypingErrorCode.RoomNotFound,
+        })
+        await expect(service.set("user-1", "workspace-1", ROOM, true)).rejects.toMatchObject({
+            code: ChatTypingErrorCode.RoomNotFound,
+        })
         expect(realtime.publish).not.toHaveBeenCalled()
         expect(now).not.toHaveBeenCalled()
     })
@@ -114,7 +132,7 @@ describe("ChatTypingService.set", () => {
         const failure = new Error("realtime unavailable")
         realtime.publish.mockRejectedValue(failure)
 
-        await expect(service.set("principal", "workspace-1", OFFICE, true)).rejects.toBe(failure)
+        await expect(service.set("user-1", "workspace-1", ROOM, true)).rejects.toBe(failure)
     })
 })
 
@@ -122,31 +140,31 @@ describe("ChatTypingService.setAgent", () => {
     const AGENT = { id: "agent-1", name: "Ke toan" }
 
     it("tells every active account of the workspace that the agent is working, with no caller to prove", async () => {
-        const { service, markers, seats, realtime } = await build()
+        const { service, chat, seats, realtime } = await build()
 
-        await service.setAgent("workspace-1", OFFICE, AGENT, true)
+        await service.setAgent("workspace-1", ROOM, AGENT, true)
 
         const frame = { id: `agent-1:${NOW}`, actorId: "agent-1", actorName: "Ke toan", state: "start", at: NOW }
         expect(seats.activeUsers).toHaveBeenCalledWith("workspace-1", 500)
-        expect(markers.requireTarget).not.toHaveBeenCalled()
+        expect(chat.room).not.toHaveBeenCalled()
         expect(realtime.publish).toHaveBeenCalledTimes(2)
         expect(realtime.publish).toHaveBeenCalledWith(
-            expect.objectContaining({ name: "chat-typing:user-1:workspace-1:room:office" }),
+            expect.objectContaining({ name: "chat-typing:user-1:workspace-1:room:room-1" }),
             frame,
         )
         expect(realtime.publish).toHaveBeenCalledWith(
-            expect.objectContaining({ name: "chat-typing:user-2:workspace-1:room:office" }),
+            expect.objectContaining({ name: "chat-typing:user-2:workspace-1:room:room-1" }),
             frame,
         )
     })
 
-    it("clears the indicator in a department room when the turn ends", async () => {
+    it("clears the indicator when the turn ends", async () => {
         const { service, realtime } = await build()
 
-        await service.setAgent("workspace-1", { room: "sales" }, AGENT, false)
+        await service.setAgent("workspace-1", ROOM, AGENT, false)
 
         expect(realtime.publish).toHaveBeenCalledWith(
-            expect.objectContaining({ name: "chat-typing:user-1:workspace-1:room:sales" }),
+            expect.objectContaining({ name: "chat-typing:user-1:workspace-1:room:room-1" }),
             { id: `agent-1:${NOW}`, actorId: "agent-1", actorName: "Ke toan", state: "stop", at: NOW },
         )
     })
@@ -156,6 +174,6 @@ describe("ChatTypingService.setAgent", () => {
         const failure = new Error("realtime unavailable")
         realtime.publish.mockRejectedValue(failure)
 
-        await expect(service.setAgent("workspace-1", OFFICE, AGENT, true)).rejects.toBe(failure)
+        await expect(service.setAgent("workspace-1", ROOM, AGENT, true)).rejects.toBe(failure)
     })
 })

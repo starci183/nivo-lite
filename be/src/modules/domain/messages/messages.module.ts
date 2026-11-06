@@ -9,7 +9,6 @@ import { OfficeCardsService } from "./office-cards.service"
 import { OfficeBackgroundVoiceService } from "./office-background-voice.service"
 import { OfficeInboundStopReporterService } from "./office-inbound-stop-reporter.service"
 import { OfficeLinesService } from "./office-lines.service"
-import { TeamChatService } from "./team-chat.service"
 
 @Module({})
 /** The team chat of a workspace and the Office thread. The agent directory is bound by the app root through the options. */
@@ -29,7 +28,6 @@ export class MessagesModule extends ConfigurableModuleClass {
                 OfficeBackgroundVoiceService,
                 OfficeInboundStopReporterService,
                 OfficeCardsService,
-                TeamChatService,
             ],
             exports: [
                 MessagesService,
@@ -39,7 +37,6 @@ export class MessagesModule extends ConfigurableModuleClass {
                 OfficeBackgroundVoiceService,
                 OfficeInboundStopReporterService,
                 OfficeCardsService,
-                TeamChatService,
             ],
         }
     }

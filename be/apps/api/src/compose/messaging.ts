@@ -22,8 +22,7 @@ import {
 } from "@modules/domain/inbound-events"
 import { ChatActivityModule } from "@modules/domain/chat-activity"
 import { CHAT_RECORDS_ERROR_KINDS, CHAT_RECORDS_MESSAGES, ChatRecordsModule } from "@modules/domain/chat-records"
-import { CHAT_MARKERS_ERROR_KINDS, CHAT_MARKERS_MESSAGES, ChatMarkersModule } from "@modules/domain/chat-markers"
-import { ChatTypingModule } from "@modules/domain/chat-typing"
+import { CHAT_TYPING_ERROR_KINDS, CHAT_TYPING_MESSAGES, ChatTypingModule } from "@modules/domain/chat-typing"
 import { TEAM_CHAT_ERROR_KINDS, TEAM_CHAT_MESSAGES, TeamChatModule } from "@modules/domain/team-chat"
 import {
     CHANNELS_ERROR_KINDS,
@@ -58,7 +57,6 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
     ChatRecordsModule.register({ isGlobal: true }),
     ChatActivityModule.register({ isGlobal: true }),
-    ChatMarkersModule.register({ isGlobal: true }),
     ChatTypingModule.register({ isGlobal: true }),
     TeamChatModule.register({ isGlobal: true }),
     ChannelReceiptsModule.register({ isGlobal: true }),
@@ -95,7 +93,7 @@ export const messagingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
     TELEGRAM_ERROR_KINDS,
     SEPAY_ERROR_KINDS,
     ZALO_ERROR_KINDS,
-    CHAT_MARKERS_ERROR_KINDS,
+    CHAT_TYPING_ERROR_KINDS,
     TEAM_CHAT_ERROR_KINDS,
     MCP_GATEWAY_ERROR_KINDS,
     ENTITY_ENGINE_DOOR_ERROR_KINDS,
@@ -114,7 +112,7 @@ export const messagingMessages: ReadonlyArray<MessageBundle> = [
     TELEGRAM_MESSAGES,
     SEPAY_MESSAGES,
     ZALO_MESSAGES,
-    CHAT_MARKERS_MESSAGES,
+    CHAT_TYPING_MESSAGES,
     TEAM_CHAT_MESSAGES,
     MCP_GATEWAY_MESSAGES,
     ENTITY_ENGINE_DOOR_MESSAGES,

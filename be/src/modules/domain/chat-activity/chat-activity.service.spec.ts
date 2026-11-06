@@ -56,7 +56,7 @@ const published = (hub: Pick<jest.Mocked<RealtimeHub>, "publish">) =>
     hub.publish.mock.calls.map(([topic, frame]) => ({
         topic: topic.name,
         kind: fieldOf(frame, "kind"),
-        target: fieldOf(frame, "roomOrConversation"),
+        target: fieldOf(frame, "roomId"),
         at: fieldOf(frame, "at"),
     }))
 
@@ -64,22 +64,22 @@ describe("ChatActivityService.message", () => {
     it("tells every active member of the line and every member but its author of the unread", async () => {
         const { service, seats, hub } = await build()
 
-        await service.message(WS, "room:sales", "author", inside)
+        await service.message(WS, "room-sales", "author", inside)
 
         expect(seats.activeUsers).toHaveBeenCalledWith(WS, 500)
         expect(published(hub)).toEqual([
-            { topic: chatActivityTopic("author", WS).name, kind: "message", target: "room:sales", at: NOW },
-            { topic: chatActivityTopic("bob", WS).name, kind: "message", target: "room:sales", at: NOW },
-            { topic: chatActivityTopic("cara", WS).name, kind: "message", target: "room:sales", at: NOW },
-            { topic: chatActivityTopic("bob", WS).name, kind: "unread", target: "room:sales", at: NOW },
-            { topic: chatActivityTopic("cara", WS).name, kind: "unread", target: "room:sales", at: NOW },
+            { topic: chatActivityTopic("author", WS).name, kind: "message", target: "room-sales", at: NOW },
+            { topic: chatActivityTopic("bob", WS).name, kind: "message", target: "room-sales", at: NOW },
+            { topic: chatActivityTopic("cara", WS).name, kind: "message", target: "room-sales", at: NOW },
+            { topic: chatActivityTopic("bob", WS).name, kind: "unread", target: "room-sales", at: NOW },
+            { topic: chatActivityTopic("cara", WS).name, kind: "unread", target: "room-sales", at: NOW },
         ])
     })
 
     it("gives every frame its own id prefixed by its kind", async () => {
         const { service, hub } = await build()
 
-        await service.message(WS, "room:office", null)
+        await service.message(WS, "room-office", null)
 
         const ids = hub.publish.mock.calls.map(([, frame]) => fieldOf(frame, "id"))
         expect(new Set(ids).size).toBe(6)
@@ -90,7 +90,7 @@ describe("ChatActivityService.message", () => {
     it("counts the line unread for everyone when no member wrote it", async () => {
         const { service, hub } = await build()
 
-        await service.message(WS, "room:office", null)
+        await service.message(WS, "room-office", null)
 
         expect(published(hub).filter((frame) => frame.kind === "unread")).toHaveLength(3)
     })
@@ -98,7 +98,7 @@ describe("ChatActivityService.message", () => {
     it("pushes nothing when the workspace has no active member", async () => {
         const { service, hub } = await build([])
 
-        await service.message(WS, "room:sales", "author")
+        await service.message(WS, "room-sales", "author")
 
         expect(hub.publish).not.toHaveBeenCalled()
     })
@@ -108,7 +108,7 @@ describe("ChatActivityService.message", () => {
         const cause = new Error("hub down")
         hub.publish.mockRejectedValue(cause)
 
-        await expect(service.message(WS, "room:sales", "author")).resolves.toBeUndefined()
+        await expect(service.message(WS, "room-sales", "author")).resolves.toBeUndefined()
 
         expect(logger.error).toHaveBeenCalledWith(ChatActivityLogEvent.PublishFailed, cause, { workspaceId: WS })
     })
@@ -118,7 +118,7 @@ describe("ChatActivityService.message", () => {
         const cause = new Error("db down")
         seats.activeUsers.mockRejectedValue(cause)
 
-        await expect(service.message(WS, "room:sales", "author")).resolves.toBeUndefined()
+        await expect(service.message(WS, "room-sales", "author")).resolves.toBeUndefined()
 
         expect(hub.publish).not.toHaveBeenCalled()
         expect(logger.error).toHaveBeenCalledWith(ChatActivityLogEvent.PublishFailed, cause, { workspaceId: WS })
@@ -129,13 +129,13 @@ describe("ChatActivityService.receipt", () => {
     it("tells every active member that a cursor moved", async () => {
         const { service, hub } = await build()
 
-        await service.receipt(WS, "room:sales")
+        await service.receipt(WS, "room-sales")
 
         expect(published(hub)).toEqual(
             MEMBERS.map((member) => ({
                 topic: chatActivityTopic(member.userId, WS).name,
                 kind: "receipt",
-                target: "room:sales",
+                target: "room-sales",
                 at: NOW,
             })),
         )
@@ -146,17 +146,17 @@ describe("ChatActivityService.unread", () => {
     it("tells only the named active member", async () => {
         const { service, hub } = await build()
 
-        await service.unread(WS, "agent:a-1", "bob", inside)
+        await service.unread(WS, "room-a1", "bob", inside)
 
         expect(published(hub)).toEqual([
-            { topic: chatActivityTopic("bob", WS).name, kind: "unread", target: "agent:a-1", at: NOW },
+            { topic: chatActivityTopic("bob", WS).name, kind: "unread", target: "room-a1", at: NOW },
         ])
     })
 
     it("tells nobody when the member is not active in the workspace", async () => {
         const { service, hub } = await build()
 
-        await service.unread(WS, "room:sales", "stranger")
+        await service.unread(WS, "room-sales", "stranger")
 
         expect(hub.publish).not.toHaveBeenCalled()
     })
@@ -171,7 +171,7 @@ describe("ChatActivityService after the commit", () => {
             return Promise.resolve()
         })
 
-        await service.message(WS, "room:sales", "author", inside)
+        await service.message(WS, "room-sales", "author", inside)
 
         expect(commits.run.mock.calls.map(([manager]) => manager)).toEqual([inside])
         expect(hub.publish).not.toHaveBeenCalled()
@@ -183,8 +183,8 @@ describe("ChatActivityService after the commit", () => {
         const { service, hub, commits } = await build()
         commits.run.mockResolvedValue(undefined)
 
-        await service.receipt(WS, "room:sales", inside)
-        await service.unread(WS, "room:sales", "bob", inside)
+        await service.receipt(WS, "room-sales", inside)
+        await service.unread(WS, "room-sales", "bob", inside)
 
         expect(hub.publish).not.toHaveBeenCalled()
     })
@@ -192,7 +192,7 @@ describe("ChatActivityService after the commit", () => {
     it("runs at once on the primary manager when the writer is not inside a transaction", async () => {
         const { service, entityManager, commits } = await build()
 
-        await service.receipt(WS, "room:sales")
+        await service.receipt(WS, "room-sales")
 
         expect(commits.run.mock.calls.map(([manager]) => manager)).toEqual([entityManager])
     })

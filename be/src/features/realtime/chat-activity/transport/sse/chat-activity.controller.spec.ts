@@ -11,7 +11,7 @@ const principal: Principal = { id: "person-1", role: "authenticated" }
 const WS = "ws-1"
 const EVENT: MessageEvent = {
     id: "message:1",
-    data: { id: "message:1", kind: "message", roomOrConversation: "room:sales", at: "2026-10-26T01:00:00.000Z" },
+    data: { id: "message:1", kind: "message", roomId: "room-sales", at: "2026-10-26T01:00:00.000Z" },
 }
 
 /** A recording hub whose event stream yields one event and records the topic, the resume point and the release. */

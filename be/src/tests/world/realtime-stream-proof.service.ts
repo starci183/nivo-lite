@@ -1,12 +1,6 @@
 import { TextDecoder } from "node:util"
 import { parseJsonText } from "@modules/platform/primitives"
 
-/** One typing target: the named room, or the general office room when it is null. */
-export interface TypingStreamTarget {
-    /** The named room, when the stream follows a room. */
-    readonly room: string | null
-}
-
 /** A complete default-message frame received through the real HTTP event stream. */
 export interface TypingStreamFrame {
     /** The server-supplied resume cursor, independently observed from the JSON payload. */
@@ -21,8 +15,8 @@ export interface TypingStreamOptions {
     readonly principalId?: string
     /** Workspace admission is checked against the disposable database. */
     readonly workspaceId: string
-    /** The room the stream follows; a null room selects the general office room. */
-    readonly target: TypingStreamTarget
+    /** The team-chat room the stream follows. */
+    readonly roomId: string
     /** A reconnect supplies the last frame received, through Last-Event-ID. */
     readonly after?: string
     /** A deliberate negative case: credentials in the URL must never authorize a stream. */
@@ -95,7 +89,7 @@ const headersOf = (options: TypingStreamOptions): Record<string, string> => ({
 /** The door URL with its target and, only for the negative case, a credential in the query string. */
 const urlOf = (origin: string, options: TypingStreamOptions): URL => {
     const url = new URL("/realtime/chat-typing", origin)
-    if (options.target.room !== null) url.searchParams.set("room", options.target.room)
+    url.searchParams.set("roomId", options.roomId)
     if (options.queryToken !== undefined) url.searchParams.set("access_token", options.queryToken)
     return url
 }

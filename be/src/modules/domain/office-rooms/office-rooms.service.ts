@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ChatActivityService, chatActivityTarget } from "@modules/domain/chat-activity"
+import { ChatActivityService } from "@modules/domain/chat-activity"
 import { isOfficeRoomKey, OfficeCardsService } from "@modules/domain/messages"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
@@ -105,7 +105,7 @@ export class OfficeRoomsService {
         if (room !== null && !isOfficeRoomKey(room))
             throw new OfficeRoomsError({ code: OfficeRoomsErrorCode.RoomInvalid, params: { room } })
         await callDbFunction(this.entityManager, MARK_READ, [workspaceId, member.userId, room ?? OFFICE_READ_KEY])
-        const target = chatActivityTarget({ room })
+        const target = `room:${room ?? "office"}`
         await this.activity.receipt(workspaceId, target)
         await this.activity.unread(workspaceId, target, member.userId)
     }

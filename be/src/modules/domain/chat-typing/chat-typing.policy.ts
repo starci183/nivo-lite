@@ -1,4 +1,3 @@
-import type { ChatTarget } from "@modules/domain/chat-markers"
 import type { RealtimeTopic } from "@modules/platform/realtime"
 import type { ChatTypingFrame } from "./chat-typing.contracts"
 
@@ -18,15 +17,15 @@ export const isChatTypingFrame = (value: unknown): value is ChatTypingFrame =>
     typeof value.at === "string"
 
 /**
- * The channel of the typing frames one recipient may see in one workspace target. The recipient is part of the name, so a stream
+ * The channel of the typing frames one recipient may see in one team-chat room. The recipient is part of the name, so a stream
  * built from another principal can never receive these frames: the publisher pushes one copy per admitted member, the SSE door
  * subscribes only the caller's own copy.
  */
 export const chatTypingTopic = (
     recipientId: string,
     workspaceId: string,
-    target: ChatTarget,
+    roomId: string,
 ): RealtimeTopic<ChatTypingFrame> => ({
-    name: `chat-typing:${recipientId}:${workspaceId.toLowerCase()}:room:${target.room ?? "office"}`,
+    name: `chat-typing:${recipientId}:${workspaceId.toLowerCase()}:room:${roomId.toLowerCase()}`,
     accepts: isChatTypingFrame,
 })

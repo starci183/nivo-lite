@@ -10,7 +10,6 @@ import { WorkspacesGraphqlModule } from "@features/api/workspaces"
 import { InboxGraphqlModule } from "@features/api/inbox"
 import { AgentWorkGraphqlModule } from "@features/api/agent-work"
 import { AgentRunsGraphqlModule } from "@features/api/agent-runs"
-import { ChatMarkersGraphqlModule } from "@features/api/chatmarkers"
 import { TeamChatGraphqlModule } from "@features/api/team-chat"
 import { ChattypingGraphqlModule } from "@features/api/chattyping"
 import { CHAT_FILES_ERROR_KINDS, CHAT_FILES_MESSAGES, ChatFilesModule } from "@modules/domain/chat-files"
@@ -51,7 +50,6 @@ export const apiModules = (): Array<DynamicModule> => [
     InboxGraphqlModule.register({}),
     AgentWorkGraphqlModule.register({}),
     AgentRunsGraphqlModule.register({}),
-    ChatMarkersGraphqlModule.register({}),
     TeamChatGraphqlModule.register({}),
     ChattypingGraphqlModule.register({}),
     ChatFilesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
