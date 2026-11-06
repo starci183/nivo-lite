@@ -1,5 +1,6 @@
 import type { CountsResult, ListPage } from "@nivo-lite/agent-sdk/block"
 import { attentionRowsOf, salesDecisionQueueOf } from "../../../rules/sales/decisions"
+import { awaitingRowsOf, failedRowsOf } from "../../../rules/sales/attention"
 import { salesFiguresOf } from "../../../rules/sales/figures"
 import { orderSummaryOf } from "../../../rules/sales/lead-orders"
 import { waitsForOwner } from "../../../rules/sales/order-confirm"
@@ -104,6 +105,25 @@ export const SALES_FIXTURES: ModuleFixtures = {
         },
         "sales.attention": {
             ready: { rows: attentionRowsOf(WAITING_ORDERS), cursor: null },
+            empty: NO_ROWS,
+        },
+        "sales.awaiting-reply": {
+            ready: { rows: awaitingRowsOf(SAMPLE_LEADS), cursor: null },
+            empty: NO_ROWS,
+        },
+        "sales.failed-steps": {
+            ready: {
+                rows: failedRowsOf(
+                    SAMPLE_ORDERS.filter((order) => order.status === "failed_system"),
+                    Object.fromEntries(
+                        SAMPLE_ORDERS.filter((order) => order.status === "failed_system").map((order) => [
+                            order.id,
+                            customerOf(order) ?? "",
+                        ]),
+                    ),
+                ),
+                cursor: null,
+            },
             empty: NO_ROWS,
         },
         "sales.decisions": {

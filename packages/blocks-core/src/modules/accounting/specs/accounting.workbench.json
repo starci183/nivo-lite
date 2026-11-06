@@ -125,46 +125,23 @@
           },
           {
             "id": "ageing",
-            "block": "core.figures",
+            "block": "accounting.ageing",
             "props": {
-              "label": {
+              "title": {
                 "key": "ageing_label"
               },
-              "kind": "proportion",
-              "currency": "VND",
-              "items": [
-                {
-                  "term": {
-                    "key": "ageing_d0"
-                  },
-                  "path": "ageing.d0.count",
-                  "format": "count"
-                },
-                {
-                  "term": {
-                    "key": "ageing_d30"
-                  },
-                  "path": "ageing.d30.count",
-                  "format": "count"
-                },
-                {
-                  "term": {
-                    "key": "ageing_d60"
-                  },
-                  "path": "ageing.d60.count",
-                  "format": "count"
-                }
-              ]
+              "empty": {
+                "key": "ageing_empty"
+              }
             },
             "bind": {
-              "data": {
+              "figures": {
                 "read": "accounting.figures",
                 "variables": {
                   "period": "$period"
                 }
               }
-            },
-            "children": []
+            }
           }
         ]
       }

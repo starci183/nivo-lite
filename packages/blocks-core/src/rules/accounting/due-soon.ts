@@ -7,7 +7,7 @@ export type TaxKind = "vat" | "pit"
 /** The kinds in the order the list shows them on one day. */
 export const TAX_KINDS: ReadonlyArray<TaxKind> = ["vat", "pit"]
 
-/** The day of the month a declaration falls due. */
+/** The day of the month a monthly declaration falls due: the 20th of the month after the one it covers. */
 export const TAX_DUE_DAY = 20
 
 /** How far ahead the list looks, in days. */
@@ -34,15 +34,17 @@ export interface DueItem {
 
 const two = (value: number): string => String(value).padStart(2, "0")
 
-const dayStartMs = (day: string): number => Date.parse(`${day}T00:00:00.000Z`)
+const dayOf = (date: Date): string =>
+    `${date.getUTCFullYear()}-${two(date.getUTCMonth() + 1)}-${two(date.getUTCDate())}`
 
-/** The months (0 to 11) whose 20th a quarterly value added tax declaration falls due: the middle month of each quarter, which names that quarter. */
-const QUARTER_DUE_MONTHS: ReadonlyArray<number> = [1, 4, 7, 10]
+/** The months ahead of the current one that are looked at: enough to cover the horizon. */
+const MONTHS_AHEAD: ReadonlyArray<number> = [0, 1, 2, 3]
 
 /**
- * The tax declarations that fall due within the next `horizon` days of the shop calendar. On the 20th of each month the personal
- * income tax withheld for the month before is due, and value added tax is due the same day: for the month before when the shop files
- * monthly, and, when it files quarterly, on the 20th of the middle month of the quarter, for that quarter. Soonest first, value added
+ * The tax declarations that fall due within the next `horizon` days of the shop calendar, by Vietnamese law. The personal income tax
+ * withheld for a month is due on the 20th of the month after it. Value added tax is due on the 20th of the month after the month it
+ * covers for a shop that files monthly, and, for a shop that files quarterly, on the last day of the first month of the quarter after:
+ * the fourth quarter on 31 January, the first on 30 April, the second on 31 July, the third on 31 October. Soonest first, value added
  * tax before the personal income tax on the same day.
  */
 export const dueSoonOf = (
@@ -53,28 +55,26 @@ export const dueSoonOf = (
     const today = shopDayOf(now.toISOString())
     const year = Number(today.slice(0, 4))
     const monthIndex = Number(today.slice(5, 7)) - 1
-    const todayMs = dayStartMs(today)
-    return [0, 1, 2].flatMap((ahead) => {
-        const due = new Date(Date.UTC(year, monthIndex + ahead, TAX_DUE_DAY))
-        const dueDay = `${due.getUTCFullYear()}-${two(due.getUTCMonth() + 1)}-${two(due.getUTCDate())}`
+    const todayMs = Date.parse(`${today}T00:00:00.000Z`)
+    const item = (kind: TaxKind, unit: DuePeriodUnit, period: number, due: Date): ReadonlyArray<DueItem> => {
         const daysLeft = Math.round((due.getTime() - todayMs) / DAY_MS)
-        if (daysLeft < 0 || daysLeft > horizon) return []
-        const before = due.getUTCMonth() === 0 ? 12 : due.getUTCMonth()
-        const vat: ReadonlyArray<DueItem> =
-            vatPeriod === "monthly"
-                ? [{ id: `vat-${dueDay}`, kind: "vat", unit: "month", period: before, dueDay, daysLeft }]
-                : QUARTER_DUE_MONTHS.includes(due.getUTCMonth())
-                  ? [
-                        {
-                            id: `vat-${dueDay}`,
-                            kind: "vat",
-                            unit: "quarter",
-                            period: Math.floor(due.getUTCMonth() / 3) + 1,
-                            dueDay,
-                            daysLeft,
-                        },
-                    ]
-                  : []
-        return [...vat, { id: `pit-${dueDay}`, kind: "pit", unit: "month", period: before, dueDay, daysLeft }]
-    })
+        return daysLeft < 0 || daysLeft > horizon
+            ? []
+            : [{ id: `${kind}-${dayOf(due)}`, kind, unit, period, dueDay: dayOf(due), daysLeft }]
+    }
+    return MONTHS_AHEAD.flatMap((ahead) => {
+        const month = monthIndex + ahead
+        const dueMonth = ((month % 12) + 12) % 12
+        const twentieth = new Date(Date.UTC(year, month, TAX_DUE_DAY))
+        const before = dueMonth === 0 ? 12 : dueMonth
+        const quarterly =
+            vatPeriod === "quarterly" && dueMonth % 3 === 0
+                ? item("vat", "quarter", dueMonth === 0 ? 4 : dueMonth / 3, new Date(Date.UTC(year, month + 1, 0)))
+                : []
+        const vat = vatPeriod === "monthly" ? item("vat", "month", before, twentieth) : quarterly
+        return [...vat, ...item("pit", "month", before, twentieth)]
+    }).toSorted(
+        (left, right) =>
+            left.dueDay.localeCompare(right.dueDay) || TAX_KINDS.indexOf(left.kind) - TAX_KINDS.indexOf(right.kind),
+    )
 }

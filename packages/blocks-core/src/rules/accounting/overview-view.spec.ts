@@ -1,4 +1,4 @@
-import { dueRecord, dueRowsOf, figureCellsOf, figuresRecord } from "./overview-view"
+import { ageingOf, dueRecord, dueRowsOf, figureCellsOf, figuresRecord } from "./overview-view"
 import type { DueWords, FigureWords, FiguresRecord } from "./overview-view"
 
 const FIGURES: FiguresRecord = {
@@ -72,5 +72,21 @@ describe("dueRowsOf", () => {
                 rows: [{ id: "a", kind: "vat", unit: "month", period: 13, dueDay: "x", daysLeft: 1 }],
             }).success,
         ).toBe(false)
+    })
+})
+
+describe("ageingOf", () => {
+    it("titles the ageing with the open invoices in all and draws one gauge per bucket with its count", () => {
+        const ageing = ageingOf(FIGURES, {
+            buckets: ["to 30", "31 to 60", "over 60"],
+            total: "{count} open",
+            count: "{count} inv",
+        })
+        expect(ageing.total).toBe("6 open")
+        expect(ageing.points.map((point) => [point.id, point.label, point.value, point.valueLabel])).toEqual([
+            ["d0", "to 30", 4, "4 inv"],
+            ["d1", "31 to 60", 1, "1 inv"],
+            ["d2", "over 60", 1, "1 inv"],
+        ])
     })
 })

@@ -1,0 +1,71 @@
+{
+  "threads": [
+    {
+      "id": "t1",
+      "name": "Chị Thu",
+      "channel": "zalo",
+      "status": "needs",
+      "handledBy": "",
+      "lastText": "Spa có mở cửa mùng 2 Tết không ạ?",
+      "lastRole": "user",
+      "lastAt": "2026-11-06T01:58:00.000Z"
+    },
+    {
+      "id": "t2",
+      "name": "Anh Bảo",
+      "channel": "website",
+      "status": "ai",
+      "handledBy": "",
+      "lastText": "Dạ bên em còn lịch 16:00 chiều nay ạ",
+      "lastRole": "agent",
+      "lastAt": "2026-11-06T01:54:00.000Z"
+    },
+    {
+      "id": "t3",
+      "name": "Chị Mai Anh",
+      "channel": "telegram",
+      "status": "handled",
+      "handledBy": "Minh",
+      "lastText": "Em đã giữ chỗ cho chị rồi ạ",
+      "lastRole": "agent",
+      "lastAt": "2026-11-06T01:39:00.000Z"
+    },
+    {
+      "id": "t4",
+      "name": "",
+      "channel": "website",
+      "status": "needs",
+      "handledBy": "",
+      "lastText": "Cho mình xin bảng giá gội đầu",
+      "lastRole": "user",
+      "lastAt": "2026-11-05T22:00:00.000Z"
+    }
+  ],
+  "contact": {
+    "id": "t1",
+    "name": "Chị Thu",
+    "channelName": "Zalo OA",
+    "status": "needs",
+    "handledBy": "",
+    "stage": "new",
+    "need": "Gội đầu dưỡng sinh dịp Tết",
+    "company": "",
+    "phone": "0938 *** 554",
+    "email": "",
+    "leadId": "lead-thu"
+  },
+  "proposal": {
+    "id": "p1",
+    "asked": "Spa có mở cửa mùng 2 Tết không ạ?",
+    "text": "Dạ chị Thu ơi, mùng 2 Tết spa mở từ 9:00 đến 17:00 ạ. Chị muốn em giữ chỗ giờ nào ạ?",
+    "note": "Gửi cho khách qua Zalo với tên Nhà Mộc. Chỉnh lại bản AI đề xuất nếu cần."
+  },
+  "settings": {
+    "openclawTimeoutSec": 25,
+    "holdingMessage": "Dạ chị chờ em kiểm tra một chút nhé ạ."
+  },
+  "counts": {
+    "counts": { "needs": 3, "today": 8 },
+    "total": 12
+  }
+}

@@ -69,6 +69,15 @@ export const LOYALTY_FIXTURES: ModuleFixtures = {
             empty: { rows: [] },
         },
         "loyalty.members": { ready: { rows: ROWS, cursor: null }, empty: { rows: [], cursor: null } },
+        "loyalty.tier-counts": {
+            ready: {
+                counts: Object.fromEntries(
+                    ["dong", "bac", "vang"].map((key) => [key, ROWS.filter((row) => row.tierKey === key).length]),
+                ),
+                total: ROWS.length,
+            },
+            empty: { counts: { dong: 0, bac: 0, vang: 0 }, total: 0 },
+        },
         "loyalty.member-counts": {
             ready: {
                 counts: Object.fromEntries(

@@ -1,0 +1,164 @@
+import { useState } from "react"
+import type { ReactNode } from "react"
+import type { ActionHandle } from "@nivo-lite/agent-sdk/block"
+import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
+import { Button, Cluster, DropdownMenu, Form, Quote, Stack, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import type { approvalCardBlock } from "../../blocks/chatbot/approval-card.block"
+import { PROPOSAL_FIELDS } from "../../rows/chatbot/inbox-fields"
+import { proposalOf } from "../../rows/chatbot/proposal"
+import type { ProposalRow } from "../../rows/chatbot/conversation.types"
+import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
+import type { RenderOf } from "../render-props"
+
+type CardProps = RenderOf<typeof approvalCardBlock>
+
+/** What the card of one waiting draft is given. */
+interface DraftCardProps {
+    readonly proposal: ProposalRow
+    readonly slots: CardProps["slots"]
+    readonly maxLength: number
+    /** Runs an action on the draft; the card tells the person when it did not go through. */
+    readonly onRun: (
+        action: ActionHandle,
+        input: { readonly id: string; readonly values?: { readonly text: string } },
+    ) => void
+}
+
+/** The draft in a field to change; "Gửi bản đã sửa" approves it with the changed words, "Hủy" leaves it as it was. */
+const DraftEditForm = (props: DraftCardProps & { readonly onClose: () => void }): ReactNode => {
+    const words = useBlockWords()
+    const [text, setText] = useState(props.proposal.text)
+    const { approve } = props.slots
+    return (
+        <Form
+            label={words({ key: "approval_title" })}
+            isPending={approve.isRunning}
+            onSubmit={() => {
+                props.onRun(approve, { id: props.proposal.id, values: { text: text.trim() } })
+                props.onClose()
+            }}
+        >
+            <Textarea
+                name="text"
+                label={words({ key: "approval_title" })}
+                isLabelHidden
+                rows={3}
+                maxLength={props.maxLength}
+                value={text}
+                onValueChange={setText}
+            />
+            <Cluster gap="inline">
+                <Button type="submit" intent="commit" isPending={approve.isRunning} isDisabled={text.trim() === ""}>
+                    {words({ key: "approval_send_edited" })}
+                </Button>
+                <Button intent="neutral" onPress={props.onClose}>
+                    {words({ key: "approval_cancel" })}
+                </Button>
+            </Cluster>
+        </Form>
+    )
+}
+
+/** The commands of the draft: approve and send it, change it, or dismiss it from the menu. */
+const DraftCommands = (props: DraftCardProps & { readonly onEdit: () => void }): ReactNode => {
+    const words = useBlockWords()
+    const { approve, dismiss } = props.slots
+    const id = props.proposal.id
+    return (
+        <Cluster gap="inline">
+            {approve.isAllowed ? (
+                <Button intent="commit" isPending={approve.isRunning} onPress={() => props.onRun(approve, { id })}>
+                    {approve.label}
+                </Button>
+            ) : null}
+            {approve.isAllowed ? (
+                <Button intent="alternative" onPress={props.onEdit}>
+                    {words({ key: "approval_edit" })}
+                </Button>
+            ) : null}
+            {dismiss.isAllowed ? (
+                <DropdownMenu
+                    placement="bottom end"
+                    trigger={
+                        <Button intent="neutral" isPending={dismiss.isRunning}>
+                            {words({ key: "approval_more" })}
+                        </Button>
+                    }
+                    entries={[
+                        {
+                            id: "dismiss",
+                            label: dismiss.label,
+                            tone: "danger",
+                            onAction: () => props.onRun(dismiss, { id }),
+                        },
+                    ]}
+                />
+            ) : null}
+        </Cluster>
+    )
+}
+
+/** The card of one draft: what the customer asked, the draft in a quote, a line of guidance, and the commands. */
+const DraftCard = (props: DraftCardProps): ReactNode => {
+    const words = useBlockWords()
+    const [isEditing, setIsEditing] = useState(false)
+    const { proposal } = props
+    return (
+        <SurfaceCard label={words({ key: "approval_title" })} headingLevel={3}>
+            <Stack gap="row">
+                {proposal.asked === "" ? null : (
+                    <Text size="sm" tone="muted">
+                        {words({ key: "approval_asked" }).replace("{asked}", proposal.asked)}
+                    </Text>
+                )}
+                {isEditing ? (
+                    <DraftEditForm {...props} onClose={() => setIsEditing(false)} />
+                ) : (
+                    <>
+                        <Quote text={proposal.text} />
+                        <Text size="sm" tone="muted">
+                            {proposal.note === "" ? words({ key: "approval_note" }) : proposal.note}
+                        </Text>
+                        <DraftCommands {...props} onEdit={() => setIsEditing(true)} />
+                    </>
+                )}
+            </Stack>
+        </SurfaceCard>
+    )
+}
+
+/**
+ * The approval card of the Chatbot thread: the reply the AI drafted, waiting for a person. It draws nothing while no draft waits and
+ * holds no business: "Duyệt và gửi" is the bound action, which posts the line and queues its delivery.
+ */
+export const ApprovalCardBlock = (props: CardProps): ReactNode => {
+    const host = useBlockHost()
+    const words = useBlockWords()
+    const labels = useSlotLabels()
+    const read = props.slots.proposal
+    const fail = (): void => host.notify("danger", words({ key: "approval_failed" }))
+    const run: DraftCardProps["onRun"] = (action, input) => {
+        action
+            .run(input)
+            .then((outcome) => {
+                if (!outcome.ok) fail()
+            })
+            .catch(fail)
+    }
+    return (
+        <SlotView
+            slot={read.slot}
+            labels={labels}
+            placeholder={{}}
+            forbidden="hide"
+            empty="collapse"
+            onRetry={read.retry}
+            render={(record) => {
+                const proposal = proposalOf(record, PROPOSAL_FIELDS)
+                return proposal === null ? null : (
+                    <DraftCard proposal={proposal} slots={props.slots} maxLength={props.props.maxLength} onRun={run} />
+                )
+            }}
+        />
+    )
+}

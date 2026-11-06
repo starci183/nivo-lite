@@ -1,5 +1,6 @@
 import { asideDetailBlock } from "./aside-detail.block"
-import { conversationBlock } from "./conversation.block"
+import { accountingBlocks } from "./accounting/accounting-blocks"
+import { chatbotBlocks } from "./chatbot/chatbot-blocks"
 import { filterTabsBlock } from "./filter-tabs.block"
 import { formBlock } from "./form.block"
 import { listEditorBlock } from "./list-editor.block"
@@ -42,11 +43,12 @@ const EXPLANATION_WORDS = [
 ]
 
 describe("coreBlocks", () => {
-    it("lists every block once: the core blocks first, under the core namespace, then those of each module under its own", () => {
+    it("lists every block once: the core ones under the core namespace, those of each module under its own", () => {
         const ids = coreBlocks.map((block) => block.id)
         expect(new Set(ids).size).toBe(ids.length)
-        expect(ids.slice(0, 22).every((id) => id.startsWith("core."))).toBe(true)
-        expect(ids.slice(22).every((id) => id.startsWith("accounting."))).toBe(true)
+        expect(ids.filter((id) => id.startsWith("core."))).toHaveLength(21)
+        expect(ids.filter((id) => id.startsWith("chatbot."))).toHaveLength(chatbotBlocks.length)
+        expect(ids.filter((id) => id.startsWith("accounting."))).toHaveLength(accountingBlocks.length)
     })
 
     it("carries the JSON Schema of every block's props", () => {
@@ -54,7 +56,7 @@ describe("coreBlocks", () => {
     })
 
     it("holds the blocks a client draws, in the order a palette shows them", () => {
-        expect(coreBlocks.slice(0, 22)).toEqual([
+        expect(coreBlocks).toEqual([
             stackBlock,
             cardGridBlock,
             sectionBlock,
@@ -69,7 +71,7 @@ describe("coreBlocks", () => {
             listEditorBlock,
             tabbedPanelBlock,
             asideDetailBlock,
-            conversationBlock,
+            ...chatbotBlocks,
             waitingBlock,
             decisionQueueBlock,
             dashboardCardsBlock,
@@ -77,6 +79,7 @@ describe("coreBlocks", () => {
             explanationBlock,
             graphBlock,
             runTimelineBlock,
+            ...accountingBlocks,
         ])
     })
 })

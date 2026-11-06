@@ -217,6 +217,15 @@ export const CHATBOT_FIXTURES: ModuleFixtures = {
             ready: chatDecisionQueueOf(WAITING_THREAD_ROWS, WAITING_THREAD_ROWS.length),
             empty: chatDecisionQueueOf([], 0),
         },
+        "chatbot.proposals": {
+            ready: {
+                id: "m8",
+                asked: "Does this pot come with a root warranty?",
+                text: "Yes, the root is covered for one year.",
+                note: "",
+            },
+            empty: null,
+        },
         "chatbot.thread": { ready: HANDLED_VIEW, waiting: WAITING_VIEW },
         "chatbot.messages": {
             ready: { rows: READY_LINES, cursor: null },
@@ -228,6 +237,8 @@ export const CHATBOT_FIXTURES: ModuleFixtures = {
         "chatbot.reply": { ok: true, data: { messageId: "m9" } },
         "chatbot.handoff": { ok: true, data: { handledBy: "L\u00ea Thu H\u00e0" } },
         "chatbot.release": { ok: true, data: { handledBy: null } },
+        "chatbot.approve-and-send": { ok: true, data: { messageId: "m8" } },
+        "chatbot.reject-proposal": { ok: true },
         "chatbot.decide": { ok: true, data: { handledBy: "L\u00ea Thu H\u00e0" } },
     },
 }

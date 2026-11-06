@@ -3,7 +3,6 @@ import type { BlockRenderer } from "@nivo-lite/agent-sdk/client"
 import {
     asideDetailBlock,
     cardGridBlock,
-    conversationBlock,
     filterTabsBlock,
     formBlock,
     listEditorBlock,
@@ -24,11 +23,16 @@ import {
 import { boardBlock } from "../blocks/board.block"
 import { graphBlock } from "../blocks/graph.block"
 import { runTimelineBlock } from "../blocks/run-timeline.block"
+import { approvalCardBlock } from "../blocks/chatbot/approval-card.block"
+import { inboxBlock } from "../blocks/chatbot/inbox.block"
+import { rulesBlock } from "../blocks/chatbot/rules.block"
+import { ApprovalCardBlock } from "./chatbot/ApprovalCardBlock"
+import { InboxBlock } from "./chatbot/InboxBlock"
+import { RulesBlock } from "./chatbot/RulesBlock"
 import { accountingRenderers } from "./accounting/accounting-renderers"
 import { AsideDetailBlock } from "./blocks/AsideDetailBlock"
 import { BoardBlock } from "./blocks/BoardBlock"
 import { CardGridBlock } from "./blocks/CardGridBlock"
-import { ConversationBlock } from "./blocks/ConversationBlock"
 import { FilterTabsBlock } from "./blocks/FilterTabsBlock"
 import { FormBlock } from "./blocks/FormBlock"
 import { ListEditorBlock } from "./blocks/ListEditorBlock"
@@ -64,7 +68,9 @@ export const coreBlocks: ReadonlyArray<BlockRenderer> = [
     defineRenderer(listEditorBlock, ListEditorBlock),
     defineRenderer(tabbedPanelBlock, TabbedPanelBlock),
     defineRenderer(asideDetailBlock, AsideDetailBlock),
-    defineRenderer(conversationBlock, ConversationBlock),
+    defineRenderer(inboxBlock, InboxBlock),
+    defineRenderer(approvalCardBlock, ApprovalCardBlock),
+    defineRenderer(rulesBlock, RulesBlock),
     defineRenderer(waitingBlock, WaitingBlock),
     defineRenderer(decisionQueueBlock, DecisionQueueBlock),
     defineRenderer(dashboardCardsBlock, DashboardCardsBlock),

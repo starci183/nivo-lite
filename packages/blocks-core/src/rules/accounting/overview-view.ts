@@ -156,3 +156,45 @@ export const dueRowsOf = (items: ReadonlyArray<DueItem>, words: DueWords): Reado
         description: words.due.replaceAll("{date}", dateOf(item.dueDay)),
         chip: item.daysLeft === 0 ? words.today : words.left.replaceAll("{count}", String(item.daysLeft)),
     }))
+
+/** The words of the ageing: the title with the number of open invoices, and each bucket with its count; each takes `{count}`. */
+export interface AgeingWords {
+    /** The bucket names, from the youngest to the oldest. */
+    readonly buckets: readonly [string, string, string]
+    /** The line after the title; takes `{count}`. */
+    readonly total: string
+    /** The count written under a bucket; takes `{count}`. */
+    readonly count: string
+}
+
+/** The open invoices by age: how many there are in all, and one gauge per bucket. */
+export interface Ageing {
+    /** The suffix of the title with the number of open invoices. */
+    readonly total: string
+    /** The gauges, sharing the sum of the counts. */
+    readonly points: ReadonlyArray<{
+        readonly id: string
+        readonly label: string
+        readonly value: number
+        readonly valueLabel: string
+    }>
+}
+
+/** The ageing of the open invoices drawn from the figures: three gauges on the scale of their sum. */
+export const ageingOf = (figures: FiguresRecord, words: AgeingWords): Ageing => {
+    const counts: readonly [number, number, number] = [
+        figures.ageing.d0.count,
+        figures.ageing.d30.count,
+        figures.ageing.d60.count,
+    ]
+    const sum = counts.reduce((total, count) => total + count, 0)
+    return {
+        total: words.total.replaceAll("{count}", String(sum)),
+        points: counts.map((count, index) => ({
+            id: `d${index}`,
+            label: words.buckets[index] ?? "",
+            value: count,
+            valueLabel: words.count.replaceAll("{count}", String(count)),
+        })),
+    }
+}

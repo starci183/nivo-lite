@@ -100,3 +100,31 @@ export const sectionsOf = (ledger: Ledger, kindWord: (kind: string) => string): 
             balance: moneyOf(each.balanceVnd),
         })),
     }))
+
+/** One line of the cash book as a phone card: the name over what moved, the balance at the end. */
+export interface LedgerCard {
+    /** The key of the card. */
+    readonly id: string
+    /** What the entry is called. */
+    readonly title: string
+    /** The money in and out, each with its word, joined; empty when neither moved. */
+    readonly description: string
+    /** The balance after the line. */
+    readonly balance: string
+}
+
+/** The card of a line on a phone: the columns of the table become one line of words. */
+export const ledgerCardOf = (
+    row: LedgerRow,
+    words: { readonly income: string; readonly expense: string },
+): LedgerCard => ({
+    id: row.id,
+    title: row.title,
+    description: [
+        row.income === "" ? "" : `${words.income} ${row.income}`,
+        row.expense === "" ? "" : `${words.expense} ${row.expense}`,
+    ]
+        .filter((part) => part !== "")
+        .join(" · "),
+    balance: row.balance,
+})

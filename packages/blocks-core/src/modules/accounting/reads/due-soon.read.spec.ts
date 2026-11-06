@@ -15,7 +15,7 @@ describe("the accounting.due-soon read", () => {
         )
         expect(result).toMatchObject({
             ok: true,
-            data: { rows: [{ kind: "vat", unit: "quarter", period: 4 }, { kind: "pit" }] },
+            data: { rows: [{ kind: "pit", unit: "month", period: 10 }] },
         })
     })
 

@@ -43,7 +43,8 @@ const slots: Slots = { data: { kind: "read", shape: "record", required: true } }
 
 /**
  * A ribbon of figures in one card (kind `tiles`, the default), bars on one scale (`bars`) or one gauge per item sharing the total
- * (`proportion`), with the text at `captionPath` under a chart: each item names its term, the path of its value in the bound record and how the value is drawn and, with a `hintPath`, the path of the line of text under it (tiles only).
+ * (`proportion`), with the text at `captionPath` under a chart: each item names its term, the path of its value in the bound record and how the value is drawn and, with a `hintPath`, the path of the line of text under it (tiles only). That value is a plain string, or a message `{ key, values }` that the block
+ * translates in the words of the spec's module and fills with its `values` (reads return keys and values, never text).
  */
 export const figuresBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "core.figures",

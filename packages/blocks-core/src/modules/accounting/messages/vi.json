@@ -160,5 +160,8 @@
   "due_vat_quarter": "Thuế GTGT · quý '{period}'",
   "weekly_period": "kỳ",
   "weekly_caption": "Hóa đơn đã thu, gom theo tuần thu tiền.",
-  "weekly_empty": "Chưa thu khoản nào trong kỳ."
+  "weekly_empty": "Chưa thu khoản nào trong kỳ.",
+  "ageing_total": "· '{count}' hóa đơn",
+  "ageing_count": "'{count}' hóa đơn",
+  "ageing_empty": "Chưa có hóa đơn mở."
 }

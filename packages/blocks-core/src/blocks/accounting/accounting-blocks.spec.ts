@@ -1,4 +1,5 @@
 import {
+    ageingFixtureProps,
     dueSoonFixtureProps,
     dueSoonFixtures,
     ledgerFixtureProps,
@@ -18,6 +19,7 @@ import { weeklyRecord } from "../../rules/accounting/weekly-view"
 import { entryRecord } from "../../rules/accounting/entry-stages"
 import { questionsRecord } from "../../rules/accounting/question-rows"
 import { accountingBlocks } from "./accounting-blocks"
+import { accountingAgeingBlock } from "./ageing.block"
 import { accountingBookBlock } from "./book.block"
 import { accountingDueSoonBlock } from "./due-soon.block"
 import { accountingLedgerBlock } from "./ledger.block"
@@ -29,11 +31,12 @@ import { accountingWeeklyBlock } from "./weekly.block"
 const itemsOf = (slot: object): unknown => ("items" in slot ? slot.items : undefined)
 
 describe("accountingBlocks", () => {
-    it("lists the seven blocks of the module under the accounting namespace, with no children", () => {
+    it("lists the eight blocks of the module under the accounting namespace, with no children", () => {
         expect(accountingBlocks.map((block) => block.id)).toEqual([
             "accounting.period-figures",
             "accounting.due-soon",
             "accounting.weekly",
+            "accounting.ageing",
             "accounting.book",
             "accounting.ledger",
             "accounting.entry-detail",
@@ -52,6 +55,7 @@ describe("accountingBlocks", () => {
         expect(accountingLedgerBlock.params).toEqual(["periodParam"])
         expect(accountingWeeklyBlock.props.safeParse(weeklyFixtureProps).success).toBe(true)
         expect(accountingWeeklyBlock.params).toEqual(["periodParam"])
+        expect(accountingAgeingBlock.props.safeParse(ageingFixtureProps).success).toBe(true)
         expect(accountingBookBlock.params).toEqual([
             "searchParam",
             "filterParam",
@@ -89,6 +93,7 @@ describe("accountingBlocks", () => {
         expect(accountingDueSoonBlock.slots).toEqual({ due: record })
         expect(accountingLedgerBlock.slots).toEqual({ ledger: record })
         expect(accountingWeeklyBlock.slots).toEqual({ weekly: record })
+        expect(accountingAgeingBlock.slots).toEqual({ figures: record })
     })
 
     it("has fixtures that its views accept in the ready states", () => {

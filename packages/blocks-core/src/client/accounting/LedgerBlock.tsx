@@ -4,11 +4,12 @@ import { Cluster, DataTable, EmptyNotice, Heading, Section, Stack, Text } from "
 import type { accountingLedgerBlock } from "../../blocks/accounting/ledger.block"
 import { bookPeriodOf } from "../../rules/accounting/book-view"
 import type { Ledger } from "../../rules/accounting/ledger"
-import { bandOf, ledgerRecord, sectionsOf } from "../../rules/accounting/ledger-view"
+import { bandOf, ledgerCardOf, ledgerRecord, sectionsOf } from "../../rules/accounting/ledger-view"
 import type { LedgerRow, LedgerSection } from "../../rules/accounting/ledger-view"
 import { parsedSlot } from "../../slots/slots"
 import { PeriodControl } from "./PeriodControl"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
+import { useIsPhone } from "../composites/useIsPhone"
 import type { RenderOf } from "../render-props"
 
 const COLUMNS = ["entry", "income", "expense", "balance"] as const
@@ -57,6 +58,8 @@ interface DayProps {
     readonly closingLabel: string
     readonly empty: string
     readonly isLoading: boolean
+    readonly isPhone: boolean
+    readonly cardWords: { readonly income: string; readonly expense: string }
 }
 
 /** One day: its date and closing balance over the lines of the day. */
@@ -66,30 +69,55 @@ const Day = (props: DayProps): ReactNode => (
             <Heading level={4}>{props.section.day}</Heading>
             <Text size="sm" tone="muted">{`${props.closingLabel} ${props.section.balance}`}</Text>
         </Cluster>
-        <DataTable
-            label={props.section.day}
-            columns={COLUMNS.map((column, index) => ({
-                id: column,
-                label: props.columnLabels[column],
-                isRowHeader: index === 0,
-                align: column === "entry" ? "start" : "end",
-            }))}
-            rows={props.section.rows}
-            renderCell={(row, column) => (
-                <LineCell row={row} column={COLUMNS.find((candidate) => candidate === column) ?? "entry"} />
-            )}
-            isLoading={props.isLoading}
-            emptyContent={<EmptyNotice message={props.empty} />}
-        />
+        {props.isPhone ? (
+            <Section
+                kind="list"
+                ariaLabel={props.section.day}
+                isLoading={props.isLoading}
+                items={props.section.rows
+                    .map((row) => ledgerCardOf(row, props.cardWords))
+                    .map((card) => ({
+                        id: card.id,
+                        title: card.title,
+                        ...(card.description === "" ? {} : { description: card.description }),
+                        meta: { text: card.balance },
+                    }))}
+                empty={<EmptyNotice message={props.empty} />}
+            />
+        ) : (
+            <DataTable
+                label={props.section.day}
+                columns={COLUMNS.map((column, index) => ({
+                    id: column,
+                    label: props.columnLabels[column],
+                    isRowHeader: index === 0,
+                    align: column === "entry" ? "start" : "end",
+                }))}
+                rows={props.section.rows}
+                renderCell={(row, column) => (
+                    <LineCell row={row} column={COLUMNS.find((candidate) => candidate === column) ?? "entry"} />
+                )}
+                isLoading={props.isLoading}
+                emptyContent={<EmptyNotice message={props.empty} />}
+            />
+        )}
     </Stack>
 )
 
 /** The cash book of the period: the band of balances, then each day with its lines. */
 export const LedgerBlock = (props: RenderOf<typeof accountingLedgerBlock>): ReactNode => {
     const words = useBlockWords()
+    const isPhone = useIsPhone()
     const labels = useSlotLabels(props.props.empty)
     const read = props.slots.ledger
     const period = bookPeriodOf(props.params.value(props.props.periodParam))
+    const bandCells = (ledger: Ledger) =>
+        bandOf(ledger, {
+            opening: words({ key: "ledger_opening" }),
+            income: words({ key: "ledger_in" }),
+            expense: words({ key: "ledger_out" }),
+            closing: words({ key: "ledger_closing" }),
+        })
     const kindWord = (kind: string): string => words({ key: `kind_${kind}` })
     return (
         <Stack gap="row">
@@ -107,17 +135,30 @@ export const LedgerBlock = (props: RenderOf<typeof accountingLedgerBlock>): Reac
                 onRetry={read.retry}
                 render={(ledger, isLoading) => (
                     <Stack gap="section">
-                        <Section
-                            kind="figures"
-                            ariaLabel={words(props.props.title)}
-                            isLoading={isLoading}
-                            items={bandOf(ledger, {
-                                opening: words({ key: "ledger_opening" }),
-                                income: words({ key: "ledger_in" }),
-                                expense: words({ key: "ledger_out" }),
-                                closing: words({ key: "ledger_closing" }),
-                            }).map((cell) => ({ id: cell.id, term: cell.term, value: cell.value }))}
-                        />
+                        {isPhone ? (
+                            <Section
+                                kind="list"
+                                ariaLabel={words(props.props.title)}
+                                isLoading={isLoading}
+                                items={bandCells(ledger).map((cell) => ({
+                                    id: cell.id,
+                                    title: cell.term,
+                                    meta: { text: cell.value },
+                                }))}
+                                empty={<EmptyNotice message={labels.empty} />}
+                            />
+                        ) : (
+                            <Section
+                                kind="figures"
+                                ariaLabel={words(props.props.title)}
+                                isLoading={isLoading}
+                                items={bandCells(ledger).map((cell) => ({
+                                    id: cell.id,
+                                    term: cell.term,
+                                    value: cell.value,
+                                }))}
+                            />
+                        )}
                         {sectionsOf(ledger, kindWord).map((section) => (
                             <Day
                                 key={section.day}
@@ -131,6 +172,11 @@ export const LedgerBlock = (props: RenderOf<typeof accountingLedgerBlock>): Reac
                                 closingLabel={words({ key: "ledger_day_balance" })}
                                 empty={labels.empty}
                                 isLoading={isLoading}
+                                isPhone={isPhone}
+                                cardWords={{
+                                    income: words({ key: "ledger_in" }),
+                                    expense: words({ key: "ledger_out" }),
+                                }}
                             />
                         ))}
                     </Stack>

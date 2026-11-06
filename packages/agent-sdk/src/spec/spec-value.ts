@@ -1,4 +1,5 @@
 import type { ReadDefinition, ReadVariables } from "../block/block.types"
+import { isTimeToken } from "../block/time-token"
 import { isRecord } from "../schema/is-record"
 import { z } from "../schema/zod-entry"
 
@@ -24,9 +25,14 @@ export const textOf = (value: unknown): string => {
     return ""
 }
 
-/** The name of the param a variable value `"$<name>"` refers to; null for any other value, `$installationId` included. */
+/**
+ * The name of the param a variable value `"$<name>"` refers to; null for any other value, `$installationId` and the time tokens
+ * (`$today`, `$thisWeek`, `$thisMonth`: the server resolves them from the clock of the run) included.
+ */
 export const paramNameOf = (value: unknown): string | null =>
-    typeof value === "string" && value.startsWith("$") && value !== INSTALLATION_VARIABLE ? value.slice(1) : null
+    typeof value === "string" && value.startsWith("$") && value !== INSTALLATION_VARIABLE && !isTimeToken(value)
+        ? value.slice(1)
+        : null
 
 /** The variables of a read after resolution, and the names of those whose param has no value. */
 export interface ResolvedVariables {

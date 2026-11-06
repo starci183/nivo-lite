@@ -1,8 +1,19 @@
 import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { Badge, Cluster, DataTable, EmptyNotice, Heading, SearchField, Stack, Tabs, Text } from "@starci/grammar/common"
+import {
+    Badge,
+    Cluster,
+    DataTable,
+    EmptyNotice,
+    Heading,
+    SearchField,
+    Section,
+    Stack,
+    Tabs,
+    Text,
+} from "@starci/grammar/common"
 import type { accountingBookBlock } from "../../blocks/accounting/book.block"
-import { bookPeriodOf, bookRecords, bookRowsOf, bookSubtitleOf } from "../../rules/accounting/book-view"
+import { bookPeriodOf, bookRecords, bookRowsOf, bookSubtitleOf, phoneCardOf } from "../../rules/accounting/book-view"
 import type { BookRow } from "../../rules/accounting/book-view"
 import { ENTRY_STATUSES } from "../../rules/accounting/entry-status"
 import type { EntryStatus } from "../../rules/accounting/entry-status"
@@ -18,6 +29,7 @@ import { chosenIdOf, selectedIdsOf } from "../../rows/table-rows"
 import { queryOf } from "../../rows/search"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
+import { useIsPhone } from "../composites/useIsPhone"
 import { useSearchText } from "../composites/useSearchText"
 import type { RenderOf } from "../render-props"
 
@@ -73,12 +85,18 @@ const BookCell = (props: BookCellProps): ReactNode => {
 /** The books: the head, the search, the status tabs with their counts and the entries as rows. */
 export const BookBlock = (props: RenderOf<typeof accountingBookBlock>): ReactNode => {
     const words = useBlockWords()
+    const isPhone = useIsPhone()
     const spec = props.props
     const query = queryOf(props.params.value(spec.searchParam))
     const labels = useSlotLabels(query === null ? spec.empty : spec.emptySearch)
     const search = useSearchText(props.params.value(spec.searchParam), (value) =>
         props.params.set(spec.searchParam, value),
     )
+    const select = (chosen: string | null): void =>
+        props.params.setMany({
+            [spec.selectParam]: chosen,
+            [spec.paneParam]: chosen === null ? "list" : "detail",
+        })
     const statusWord = (status: EntryStatus): string => words({ key: `status_${status}` })
     const rows = derivedSlot(parsedSlot(props.slots.rows.slot, bookRecords), (records) =>
         records.length === 0 ? null : bookRowsOf(records, statusWord),
@@ -124,33 +142,47 @@ export const BookBlock = (props: RenderOf<typeof accountingBookBlock>): ReactNod
                 labels={labels}
                 placeholder={PLACEHOLDER}
                 onRetry={props.slots.rows.retry}
-                render={(items, isLoading) => (
-                    <DataTable
-                        label={words(spec.title)}
-                        columns={COLUMNS.map((column, index) => ({
-                            id: column,
-                            label: words({ key: `col_${column}` }),
-                            isRowHeader: index === 1,
-                            align: column === "amount" ? "end" : "start",
-                            priority: column === "status" || column === "date" ? "low" : "high",
-                        }))}
-                        rows={items}
-                        renderCell={(row, column) => (
-                            <BookCell row={row} column={COLUMNS.find((candidate) => candidate === column) ?? "date"} />
-                        )}
-                        isLoading={isLoading}
-                        emptyContent={<EmptyNotice message={labels.empty} />}
-                        selectionMode="single"
-                        selectedIds={selectedIdsOf(props.params.value(spec.selectParam))}
-                        onSelectionChange={(ids) => {
-                            const chosen = chosenIdOf(ids)
-                            props.params.setMany({
-                                [spec.selectParam]: chosen,
-                                [spec.paneParam]: chosen === null ? "list" : "detail",
-                            })
-                        }}
-                    />
-                )}
+                render={(items, isLoading) =>
+                    isPhone ? (
+                        <Section
+                            kind="list"
+                            ariaLabel={words(spec.title)}
+                            isLoading={isLoading}
+                            items={items.map(phoneCardOf).map((card) => ({
+                                id: card.id,
+                                title: card.title,
+                                description: card.description,
+                                meta: { text: card.amount },
+                                badges: [{ label: card.status, tone: card.tone, isDot: true }],
+                                onPress: () => select(card.id),
+                            }))}
+                            empty={<EmptyNotice message={labels.empty} />}
+                        />
+                    ) : (
+                        <DataTable
+                            label={words(spec.title)}
+                            columns={COLUMNS.map((column, index) => ({
+                                id: column,
+                                label: words({ key: `col_${column}` }),
+                                isRowHeader: index === 1,
+                                align: column === "amount" ? "end" : "start",
+                                priority: column === "status" || column === "date" ? "low" : "high",
+                            }))}
+                            rows={items}
+                            renderCell={(row, column) => (
+                                <BookCell
+                                    row={row}
+                                    column={COLUMNS.find((candidate) => candidate === column) ?? "date"}
+                                />
+                            )}
+                            isLoading={isLoading}
+                            emptyContent={<EmptyNotice message={labels.empty} />}
+                            selectionMode="single"
+                            selectedIds={selectedIdsOf(props.params.value(spec.selectParam))}
+                            onSelectionChange={(ids) => select(chosenIdOf(ids))}
+                        />
+                    )
+                }
             />
         </Stack>
     )

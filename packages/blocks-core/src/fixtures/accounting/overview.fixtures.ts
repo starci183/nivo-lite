@@ -2,6 +2,7 @@ import type { DataSlot } from "@nivo-lite/agent-sdk/client"
 import type { z } from "zod"
 import type { accountingDueSoonBlock } from "../../blocks/accounting/due-soon.block"
 import type { accountingLedgerBlock } from "../../blocks/accounting/ledger.block"
+import type { accountingAgeingBlock } from "../../blocks/accounting/ageing.block"
 import type { accountingWeeklyBlock } from "../../blocks/accounting/weekly.block"
 import type { accountingPeriodFiguresBlock } from "../../blocks/accounting/period-figures.block"
 import type { BookEntryRecord } from "../../rules/accounting/accounting.types"
@@ -49,8 +50,8 @@ export const dueSoonFixtureProps: z.infer<(typeof accountingDueSoonBlock)["props
 /** The two declarations of the canvas. */
 export const DUE_READY: DueRecord = {
     rows: [
-        { id: "vat-2026-11-20", kind: "vat", unit: "quarter", period: 4, dueDay: "2026-11-20", daysLeft: 15 },
-        { id: "pit-2026-11-20", kind: "pit", unit: "month", period: 10, dueDay: "2026-11-20", daysLeft: 0 },
+        { id: "pit-2027-01-20", kind: "pit", unit: "month", period: 12, dueDay: "2027-01-20", daysLeft: 8 },
+        { id: "vat-2027-01-31", kind: "vat", unit: "quarter", period: 4, dueDay: "2027-01-31", daysLeft: 19 },
     ],
 }
 
@@ -124,4 +125,10 @@ export const weeklyFixtures: Readonly<Record<Status, DataSlot<WeeklyRecord>>> = 
     error: { isError: true },
     loading: { isLoading: true },
     forbidden: { isForbidden: true },
+}
+
+/** The props of the ageing as the Accounting spec sets them. */
+export const ageingFixtureProps: z.infer<(typeof accountingAgeingBlock)["props"]> = {
+    title: { vi: "Tu\u1ed5i n\u1ee3 ph\u1ea3i thu", en: "Receivable ageing" },
+    empty: { vi: "Ch\u01b0a c\u00f3 h\u00f3a \u0111\u01a1n m\u1edf.", en: "No open invoice." },
 }

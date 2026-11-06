@@ -40,6 +40,8 @@ describe("the Sales module declaration", () => {
             "sales.figures",
             "sales.attention",
             "sales.decisions",
+            "sales.awaiting-reply",
+            "sales.failed-steps",
         ])
         expect(salesModule.actions.map((action) => action.id)).toEqual([
             "sales.move-stage",

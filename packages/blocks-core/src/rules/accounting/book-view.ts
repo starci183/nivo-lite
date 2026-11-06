@@ -97,3 +97,29 @@ export const bookPeriodOf = (value: string | null): BookPeriod => (value === "la
 /** The line after the title: the period and how many entries the book holds under the search, from a template with `{count}`. */
 export const bookSubtitleOf = (period: string, count: number, countTemplate: string): string =>
     `\u00b7 ${period} \u00b7 ${countTemplate.replaceAll("{count}", String(count))}`
+
+/** One entry as a phone card: the name over the day and the second line, the amount at the end and the status mark. */
+export interface PhoneCard {
+    /** The key of the card, and the entry a press of it names. */
+    readonly id: string
+    /** The first line. */
+    readonly title: string
+    /** The day and the second line, joined; the day alone when there is no second line. */
+    readonly description: string
+    /** The amount. */
+    readonly amount: string
+    /** The words of the status mark. */
+    readonly status: string
+    /** The tone of the status mark. */
+    readonly tone: CellTone
+}
+
+/** The card of a row on a phone: the day moves into the second line, so the card carries no labels. */
+export const phoneCardOf = (row: BookRow): PhoneCard => ({
+    id: row.id,
+    title: row.title,
+    description: row.subline === "" ? row.date : `${row.date} · ${row.subline}`,
+    amount: row.amount,
+    status: row.status,
+    tone: row.tone,
+})

@@ -41,7 +41,7 @@ export type {
 
 export { asideDetailBlock } from "./blocks/aside-detail.block"
 export { cardGridBlock } from "./blocks/card-grid.block"
-export { conversationBlock } from "./blocks/conversation.block"
+export { chatbotBlocks } from "./blocks/chatbot/chatbot-blocks"
 export { filterTabsBlock } from "./blocks/filter-tabs.block"
 export { formBlock } from "./blocks/form.block"
 export { listEditorBlock } from "./blocks/list-editor.block"

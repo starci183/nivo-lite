@@ -62,5 +62,8 @@
   "tab_customers": "Khách đang xử lý",
   "tab_unanswered": "Chưa trả lời được",
   "customers_section": "Khách đang xử lý",
-  "unanswered_section": "Chưa trả lời được"
+  "unanswered_section": "Chưa trả lời được",
+  "action_approve_and_send": "Duyệt và gửi",
+  "action_reject_proposal": "Từ chối bản AI soạn",
+  "proposal_closed": "Bản soạn này đã được xử lý hoặc không còn."
 }

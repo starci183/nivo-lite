@@ -1,7 +1,17 @@
-import { BOOK_TONES, bookPeriodOf, bookRecords, bookRowsOf, bookSubtitleOf, dayOf, moneyOf } from "./book-view"
+import type { BookRecord } from "./book-view"
+import {
+    BOOK_TONES,
+    bookPeriodOf,
+    phoneCardOf,
+    bookRecords,
+    bookRowsOf,
+    bookSubtitleOf,
+    dayOf,
+    moneyOf,
+} from "./book-view"
 import { ENTRY_STATUSES } from "./entry-status"
 
-const RECORD = {
+const RECORD: BookRecord = {
     id: "e1",
     title: "H\u0110-0141 \u00b7 Anh Khoa",
     entryDate: "2026-11-03",
@@ -63,5 +73,16 @@ describe("the head", () => {
         expect(bookSubtitleOf("Th\u00e1ng n\u00e0y", 24, "{count} ch\u1ee9ng t\u1eeb")).toBe(
             "\u00b7 Th\u00e1ng n\u00e0y \u00b7 24 ch\u1ee9ng t\u1eeb",
         )
+    })
+})
+
+describe("phoneCardOf", () => {
+    it("puts the day in the second line, with the counterparty after it when there is one", () => {
+        const [withLine, plain] = bookRowsOf(
+            [RECORD, { ...RECORD, id: "e2", counterparty: undefined }],
+            (status) => status,
+        ).map(phoneCardOf)
+        expect(withLine).toMatchObject({ id: "e1", description: "03/11 · Anh Khoa", status: "paid", tone: "success" })
+        expect(plain?.description).toBe("03/11")
     })
 })

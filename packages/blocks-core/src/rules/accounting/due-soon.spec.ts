@@ -10,22 +10,37 @@ const summary = (now: string, vat: "monthly" | "quarterly", horizon?: number): R
     ])
 
 describe("dueSoonOf", () => {
-    it("lists value added tax by quarter for a shop that files quarterly, with the income tax of the month", () => {
-        expect(summary("2026-11-04T11:30:00.000Z", "quarterly")).toEqual([
-            ["vat", "quarter", 4, "2026-11-20", 16],
-            ["pit", "month", 10, "2026-11-20", 16],
+    it("falls due for the fourth quarter on 31 January for a shop that files quarterly", () => {
+        expect(summary("2027-01-12T03:00:00.000Z", "quarterly")).toEqual([
+            ["pit", "month", 12, "2027-01-20", 8],
+            ["vat", "quarter", 4, "2027-01-31", 19],
         ])
     })
 
-    it("lists value added tax by month for a shop that files monthly", () => {
+    it("falls due for the first, the second and the third quarter on the last day of April, July and October", () => {
+        expect(summary("2026-04-10T03:00:00.000Z", "quarterly")).toEqual([
+            ["pit", "month", 3, "2026-04-20", 10],
+            ["vat", "quarter", 1, "2026-04-30", 20],
+        ])
+        expect(summary("2026-07-25T03:00:00.000Z", "quarterly")).toEqual([
+            ["vat", "quarter", 2, "2026-07-31", 6],
+            ["pit", "month", 7, "2026-08-20", 26],
+        ])
+        expect(summary("2026-10-20T03:00:00.000Z", "quarterly")).toEqual([
+            ["pit", "month", 9, "2026-10-20", 0],
+            ["vat", "quarter", 3, "2026-10-31", 11],
+        ])
+    })
+
+    it("lists only the income tax in a month where no quarterly declaration is near", () => {
+        expect(summary("2026-11-04T11:30:00.000Z", "quarterly")).toEqual([["pit", "month", 10, "2026-11-20", 16]])
+    })
+
+    it("falls due on the 20th of the following month for a shop that files monthly, value added tax first", () => {
         expect(summary("2026-11-04T11:30:00.000Z", "monthly")).toEqual([
             ["vat", "month", 10, "2026-11-20", 16],
             ["pit", "month", 10, "2026-11-20", 16],
         ])
-    })
-
-    it("lists only the income tax in a month where no quarterly declaration falls due", () => {
-        expect(summary("2026-12-01T03:00:00.000Z", "quarterly", 20)).toEqual([["pit", "month", 11, "2026-12-20", 19]])
     })
 
     it("counts the day itself, looks to the next month and wraps the year", () => {

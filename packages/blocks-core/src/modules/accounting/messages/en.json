@@ -160,5 +160,8 @@
   "due_vat_quarter": "VAT · quarter '{period}'",
   "weekly_period": "period",
   "weekly_caption": "Invoices collected, grouped by the week the money came in.",
-  "weekly_empty": "Nothing collected in this period."
+  "weekly_empty": "Nothing collected in this period.",
+  "ageing_total": "· '{count}' invoices",
+  "ageing_count": "'{count}' invoices",
+  "ageing_empty": "No open invoice."
 }

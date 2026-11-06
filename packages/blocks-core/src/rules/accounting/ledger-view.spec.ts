@@ -1,5 +1,5 @@
 import { ledgerOf } from "./ledger"
-import { bandOf, ledgerRecord, sectionsOf } from "./ledger-view"
+import { bandOf, ledgerCardOf, ledgerRecord, sectionsOf } from "./ledger-view"
 
 const LEDGER = ledgerOf(1_000, [
     {
@@ -55,5 +55,24 @@ describe("ledgerRecord", () => {
         expect(ledgerRecord.safeParse(LEDGER).success).toBe(true)
         const broken = { ...LEDGER, days: [{ ...LEDGER.days[0], lines: [{ ...LEDGER.days[0]?.lines[0], kind: "x" }] }] }
         expect(ledgerRecord.safeParse(broken).success).toBe(false)
+    })
+})
+
+describe("ledgerCardOf", () => {
+    it("says what moved in words, in and out, and leaves the side that did not move out", () => {
+        const [day] = sectionsOf(LEDGER, (kind) => kind)
+        const [income, expense] = (day?.rows ?? []).map((row) => ledgerCardOf(row, { income: "In", expense: "Out" }))
+        expect(clean(income?.description ?? "")).toBe("In 500 ₫")
+        expect(clean(expense?.description ?? "")).toBe("Out 200 ₫")
+        expect(clean(expense?.balance ?? "")).toBe("1.300 ₫")
+    })
+
+    it("has an empty line for a row that moved nothing", () => {
+        expect(
+            ledgerCardOf(
+                { id: "x", title: "t", income: "", expense: "", balance: "b" },
+                { income: "In", expense: "Out" },
+            ).description,
+        ).toBe("")
     })
 })

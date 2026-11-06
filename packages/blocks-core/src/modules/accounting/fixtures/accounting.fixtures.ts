@@ -241,8 +241,10 @@ export const LEDGER_NONE: LedgerView = {
     ...ledgerOf(12_000_000, []),
 }
 
-/** The tax declarations that fall due within 30 days of the fixtures' now. */
-export const DUE_SOON_VIEW: DueSoonView = { rows: dueSoonOf(FIXTURE_NOW, ACCOUNTING_SETTINGS_DEFAULTS.vatPeriod) }
+/** The tax declarations that fall due within 30 days of 12 January 2027, where the fourth quarter's value added tax is near. */
+export const DUE_SOON_VIEW: DueSoonView = {
+    rows: dueSoonOf(new Date("2027-01-12T03:00:00.000Z"), ACCOUNTING_SETTINGS_DEFAULTS.vatPeriod),
+}
 
 /** Nothing falls due. */
 export const DUE_SOON_NONE: DueSoonView = { rows: [] }

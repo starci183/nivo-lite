@@ -42,7 +42,7 @@ describe("listRead", () => {
     })
 
     it("derives q, sort, cursor and one optional enum per filter with all", () => {
-        expect(Object.keys(LEADS.variables.shape)).toEqual(["q", "sort", "cursor", "stage", "stock"])
+        expect(Object.keys(LEADS.variables.shape)).toEqual(["q", "sort", "cursor", "stage", "stock", "added"])
         const accepted = LEADS.variables.safeParse({ q: "an", sort: "name", cursor: "c", stage: "all", stock: "low" })
         expect(accepted.success).toBe(true)
         expect(LEADS.variables.safeParse({}).success).toBe(true)
@@ -54,7 +54,7 @@ describe("listRead", () => {
 
     it("keeps extra variables next to the derived ones", () => {
         const read = listRead({ ...BASE, list: LEADS_SHAPE, variables: z.object({ ownerId: z.string().max(40) }) })
-        expect(Object.keys(read.variables.shape)).toEqual(["ownerId", "q", "sort", "cursor", "stage", "stock"])
+        expect(Object.keys(read.variables.shape)).toEqual(["ownerId", "q", "sort", "cursor", "stage", "stock", "added"])
     })
 
     it("accepts a list without search or filters", () => {
@@ -70,6 +70,16 @@ describe("listRead", () => {
         )
         expect(result).toEqual({ ok: true, data: { rows: [{ id: "l1", name: "An" }], cursor: "next" } })
         expect(calls.pages).toEqual([{ q: "an", filters: { stage: "new" }, sort: "name", cursor: "c1", size: 30 }])
+    })
+
+    it("runs a time token against the clock of the run, for the page and for the counts", async () => {
+        const calls = callsOf()
+        await LEADS.execute?.(leadsProvider(calls), { added: "$today" }, CONTEXT)
+        await LEAD_COUNTS.execute?.(leadsProvider(calls), { added: "$thisMonth" }, CONTEXT)
+        const today = { from: "2026-11-05T00:00:00.000Z", to: "2026-11-06T00:00:00.000Z" }
+        const month = { from: "2026-11-01T00:00:00.000Z", to: "2026-12-01T00:00:00.000Z" }
+        expect(calls.pages).toMatchObject([{ filters: {}, windows: { added: today } }])
+        expect(calls.counts).toMatchObject([{ query: { filters: {}, windows: { added: month } } }])
     })
 
     it("runs with the defaults when the variables are empty", async () => {
@@ -96,6 +106,11 @@ describe("listRead", () => {
         ],
         ["a filter without values", { ...LEADS_SHAPE, filters: { stage: { field: "x", op: "in", of: [] } } }, []],
         ["a filter without cases", { ...LEADS_SHAPE, filters: { stock: { cases: {} } } }, []],
+        [
+            "a within filter that takes a value that is no time token",
+            { ...LEADS_SHAPE, filters: { added: { field: "x", op: "within", of: ["$today", "yesterday"] } } },
+            [],
+        ],
         ["an extra variable named like a derived one", LEADS_SHAPE, ["cursor"]],
         ["an extra variable named like a filter", LEADS_SHAPE, ["stage"]],
     ])("refuses %s", (_name, list, extra) => {
@@ -106,11 +121,14 @@ describe("listRead", () => {
     })
 })
 
+const NOW = new Date("2026-11-05T15:30:00Z")
+
 describe("listQueryOf", () => {
     it("trims the search, drops an all filter and an empty search, and takes the default sort", () => {
-        expect(listQueryOf(LEADS_SHAPE, "recent", { q: "   ", stage: "all", stock: "out" })).toEqual({
+        expect(listQueryOf(LEADS_SHAPE, "recent", { q: "   ", stage: "all", stock: "out" }, NOW)).toEqual({
             q: null,
             filters: { stock: "out" },
+
             sort: "recent",
             cursor: null,
             size: 30,
@@ -118,9 +136,10 @@ describe("listQueryOf", () => {
     })
 
     it("ignores values that are not text", () => {
-        expect(listQueryOf(LEADS_SHAPE, "recent", { q: 4, stage: 1, sort: 2, cursor: 3 })).toEqual({
+        expect(listQueryOf(LEADS_SHAPE, "recent", { q: 4, stage: 1, sort: 2, cursor: 3 }, NOW)).toEqual({
             q: null,
             filters: {},
+
             sort: "recent",
             cursor: null,
             size: 30,
@@ -128,7 +147,18 @@ describe("listQueryOf", () => {
     })
 
     it("works for a list with no filters", () => {
-        expect(listQueryOf(BARE, "recent", { q: "x" })).toMatchObject({ q: "x", filters: {}, size: 5 })
+        expect(listQueryOf(BARE, "recent", { q: "x" }, NOW)).toMatchObject({ q: "x", filters: {}, size: 5 })
+    })
+
+    it("resolves a time token to the window it names at the clock of the run, and leaves it out of the plain filters", () => {
+        expect(listQueryOf(LEADS_SHAPE, "recent", { added: "$thisWeek", stage: "new" }, NOW)).toMatchObject({
+            filters: { stage: "new" },
+            windows: { added: { from: "2026-11-02T00:00:00.000Z", to: "2026-11-09T00:00:00.000Z" } },
+        })
+    })
+
+    it("draws no window for a time filter left at all", () => {
+        expect(listQueryOf(LEADS_SHAPE, "recent", { added: "all" }, NOW)).not.toHaveProperty("windows")
     })
 })
 
@@ -144,7 +174,7 @@ describe("countsRead", () => {
             permission: "sales.view",
             listing: { kind: "counts", of: "sales.leads", by: "stage" },
         })
-        expect(Object.keys(LEAD_COUNTS.variables.shape)).toEqual(["q", "stock"])
+        expect(Object.keys(LEAD_COUNTS.variables.shape)).toEqual(["q", "stock", "added"])
     })
 
     it("runs: counts under the same search and other filters, and totals them", async () => {
@@ -152,7 +182,10 @@ describe("countsRead", () => {
         const result = await LEAD_COUNTS.execute?.(leadsProvider(calls), { q: "an", stock: "low" }, CONTEXT)
         expect(result).toEqual({ ok: true, data: { counts: { new: 2, won: 3 }, total: 5 } })
         expect(calls.counts).toEqual([
-            { by: "stage", query: { q: "an", filters: { stock: "low" }, sort: "recent", cursor: null, size: 30 } },
+            {
+                by: "stage",
+                query: { q: "an", filters: { stock: "low" }, sort: "recent", cursor: null, size: 30 },
+            },
         ])
     })
 

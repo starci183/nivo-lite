@@ -1,4 +1,5 @@
 import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
+import { accountingAgeingBlock } from "./ageing.block"
 import { accountingBookBlock } from "./book.block"
 import { accountingDueSoonBlock } from "./due-soon.block"
 import { accountingEntryDetailBlock } from "./entry-detail.block"
@@ -12,6 +13,7 @@ export const accountingBlocks: ReadonlyArray<BlockDefinition> = [
     accountingPeriodFiguresBlock,
     accountingDueSoonBlock,
     accountingWeeklyBlock,
+    accountingAgeingBlock,
     accountingBookBlock,
     accountingLedgerBlock,
     accountingEntryDetailBlock,

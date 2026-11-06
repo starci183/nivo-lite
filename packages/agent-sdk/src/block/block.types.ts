@@ -53,7 +53,10 @@ export interface BlockConfig<P extends PropsSchema, S extends BlockSlots> {
     readonly slots: S
     /** Whether the block holds child blocks, and how many of which ids. */
     readonly children: BlockChildren
-    /** The names of the props whose string value names a spec param (`searchParam`, `selectParam`); a spec is refused when one names no param. */
+    /**
+     * The names of the props whose string value names a spec param (`searchParam`, `selectParam`; a dotted name reaches into an
+     * object prop, `sort.param`); a spec is refused when one names no param.
+     */
     readonly params?: ReadonlyArray<string>
 }
 

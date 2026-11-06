@@ -2,6 +2,7 @@ import { seedSpecProblems } from "@nivo-lite/agent-sdk/module"
 import { specProblems } from "@nivo-lite/agent-sdk/spec"
 import type { SpecDocument } from "@nivo-lite/agent-sdk/spec"
 import { coreBlocks } from "../../blocks/core-blocks"
+import { CHATBOT_MESSAGES } from "./chatbot-messages"
 import { chatbotCopyKeys } from "./copy"
 import { CHATBOT_MODULE_KEY, CHATBOT_PERMISSIONS, chatbotModule } from "./declaration"
 
@@ -25,12 +26,15 @@ describe("the Chatbot module declaration", () => {
             "chatbot.messages",
             "chatbot.figures",
             "chatbot.decisions",
+            "chatbot.proposals",
         ])
         expect(chatbotModule.actions.map((action) => action.id)).toEqual([
             "chatbot.reply",
             "chatbot.handoff",
             "chatbot.release",
             "chatbot.decide",
+            "chatbot.approve-and-send",
+            "chatbot.reject-proposal",
         ])
     })
 
@@ -69,17 +73,20 @@ describe("the Chatbot seed spec", () => {
         expect(spec?.views.map((view) => view.id)).toEqual(["customers", "unanswered", "inbox"])
     })
 
-    it("uses only generic blocks", () => {
+    it("places the core blocks and the Chatbot's own: the inbox with the approval card inside it", () => {
         const [spec] = chatbotModule.specs
-        const blocks = JSON.stringify(spec).match(/"block":"([^"]+)"/g) ?? []
-        expect(blocks.every((block) => block.startsWith('"block":"core.'))).toBe(true)
+        const blocks = (JSON.stringify(spec).match(/"block":"([^"]+)"/g) ?? []).map((block) =>
+            block.slice('"block":"'.length, -1),
+        )
+        expect(blocks.every((block) => block.startsWith("core.") || block.startsWith("chatbot."))).toBe(true)
+        expect(blocks).toEqual(expect.arrayContaining(["chatbot.inbox", "chatbot.approval-card"]))
     })
 
     it("words every text with a key the catalogue holds in both languages", () => {
         const keys = keysIn(chatbotModule.specs)
         expect(keys.length).toBeGreaterThan(20)
         for (const locale of ["vi", "en"] as const) {
-            const known = new Set(chatbotCopyKeys(locale))
+            const known = new Set(Object.keys(CHATBOT_MESSAGES[locale]))
             expect(keys.filter((key) => !known.has(key))).toEqual([])
         }
     })
@@ -87,7 +94,7 @@ describe("the Chatbot seed spec", () => {
     it("words the action labels and refusals with catalogue keys too", () => {
         const known = new Set(chatbotCopyKeys("en"))
         const labels = chatbotModule.actions.flatMap((action) => keysIn(action.label))
-        expect(labels).toHaveLength(4)
+        expect(labels).toHaveLength(6)
         expect(labels.filter((key) => !known.has(key))).toEqual([])
     })
 
