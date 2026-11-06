@@ -3,8 +3,6 @@ import { FlowsGraphqlModule } from "@features/api/flows"
 import { ApiKeysGraphqlModule } from "@features/api/api-keys"
 import { DataHubGraphqlModule } from "@features/api/data-hub"
 import { HiringGraphqlModule } from "@features/api/hiring"
-import { InventoryGraphqlModule } from "@features/api/inventory"
-import { ShiftsGraphqlModule } from "@features/api/shifts"
 import { AdminGraphqlModule } from "@features/api/admin"
 import { WorkspacesGraphqlModule } from "@features/api/workspaces"
 import { InboxGraphqlModule } from "@features/api/inbox"
@@ -37,8 +35,6 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const apiModules = (): Array<DynamicModule> => [
     WorkspacesGraphqlModule.register({}),
     ApiKeysGraphqlModule.register({}),
-    InventoryGraphqlModule.register({}),
-    ShiftsGraphqlModule.register({}),
     HiringGraphqlModule.register({}),
     AccountGraphqlModule.register({}),
     ShellGraphqlModule.register({}),

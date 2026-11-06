@@ -3,6 +3,7 @@ export const CONSOLE_ROUTES = {
     login: "/login",
     workspaceHome: "/agents",
     inbox: "/inbox",
+    chat: "/chat",
     authority: "/authority",
     connections: "/connections",
     team: "/team",
@@ -42,3 +43,6 @@ export const zaloReturnPath = (query: Readonly<Record<string, string | undefined
 /** The page of one Zalo OA connection, on a tab when one is named. */
 export const zaloConnectionHref = (connectionId: string, tab?: string): string =>
     tab === undefined ? `/connections/zalo/${connectionId}` : `/connections/zalo/${connectionId}?tab=${tab}`
+
+/** The team chat opened on one room. */
+export const chatRoomHref = (roomId: string): string => `${CONSOLE_ROUTES.chat}?room=${encodeURIComponent(roomId)}`

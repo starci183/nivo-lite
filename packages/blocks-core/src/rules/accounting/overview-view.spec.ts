@@ -89,4 +89,14 @@ describe("ageingOf", () => {
             ["d2", "over 60", 1, "1 inv"],
         ])
     })
+
+    it("labels a bucket the words do not name with nothing, and still counts it", () => {
+        const ageing = ageingOf(FIGURES, { buckets: ["to 30"], total: "{count} open", count: "{count} inv" })
+
+        expect(ageing.points.map((point) => [point.id, point.label, point.value])).toEqual([
+            ["d0", "to 30", 4],
+            ["d1", "", 1],
+            ["d2", "", 1],
+        ])
+    })
 })

@@ -2,7 +2,6 @@ import { builder } from "@starci/jest-preset"
 import type { Proposal, WorkContext, WorkItem } from "@modules/domain/decisions"
 import type { OptionalInboundEvent, InboundEventDetail } from "@modules/domain/inbound-events"
 import type { InvoiceRow } from "@modules/domain/invoices"
-import type { OptionalTransaction, TransactionRow } from "@modules/domain/transactions"
 
 /** The context of every reconcile case. */
 export const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
@@ -35,20 +34,6 @@ export const itemOf: (overrides?: Partial<WorkItem>) => WorkItem = builder<WorkI
     updated_at: "2026-10-12T09:00:00.000Z",
     completed_at: null,
     installation_id: null,
-})
-
-/** A bank transaction. */
-export const transactionOf: (overrides?: Partial<TransactionRow>) => TransactionRow = builder<
-    NonNullable<OptionalTransaction>
->({
-    id: "tx-1",
-    workspace_id: "ws-1",
-    inbound_event_id: null,
-    amount_vnd: 450000,
-    reference: "INV-1 Lan",
-    payer: "Lan",
-    invoice_id: null,
-    status: "unmatched",
 })
 
 /** A paid invoice. */

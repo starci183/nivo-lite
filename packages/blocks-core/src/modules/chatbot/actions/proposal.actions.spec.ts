@@ -37,6 +37,10 @@ const approve = (world: MemoryWorld, input: unknown, memberId: string | null = S
 const reject = (world: MemoryWorld, input: unknown) =>
     REJECT_PROPOSAL.execute?.(memoryProvider(world), input, STAFF_CONTEXT)
 
+/** The members of an implementation a port gave, as a record to spread. */
+const recordOf = (value: unknown): Readonly<Record<string, unknown>> =>
+    typeof value === "object" && value !== null ? { ...value } : {}
+
 /** A provider whose port `target` refuses every update with the given reason. */
 const failingUpdate = (
     world: MemoryWorld,
@@ -48,7 +52,7 @@ const failingUpdate = (
     return {
         implementationOf: (port) =>
             port.id === target.id
-                ? { ...Object(real), update: () => Promise.resolve({ ok: false, reason }) }
+                ? { ...recordOf(real), update: () => Promise.resolve({ ok: false, reason }) }
                 : base.implementationOf(port),
     }
 }

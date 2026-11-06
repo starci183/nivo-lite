@@ -1,6 +1,6 @@
 import type { ConnectionsRegionView, ItemsRegionView, KnowledgeRegionView } from "../../../views/views.types"
 import type { ModuleFixtures } from "../../module-fixtures"
-import type { InstallationFacts, InstallationView, ParkedRunRow } from "../platform.types"
+import type { InstallationFacts, InstallationView, ParkedRunsView } from "../platform.types"
 
 /** An installation with one enabled module and one the workspace has not enabled. */
 export const INSTALLATION: InstallationView = {
@@ -119,7 +119,7 @@ export const KNOWLEDGE_VIEW: KnowledgeRegionView = {
 export const KNOWLEDGE_NONE: KnowledgeRegionView = { ...KNOWLEDGE_VIEW, gaps: null }
 
 /** Two runs the engine parked, about two orders. */
-export const PARKED_RUNS_VIEW: { readonly count: string; readonly rows: ReadonlyArray<ParkedRunRow> } = {
+export const PARKED_RUNS_VIEW: ParkedRunsView = {
     count: "2",
     rows: [
         {
@@ -146,7 +146,7 @@ export const PARKED_RUNS_VIEW: { readonly count: string; readonly rows: Readonly
 }
 
 /** No run is parked. */
-export const PARKED_RUNS_NONE: { readonly count: null; readonly rows: ReadonlyArray<ParkedRunRow> } = {
+export const PARKED_RUNS_NONE: ParkedRunsView = {
     count: null,
     rows: [],
 }

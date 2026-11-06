@@ -338,9 +338,9 @@ export const CLAIM_ROW: NodeRow = {
 export const FEED_ROW: NodeRow = {
     id: "tx-95937289",
     amountVnd: 2000,
-    content: "Test Sepay",
-    counterpartName: null,
-    receivedAt: "2026-11-03T22:51:00.000Z",
+    reference: "Test Sepay",
+    payer: null,
+    occurredAt: "2026-11-03T22:51:00.000Z",
     orderId: null,
     status: "unmatched",
 }

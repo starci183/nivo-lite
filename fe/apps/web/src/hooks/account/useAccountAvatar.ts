@@ -7,7 +7,7 @@ import { useAvatarUpload, type AvatarProblem } from "@/hooks/avatar"
 import type { AvatarDoors } from "@/hooks/avatar"
 import {
     QUERY_MY_ACCOUNT_SWR_KEY,
-    QUERY_OFFICE_ROOMS_SWR_KEY,
+    QUERY_CHAT_ROOMS_SWR_KEY,
     useMutateRequestMyAvatarUploadSwr,
     useMutateSetMyAvatarSwr,
 } from "@/hooks/swr"
@@ -37,7 +37,7 @@ export const useAccountAvatar = (): AccountAvatarView => {
             refresh: () =>
                 Promise.all([
                     mutate(matchesSwrKey(QUERY_MY_ACCOUNT_SWR_KEY)),
-                    mutate(matchesSwrKey(QUERY_OFFICE_ROOMS_SWR_KEY)),
+                    mutate(matchesSwrKey(QUERY_CHAT_ROOMS_SWR_KEY)),
                 ]),
             savedMessage: t("avatarSaved"),
             removedMessage: t("avatarRemoved"),

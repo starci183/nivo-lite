@@ -13,7 +13,7 @@ take the native backup (`starci app db dump`) and verify its receipt first.
   - `keep`: the kept workspaces (id, name).
   - `remove`: each workspace to delete, with its row count per table that cascades from `public.workspaces` and their total.
     The counts come from `public.workspace_footprint(uuid)` (migration
-    `db/migrations/20261101000907_workspace-footprint.sql`), a read-only `SECURITY INVOKER` function that only `app_be` may
+    the workspace footprint migration (folded into the baseline)), a read-only `SECURITY INVOKER` function that only `app_be` may
     execute.
   - `orphanUsers`: each account no kept workspace holds as a member or owner, by id, with the email masked (`h***@gmail.com`)
     and `keptCascade`, the kept rows its delete would cascade-delete (empty unless `--allow-kept-cascade`).

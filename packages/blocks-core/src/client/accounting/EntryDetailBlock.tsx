@@ -103,6 +103,45 @@ const AdjustForm = (props: AdjustFormProps): ReactNode => {
     )
 }
 
+/** What the lineage of an entry is given. */
+interface LineageSectionProps {
+    readonly entry: EntryRecord
+    readonly isLoading: boolean
+}
+
+/** Where the entry came from: the order, the invoice, the payment and the correction, each done or still to come. */
+const LineageSection = (props: LineageSectionProps): ReactNode => {
+    const words = useBlockWords()
+    const stages = stagesOf(props.entry.lineage, {
+        names: {
+            order: words({ key: "stage_order" }),
+            invoice: words({ key: "stage_invoice" }),
+            payment: words({ key: "stage_payment" }),
+            adjustment: words({ key: "stage_adjustment" }),
+        },
+        missing: words({ key: "stage_missing" }),
+        state: (kind, status) => {
+            const key = stateKeyOf(kind, status)
+            return key === undefined ? undefined : words({ key })
+        },
+    })
+    return (
+        <Stack gap="row">
+            <Heading level={3}>{words({ key: "lineage" })}</Heading>
+            <Timeline
+                label={words({ key: "lineage" })}
+                isLoading={props.isLoading}
+                items={stages.map((stage) => ({
+                    id: stage.id,
+                    title: stage.title,
+                    state: stage.isDone ? "affirmative" : "pending",
+                    description: stage.note,
+                }))}
+            />
+        </Stack>
+    )
+}
+
 /** The entry of the books with where it came from and the correction the owner may add. */
 export const EntryDetailBlock = (props: RenderOf<typeof accountingEntryDetailBlock>): ReactNode => {
     const words = useBlockWords()
@@ -117,19 +156,6 @@ export const EntryDetailBlock = (props: RenderOf<typeof accountingEntryDetailBlo
             placeholder={PLACEHOLDER}
             onRetry={read.retry}
             render={(entry, isLoading) => {
-                const stages = stagesOf(entry.lineage, {
-                    names: {
-                        order: words({ key: "stage_order" }),
-                        invoice: words({ key: "stage_invoice" }),
-                        payment: words({ key: "stage_payment" }),
-                        adjustment: words({ key: "stage_adjustment" }),
-                    },
-                    missing: words({ key: "stage_missing" }),
-                    state: (kind, status) => {
-                        const key = stateKeyOf(kind, status)
-                        return key === undefined ? undefined : words({ key })
-                    },
-                })
                 const canAdjust = adjust.isAllowed && adjustTargetOf(entry) !== null && !isLoading
                 return (
                     <>
@@ -155,19 +181,7 @@ export const EntryDetailBlock = (props: RenderOf<typeof accountingEntryDetailBlo
                                         }
                                     />
                                 </Cluster>
-                                <Stack gap="row">
-                                    <Heading level={3}>{words({ key: "lineage" })}</Heading>
-                                    <Timeline
-                                        label={words({ key: "lineage" })}
-                                        isLoading={isLoading}
-                                        items={stages.map((stage) => ({
-                                            id: stage.id,
-                                            title: stage.title,
-                                            state: stage.isDone ? "affirmative" : "pending",
-                                            description: stage.note,
-                                        }))}
-                                    />
-                                </Stack>
+                                <LineageSection entry={entry} isLoading={isLoading} />
                                 <Stack gap="row">
                                     <Heading level={3}>{words({ key: "adjust_title" })}</Heading>
                                     <Text size="sm" tone="muted">

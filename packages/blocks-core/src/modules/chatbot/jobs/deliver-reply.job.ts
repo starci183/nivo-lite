@@ -75,7 +75,7 @@ export const deliverReply = async (
 ): Promise<DeliverOutcome> => {
     const stored = await ports.messages.get(input.messageId)
     const line = stored === null ? null : messageRecordOf(stored)
-    if (line === null || line.status !== "posted" || line.deliveryStatus === "sent") return "skipped"
+    if (line?.status !== "posted" || line.deliveryStatus === "sent") return "skipped"
     const found = await ports.conversations.get(line.conversationId)
     const conversation = found === null ? null : threadRowOf(found)
     if (conversation === null) return "skipped"

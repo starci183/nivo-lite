@@ -53,7 +53,6 @@ export const DueSoonBlock = (props: RenderOf<typeof accountingDueSoonBlock>): Re
             />
             <Alert
                 tone="informative"
-                appearance="soft"
                 title={words(props.props.notice)}
                 description={
                     <Link href={host.navigation.href(props.props.linkPath)}>{words(props.props.linkLabel)}</Link>

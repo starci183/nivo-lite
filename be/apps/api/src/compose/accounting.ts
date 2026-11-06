@@ -13,7 +13,6 @@ import {
     EmailMessagesModule,
 } from "@modules/domain/email-messages"
 import { INVOICES_ERROR_KINDS, INVOICES_MESSAGES, InvoicesModule } from "@modules/domain/invoices"
-import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
 import {
     WORK_PERFORMERS_ERROR_KINDS,
     WORK_PERFORMERS_MESSAGES,
@@ -29,7 +28,6 @@ export const accountingModules = (): Array<DynamicModule> => [
     SupplierPayablesModule.register({ isGlobal: true }),
     AccountingModule.register({ isGlobal: true, gateway: McpAccountingGatewayService }),
     InvoicesModule.register({ isGlobal: true }),
-    TransactionsModule.register({ isGlobal: true }),
     EmailMessagesModule.register({ isGlobal: true }),
     WorkPerformersModule.register({ isGlobal: true, writer: AiTasksService }),
     OfficeRoomsModule.register({ isGlobal: true }),
@@ -39,7 +37,6 @@ export const accountingModules = (): Array<DynamicModule> => [
 export const accountingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
     EMAIL_MESSAGES_ERROR_KINDS,
     INVOICES_ERROR_KINDS,
-    TRANSACTIONS_ERROR_KINDS,
     WORK_PERFORMERS_ERROR_KINDS,
     AI_TASKS_ERROR_KINDS,
     STAFF_ERROR_KINDS,
@@ -51,7 +48,6 @@ export const accountingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKi
 export const accountingMessages: ReadonlyArray<MessageBundle> = [
     EMAIL_MESSAGES_MESSAGES,
     INVOICES_MESSAGES,
-    TRANSACTIONS_MESSAGES,
     WORK_PERFORMERS_MESSAGES,
     AI_TASKS_MESSAGES,
     STAFF_MESSAGES,
