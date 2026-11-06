@@ -1,7 +1,11 @@
 // Read services lead the barrel: other capabilities import this barrel while it loads (import cycles), they must already be defined.
 export { ApprovalRequestsHistoryReadService } from "./approval-requests-history-read.service"
 export type { ResolvedRequestLine } from "./approval-requests-history-read.contracts"
-export { APPROVAL_REQUESTS_ERROR_KINDS } from "./errors/approval-requests.error"
+export {
+    APPROVAL_REQUESTS_ERROR_KINDS,
+    ApprovalRequestsError,
+    ApprovalRequestsErrorCode,
+} from "./errors/approval-requests.error"
 export { APPROVAL_REQUESTS_MESSAGES } from "./messages/approval-requests.messages"
 export { ApprovalRequestsModule } from "./approval-requests.module"
 export { resolveApprovers } from "./approver-set.policy"

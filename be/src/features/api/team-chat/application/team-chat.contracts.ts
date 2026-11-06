@@ -1,4 +1,4 @@
-import type { MemberRef, UploadAsk } from "@modules/domain/team-chat"
+import type { ApprovalState, MemberRef, UploadAsk } from "@modules/domain/team-chat"
 
 /** The workspace selected by X-Workspace-Id; the service proves the caller's seat. */
 export interface TeamChatScope {
@@ -76,6 +76,19 @@ export interface SetMutedRequest extends RoomRequest {
     /** True to mute. */
     readonly muted: boolean
 }
+
+/** A verdict on the decision an approval card is about. */
+export interface DecideRequest extends TeamChatScope {
+    /** The decision (the approval request). */
+    readonly decisionId: string
+    /** Approve or reject. */
+    readonly verdict: "approve" | "reject"
+}
+
+/** How a decision verdict ended: the state every card of the decision now shows, or why the verdict was refused. */
+export type DecideOutcome =
+    | { readonly ok: true; readonly approval: ApprovalState }
+    | { readonly ok: false; readonly refusal: "decision_not_found" | "not_an_approver" | "decision_closed" }
 
 /** A pin of one message. */
 export interface PinRequest extends RoomRequest {

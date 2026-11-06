@@ -9,6 +9,7 @@ import { ChatMessagesQuery } from "../../application/chat-messages.query"
 import { ChatRoomQuery } from "../../application/chat-room.query"
 import { ChatRoomsQuery } from "../../application/chat-rooms.query"
 import { ChatUnreadQuery } from "../../application/chat-unread.query"
+import { DecideChatApprovalCommand } from "../../application/decide-chat-approval.command"
 import { CreateChatRoomCommand } from "../../application/create-chat-room.command"
 import { MarkChatRoomReadCommand } from "../../application/mark-chat-room-read.command"
 import { PinChatMessageCommand } from "../../application/pin-chat-message.command"
@@ -17,6 +18,7 @@ import { RequestChatFileUploadCommand } from "../../application/request-chat-fil
 import { SetChatRoomMutedCommand } from "../../application/set-chat-room-muted.command"
 import { SendChatMessageCommand } from "../../application/send-chat-message.command"
 import { UnpinChatMessageCommand } from "../../application/unpin-chat-message.command"
+import { ChatDecisionPayloadType } from "./dto/chat-decision-payload.type"
 import { ChatFileUploadPayloadType } from "./dto/chat-file-upload-payload.type"
 import { ChatMessagePageType } from "./dto/chat-message-page.type"
 import { ChatMessagePayloadType } from "./dto/chat-message-payload.type"
@@ -29,6 +31,7 @@ import { ChatRoomType } from "./dto/chat-room.type"
 import { ChatRoomsInput } from "./dto/chat-rooms.input"
 import { ChatUnreadType } from "./dto/chat-unread.type"
 import { CreateChatRoomInput } from "./dto/create-chat-room.input"
+import { DecideChatApprovalInput } from "./dto/decide-chat-approval.input"
 import { MarkChatRoomReadInput } from "./dto/mark-chat-room-read.input"
 import { RequestChatFileUploadInput } from "./dto/request-chat-file-upload.input"
 import { SendChatMessageInput } from "./dto/send-chat-message.input"
@@ -37,6 +40,7 @@ import {
     toChatMessagePageType,
     toChatRoomType,
     toChatUnreadType,
+    toDecisionPayload,
     toMemberRef,
     toMessagePayload,
     toReadPayload,
@@ -171,6 +175,21 @@ export class TeamChatResolver {
     ): Promise<ChatReadPayloadType> {
         const request = { workspaceId, roomId: input.roomId, messageId: input.messageId }
         return toReadPayload(await this.commandBus.execute(new MarkChatRoomReadCommand({ request, principal })))
+    }
+
+    /** Answers the decision an approval card is about; every card of that decision then shows the outcome. */
+    @Mutation(() => ChatDecisionPayloadType, { name: "decideChatApproval" })
+    async decideChatApproval(
+        @CurrentPrincipal() principal: Principal,
+        @WorkspaceId() workspaceId: string,
+        @Args("input") input: DecideChatApprovalInput,
+    ): Promise<ChatDecisionPayloadType> {
+        const request = {
+            workspaceId,
+            decisionId: input.decisionId,
+            verdict: input.verdict === "reject" ? ("reject" as const) : ("approve" as const),
+        }
+        return toDecisionPayload(await this.commandBus.execute(new DecideChatApprovalCommand({ request, principal })))
     }
 
     /** Issues the address a browser uploads one file of a room to. */

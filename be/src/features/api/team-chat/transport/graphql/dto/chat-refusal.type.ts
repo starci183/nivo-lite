@@ -18,6 +18,9 @@ export const ChatRefusal = {
     file_too_large: "file_too_large",
     file_type_not_allowed: "file_type_not_allowed",
     storage_unavailable: "storage_unavailable",
+    decision_not_found: "decision_not_found",
+    not_an_approver: "not_an_approver",
+    decision_closed: "decision_closed",
 }
 
 registerEnumType(ChatRefusal, { name: "ChatRefusal" })

@@ -4,6 +4,7 @@ import { AgentDirectoryService } from "@modules/domain/agents"
 import { TEAM_CHAT_STORAGE, TEAM_CHAT_TAGS, TeamChatFilesService, TeamChatService } from "@modules/domain/team-chat"
 import type { TeamChatTags } from "@modules/domain/team-chat"
 import { WorkspaceMemberSeatsService, WorkspaceMembersReadService } from "@modules/domain/workspace-members"
+import { OBJECT_STORAGE_ERROR_CODES } from "@starci/object-storage"
 import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { IdsModule } from "@modules/platform/ids"
 
@@ -48,7 +49,7 @@ export class TeamChatProofStorage implements Pick<
         return Promise.resolve(
             this.reachable
                 ? { kind: "ok", value: { path, token: "", signedUrl: `https://store.test/put/${path}` } }
-                : { kind: "refused", code: "unavailable" },
+                : { kind: "refused", code: OBJECT_STORAGE_ERROR_CODES.Unavailable },
         )
     }
 
@@ -56,7 +57,9 @@ export class TeamChatProofStorage implements Pick<
     sizeOf(_bucket: string, path: string): ReturnType<StorageObjectsPort["sizeOf"]> {
         const size = this.sizes.get(path)
         return Promise.resolve(
-            size === undefined ? { kind: "refused", code: "not_found" } : { kind: "ok", value: size },
+            size === undefined
+                ? { kind: "refused", code: OBJECT_STORAGE_ERROR_CODES.ObjectNotFound }
+                : { kind: "ok", value: size },
         )
     }
 

@@ -9,7 +9,9 @@ import type {
     TeamChatResult,
     UnreadView,
 } from "@modules/domain/team-chat"
+import type { ChatDecisionPayloadType } from "./dto/chat-decision-payload.type"
 import type { ChatFileUploadPayloadType } from "./dto/chat-file-upload-payload.type"
+import type { DecideOutcome } from "../../application/team-chat.contracts"
 import type { ChatMemberRefInput } from "./dto/chat-member-ref.input"
 import type { ChatMessagePageType } from "./dto/chat-message-page.type"
 import type { ChatMessagePayloadType } from "./dto/chat-message-payload.type"
@@ -94,6 +96,10 @@ export const toMessagePayload = (result: TeamChatResult<MessageView>): ChatMessa
     result.ok
         ? { message: toChatMessageType(result.value), refusal: null }
         : { message: null, refusal: REFUSALS[result.refusal] }
+
+/** The payload of a verdict on a decision. */
+export const toDecisionPayload = (outcome: DecideOutcome): ChatDecisionPayloadType =>
+    outcome.ok ? { approval: outcome.approval, refusal: null } : { approval: null, refusal: outcome.refusal }
 
 /** The payload of an upload request. */
 export const toUploadPayload = (result: TeamChatResult<ChatUpload>): ChatFileUploadPayloadType =>

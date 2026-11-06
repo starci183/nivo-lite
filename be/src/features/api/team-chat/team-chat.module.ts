@@ -6,6 +6,7 @@ import { ChatUnreadHandler } from "./application/chat-unread.handler"
 import { CreateChatRoomHandler } from "./application/create-chat-room.handler"
 import { RequestChatFileUploadHandler } from "./application/request-chat-file-upload.handler"
 import { SetChatRoomMutedHandler } from "./application/set-chat-room-muted.handler"
+import { DecideChatApprovalHandler } from "./application/decide-chat-approval.handler"
 import { AddChatRoomMemberHandler } from "./application/add-chat-room-member.handler"
 import { RemoveChatRoomMemberHandler } from "./application/remove-chat-room-member.handler"
 import { SendChatMessageHandler } from "./application/send-chat-message.handler"
@@ -16,6 +17,7 @@ import { ConfigurableModuleClass } from "./team-chat.module-definition"
 
 @Module({
     providers: [
+        DecideChatApprovalHandler,
         RequestChatFileUploadHandler,
         SetChatRoomMutedHandler,
         ChatRoomsHandler,

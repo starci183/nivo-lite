@@ -928,6 +928,11 @@ export class TeamChatService {
               }
     }
 
+    /** Where one decision stands, for the viewer; null when the workspace has no such request. */
+    async approvalOf(workspaceId: string, viewerId: string, decisionId: string): Promise<ApprovalState | null> {
+        return (await this.approvalStates(workspaceId, viewerId, [decisionId])).get(decisionId) ?? null
+    }
+
     /** Where each decision stands, for the viewer: pending, approved, refused or expired, who settled it, and whether the viewer may. */
     private async approvalStates(
         workspaceId: string,
