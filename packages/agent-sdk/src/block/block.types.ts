@@ -315,6 +315,8 @@ export interface ParamHandle {
     readonly value: (name: string) => string | null
     /** Writes the URL key of the param (replace, no scroll); null removes it. It also resets the `cursor` param when the spec has one. */
     readonly set: (name: string, value: string | null) => void
+    /** Writes several params in one step (a choice that also opens a pane); the same rules as `set`, one write to the URL. */
+    readonly setMany: (entries: Readonly<Record<string, string | null>>) => void
 }
 
 /** The ports a block may use; the renderer's provider implements them. */

@@ -89,20 +89,32 @@ export interface ParamSource {
  * default, else null (an empty URL value counts as absent). Writing a param writes its URL key and, in the same step, drops the
  * `cursor` param when the spec has one, so a new search, filter or sort never keeps the page of the old one.
  */
-export const paramHandleOf = (source: ParamSource): ParamHandle => ({
-    value: (name) => {
-        const param = source.params[name]
-        if (param === undefined) return null
-        const raw = source.queryValue(param.url)
-        const allowed = allowedValuesOf(param, source.reads)
-        const usable =
-            raw !== null && raw !== "" && (allowed === null || allowed === undefined || allowed.includes(raw))
-        return usable ? raw : (param.default ?? null)
-    },
-    set: (name, value) => {
-        const param = source.params[name]
-        if (param === undefined) return
-        const cursor = name === CURSOR_PARAM ? undefined : source.params[CURSOR_PARAM]
-        source.setQueryValues({ [param.url]: value, ...(cursor === undefined ? {} : { [cursor.url]: null }) })
-    },
-})
+export const paramHandleOf = (source: ParamSource): ParamHandle => {
+    const handle: ParamHandle = {
+        value: (name) => {
+            const param = source.params[name]
+            if (param === undefined) return null
+            const raw = source.queryValue(param.url)
+            const allowed = allowedValuesOf(param, source.reads)
+            const usable =
+                raw !== null && raw !== "" && (allowed === null || allowed === undefined || allowed.includes(raw))
+            return usable ? raw : (param.default ?? null)
+        },
+        set: (name, value) => handle.setMany({ [name]: value }),
+        setMany: (entries) => {
+            const written = Object.entries(entries).flatMap(
+                ([name, value]): Array<readonly [string, string | null]> => {
+                    const param = source.params[name]
+                    return param === undefined ? [] : [[param.url, value]]
+                },
+            )
+            if (written.length === 0) return
+            const cursor = Object.keys(entries).includes(CURSOR_PARAM) ? undefined : source.params[CURSOR_PARAM]
+            source.setQueryValues({
+                ...Object.fromEntries(written),
+                ...(cursor === undefined ? {} : { [cursor.url]: null }),
+            })
+        },
+    }
+    return handle
+}

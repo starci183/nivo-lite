@@ -110,6 +110,9 @@ export const sampleParamHandle = (values: Readonly<Record<string, string | null>
         set: (name, value) => {
             writes.push([name, value])
         },
+        setMany: (entries) => {
+            Object.entries(entries).forEach(([name, value]) => writes.push([name, value]))
+        },
         writes: () => writes,
     }
 }
