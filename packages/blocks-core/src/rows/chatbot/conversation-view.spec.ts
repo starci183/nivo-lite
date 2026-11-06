@@ -55,6 +55,19 @@ describe("threadViewOf", () => {
         expect(view[2]).toMatchObject({ side: "incoming", hasAvatar: false })
     })
 
+    it("gives an outgoing message the soft tint when the AI wrote it, the brand fill when the reader did, and the brand tone to what is incoming", () => {
+        const view = viewOf([
+            row({ id: "1", side: "outgoing", mark: "AI" }),
+            row({ id: "2", side: "outgoing", atMs: NOON + 1_000_000 }),
+            row({ id: "3", mark: "AI", atMs: NOON + 2_000_000 }),
+        ])
+        expect(view.filter((entry) => entry.kind === "message").map((entry) => entry.tone)).toEqual([
+            "soft",
+            "brand",
+            "brand",
+        ])
+    })
+
     it("marks delivery with its words and offers a retry only for a failed message that can be retried", () => {
         const rows = [
             row({ id: "a", side: "outgoing", delivery: "sent" }),

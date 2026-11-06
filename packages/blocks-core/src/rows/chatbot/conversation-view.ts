@@ -48,6 +48,8 @@ export type ThreadViewEntry =
           readonly meta: string
           /** The short marker beside the author; empty draws none. */
           readonly mark: string
+          /** The face of an outgoing bubble: the soft tint for the AI speaking for the reader, the brand fill for the reader's own words. */
+          readonly tone: "brand" | "soft"
           /** Whether the author's avatar stands beside the message. */
           readonly hasAvatar: boolean
           /** How far the message has travelled, with its words; null draws no mark. */
@@ -79,6 +81,7 @@ export const threadViewOf = (
             text: row.text,
             meta: timeLabelOf(row.atMs, clock.locale, clock.zone),
             mark: entry.isContinuation ? "" : row.mark,
+            tone: row.side === "outgoing" && row.mark !== "" ? "soft" : "brand",
             hasAvatar: row.side === "incoming" && !entry.isContinuation && row.author !== "",
             delivery: row.delivery === null ? null : { state: row.delivery, label: words.delivery[row.delivery] },
             canRetry: row.delivery === "failed" && retryable.has(entry.id),
