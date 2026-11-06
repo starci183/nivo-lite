@@ -116,6 +116,7 @@ const decisionRowView: z.ZodType<DecisionRowView> = z.object({
     badges: list(badgeView),
     reason: nullableText,
     amount: nullableText,
+    amountValue: z.number().optional(),
     proposal: text,
     trace: traceView.nullable(),
     expiry: nullableText,

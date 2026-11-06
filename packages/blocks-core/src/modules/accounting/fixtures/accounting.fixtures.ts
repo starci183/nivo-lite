@@ -3,6 +3,8 @@ import { ADJUSTMENT, INVOICE, ORDER, TRANSACTION, transactionOf } from "../../..
 import { questionQueueOf } from "../../../rules/accounting/questions"
 import type { QuestionLine } from "../../../rules/accounting/questions"
 import { unmatchedQueueOf } from "../../../rules/accounting/decisions"
+import { openOrdersOf } from "../../../rules/accounting/open-orders"
+import type { OpenOrdersView } from "../../../rules/accounting/open-orders"
 import { entryStatusOf } from "../../../rules/accounting/entry-status"
 import { dueSoonOf } from "../../../rules/accounting/due-soon"
 import { ledgerOf } from "../../../rules/accounting/ledger"
@@ -98,6 +100,12 @@ export const UNMATCHED_PAYMENT = {
     payer: "Hoa Sen Spa",
     occurredAt: "2026-11-04T02:12:00.000Z",
 }
+
+/** The orders that wait for money, as the picker lists them. */
+export const OPEN_ORDERS_VIEW: OpenOrdersView = openOrdersOf([
+    { id: "00000000-0000-4000-8000-0000000000b1", orderNo: "DH-0141", amountVnd: 300_000, customer: "Anh Khoa" },
+    { id: "00000000-0000-4000-8000-0000000000b2", orderNo: "DH-0142", amountVnd: 5_000_000, customer: null },
+])
 
 /** The questions the department asks the owner. */
 export const QUESTIONS: ReadonlyArray<QuestionLine> = [
@@ -275,6 +283,7 @@ export const ACCOUNTING_FIXTURES: ModuleFixtures = {
         "accounting.entry-counts": { ready: ENTRY_COUNTS, empty: ENTRY_COUNTS_NONE },
         "accounting.status-counts": { ready: ENTRY_STATUS_COUNTS, empty: ENTRY_STATUS_COUNTS_NONE },
         "accounting.weekly": { ready: WEEKLY_VIEW, empty: WEEKLY_NONE },
+        "accounting.open-orders": { ready: OPEN_ORDERS_VIEW, empty: openOrdersOf([]) },
         "accounting.decisions": { ready: unmatchedQueueOf([UNMATCHED_PAYMENT], 1), empty: unmatchedQueueOf([], 0) },
         "accounting.question-count": { ready: { count: 3 }, empty: { count: 0 } },
         "accounting.questions": { ready: questionQueueOf(QUESTIONS, 3), empty: questionQueueOf([], 0) },

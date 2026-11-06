@@ -152,7 +152,7 @@ export const claimOf = (listed: ListedRecord): ClaimRecord | null => {
 }
 
 /** The name of the customer a joined `sales.lead` record holds; null when there is no link or no name. */
-const customerOf = (listed: ListedRecord): string | null => {
+export const customerOf = (listed: ListedRecord): string | null => {
     const joined = listed.joined["lead"]
     const parsed = joined === undefined || joined === null ? null : leadData.safeParse(joined.data)
     return parsed?.success === true ? parsed.data.contactName : null

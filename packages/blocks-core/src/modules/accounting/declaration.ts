@@ -7,6 +7,7 @@ import { saveSettingsAction } from "./actions/save-settings.action"
 import { settleAction } from "./actions/settle.action"
 import { closeCheckRead } from "./reads/close-check.read"
 import { decisionsRead } from "./reads/decisions.read"
+import { openOrdersRead } from "./reads/open-orders.read"
 import { entriesRead, entryCountsRead, entryStatusCountsRead } from "./reads/entries.read"
 import { dueSoonRead } from "./reads/due-soon.read"
 import { entryRead } from "./reads/entry.read"
@@ -37,6 +38,7 @@ export const accountingModule: ModuleDeclaration = defineModule({
         dueSoonRead,
         weeklyRead,
         decisionsRead,
+        openOrdersRead,
         questionCountRead,
         questionsRead,
         closeCheckRead,
