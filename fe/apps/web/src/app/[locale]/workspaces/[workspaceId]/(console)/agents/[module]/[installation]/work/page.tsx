@@ -4,12 +4,15 @@ import { AgentWorkPage } from "@/features/pages/AgentWorkPage"
 /** The document title of the work tab. */
 export { agentWorkMetadata as generateMetadata } from "@/features/pages/AgentWorkPage"
 
-type PageProps = { readonly params: Promise<{ module: string; installation: string }> }
+type PageProps = {
+    readonly params: Promise<{ module: string; installation: string }>
+    readonly searchParams: Promise<Record<string, string | undefined>>
+}
 
 /** The work slot of one agent instance. */
 const Page = async (props: PageProps): Promise<ReactElement> => {
-    const { module, installation } = await props.params
-    return <AgentWorkPage module={module} installationId={installation} />
+    const [{ module, installation }, query] = await Promise.all([props.params, props.searchParams])
+    return <AgentWorkPage module={module} installationId={installation} query={query} />
 }
 
 export default Page

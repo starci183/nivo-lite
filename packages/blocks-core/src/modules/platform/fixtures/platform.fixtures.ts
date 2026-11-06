@@ -1,5 +1,7 @@
 import type { ConnectionsRegionView, ItemsRegionView, KnowledgeRegionView } from "../../../views/views.types"
 import type { ModuleFixtures } from "../../module-fixtures"
+import { RUN_PARKED } from "../../../fixtures/run-timeline.fixtures"
+import type { AgentRunCounts, AgentRunRow } from "../agent-runs"
 import type { InstallationFacts, InstallationView, ParkedRunsView } from "../platform.types"
 
 /** An installation with one enabled module and one the workspace has not enabled. */
@@ -151,6 +153,29 @@ export const PARKED_RUNS_NONE: ParkedRunsView = {
     rows: [],
 }
 
+/** The runs of an agent: one parked on a refused send, one failed, one running and one done. */
+export const AGENT_RUNS_VIEW: { readonly rows: ReadonlyArray<AgentRunRow>; readonly cursor: string | null } = {
+    rows: [
+        { id: "run-3", status: "parked", trigger: "zalo.message", when: "05/11/2026 15:00", duration: "1:12" },
+        { id: "run-4", status: "failed", trigger: "schedule.daily", when: "05/11/2026 09:00", duration: "0:04" },
+        { id: "run-5", status: "running", trigger: "zalo.message", when: "05/11/2026 15:20", duration: "0:09" },
+        { id: "run-1", status: "done", trigger: "zalo.message", when: "05/11/2026 08:00", duration: "1:07" },
+    ],
+    cursor: null,
+}
+
+/** The agent has not run yet. */
+export const AGENT_RUNS_NONE: { readonly rows: ReadonlyArray<AgentRunRow>; readonly cursor: string | null } = {
+    rows: [],
+    cursor: null,
+}
+
+/** How many runs the agent has under each filter. */
+export const AGENT_RUN_COUNTS: AgentRunCounts = { counts: { running: 1, parked: 1, done: 1, failed: 1 }, total: 4 }
+
+/** The agent has no run. */
+export const AGENT_RUN_COUNTS_NONE: AgentRunCounts = { counts: { running: 0, parked: 0, done: 0, failed: 0 }, total: 0 }
+
 /** What the prototype data port answers for the platform module. */
 export const PLATFORM_FIXTURES: ModuleFixtures = {
     reads: {
@@ -159,6 +184,9 @@ export const PLATFORM_FIXTURES: ModuleFixtures = {
         "platform.agent-connections": { ready: CONNECTIONS_VIEW, empty: CONNECTIONS_NONE },
         "platform.agent-knowledge": { ready: KNOWLEDGE_VIEW, empty: KNOWLEDGE_NONE },
         "platform.parked-runs": { ready: PARKED_RUNS_VIEW, empty: PARKED_RUNS_NONE },
+        "platform.agent-runs": { ready: AGENT_RUNS_VIEW, empty: AGENT_RUNS_NONE },
+        "platform.agent-run-counts": { ready: AGENT_RUN_COUNTS, empty: AGENT_RUN_COUNTS_NONE },
+        "platform.agent-run": { ready: RUN_PARKED },
     },
     actions: { "platform.resume-run": { ok: true } },
 }

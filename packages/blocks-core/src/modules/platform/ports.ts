@@ -1,8 +1,12 @@
 import { entityPort } from "@nivo-lite/agent-sdk/entity/port"
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
+import type { ListSource } from "@nivo-lite/agent-sdk/block"
 import { definePort } from "@nivo-lite/agent-sdk/port"
 import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
+import { agentGraphEntity } from "../../entities/agent/graph.entity"
 import { agentRunEntity } from "../../entities/agent/run.entity"
+import { agentRunStepEntity } from "../../entities/agent/run-step.entity"
+import type { AgentRunRow } from "./agent-runs"
 import type {
     AgentConnections,
     AgentKnowledge,
@@ -25,6 +29,12 @@ export const rightsPort: PortDefinition<RightsDirectory> = definePort<RightsDire
 /** The runs of the agents (`agent.run`): what the agent finished is read from them, through the engine. */
 export const agentRuns: PortDefinition<EntityApi> = entityPort(agentRunEntity)
 
+/** The steps of the runs of the agents (`agent.run-step`): the timeline of one run is read from them. */
+export const agentRunSteps: PortDefinition<EntityApi> = entityPort(agentRunStepEntity)
+
+/** The graphs of the agents (`agent.graph`): the one that holds an installation tells which agent it runs. */
+export const agentGraphs: PortDefinition<EntityApi> = entityPort(agentGraphEntity)
+
 /** The connections of the workspace bound to an agent. */
 export const agentConnectionsPort: PortDefinition<AgentConnections> =
     definePort<AgentConnections>("platform.agent-connections")
@@ -34,3 +44,7 @@ export const agentKnowledgePort: PortDefinition<AgentKnowledge> = definePort<Age
 
 /** The runs the engine parked and the resume of them. The door provides it, over the engine's park and resume of runs. */
 export const parkedRunsPort: PortDefinition<ParkedRuns> = definePort<ParkedRuns>("platform.parked-runs")
+
+/** The port `platform.agent-runs` declares as the list it pages, so a host pages it with a cursor; the read itself runs on the entity ports. */
+export const agentRunsList: PortDefinition<ListSource<AgentRunRow>> =
+    definePort<ListSource<AgentRunRow>>("platform.agent-runs-list")
