@@ -142,5 +142,14 @@
   "tab_orders": "Orders",
   "tab_pipeline": "Sales pipeline",
   "tab_settings": "Rules",
-  "waiting_owner": "Orders waiting for the owner"
+  "waiting_owner": "Orders waiting for the owner",
+  "failed_step_confirm": "Confirm the order",
+  "failed_step_notify": "Tell the customer",
+  "failed_step_invoice": "Issue the invoice",
+  "failed_step_order_complete": "Complete the order",
+  "failed_step_order_ask_missing": "Ask for missing details",
+  "failed_reason_delivery": "The message could not be sent",
+  "failed_reason_invoice": "The invoice service could not be reached",
+  "failed_reason_timeout": "The channel did not answer",
+  "action_resume_run": "Run again"
 }

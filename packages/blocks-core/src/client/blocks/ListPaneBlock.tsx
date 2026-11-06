@@ -1,6 +1,6 @@
 import { Children } from "react"
 import type { ReactNode } from "react"
-import { Divider, Section, Stack, SurfaceCard } from "@starci/grammar/common"
+import { Divider, Stack, SurfaceCard } from "@starci/grammar/common"
 import type { listPaneBlock } from "../../blocks/list-pane.block"
 import { InSurfaceProvider } from "../composites/InSurface"
 import { PaneSearch } from "../composites/PaneSearch"
@@ -17,7 +17,9 @@ export const ListPaneBlock = (props: RenderOf<typeof listPaneBlock>): ReactNode 
     const [head, ...rest] = Children.toArray(props.children)
     const label = words(props.props.title ?? props.props.searchLabel ?? { key: "searchLabel" })
     const card = (
-        <SurfaceCard ariaLabel={label}>
+        <SurfaceCard
+            {...(props.props.title === undefined ? { ariaLabel: label } : { label, headingLevel: 3 as const })}
+        >
             <InSurfaceProvider value>
                 <Stack gap="row">
                     {head}
@@ -35,11 +37,5 @@ export const ListPaneBlock = (props: RenderOf<typeof listPaneBlock>): ReactNode 
             </InSurfaceProvider>
         </SurfaceCard>
     )
-    return props.props.title === undefined ? (
-        card
-    ) : (
-        <Section title={label} headingLevel={3}>
-            {card}
-        </Section>
-    )
+    return card
 }

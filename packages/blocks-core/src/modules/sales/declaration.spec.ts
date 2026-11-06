@@ -2,7 +2,14 @@ import { seedSpecProblems } from "@nivo-lite/agent-sdk/module"
 import type { SpecNode } from "@nivo-lite/agent-sdk/spec"
 import { coreBlocks } from "../../blocks/core-blocks"
 import { salesBlocks } from "../../blocks/sales/sales-blocks"
-import { ATTENTION_COUNT_KEY, ATTENTION_KINDS, ATTENTION_KIND_VIEWS } from "../../rules/sales/attention-list"
+import { resumeRunAction } from "../platform/actions/resume-run.action"
+import {
+    ATTENTION_COUNT_KEY,
+    ATTENTION_KINDS,
+    ATTENTION_KIND_VIEWS,
+    PARKED_REASON_KEYS,
+    PARKED_STEP_KEYS,
+} from "../../rules/sales/attention-list"
 import { FIGURE_HINT_KEYS } from "../../rules/sales/figures"
 import { PIPELINE_WORD_KEYS, stageKeyOf } from "../../rules/sales/pipeline"
 import { LEAD_STAGES } from "../../rules/sales/stage"
@@ -135,11 +142,17 @@ describe("the messages of the Sales module", () => {
             ...refusals.flatMap((reason) => keysIn(refusedWith(reason))),
             ...salesBlocks.flatMap((block) => keysIn(block.title)),
             ATTENTION_COUNT_KEY,
-            ...Object.values(FIGURE_HINT_KEYS),
+            FIGURE_HINT_KEYS.open,
+            FIGURE_HINT_KEYS.proposal,
+            FIGURE_HINT_KEYS.closed,
+            FIGURE_HINT_KEYS.conversion,
             ...ATTENTION_KINDS.flatMap((kind) => [
                 ATTENTION_KIND_VIEWS[kind].chipKey,
                 ATTENTION_KIND_VIEWS[kind].commandKey,
             ]),
+            ...[resumeRunAction].flatMap((action) => keysIn(action.label)),
+            ...PARKED_STEP_KEYS.values(),
+            ...PARKED_REASON_KEYS.values(),
             ...Object.values(PIPELINE_WORD_KEYS),
             ...LEAD_STAGES.map(stageKeyOf),
             "refusal_conflict",

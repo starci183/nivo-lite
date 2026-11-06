@@ -275,6 +275,11 @@ export const DetailBlock = (props: RenderOf<typeof detailBlock>): ReactNode => {
             labels={labels}
             placeholder={{}}
             onRetry={read.retry}
+            frame={(notice) => (
+                <SurfaceCard label={words(props.props.label)} headingLevel={2}>
+                    {notice}
+                </SurfaceCard>
+            )}
             render={(record, isLoading) => (
                 <DetailBody
                     record={record}
