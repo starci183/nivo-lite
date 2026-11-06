@@ -83,5 +83,7 @@
   "decisions_see_why": "Why",
   "decisions_more": "More",
   "aside_label": "Waiting for your approval",
-  "entry_kind": "Entry"
+  "entry_kind": "Entry",
+  "tab_questions": "Questions to answer",
+  "questions_label": "Questions waiting for you"
 }

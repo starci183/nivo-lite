@@ -174,6 +174,11 @@ export const ACCOUNTING_FIXTURES: ModuleFixtures = {
         "accounting.status-counts": { ready: ENTRY_STATUS_COUNTS, empty: ENTRY_STATUS_COUNTS_NONE },
         "accounting.weekly": { ready: WEEKLY_VIEW, empty: WEEKLY_NONE },
         "accounting.decisions": { ready: unmatchedQueueOf([UNMATCHED_PAYMENT], 1), empty: unmatchedQueueOf([], 0) },
+        "accounting.question-count": { ready: { count: 3 }, empty: { count: 0 } },
+        "accounting.questions": {
+            ready: { count: "3", rows: [], linkLabel: "", linkHref: "", more: null },
+            empty: { count: null, rows: [], linkLabel: "", linkHref: "", more: null },
+        },
         "accounting.entry": { ready: ENTRY_DETAIL, empty: null },
         "accounting.figures": { ready: FIGURES_VIEW, empty: FIGURES_NONE },
         "accounting.settings": { ready: ACCOUNTING_SETTINGS_DEFAULTS, empty: null },

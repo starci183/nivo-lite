@@ -83,5 +83,7 @@
   "decisions_see_why": "Vì sao",
   "decisions_more": "Thêm",
   "aside_label": "Cần bạn duyệt",
-  "entry_kind": "Chứng từ"
+  "entry_kind": "Chứng từ",
+  "tab_questions": "Câu hỏi cần trả lời",
+  "questions_label": "Câu hỏi đang chờ bạn"
 }

@@ -457,6 +457,31 @@
       }
     },
     {
+      "id": "questions",
+      "label": {
+        "key": "tab_questions"
+      },
+      "count": {
+        "read": "accounting.question-count",
+        "path": "count",
+        "isAttention": true
+      },
+      "root": {
+        "id": "questions-root",
+        "block": "core.waiting",
+        "props": {
+          "label": {
+            "key": "questions_label"
+          }
+        },
+        "bind": {
+          "region": {
+            "read": "accounting.questions"
+          }
+        }
+      }
+    },
+    {
       "id": "settings",
       "label": {
         "key": "tab_settings"
