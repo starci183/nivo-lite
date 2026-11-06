@@ -22,7 +22,7 @@ export const AuthFrame = (props: AuthFrameProps) => (
         artwork={
             <Freestyle
                 reason="sign-in brand art"
-                className="relative min-h-0 flex-1 overflow-hidden rounded-br-[3rem] bg-[var(--accent-soft)]"
+                className="relative min-h-0 flex-1 overflow-hidden bg-[var(--accent-soft)]"
             >
                 <div className="absolute left-8 top-8 z-10">{props.logo}</div>
                 <img
