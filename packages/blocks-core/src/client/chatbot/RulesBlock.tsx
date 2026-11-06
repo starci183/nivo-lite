@@ -97,7 +97,7 @@ const RulesForm = (props: RulesProps & { readonly record: unknown; readonly isLo
                     )}
                     {lastEdit === "" ? null : (
                         <Text size="sm" tone="muted">
-                            {words({ key: "rules_last_edit" }).replace("{by}", lastEdit)}
+                            {`${words({ key: "rules_last_edit_prefix" })}${lastEdit}`}
                         </Text>
                     )}
                 </Form>

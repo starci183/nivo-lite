@@ -23,12 +23,10 @@ export interface ThreadFixtureRecord {
     readonly lastAt: string
 }
 
-/** The contact of an open conversation as `chatbot.thread` yields it, with the customer record behind it. */
+/** The contact of an open conversation as `chatbot.thread` yields it; the status is the text of the record. */
 export interface ContactFixtureRecord extends Omit<ThreadView, "status"> {
     /** Where the conversation stands, as the text of the record. */
     readonly status: string
-    /** The customer record behind the conversation. */
-    readonly leadId: string
 }
 
 /** The counts of the tabs of the inbox, as `chatbot.thread-counts` yields them. */

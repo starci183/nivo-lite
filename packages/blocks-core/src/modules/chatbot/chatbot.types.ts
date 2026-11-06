@@ -1,3 +1,4 @@
+import type { ChatbotSettings } from "../../rules/chatbot/settings"
 import type { ChatbotChannel, ConversationState, InboxStatus, MessageRole } from "../../rules/chatbot"
 
 /**
@@ -113,4 +114,10 @@ export interface ProposalView {
     readonly text: string
     /** A note under the reply. */
     readonly note: string
+}
+
+/** The rules of the Chatbot as the workspace saved them, with who saved them last. */
+export interface SavedSettings extends ChatbotSettings {
+    /** The name of the member who saved them last. */
+    readonly updatedBy: string
 }

@@ -31,6 +31,14 @@ export interface SettingsProblem {
     readonly issue: SettingsIssue
 }
 
+/** The message key that words each refusal, in the module's catalogue. */
+export const SETTINGS_ISSUE_KEYS: Readonly<Record<SettingsIssue, string>> = {
+    timeout_range: "rules_error_timeout_range",
+    timeout_whole: "rules_error_timeout_whole",
+    holding_empty: "rules_error_holding_empty",
+    holding_too_long: "rules_error_holding_too_long",
+}
+
 /** What is wrong with the settings; nothing when they may be saved. */
 export const settingsProblemsOf = (given: ChatbotSettings): ReadonlyArray<SettingsProblem> => {
     const problems: Array<SettingsProblem> = []

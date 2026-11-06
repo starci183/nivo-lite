@@ -15,19 +15,3 @@ export interface DraftReplyOutput {
     /** The stored line, with the status proposed; null when no draft was stored. */
     readonly messageId: string | null
 }
-
-/** What approving a draft sends: the stored line and its words. */
-export interface SendApprovedInput {
-    /** The conversation the reply goes to. */
-    readonly conversationId: string
-    /** The stored line a person approved. */
-    readonly messageId: string
-    /** The words the person approved, changed or not. */
-    readonly text: string
-}
-
-/** What sending an approved draft answered. */
-export interface SendApprovedOutput {
-    /** The message the channel took. */
-    readonly sentId: string
-}

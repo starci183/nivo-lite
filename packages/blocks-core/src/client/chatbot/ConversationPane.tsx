@@ -125,7 +125,7 @@ const ThreadBand = (props: ThreadBandProps): ReactNode => {
     const words = useBlockWords()
     return (
         <PaneSection
-            scroll={{ label: props.label, role: "log", tone: "background", align: "end", scrollRef: props.scrollRef }}
+            scroll={{ label: props.label, role: "log", tone: "background", align: "start", scrollRef: props.scrollRef }}
         >
             <SlotView
                 slot={props.thread}
@@ -204,7 +204,7 @@ export const ConversationPane = (props: ConversationPaneProps): ReactNode => {
                               subtitle:
                                   contact.channelName === ""
                                       ? ""
-                                      : words({ key: "inbox_channel_line" }).replace("{channel}", contact.channelName),
+                                      : `${words({ key: "inbox_channel_prefix" })} ${contact.channelName}`,
                           }
                 }
                 contact={props.contact}

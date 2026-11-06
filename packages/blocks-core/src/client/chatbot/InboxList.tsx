@@ -3,15 +3,9 @@ import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import { Avatar, Badge, Button, Cluster, ListBox, RelativeTime, Stack, Tabs, Text } from "@starci/grammar/common"
 import type { BadgeTone, ListBoxItem } from "@starci/grammar/common"
 import type { inboxBlock } from "../../blocks/chatbot/inbox.block"
-import {
-    countsView,
-    EMPTY_TAB_COUNTS,
-    selectedTab,
-    tabEntriesOf,
-    TAB_COUNTS_PLACEHOLDER,
-    tabParamValue,
-} from "../../rows/filter-tabs"
+import { countsView, EMPTY_TAB_COUNTS, tabEntriesOf, TAB_COUNTS_PLACEHOLDER } from "../../rows/filter-tabs"
 import type { TabCounts, TabSpec } from "../../rows/filter-tabs"
+import { tabOf, paramsOfTab } from "../../rows/chatbot/inbox-tabs"
 import { INBOX_TABS, threadRowsOf } from "../../rows/chatbot/thread-rows"
 import type { ThreadListRow, ThreadStatus } from "../../rows/chatbot/thread-rows"
 import { chosenRow, moreStateOf, recordsView, selectionOf } from "../../rows/rows"
@@ -43,14 +37,12 @@ interface RowWords {
 const trailingOf = (row: ThreadListRow, words: RowWords): ReactNode => (
     <Stack gap="inline" align="end">
         {row.at === "" ? null : <RelativeTime dateTime={row.at} locale={words.locale} size="sm" tone="muted" />}
-        <Cluster gap="inline" wrap={false}>
-            {row.status === null ? null : (
-                <Badge tone={STATUS_TONE[row.status]} isDot>
-                    {words.status(row)}
-                </Badge>
-            )}
-            {row.channel === "" ? null : <Badge tone="neutral">{words.channel(row.channel)}</Badge>}
-        </Cluster>
+        {row.status === null ? null : (
+            <Badge tone={STATUS_TONE[row.status]} isDot>
+                {words.status(row)}
+            </Badge>
+        )}
+        {row.channel === "" ? null : <Badge tone="neutral">{words.channel(row.channel)}</Badge>}
     </Stack>
 )
 
@@ -80,9 +72,22 @@ const InboxTabs = (props: InboxListProps): ReactNode => {
             moreLabel={() => words({ key: "filtersOverflow" })}
             overflowLabel={words({ key: "filtersOverflow" })}
             inset="none"
-            selectedKey={selectedTab(props.params.value(props.props.statusParam), specs)}
-            items={tabEntriesOf(words({ key: "filter_all" }), specs, view)}
-            onSelect={(key) => props.params.set(props.props.statusParam, tabParamValue(key))}
+            selectedKey={tabOf(
+                props.params.value(props.props.statusParam),
+                props.params.value(props.props.periodParam),
+            )}
+            items={tabEntriesOf(words({ key: "filter_all" }), specs, view).map((entry) =>
+                view !== null && entry.id === "today" && !("today" in view.counts)
+                    ? { id: entry.id, label: entry.label }
+                    : entry,
+            )}
+            onSelect={(key) => {
+                const chosen = paramsOfTab(key)
+                props.params.setMany({
+                    [props.props.statusParam]: chosen.status,
+                    [props.props.periodParam]: chosen.period,
+                })
+            }}
         />
     )
     if ("isError" in counts) return tabs(null)
@@ -115,7 +120,7 @@ const InboxRows = (props: InboxListProps): ReactNode => {
         locale: host.locale(),
         status: (row) =>
             row.status === "handled" && row.handledBy !== ""
-                ? words({ key: "inbox_status_handled_by" }).replace("{name}", row.handledBy)
+                ? `${row.handledBy}${words({ key: "inbox_status_handled_suffix" })}`
                 : words({ key: `row_${row.status ?? "ai"}` }),
         channel: (key) => words({ key: `channel_${key}` }),
     }
