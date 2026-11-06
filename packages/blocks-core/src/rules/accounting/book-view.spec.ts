@@ -57,6 +57,11 @@ describe("bookRowsOf", () => {
         expect(second).toMatchObject({ subline: "", status: "w:expense", tone: "neutral" })
     })
 
+    it("gives an entry with no note an empty title", () => {
+        const [row] = bookRowsOf([{ ...RECORD, note: null }], (status) => status)
+        expect(row).toMatchObject({ title: "", subline: "Anh Khoa" })
+    })
+
     it("gives every status a tone", () => {
         expect(ENTRY_STATUSES.map((status) => BOOK_TONES[status])).toEqual(["success", "warning", "neutral", "warning"])
     })
