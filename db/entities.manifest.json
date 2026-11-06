@@ -638,9 +638,13 @@
       "partition": "records_sales_settings",
       "checks": [
         "records_sales_settings_approval_threshold_vnd_chk",
+        "records_sales_settings_auto_won_chk",
         "records_sales_settings_closed_deals_can_flip_chk",
         "records_sales_settings_draft_without_total_needs_approval_chk",
         "records_sales_settings_key_chk",
+        "records_sales_settings_max_discount_pct_chk",
+        "records_sales_settings_notify_accounting_chk",
+        "records_sales_settings_remind_after_days_chk",
         "records_sales_settings_reopen_needs_approval_chk"
       ],
       "indexes": ["records_sales_settings_key", "records_sales_settings_key_key"]
