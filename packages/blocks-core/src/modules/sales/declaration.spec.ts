@@ -2,6 +2,7 @@ import { seedSpecProblems } from "@nivo-lite/agent-sdk/module"
 import type { SpecNode } from "@nivo-lite/agent-sdk/spec"
 import { coreBlocks } from "../../blocks/core-blocks"
 import { salesBlocks } from "../../blocks/sales/sales-blocks"
+import { resumeRunAction } from "../platform/actions/resume-run.action"
 import {
     ATTENTION_COUNT_KEY,
     ATTENTION_KINDS,
@@ -146,6 +147,7 @@ describe("the messages of the Sales module", () => {
                 ATTENTION_KIND_VIEWS[kind].chipKey,
                 ATTENTION_KIND_VIEWS[kind].commandKey,
             ]),
+            ...keysIn(resumeRunAction.label),
             ...PARKED_STEP_KEYS.values(),
             ...PARKED_REASON_KEYS.values(),
             ...Object.values(PIPELINE_WORD_KEYS),

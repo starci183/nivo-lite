@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot } from "@nivo-lite/agent-sdk/client"
 import type { ActionHandle, ReadHandle } from "@nivo-lite/agent-sdk/block"
-import { EmptyNotice, Section, SurfaceCard } from "@starci/grammar/common"
+import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import type { salesAttentionCardBlock } from "../../blocks/sales/attention-card.block"
 import { countedWords } from "../../rows/counted-words"
@@ -114,27 +114,27 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
     }
     const count = "items" in display ? display.items.length : null
     return (
-        <Section
-            title={words(props.props.label)}
-            headingLevel={3}
-            {...(count === null ? {} : { fact: countedWords(word(ATTENTION_COUNT_KEY), count) })}
-        >
-            <SlotView
-                slot={display}
-                labels={labels}
-                placeholder={PLACEHOLDER}
-                onRetry={() => retryReads(props)}
-                frame={(notice) => <SurfaceCard ariaLabel={words(props.props.label)}>{notice}</SurfaceCard>}
-                render={(items, isLoading) => (
-                    <SurfaceCard
-                        kind="list"
-                        ariaLabel={words(props.props.label)}
-                        isLoading={isLoading}
-                        items={items.map(rowOf)}
-                        empty={<EmptyNotice message={labels.empty} />}
-                    />
-                )}
-            />
-        </Section>
+        <SlotView
+            slot={display}
+            labels={labels}
+            placeholder={PLACEHOLDER}
+            onRetry={() => retryReads(props)}
+            frame={(notice) => (
+                <SurfaceCard label={words(props.props.label)} headingLevel={3}>
+                    {notice}
+                </SurfaceCard>
+            )}
+            render={(items, isLoading) => (
+                <SurfaceCard
+                    kind="list"
+                    label={words(props.props.label)}
+                    headingLevel={3}
+                    {...(count === null ? {} : { fact: countedWords(word(ATTENTION_COUNT_KEY), count) })}
+                    isLoading={isLoading}
+                    items={items.map(rowOf)}
+                    empty={<EmptyNotice message={labels.empty} />}
+                />
+            )}
+        />
     )
 }

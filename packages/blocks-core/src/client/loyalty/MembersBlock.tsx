@@ -1,25 +1,16 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ReadHandle } from "@nivo-lite/agent-sdk/block"
-import {
-    Avatar,
-    Badge,
-    Divider,
-    ListBox,
-    Section,
-    Select,
-    Stack,
-    SurfaceCard,
-    Tabs,
-    Text,
-} from "@starci/grammar/common"
-import type { ListBoxItem } from "@starci/grammar/common"
+import type { DataSlot, SlotLabels } from "@nivo-lite/agent-sdk/client"
+import { Divider, EmptyNotice, Section, Select, Stack, SurfaceCard, Tabs } from "@starci/grammar/common"
+import type { BadgeData, ListRowData } from "@starci/grammar/common"
 import type { loyaltyMembersBlock } from "../../blocks/loyalty/members.block"
 import { cellContextOf, formatValue } from "../../rows/cell-format"
+import type { CellContext } from "../../rows/cell-format"
 import { countedWords } from "../../rows/counted-words"
 import { ALL_TAB, countsView, moreLabelOf, tabParamValue } from "../../rows/filter-tabs"
 import type { TabCounts } from "../../rows/filter-tabs"
-import { chosenRow, recordsView, selectionOf } from "../../rows/rows"
+import { recordsView } from "../../rows/rows"
 import {
     MEMBER_SORTS,
     MEMBER_WORD_KEYS,
@@ -63,6 +54,81 @@ const tiersOf = (handle: ReadHandle): ReadonlyArray<MemberTier> => {
     return "items" in parsed ? parsed.items : []
 }
 
+/** What the rows of the members take. */
+interface MemberRowsProps {
+    readonly blockProps: Props
+    readonly entries: DataSlot<ReadonlyArray<MemberEntry>>
+    readonly labels: SlotLabels
+    readonly itemOf: (entry: MemberEntry) => ListRowData
+    readonly word: (key: string) => string
+}
+
+/** The members as one list that writes the chosen one to the select param and loads further pages on request. */
+const MemberRows = (props: MemberRowsProps): ReactNode => {
+    const words = useBlockWords()
+    const block = props.blockProps
+    return (
+        <SlotView
+            slot={props.entries}
+            labels={props.labels}
+            placeholder={PLACEHOLDER_ENTRIES}
+            onRetry={block.slots.rows.retry}
+            render={(items, isLoading) => (
+                <Stack gap="row">
+                    <Section
+                        kind="list"
+                        ariaLabel={words(block.props.label)}
+                        isLoading={isLoading}
+                        items={items.map((entry) => ({
+                            ...props.itemOf(entry),
+                            onPress: () => block.params.set(block.props.selectParam, entry.id),
+                        }))}
+                        empty={<EmptyNotice message={props.labels.empty} />}
+                    />
+                    {block.slots.rows.page === null ? null : (
+                        <LoadMore
+                            page={block.slots.rows.page}
+                            words={{
+                                label: words(block.props.label),
+                                loadMore: props.word("listLoadMore"),
+                                loadFailed: props.word("listLoadFailed"),
+                                retry: props.labels.retry,
+                            }}
+                        />
+                    )}
+                </Stack>
+            )}
+        />
+    )
+}
+
+/** The chips of a member: the tier, and the risk of leaving; no chip is drawn for a member with neither. */
+const badgesOf = (entry: MemberEntry, word: (key: string) => string): Pick<ListRowData, "badges"> => {
+    const tier: BadgeData | null = entry.tier === "" ? null : { label: entry.tier, tone: "accent" }
+    const risk: BadgeData | null = entry.isAtRisk ? { label: word(MEMBER_WORD_KEYS.atRisk), tone: "warning" } : null
+    if (tier !== null && risk !== null) return { badges: [tier, risk] }
+    const only = tier ?? risk
+    return only === null ? {} : { badges: [only] }
+}
+
+/** The row the list draws for one member: the name, the last purchase, the points at the end and the tier and risk chips. */
+const memberItemOf = (entry: MemberEntry, word: (key: string) => string, context: CellContext): ListRowData => {
+    const line = memberLineOf(
+        entry,
+        entry.lastVisitAt === ""
+            ? ""
+            : countedWords(word(MEMBER_WORD_KEYS.lastPurchase), formatValue(entry.lastVisitAt, "day", context)),
+    )
+    return {
+        id: entry.id,
+        title: entry.name,
+        leading: { avatar: { name: entry.name } },
+        ...(line === "" ? {} : { description: line }),
+        meta: { text: countedWords(word(MEMBER_WORD_KEYS.points), formatValue(entry.points, "number", context)) },
+        ...badgesOf(entry, word),
+    }
+}
+
 /** The members of the programme as the owner reads them: a head with the sort, a search, the tier tabs and the rows. */
 export const MembersBlock = (props: Props): ReactNode => {
     const host = useBlockHost()
@@ -92,35 +158,13 @@ export const MembersBlock = (props: Props): ReactNode => {
     })
     const moreTemplate = word("filtersMore")
     const sortOptions = MEMBER_SORTS.map((sort) => ({ id: sort, label: word(sortKeyOf(sort)) }))
-    const itemOf = (entry: MemberEntry): ListBoxItem => {
-        const line = memberLineOf(
-            entry,
-            entry.lastVisitAt === ""
-                ? ""
-                : countedWords(word(MEMBER_WORD_KEYS.lastPurchase), formatValue(entry.lastVisitAt, "day", context)),
-        )
-        return {
-            id: entry.id,
-            label: entry.name,
-            leading: <Avatar name={entry.name} isDecorative />,
-            ...(line === "" ? {} : { description: line }),
-            trailing: (
-                <Stack gap="inline" align="end">
-                    {entry.tier === "" ? null : <Badge tone="accent">{entry.tier}</Badge>}
-                    <Text size="sm" tone="muted">
-                        {countedWords(word(MEMBER_WORD_KEYS.points), formatValue(entry.points, "number", context))}
-                    </Text>
-                    {entry.isAtRisk ? <Badge tone="warning">{word(MEMBER_WORD_KEYS.atRisk)}</Badge> : null}
-                </Stack>
-            ),
-        }
-    }
+    const itemOf = (entry: MemberEntry): ListRowData => memberItemOf(entry, word, context)
     return (
-        <Section
-            title={words(props.props.label)}
+        <SurfaceCard
+            label={words(props.props.label)}
             headingLevel={3}
             {...(tierCounts === null ? {} : { fact: formatValue(tierCounts.total, "number", context) })}
-            action={
+            labelEnd={
                 <Select
                     label={words(props.props.sortLabel)}
                     isLabelHidden
@@ -132,66 +176,32 @@ export const MembersBlock = (props: Props): ReactNode => {
                 />
             }
         >
-            <SurfaceCard ariaLabel={words(props.props.label)}>
-                <Stack gap="row">
-                    <Tabs
-                        kind="filter"
-                        label={words(props.props.label)}
-                        moreLabel={(count) => moreLabelOf(moreTemplate, count)}
-                        overflowLabel={word("filtersOverflow")}
-                        inset="none"
-                        selectedKey={selectedMemberTab(params, tiers, showAtRisk)}
-                        items={memberTabsOf(
-                            tiers,
-                            tierCounts,
-                            countsOf(props.slots.activityCounts),
-                            { all: words(props.props.all), atRisk: words(props.props.atRisk) },
-                            showAtRisk,
-                        )}
-                        onSelect={(key) => choose(tabParamValue(key) ?? ALL_TAB)}
-                    />
-                    <PaneSearch
-                        param={props.props.searchParam}
-                        params={props.params}
-                        label={words(props.props.searchLabel)}
-                        clearLabel={word("searchClear")}
-                    />
-                    <Divider />
-                    <SlotView
-                        slot={entries}
-                        labels={labels}
-                        placeholder={PLACEHOLDER_ENTRIES}
-                        onRetry={props.slots.rows.retry}
-                        render={(items, isLoading) => (
-                            <Stack gap="row">
-                                <ListBox
-                                    label={words(props.props.label)}
-                                    items={items.map(itemOf)}
-                                    selectionMode="single"
-                                    selectionIndicator="none"
-                                    selectedIds={selectionOf(props.params.value(props.props.selectParam))}
-                                    onSelectionChange={(ids) => {
-                                        const id = chosenRow(ids)
-                                        if (id !== null) props.params.set(props.props.selectParam, id)
-                                    }}
-                                    isLoading={isLoading}
-                                />
-                                {props.slots.rows.page === null ? null : (
-                                    <LoadMore
-                                        page={props.slots.rows.page}
-                                        words={{
-                                            label: words(props.props.label),
-                                            loadMore: word("listLoadMore"),
-                                            loadFailed: word("listLoadFailed"),
-                                            retry: labels.retry,
-                                        }}
-                                    />
-                                )}
-                            </Stack>
-                        )}
-                    />
-                </Stack>
-            </SurfaceCard>
-        </Section>
+            <Stack gap="row">
+                <Tabs
+                    kind="filter"
+                    label={words(props.props.label)}
+                    moreLabel={(count) => moreLabelOf(moreTemplate, count)}
+                    overflowLabel={word("filtersOverflow")}
+                    inset="none"
+                    selectedKey={selectedMemberTab(params, tiers, showAtRisk)}
+                    items={memberTabsOf(
+                        tiers,
+                        tierCounts,
+                        countsOf(props.slots.activityCounts),
+                        { all: words(props.props.all), atRisk: words(props.props.atRisk) },
+                        showAtRisk,
+                    )}
+                    onSelect={(key) => choose(tabParamValue(key) ?? ALL_TAB)}
+                />
+                <PaneSearch
+                    param={props.props.searchParam}
+                    params={props.params}
+                    label={words(props.props.searchLabel)}
+                    clearLabel={word("searchClear")}
+                />
+                <Divider />
+                <MemberRows blockProps={props} entries={entries} labels={labels} itemOf={itemOf} word={word} />
+            </Stack>
+        </SurfaceCard>
     )
 }

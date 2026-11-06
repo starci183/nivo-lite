@@ -150,5 +150,6 @@
   "failed_step_order_ask_missing": "Ask for missing details",
   "failed_reason_delivery": "The message could not be sent",
   "failed_reason_invoice": "The invoice service could not be reached",
-  "failed_reason_timeout": "The channel did not answer"
+  "failed_reason_timeout": "The channel did not answer",
+  "action_resume_run": "Run again"
 }

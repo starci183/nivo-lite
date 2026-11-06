@@ -150,5 +150,6 @@
   "failed_step_order_ask_missing": "Hỏi thông tin còn thiếu",
   "failed_reason_delivery": "Không gửi được tin nhắn",
   "failed_reason_invoice": "Không nối được dịch vụ hóa đơn",
-  "failed_reason_timeout": "Kênh không trả lời"
+  "failed_reason_timeout": "Kênh không trả lời",
+  "action_resume_run": "Chạy lại"
 }

@@ -49,7 +49,14 @@ export const RecordCardList = (props: RecordCardListProps): ReactNode => {
     if (props.isHeadless === true)
         return <Section kind="list" ariaLabel={props.title} isLoading={props.isLoading} items={items} empty={empty} />
     return props.isCard ? (
-        <SurfaceCard kind="list" ariaLabel={props.title} isLoading={props.isLoading} items={items} empty={empty} />
+        <SurfaceCard
+            kind="list"
+            label={props.title}
+            headingLevel={3}
+            isLoading={props.isLoading}
+            items={items}
+            empty={empty}
+        />
     ) : (
         <Section
             kind="list"
