@@ -52,6 +52,7 @@ export const OWNER_CONTEXT: RunContext = {
     memberId: OWNER_ID,
     now: new Date(SAMPLE_NOW),
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 }
 
 /** The text of a field of a row; empty when the field is not text. */

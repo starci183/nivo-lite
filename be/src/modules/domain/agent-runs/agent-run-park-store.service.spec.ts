@@ -5,7 +5,7 @@ import type { ScopedTx } from "@modules/domain/entity-engine"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentStepQueue } from "@modules/queues/agent-step"
-import { WHEN, runRecordOf, runStepViewOf, stepRecordOf } from "@tests/fixtures/builders/agent-runs.builder"
+import { WHEN, runRecordOf, runStepViewOf, runViewOf, stepRecordOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { AgentRunParkStoreService } from "./agent-run-park-store.service"
 import { AgentRunRecordsService } from "./agent-run-records.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
@@ -237,5 +237,61 @@ describe("AgentRunParkStoreService parked", () => {
         await expect(service.parked({ ...QUERY, byBuild: true, minAgeSeconds: 0 })).resolves.toEqual([
             { runId: "other", workspaceId: "ws-1" },
         ])
+    })
+})
+
+describe("AgentRunParkStoreService parked facts and standing", () => {
+    it("lists the parked runs for a person: newest first (whatever order the index gave), with the step they failed on and when they parked, leaving out one with no failed step", async () => {
+        const { service, records } = await build()
+        records.runsOf.mockResolvedValue([
+            runRecordOf({
+                id: "r1",
+                agentId: "a1",
+                status: "parked",
+                endedAt: WHEN,
+                context: { subject: { kind: "wake", id: "w1" } },
+            }),
+            runRecordOf({ id: "r2", status: "parked", endedAt: null }),
+            runRecordOf({ id: "r3", status: "parked", endedAt: null }),
+            runRecordOf({ id: "r4", status: "parked", endedAt: new Date(WHEN.getTime() - 1000) }),
+        ])
+        records.stepsOf.mockImplementation((_scoped, runId) =>
+            Promise.resolve(
+                runId === "r3"
+                    ? [stepRecordOf({ stepKey: "ok", status: "done" })]
+                    : [
+                          stepRecordOf({
+                              stepKey: "send",
+                              status: "failed",
+                              errorCode: runId === "r1" ? "boom" : null,
+                              input: runId === "r1" ? { trigger: { subject: { kind: "x", id: "1" } } } : {},
+                          }),
+                      ],
+            ),
+        )
+
+        const found = await service.parkedFacts("ws-1", 500)
+
+        expect(found.map((fact) => [fact.runId, fact.agentId, fact.stepKey, fact.errorCode])).toEqual([
+            ["r1", "a1", "send", "boom"],
+            ["r4", runRecordOf().agentId, "send", ""],
+            ["r2", runRecordOf().agentId, "send", ""],
+        ])
+        expect(found[0]).toMatchObject({ parkedAt: WHEN.toISOString(), subjectKind: "x", subjectId: "1" })
+        expect(found[1]).toMatchObject({ subjectKind: "", subjectId: "" })
+        expect(found[2]?.parkedAt).toBe(new Date(0).toISOString())
+        expect(records.runsOf.mock.calls[0]?.[4]).toBe(100)
+    })
+
+    it("answers where a run stands, and null for a run of another workspace or none", async () => {
+        const { service, store } = await build()
+        store.runById.mockResolvedValueOnce(runViewOf({ workspaceId: "ws-1", agentId: "a1", status: "parked" }))
+        store.runById.mockResolvedValueOnce(runViewOf({ workspaceId: "ws-1", agentId: "a1", status: "running" }))
+        store.runById.mockResolvedValueOnce(runViewOf({ workspaceId: "ws-2" }))
+        store.runById.mockResolvedValueOnce(null)
+        await expect(service.standingOf("ws-1", "r1")).resolves.toEqual({ agentId: "a1", parked: true })
+        await expect(service.standingOf("ws-1", "r1")).resolves.toEqual({ agentId: "a1", parked: false })
+        await expect(service.standingOf("ws-1", "r1")).resolves.toBeNull()
+        await expect(service.standingOf("ws-1", "r1")).resolves.toBeNull()
     })
 })

@@ -16,6 +16,7 @@ const CONTEXT: RunContext = {
     memberId: "m1",
     now: new Date(SAMPLE_NOW),
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 }
 
 const page = z.object({

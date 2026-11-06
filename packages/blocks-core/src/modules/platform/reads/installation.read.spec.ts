@@ -1,15 +1,16 @@
 import { portsOf } from "@nivo-lite/agent-sdk/port"
-import type { PortProvider } from "@nivo-lite/agent-sdk/port"
+import type { PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
 import { INSTALLATION, INSTALLATION_FACTS } from "../fixtures/platform.fixtures"
 import { installationPort } from "../ports"
 import type { InstallationSource } from "../platform.types"
 import { installationRead } from "./installation.read"
 
-const CONTEXT = {
+const CONTEXT: RunContext = {
     workspaceId: "ws-1",
     memberId: "member-1",
     now: new Date("2026-11-05T01:00:00.000Z"),
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 }
 
 const providerOf = (source: InstallationSource): PortProvider => ({

@@ -18,6 +18,7 @@ const contextOf = (memberId: string | null): RunContext => ({
     memberId,
     now: new Date(SAMPLE_NOW),
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 })
 
 const execute = (
