@@ -14,8 +14,8 @@ describe("the sample data of the Sales fixtures", () => {
             total: 5,
         })
         expect(SALES_FIXTURES.reads["sales.order-counts"]?.ready).toMatchObject({
-            counts: { draft: 2, confirmed: 1, invoiced: 0, paid: 2, cancelled: 1, failed_system: 0 },
-            total: 6,
+            counts: { draft: 2, confirmed: 1, invoiced: 0, paid: 2, cancelled: 1, failed_system: 1 },
+            total: 7,
         })
         expect(SALES_FIXTURES.reads["sales.order-counts"]?.empty).toMatchObject({ total: 0 })
     })

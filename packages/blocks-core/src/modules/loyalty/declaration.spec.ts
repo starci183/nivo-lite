@@ -33,7 +33,7 @@ const REFUSALS = [
 describe("the Loyalty declaration", () => {
     it("declares the reads and actions the workbench uses, each under the module key", () => {
         expect(loyaltyModule.key).toBe(LOYALTY_MODULE_KEY)
-        expect(loyaltyModule.reads.map((read) => read.id)).toHaveLength(15)
+        expect(loyaltyModule.reads.map((read) => read.id)).toHaveLength(16)
         expect(loyaltyModule.actions.map((action) => action.id)).toHaveLength(12)
         expect(loyaltyModule.permissions).toEqual(["loyalty.view", "loyalty.manage", "loyalty.decide"])
     })

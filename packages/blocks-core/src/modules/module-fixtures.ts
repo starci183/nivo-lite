@@ -2,6 +2,7 @@ import type { ActionResult } from "@nivo-lite/agent-sdk/block"
 import { ACCOUNTING_FIXTURES, PAYMENT_FIXTURES } from "./accounting"
 import { CHATBOT_FIXTURES } from "./chatbot"
 import { LOYALTY_FIXTURES } from "./loyalty"
+import { PLATFORM_FIXTURES } from "./platform"
 import { SALES_FIXTURES } from "./sales"
 
 /** The data of one read in each state a prototype draws: the answer when ready, and whether each other state exists for it. */
@@ -32,4 +33,5 @@ export const MODULE_FIXTURES: Readonly<Record<string, ModuleFixtures>> = {
     chatbot: CHATBOT_FIXTURES,
     accounting: ACCOUNTING_FIXTURES,
     payment: PAYMENT_FIXTURES,
+    platform: PLATFORM_FIXTURES,
 }

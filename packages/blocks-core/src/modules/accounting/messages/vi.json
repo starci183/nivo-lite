@@ -85,5 +85,15 @@
   "aside_label": "Cần bạn duyệt",
   "entry_kind": "Chứng từ",
   "tab_questions": "Câu hỏi cần trả lời",
-  "questions_label": "Câu hỏi đang chờ bạn"
+  "questions_label": "Câu hỏi đang chờ bạn",
+  "questions_empty_title": "Không có câu hỏi nào",
+  "questions_empty_body": "Câu hỏi của kế toán sẽ hiện ở đây.",
+  "answer_command": "Trả lời",
+  "answer_form": "Trả lời câu hỏi",
+  "answer_submit": "Gửi câu trả lời",
+  "answer_cancel": "Hủy",
+  "answer_field": "Câu trả lời",
+  "answer_question": "Trả lời câu hỏi kế toán",
+  "answer_empty": "Hãy nhập câu trả lời.",
+  "answer_closed": "Câu hỏi này đã được trả lời hoặc không còn."
 }

@@ -1,8 +1,9 @@
 import { defineRead } from "@nivo-lite/agent-sdk/block"
 import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
-import type { ItemsRegionView } from "../../../views/views.types"
-import { questionsPort } from "../ports"
+import { questionQueueOf } from "../../../rules/accounting/questions"
+import type { DecisionQueueView } from "../../../views/views.types"
+import { questionListPort, questionsPort } from "../ports"
 
 const variables: z.ZodObject<Record<string, never>> = z.object({})
 
@@ -25,18 +26,19 @@ export const questionCountRead: ReadDefinition = defineRead({
     run: async ({ questions }): Promise<QuestionCount> => ({ count: await questions.waiting() }),
 })
 
-/** `accounting.questions`: the questions that wait for the owner, as the waiting region reads them: the count, with no rows to list. */
+/** The most questions the queue lists. */
+export const QUESTIONS_SHOWN = 20
+
+/** `accounting.questions`: the questions that wait for the owner, as a queue whose edit form is the answer. */
 export const questionsRead: ReadDefinition = defineRead({
     id: "accounting.questions",
-    dataKind: "accounting-questions",
+    dataKind: "accounting-question",
     shape: "record",
-    fields: ["count", "rows", "linkLabel", "linkHref", "more"],
+    fields: ["count", "more", "rows"],
     paths: { rows: "list" },
     variables,
     permission: "accounting.view",
-    ports: { questions: questionsPort },
-    run: async ({ questions }): Promise<ItemsRegionView> => {
-        const waiting = await questions.waiting()
-        return { count: waiting === 0 ? null : String(waiting), rows: [], linkLabel: "", linkHref: "", more: null }
-    },
+    ports: { questions: questionsPort, list: questionListPort },
+    run: async ({ questions, list }): Promise<DecisionQueueView> =>
+        questionQueueOf(await list.waiting(QUESTIONS_SHOWN), await questions.waiting()),
 })

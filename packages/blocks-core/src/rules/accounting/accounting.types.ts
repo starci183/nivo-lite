@@ -64,6 +64,8 @@ export interface ClaimRecord {
     readonly settledTransactionId: string | null
     /** The conversation the claim came in. */
     readonly conversationId: string | null
+    /** The customer who said they paid; null when the claim came from a visitor not yet known. */
+    readonly leadId: string | null
 }
 
 /** The statuses of an invoice. */

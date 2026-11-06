@@ -22,6 +22,8 @@ export interface LeadRow {
     readonly contextSummary: string | null
     /** Why the deal was closed (won or lost); null while it is open. */
     readonly closedReason: string | null
+    /** Since when the customer waits for an answer, ISO text; null when nobody waits. */
+    readonly awaitingSince: string | null
     /** The version token an update must present. */
     readonly version: string
     /** When the lead was created, ISO text. */

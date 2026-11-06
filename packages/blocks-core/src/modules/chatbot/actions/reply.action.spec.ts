@@ -23,6 +23,7 @@ describe("the chatbot.reply action", () => {
                 authorKind: "human",
                 authorName: "L\u00ea Thu H\u00e0",
                 authorUserId: "member-staff",
+                status: "posted",
                 deliveryStatus: null,
                 deliveryError: null,
             },

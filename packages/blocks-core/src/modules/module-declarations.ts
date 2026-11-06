@@ -2,6 +2,7 @@ import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
 import { accountingModule, paymentModule } from "./accounting"
 import { chatbotModule } from "./chatbot"
 import { loyaltyModule } from "./loyalty"
+import { platformModule } from "./platform"
 import { salesModule } from "./sales"
 
 /**
@@ -15,4 +16,5 @@ export const MODULE_DECLARATIONS: ReadonlyArray<ModuleDeclaration> = [
     chatbotModule,
     accountingModule,
     paymentModule,
+    platformModule,
 ]

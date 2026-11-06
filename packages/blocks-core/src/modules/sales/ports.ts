@@ -12,6 +12,8 @@ export interface LeadStore {
     readonly update: (id: string, expected: string, patch: LeadPatch) => Promise<StoreResult<LeadRow>>
     /** The names of the given leads, by id; a lead that does not exist has no entry. */
     readonly names: (ids: ReadonlyArray<string>) => Promise<Readonly<Record<string, string>>>
+    /** The open customers who wait for an answer, longest wait first, at most `limit`. */
+    readonly awaitingReply: (limit: number) => Promise<ReadonlyArray<LeadRow>>
 }
 
 /** The order entity as the Sales reads and actions use it. */
@@ -27,6 +29,8 @@ export interface OrderStore {
      * settings say so), oldest first, at most `limit`, and how many there are.
      */
     readonly waiting: (settings: SalesSettings, limit: number) => Promise<WaitingPage>
+    /** The orders whose follow-up step failed, newest first, at most `limit`. */
+    readonly failedSteps: (limit: number) => Promise<ReadonlyArray<OrderRow>>
 }
 
 /** What the Sales asks of the rights of the member who acts. */

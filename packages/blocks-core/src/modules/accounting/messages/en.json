@@ -85,5 +85,15 @@
   "aside_label": "Waiting for your approval",
   "entry_kind": "Entry",
   "tab_questions": "Questions to answer",
-  "questions_label": "Questions waiting for you"
+  "questions_label": "Questions waiting for you",
+  "questions_empty_title": "No questions",
+  "questions_empty_body": "Questions from the accountant show here.",
+  "answer_command": "Answer",
+  "answer_form": "Answer the question",
+  "answer_submit": "Send the answer",
+  "answer_cancel": "Cancel",
+  "answer_field": "Answer",
+  "answer_question": "Answer an accounting question",
+  "answer_empty": "Write an answer.",
+  "answer_closed": "This question was already answered or is gone."
 }

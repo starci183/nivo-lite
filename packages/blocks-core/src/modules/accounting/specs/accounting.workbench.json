@@ -468,15 +468,61 @@
       },
       "root": {
         "id": "questions-root",
-        "block": "core.waiting",
+        "block": "core.decision-queue",
         "props": {
+          "surface": "section",
           "label": {
             "key": "questions_label"
+          },
+          "emptyTitle": {
+            "key": "questions_empty_title"
+          },
+          "emptyBody": {
+            "key": "questions_empty_body"
+          },
+          "seeWhy": {
+            "key": "decisions_see_why"
+          },
+          "moreMenu": {
+            "key": "decisions_more"
+          },
+          "commands": [
+            {
+              "id": "edit",
+              "label": {
+                "key": "answer_command"
+              }
+            }
+          ],
+          "edit": {
+            "label": {
+              "key": "answer_form"
+            },
+            "submitLabel": {
+              "key": "answer_submit"
+            },
+            "cancelLabel": {
+              "key": "answer_cancel"
+            },
+            "fields": [
+              {
+                "name": "answer",
+                "label": {
+                  "key": "answer_field"
+                },
+                "kind": "textarea",
+                "required": true,
+                "max": 2000
+              }
+            ]
           }
         },
         "bind": {
-          "region": {
+          "queue": {
             "read": "accounting.questions"
+          },
+          "command": {
+            "action": "accounting.answer-question"
           }
         }
       }
