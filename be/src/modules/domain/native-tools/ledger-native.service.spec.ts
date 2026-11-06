@@ -8,6 +8,9 @@ import {
     ProviderRegistryErrorCode,
 } from "@modules/domain/provider-registry"
 import type { BusinessLedgerEntry, LedgerPort } from "@modules/domain/provider-registry"
+import { domainNameIn } from "@modules/domain/mcp-gateway/connector-call.policy"
+import type { WorkspaceConnector } from "@modules/domain/mcp-gateway"
+import { DOOR_GRANTS } from "@modules/domain/entity-engine-door/door-grants.policy"
 import { LEDGER_MANIFEST, LedgerNativeService } from "./ledger-native.service"
 import { NativeViewService } from "./native-view.service"
 import type { NativeView } from "./native-view.policy"
@@ -92,6 +95,35 @@ describe("LedgerNativeService > the manifest", () => {
         for (const tool of LEDGER_MANIFEST.tools) expect(tool.internalOnly).toBe(true)
         expect(LEDGER_MANIFEST.tools.map((tool) => tool.scope)).toEqual(["write", "write", "read"])
         expect(JSON.stringify(LEDGER_MANIFEST)).not.toMatch(/sheet|google|cell/iu)
+    })
+})
+
+describe("LedgerNativeService > the door", () => {
+    const connector: WorkspaceConnector = {
+        manifest: LEDGER_MANIFEST,
+        status: "active",
+        url: null,
+        credentialState: "none",
+        credentialSetAt: null,
+        timeoutMs: 4000,
+        approvedTools: null,
+        approvedAt: null,
+        checkedAt: null,
+    }
+
+    it("plays every ledger door tool the internal agent holds, so a job that calls `ledger.status` or `ledger.append` finds its tool", () => {
+        const ledgerGrants = DOOR_GRANTS.filter((tool) => tool.startsWith("ledger."))
+        expect(ledgerGrants).toEqual(["ledger.append", "ledger.status"])
+        for (const tool of ledgerGrants)
+            expect(domainNameIn([connector], tool)).toBe(`ledger.${tool.slice("ledger.".length)}`)
+    })
+
+    it("declares the domain of each of its tools", () => {
+        expect(LEDGER_MANIFEST.tools.map((tool) => tool.domain)).toEqual([
+            "ledger.append",
+            "ledger.void",
+            "ledger.status",
+        ])
     })
 })
 

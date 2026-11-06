@@ -34,6 +34,7 @@ export const LEDGER_MANIFEST: NativeConnectorManifest = {
             inputSchema: LEDGER_APPEND_INPUT_SCHEMA,
             argumentSchema: LEDGER_APPEND_SCHEMA,
             secretFields: ["customer"],
+            domain: "ledger.append",
             internalOnly: true,
         },
         {
@@ -44,6 +45,7 @@ export const LEDGER_MANIFEST: NativeConnectorManifest = {
             defaultMode: "auto",
             inputSchema: LEDGER_VOID_INPUT_SCHEMA,
             argumentSchema: LEDGER_VOID_SCHEMA,
+            domain: "ledger.void",
             internalOnly: true,
         },
         {
@@ -53,6 +55,7 @@ export const LEDGER_MANIFEST: NativeConnectorManifest = {
             defaultMode: "auto",
             inputSchema: LEDGER_STATUS_INPUT_SCHEMA,
             argumentSchema: LEDGER_STATUS_SCHEMA,
+            domain: "ledger.status",
             internalOnly: true,
         },
     ],

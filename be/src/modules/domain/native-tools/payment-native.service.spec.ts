@@ -1,6 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { WorkspacePaymentAccountService } from "@modules/domain/channel-connections"
+import { ConnectionBindingsReadService } from "@modules/domain/connections"
+import type { FeedAccountFacts } from "@modules/domain/connections"
+import { SepayPaymentInstructionService } from "@modules/domain/sepay-provider/sepay-payment-instruction.service"
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
 import { PaymentInstructionRegistryService } from "@modules/domain/provider-registry"
 import { PAYMENT_MANIFEST, PaymentNativeService } from "./payment-native.service"
@@ -78,6 +81,56 @@ describe("PaymentNativeService", () => {
         })
         await expect(service.invoke("ws-1", "other", ARGS)).rejects.toMatchObject({
             code: McpGatewayErrorCode.UnknownTool,
+        })
+    })
+})
+
+describe("PaymentNativeService on the SePay connection of the walk", () => {
+    /** The facts the walk's SePay feed reports: the masked and the full account number and the bank code in the public meta, no holder. */
+    const WALK_FEED: FeedAccountFacts = {
+        id: "44c471c0-0000-4000-8000-000000000001",
+        provider: "sepay",
+        status: "active",
+        createdAt: new Date("2026-11-06T10:00:00Z"),
+        accountNumber: "0123456789",
+        bankCode: "MBBANK",
+        accountHolder: null,
+    }
+
+    it("answers the QR link and the account with the order code in the transfer content, so the credit that comes in matches", async () => {
+        const bindings = mock<ConnectionBindingsReadService>()
+        bindings.feedAccountsOf.mockImplementation((_workspace, provider) =>
+            Promise.resolve(provider === "sepay" ? [WALK_FEED] : []),
+        )
+        const moduleRef = await Test.createTestingModule({
+            providers: [
+                PaymentNativeService,
+                PaymentInstructionRegistryService,
+                WorkspacePaymentAccountService,
+                { provide: ConnectionBindingsReadService, useValue: bindings },
+            ],
+        }).compile()
+        moduleRef.get(PaymentInstructionRegistryService).register(new SepayPaymentInstructionService())
+
+        const answer = await moduleRef.get(PaymentNativeService).invoke("ws-1", "instruction", {
+            orderNo: "DH-20261107-0004",
+            amountVnd: 2000,
+            transferContent: "DH202611070004",
+        })
+
+        expect(answer).toMatchObject({
+            bankCode: "MBBANK",
+            accountNumber: "0123456789",
+            accountHolder: "",
+            provider: "sepay",
+        })
+        const qr = new URL(String((answer as { qrUrl: string }).qrUrl))
+        expect(qr.origin + qr.pathname).toBe("https://qr.sepay.vn/img")
+        expect(Object.fromEntries(qr.searchParams)).toMatchObject({
+            acc: "0123456789",
+            bank: "MBBANK",
+            amount: "2000",
+            des: "DH202611070004",
         })
     })
 })
