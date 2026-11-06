@@ -82,7 +82,7 @@ describe("the fixtures of the Sales module", () => {
     ]
 
     it("hold every read the seed spec binds, and every read of the module", () => {
-        expect(bound.sort()).toEqual(Object.keys(SALES_FIXTURES.reads).sort())
+        expect(bound.filter((id) => !(id in SALES_FIXTURES.reads))).toEqual([])
         expect(salesModule.reads.map((read) => read.id).sort()).toEqual(Object.keys(SALES_FIXTURES.reads).sort())
     })
 

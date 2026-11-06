@@ -360,7 +360,13 @@
                       "path": "status",
                       "format": "badge"
                     }
-                  ]
+                  ],
+                  "tones": {
+                    "paid": "success",
+                    "open": "warning",
+                    "expense": "neutral",
+                    "review": "danger"
+                  }
                 },
                 "bind": {
                   "rows": {

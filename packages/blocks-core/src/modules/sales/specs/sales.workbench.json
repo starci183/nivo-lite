@@ -7,12 +7,6 @@
       "url": "q",
       "default": ""
     },
-    "stage": {
-      "type": "enum",
-      "of": "sales.leads.stage",
-      "url": "stage",
-      "default": "all"
-    },
     "sort": {
       "type": "enum",
       "of": "sales.leads.sort",
@@ -194,39 +188,247 @@
       },
       "root": {
         "id": "pipeline-root",
-        "block": "core.master-detail",
+        "block": "core.stack",
         "props": {
-          "emptyTitle": {
-            "key": "lead_idle_title"
-          },
-          "emptyBody": {
-            "key": "lead_idle_body"
-          }
+          "gap": "region"
         },
         "children": [
           {
-            "id": "lead-pane",
-            "block": "core.list-pane",
+            "id": "lead-board",
+            "block": "core.board",
             "props": {
-              "search": true,
-              "searchParam": "q",
-              "searchLabel": {
-                "key": "search_leads"
-              }
-            },
-            "children": [
-              {
-                "id": "lead-tabs",
-                "block": "core.filter-tabs",
-                "props": {
-                  "param": "stage",
+              "label": {
+                "key": "leads"
+              },
+              "emptyColumn": {
+                "key": "board_empty_column"
+              },
+              "emptySearch": {
+                "key": "leads_empty_search"
+              },
+              "idPath": "id",
+              "titlePath": "contactName",
+              "descriptionPath": "need",
+              "metaPath": "company",
+              "groupBy": "stage",
+              "columns": [
+                {
+                  "value": "new",
                   "label": {
-                    "key": "stage_label"
+                    "key": "stage_new"
+                  }
+                },
+                {
+                  "value": "qualified",
+                  "label": {
+                    "key": "stage_qualified"
+                  }
+                },
+                {
+                  "value": "proposal",
+                  "label": {
+                    "key": "stage_proposal"
+                  }
+                },
+                {
+                  "value": "won",
+                  "label": {
+                    "key": "stage_won"
+                  }
+                },
+                {
+                  "value": "lost",
+                  "label": {
+                    "key": "stage_lost"
+                  }
+                }
+              ],
+              "selectParam": "selected",
+              "searchParam": "q"
+            },
+            "bind": {
+              "rows": {
+                "read": "sales.leads",
+                "variables": {
+                  "q": "$q",
+                  "sort": "$sort"
+                }
+              },
+              "move": {
+                "action": "sales.move-stage"
+              }
+            }
+          },
+          {
+            "id": "lead-detail",
+            "block": "core.detail",
+            "props": {
+              "label": {
+                "key": "lead_detail"
+              },
+              "idle": {
+                "key": "lead_idle_body"
+              },
+              "currency": "VND",
+              "items": [
+                {
+                  "term": {
+                    "key": "fact_name"
                   },
-                  "all": {
-                    "key": "filter_all"
+                  "path": "contactName"
+                },
+                {
+                  "term": {
+                    "key": "fact_company"
+                  },
+                  "path": "company"
+                },
+                {
+                  "term": {
+                    "key": "fact_stage"
+                  },
+                  "path": "stage",
+                  "format": "badge"
+                },
+                {
+                  "term": {
+                    "key": "fact_channel"
+                  },
+                  "path": "channel"
+                },
+                {
+                  "term": {
+                    "key": "fact_need"
+                  },
+                  "path": "need"
+                }
+              ],
+              "sections": [
+                {
+                  "title": {
+                    "key": "section_contact"
                   },
                   "items": [
+                    {
+                      "term": {
+                        "key": "fact_phone"
+                      },
+                      "path": "phone"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_email"
+                      },
+                      "path": "email"
+                    }
+                  ]
+                },
+                {
+                  "title": {
+                    "key": "section_orders"
+                  },
+                  "items": [
+                    {
+                      "term": {
+                        "key": "fact_order_count"
+                      },
+                      "path": "orderCount",
+                      "format": "number"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_confirmed"
+                      },
+                      "path": "confirmedVnd",
+                      "format": "money"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_latest_order"
+                      },
+                      "path": "latestOrderNo"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_latest_amount"
+                      },
+                      "path": "latestOrderAmountVnd",
+                      "format": "money"
+                    }
+                  ]
+                },
+                {
+                  "title": {
+                    "key": "section_outcome"
+                  },
+                  "items": [
+                    {
+                      "term": {
+                        "key": "fact_closed_reason"
+                      },
+                      "path": "closedReason"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_created"
+                      },
+                      "path": "createdAt",
+                      "format": "dateTime"
+                    }
+                  ]
+                }
+              ],
+              "labels": {
+                "stage": {
+                  "new": {
+                    "key": "stage_new"
+                  },
+                  "qualified": {
+                    "key": "stage_qualified"
+                  },
+                  "proposal": {
+                    "key": "stage_proposal"
+                  },
+                  "won": {
+                    "key": "stage_won"
+                  },
+                  "lost": {
+                    "key": "stage_lost"
+                  }
+                }
+              }
+            },
+            "bind": {
+              "record": {
+                "read": "sales.lead",
+                "variables": {
+                  "id": "$selected"
+                }
+              }
+            }
+          },
+          {
+            "id": "lead-move",
+            "block": "core.form",
+            "props": {
+              "label": {
+                "key": "move_title"
+              },
+              "submitLabel": {
+                "key": "move_submit"
+              },
+              "successNotice": {
+                "key": "move_done"
+              },
+              "fields": [
+                {
+                  "name": "to",
+                  "label": {
+                    "key": "move_to"
+                  },
+                  "kind": "choice",
+                  "required": true,
+                  "options": [
                     {
                       "value": "new",
                       "label": {
@@ -259,309 +461,37 @@
                     }
                   ]
                 },
-                "bind": {
-                  "counts": {
-                    "read": "sales.lead-counts",
-                    "variables": {
-                      "q": "$q"
-                    }
-                  }
-                }
-              },
-              {
-                "id": "lead-rows",
-                "block": "core.record-list",
-                "props": {
+                {
+                  "name": "reason",
                   "label": {
-                    "key": "leads"
+                    "key": "move_reason"
                   },
-                  "empty": {
-                    "key": "leads_empty"
+                  "hint": {
+                    "key": "move_reason_hint"
                   },
-                  "emptySearch": {
-                    "key": "leads_empty_search"
-                  },
-                  "idPath": "id",
-                  "titlePath": "contactName",
-                  "descriptionPath": "need",
-                  "badgePath": "stage",
-                  "selectParam": "selected",
-                  "searchParam": "q",
-                  "labels": {
-                    "stage": {
-                      "new": {
-                        "key": "stage_new"
-                      },
-                      "qualified": {
-                        "key": "stage_qualified"
-                      },
-                      "proposal": {
-                        "key": "stage_proposal"
-                      },
-                      "won": {
-                        "key": "stage_won"
-                      },
-                      "lost": {
-                        "key": "stage_lost"
-                      }
-                    }
-                  }
-                },
-                "bind": {
-                  "rows": {
-                    "read": "sales.leads",
-                    "variables": {
-                      "q": "$q",
-                      "stage": "$stage",
-                      "sort": "$sort"
-                    }
-                  }
+                  "kind": "textarea",
+                  "max": 500
                 }
+              ],
+              "requireRecord": true,
+              "idle": {
+                "key": "lead_idle_body"
               }
-            ]
-          },
-          {
-            "id": "lead-side",
-            "block": "core.stack",
-            "props": {
-              "gap": "region"
             },
-            "children": [
-              {
-                "id": "lead-detail",
-                "block": "core.detail",
-                "props": {
-                  "label": {
-                    "key": "lead_detail"
-                  },
-                  "idle": {
-                    "key": "lead_idle_body"
-                  },
-                  "currency": "VND",
-                  "items": [
-                    {
-                      "term": {
-                        "key": "fact_name"
-                      },
-                      "path": "contactName"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_company"
-                      },
-                      "path": "company"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_stage"
-                      },
-                      "path": "stage",
-                      "format": "badge"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_channel"
-                      },
-                      "path": "channel"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_need"
-                      },
-                      "path": "need"
-                    }
-                  ],
-                  "sections": [
-                    {
-                      "title": {
-                        "key": "section_contact"
-                      },
-                      "items": [
-                        {
-                          "term": {
-                            "key": "fact_phone"
-                          },
-                          "path": "phone"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_email"
-                          },
-                          "path": "email"
-                        }
-                      ]
-                    },
-                    {
-                      "title": {
-                        "key": "section_orders"
-                      },
-                      "items": [
-                        {
-                          "term": {
-                            "key": "fact_order_count"
-                          },
-                          "path": "orderCount",
-                          "format": "number"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_confirmed"
-                          },
-                          "path": "confirmedVnd",
-                          "format": "money"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_latest_order"
-                          },
-                          "path": "latestOrderNo"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_latest_amount"
-                          },
-                          "path": "latestOrderAmountVnd",
-                          "format": "money"
-                        }
-                      ]
-                    },
-                    {
-                      "title": {
-                        "key": "section_outcome"
-                      },
-                      "items": [
-                        {
-                          "term": {
-                            "key": "fact_closed_reason"
-                          },
-                          "path": "closedReason"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_created"
-                          },
-                          "path": "createdAt",
-                          "format": "dateTime"
-                        }
-                      ]
-                    }
-                  ],
-                  "labels": {
-                    "stage": {
-                      "new": {
-                        "key": "stage_new"
-                      },
-                      "qualified": {
-                        "key": "stage_qualified"
-                      },
-                      "proposal": {
-                        "key": "stage_proposal"
-                      },
-                      "won": {
-                        "key": "stage_won"
-                      },
-                      "lost": {
-                        "key": "stage_lost"
-                      }
-                    }
-                  }
-                },
-                "bind": {
-                  "record": {
-                    "read": "sales.lead",
-                    "variables": {
-                      "id": "$selected"
-                    }
-                  }
+            "bind": {
+              "record": {
+                "read": "sales.lead",
+                "variables": {
+                  "id": "$selected"
                 }
               },
-              {
-                "id": "lead-move",
-                "block": "core.form",
-                "props": {
-                  "label": {
-                    "key": "move_title"
-                  },
-                  "submitLabel": {
-                    "key": "move_submit"
-                  },
-                  "successNotice": {
-                    "key": "move_done"
-                  },
-                  "fields": [
-                    {
-                      "name": "to",
-                      "label": {
-                        "key": "move_to"
-                      },
-                      "kind": "choice",
-                      "required": true,
-                      "options": [
-                        {
-                          "value": "new",
-                          "label": {
-                            "key": "stage_new"
-                          }
-                        },
-                        {
-                          "value": "qualified",
-                          "label": {
-                            "key": "stage_qualified"
-                          }
-                        },
-                        {
-                          "value": "proposal",
-                          "label": {
-                            "key": "stage_proposal"
-                          }
-                        },
-                        {
-                          "value": "won",
-                          "label": {
-                            "key": "stage_won"
-                          }
-                        },
-                        {
-                          "value": "lost",
-                          "label": {
-                            "key": "stage_lost"
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "name": "reason",
-                      "label": {
-                        "key": "move_reason"
-                      },
-                      "hint": {
-                        "key": "move_reason_hint"
-                      },
-                      "kind": "textarea",
-                      "max": 500
-                    }
-                  ],
-                  "requireRecord": true,
-                  "idle": {
-                    "key": "lead_idle_body"
-                  }
-                },
-                "bind": {
-                  "record": {
-                    "read": "sales.lead",
-                    "variables": {
-                      "id": "$selected"
-                    }
-                  },
-                  "submit": {
-                    "action": "sales.move-stage"
-                  }
-                },
-                "when": {
-                  "permission": "sales.manage"
-                }
+              "submit": {
+                "action": "sales.move-stage"
               }
-            ]
+            },
+            "when": {
+              "permission": "sales.manage"
+            }
           }
         ]
       }
