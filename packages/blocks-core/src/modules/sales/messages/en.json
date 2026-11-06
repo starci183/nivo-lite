@@ -40,8 +40,8 @@
   "fact_stage": "Stage",
   "fact_status": "Status",
   "fact_threshold": "Owner decides from",
-  "fig_closed": "Orders closed",
-  "fig_conversion": "Win rate",
+  "fig_closed": "Closed this month",
+  "fig_conversion": "Conversion by source",
   "fig_open": "Open deals",
   "fig_proposal": "Value on offer",
   "figures_label": "Key figures",
@@ -101,6 +101,7 @@
   "tab_attention": "Needs attention",
   "tab_orders": "Orders",
   "tab_pipeline": "Sales pipeline",
-  "tab_settings": "Settings",
-  "waiting_owner": "Orders waiting for the owner"
+  "tab_settings": "Rules",
+  "waiting_owner": "Orders waiting for the owner",
+  "aside_label": "Waiting for your approval"
 }

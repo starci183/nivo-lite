@@ -40,8 +40,8 @@
   "fact_stage": "Giai đoạn",
   "fact_status": "Trạng thái",
   "fact_threshold": "Ngưỡng chủ quyết định",
-  "fig_closed": "Đơn đã chốt",
-  "fig_conversion": "Tỷ lệ chốt",
+  "fig_closed": "Chốt trong tháng",
+  "fig_conversion": "Chuyển đổi theo nguồn",
   "fig_open": "Cơ hội đang mở",
   "fig_proposal": "Giá trị đang đề xuất",
   "figures_label": "Chỉ số chính",
@@ -101,6 +101,7 @@
   "tab_attention": "Cần chú ý",
   "tab_orders": "Đơn hàng",
   "tab_pipeline": "Tiến trình bán",
-  "tab_settings": "Cài đặt",
-  "waiting_owner": "Đơn chờ chủ quyết định"
+  "tab_settings": "Quy tắc",
+  "waiting_owner": "Đơn chờ chủ quyết định",
+  "aside_label": "Cần bạn duyệt"
 }

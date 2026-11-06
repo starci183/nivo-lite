@@ -50,14 +50,19 @@
   "stage_won": "Won",
   "stage_lost": "Lost",
   "figures_label": "Inbox today",
-  "fig_total": "Conversations",
-  "fig_ai_share": "Answered by AI",
-  "fig_needs": "Need a person",
+  "fig_total": "Conversations today",
+  "fig_ai_share": "Handled by AI",
+  "fig_needs": "Handoffs",
   "fig_handled": "Held by a person",
   "decisions_label": "Customers waiting for you",
   "decisions_empty_title": "Nobody is waiting",
   "decisions_empty_body": "Customers who need a person show here.",
   "decisions_see_why": "Why",
   "decisions_more": "More",
-  "action_decide": "Decide a conversation"
+  "action_decide": "Decide a conversation",
+  "aside_label": "Waiting for your approval",
+  "tab_customers": "Customers in progress",
+  "tab_unanswered": "Unanswered",
+  "customers_section": "Customers in progress",
+  "unanswered_section": "Unanswered"
 }

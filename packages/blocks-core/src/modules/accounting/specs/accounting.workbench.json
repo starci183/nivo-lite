@@ -28,6 +28,12 @@
       "of": "accounting.entries.status",
       "url": "status",
       "default": "all"
+    },
+    "pane": {
+      "type": "enum",
+      "of": ["list", "queue"],
+      "url": "pane",
+      "default": "list"
     }
   },
   "views": [
@@ -99,7 +105,8 @@
             },
             "when": {
               "permission": "accounting.view"
-            }
+            },
+            "children": []
           },
           {
             "id": "weekly",
@@ -155,7 +162,8 @@
                   "period": "$period"
                 }
               }
-            }
+            },
+            "children": []
           },
           {
             "id": "ageing",
@@ -197,35 +205,8 @@
                   "period": "$period"
                 }
               }
-            }
-          },
-          {
-            "id": "decisions",
-            "block": "core.decision-queue",
-            "props": {
-              "surface": "section",
-              "label": {
-                "key": "decisions_label"
-              },
-              "emptyTitle": {
-                "key": "decisions_empty_title"
-              },
-              "emptyBody": {
-                "key": "decisions_empty_body"
-              },
-              "seeWhy": {
-                "key": "decisions_see_why"
-              },
-              "moreMenu": {
-                "key": "decisions_more"
-              },
-              "currency": "VND"
             },
-            "bind": {
-              "queue": {
-                "read": "accounting.decisions"
-              }
-            }
+            "children": []
           }
         ]
       }
@@ -591,5 +572,42 @@
         }
       }
     }
-  ]
+  ],
+  "aside": {
+    "id": "decisions",
+    "block": "core.decision-queue",
+    "props": {
+      "surface": "section",
+      "label": {
+        "key": "decisions_label"
+      },
+      "emptyTitle": {
+        "key": "decisions_empty_title"
+      },
+      "emptyBody": {
+        "key": "decisions_empty_body"
+      },
+      "seeWhy": {
+        "key": "decisions_see_why"
+      },
+      "moreMenu": {
+        "key": "decisions_more"
+      },
+      "currency": "VND"
+    },
+    "bind": {
+      "queue": {
+        "read": "accounting.decisions"
+      }
+    }
+  },
+  "asideSummary": {
+    "read": "accounting.decisions",
+    "path": "count",
+    "previewPath": "rows.0.title",
+    "label": {
+      "key": "aside_label"
+    },
+    "opens": "queue"
+  }
 }
