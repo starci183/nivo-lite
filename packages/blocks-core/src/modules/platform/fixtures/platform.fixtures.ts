@@ -1,6 +1,6 @@
 import type { ConnectionsRegionView, ItemsRegionView, KnowledgeRegionView } from "../../../views/views.types"
 import type { ModuleFixtures } from "../../module-fixtures"
-import type { InstallationFacts, InstallationView } from "../platform.types"
+import type { InstallationFacts, InstallationView, ParkedRunRow } from "../platform.types"
 
 /** An installation with one enabled module and one the workspace has not enabled. */
 export const INSTALLATION: InstallationView = {
@@ -118,6 +118,39 @@ export const KNOWLEDGE_VIEW: KnowledgeRegionView = {
 /** What the agent knows, with no open gap. */
 export const KNOWLEDGE_NONE: KnowledgeRegionView = { ...KNOWLEDGE_VIEW, gaps: null }
 
+/** Two runs the engine parked, about two orders. */
+export const PARKED_RUNS_VIEW: { readonly count: string; readonly rows: ReadonlyArray<ParkedRunRow> } = {
+    count: "2",
+    rows: [
+        {
+            id: "run-2",
+            module: "sales",
+            subjectKind: "sales.order",
+            subjectId: "order-2",
+            step: "confirm",
+            errorCode: "DELIVERY_FAILED",
+            errorWords: "The message could not be sent",
+            parkedAt: "2026-11-04T10:30:00.000Z",
+        },
+        {
+            id: "run-1",
+            module: "sales",
+            subjectKind: "sales.order",
+            subjectId: "order-1",
+            step: "notify",
+            errorCode: "TIMEOUT",
+            errorWords: "The channel did not answer",
+            parkedAt: "2026-11-04T09:10:00.000Z",
+        },
+    ],
+}
+
+/** No run is parked. */
+export const PARKED_RUNS_NONE: { readonly count: null; readonly rows: ReadonlyArray<ParkedRunRow> } = {
+    count: null,
+    rows: [],
+}
+
 /** What the prototype data port answers for the platform module. */
 export const PLATFORM_FIXTURES: ModuleFixtures = {
     reads: {
@@ -125,6 +158,7 @@ export const PLATFORM_FIXTURES: ModuleFixtures = {
         "platform.agent-done": { ready: DONE_VIEW, empty: DONE_NONE },
         "platform.agent-connections": { ready: CONNECTIONS_VIEW, empty: CONNECTIONS_NONE },
         "platform.agent-knowledge": { ready: KNOWLEDGE_VIEW, empty: KNOWLEDGE_NONE },
+        "platform.parked-runs": { ready: PARKED_RUNS_VIEW, empty: PARKED_RUNS_NONE },
     },
-    actions: {},
+    actions: { "platform.resume-run": { ok: true } },
 }

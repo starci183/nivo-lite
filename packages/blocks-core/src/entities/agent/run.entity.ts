@@ -80,6 +80,7 @@ export const agentRunEntity: EntityDefinition<RunFields> = defineEntity({
     indexes: [
         { name: "wake", on: ["wakeId", "id"] },
         { name: "agent_started", on: ["agentId", { desc: "startedAt" }, { desc: "id" }] },
+        { name: "agent_status_ended", on: ["agentId", "status", { desc: "endedAt" }, { desc: "id" }] },
         { name: "status_resume", on: ["status", "resumeNotBefore", "id"] },
         { name: "status_dead_lettered", on: ["status", "deadLetteredAt", "id"] },
     ],
