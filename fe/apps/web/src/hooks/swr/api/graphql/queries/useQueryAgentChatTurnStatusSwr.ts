@@ -2,8 +2,11 @@
 
 import { workspaceArgumentKey, type ReadResponse } from "@/hooks/workspaceread"
 import useSWR from "swr"
-import type { AgentChatTurnStatusType, AgentChatTurnStatusQuery } from "@/modules/api"
+import type { AgentChatTurnStatusQuery } from "@/modules/api"
 import { queryAgentChatTurnStatus } from "@/modules/api/graphql/queries/query-agent-chat-turn-status"
+
+/** The turn of an accepted message as the back end answers it. */
+export type AgentChatTurnStatusType = AgentChatTurnStatusQuery["agentChatTurnStatus"]
 
 /** SWR identity for the backend job state of an accepted message. */
 export const QUERY_AGENT_CHAT_TURN_STATUS_SWR_KEY = "QUERY_AGENT_CHAT_TURN_STATUS_SWR"

@@ -1,7 +1,6 @@
 import { ConnectionHealthTiles } from "@/components/blocks/ConnectionHealthTiles"
 import { ConnectionPageHead } from "@/components/blocks/ConnectionPageHead"
 import { ConnectionPageNotices } from "@/components/blocks/ConnectionPageNotices"
-import { ConnectionPageRail } from "@/components/blocks/ConnectionPageRail"
 import { TelegramConnectionSteps } from "@/components/blocks/TelegramConnectionSteps"
 import { ConnectionPaneFrame } from "@/components/frames/ConnectionPaneFrame"
 
@@ -11,14 +10,12 @@ export interface TelegramConnectionPageBaseProps {
         readonly connectionId: string
         readonly gridLabel: string
         readonly mainLabel: string
-        readonly rail: { readonly label: string; readonly closeLabel: string }
     }
 }
 
 /**
  * Draws the page of one Telegram bot connection inside the Connections frame: the head band, the health tiles, the four steps in back
- * end order (the bot and its token, the webhook, the check, the agents) ; the live Telegram events
- * stand in the rail beside it.
+ * end order (the bot and its token, the webhook, the check, the agents).
  */
 export const TelegramConnectionPageBase = (props: TelegramConnectionPageBaseProps) => {
     const { connectionId } = props.props
@@ -26,9 +23,7 @@ export const TelegramConnectionPageBase = (props: TelegramConnectionPageBaseProp
         <ConnectionPaneFrame
             gridLabel={props.props.gridLabel}
             mainLabel={props.props.mainLabel}
-            rail={props.props.rail}
             head={<ConnectionPageHead kind="telegram" connectionId={connectionId} />}
-            aside={<ConnectionPageRail kind="telegram" connectionId={connectionId} />}
         >
             <ConnectionPageNotices kind="telegram" connectionId={connectionId} />
             <ConnectionHealthTiles kind="telegram" connectionId={connectionId} />

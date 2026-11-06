@@ -4,7 +4,6 @@ import type {
     AgentGenerationStatusQuery,
     AgentKnowledgeLensesQuery,
     CreditPacksBoughtQuery,
-    AgentChatTurnStatusQuery,
     VideoProjectQuery,
     AskKnowledgeQuery,
     BillingPlanQuery,
@@ -68,8 +67,6 @@ import type { WireInput } from "./types"
 export type AgentGenerationStatusType = AgentGenerationStatusQuery["agentGenerationStatus"]
 /** The `CreditPackPurchaseType` object of the back end contract, as the operations of this app select it. */
 export type CreditPackPurchaseType = CreditPacksBoughtQuery["creditPacksBought"][number]
-/** The `AgentChatTurnStatusType` object of the back end contract, as the operations of this app select it. */
-export type AgentChatTurnStatusType = AgentChatTurnStatusQuery["agentChatTurnStatus"]
 /** The `BillingPlanType` object of the back end contract, as the operations of this app select it. */
 export type BillingPlanType = NonNullable<BillingPlanQuery["billingPlan"]>
 /** The `BillingWorkspaceType` object of the back end contract, as the operations of this app select it. */

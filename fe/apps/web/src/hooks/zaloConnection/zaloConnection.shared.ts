@@ -1,7 +1,6 @@
 import type { ZaloStepId, ZaloTone, ZnsRenewalForm } from "@/modules/types"
 
 /** How often the live panel asks for newer events. */
-export const ZALO_EVENTS_POLL_MS = 5000
 
 /** How often the page asks again while the connection needs attention (a reconnect finishes in the background). */
 export const ZALO_PAGE_POLL_MS = 8000
