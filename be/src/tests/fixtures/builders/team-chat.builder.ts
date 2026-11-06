@@ -1,8 +1,10 @@
 import type { EntityManager } from "typeorm"
+import { agentsEntities } from "@modules/domain/agents"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { workspacesEntities } from "@modules/domain/workspaces"
 
 const [WorkspaceEntity] = workspacesEntities
+const [AgentEntity] = agentsEntities
 const [WorkspaceMemberEntity] = workspaceMembersEntities
 
 /** The people of one team chat proof: an owner, three staff and a person of another workspace. */
@@ -13,6 +15,8 @@ export interface TeamChatIdentity {
     readonly ownerId: string
     /** Three staff seats. */
     readonly staffIds: readonly [string, string, string]
+    /** An active agent of the workspace. */
+    readonly agentId: string
     /** An account that sits in a different workspace. */
     readonly outsiderId: string
     /** The workspace of the outsider. */
@@ -24,6 +28,7 @@ export const teamChatIdentity = (id: () => string): TeamChatIdentity => ({
     workspaceId: id(),
     ownerId: id(),
     staffIds: [id(), id(), id()],
+    agentId: id(),
     outsiderId: id(),
     foreignWorkspaceId: id(),
 })
@@ -41,6 +46,19 @@ export const persistTeamChat = (manager: EntityManager, identity: TeamChatIdenti
             name: "Foreign team chat proof",
         })
         await tx.update(WorkspaceMemberEntity, { workspaceId: identity.workspaceId, userId: identity.ownerId }, { displayName: "Owner" })
+        await tx.insert(AgentEntity, {
+            id: identity.agentId,
+            workspaceId: identity.workspaceId,
+            module: "chatbot",
+            name: "Bot",
+            handle: "bot",
+            role: "Front desk",
+            instructions: "",
+            knowledge: "",
+            greeting: "",
+            approvalRule: "",
+            status: "active",
+        })
         await tx.insert(
             WorkspaceMemberEntity,
             identity.staffIds.map((userId, index) => ({

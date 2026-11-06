@@ -58,7 +58,7 @@ export const toChatMessageType = (view: MessageView): ChatMessageType => ({
     mentions: view.mentions,
     attachments: view.attachments.map((file) => ({ ...file, url: "" })),
     report: view.runId === null || view.authorId === null ? null : { runId: view.runId, agentId: view.authorId },
-    approval: null,
+    approval: view.approval,
 })
 
 /** A room of the domain as the contract shows it. */

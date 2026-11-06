@@ -5,6 +5,7 @@ export { TeamChatModule } from "./team-chat.module"
 export { TeamChatService } from "./team-chat.service"
 export { BODY_MAX, FILES_MAX, MENTIONS_MAX, PAGE_DEFAULT, PAGE_MAX } from "./team-chat.contracts"
 export type {
+    ApprovalState,
     MemberKind,
     MemberRef,
     MessagePage,

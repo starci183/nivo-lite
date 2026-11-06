@@ -42,6 +42,20 @@ export interface RoomMemberView extends MemberRef {
     readonly muted: boolean
 }
 
+/** Where the decision an approval card is about stands, for one viewer. */
+export interface ApprovalState {
+    /** The decision. */
+    readonly decisionId: string
+    /** Pending, or how it ended. */
+    readonly status: "pending" | "approved" | "refused" | "expired"
+    /** Who settled it. */
+    readonly decidedByName: string | null
+    /** When it was settled. */
+    readonly decidedAt: Date | null
+    /** Whether the viewer is one of the approvers of a pending decision. */
+    readonly canDecide: boolean
+}
+
 /** One message as a screen shows it. */
 export interface MessageView {
     readonly id: string
@@ -60,6 +74,8 @@ export interface MessageView {
     readonly runId: string | null
     /** The decision an approval card is about; null for any other kind. */
     readonly decisionId: string | null
+    /** The state of that decision; null for any other kind. */
+    readonly approval: ApprovalState | null
 }
 
 /** One room as a screen shows it, for one viewer. */
