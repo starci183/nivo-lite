@@ -419,7 +419,7 @@ describe("loyalty.pending-waiting", () => {
                 {
                     id: "d-1",
                     title: "G\u1eedi khuy\u1ebfn m\u00e3i cho th\u00e0nh vi\u00ean h\u1ea1ng B\u1ea1c l\u00e2u ch\u01b0a quay l\u1ea1i",
-                    description: "1 member",
+                    description: "1 h\u1ed9i vi\u00ean",
                     href: "?tab=pending",
                 },
                 {
