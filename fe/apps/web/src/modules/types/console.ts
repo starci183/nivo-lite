@@ -1,4 +1,4 @@
-/** One destination in the console rail; `badge` is a real pending count (Office only). */
+/** One destination in the console rail; `badge` is a real count (the Second Brain only). */
 export type ConsoleNavItem = {
     readonly id: string
     readonly label: string
@@ -25,14 +25,6 @@ export type ConsoleIconName =
     | "talents"
     | "servers"
     | "wallet"
-
-/** One approval waiting for a person, as the bell list draws it. */
-export type ConsolePending = {
-    readonly id: string
-    readonly leadName: string
-    readonly summary: string
-    readonly href: string
-}
 
 /** One workspace the signed-in person is an active member of. */
 export type ConsoleWorkspace = {

@@ -2,7 +2,6 @@
 
 import { useFormatter, useNow, useTranslations } from "next-intl"
 import { useWorkspaceId } from "@/hooks/workspaces"
-import { CONSOLE_ROUTES, leadHref, workspaceHref } from "@/modules/routes"
 import { isWaitingOf, mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryInboundEventsSwr } from "@/hooks/swr"
 import type { DataSlot, InboxRowView } from "@/modules/types"
@@ -25,20 +24,6 @@ const toneOf = (status: string): "neutral" | "success" | "warning" | "danger" =>
  * others the reference is the system's own id of the conversation or the provider's, which says nothing to the owner.
  */
 const READABLE_REFERENCE_KINDS: ReadonlySet<string> = new Set(["payment", "order", "invoice"])
-
-/** The pages a row leads to: its customer, and the Office while a decision waits. */
-const linksOf = (
-    t: ReturnType<typeof useTranslations<"inbox">>,
-    workspaceId: string,
-    leadId: string | null | undefined,
-    status: string,
-): Pick<InboxRowView, "lead" | "office"> => ({
-    lead: leadId == null ? null : { href: workspaceHref(workspaceId, leadHref(leadId)), label: t("openLead") },
-    office:
-        status === "needs_decision"
-            ? { href: workspaceHref(workspaceId, CONSOLE_ROUTES.chat), label: t("openOffice") }
-            : null,
-})
 
 /** The view `useInboxFeed` returns. */
 export interface InboxFeedView {
@@ -117,7 +102,6 @@ export const useInboxFeed = (): InboxFeedView => {
             line: line.filter((part) => part !== null).join(" · "),
             details,
             duplicates: event.duplicateCount,
-            ...linksOf(t, workspaceId, event.leadId, event.status),
         }
     }
     const slot = mapSlot(slotOfSwr(swrRead), (events) => events.map(rowOf))

@@ -82,7 +82,7 @@ const MainPane = (props: Props) => {
                     message={copy.forbiddenTitle}
                     description={copy.forbiddenBody}
                     actionLabel={copy.forbiddenAction}
-                    onAction={props.on.goOffice}
+                    onAction={props.on.goHome}
                 />
             </PaneSection>
         )

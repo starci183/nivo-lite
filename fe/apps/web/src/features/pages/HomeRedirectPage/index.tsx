@@ -19,7 +19,7 @@ export const HomeRedirectPage = async (): Promise<ReactElement> => {
         href:
             remembered === undefined
                 ? AUTH_ROUTES.workspaces
-                : workspaceHref(decodeURIComponent(remembered), CONSOLE_ROUTES.dashboard),
+                : workspaceHref(decodeURIComponent(remembered), CONSOLE_ROUTES.workspaceHome),
         locale: (await getLocale()) === "en" ? "en" : "vi",
     })
 }

@@ -43,7 +43,6 @@
   "settle_stale": "Dữ liệu vừa thay đổi. Tải lại rồi thử lại.",
   "settle_confirmation": "Shop đã nhận {amount} cho đơn {orderNo}. Cảm ơn bạn!",
   "lineage": "Nguồn gốc",
-  "lineage_empty": "Chưa có nguồn gốc nào.",
   "save_settings": "Lưu cài đặt kế toán",
   "tab_settings": "Quy tắc",
   "settings_title": "Quy tắc kế toán",
@@ -83,5 +82,8 @@
   "decisions_empty_body": "Tiền về chưa khớp hóa đơn sẽ hiện ở đây.",
   "decisions_see_why": "Vì sao",
   "decisions_more": "Thêm",
-  "aside_label": "Cần bạn duyệt"
+  "aside_label": "Cần bạn duyệt",
+  "entry_kind": "Chứng từ",
+  "tab_questions": "Câu hỏi cần trả lời",
+  "questions_label": "Câu hỏi đang chờ bạn"
 }

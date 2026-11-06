@@ -5,12 +5,6 @@ export const noData = (name: string): never => {
     throw new Error(`${name} answered no data`)
 }
 
-/** Callbacks for a queued operation whose status is polled through its SWR wrapper. */
-export interface StatusPollOptions {
-    readonly onSuccess?: (progress: ProgressInput1) => void
-    readonly onError?: (error: unknown) => void
-}
-
 /** The part of an Apollo answer {@link answeredData} reads. */
 interface GraphQLAnswer<T> {
     readonly data?: T | null | undefined
@@ -29,8 +23,6 @@ export const answeredData = <T>(result: GraphQLAnswer<T>, operation: string): T 
     if (!result.data) throw new Error(`${operation} answered no data`)
     return result.data
 }
-
-type ProgressInput1 = { readonly status: string }
 
 /** An argument-keyed read waits until the argument is defined. */
 export const argumentKey = <Argument>(
@@ -68,21 +60,6 @@ export const terminalJobOptions = <Callbacks extends object>(
 ): TerminalJobOptionsResult<Callbacks> => ({
     refreshInterval: terminalInterval(intervalMs),
     ...callbacks,
-})
-
-type TerminalStatusOptionsResult<Callbacks extends object> = Callbacks & {
-    refreshInterval: (progress: PolledStatus | undefined) => number
-    revalidateOnFocus: boolean
-}
-
-/** Status polling keeps caller callbacks and disables focus refresh. */
-export const terminalStatusOptions = <Callbacks extends object>(
-    intervalMs: number,
-    callbacks: Callbacks,
-): TerminalStatusOptionsResult<Callbacks> => ({
-    ...callbacks,
-    refreshInterval: terminalInterval(intervalMs),
-    revalidateOnFocus: false,
 })
 
 /** The cache identity of one argument/request read in a workspace. */

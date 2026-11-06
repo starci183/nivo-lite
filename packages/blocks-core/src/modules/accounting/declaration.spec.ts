@@ -14,6 +14,8 @@ describe("accounting module", () => {
             "accounting.figures",
             "accounting.weekly",
             "accounting.decisions",
+            "accounting.question-count",
+            "accounting.questions",
             "accounting.close-check",
             "accounting.settings",
         ])
@@ -39,7 +41,12 @@ describe("accounting module", () => {
 
     it("draws figures on the overview only, the queue in the aside, a book view bound to the list, its counts and the detail, and a settings form", () => {
         const view = accountingSpecDocument.views.find((each) => each.id === "book")
-        expect(accountingSpecDocument.views.map((each) => each.id)).toEqual(["overview", "book", "settings"])
+        expect(accountingSpecDocument.views.map((each) => each.id)).toEqual([
+            "overview",
+            "book",
+            "questions",
+            "settings",
+        ])
         expect(view?.id).toBe("book")
         expect(Object.keys(accountingSpecDocument.params ?? {})).toEqual([
             "q",

@@ -15,7 +15,7 @@ interface AgentsSubpageLabels {
 
 /** The trail of a page under the agents page: the dashboard, the agents and the page itself. */
 export const agentsSubpageCrumbsOf = (labels: AgentsSubpageLabels): ReadonlyArray<BreadcrumbItem> => [
-    { id: "home", label: labels.home, href: workspaceHref(labels.workspaceId, APP_ROUTES.dashboard) },
+    { id: "home", label: labels.home, href: workspaceHref(labels.workspaceId, APP_ROUTES.workspaceHome) },
     { id: "agents", label: labels.agents, href: workspaceHref(labels.workspaceId, AGENTS_ROUTE) },
     { id: "current", label: labels.current },
 ]

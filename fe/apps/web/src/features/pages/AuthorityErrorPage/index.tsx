@@ -16,7 +16,11 @@ export const AuthorityErrorPage = (props: AuthorityErrorPageProps) => {
         <AuthorityErrorPageBase
             props={{
                 crumbs: [
-                    { id: "home", label: t("crumbHome"), href: workspaceHref(workspaceId, CONSOLE_ROUTES.dashboard) },
+                    {
+                        id: "home",
+                        label: t("crumbHome"),
+                        href: workspaceHref(workspaceId, CONSOLE_ROUTES.workspaceHome),
+                    },
                     { id: "authority", label: t("title") },
                 ],
                 title: t("title"),

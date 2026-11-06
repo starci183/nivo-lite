@@ -4,9 +4,8 @@ import { useTransition } from "react"
 import { useSWRConfig } from "swr"
 import { useViewerKeyId } from "@/hooks/workspaceKey"
 import { navigation } from "@/modules/i18n"
-import { workspaceHref } from "@/modules/routes"
+import { APP_ROUTES, workspaceHref } from "@/modules/routes"
 import { isWorkspaceSwitchSwrKey } from "@/modules/utils"
-import { OFFICE_ROUTE } from "./console.shared"
 
 /**
  * Makes another workspace the current one (its address is the one the GraphQL client sends), then lands on its Office. The
@@ -21,7 +20,7 @@ export const useSwitchWorkspace = (currentId: string): ((workspaceId: string) =>
         if (workspaceId === currentId) return
         startTransition(() => {
             void mutate(isWorkspaceSwitchSwrKey(viewerKeyId), undefined, { revalidate: false })
-            router.push(workspaceHref(workspaceId, OFFICE_ROUTE))
+            router.push(workspaceHref(workspaceId, APP_ROUTES.workspaceHome))
         })
     }
 }

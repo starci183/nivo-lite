@@ -1,13 +1,9 @@
-/** Console and public destinations the overview, workbench and landing surfaces link to, named once. */
+/** Console and public destinations the workbench and landing surfaces link to, named once. */
 export const CONSOLE_ROUTES = {
     login: "/login",
-    dashboard: "/dashboard",
-    chat: "/chat",
-    leads: "/leads",
-    newLead: "/leads?new=1",
-    responsibilities: "/responsibilities",
+    workspaceHome: "/agents",
+    inbox: "/inbox",
     authority: "/authority",
-    decisions: "/decisions",
     connections: "/connections",
     team: "/team",
     teamInvite: "/team?invite=1",
@@ -17,17 +13,11 @@ export const CONSOLE_ROUTES = {
 /** One section of the authority page. */
 export const authoritySectionPath = (section: string): string => `/authority/${section}`
 
-/** The detail page of one lead. */
-export const leadHref = (leadId: string): string => `/leads/${leadId}`
-
 /** The chat page of one module agent. */
 export const agentChatHref = (agentId: string, tab?: string): string => {
     const query = tab === undefined ? "" : `?tab=${tab}`
     return `/modules/${agentId}/chat${query}`
 }
-
-/** The responsibilities board filtered by one query string such as `status=open`. */
-export const responsibilitiesHref = (query: string): string => `${CONSOLE_ROUTES.responsibilities}?${query}`
 
 /** The workbench of one module, opened on one work item. */
 export const workItemHref = (module: string, workItemId: string): string =>
@@ -44,9 +34,6 @@ export const AGENT_ROLES_ANCHOR = "agent-roles"
 
 /** The roles to add on the agents page, from anywhere. */
 export const AGENT_ROLES_HREF: "/agents#agent-roles" = `${AGENTS_ROUTE}#${AGENT_ROLES_ANCHOR}`
-
-/** The work flow of one lead, where a handed-over customer chat leads. */
-export const leadFlowHref = (leadId: string): string => `${leadHref(leadId)}#flow`
 
 /** The chat page of one module agent opened on one tab and, when given, on one conversation. */
 export const agentChatConversationHref = (agentId: string, tab: string, conversationId: string | null): string => {

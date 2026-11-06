@@ -78,7 +78,7 @@ export const AgentInstances = (props: AgentInstancesProps) => {
             props={{
                 crumbLabel: ts("crumbLabel"),
                 crumbs: [
-                    { id: "home", label: ts("crumbHome"), href: workspaceHref(workspaceId, APP_ROUTES.dashboard) },
+                    { id: "home", label: ts("crumbHome"), href: workspaceHref(workspaceId, APP_ROUTES.workspaceHome) },
                     { id: "modules", label: t("catalogTitle"), href: workspaceHref(workspaceId, AGENTS_ROUTE) },
                     { id: "module", label: list.typeName },
                 ],

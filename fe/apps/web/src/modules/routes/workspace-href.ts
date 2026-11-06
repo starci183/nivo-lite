@@ -11,10 +11,6 @@ export const workspaceHref = (workspaceId: string, path: string): string => {
     return path === "/" ? root : `${root}${path}`
 }
 
-/** An address the back end hands over for a page: an app-relative path is a page of the workspace, a full address stays as it is. */
-export const workspaceLinkOf = (workspaceId: string, link: string): string =>
-    link.startsWith("/") ? workspaceHref(workspaceId, link) : link
-
 const WORKSPACE_PREFIX = /^\/workspaces\/[^/]+/u
 
 /** The path of a page inside its workspace: `/workspaces/abc/leads/1` gives `/leads/1`; an address outside a workspace comes back as it is. */

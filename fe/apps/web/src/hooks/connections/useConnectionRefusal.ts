@@ -28,7 +28,7 @@ export const useConnectionRefusal = ():
         title: t("title"),
         crumbLabel: t("crumbLabel"),
         homeLabel: t("crumbHome"),
-        homeHref: workspaceHref(workspaceId, CONNECTION_ROUTES.dashboard),
+        homeHref: workspaceHref(workspaceId, CONNECTION_ROUTES.workspaceHome),
         message: t("forbiddenTitle"),
         description: t("forbiddenBody"),
     }

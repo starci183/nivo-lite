@@ -15,31 +15,7 @@ type Document = TypedDocumentNode<QueryWorkspaceShellResponse, InputVariables<Qu
 const query1: Document = gql`
     query WorkspaceShell($input: ShellWindowInput!) {
         workspaceShell(input: $input) {
-            agents {
-                id
-                module
-                name
-                status
-            }
-            approvals {
-                contactName
-                draft
-                id
-                leadId
-                nextAction
-            }
-            exceptions {
-                contactName
-                error
-                id
-                leadId
-                summary
-            }
-            hasChatbot
             isFoundingMember
-            leadCount
-            openResponsibilityCount
-            pendingDecisions
         }
     }
 `

@@ -14,9 +14,6 @@ export type { AgentGraphAnswerView, AgentGraphDecideEditorView, AgentGraphOption
 export type { AgentGraphDetailView, AgentGraphHeadView, AgentGraphProblemsView } from "./agentGraphView"
 export type { AgentGraphProposalView, AgentGraphProposalsView } from "./agentGraphView"
 export type { AgentGraphRowView, AgentGraphTermView, AgentGraphRunView, AgentGraphVersionsView } from "./agentGraphView"
-export type { LeadRecord, LeadListItem, LeadStageId } from "./leads"
-export type { StepStatus } from "./leads"
-
 export type {
     BookingAction,
     BookingAgendaRowView,
@@ -27,7 +24,7 @@ export type {
     PublicBookingPageData,
     ResourceFields,
 } from "./booking"
-export type { ConsoleIconName, ConsoleNavItem, ConsolePending, ConsoleSessionView, ConsoleWorkspace } from "./console"
+export type { ConsoleIconName, ConsoleNavItem, ConsoleSessionView, ConsoleWorkspace } from "./console"
 export { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "./console"
 export type { Access, Environment, Provider, ProviderKind, Purpose, AgentOption, Connection } from "./connections"
 export type { ConnectionAgentRowView, ConnectionStatus, ConnectionTone, ConnectionCheck } from "./connections"
@@ -37,13 +34,7 @@ export type { ConnectionRefusalView, ConnectionNotice, ConnectionTilesView, Conn
 export type { ConnectorCategory, ConnectorGlyph, ConnectorStatus, FirstEvent, FirstEventState } from "./connections"
 export type { WebhookTestVerdict, MetaCheckSummary, SepayKeys, LibraryCard, LibraryCategory } from "./connections"
 export type { InboxRowView } from "./inbox"
-export type {
-    OverviewPaneCopy,
-    OverviewPaneReady,
-    PaneGridLayout,
-    WorkbenchAsideActions,
-    WorkbenchAsideView,
-} from "./panes"
+export type { PaneGridLayout, WorkbenchAsideActions, WorkbenchAsideView } from "./panes"
 export type {
     ConnectionAgentRow,
     ConnectionFilterChoice,
@@ -77,28 +68,7 @@ export type { TelegramUserChatsView, TelegramUserLoginView, TelegramUserWizardCo
 export type { WebhookView, WizardConnection, WizardNote, WizardResume, ZaloWizardConnection } from "./connection-wizard"
 export type { MetaCheck, MetaWizardConnection } from "./connection-wizard"
 export type { DataSlot, SlotLabels, SlotRead } from "./slot"
-export type { InventoryWorkbenchData, InventorySay, InventoryTemplateChoice } from "./inventory"
-export type { ItemView, LocationView, RecipeView, PendingView, PoStatus, PoView, StockStatus } from "./inventory"
-export type { SupplierChannel, SupplierFormField, SupplierFormValues, SupplierView } from "./inventory"
-export type { AdjustInput, AdjustItem, CountInput, StockTakeItem } from "./inventory-commands"
-export type { DraftLowItem, DraftPoInput, NewPoInput, ImportItem, StarterItem } from "./inventory-commands"
-export type { ItemInput, SavedItem, ReceiveInput, ReceiveItem, RecipeInput } from "./inventory-commands"
-export type { SendItem, TransferInput, SupplierInput } from "./inventory-commands"
-export type { DecisionKind, DecisionOutcome } from "./decisions"
-
-export type {
-    LeadGenComment,
-    LeadGenHandoff,
-    LeadGenLead,
-    LeadGenMetrics,
-    LeadGenSource,
-    LeadGenWorkbenchData,
-    LeadOrigin,
-    LeadPlatform,
-    LeadScore,
-    LeadSourceKind,
-} from "./leadgen"
-export type { FlowRuleMode, FlowWorkStatus, ReasonCode } from "./flow"
+export type { FlowRuleMode } from "./flow"
 export type {
     BrainEvidence,
     BrainExtraction,
@@ -125,66 +95,6 @@ export type { KnowledgeAddDrawerView } from "./knowledge-add"
 export type { AskAgentOption, AskPassageView, AskSeesLane, AskSeesView, BrainAskCopy, BrainAskView } from "./brain-ask"
 export type { PublicAskView, PublicBrainCopy, PublicBrainView, PublicDraftView } from "./brain-public"
 export type { PublicFormView, PublicPickerDrawerView, PublicWriteDrawerView } from "./brain-public"
-export type {
-    ShiftsAvailRowView,
-    ShiftsAvailView,
-    ShiftsBenchView,
-    ShiftsBlockView,
-    ShiftsFiguresView,
-    ShiftsLeaveRowView,
-    ShiftsLeaveSpanView,
-    ShiftsMineView,
-    ShiftsPositionView,
-    ShiftsScheduleView,
-    ShiftsSegView,
-    ShiftsSettingsView,
-    ShiftsSetupView,
-    ShiftsShiftView,
-    ShiftsStaffView,
-    ShiftsSwapRowView,
-    ShiftsWeekView,
-    ShiftsWorkItemView,
-} from "./shifts"
-export type {
-    OfficeApprovalView,
-    OfficeAvatarView,
-    OfficeBodyPart,
-    OfficeChannelRowView,
-    OfficeCommandView,
-    OfficeConversationRowView,
-    OfficeConversationState,
-    OfficeExceptionView,
-    OfficeInfoView,
-    OfficeJumpRowView,
-    OfficeWaitingRowView,
-    OfficeListView,
-    OfficeMemberRowView,
-    OfficeMentionView,
-    OfficePinRowView,
-    OfficeResultCardView,
-    OfficeCardIdentity,
-    OfficeRoomMembersView,
-    OfficeRoomRowView,
-    OfficeMessageStatusView,
-    OfficeMessageView,
-    OfficeMissingField,
-    OfficeOutboxView,
-    OfficePreviewKind,
-    OfficeTaskView,
-    OfficeText,
-    OfficeThreadItem,
-    OfficeUnreadBadgeView,
-    OfficeWorkDecision,
-} from "./office"
-export type {
-    OfficeCardDraft,
-    Arrangement,
-    OfficeComposerProps,
-    OfficeConversationsProps,
-    OfficeInfoPanelProps,
-    OfficeTasksProps,
-    OfficeThreadProps,
-} from "./office-slots"
 export type {
     SetupFactWrite,
     SetupResolution,
@@ -232,25 +142,7 @@ export type {
     HiringSay,
     PublicQuestionView,
 } from "./hiring"
-export type {
-    ContentChannel,
-    ContentT,
-    DownloadFile,
-    HistoryRow,
-    MarketingReportView,
-    MediaTile,
-    Pillar,
-    PostView,
-    PublishStep,
-    QuoteView,
-} from "./content"
-export type {
-    ContentEditorFormView,
-    ContentEditorItemView,
-    ContentNoteView,
-    ContentTransitionView,
-} from "./content-editor"
-
+export type { MarketingReportView } from "./content"
 export type { InviteAction, InviteRowView, TeamPanesBaseProps } from "./team"
 
 export type { AccountSignInView, SessionRowView } from "./account"
@@ -287,7 +179,6 @@ export type { BrainChipView, BrainFilterView, BrainHeadView, FactDetailView, Fac
 export type { FactHistoryView, FactsView, LessonActionView, LessonDetailView, LessonDrawerView } from "./brain-lists"
 export type { LessonEntryView, LessonsView } from "./brain-lists"
 
-export type { LeadGenWorkbenchDataView, LeadGenWorkbenchActions } from "./leadgen-workbench"
 export type { BookingDetailFact, BookingDeskData, BookingDeskActions } from "./booking-workbench"
 export type { BookingServicesData, BookingServicesActions } from "./booking-workbench"
 export type { BookingResourcesData, BookingResourcesActions } from "./booking-workbench"
@@ -296,34 +187,12 @@ export type { BookingPolicyData, BookingPolicyActions } from "./booking-workbenc
 export type { BookingPublicPageData, BookingPublicPageActions } from "./booking-workbench"
 export type { BookingWaitlistData, BookingWaitlistActions, BookingStatisticsData } from "./booking-workbench"
 export type { BookingWorkbenchDataView, BookingWorkbenchActions } from "./booking-workbench"
-export type { InventoryStockData, InventoryStockActions } from "./inventory-workbench"
-export type { InventoryOrdersData, InventoryOrdersActions } from "./inventory-workbench"
-export type { InventoryPendingData, InventoryPendingActions } from "./inventory-workbench"
-export type { InventorySuppliersData, InventorySuppliersActions } from "./inventory-workbench"
-export type { InventoryRecipesData, InventoryRecipesActions } from "./inventory-workbench"
-export type { InventoryHistoryData, InventoryHistoryActions } from "./inventory-workbench"
-export type { InventoryCountData, InventoryCountActions } from "./inventory-workbench"
-export type { InventoryImportData, InventoryImportActions } from "./inventory-workbench"
-export type { InventoryWorkbenchDataView, InventoryWorkbenchActions } from "./inventory-workbench"
-export type { InventoryItemFormData, InventoryItemEditorData, InventoryAdjustmentEditorData } from "./inventory-editors"
-export type { InventoryNewPoEditorData, InventoryPoEditorData, InventorySupplierEditorData } from "./inventory-editors"
-export type { InventoryRecipeEditorData } from "./inventory-editors"
 export type { WorkbenchFigureData, WorkbenchWaitingRegionView, WorkbenchExplanationView } from "./workbench-dashboard"
 export type { WorkbenchDashboardRegions, WorkbenchFigureRegion, WorkbenchWhyLabels } from "./workbench-dashboard"
 
 export type { ChatMessageFile } from "./chatbot-inbox"
 
-export type { ShiftsWeekViews, ShiftsWeekActions } from "./shifts-workbench-week"
-export type { ShiftsSetupViews, ShiftsSetupActions } from "./shifts-workbench-setup"
-export type { ShiftsRequestViews, ShiftsRequestActions } from "./shifts-workbench-requests"
-export type { ShiftsPersonalViews, ShiftsPersonalActions } from "./shifts-workbench-mine"
-export type { ShiftsWorkbenchData, ShiftsWorkbenchOn } from "./shifts-workbench"
-
-export { INVENTORY_TABS } from "./inventory-workbench"
-export { LEADGEN_TABS } from "./leadgen-workbench"
 export { BOOKING_TABS } from "./booking-workbench"
-export type { ContentViews, ContentActions, ContentAssembly } from "./content-model-views"
-export { CONTENT_TABS } from "./content-model-workbench"
 export type { HiringViews, HiringActions, HiringAssembly } from "./hiring-model-views"
 export { HIRING_TABS } from "./hiring-model-workbench"
 export type { VideoEditorViews, VideoEditorActions } from "./video-editor-views"
@@ -333,14 +202,5 @@ export type { VideoWorkbenchViews, VideoWorkbenchActions } from "./video-workben
 export { VIDEO_TABS, VIDEO_EDITOR_STEPS } from "./video-workbench"
 export { textFieldsOf, type TextFieldItem } from "./form-fields"
 export type { BookingServiceView, BookingResourceView } from "./booking"
-export type { ContentAddPostFields, ContentAddPostActions } from "./content-model-workbench-forms"
-export type { ContentWorkbenchCopy } from "./content-model-workbench-copy"
-export type { AutomationKey } from "./content-model-workbench-forms"
-export type { ContentBalanceFields, ContentBalanceActions } from "./content-model-workbench"
-export type { ContentQuickIdeaFields, ContentPlanFields } from "./content-model-workbench-forms"
-export type { ContentQuickIdeaActions, ContentPlanActions } from "./content-model-workbench-forms"
-export type { ContentListFields, ContentListActions, ContentQueueFields } from "./content-model-workbench"
-export type { ContentQueueActions } from "./content-model-workbench"
-export type { ContentEditorView } from "./content-model-workbench-editor"
 export type { HiringCandidateDialog, HiringRequestOutcome } from "./hiring-model-workbench-candidate"
 export type { HiringWorkbenchCopy } from "./hiring-model-workbench-copy"

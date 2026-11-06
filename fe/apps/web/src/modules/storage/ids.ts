@@ -5,7 +5,6 @@ export enum StorageId {
     /** Which console rails each person collapsed, by person id. */
     RailCollapsed = "NIVO_RAIL_COLLAPSED",
     /** Which notices the reader closed, one record keyed by notice. */
-    Dismissed = "NIVO_DISMISSED",
     /** The Zalo connection whose permission page the browser was sent to from its own page, so the return lands back there. */
     ZaloReturn = "NIVO_ZALO_RETURN",
     /** The files of an upload batch whose bytes were on their way to storage, so a reload says the upload stopped. */

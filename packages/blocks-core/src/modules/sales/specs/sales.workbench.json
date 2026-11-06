@@ -124,6 +124,10 @@
                     "key": "reason_owner"
                   }
                 }
+              },
+              "avatar": true,
+              "badgeTones": {
+                "owner": "warning"
               }
             },
             "bind": {
@@ -876,7 +880,8 @@
           },
           "intent": "danger"
         }
-      ]
+      ],
+      "isHeadless": true
     },
     "bind": {
       "queue": {

@@ -16,7 +16,11 @@ export const AgentProfileErrorPage = (props: AgentProfileErrorPageProps) => {
         <AgentProfileErrorPageBase
             props={{
                 crumbs: [
-                    { id: "home", label: t("crumbHome"), href: workspaceHref(workspaceId, CONSOLE_ROUTES.dashboard) },
+                    {
+                        id: "home",
+                        label: t("crumbHome"),
+                        href: workspaceHref(workspaceId, CONSOLE_ROUTES.workspaceHome),
+                    },
                     { id: "agents", label: t("crumbAgents"), href: workspaceHref(workspaceId, AGENTS_ROUTE) },
                     { id: "agent", label: t("title") },
                 ],

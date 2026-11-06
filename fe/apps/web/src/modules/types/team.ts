@@ -219,7 +219,7 @@ export interface TeamPanesBaseProps {
         readonly inviteCopied: () => void
         readonly linkCopied: () => void
         readonly goTeamPlan: () => void
-        readonly goOffice: () => void
+        readonly goHome: () => void
         readonly setRole: (id: string, role: string) => void
         readonly enable: (id: string) => void
         readonly askDisable: (id: string) => void

@@ -20,24 +20,15 @@ import type {
     ConnectionAgentsQuery,
     ConnectionFirstEventQuery,
     ConnectionsQuery,
-    ContentAiStatusQuery,
-    ContentConfigurationQuery,
-    ContentMediaQuery,
-    ContentWorkbenchQuery,
-    CreateContentItemMutation,
     CreditPacksQuery,
     CreditQuotaStatusQuery,
     CreditTopupLotsQuery,
     CreditUsageSummaryQuery,
-    DashboardQuery,
     HiringCandidateDetailQuery,
     HiringWorkbenchQuery,
-    InventoryTemplatesQuery,
-    InventoryWorkbenchQuery,
     KnowledgeSourceQuery,
     KnowledgeSourcesQuery,
     KnowledgeSuggestionsQuery,
-    LeadJourneyQuery,
     LessonMiningStatusQuery,
     ModuleInstallationsQuery,
     NivoKnowledgeQuery,
@@ -45,13 +36,10 @@ import type {
     PublicHiringInterviewQuery,
     PublicHiringJobQuery,
     PublicHiringOfferQuery,
-    RequestContentDraftMutation,
     RequestDataSyncMutation,
     ReturnZaloAuthorizationMutation,
     SaveHiringSettingsMutation,
     SaveVideoBrandMutation,
-    ShiftsMineQuery,
-    ShiftsWorkbenchQuery,
     StartMoneyConnectionMutation,
     StartWebhookConnectionMutation,
     TestOpenApiOperationQuery,
@@ -109,24 +97,10 @@ export type ConnectionAgentType = ConnectionAgentsQuery["connectionAgents"][numb
 export type ConnectionCheckType = CheckConnectionMutation["checkConnection"]
 /** The `ConnectionType` object of the back end contract, as the operations of this app select it. */
 export type ConnectionType = ConnectionsQuery["connections"][number]
-/** The `ContentAiRequestedType` object of the back end contract, as the operations of this app select it. */
-export type ContentAiRequestedType = RequestContentDraftMutation["requestContentDraft"]
 /** The `BrandProposalType` object of the back end contract, as the operations of this app select it. */
 export type BrandProposalType = BrandProposalsQuery["brandProposals"][number]
 /** The `WeeklyReportType` object of the back end contract, as the operations of this app select it. */
 export type WeeklyReportType = MarketingWeeklyReportQuery["marketingWeeklyReport"]
-/** The `ContentAiStatusType` object of the back end contract, as the operations of this app select it. */
-export type ContentAiStatusType = ContentAiStatusQuery["contentAiStatus"]
-/** The `ContentAiWarningType` object of the back end contract, as the operations of this app select it. */
-export type ContentAiWarningType = ContentAiStatusQuery["contentAiStatus"]["warnings"][number]
-/** The `ContentConfigurationType` object of the back end contract, as the operations of this app select it. */
-export type ContentConfigurationType = ContentConfigurationQuery["contentConfiguration"]
-/** The `ContentItemType` object of the back end contract, as the operations of this app select it. */
-export type ContentItemType = CreateContentItemMutation["createContentItem"]
-/** The `ContentMediaType` object of the back end contract, as the operations of this app select it. */
-export type ContentMediaType = ContentMediaQuery["contentMedia"]
-/** The `ContentWorkbenchType` object of the back end contract, as the operations of this app select it. */
-export type ContentWorkbenchType = ContentWorkbenchQuery["contentWorkbench"]
 /** The `CreditPackType` object of the back end contract, as the operations of this app select it. */
 export type CreditPackType = CreditPacksQuery["creditPacks"][number]
 /** The `CreditQuotaStatusType` object of the back end contract, as the operations of this app select it. */
@@ -135,8 +109,6 @@ export type CreditQuotaStatusType = NonNullable<CreditQuotaStatusQuery["creditQu
 export type CreditTopupLotType = CreditTopupLotsQuery["creditTopupLots"][number]
 /** The `CreditUsageSummaryType` object of the back end contract, as the operations of this app select it. */
 export type CreditUsageSummaryType = CreditUsageSummaryQuery["creditUsageSummary"]
-/** The `DashboardType` object of the back end contract, as the operations of this app select it. */
-export type DashboardType = DashboardQuery["dashboard"]
 /** The `DataSyncRunType` object of the back end contract, as the operations of this app select it. */
 export type DataSyncRunType = RequestDataSyncMutation["requestDataSync"]
 /** The `DocumentPassageType` object of the back end contract, as the operations of this app select it. */
@@ -182,30 +154,12 @@ export type HiringSettingsType = SaveHiringSettingsMutation["saveHiringSettings"
 export type HiringSlotType = HiringWorkbenchQuery["hiringWorkbench"]["interviews"][number]["proposedSlots"][number]
 /** The `HiringWindowType` object of the back end contract, as the operations of this app select it. */
 export type HiringWindowType = HiringWorkbenchQuery["hiringWorkbench"]["members"][number]["windows"][number]
-/** The `InventoryItemType` object of the back end contract, as the operations of this app select it. */
-export type InventoryItemType = InventoryWorkbenchQuery["inventoryWorkbench"]["items"][number]
-/** The `InventoryMovementType` object of the back end contract, as the operations of this app select it. */
-export type InventoryMovementType = InventoryWorkbenchQuery["inventoryWorkbench"]["movements"][number]
-/** The `InventoryPendingType` object of the back end contract, as the operations of this app select it. */
-export type InventoryPendingType = InventoryWorkbenchQuery["inventoryWorkbench"]["pending"][number]
-/** The `InventoryPoType` object of the back end contract, as the operations of this app select it. */
-export type InventoryPoType = InventoryWorkbenchQuery["inventoryWorkbench"]["pos"][number]
-/** The `InventoryRecipeType` object of the back end contract, as the operations of this app select it. */
-export type InventoryRecipeType = InventoryWorkbenchQuery["inventoryWorkbench"]["recipes"][number]
-/** The `InventorySupplierType` object of the back end contract, as the operations of this app select it. */
-export type InventorySupplierType = InventoryWorkbenchQuery["inventoryWorkbench"]["suppliers"][number]
-/** The `InventoryTemplateType` object of the back end contract, as the operations of this app select it. */
-export type InventoryTemplateType = InventoryTemplatesQuery["inventoryTemplates"][number]
-/** The `InventoryWorkbenchType` object of the back end contract, as the operations of this app select it. */
-export type InventoryWorkbenchType = InventoryWorkbenchQuery["inventoryWorkbench"]
 /** The `KnowledgeSourceTextType` object of the back end contract, as the operations of this app select it. */
 export type KnowledgeSourceTextType = KnowledgeSourceQuery["knowledgeSource"]["source"]
 /** The `KnowledgeSourceType` object of the back end contract, as the operations of this app select it. */
 export type KnowledgeSourceType = KnowledgeSourcesQuery["knowledgeSources"][number]
 /** The `KnowledgeSuggestionContextType` object of the back end contract, as the operations of this app select it. */
 export type KnowledgeSuggestionContextType = KnowledgeSuggestionsQuery["knowledgeSuggestions"]
-/** The `LeadRecordType` object of the back end contract, as the operations of this app select it. */
-export type LeadRecordType = LeadJourneyQuery["leadJourney"]["lead"]
 /** The `LessonMiningStatusType` object of the back end contract, as the operations of this app select it. */
 export type LessonMiningStatusType = LessonMiningStatusQuery["lessonMiningStatus"]
 /** The `MetaAppObjectType` object of the back end contract, as the operations of this app select it. */
@@ -236,40 +190,6 @@ export type PublicRequirementsType = PublicHiringJobQuery["publicHiringJob"]["re
 export type PublicSlotType = PublicHiringInterviewQuery["publicHiringInterview"]["proposedSlots"][number]
 /** The `RetrievedPassageType` object of the back end contract, as the operations of this app select it. */
 export type RetrievedPassageType = AskKnowledgeQuery["askKnowledge"][number]
-/** The `ShiftPositionType` object of the back end contract, as the operations of this app select it. */
-export type ShiftPositionType = ShiftsWorkbenchQuery["shiftsWorkbench"]["setup"]["positions"][number]
-/** The `ShiftStaffType` object of the back end contract, as the operations of this app select it. */
-export type ShiftStaffType = ShiftsWorkbenchQuery["shiftsWorkbench"]["setup"]["staff"][number]
-/** The `ShiftType` object of the back end contract, as the operations of this app select it. */
-export type ShiftType = ShiftsMineQuery["shiftsMine"]["openShifts"][number]
-/** The `ShiftsAvailType` object of the back end contract, as the operations of this app select it. */
-export type ShiftsAvailType = ShiftsWorkbenchQuery["shiftsWorkbench"]["week"]["approvedAvail"][number]
-/** The `ShiftsAvailabilityType` object of the back end contract, as the operations of this app select it. */
-export type ShiftsAvailabilityType = ShiftsMineQuery["shiftsMine"]["availability"][number]
-/** The `ShiftsBenchType` object of the back end contract, as the operations of this app select it. */
-export type ShiftsBenchType = ShiftsWorkbenchQuery["shiftsWorkbench"]
-/** The `ShiftsBlockType` object of the back end contract, as the operations of this app select it. */
-export type ShiftsBlockType = ShiftsWorkbenchQuery["shiftsWorkbench"]["setup"]["blocks"][number]
-/** The `ShiftsFiguresType` object of the back end contract, as the operations of this app select it. */
-export type ShiftsFiguresType = NonNullable<ShiftsWorkbenchQuery["shiftsWorkbench"]["figures"]>
-/** The `ShiftsLeaveType` object of the back end contract, as the operations of this app select it. */
-export type ShiftsLeaveType = ShiftsMineQuery["shiftsMine"]["leaves"][number]
-/** The `ShiftsMineType` object of the back end contract, as the operations of this app select it. */
-export type ShiftsMineType = ShiftsMineQuery["shiftsMine"]
-/** The `ShiftsPriorType` object of the back end contract, as the operations of this app select it. */
-export type ShiftsPriorType = ShiftsWorkbenchQuery["shiftsWorkbench"]["week"]["prior"][number]
-/** The `ShiftsScheduleType` object of the back end contract, as the operations of this app select it. */
-export type ShiftsScheduleType = NonNullable<ShiftsWorkbenchQuery["shiftsWorkbench"]["week"]["current"]>
-/** The `ShiftsSettingsType` object of the back end contract, as the operations of this app select it. */
-export type ShiftsSettingsType = ShiftsWorkbenchQuery["shiftsWorkbench"]["setup"]["settings"]
-/** The `ShiftsSetupType` object of the back end contract, as the operations of this app select it. */
-export type ShiftsSetupType = ShiftsWorkbenchQuery["shiftsWorkbench"]["setup"]
-/** The `ShiftsSwapType` object of the back end contract, as the operations of this app select it. */
-export type ShiftsSwapType = ShiftsMineQuery["shiftsMine"]["swaps"][number]
-/** The `ShiftsWeekType` object of the back end contract, as the operations of this app select it. */
-export type ShiftsWeekType = ShiftsWorkbenchQuery["shiftsWorkbench"]["week"]
-/** The `ShiftsWorkItemType` object of the back end contract, as the operations of this app select it. */
-export type ShiftsWorkItemType = NonNullable<ShiftsMineQuery["shiftsMine"]["leaves"][number]["item"]>
 /** The `VideoBrandType` object of the back end contract, as the operations of this app select it. */
 export type VideoBrandType = SaveVideoBrandMutation["saveVideoBrand"]
 /** The `VideoMediaType` object of the back end contract, as the operations of this app select it. */

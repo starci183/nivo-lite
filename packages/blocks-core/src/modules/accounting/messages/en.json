@@ -43,7 +43,6 @@
   "settle_stale": "The data just changed. Reload and try again.",
   "settle_confirmation": "The shop received {amount} for order {orderNo}. Thank you!",
   "lineage": "Where it came from",
-  "lineage_empty": "No source yet.",
   "save_settings": "Save accounting settings",
   "tab_settings": "Rules",
   "settings_title": "Accounting rules",
@@ -83,5 +82,8 @@
   "decisions_empty_body": "Payments not matched to an invoice show here.",
   "decisions_see_why": "Why",
   "decisions_more": "More",
-  "aside_label": "Waiting for your approval"
+  "aside_label": "Waiting for your approval",
+  "entry_kind": "Entry",
+  "tab_questions": "Questions to answer",
+  "questions_label": "Questions waiting for you"
 }

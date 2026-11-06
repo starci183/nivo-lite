@@ -19,7 +19,6 @@ export interface AgentChatHeaderView {
         label: string
         isPending: boolean
     } | null
-    openLeadLabel: string | null
     setup: {
         label: string
         href: string
@@ -55,7 +54,6 @@ export const useAgentChatHeaderCopy = (chat: AgentChatState): AgentChatHeaderVie
             isCustomer && chat.hasSelection
                 ? { label: t(chat.isTakenOver ? "giveBack" : "takeOver"), isPending: chat.isTakingOver }
                 : null,
-        openLeadLabel: chat.leadId === null ? null : t("openLead"),
         setup: setupHref === null ? null : { label: t("setupLink"), href: setupHref },
         historyLabel: t("historyToggle"),
         moreLabel: t("moreActions"),

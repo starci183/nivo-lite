@@ -49,7 +49,7 @@ const copyOf = (t: Translate, brain: SecondBrainTranslate, tab: BrainTab, worksp
                     label: t("crumbHome"),
                     ...(workspaceId === undefined
                         ? {}
-                        : { href: workspaceHref(workspaceId, CONSOLE_ROUTES.dashboard) }),
+                        : { href: workspaceHref(workspaceId, CONSOLE_ROUTES.workspaceHome) }),
                 },
                 { id: "brain", label: t("title") },
             ],

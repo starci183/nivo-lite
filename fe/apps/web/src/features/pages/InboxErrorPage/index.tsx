@@ -17,7 +17,7 @@ export const InboxErrorPage = (props: InboxErrorPageProps) => {
         <InboxErrorPageBase
             props={{
                 crumbs: [
-                    { id: "home", label: t("crumbHome"), href: workspaceHref(workspaceId, APP_ROUTES.dashboard) },
+                    { id: "home", label: t("crumbHome"), href: workspaceHref(workspaceId, APP_ROUTES.workspaceHome) },
                     { id: "inbox", label: title },
                 ],
                 title,
