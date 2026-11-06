@@ -28,8 +28,8 @@ export interface BookRecord {
     readonly amountVnd: number
     /** Where the entry stands. */
     readonly status: EntryStatus
-    /** The customer or supplier the entry is with, for the second line; absent or empty draws none. */
-    readonly counterparty?: string | undefined
+    /** The customer or supplier the entry is with, for the second line; absent, null or empty draws none. */
+    readonly counterparty?: string | null | undefined
 }
 
 /** The records of the entries read, each judged by its fields: a record that does not fit fails the whole read. */
@@ -41,7 +41,7 @@ export const bookRecords: z.ZodType<ReadonlyArray<BookRecord>> = z
             entryDate: z.string().max(MAX_ID),
             amountVnd: z.number(),
             status: z.enum(ENTRY_STATUSES),
-            counterparty: z.string().max(MAX_LINE).optional(),
+            counterparty: z.string().max(MAX_LINE).nullable().optional(),
         }),
     )
     .max(MAX_ENTRIES)
