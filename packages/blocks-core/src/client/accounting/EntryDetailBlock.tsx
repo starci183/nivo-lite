@@ -142,13 +142,31 @@ const LineageSection = (props: LineageSectionProps): ReactNode => {
     )
 }
 
-/** The entry of the books with where it came from and the correction the owner may add. */
+/** Asks for the ledger line of a payment again and says how it went; the read decides whether the control is offered at all. */
+const useRepostSender = (repost: ActionHandle): ((paymentId: string) => void) => {
+    const host = useBlockHost()
+    const words = useBlockWords()
+    return (paymentId) => {
+        repost
+            .run({ id: paymentId })
+            .then((outcome) =>
+                outcome.ok
+                    ? host.notify("success", words({ key: "repost_done" }))
+                    : host.notify("danger", words(outcome.message ?? { key: "repost_failed" })),
+            )
+            .catch(() => host.notify("danger", words({ key: "repost_failed" })))
+    }
+}
+
+/** The entry of the books with where it came from, the correction the owner may add and the ledger line they may ask for again. */
 export const EntryDetailBlock = (props: RenderOf<typeof accountingEntryDetailBlock>): ReactNode => {
     const words = useBlockWords()
+    const sendRepost = useRepostSender(props.slots.repost)
     const labels = useSlotLabels(props.props.idle)
     const [isAdjusting, setAdjusting] = useState(false)
     const read = props.slots.record
     const adjust = props.slots.adjust
+    const repost = props.slots.repost
     return (
         <SlotView
             slot={parsedSlot(read.slot, entryRecord)}
@@ -157,6 +175,7 @@ export const EntryDetailBlock = (props: RenderOf<typeof accountingEntryDetailBlo
             onRetry={read.retry}
             render={(entry, isLoading) => {
                 const canAdjust = adjust.isAllowed && adjustTargetOf(entry) !== null && !isLoading
+                const canRepost = repost.isAllowed && entry.canRepostLedger === true && !isLoading
                 return (
                     <>
                         <SurfaceCard ariaLabel={words(props.props.label)} isLoading={isLoading}>
@@ -193,11 +212,22 @@ export const EntryDetailBlock = (props: RenderOf<typeof accountingEntryDetailBlo
                                 ) : null}
                             </Stack>
                         </SurfaceCard>
-                        {canAdjust && !isAdjusting ? (
+                        {(canAdjust && !isAdjusting) || canRepost ? (
                             <PinnedActionBar label={words(props.props.label)} visibility="always">
-                                <Button intent="commit" onPress={() => setAdjusting(true)}>
-                                    {words({ key: "adjust_open" })}
-                                </Button>
+                                {canRepost ? (
+                                    <Button
+                                        intent="alternative"
+                                        isPending={repost.isRunning}
+                                        onPress={() => sendRepost(entry.sourceId)}
+                                    >
+                                        {words({ key: "repost_open" })}
+                                    </Button>
+                                ) : null}
+                                {canAdjust && !isAdjusting ? (
+                                    <Button intent="commit" onPress={() => setAdjusting(true)}>
+                                        {words({ key: "adjust_open" })}
+                                    </Button>
+                                ) : null}
                             </PinnedActionBar>
                         ) : null}
                     </>

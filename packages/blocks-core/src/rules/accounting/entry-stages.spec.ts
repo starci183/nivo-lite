@@ -101,6 +101,11 @@ describe("entryRecord", () => {
         expect(entryRecord.safeParse({ ...base, lineage: [{ ...step({}), kind: "x" }] }).success).toBe(false)
     })
 
+    it("reads the flag that offers the ledger re-post, and refuses one that is not a boolean", () => {
+        expect(entryRecord.safeParse({ ...base, canRepostLedger: true }).success).toBe(true)
+        expect(entryRecord.safeParse({ ...base, canRepostLedger: "yes" }).success).toBe(false)
+    })
+
     it("titles the entry by its note, or by its id when it has none", () => {
         expect(entryTitleOf({ ...base, note: "H\u0110-0140" })).toBe("H\u0110-0140")
         expect(entryTitleOf({ ...base, note: null })).toBe("e")

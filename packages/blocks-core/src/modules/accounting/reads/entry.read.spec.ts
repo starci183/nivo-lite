@@ -1,5 +1,12 @@
 import type { ReadRunResult } from "@nivo-lite/agent-sdk/block"
-import { ADJUSTMENT, INVOICE, ORDER, TRANSACTION, transactionOf } from "../../../rules/accounting/accounting.fixtures"
+import {
+    ADJUSTMENT,
+    INVOICE,
+    ORDER,
+    TRANSACTION,
+    orderOf,
+    transactionOf,
+} from "../../../rules/accounting/accounting.fixtures"
 import type { BookEntryRecord, TransactionRecord } from "../../../rules/accounting/accounting.types"
 import {
     ACCOUNTANT_CONTEXT,
@@ -89,5 +96,19 @@ describe("accounting.entry", () => {
     it("yields null for an entry that is gone and refuses a missing id", async () => {
         await expect(read(worldOf(null))).resolves.toEqual({ ok: true, data: null })
         await expect(read(worldOf(null), {})).resolves.toMatchObject({ ok: false })
+    })
+
+    it("says the ledger line may be asked for again only for a payment that paid a paid order", async () => {
+        const paid = memoryWorld()
+        putBookEntry(paid, entryOf({}))
+        putTransaction(paid, matched)
+        putOrder(paid, orderOf({ status: "paid" }))
+        const waiting = worldOf(entryOf({}))
+        const invoice = worldOf(entryOf({ sourceEntity: "accounting.invoice", sourceId: INVOICE.id }))
+        const unpaid = worldOf(entryOf({}), TRANSACTION)
+        await expect(read(paid)).resolves.toMatchObject({ ok: true, data: { canRepostLedger: true } })
+        await expect(read(waiting)).resolves.toMatchObject({ ok: true, data: { canRepostLedger: false } })
+        await expect(read(invoice)).resolves.toMatchObject({ ok: true, data: { canRepostLedger: false } })
+        await expect(read(unpaid)).resolves.toMatchObject({ ok: true, data: { canRepostLedger: false } })
     })
 })

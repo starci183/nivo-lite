@@ -4,6 +4,7 @@ import { answerQuestionAction } from "./actions/answer-question.action"
 import { adjustAction } from "./actions/adjust.action"
 import { resolveUnmatchedPaymentAction } from "./actions/resolve-unmatched-payment.action"
 import { saveSettingsAction } from "./actions/save-settings.action"
+import { repostLedgerAction } from "./actions/repost-ledger.action"
 import { settleAction } from "./actions/settle.action"
 import { closeCheckRead } from "./reads/close-check.read"
 import { decisionsRead } from "./reads/decisions.read"
@@ -44,7 +45,13 @@ export const accountingModule: ModuleDeclaration = defineModule({
         closeCheckRead,
         settingsRead,
     ],
-    actions: [adjustAction, saveSettingsAction, answerQuestionAction, resolveUnmatchedPaymentAction],
+    actions: [
+        adjustAction,
+        saveSettingsAction,
+        answerQuestionAction,
+        resolveUnmatchedPaymentAction,
+        repostLedgerAction,
+    ],
     tools: ["ledger.status", "ledger.append"],
     specs: [accountingSpecDocument],
 })

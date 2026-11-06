@@ -3,6 +3,7 @@ import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import { z } from "zod"
 import type { BookEntryKind, BookEntryRecord } from "../../../rules/accounting/accounting.types"
+import { canRepost } from "../../../rules/accounting/ledger-repost"
 import { lineageOf } from "../../../rules/accounting/lineage"
 import type { LineageSources, LineageStep } from "../../../rules/accounting/lineage"
 import { SOURCE_ADJUSTMENT, SOURCE_INVOICE, SOURCE_TRANSACTION } from "../../../rules/accounting/posting"
@@ -46,6 +47,8 @@ export interface EntryDetail {
     readonly lineage: ReadonlyArray<LineageStep>
     /** How many corrections point at the source. */
     readonly adjustmentCount: number
+    /** Whether the payment behind the entry paid a paid order, so its ledger line may be asked for again. */
+    readonly canRepostLedger: boolean
 }
 
 /** The ports the records behind an entry are read through. */
@@ -81,7 +84,18 @@ export const entryRead: ReadDefinition = defineRead({
     id: "accounting.entry",
     dataKind: "book-entry",
     shape: "record",
-    fields: ["id", "kind", "entryDate", "amountVnd", "note", "sourceEntity", "sourceId", "lineage", "adjustmentCount"],
+    fields: [
+        "id",
+        "kind",
+        "entryDate",
+        "amountVnd",
+        "note",
+        "sourceEntity",
+        "sourceId",
+        "lineage",
+        "adjustmentCount",
+        "canRepostLedger",
+    ],
     paths: { lineage: "list" },
     variables,
     permission: "accounting.view",
@@ -100,6 +114,7 @@ export const entryRead: ReadDefinition = defineRead({
             sourceId: entry.sourceId,
             lineage: lineageOf(sources),
             adjustmentCount: sources.adjustments.length,
+            canRepostLedger: entry.sourceEntity === SOURCE_TRANSACTION && canRepost(sources.transaction, sources.order),
         }
     },
 })
