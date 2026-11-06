@@ -3,3 +3,4 @@ export { ENTITY_ENGINE_DOOR_MESSAGES } from "./messages/entity-engine-door.messa
 export { EntityEngineDoorModule } from "./entity-engine-door.module"
 export { AgentNativeService } from "./agent-native.service"
 export { EngineDoorService } from "./engine-door.service"
+export { DOOR_GRANTS } from "./door-grants.policy"

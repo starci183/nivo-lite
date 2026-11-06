@@ -483,6 +483,9 @@
           },
           "adjust": {
             "action": "accounting.adjust"
+          },
+          "repost": {
+            "action": "accounting.repost-ledger"
           }
         },
         "showWhen": {

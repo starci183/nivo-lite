@@ -80,6 +80,7 @@ describe("accountingBlocks", () => {
         expect(accountingEntryDetailBlock.slots).toEqual({
             record: { kind: "read", shape: "record", required: true },
             adjust: { kind: "action", required: false },
+            repost: { kind: "action", required: false },
         })
         expect(accountingQuestionsBlock.slots).toEqual({
             questions: { kind: "read", shape: "record", required: true },

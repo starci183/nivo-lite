@@ -17,6 +17,7 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { authorityDecisionOf } from "./door-authority.policy"
 import { actionFailureOf } from "./door-failure.policy"
+import { invalidInputOf } from "./door-invalid-input.policy"
 import { parsePayload } from "./door-payload.policy"
 import { holdsPermission } from "./door-permission.policy"
 import { DoorPortsService } from "./door-ports.service"
@@ -133,11 +134,9 @@ export class WorkbenchDoorService {
 
     /** Logs the action and the field keys (never the values) of an input the action refused as invalid; answers the result as it is. */
     private logged(action: DoorAction, result: ActionResult): ActionResult {
-        if (!result.ok && result.reason === "invalid")
-            this.logger.warn(WorkbenchDoorLogEvent.InputInvalid, {
-                action: action.id,
-                fields: Object.keys(result.fields ?? {}),
-            })
+        const invalid = invalidInputOf(action.id, result)
+        if (invalid !== null)
+            this.logger.warn(WorkbenchDoorLogEvent.InputInvalid, { action: invalid.action, fields: invalid.fields })
         return result
     }
 

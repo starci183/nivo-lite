@@ -145,6 +145,7 @@ export const ENTRY_DETAIL: EntryDetail = {
         adjustments: [{ ...ADJUSTMENT, targetType: "transaction", targetId: TRANSACTION.id }],
     }),
     adjustmentCount: 1,
+    canRepostLedger: true,
 }
 
 /** The figures of this month: 5,000,000 received, one invoice of 2,000,000 still open, one payment nobody tied to anything. */
@@ -299,6 +300,7 @@ export const ACCOUNTING_FIXTURES: ModuleFixtures = {
         "accounting.save-settings": { ok: true },
         "accounting.answer-question": { ok: true },
         "accounting.resolve-unmatched-payment": { ok: true, data: { result: "other-income" } },
+        "accounting.repost-ledger": { ok: true, data: { result: "queued" } },
     },
 }
 

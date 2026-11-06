@@ -181,5 +181,12 @@
   "settings_rematch_hint": "When a payment code is sent to a customer, credits that arrived within this many days and are still unmatched are checked against that code.",
   "rematch_wrong_amount": "A credit of {amount} VND ({payer}) names order {orderNo} but the order is due {due} VND. A partial or over payment is not matched by itself: please look and decide.",
   "rematch_ambiguous": "{count} credits name order {orderNo} with the amount of {amount} VND. None is matched by itself: please choose the one that belongs to this order.",
-  "rematch_unknown_payer": "sender unknown"
+  "rematch_unknown_payer": "sender unknown",
+  "repost_open": "Re-post to the ledger",
+  "repost_done": "The ledger line was requested again.",
+  "repost_failed": "Could not re-post to the ledger.",
+  "repost_transaction_missing": "The payment was not found.",
+  "repost_transaction_not_paid": "This payment has not paid an order.",
+  "repost_order_missing": "The order of this payment was not found.",
+  "repost_order_not_paid": "This order is not marked paid."
 }

@@ -181,5 +181,12 @@
   "settings_rematch_hint": "Khi một mã thanh toán được gửi cho khách, tiền đã về trong số ngày này mà chưa khớp sẽ được đối chiếu lại với mã đó.",
   "rematch_wrong_amount": "Khoản tiền {amount} đ ({payer}) ghi mã đơn {orderNo} nhưng đơn cần {due} đ. Thanh toán thiếu hoặc thừa không tự khớp: hãy xem và quyết định.",
   "rematch_ambiguous": "Có {count} khoản tiền cùng ghi mã đơn {orderNo} và đúng số tiền {amount} đ. Không khoản nào được tự khớp: hãy chọn khoản thuộc đơn này.",
-  "rematch_unknown_payer": "không rõ người gửi"
+  "rematch_unknown_payer": "không rõ người gửi",
+  "repost_open": "Ghi lại vào sổ cái",
+  "repost_done": "Đã yêu cầu ghi lại vào sổ cái.",
+  "repost_failed": "Chưa ghi lại được vào sổ cái.",
+  "repost_transaction_missing": "Không tìm thấy giao dịch.",
+  "repost_transaction_not_paid": "Giao dịch này chưa trả cho đơn nào.",
+  "repost_order_missing": "Không tìm thấy đơn của giao dịch này.",
+  "repost_order_not_paid": "Đơn này chưa được đánh dấu đã trả."
 }
