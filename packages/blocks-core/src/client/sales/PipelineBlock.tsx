@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ReadHandle } from "@nivo-lite/agent-sdk/block"
-import { Board, EmptyNotice, Section, Stack, Text } from "@starci/grammar/common"
+import { Board, EmptyNotice, Section, SurfaceCard, Text } from "@starci/grammar/common"
 import type { BoardColumn, BoardMove } from "@starci/grammar/common"
 import type { salesPipelineBlock } from "../../blocks/sales/pipeline.block"
 import { announceOf, boardColumnsOf } from "../../rows/board-rows"
@@ -10,6 +10,7 @@ import { cellContextOf, formatValue } from "../../rows/cell-format"
 import type { CellContext } from "../../rows/cell-format"
 import { countedWords } from "../../rows/counted-words"
 import { countsView } from "../../rows/filter-tabs"
+import { paneHeadersOf } from "../../rows/pane-headers"
 import type { TabCounts } from "../../rows/filter-tabs"
 import { recordsView } from "../../rows/rows"
 import { queryOf } from "../../rows/search"
@@ -22,7 +23,7 @@ import {
 } from "../../rules/sales/pipeline"
 import type { PipelineCard } from "../../rules/sales/pipeline"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
-import { PaneSearch } from "../composites/PaneSearch"
+import { usePaneSearch } from "../composites/usePaneSearch"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import { useBoardMoves } from "../composites/useBoardMoves"
 import type { RenderOf } from "../render-props"
@@ -115,51 +116,47 @@ export const PipelineBlock = (props: Props): ReactNode => {
                       onAction: () => props.params.set(props.props.searchParam, null),
                   },
               }
+    const search = usePaneSearch(props.params, props.props.searchParam, {
+        label: words(props.props.searchLabel),
+        clearLabel: word("searchClear"),
+    })
+    const headers = paneHeadersOf(null, search)
     return (
         <Section
             title={words(props.props.label)}
             headingLevel={3}
             {...(known === null ? {} : { fact: countedWords(words(props.props.countLabel), known.total) })}
         >
-            <Stack gap="row">
-                <PaneSearch
-                    param={props.props.searchParam}
-                    params={props.params}
-                    label={words(props.props.searchLabel)}
-                    clearLabel={word("searchClear")}
-                />
-                <SlotView
-                    slot={cards}
-                    labels={labels}
-                    placeholder={NO_CARDS}
-                    onRetry={props.slots.rows.retry}
-                    {...clearSearch}
-                    render={(items, isLoading) => (
-                        <Board
-                            label={words(props.props.label)}
-                            isLoading={isLoading}
-                            scrollPreviousLabel={word("boardScrollPrevious")}
-                            scrollNextLabel={word("boardScrollNext")}
-                            columns={boardColumnsOf(
-                                items,
-                                specs,
-                                mover.moved,
-                                props.slots.rows.page?.hasMore === true,
-                            ).map((column) => columnOf(column, known, props, words(props.props.emptyColumn)))}
-                            {...(props.slots.move.isAllowed
-                                ? {
-                                      onMove: moveCard,
-                                      moveLabels: {
-                                          instructions: word("boardMoveInstructions"),
-                                          announce: (item: string, column: string) =>
-                                              announceOf(word("boardMoveAnnounce"), item, column),
-                                      },
-                                  }
-                                : {})}
-                        />
-                    )}
-                />
-            </Stack>
+            <SlotView
+                slot={cards}
+                frame={(notice) => <SurfaceCard headers={headers}>{notice}</SurfaceCard>}
+                labels={labels}
+                placeholder={NO_CARDS}
+                onRetry={props.slots.rows.retry}
+                {...clearSearch}
+                render={(items, isLoading) => (
+                    <Board
+                        headers={headers}
+                        label={words(props.props.label)}
+                        isLoading={isLoading}
+                        scrollPreviousLabel={word("boardScrollPrevious")}
+                        scrollNextLabel={word("boardScrollNext")}
+                        columns={boardColumnsOf(items, specs, mover.moved, props.slots.rows.page?.hasMore === true).map(
+                            (column) => columnOf(column, known, props, words(props.props.emptyColumn)),
+                        )}
+                        {...(props.slots.move.isAllowed
+                            ? {
+                                  onMove: moveCard,
+                                  moveLabels: {
+                                      instructions: word("boardMoveInstructions"),
+                                      announce: (item: string, column: string) =>
+                                          announceOf(word("boardMoveAnnounce"), item, column),
+                                  },
+                              }
+                            : {})}
+                    />
+                )}
+            />
         </Section>
     )
 }
