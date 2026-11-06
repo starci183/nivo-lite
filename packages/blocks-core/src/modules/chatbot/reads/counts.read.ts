@@ -16,6 +16,10 @@ const variables: z.ZodObject<{
     channel: z.enum([...CHATBOT_CHANNELS, "all"]).optional(),
 })
 
+/** The conversations a count by status adds up to. */
+const sum = (counts: Readonly<Record<string, number>>): number =>
+    Object.values(counts).reduce((total, count) => total + count, 0)
+
 /**
  * `chatbot.thread-counts`: the conversations per status under the same search and channel as the list, and under the key `today` the
  * conversations that moved in the window `$today` names at the clock of the run, so the Today tab carries a count like the others.
@@ -44,8 +48,6 @@ export const THREAD_COUNTS: ReadDefinition = defineRead({
             ...query,
             windows: { moved: timeWindowOf("$today", context.now) },
         })
-        const sum = (counts: Readonly<Record<string, number>>): number =>
-            Object.values(counts).reduce((total, count) => total + count, 0)
         return { counts: { ...byStatus, today: sum(withinToday) }, total: sum(byStatus) }
     },
 })
