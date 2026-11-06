@@ -1,5 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { In, IsNull } from "typeorm"
+import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { WorkspaceMemberSeatsService, WorkspaceMembersReadService } from "@modules/domain/workspace-members"
@@ -157,8 +157,7 @@ export class TeamChatService {
         const entities = await this.entityManager.find(ChatRoomMessageEntity, {
             where: { id: In(shown.map((row) => row.id)), workspaceId },
         })
-        const order = new Map(shown.map((row, index) => [row.id, index]))
-        const sorted = entities.toSorted((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0))
+        const sorted = shown.flatMap((row) => entities.filter((entity) => entity.id === row.id))
         const last = shown.at(-1)
         return {
             nodes: await this.messageViews(workspaceId, roomId, sorted, viewerId),
@@ -271,18 +270,10 @@ export class TeamChatService {
         if (problem !== null) return refused(problem)
         if (!(await this.allKnown(workspaceId, mentions))) return refused(TeamChatErrorCode.MemberUnknown)
         const retried = await this.sent(workspaceId, found.id, viewerId, input.clientId)
-        const attached = retried === null ? await this.files.verify(workspaceId, found.id, input.fileKeys) : null
-        if (attached !== null && !attached.ok) return refused(attached.refusal)
-        const message =
-            retried ??
-            (await this.insertMessage(
-                workspaceId,
-                found.id,
-                viewerId,
-                input,
-                mentions,
-                attached?.ok === true ? attached.value : [],
-            ))
+        const stored =
+            retried === null ? await this.store(workspaceId, found.id, viewerId, input, mentions) : done(retried)
+        if (!stored.ok) return refused(stored.refusal)
+        const message = stored.value
         if (retried === null) await this.tagAgents(workspaceId, viewerId, message, mentions)
         const [view] = await this.messageViews(workspaceId, found.id, [message], viewerId)
         await this.entityManager.query(
@@ -291,6 +282,19 @@ export class TeamChatService {
             [found.id, viewerId, workspaceId, message.id],
         )
         return done(view as MessageView)
+    }
+
+    /** Verifies the files the message names, then stores the message; a file that does not verify refuses the send. */
+    private async store(
+        workspaceId: string,
+        roomId: string,
+        viewerId: string,
+        input: SendInput,
+        mentions: ReadonlyArray<MemberRef>,
+    ): Promise<TeamChatResult<ChatRoomMessageEntity>> {
+        const attached = await this.files.verify(workspaceId, roomId, input.fileKeys)
+        if (!attached.ok) return refused(attached.refusal)
+        return done(await this.insertMessage(workspaceId, roomId, viewerId, input, mentions, attached.value))
     }
 
     /** A person who mentions an agent starts its graph: the work core writes the tag wake, once per message and agent. */
@@ -761,15 +765,19 @@ export class TeamChatService {
                 : await this.entityManager.find(ChatRoomEntity, {
                       where: { id: In([...approval.roomIds]), workspaceId },
                   })
+        const agentId = approval.agentId
         const seats =
-            approval.approverSeatIds.length === 0 || approval.agentId === null
+            approval.approverSeatIds.length === 0 || agentId === null
                 ? []
                 : await this.seats.seatsByIds(workspaceId, approval.approverSeatIds, approval.approverSeatIds.length)
-        const direct = await Promise.all(
-            seats.map((seat) =>
-                this.directRoomOf(workspaceId, seat.userId, { memberKind: "agent", memberId: approval.agentId ?? "" }),
-            ),
-        )
+        const direct =
+            agentId === null
+                ? []
+                : await Promise.all(
+                      seats.map((seat) =>
+                          this.directRoomOf(workspaceId, seat.userId, { memberKind: "agent", memberId: agentId }),
+                      ),
+                  )
         const rooms = [
             ...new Set([...named.map((room) => room.id), ...direct.flatMap((id) => (id === null ? [] : [id]))]),
         ]
@@ -823,8 +831,9 @@ export class TeamChatService {
         )
         const created = inserted[0]
         if (created !== undefined) return { roomId, messageId: created.id }
+        if (line.authorAgentId === null || line.key === null) return null
         const kept = await this.entityManager.findOneOrFail(ChatRoomMessageEntity, {
-            where: { roomId, authorId: line.authorAgentId ?? IsNull(), clientId: line.key ?? IsNull() },
+            where: { roomId, authorId: line.authorAgentId, clientId: line.key },
         })
         return { roomId, messageId: kept.id }
     }
