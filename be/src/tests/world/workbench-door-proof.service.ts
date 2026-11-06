@@ -89,6 +89,7 @@ export const useDoorProof = (world: LiteWorld): DoorProof => {
                 workspaceId: scene.workspaceId,
                 name,
                 payload: JSON.stringify(variables),
+                locale: "vi",
             })
             return answerOf(answer.data)
         },
@@ -97,6 +98,7 @@ export const useDoorProof = (world: LiteWorld): DoorProof => {
                 workspaceId: scene.workspaceId,
                 name,
                 payload: JSON.stringify(input),
+                locale: "vi",
             })
             return answerOf(answer.data)
         },

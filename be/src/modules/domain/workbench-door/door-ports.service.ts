@@ -1,14 +1,23 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import { unprovided } from "@nivo-lite/agent-sdk/port"
 import type { PortDefinition, PortProvider } from "@nivo-lite/agent-sdk/port"
 import type { ListPage, ListSource } from "@nivo-lite/agent-sdk/block"
-import type { InstallationSource, MemberDirectory, RightsDirectory } from "@nivo-lite/blocks-core/modules"
+import type {
+    AgentConnections,
+    AgentKnowledge,
+    InstallationSource,
+    MemberDirectory,
+    ParkedRuns,
+    RightsDirectory,
+} from "@nivo-lite/blocks-core/modules"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { EntityEngineService, EntityPortsService, ListSourceService } from "@modules/domain/entity-engine"
 import { MemberGrantsService } from "@modules/domain/member-grants"
+import { ParkedRunsService, PlatformRegionsService } from "@modules/domain/platform-ports"
 import { MemberLookupService } from "@modules/domain/workspace-members"
 import type { RunIn } from "@modules/domain/entity-engine"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
+import type { Locale } from "@modules/platform/i18n"
 import { portKindOf } from "./door-port-kind.policy"
 import { installationFactsOf } from "./installation-facts.policy"
 import { InjectWorkbenchDoorOptions } from "./workbench-door.decorators"
@@ -24,6 +33,10 @@ export interface DoorRun {
     readonly name: string
     /** The data kind of the rows the run lists, from which the entity is resolved; null for an action. */
     readonly dataKind: string | null
+    /** The seat that asks; null when none. */
+    readonly memberId: string | null
+    /** The language of the viewer. */
+    readonly locale: Locale
 }
 
 /** A row as a screen reads it: the declared fields, then the system fields `id`, `version`, `createdAt` and `updatedAt`. */
@@ -49,6 +62,8 @@ export class DoorPortsService {
         private readonly lists: ListSourceService,
         private readonly seats: MemberLookupService,
         private readonly grants: MemberGrantsService,
+        @Optional() private readonly regions?: PlatformRegionsService,
+        @Optional() private readonly parked?: ParkedRunsService,
     ) {}
 
     /** The provider of the ports of one run. */
@@ -61,9 +76,31 @@ export class DoorPortsService {
         if (kind === "installation") return this.installationSource(run.workspaceId)
         if (kind === "members") return this.memberDirectory(run.workspaceId)
         if (kind === "rights") return this.rightsDirectory(run.workspaceId)
+        if (kind === "agent-connections") return this.agentConnections(run, port)
+        if (kind === "agent-knowledge") return this.agentKnowledge(run, port)
+        if (kind === "parked-runs") return this.parkedRuns(run, port)
         if (kind === "engine") return this.ports.portsFor(run.runIn, "action", { port })["port"]
         const entity = [...this.engine.catalog.values()].find((declared) => declared.dataKind === run.dataKind)
         return kind === "list" && entity !== undefined ? this.listSource(run, entity.name) : unprovided(port)
+    }
+
+    private parkedRuns(run: DoorRun, port: PortDefinition<unknown>): ParkedRuns | never {
+        return (
+            this.parked?.portFor({ workspaceId: run.workspaceId, memberId: run.memberId, locale: run.locale }) ??
+            unprovided(port)
+        )
+    }
+
+    private agentConnections(run: DoorRun, port: PortDefinition<unknown>): AgentConnections | never {
+        const regions = this.regions
+        if (regions === undefined) return unprovided(port)
+        return { of: (agentId, locale = run.locale) => regions.connectionsOf(agentId, locale) }
+    }
+
+    private agentKnowledge(run: DoorRun, port: PortDefinition<unknown>): AgentKnowledge | never {
+        const regions = this.regions
+        if (regions === undefined) return unprovided(port)
+        return { of: (agentId, locale = run.locale) => regions.knowledgeOf(run.workspaceId, agentId, locale) }
     }
 
     private memberDirectory(workspaceId: string): MemberDirectory {

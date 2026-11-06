@@ -1,3 +1,4 @@
+import type { Locale } from "@modules/platform/i18n"
 import type { ActionDefinition, ActionResult, ReadDefinition } from "@nivo-lite/agent-sdk/block"
 
 /** One request to the door: for which workspace, what, and the JSON text the screen sent. The caller travels beside it. */
@@ -8,6 +9,8 @@ export interface DoorCall {
     readonly name: string
     /** The variables of a read or the input of an action, as JSON text. */
     readonly payload: string
+    /** The language of the viewer; the run context carries it to the providers of words. */
+    readonly locale: Locale
 }
 
 /** What the door answers: the JSON text of the data of a read or of the result of an action. */

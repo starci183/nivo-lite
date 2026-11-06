@@ -1,23 +1,25 @@
 import { Test } from "@nestjs/testing"
-import { WORKSPACE_TIME_ZONE, timeZoneOfWorkspace } from "./workspace-time-zone.policy"
+import { timeZoneOrDefault } from "./workspace-time-zone.policy"
 
 const SUBJECT = Symbol("workspace-time-zone.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { timeZoneOfWorkspace } }],
+        providers: [{ provide: SUBJECT, useValue: { timeZoneOrDefault } }],
     }).compile()
-    return moduleRef.get<{ timeZoneOfWorkspace: typeof timeZoneOfWorkspace }>(SUBJECT)
+    return moduleRef.get<{ timeZoneOrDefault: typeof timeZoneOrDefault }>(SUBJECT)
 }
 
 describe("the time zone of a workspace", () => {
-    it("is Vietnam's, a zone the platform knows, so the day begins at 17:00 UTC", async () => {
+    it("is the stored IANA name when the platform knows it", async () => {
         const policy = await build()
-        const zone = policy.timeZoneOfWorkspace("w1")
-        expect(zone).toBe(WORKSPACE_TIME_ZONE)
-        const hour = new Intl.DateTimeFormat("en-GB", { timeZone: zone, hour: "2-digit", hourCycle: "h23" }).format(
-            new Date("2026-11-05T17:00:00.000Z"),
-        )
-        expect(hour).toBe("00")
+        expect(policy.timeZoneOrDefault("Asia/Bangkok", "Asia/Ho_Chi_Minh")).toBe("Asia/Bangkok")
+    })
+
+    it("is the default when nothing is stored, the value is not text, or the name is unknown", async () => {
+        const policy = await build()
+        expect(policy.timeZoneOrDefault(undefined, "Asia/Ho_Chi_Minh")).toBe("Asia/Ho_Chi_Minh")
+        expect(policy.timeZoneOrDefault(7, "Asia/Ho_Chi_Minh")).toBe("Asia/Ho_Chi_Minh")
+        expect(policy.timeZoneOrDefault("Mars/Olympus", "Asia/Ho_Chi_Minh")).toBe("Asia/Ho_Chi_Minh")
     })
 })

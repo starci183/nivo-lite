@@ -8,6 +8,7 @@ import { ModulesGraphqlModule } from "@features/api/modules"
 import { WorkbenchGraphqlModule } from "@features/api/workbench"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule } from "@modules/domain/modules"
+import { PlatformPortsModule } from "@modules/domain/platform-ports"
 import { PUBLIC_API_ERROR_KINDS, PUBLIC_API_MESSAGES, PublicApiModule } from "@modules/domain/public-api"
 import {
     WORKBENCH_DOOR_ERROR_KINDS,
@@ -45,6 +46,7 @@ export const modulesModules = (): Array<DynamicModule> => [
         entities: FLOW_F_ENTITIES,
         registryHash: installed.registryHash,
     }),
+    PlatformPortsModule.register({ isGlobal: true }),
 ]
 
 /** The error kinds of the capabilities this group registers, in registration order. */

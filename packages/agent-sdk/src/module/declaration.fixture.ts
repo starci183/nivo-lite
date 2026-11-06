@@ -56,6 +56,7 @@ export const CONTEXT: RunContext = {
     memberId: "m1",
     now: new Date("2026-11-05T00:00:00Z"),
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 }
 
 /** What a recording source saw. */

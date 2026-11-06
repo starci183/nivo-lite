@@ -4,6 +4,7 @@ export { AGENT_RUN_WAIT_TIMEOUT, AGENT_RUN_ITEM_VERDICTS } from "./agent-runs.de
 export { AgentRunsModule } from "./agent-runs.module"
 export { AgentRunsService } from "./agent-runs.service"
 export { AgentRunHandlersService } from "./agent-run-handlers.service"
+export { AgentRunParkStoreService } from "./agent-run-park-store.service"
 export { AgentRunResumeService } from "./agent-run-resume.service"
 export { AgentRunAlertsService } from "./agent-run-alerts.service"
 export { AgentRunEngineAlertsService } from "./agent-run-engine-alerts.service"
@@ -29,6 +30,7 @@ export type {
     RunTimeoutClaim,
     RunStepView,
     OwnerResumeAnswer,
+    ParkedFacts,
     ResumeResult,
     RunView,
     WaitExpiry,

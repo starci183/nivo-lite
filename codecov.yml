@@ -147,6 +147,7 @@ component_management:
         - "be/src/modules/domain/payment-orders/**"
         - "be/src/modules/domain/platform-admin/**"
         - "be/src/modules/domain/platform-audit/**"
+        - "be/src/modules/domain/platform-ports/**"
         - "be/src/modules/domain/promo/**"
         - "be/src/modules/domain/public-api/**"
         - "be/src/modules/domain/public-documents/**"

@@ -13,6 +13,8 @@ import { MemberGrantsService } from "@modules/domain/member-grants"
 import type { MemberGrant } from "@modules/domain/member-grants"
 import { MemberLookupService } from "@modules/domain/workspace-members"
 import type { InstallationRecord } from "@modules/domain/module-installations"
+import type { ParkedRuns } from "@nivo-lite/blocks-core/modules"
+import { ParkedRunsService, PlatformRegionsService } from "@modules/domain/platform-ports"
 import { DoorPortsService } from "./door-ports.service"
 import type { DoorRun } from "./door-ports.service"
 import { WORKBENCH_DOOR_OPTIONS } from "./workbench-door.decorators"
@@ -47,6 +49,8 @@ const build = async () => {
     const installations = mock<InstallationRecordsService>()
     const seats = mock<MemberLookupService>()
     const grants = mock<MemberGrantsService>()
+    const regions = mock<PlatformRegionsService>()
+    const parked = mock<ParkedRunsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             DoorPortsService,
@@ -57,12 +61,41 @@ const build = async () => {
             { provide: ListSourceService, useValue: lists },
             { provide: MemberLookupService, useValue: seats },
             { provide: MemberGrantsService, useValue: grants },
+            { provide: PlatformRegionsService, useValue: regions },
+            { provide: ParkedRunsService, useValue: parked },
         ],
     }).compile()
     const runIn: RunIn = (use) => use(tx)
-    const run: DoorRun = { workspaceId: "ws-1", runIn, name: "sales.leads", dataKind: "lead" }
-    return { service: moduleRef.get(DoorPortsService), ports, lists, tx, runIn, run, installations, seats, grants }
+    const run: DoorRun = {
+        workspaceId: "ws-1",
+        runIn,
+        name: "sales.leads",
+        dataKind: "lead",
+        memberId: "m1",
+        locale: "vi",
+    }
+    return {
+        service: moduleRef.get(DoorPortsService),
+        ports,
+        lists,
+        tx,
+        runIn,
+        run,
+        installations,
+        seats,
+        grants,
+        regions,
+        parked,
+    }
 }
+
+/** A region port: `of(agentId, locale?)`. */
+interface RegionPort {
+    readonly of: (agentId: string, locale?: "vi" | "en") => Promise<unknown>
+}
+
+const isRegionPort = (value: unknown): value is RegionPort =>
+    typeof value === "object" && value !== null && "of" in value
 
 type PortId = `${string}.${string}`
 
@@ -232,3 +265,64 @@ const isRightsDirectory = (
     value: unknown,
 ): value is { readonly holds: (memberId: string | null, permission: string) => Promise<unknown> } =>
     typeof value === "object" && value !== null && "holds" in value
+
+/** The door ports of an app that registered no platform ports: only what every app has. */
+const buildBare = async () => {
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            DoorPortsService,
+            { provide: WORKBENCH_DOOR_OPTIONS, useValue: { modules: [], entities: [], registryHash: "hash-1" } },
+            { provide: InstallationRecordsService, useValue: mock<InstallationRecordsService>() },
+            { provide: EntityEngineService, useValue: mock<EntityEngineService>({ catalog: new Map() }) },
+            { provide: EntityPortsService, useValue: mock<EntityPortsService>() },
+            { provide: ListSourceService, useValue: mock<ListSourceService>() },
+            { provide: MemberLookupService, useValue: mock<MemberLookupService>() },
+            { provide: MemberGrantsService, useValue: mock<MemberGrantsService>() },
+        ],
+    }).compile()
+    return moduleRef.get(DoorPortsService)
+}
+
+describe("DoorPortsService platform ports", () => {
+    it("serves the agent regions in the language of the run, and lets a caller ask for another", async () => {
+        const { service, regions, run } = await build()
+        regions.connectionsOf.mockResolvedValue({ manageLabel: "m", manageHref: "", rows: [] })
+        const connections = service
+            .providerFor({ ...run, locale: "en" })
+            .implementationOf(portOf("platform.agent-connections"))
+        await (isRegionPort(connections) ? connections.of("a1") : Promise.reject(new Error("no port")))
+        await (isRegionPort(connections) ? connections.of("a1", "vi") : Promise.reject(new Error("no port")))
+        expect(regions.connectionsOf.mock.calls).toEqual([
+            ["a1", "en"],
+            ["a1", "vi"],
+        ])
+        const knowledge = service.providerFor(run).implementationOf(portOf("platform.agent-knowledge"))
+        await (isRegionPort(knowledge) ? knowledge.of("a2") : Promise.reject(new Error("no port")))
+        expect(regions.knowledgeOf.mock.calls).toEqual([["ws-1", "a2", "vi"]])
+    })
+
+    it("serves the parked runs for the asker of the run", async () => {
+        const { service, parked, run } = await build()
+        const served = mock<ParkedRuns>()
+        parked.portFor.mockReturnValue(served)
+        const port = service.providerFor(run).implementationOf(portOf("platform.parked-runs"))
+        expect(port).toBe(served)
+        expect(parked.portFor).toHaveBeenCalledWith({ workspaceId: "ws-1", memberId: "m1", locale: "vi" })
+    })
+
+    it.each(["platform.agent-connections", "platform.agent-knowledge", "platform.parked-runs"] as const)(
+        "reports %s as unprovided in an app that registered no platform ports",
+        async (id) => {
+            const service = await buildBare()
+            const run: DoorRun = {
+                workspaceId: "ws-1",
+                runIn: (use) => use(mock<ScopedTx>()),
+                name: "x.y",
+                dataKind: null,
+                memberId: null,
+                locale: "vi",
+            }
+            expect(() => service.providerFor(run).implementationOf(portOf(id))).toThrow(SdkDefinitionError)
+        },
+    )
+})

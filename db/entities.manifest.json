@@ -643,6 +643,12 @@
         "records_sales_settings_reopen_needs_approval_chk"
       ],
       "indexes": ["records_sales_settings_key", "records_sales_settings_key_key"]
+    },
+    {
+      "entity": "workspace.settings",
+      "partition": "records_workspace_settings",
+      "checks": ["records_workspace_settings_key_chk", "records_workspace_settings_time_zone_chk"],
+      "indexes": ["records_workspace_settings_key_id", "records_workspace_settings_workspace_key"]
     }
   ]
 }
