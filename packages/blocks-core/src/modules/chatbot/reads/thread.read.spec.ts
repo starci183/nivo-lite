@@ -11,6 +11,7 @@ describe("the chatbot.thread read", () => {
                 id: "c1",
                 name: "Minh Anh Nguyen",
                 channelName: "Zalo",
+                avatarUrl: "",
                 leadId: "l1",
                 status: "needs",
                 handledBy: "",
@@ -20,6 +21,18 @@ describe("the chatbot.thread read", () => {
                 phone: "0901234567",
                 email: "minh@example.com",
             },
+        })
+    })
+
+    it("carries the picture link the channel gave the customer", async () => {
+        const world = memoryWorld()
+        world.conversations.push({
+            ...recordOfThread({ ...WAITING_ROW, avatarUrl: "https://zalo.test/minh.png" }),
+            id: "pic",
+        })
+        expect(await THREAD.execute?.(memoryProvider(world), { id: "pic" }, STAFF_CONTEXT)).toMatchObject({
+            ok: true,
+            data: { avatarUrl: "https://zalo.test/minh.png" },
         })
     })
 

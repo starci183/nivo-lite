@@ -24,6 +24,7 @@ export const THREAD_FIELDS = {
     id: "id",
     name: "name",
     channelName: "channelName",
+    avatarUrl: "avatarUrl",
     handledBy: "handledBy",
     stage: "stage",
     need: "need",
