@@ -1,14 +1,9 @@
-import type { RunContext } from "@nivo-lite/agent-sdk/port"
-import { SAMPLE_NOW, sampleState } from "../fixtures/sales.data"
+import { sampleState } from "../fixtures/sales.data"
+import { salesContextOf } from "../fixtures/sales.context"
 import { memoryProvider } from "../memory"
 import { attentionRead } from "./attention.read"
 
-const CONTEXT: RunContext = {
-    workspaceId: "w1",
-    memberId: "m1",
-    now: new Date(SAMPLE_NOW),
-    timeZone: "Asia/Ho_Chi_Minh",
-}
+const CONTEXT = salesContextOf()
 
 const dataOf = async (state = sampleState([])): Promise<unknown> => {
     const result = await attentionRead.execute?.(memoryProvider(state), {}, CONTEXT)

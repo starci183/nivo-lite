@@ -1,14 +1,9 @@
-import type { RunContext } from "@nivo-lite/agent-sdk/port"
-import { LEAD_NEW, LEAD_WON, SAMPLE_NOW, sampleState } from "../fixtures/sales.data"
+import { LEAD_NEW, LEAD_WON, sampleState } from "../fixtures/sales.data"
+import { salesContextOf } from "../fixtures/sales.context"
 import { memoryProvider } from "../memory"
 import { awaitingReplyRead } from "./awaiting-reply.read"
 
-const CONTEXT: RunContext = {
-    workspaceId: "w1",
-    memberId: "m1",
-    now: new Date(SAMPLE_NOW),
-    timeZone: "Asia/Ho_Chi_Minh",
-}
+const CONTEXT = salesContextOf()
 
 describe("sales.awaiting-reply", () => {
     it("lists the open customers who wait, longest wait first, and leaves out closed deals", async () => {
