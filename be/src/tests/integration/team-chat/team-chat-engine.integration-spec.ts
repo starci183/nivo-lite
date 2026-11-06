@@ -48,7 +48,11 @@ const openRequest = async (workspaceId: string, seatIds: ReadonlyArray<string>, 
              (workspace_id, chain_step_id, department, action, policy, approvers, timeout_minutes, expires_at, requested_by_agent_id)
          VALUES ($1, gen_random_uuid(), 'sales', 'refund', 'any', $2::jsonb, 30, now() + interval '30 minutes', $3)
          RETURNING id`,
-        [workspaceId, JSON.stringify(seatIds.map((memberId) => ({ memberId, name: "x", role: "staff", roomId: null }))), agentId],
+        [
+            workspaceId,
+            JSON.stringify(seatIds.map((memberId) => ({ memberId, name: "x", role: "staff", roomId: null }))),
+            agentId,
+        ],
     )
     return rows[0]?.id ?? ""
 }
@@ -92,9 +96,16 @@ describe("report cards", () => {
         )
         const posted = await chat().postReport(workspaceId, { runId: world.id(), agentId, body: "x", roomId: made.id })
         expect(posted?.roomId).toBe(made.id)
-        const fallback = await chat().postReport(workspaceId, { runId: world.id(), agentId, body: "x", roomId: world.id() })
+        const fallback = await chat().postReport(workspaceId, {
+            runId: world.id(),
+            agentId,
+            body: "x",
+            roomId: world.id(),
+        })
         expect(fallback?.roomId).not.toBe(made.id)
-        expect(await chat().postReport(workspaceId, { runId: world.id(), agentId: world.id(), body: "x", roomId: null })).toBeNull()
+        expect(
+            await chat().postReport(workspaceId, { runId: world.id(), agentId: world.id(), body: "x", roomId: null }),
+        ).toBeNull()
         expect(await chat().postReport(world.id(), { runId: world.id(), agentId, body: "x", roomId: null })).toBeNull()
     })
 })
@@ -136,7 +147,11 @@ describe("approval cards", () => {
             [decisionId, firstSeat],
         )
         const settled = await chat().messages(workspaceId, first, room.id, 10, null, false)
-        expect(settled.nodes[0]?.approval).toMatchObject({ status: "refused", canDecide: false, decidedByName: "Staff 1" })
+        expect(settled.nodes[0]?.approval).toMatchObject({
+            status: "refused",
+            canDecide: false,
+            decidedByName: "Staff 1",
+        })
         const settledDirect = await chat().rooms(workspaceId, second, "direct", agentId)
         expect(settledDirect[0]?.lastMessage?.approval?.status).toBe("refused")
     })
@@ -158,7 +173,15 @@ describe("approval cards", () => {
         expect(posted).toBe(1)
         const thread = await chat().messages(workspaceId, ownerId, room.id, 10, null, false)
         expect(thread.nodes[0]).toMatchObject({ kind: "approval", authorKind: "system", authorId: null })
-        expect(await chat().postApproval(workspaceId, { decisionId, body: "x", agentId: null, roomIds: [], approverSeatIds: [] })).toBe(0)
+        expect(
+            await chat().postApproval(workspaceId, {
+                decisionId,
+                body: "x",
+                agentId: null,
+                roomIds: [],
+                approverSeatIds: [],
+            }),
+        ).toBe(0)
     })
 })
 
@@ -167,23 +190,134 @@ describe("lines of an agent", () => {
         const identity = await seed()
         const { workspaceId, ownerId, agentId } = identity
         const [first] = identity.staffIds
-        const room = valueOf(await chat().createRoom(workspaceId, ownerId, { kind: "group", name: "Sales", members: [user(first)] }))
-        const named = await chat().postMessage(workspaceId, { authorAgentId: agentId, roomId: room.id, toUserId: null, body: " Hi ", key: "k1" })
+        const room = valueOf(
+            await chat().createRoom(workspaceId, ownerId, { kind: "group", name: "Sales", members: [user(first)] }),
+        )
+        const named = await chat().postMessage(workspaceId, {
+            authorAgentId: agentId,
+            roomId: room.id,
+            toUserId: null,
+            body: " Hi ",
+            key: "k1",
+        })
         assert(named !== null)
-        const repeated = await chat().postMessage(workspaceId, { authorAgentId: agentId, roomId: room.id, toUserId: null, body: "Hi", key: "k1" })
+        const repeated = await chat().postMessage(workspaceId, {
+            authorAgentId: agentId,
+            roomId: room.id,
+            toUserId: null,
+            body: "Hi",
+            key: "k1",
+        })
         expect(repeated).toEqual(named)
-        const toPerson = await chat().postMessage(workspaceId, { authorAgentId: agentId, roomId: null, toUserId: first, body: "Private", key: null })
+        const toPerson = await chat().postMessage(workspaceId, {
+            authorAgentId: agentId,
+            roomId: null,
+            toUserId: first,
+            body: "Private",
+            key: null,
+        })
         assert(toPerson !== null)
         expect(toPerson.roomId).not.toBe(room.id)
-        const system = await chat().postMessage(workspaceId, { authorAgentId: null, roomId: room.id, toUserId: null, body: "Month closed", key: null })
+        const system = await chat().postMessage(workspaceId, {
+            authorAgentId: null,
+            roomId: room.id,
+            toUserId: null,
+            body: "Month closed",
+            key: null,
+        })
         assert(system !== null)
         const thread = await chat().messages(workspaceId, first, room.id, 10, null, false)
         expect(thread.nodes.map((node) => [node.authorKind, node.kind, node.body])).toEqual([
             ["system", "system", "Month closed"],
             ["agent", "text", "Hi"],
         ])
-        expect(await chat().postMessage(workspaceId, { authorAgentId: agentId, roomId: world.id(), toUserId: null, body: "x", key: null })).toBeNull()
-        expect(await chat().postMessage(workspaceId, { authorAgentId: null, roomId: null, toUserId: first, body: "x", key: null })).toBeNull()
-        expect(await chat().postMessage(workspaceId, { authorAgentId: agentId, roomId: room.id, toUserId: null, body: "   ", key: null })).toBeNull()
+        expect(
+            await chat().postMessage(workspaceId, {
+                authorAgentId: agentId,
+                roomId: world.id(),
+                toUserId: null,
+                body: "x",
+                key: null,
+            }),
+        ).toBeNull()
+        expect(
+            await chat().postMessage(workspaceId, {
+                authorAgentId: null,
+                roomId: null,
+                toUserId: first,
+                body: "x",
+                key: null,
+            }),
+        ).toBeNull()
+        expect(
+            await chat().postMessage(workspaceId, {
+                authorAgentId: agentId,
+                roomId: room.id,
+                toUserId: null,
+                body: "   ",
+                key: null,
+            }),
+        ).toBeNull()
+    })
+})
+
+describe("postAsAgent", () => {
+    it("opens the direct room on the write, by module key or by agent id, to the owner by default, once per key", async () => {
+        const identity = await seed()
+        const { workspaceId, ownerId, agentId } = identity
+        expect(await chat().rooms(workspaceId, ownerId, "direct", agentId)).toEqual([])
+        const byModule = await chat().postAsAgent(workspaceId, {
+            agent: "chatbot",
+            toUserId: null,
+            body: "Hello",
+            key: "k1",
+        })
+        assert(byModule !== null)
+        expect(byModule.agentId).toBe(agentId)
+        const again = await chat().postAsAgent(workspaceId, {
+            agent: agentId,
+            toUserId: ownerId,
+            body: "Hello",
+            key: "k1",
+        })
+        expect(again).toEqual(byModule)
+        const rooms = await chat().rooms(workspaceId, ownerId, "direct", agentId)
+        expect(rooms.map((room) => room.id)).toEqual([byModule.roomId])
+        const thread = await chat().messages(workspaceId, ownerId, byModule.roomId, 10, null, false)
+        expect(thread.nodes.map((node) => [node.authorKind, node.authorId, node.kind, node.body])).toEqual([
+            ["agent", agentId, "text", "Hello"],
+        ])
+    })
+
+    it("speaks to the person named and refuses an agent, a module or a person the workspace does not have", async () => {
+        const identity = await seed()
+        const { workspaceId, agentId } = identity
+        const [first] = identity.staffIds
+        const toStaff = await chat().postAsAgent(workspaceId, {
+            agent: "chatbot",
+            toUserId: first,
+            body: "Hi",
+            key: null,
+        })
+        assert(toStaff !== null)
+        const owners = await chat().rooms(workspaceId, first, "direct", agentId)
+        expect(owners.map((room) => room.id)).toEqual([toStaff.roomId])
+        expect(
+            await chat().postAsAgent(workspaceId, { agent: "sales", toUserId: null, body: "x", key: null }),
+        ).toBeNull()
+        expect(
+            await chat().postAsAgent(workspaceId, { agent: world.id(), toUserId: null, body: "x", key: null }),
+        ).toBeNull()
+        expect(
+            await chat().postAsAgent(workspaceId, {
+                agent: "chatbot",
+                toUserId: identity.outsiderId,
+                body: "x",
+                key: null,
+            }),
+        ).toBeNull()
+        expect(
+            await chat().postAsAgent(world.id(), { agent: "chatbot", toUserId: null, body: "x", key: null }),
+        ).toBeNull()
     })
 })

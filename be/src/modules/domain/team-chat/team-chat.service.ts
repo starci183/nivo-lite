@@ -35,6 +35,9 @@ const UNIQUE_VIOLATION = "23505"
 /** The database clock as an insert value: every instant of the chat is the database's, so read positions and messages compare on one clock. */
 const DATABASE_NOW = (): string => "now()"
 
+/** The shape of an id. */
+const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu
+
 /** The longest body a card keeps. */
 const CARD_BODY_MAX = 20000
 
@@ -743,6 +746,52 @@ export class TeamChatService {
         return { roomId, messageId: kept.id }
     }
 
+    /**
+     * Says one line as an agent to one person: the agent is named by its id or by the key of its module (the first agent of that module
+     * in the workspace), the person defaults to the owner of the workspace. The direct room between them is opened on this write, never
+     * on a read, and the same key from the same agent is the same line. Null when the agent or the person is not of the workspace.
+     */
+    async postAsAgent(
+        workspaceId: string,
+        post: {
+            readonly agent: string
+            readonly toUserId: string | null
+            readonly body: string
+            readonly key: string | null
+        },
+    ): Promise<{ readonly roomId: string; readonly messageId: string; readonly agentId: string } | null> {
+        const agentId = await this.agentNamed(workspaceId, post.agent)
+        const toUserId = post.toUserId ?? (await this.ownerOf(workspaceId))
+        if (agentId === null || toUserId === null) return null
+        const posted = await this.postMessage(workspaceId, {
+            authorAgentId: agentId,
+            roomId: null,
+            toUserId,
+            body: post.body,
+            key: post.key,
+        })
+        return posted === null ? null : { ...posted, agentId }
+    }
+
+    /** The agent a name stands for: an agent id of the workspace, or the key of a module whose first agent it is. */
+    private async agentNamed(workspaceId: string, named: string): Promise<string | null> {
+        if (UUID.test(named)) {
+            const [found] = await this.agents.activeInOrder(workspaceId, [named], 1)
+            return found?.id ?? null
+        }
+        const [first] = await this.agents.idsOfModule(workspaceId, named, 1)
+        return first ?? null
+    }
+
+    /** The owner of the workspace; null when the workspace is gone. */
+    private async ownerOf(workspaceId: string): Promise<string | null> {
+        const rows: Array<{ owner_id: string }> = await this.entityManager.query(
+            "SELECT owner_id FROM public.workspaces WHERE id = $1",
+            [workspaceId],
+        )
+        return rows[0]?.owner_id ?? null
+    }
+
     private async lineRoom(
         workspaceId: string,
         line: {
@@ -854,7 +903,7 @@ export class TeamChatService {
     /** The direct room of a person and a member, opened when the pair has none; null when the member is not of the workspace. */
     private async directRoomOf(workspaceId: string, userId: string, other: MemberRef): Promise<string | null> {
         const me: MemberRef = { memberKind: "user", memberId: userId }
-        if (!(await this.allKnown(workspaceId, [other]))) return null
+        if (!(await this.allKnown(workspaceId, [me, other]))) return null
         const directKey = directKeyOf(me, other)
         const existing = await this.entityManager.findOne(ChatRoomEntity, { where: { workspaceId, directKey } })
         if (existing !== null) return existing.id

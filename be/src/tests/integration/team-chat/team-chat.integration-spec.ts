@@ -46,7 +46,11 @@ const group = async (
     members: ReadonlyArray<string> = identity.staffIds.slice(0, 2),
 ): Promise<RoomView> =>
     valueOf(
-        await chat().createRoom(identity.workspaceId, identity.ownerId, { kind: "group", name, members: members.map(user) }),
+        await chat().createRoom(identity.workspaceId, identity.ownerId, {
+            kind: "group",
+            name,
+            members: members.map(user),
+        }),
     )
 
 describe("rooms", () => {
@@ -54,8 +58,12 @@ describe("rooms", () => {
         const identity = await seed()
         const [first, second] = identity.staffIds
         const direct = { kind: "direct", name: null } as const
-        const opened = valueOf(await chat().createRoom(identity.workspaceId, first, { ...direct, members: [user(second)] }))
-        const again = valueOf(await chat().createRoom(identity.workspaceId, second, { ...direct, members: [user(first)] }))
+        const opened = valueOf(
+            await chat().createRoom(identity.workspaceId, first, { ...direct, members: [user(second)] }),
+        )
+        const again = valueOf(
+            await chat().createRoom(identity.workspaceId, second, { ...direct, members: [user(first)] }),
+        )
         expect(again.id).toBe(opened.id)
         expect(opened.members.map((member) => member.memberId).toSorted()).toEqual([first, second].toSorted())
         expect(opened.name).toBe("Staff 2")
@@ -69,7 +77,8 @@ describe("rooms", () => {
         expect(made.members.find((member) => member.memberId === identity.ownerId)?.role).toBe("owner")
         const { workspaceId, ownerId } = identity
         const [first, second, third] = identity.staffIds
-        const open = (input: Parameters<TeamChatService["createRoom"]>[2]) => chat().createRoom(workspaceId, ownerId, input)
+        const open = (input: Parameters<TeamChatService["createRoom"]>[2]) =>
+            chat().createRoom(workspaceId, ownerId, input)
         expect(refusalOf(await open({ kind: "group", name: "  ", members: [user(first)] }))).toBe(
             TeamChatErrorCode.GroupNeedsName,
         )
@@ -83,7 +92,9 @@ describe("rooms", () => {
             TeamChatErrorCode.MemberUnknown,
         )
         expect(
-            refusalOf(await open({ kind: "group", name: "x", members: [{ memberKind: "agent", memberId: world.id() }] })),
+            refusalOf(
+                await open({ kind: "group", name: "x", members: [{ memberKind: "agent", memberId: world.id() }] }),
+            ),
         ).toBe(TeamChatErrorCode.MemberUnknown)
     })
 
@@ -104,9 +115,15 @@ describe("rooms", () => {
         const [first, second] = identity.staffIds
         expect(await chat().rooms(identity.workspaceId, first, "direct", second)).toEqual([])
         const opened = valueOf(
-            await chat().createRoom(identity.workspaceId, first, { kind: "direct", name: null, members: [user(second)] }),
+            await chat().createRoom(identity.workspaceId, first, {
+                kind: "direct",
+                name: null,
+                members: [user(second)],
+            }),
         )
-        expect((await chat().rooms(identity.workspaceId, first, "direct", second)).map((room) => room.id)).toEqual([opened.id])
+        expect((await chat().rooms(identity.workspaceId, first, "direct", second)).map((room) => room.id)).toEqual([
+            opened.id,
+        ])
     })
 })
 
@@ -120,7 +137,9 @@ describe("members", () => {
         expect(refusalOf(await chat().addMember(workspaceId, ownerId, made.id, user(second)))).toBe(
             TeamChatErrorCode.AlreadyMember,
         )
-        expect(refusalOf(await chat().addMember(workspaceId, first, made.id, user(third)))).toBe(TeamChatErrorCode.Forbidden)
+        expect(refusalOf(await chat().addMember(workspaceId, first, made.id, user(third)))).toBe(
+            TeamChatErrorCode.Forbidden,
+        )
         expect(refusalOf(await chat().removeMember(workspaceId, ownerId, made.id, user(third)))).toBe(
             TeamChatErrorCode.NotAMemberToRemove,
         )
@@ -137,7 +156,11 @@ describe("members", () => {
         const identity = await seed()
         const [first, second, third] = identity.staffIds
         const direct = valueOf(
-            await chat().createRoom(identity.workspaceId, first, { kind: "direct", name: null, members: [user(second)] }),
+            await chat().createRoom(identity.workspaceId, first, {
+                kind: "direct",
+                name: null,
+                members: [user(second)],
+            }),
         )
         expect(refusalOf(await chat().addMember(identity.workspaceId, first, direct.id, user(third)))).toBe(
             TeamChatErrorCode.Forbidden,
@@ -159,7 +182,13 @@ describe("messages", () => {
         const sent = valueOf(await send("hello", { mentions: [user(second)], clientId: "c1" }))
         const retried = valueOf(await send("hello", { mentions: [user(second)], clientId: "c1" }))
         expect(retried.id).toBe(sent.id)
-        expect(sent).toMatchObject({ kind: "text", authorKind: "user", authorId: first, authorName: "Staff 1", roomId: made.id })
+        expect(sent).toMatchObject({
+            kind: "text",
+            authorKind: "user",
+            authorId: first,
+            authorName: "Staff 1",
+            roomId: made.id,
+        })
         expect(sent.mentions.map((mention) => mention.name)).toEqual(["Staff 2"])
         expect(refusalOf(await send("   "))).toBe(TeamChatErrorCode.BodyEmpty)
         expect(refusalOf(await send("x".repeat(8001)))).toBe(TeamChatErrorCode.BodyTooLong)
@@ -167,8 +196,12 @@ describe("messages", () => {
         expect(refusalOf(await send("hi", { mentions: crowd }))).toBe(TeamChatErrorCode.TooManyMentions)
         const files = Array.from({ length: 11 }, (_, index) => `k${String(index)}`)
         expect(refusalOf(await send("hi", { fileKeys: files }))).toBe(TeamChatErrorCode.TooManyFiles)
-        expect(refusalOf(await send("hi", { mentions: [user(identity.outsiderId)] }))).toBe(TeamChatErrorCode.MemberUnknown)
-        expect(refusalOf(await chat().send(workspaceId, third, message(made.id, "hi")))).toBe(TeamChatErrorCode.NotFound)
+        expect(refusalOf(await send("hi", { mentions: [user(identity.outsiderId)] }))).toBe(
+            TeamChatErrorCode.MemberUnknown,
+        )
+        expect(refusalOf(await chat().send(workspaceId, third, message(made.id, "hi")))).toBe(
+            TeamChatErrorCode.NotFound,
+        )
     })
 
     it("opens the direct room with the first message to a member", async () => {
@@ -220,7 +253,9 @@ describe("unread and pins", () => {
             mentionCount: 0,
         })
         expect((await chat().unread(workspaceId, second)).rooms).toEqual([])
-        expect(refusalOf(await chat().markRead(workspaceId, second, made.id, world.id()))).toBe(TeamChatErrorCode.NotFound)
+        expect(refusalOf(await chat().markRead(workspaceId, second, made.id, world.id()))).toBe(
+            TeamChatErrorCode.NotFound,
+        )
         expect(refusalOf(await chat().markRead(workspaceId, ownerId, made.id, null))).toBeNull()
         expect(refusalOf(await chat().markRead(workspaceId, third, made.id, null))).toBe(TeamChatErrorCode.NotFound)
     })
