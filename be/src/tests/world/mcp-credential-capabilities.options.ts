@@ -18,7 +18,6 @@ import { PaymentTransactionsModule } from "@modules/domain/payment-transactions"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { JobsModule } from "@modules/platform/jobs"
 import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
-import { TRANSACTIONS_ERROR_KINDS, TRANSACTIONS_MESSAGES, TransactionsModule } from "@modules/domain/transactions"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { MCP_ERROR_KINDS, MCP_MESSAGES } from "@modules/integrations/mcp"
@@ -43,7 +42,6 @@ export const MCP_CREDENTIAL_MODULES: Array<DynamicModule> = [
             MCP_GATEWAY_MESSAGES,
             MCP_GATEWAY_RECEIPTS_MESSAGES,
             MCP_MESSAGES,
-            TRANSACTIONS_MESSAGES,
         ],
     }),
     ErrorsModule.register({
@@ -55,7 +53,6 @@ export const MCP_CREDENTIAL_MODULES: Array<DynamicModule> = [
             MCP_GATEWAY_ERROR_KINDS,
             MCP_GATEWAY_RECEIPTS_ERROR_KINDS,
             MCP_ERROR_KINDS,
-            TRANSACTIONS_ERROR_KINDS,
         ],
     }),
     ...QUEUE_MODULES,
@@ -70,7 +67,6 @@ export const MCP_CREDENTIAL_MODULES: Array<DynamicModule> = [
     StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),
-    TransactionsModule.register({ isGlobal: true }),
     JobsModule.register({
         isGlobal: true,
         connection: PRIMARY_ENTITY_MANAGER,
