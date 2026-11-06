@@ -44,6 +44,14 @@ describe("the chatbot.messages read", () => {
         })
     })
 
+    it("leaves out a record of the thread that is no line", async () => {
+        const world = memoryWorld()
+        await stored(world, [lineOf(1, {})])
+        await stored(world, [lineOf(2, { role: "bogus" })])
+        const result = await THREAD_MESSAGES.execute?.(memoryProvider(world), { threadId: "c2" }, STAFF_CONTEXT)
+        expect(result).toMatchObject({ ok: true, data: { rows: [{ text: "line 1" }] } })
+    })
+
     it("pages to older lines with the cursor the engine signed", async () => {
         const world = memoryWorld()
         await stored(

@@ -44,12 +44,16 @@ describe("accounting.save-settings", () => {
         const world = memoryWorld()
         await run(world, { vatPeriod: "monthly" })
         expect(savedOf(world)).toMatchObject({ vatPeriod: "monthly" })
+        await run(world, { rematchDays: 14 })
+        expect(savedOf(world)).toMatchObject({ vatPeriod: "monthly", rematchDays: 14 })
     })
 
     it("refuses a void mode or a filing period it does not know", async () => {
         const world = memoryWorld()
         expect(await run(world, { voidMode: "delete" })).toMatchObject({ ok: false, reason: "invalid" })
         expect(await run(world, { vatPeriod: "yearly" })).toMatchObject({ ok: false, reason: "invalid" })
+        expect(await run(world, { rematchDays: 0 })).toMatchObject({ ok: false, reason: "invalid" })
+        expect(await run(world, { rematchDays: 31 })).toMatchObject({ ok: false, reason: "invalid" })
         expect(rowsOf(world, "accounting.settings")).toEqual([])
     })
 

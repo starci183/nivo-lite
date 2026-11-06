@@ -1,4 +1,6 @@
 import type { DynamicModule } from "@nestjs/common"
+import { EventsModule } from "@modules/domain/events"
+import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
 import { ClockModule } from "@modules/platform/clock"
@@ -9,6 +11,8 @@ import { TeamChatProofModule } from "./team-chat-proof.module"
 export const TEAM_CHAT_PROOF_MODULES: ReadonlyArray<DynamicModule> = [
     IdsModule.register({ isGlobal: true }),
     ClockModule.register({ isGlobal: true }),
+    EventsModule.register({ isGlobal: true }),
+    StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true }),
     WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: false }),
     TeamChatProofModule.register(),

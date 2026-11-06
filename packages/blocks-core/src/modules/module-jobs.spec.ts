@@ -12,6 +12,7 @@ describe("MODULE_JOBS", () => {
             "payment.confirm-notice",
             "platform.post-report",
             "platform.post-approval",
+            "payment.rematch",
         ])
     })
 

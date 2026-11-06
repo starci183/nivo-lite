@@ -113,11 +113,16 @@ export interface LedgerCard {
     readonly balance: string
 }
 
+/** The two words a card names its amounts by. */
+export interface LedgerCardWords {
+    /** The word of money in. */
+    readonly income: string
+    /** The word of money out. */
+    readonly expense: string
+}
+
 /** The card of a line on a phone: the columns of the table become one line of words. */
-export const ledgerCardOf = (
-    row: LedgerRow,
-    words: { readonly income: string; readonly expense: string },
-): LedgerCard => ({
+export const ledgerCardOf = (row: LedgerRow, words: LedgerCardWords): LedgerCard => ({
     id: row.id,
     title: row.title,
     description: [

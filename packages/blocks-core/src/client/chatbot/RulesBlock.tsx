@@ -12,8 +12,66 @@ import type { RenderOf } from "../render-props"
 
 type RulesProps = RenderOf<typeof rulesBlock>
 
+/** What the two fields of the settings are given. */
+interface RulesFieldsProps {
+    /** The values being typed. */
+    readonly draft: RulesDraft
+    /** Takes the values after a change. */
+    readonly onDraft: (next: RulesDraft) => void
+    /** True while the person may not change them. */
+    readonly isLocked: boolean
+    /** True while the settings are still being read. */
+    readonly isLoading: boolean
+    /** The refusal to show under a field, when it has one. */
+    readonly errorOf: (field: string) => { readonly errorMessage?: string }
+}
+
+/** The fields of the settings: how long the model may take, and what a customer is told while it does. */
+const RulesFields = (props: RulesFieldsProps): ReactNode => {
+    const words = useBlockWords()
+    return (
+        <>
+            <NumberField
+                id="openclawTimeoutSec"
+                name="openclawTimeoutSec"
+                label={words({ key: "rules_timeout_label" })}
+                description={words({ key: "rules_timeout_hint" })}
+                isLoading={props.isLoading}
+                isReadOnly={props.isLocked}
+                minValue={TIMEOUT_MIN_SEC}
+                maxValue={TIMEOUT_MAX_SEC}
+                formatOptions={{ style: "unit", unit: "second", unitDisplay: "long" }}
+                value={props.draft.openclawTimeoutSec ?? Number.NaN}
+                onValueChange={(reported) =>
+                    props.onDraft({ ...props.draft, openclawTimeoutSec: Number.isNaN(reported) ? null : reported })
+                }
+                {...props.errorOf("openclawTimeoutSec")}
+            />
+            <Textarea
+                id="holdingMessage"
+                name="holdingMessage"
+                label={words({ key: "rules_holding_label" })}
+                description={words({ key: "rules_holding_hint" })}
+                isLoading={props.isLoading}
+                isReadOnly={props.isLocked}
+                rows={3}
+                maxLength={HOLDING_MESSAGE_MAX}
+                value={props.draft.holdingMessage}
+                onValueChange={(holdingMessage) => props.onDraft({ ...props.draft, holdingMessage })}
+                {...props.errorOf("holdingMessage")}
+            />
+        </>
+    )
+}
+
+/** What the form over the settings is given: the block's props and the record it starts from. */
+interface RulesFormProps extends RulesProps {
+    readonly record: unknown
+    readonly isLoading: boolean
+}
+
 /** The form over the settings a record holds: it starts from them again whenever the record changes. */
-const RulesForm = (props: RulesProps & { readonly record: unknown; readonly isLoading: boolean }): ReactNode => {
+const RulesForm = (props: RulesFormProps): ReactNode => {
     const host = useBlockHost()
     const words = useBlockWords()
     const [draft, setDraft] = useState<RulesDraft>(() => draftOf(props.record))
@@ -51,34 +109,12 @@ const RulesForm = (props: RulesProps & { readonly record: unknown; readonly isLo
                     isPending={save.isRunning}
                     onSubmit={submit}
                 >
-                    <NumberField
-                        id="openclawTimeoutSec"
-                        name="openclawTimeoutSec"
-                        label={words({ key: "rules_timeout_label" })}
-                        description={words({ key: "rules_timeout_hint" })}
+                    <RulesFields
+                        draft={draft}
+                        onDraft={setDraft}
+                        isLocked={!save.isAllowed || save.isRunning}
                         isLoading={props.isLoading}
-                        isReadOnly={!save.isAllowed || save.isRunning}
-                        minValue={TIMEOUT_MIN_SEC}
-                        maxValue={TIMEOUT_MAX_SEC}
-                        formatOptions={{ style: "unit", unit: "second", unitDisplay: "long" }}
-                        value={draft.openclawTimeoutSec ?? Number.NaN}
-                        onValueChange={(reported) =>
-                            setDraft({ ...draft, openclawTimeoutSec: Number.isNaN(reported) ? null : reported })
-                        }
-                        {...errorOf("openclawTimeoutSec")}
-                    />
-                    <Textarea
-                        id="holdingMessage"
-                        name="holdingMessage"
-                        label={words({ key: "rules_holding_label" })}
-                        description={words({ key: "rules_holding_hint" })}
-                        isLoading={props.isLoading}
-                        isReadOnly={!save.isAllowed || save.isRunning}
-                        rows={3}
-                        maxLength={HOLDING_MESSAGE_MAX}
-                        value={draft.holdingMessage}
-                        onValueChange={(holdingMessage) => setDraft({ ...draft, holdingMessage })}
-                        {...errorOf("holdingMessage")}
+                        errorOf={errorOf}
                     />
                     {save.isAllowed ? (
                         <Button
@@ -106,7 +142,7 @@ const RulesForm = (props: RulesProps & { readonly record: unknown; readonly isLo
     )
 }
 
-/** The "Quy tắc" form of the Chatbot: its settings in the states of the settings read, saved by the bound action. */
+/** The rules form of the Chatbot: its settings in the states of the settings read, saved by the bound action. */
 export const RulesBlock = (props: RulesProps): ReactNode => {
     const labels = useSlotLabels()
     const read = props.slots.settings

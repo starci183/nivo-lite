@@ -3,8 +3,13 @@ import type { EntityDefinition, FieldDef } from "@nivo-lite/agent-sdk/entity"
 
 import { MAX_ID, MAX_LINE } from "../../bounds"
 
-/** Whether a transaction is tied to what it paid. */
-export const TRANSACTION_STATUSES: readonly [string, ...Array<string>] = ["unmatched", "matched", "needs_review"]
+/** Whether a transaction is tied to what it paid, or the owner called it other income. */
+export const TRANSACTION_STATUSES: readonly [string, ...Array<string>] = [
+    "unmatched",
+    "matched",
+    "needs_review",
+    "other_income",
+]
 
 type TransactionFields = {
     readonly channel: FieldDef<"enum", false>

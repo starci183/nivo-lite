@@ -5,10 +5,6 @@ import type { ErrorKind } from "@modules/platform/errors"
 export enum DecisionsErrorCode {
     /** Another worker's claim still holds the queued item. */
     WorkBusy = "DECISIONS_WORK_BUSY",
-    /** Only failed work may be retried or stopped. */
-    NotFailed = "DECISIONS_NOT_FAILED",
-    /** A concurrent caller changed the item. */
-    StateChanged = "DECISIONS_STATE_CHANGED",
     /** The record asked for does not exist in the workspace. */
     NotFound = "DECISIONS_NOT_FOUND",
     /** The caller may not decide or change this. */
@@ -21,8 +17,6 @@ export enum DecisionsErrorCode {
     ModeCapped = "DECISIONS_MODE_CAPPED",
     /** The work item is not waiting for a decision any more. */
     NotWaiting = "DECISIONS_NOT_WAITING",
-    /** The work could not be done; the reason rides in the params. */
-    WorkFailed = "DECISIONS_WORK_FAILED",
     /** The person approved but required data is still missing; the fields ride in the params. */
     StillMissing = "DECISIONS_STILL_MISSING",
     /** The person approved but has not chosen among the candidates yet. */
@@ -40,15 +34,12 @@ export enum DecisionsErrorCode {
 /** How each decisions code travels. */
 export const DECISIONS_ERROR_KINDS: Record<DecisionsErrorCode, ErrorKind> = {
     [DecisionsErrorCode.WorkBusy]: "unavailable",
-    [DecisionsErrorCode.NotFailed]: "conflict",
-    [DecisionsErrorCode.StateChanged]: "conflict",
     [DecisionsErrorCode.NotFound]: "not-found",
     [DecisionsErrorCode.NotAllowed]: "forbidden",
     [DecisionsErrorCode.CommandRefused]: "invalid",
     [DecisionsErrorCode.UnknownAction]: "invalid",
     [DecisionsErrorCode.ModeCapped]: "invalid",
     [DecisionsErrorCode.NotWaiting]: "conflict",
-    [DecisionsErrorCode.WorkFailed]: "internal",
     [DecisionsErrorCode.StillMissing]: "invalid",
     [DecisionsErrorCode.ChooseCandidate]: "invalid",
     [DecisionsErrorCode.BasisRequired]: "invalid",

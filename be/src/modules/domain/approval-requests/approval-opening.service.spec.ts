@@ -131,7 +131,9 @@ describe("ApprovalOpeningService > open", () => {
 
         expect(jobs.enqueue).not.toHaveBeenCalled()
     })
+})
 
+describe("ApprovalOpeningService > open, what the rule and the graph say", () => {
     it("gives the approvers the order the rule lists them and the policy and time the rule names", async () => {
         const { em, values } = inserting(sequentialRequest())
         const setup = setupOf({

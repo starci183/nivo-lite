@@ -17,6 +17,7 @@ type SettingsFields = {
     readonly postUnmatched: FieldDef<"bool", false>
     readonly voidMode: FieldDef<"enum", false>
     readonly vatPeriod: FieldDef<"enum", false>
+    readonly rematchDays: FieldDef<"int", false>
 }
 
 const settingsFields: SettingsFields = {
@@ -26,6 +27,7 @@ const settingsFields: SettingsFields = {
     postUnmatched: field.bool({ default: { literal: false } }),
     voidMode: field.enum({ of: VOID_MODE_VALUES, default: { literal: "reversal" } }),
     vatPeriod: field.enum({ of: VAT_PERIOD_VALUES, default: { literal: "quarterly" } }),
+    rematchDays: field.int({ default: { literal: 7 } }),
 }
 
 /** What a workspace decides about its books: which money and documents become entries, and how it files value added tax. One row. */

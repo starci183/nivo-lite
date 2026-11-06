@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { WORK_ITEM_CLOSED } from "@modules/domain/work-items"
 import { AgentStepQueueModule } from "@modules/queues/agent-step"
-import { ModuleJobsQueueModule } from "@modules/queues/module-jobs"
 import { AgentRunAlertsService } from "./agent-run-alerts.service"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
@@ -17,6 +16,7 @@ import { AgentRunWorkspacesService } from "./agent-run-workspaces.service"
 import { AgentRunParkStoreService } from "./agent-run-park-store.service"
 import { AgentRunResumeService } from "./agent-run-resume.service"
 import { AgentRunStepsService } from "./agent-run-steps.service"
+import { AgentRunReportService } from "./agent-run-report.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentRunSweepService } from "./agent-run-sweep.service"
 import { AgentRunTraceService } from "./agent-run-trace.service"
@@ -38,7 +38,7 @@ export class AgentRunsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), AgentStepQueueModule.register({}), ModuleJobsQueueModule.register({})],
+            imports: [...(base.imports ?? []), AgentStepQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 {
@@ -52,6 +52,7 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                 AgentRunRecordsService,
                 AgentRunWorkspacesService,
                 AgentRunDueService,
+                AgentRunReportService,
                 AgentRunStoreService,
                 AgentRunParkStoreService,
                 AgentRunResumeService,

@@ -44,8 +44,16 @@ export const FIGURE_VARIANTS = ["strip", "ribbon"] as const
 /** One variant of tiles. */
 export type FigureVariant = (typeof FIGURE_VARIANTS)[number]
 
-/** The fewest and the most figures a ribbon holds. */
-export const RIBBON_FIGURES: { readonly min: number; readonly max: number } = { min: 2, max: 5 }
+/** How many figures a ribbon holds: its fewest and its most. */
+export interface RibbonBounds {
+    /** The fewest figures a ribbon holds. */
+    readonly min: number
+    /** The most figures a ribbon holds. */
+    readonly max: number
+}
+
+/** The figures a ribbon holds. */
+export const RIBBON_FIGURES: RibbonBounds = { min: 2, max: 5 }
 
 /** Whether a variant and a count of figures draw as a ribbon: the variant asks for it and the count fits one. */
 export const isRibbon = (variant: FigureVariant | undefined, count: number): boolean =>

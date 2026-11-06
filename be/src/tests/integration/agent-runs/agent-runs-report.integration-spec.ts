@@ -1,4 +1,5 @@
 import { jobsEntities } from "@modules/platform/jobs"
+import { eachInOrder, isRecord } from "@modules/platform/primitives"
 import { AgentRunsService } from "../../../modules/domain/agent-runs/agent-runs.service"
 import { AGENT_RUNS_MODULES } from "../../world/agent-runs-capabilities.options"
 import { ScriptedWorld, chainFrom } from "../../world/agent-runs-script.service"
@@ -19,8 +20,8 @@ beforeEach(() => world.resolve(ScriptedWorld).reset())
 const deliveriesOf = async (job: string): Promise<ReadonlyArray<Readonly<Record<string, unknown>>>> => {
     const rows = await em().find(JobOutboxEntity, { where: { workspaceId: scene.workspaceId }, take: 100 })
     return rows
-        .map((row) => row.payload)
-        .filter((payload) => Object.getOwnPropertyDescriptor(payload, "job")?.value === job)
+        .flatMap((row) => (isRecord(row.payload) ? [row.payload] : []))
+        .filter((payload) => payload["job"] === job)
 }
 
 describe("the report of a run that ended", () => {
@@ -33,8 +34,7 @@ describe("the report of a run that ended", () => {
         )
         expect(await deliveriesOf("platform.post-report")).toEqual([])
 
-        for (let round = 0; round < 4; round += 1)
-            await world.resolve(AgentRunsService).advance(scene.workspaceId, runId, SIGNAL)
+        await eachInOrder([0, 1, 2, 3], () => world.resolve(AgentRunsService).advance(scene.workspaceId, runId, SIGNAL))
 
         const reports = await deliveriesOf("platform.post-report")
         expect(reports).toHaveLength(1)

@@ -3,7 +3,7 @@ import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { PLATFORM_VIEW } from "../constants"
 import { MAX_ID, MAX_LINE } from "../../../bounds"
-import type { ParkedRunRow } from "../platform.types"
+import type { ParkedRunsView } from "../platform.types"
 import { parkedRunsPort } from "../ports"
 
 /** The most parked runs a read lists when it names no limit. */
@@ -11,14 +11,6 @@ export const PARKED_DEFAULT = 20
 
 /** The most parked runs a read lists at all. */
 export const PARKED_MAX = 100
-
-/** What `platform.parked-runs` answers. */
-interface ParkedRunsView {
-    /** How many parked runs match, as text; null when none. */
-    readonly count: string | null
-    /** The newest ones, at most the limit. */
-    readonly rows: ReadonlyArray<ParkedRunRow>
-}
 
 /** `platform.parked-runs`: the runs the engine parked, newest first, narrowed by module and by the record they are about. */
 export const parkedRunsRead: ReadDefinition = defineRead({

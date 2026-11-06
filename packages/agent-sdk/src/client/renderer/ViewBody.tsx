@@ -6,7 +6,6 @@ import type { SpecAsideSummary } from "../../spec/spec.types"
 import { AsideFrame } from "./AsideFrame"
 import type { SpecContext } from "./renderer.types"
 import { SpecNode } from "./SpecNode"
-import { isAsidePane } from "./view-chrome"
 import { ViewGate } from "./ViewGate"
 
 /** What the body of the open view takes. */
@@ -61,7 +60,6 @@ export const ViewBody = (props: ViewBodyProps): ReactNode => {
             namespace={context.namespace}
             installationId={context.installationId}
             params={context.params}
-            isAsideShown={isAsidePane(context.params.value("pane"))}
             tabs={props.tabs}
             main={
                 <Stack gap="region">

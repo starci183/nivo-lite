@@ -12,12 +12,7 @@ export const toGetShellRequest = (workspaceId: string, input: ShellWindowInput):
 
 /** Maps the shell facts to the GraphQL type. */
 export const toWorkspaceShellType = (result: ShellFacts): WorkspaceShellType => ({
-    leadCount: result.leadCount,
-    openResponsibilityCount: result.openResponsibilityCount,
     agents: result.agents.map((agent) => ({ ...agent })),
     hasChatbot: result.hasChatbot,
     isFoundingMember: result.isFoundingMember,
-    approvals: result.approvals.map((approval) => ({ ...approval })),
-    exceptions: result.exceptions.map((exception) => ({ ...exception })),
-    pendingDecisions: result.pendingDecisions,
 })

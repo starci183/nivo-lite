@@ -98,7 +98,6 @@ import { agentTemplatesEntities } from "@modules/domain/agent-templates"
 import { templateMarketplaceEntities } from "@modules/domain/template-marketplace"
 import { entityEngineEntities } from "@modules/domain/entity-engine"
 import { agentWorkEntities } from "@modules/domain/agent-work"
-import { transactionsEntities } from "@modules/domain/transactions"
 import { videoBrandKitsEntities } from "@modules/domain/video-brand-kits"
 import { videoDelegationsEntities } from "@modules/domain/video-delegations"
 import { videoProjectVersionsEntities } from "@modules/domain/video-project-versions"
@@ -222,7 +221,6 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...templateMarketplaceEntities,
     ...entityEngineEntities,
     ...agentWorkEntities,
-    ...transactionsEntities,
     ...videoBrandKitsEntities,
     ...videoDelegationsEntities,
     ...videoProjectVersionsEntities,

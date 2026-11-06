@@ -28,12 +28,12 @@ const build = async () => {
 const refusedWith = (code: WorkspaceCleanupErrorCode, params?: Record<string, string>) =>
     objectLike(params === undefined ? { code } : { code, params })
 
-const CLEAN: UserReferences = { cascade: { "app_commands.requested_by": 0 }, block: { "lead_actions.requested_by": 0 } }
+const CLEAN: UserReferences = { cascade: { "app_commands.requested_by": 0 }, block: { "decisions.decided_by": 0 } }
 const CASCADING: UserReferences = {
     cascade: { "hiring_availability.member_user_id": 1, "app_commands.requested_by": 4 },
-    block: { "lead_actions.requested_by": 0 },
+    block: { "decisions.decided_by": 0 },
 }
-const BLOCKED: UserReferences = { cascade: {}, block: { "lead_actions.requested_by": 2 } }
+const BLOCKED: UserReferences = { cascade: {}, block: { "decisions.decided_by": 2 } }
 
 describe("user references reading", () => {
     it("reads the cascade and block counts of each account", async () => {
@@ -85,7 +85,7 @@ describe("user references refusals", () => {
         expect(thrownBy(() => subject.assertUserReferences(references, true))).toEqual(
             refusedWith(WorkspaceCleanupErrorCode.UserReferenceBlocked, {
                 users: "u-2,u-3",
-                tables: "lead_actions.requested_by",
+                tables: "decisions.decided_by",
             }),
         )
     })

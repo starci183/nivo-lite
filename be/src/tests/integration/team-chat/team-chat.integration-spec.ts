@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { eachInOrder } from "@modules/platform/primitives"
 import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import type { ChatMemberRef, ChatRoomView, TeamChatResult } from "@modules/domain/team-chat"
 import { TEAM_CHAT_CODES, persistTeamChat, teamChatIdentity } from "../../fixtures/builders/team-chat.builder"
@@ -221,10 +222,9 @@ describe("messages", () => {
         const [first, second, third] = identity.staffIds
         const { workspaceId } = identity
         const made = await group(identity, "Team", [first, second])
-        await [1, 2, 3, 4, 5].reduce(async (previous, index) => {
-            await previous
+        await eachInOrder([1, 2, 3, 4, 5], async (index) => {
             valueOf(await chat().send(workspaceId, first, message(made.id, `m${String(index)}`)))
-        }, Promise.resolve())
+        })
         const page1 = await chat().messages(workspaceId, second, made.id, 2, null, false)
         expect(page1.nodes.map((node) => node.body)).toEqual(["m5", "m4"])
         expect(page1.hasNextPage).toBe(true)

@@ -4,18 +4,18 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { EntityEngineService } from "@modules/domain/entity-engine"
 import type { ScopedTx } from "@modules/domain/entity-engine"
-import { eachInOrder, isRecord } from "@modules/platform/primitives"
+import { eachInOrder } from "@modules/platform/primitives"
 import type { MutationValues } from "@nivo-lite/agent-sdk/mutation"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
-import { POST_REPORT_JOB } from "@nivo-lite/blocks-core/modules"
 import { AgentStepQueue } from "@modules/queues/agent-step"
-import { ModuleJobsQueue } from "@modules/queues/module-jobs"
 import { AgentRunRecordsService } from "./agent-run-records.service"
+import { AgentRunReportService } from "./agent-run-report.service"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { handlerViewOf, handlerViewsOf, routeStepOf, runRecordOf, runViewOf, stepViewOf } from "./agent-runs.mapper"
 import type { RunRecord } from "./agent-runs-records.contracts"
 import { SETTLE_TRIES, STEPS_MAX, TELL_STATUSES, filled } from "./policies/agent-runs.policy"
 import { jsonValueOf } from "./policies/json-value.policy"
+import { planBindingVerdict } from "./policies/plan-binding.policy"
 import { CLOSED_RUN, statusAfter } from "./policies/run-status.policy"
 import type { RouteMove, RunRef, RunStepView, RunView, WaitAnswer } from "./agent-runs-engine.contracts"
 import type { RunOpen, StepLink, StepSpec, StepView } from "./agent-runs.contracts"
@@ -46,7 +46,7 @@ export class AgentRunStoreService {
         private readonly engine: EntityEngineService,
         private readonly records: AgentRunRecordsService,
         private readonly queue: AgentStepQueue,
-        private readonly jobs: ModuleJobsQueue,
+        private readonly report: AgentRunReportService,
     ) {}
 
     /** Runs `work` in the scope of the workspace: on `manager` when the caller holds a transaction, else in one of its own. */
@@ -65,19 +65,14 @@ export class AgentRunStoreService {
         const existing = await this.records.runOfWake(scoped, input.wakeId)
         const run = existing ?? (await this.insertRun(scoped, input))
         if (input.planning !== true) return run
-        const binding = "planBinding" in run.context ? run.context.planBinding : undefined
-        if (binding !== undefined) {
-            if (
-                !isRecord(binding) ||
-                run.graphVersionId !== input.versionId ||
-                binding.versionId !== input.versionId ||
-                binding.trigger !== input.trigger
-            )
-                throw new AgentRunsError({ code: AgentRunsErrorCode.PlanConflict })
-            return run
-        }
-        if (run.graphVersionId !== null && run.graphVersionId !== input.versionId)
-            throw new AgentRunsError({ code: AgentRunsErrorCode.PlanConflict })
+        const verdict = planBindingVerdict({
+            binding: "planBinding" in run.context ? run.context.planBinding : undefined,
+            graphVersionId: run.graphVersionId,
+            versionId: input.versionId,
+            trigger: input.trigger,
+        })
+        if (verdict === "conflict") throw new AgentRunsError({ code: AgentRunsErrorCode.PlanConflict })
+        if (verdict === "bound") return run
         if (run.stepSeq > 0 || (await this.records.stepsOf(scoped, run.id)).length > 0)
             throw new AgentRunsError({ code: AgentRunsErrorCode.PlanConflict })
         const context = {
@@ -204,7 +199,8 @@ export class AgentRunStoreService {
         if (values === null) return null
         const written = await this.records.patchRun(scoped, run, values)
         if (written === null) return this.patchRunWith(scoped, runId, build, left - 1)
-        if (written.status === "done" && run.status !== "done") await this.reportEnded(scoped, written)
+        if (written.status === "done" && run.status !== "done")
+            await this.report.ended(scoped.manager, scoped.workspaceId, written)
         return written
     }
 
@@ -216,22 +212,6 @@ export class AgentRunStoreService {
             const status = statusAfter(steps, more)
             return status === "done" ? { status, endedAt: iso(this.clock.now()) } : { status }
         })
-    }
-
-    /**
-     * Enqueues the declared job that posts the report of a run that ended, in the transaction of the run's final status: the report exists
-     * when the status does, and not otherwise. The run id is the dedupe key, so a replay of the settling enqueues one delivery.
-     */
-    private reportEnded(scoped: ScopedTx, run: RunRecord): Promise<void> {
-        return this.jobs.enqueue(
-            {
-                workspaceId: scoped.workspaceId,
-                job: POST_REPORT_JOB,
-                input: { runId: run.id, agentId: run.agentId, trigger: run.trigger },
-            },
-            scoped.manager,
-            { dedupeKey: `${POST_REPORT_JOB}:${run.id}` },
-        )
     }
 
     /** The run of a wake, or null; a producer reads it through the transaction that writes its work. */

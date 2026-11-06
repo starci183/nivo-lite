@@ -9,6 +9,10 @@ import { parsedSlot, derivedSlot } from "../../slots/slots"
 import { DECISION_QUEUE_PLACEHOLDER } from "../../views/placeholders"
 import { decisionQueueView } from "../../views/views"
 import type { DecisionQueueView } from "../../views/views.types"
+import { openOrdersView } from "../../rules/accounting/open-orders"
+import { amountOf, confirmWordsOf, pickWordsOf } from "../composites/queue-choice-words"
+import { useQueueCommands } from "../composites/useQueueChoices"
+import { QueueChoices } from "../composites/QueueChoices"
 import { DecisionList } from "../composites/DecisionList"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
@@ -21,15 +25,9 @@ export const DecisionQueueBlock = (props: RenderOf<typeof decisionQueueBlock>): 
     const read = props.slots.queue
     const command = props.slots.command
     const spec = props.props
-    const runCommand = (rowId: string, commandId: string): void => {
-        if (!command.isAllowed) return
-        command
-            .run({ id: rowId, command: commandId })
-            .then((outcome) => {
-                if (!outcome.ok) host.notify("danger", labels.error)
-            })
-            .catch(() => host.notify("danger", labels.error))
-    }
+    const commands = useQueueCommands(command, spec.choices, () => host.notify("danger", labels.error))
+    const options = parsedSlot(props.slots.options.slot, openOrdersView)
+    const queueRows = parsedSlot(read.slot, decisionQueueView)
     const sendEdit = (rowId: string, values: FormValues): Promise<EditAnswer> =>
         command
             .run({ id: rowId, command: EDIT_COMMAND, values })
@@ -53,32 +51,44 @@ export const DecisionQueueBlock = (props: RenderOf<typeof decisionQueueBlock>): 
         view.rows.length === 0 ? null : declaredQueue(view, spec.commands ?? [], spec.edit?.label, words),
     )
     return (
-        <SlotView
-            slot={queue}
-            labels={labels}
-            placeholder={DECISION_QUEUE_PLACEHOLDER}
-            forbidden="hide"
-            empty={spec.surface === "card" ? "collapse" : "notice"}
-            emptyDescription={words(spec.emptyBody)}
-            onRetry={read.retry}
-            render={(view, isLoading) => (
-                <DecisionList
-                    surface={spec.surface}
-                    commandSize={spec.commandSize ?? "sm"}
-                    isHeadless={spec.isHeadless === true}
-                    queue={view}
-                    isLoading={isLoading}
-                    edit={edit}
-                    onCommand={runCommand}
-                    words={{
-                        label: words(spec.label),
-                        emptyTitle: words(spec.emptyTitle),
-                        emptyBody: words(spec.emptyBody),
-                        seeWhyLabel: words(spec.seeWhy),
-                        moreLabel: words(spec.moreMenu),
-                    }}
-                />
-            )}
-        />
+        <>
+            <SlotView
+                slot={queue}
+                labels={labels}
+                placeholder={DECISION_QUEUE_PLACEHOLDER}
+                forbidden="hide"
+                empty={spec.surface === "card" ? "collapse" : "notice"}
+                emptyDescription={words(spec.emptyBody)}
+                onRetry={read.retry}
+                render={(view, isLoading) => (
+                    <DecisionList
+                        surface={spec.surface}
+                        commandSize={spec.commandSize ?? "sm"}
+                        isHeadless={spec.isHeadless === true}
+                        queue={view}
+                        isLoading={isLoading}
+                        edit={edit}
+                        onCommand={commands.press}
+                        words={{
+                            label: words(spec.label),
+                            emptyTitle: words(spec.emptyTitle),
+                            emptyBody: words(spec.emptyBody),
+                            seeWhyLabel: words(spec.seeWhy),
+                            moreLabel: words(spec.moreMenu),
+                        }}
+                    />
+                )}
+            />
+            <QueueChoices
+                pending={commands.pending}
+                onClose={commands.close}
+                onRun={commands.runWith}
+                options={"items" in options ? options.items.rows : []}
+                isLoading={"isLoading" in options}
+                paymentVnd={amountOf(queueRows, commands.pending?.rowId ?? null)}
+                pickWords={pickWordsOf(commands.pending?.choice ?? null, words)}
+                confirmWords={confirmWordsOf(commands.pending?.choice ?? null, words)}
+            />
+        </>
     )
 }
