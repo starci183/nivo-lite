@@ -21,8 +21,13 @@ export type PgFailure =
     | { readonly kind: "taken"; readonly constraint: string; readonly refusal: string }
     /** A unique or exclusion constraint no declaration lists was violated. */
     | { readonly kind: "undeclared"; readonly constraint: string }
-    /** A check, not-null, malformed value or foreign key refused the write. */
-    | { readonly kind: "invalid"; readonly constraint: string | null }
+    /** A check, not-null, malformed value or foreign key refused the statement: its SQLSTATE and the constraint and column it names (never a value). */
+    | {
+          readonly kind: "invalid"
+          readonly sqlstate: string
+          readonly constraint: string | null
+          readonly column: string | null
+      }
     /** Row-level security refused the statement. */
     | { readonly kind: "scope" }
     /** A serialization failure, a deadlock or a lost connection. */
@@ -30,10 +35,11 @@ export type PgFailure =
     /** Anything else. */
     | { readonly kind: "unknown" }
 
-/** The two fields of a PostgreSQL error the engine reads. */
+/** The fields of a PostgreSQL error the engine reads: its SQLSTATE and the constraint and column it names. The message and the detail carry values and are never read. */
 interface PgErrorFacts {
     readonly code: string
     readonly constraint: string | null
+    readonly column: string | null
 }
 
 const UNIQUE_CODES: ReadonlySet<string> = new Set(["23505", "23P01"])
@@ -70,7 +76,11 @@ const factsOf = (cause: unknown): PgErrorFacts | null => {
     const code = fieldTextOrNullOf(driver.code) ?? fieldTextOrNullOf(cause.code)
     return code === null
         ? null
-        : { code, constraint: fieldTextOrNullOf(driver.constraint) ?? fieldTextOrNullOf(cause.constraint) }
+        : {
+              code,
+              constraint: fieldTextOrNullOf(driver.constraint) ?? fieldTextOrNullOf(cause.constraint),
+              column: fieldTextOrNullOf(driver.column) ?? fieldTextOrNullOf(cause.column),
+          }
 }
 
 const isConnectionClass = (code: string): boolean => code.startsWith("08") || code.startsWith("57P")
@@ -84,14 +94,14 @@ const isConnectionClass = (code: string): boolean => code.startsWith("08") || co
 export const pgFailureOf = (cause: unknown, declared: ReadonlyArray<DeclaredConstraint>): PgFailure => {
     const facts = factsOf(cause)
     if (facts === null) return { kind: "unknown" }
-    const { code, constraint } = facts
+    const { code, constraint, column } = facts
     if (UNIQUE_CODES.has(code)) {
         const found = declared.find((candidate) => candidate.pgName === constraint)
         return found === undefined
             ? { kind: "undeclared", constraint: constraint ?? "" }
             : { kind: "taken", constraint: found.name, refusal: found.refusal }
     }
-    if (INVALID_CODES.has(code)) return { kind: "invalid", constraint }
+    if (INVALID_CODES.has(code)) return { kind: "invalid", sqlstate: code, constraint, column }
     if (code === SCOPE_CODE) return { kind: "scope" }
     if (TRANSIENT_CODES.has(code) || isConnectionClass(code)) return { kind: "transient" }
     return { kind: "unknown" }

@@ -86,6 +86,7 @@ component_management:
         - "be/src/modules/domain/chat-markers/**"
         - "be/src/modules/domain/chat-node-ports/**"
         - "be/src/modules/domain/chat-records/**"
+        - "be/src/modules/domain/chat-room-directory/**"
         - "be/src/modules/domain/chat-typing/**"
         - "be/src/modules/domain/connection-commands/**"
         - "be/src/modules/domain/connection-grants/**"

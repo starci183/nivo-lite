@@ -230,7 +230,7 @@ describe("EntityMutationService database failures", () => {
         await expect(mutations.mutate(txOf(em), INSERT, "action")).rejects.toMatchObject({
             code: EntityEngineErrorCode.Failed,
         })
-        expect(failures.fail).toHaveBeenCalledWith(cause, { kind: "scope" })
+        expect(failures.fail).toHaveBeenCalledWith(cause, { kind: "scope" }, "sales.lead")
     })
 })
 

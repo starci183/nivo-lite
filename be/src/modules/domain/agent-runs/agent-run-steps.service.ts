@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { isDomainError } from "@modules/platform/errors"
+import type { ErrorParams } from "@modules/platform/errors"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { classifyFailure } from "@modules/platform/queue"
@@ -39,7 +40,14 @@ export class AgentRunStepsService {
     async execute(step: StepView, signal: AbortSignal): Promise<StepEnd> {
         const answer = await this.answerOf(step, signal)
         if (answer.kind === "retry" || answer.kind === "failed") {
-            return this.fail(step, answer.code, answer.kind === "retry", signal, answer.kind === "failed")
+            return this.fail(
+                step,
+                answer.code,
+                answer.kind === "retry",
+                signal,
+                answer.kind === "failed",
+                answer.params,
+            )
         }
         const committed = await this.ledger.commit(
             step,
@@ -69,6 +77,7 @@ export class AgentRunStepsService {
         retryable: boolean,
         signal: AbortSignal,
         park: boolean = false,
+        params: ErrorParams = {},
     ): Promise<StepEnd> {
         const routed = await this.entityManager.transaction(async (tx) => {
             const steps = await this.store.routeStepsOf(step.workspaceId, step.runId, tx)
@@ -92,15 +101,15 @@ export class AgentRunStepsService {
         })
         if (routed === null) return this.fenced(step)
         if (routed.kind === "retry") {
-            this.logger.warn(AgentRunsLogEvent.StepRetry, { runId: step.runId, stepKey: step.stepKey, code })
+            this.logger.warn(AgentRunsLogEvent.StepRetry, { runId: step.runId, stepKey: step.stepKey, code, params })
         } else {
-            this.logger.warn(AgentRunsLogEvent.StepFailed, { runId: step.runId, stepKey: step.stepKey, code })
+            this.logger.warn(AgentRunsLogEvent.StepFailed, { runId: step.runId, stepKey: step.stepKey, code, params })
         }
         if (routed.kind === "compensate") await this.compensation.run(step, signal)
         if (routed.kind === "person") {
             await this.resume.markParked(step.workspaceId, step.runId)
-            this.logger.warn(AgentRunsLogEvent.RunParked, { runId: step.runId, stepKey: step.stepKey, code })
-            await this.deadLetter.tell(step.workspaceId, step.runId, step.stepKey, code)
+            this.logger.warn(AgentRunsLogEvent.RunParked, { runId: step.runId, stepKey: step.stepKey, code, params })
+            await this.deadLetter.tell(step.workspaceId, step.runId, step.stepKey, code, params)
         }
         return { kind: "failed", code }
     }
@@ -123,9 +132,15 @@ export class AgentRunStepsService {
         try {
             return await handler.run(step, signal)
         } catch (cause) {
-            this.logger.error(AgentRunsLogEvent.HandlerThrew, cause, { runId: step.runId, stepKey: step.stepKey })
             const code = isDomainError(cause) ? cause.code : HANDLER_THREW
-            return { kind: classifyFailure(cause) === "transient" ? "retry" : "failed", code }
+            const params = isDomainError(cause) ? cause.params : {}
+            this.logger.error(AgentRunsLogEvent.HandlerThrew, cause, {
+                runId: step.runId,
+                stepKey: step.stepKey,
+                code,
+                params,
+            })
+            return { kind: classifyFailure(cause) === "transient" ? "retry" : "failed", code, params }
         }
     }
 }

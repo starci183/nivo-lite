@@ -74,7 +74,7 @@ const storedLead = Object.assign(new RecordEntity(), {
 const build = async (em: MockEntityManager, overrides: Partial<EntityEngineOptions> = {}) => {
     fakeTransaction(em)
     const failures = mock<EngineFailureService>()
-    failures.reading.mockImplementation((work) => work())
+    failures.reading.mockImplementation((_entity, work) => work())
     const moduleRef = await Test.createTestingModule({
         providers: [
             EntityEngineService,
@@ -269,7 +269,7 @@ describe("EntityEngineService list", () => {
 
         await expect(engine.list(txOf(em), { ...LIST, from: "sales.nothing" }, "scope-1")).rejects.toMatchObject({
             code: EntityEngineErrorCode.QueryInvalid,
-            params: { problem: "QUERY_ENTITY_UNKNOWN", at: "from" },
+            params: { problem: "QUERY_ENTITY_UNKNOWN", at: "from", entity: "sales.nothing" },
         })
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
