@@ -65,7 +65,6 @@ import { WorkItemClosedService } from "../../modules/domain/decisions/work-item-
 import { WORK_PERFORMER_REGISTRY } from "../../modules/domain/decisions/work-performer.port"
 import { WorkPerformersService } from "../../modules/domain/decisions/work-performers.service"
 import { WorkRecorderService } from "../../modules/domain/decisions/work-recorder.service"
-import { HandoffLeadPerformerService } from "../../modules/domain/work-performers/handoff-lead-performer.service"
 import { PerformerKitService } from "../../modules/domain/work-performers/performer-kit.service"
 import { queueOptions } from "./test-capabilities.options"
 import { QUIET_INSTALLATIONS } from "./quiet-peers.options"
@@ -188,7 +187,6 @@ class PublicApiProofPeersModule {
             OfficeLinesService,
             PublicApiProofDirectory,
             PublicApiProofAccess,
-            HandoffLeadPerformerService,
             PerformerKitService,
             WorkApprovalService,
             WorkBranchService,

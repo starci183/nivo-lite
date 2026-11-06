@@ -6,11 +6,8 @@ import type {
 } from "./public-api-database.service"
 import assert from "node:assert/strict"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
-import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
-import type { WorkPerformerRegistry } from "@modules/domain/decisions"
 import { ModulesService } from "@modules/domain/modules"
 import { PUBLIC_API_QUEUE } from "@modules/queues/public-api"
-import { HandoffLeadPerformerService } from "../../modules/domain/work-performers/handoff-lead-performer.service"
 import type { PublicApiIdentity } from "../fixtures/builders/public-api.builder"
 import { apiDealWon, apiInbox, apiLeadRequest, apiOutbox, apiSource } from "./public-api-database.service"
 import type { LiteWorld } from "./lite-world.service"
@@ -77,9 +74,6 @@ export const preparePublicApiProof = (world: LiteWorld): PreparePublicApiProofRe
     beforeAll(async () => {
         await world.resolve(ModulesService).sync()
         registrations.push(await registerPublicApiProcessors(world, world.resolve(ProcessPublicApiQueueModule)))
-        world
-            .resolve<WorkPerformerRegistry>(WORK_PERFORMER_REGISTRY)
-            .add("handoff_lead", world.resolve(HandoffLeadPerformerService))
     })
     beforeEach(() => {
         jest.restoreAllMocks()
