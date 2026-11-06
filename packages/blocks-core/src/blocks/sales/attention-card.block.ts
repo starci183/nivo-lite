@@ -23,29 +23,29 @@ const props: z.ZodObject<{
 type Slots = {
     readonly attention: RequiredRead<"list">
     readonly awaitingReply: OptionalRead<"list">
-    readonly failedSteps: OptionalRead<"list">
+    readonly parkedRuns: OptionalRead<"list">
     readonly respond: OptionalAction
     readonly follow: OptionalAction
     readonly reply: OptionalAction
     readonly review: OptionalAction
-    readonly retry: OptionalAction
+    readonly resume: OptionalAction
 }
 
 const slots: Slots = {
     attention: { kind: "read", shape: "list", required: true },
     awaitingReply: { kind: "read", shape: "list", required: false },
-    failedSteps: { kind: "read", shape: "list", required: false },
+    parkedRuns: { kind: "read", shape: "list", required: false },
     respond: { kind: "action", required: false },
     follow: { kind: "action", required: false },
     reply: { kind: "action", required: false },
     review: { kind: "action", required: false },
-    retry: { kind: "action", required: false },
+    resume: { kind: "action", required: false },
 }
 
 /**
- * The "needs attention" list of Sales: what waits for the owner, from the attention read, the customers waiting for a reply and the steps
- * that failed. Each row is a customer, an order or a step, with a chip that says why it waits and one command under the text (respond,
- * follow up, reply, review, retry). The kinds are listed in a fixed order; `kinds` narrows which of them show. With a `selectParam`
+ * The "needs attention" list of Sales: what waits for the owner, from the attention read, the customers waiting for a reply and the runs
+ * the engine parked after a step failed. Each row is a customer, an order or a step, with a chip that says why it waits and one command under the text (respond,
+ * follow up, reply, review, run again). The kinds are listed in a fixed order; `kinds` narrows which of them show. With a `selectParam`
  * pressing a customer's row writes the customer to the param.
  */
 export const salesAttentionCardBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({

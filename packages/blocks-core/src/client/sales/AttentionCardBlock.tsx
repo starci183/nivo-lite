@@ -14,6 +14,7 @@ import {
     ATTENTION_KIND_VIEWS,
     attentionEntriesOf,
     attentionListOf,
+    parkedEntriesOf,
 } from "../../rules/sales/attention-list"
 import type { AttentionCommand, AttentionEntry } from "../../rules/sales/attention-list"
 import { combinedSlots } from "../../slots/combine"
@@ -33,9 +34,9 @@ const PLACEHOLDER: ReadonlyArray<AttentionEntry> = [0, 1, 2].map((index) => ({
 }))
 
 /** The entries one read gives, as a slot of its own so a read that failed does not hide the others. */
-const entriesSlot = (handle: ReadHandle) =>
+const entriesSlot = (handle: ReadHandle, entriesOf: typeof attentionEntriesOf) =>
     derivedSlot(parsedSlot(handle.slot, recordsView), (records) => {
-        const entries = attentionEntriesOf(records)
+        const entries = entriesOf(records)
         return entries.length === 0 ? null : entries
     })
 
@@ -51,9 +52,9 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
     const labels = useSlotLabels(props.props.empty)
     const shown = props.props.kinds ?? ATTENTION_KINDS
     const slot = combinedSlots([
-        entriesSlot(props.slots.attention),
-        entriesSlot(props.slots.awaitingReply),
-        entriesSlot(props.slots.failedSteps),
+        entriesSlot(props.slots.attention, attentionEntriesOf),
+        entriesSlot(props.slots.awaitingReply, attentionEntriesOf),
+        entriesSlot(props.slots.parkedRuns, parkedEntriesOf),
     ])
     const listed = derivedSlot(slot, (items) => {
         const list = attentionListOf(items, shown)
@@ -73,7 +74,7 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
         follow: props.slots.follow,
         reply: props.slots.reply,
         review: props.slots.review,
-        retry: props.slots.retry,
+        resume: props.slots.resume,
     }
     const selectParam = props.props.selectParam
     const rowOf = (item: AttentionEntry): ListRowData => {
@@ -97,7 +98,7 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
     const retry = (): void => {
         props.slots.attention.retry()
         props.slots.awaitingReply.retry()
-        props.slots.failedSteps.retry()
+        props.slots.parkedRuns.retry()
     }
     return (
         <SlotView

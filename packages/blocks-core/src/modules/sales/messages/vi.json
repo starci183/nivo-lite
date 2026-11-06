@@ -14,7 +14,7 @@
   "attention_command_follow": "Theo dõi",
   "attention_command_reply": "Trả lời",
   "attention_command_respond": "Phản hồi",
-  "attention_command_retry": "Thử lại",
+  "attention_command_resume": "Chạy lại",
   "attention_command_review": "Xem xét",
   "attention_count": "{count} việc",
   "attention_empty": "Không có việc nào cần bạn chú ý",

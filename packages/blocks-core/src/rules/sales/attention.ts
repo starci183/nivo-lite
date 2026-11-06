@@ -27,9 +27,6 @@ export const OVERDUE = "overdue"
 /** The reason of a customer the assistant has a question about. */
 export const NEEDS_REPLY = "needs_reply"
 
-/** The reason of a run the engine parked after a step failed; the rows of `platform.parked-runs` carry it. */
-export const FAILED_STEP = "failed_step"
-
 /** The part of a customer the awaiting list shows. */
 export interface AwaitingLead {
     /** The lead id. */
