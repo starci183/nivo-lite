@@ -1,4 +1,5 @@
 import { asideDetailBlock } from "./aside-detail.block"
+import { accountingBlocks } from "./accounting/accounting-blocks"
 import { chatbotBlocks } from "./chatbot/chatbot-blocks"
 import { filterTabsBlock } from "./filter-tabs.block"
 import { formBlock } from "./form.block"
@@ -42,11 +43,12 @@ const EXPLANATION_WORDS = [
 ]
 
 describe("coreBlocks", () => {
-    it("lists every block once: the core ones under the core namespace, the Chatbot's own under its own", () => {
+    it("lists every block once: the core ones under the core namespace, those of each module under its own", () => {
         const ids = coreBlocks.map((block) => block.id)
-        expect(new Set(ids).size).toBe(24)
+        expect(new Set(ids).size).toBe(ids.length)
         expect(ids.filter((id) => id.startsWith("core."))).toHaveLength(21)
-        expect(ids.filter((id) => id.startsWith("chatbot."))).toHaveLength(3)
+        expect(ids.filter((id) => id.startsWith("chatbot."))).toHaveLength(chatbotBlocks.length)
+        expect(ids.filter((id) => id.startsWith("accounting."))).toHaveLength(accountingBlocks.length)
     })
 
     it("carries the JSON Schema of every block's props", () => {
@@ -77,6 +79,7 @@ describe("coreBlocks", () => {
             explanationBlock,
             graphBlock,
             runTimelineBlock,
+            ...accountingBlocks,
         ])
     })
 })

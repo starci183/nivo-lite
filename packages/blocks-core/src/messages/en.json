@@ -49,7 +49,7 @@
   "nodeOrderNeedsApprovalTitle": "Does the owner decide?",
   "nodeOrderRecordTitle": "Record the order",
   "nodePaymentClaimAckTitle": "Record and acknowledge a payment claim",
-  "nodePaymentRequestTitle": "Send the payment request",
+  "nodePaymentRequestSepayTitle": "Request a SePay transfer",
   "answerGap": "I do not have information on this yet.",
   "answerNeutral": "We have received your message.",
   "claimOrderRecorded": "order is recorded\norder has been placed\norder has been recorded\nsent for approval",
@@ -73,7 +73,7 @@
   "paymentRequestOutro": "Once you have transferred, just message us here.",
   "paymentRequestCurrency": "VND",
   "paymentRequestNoAccount": "Order {{order}} has no payment request: no SePay connection with a full account number",
-  "nodeAccountingLedgerAppendTitle": "Write to the ledger",
+  "nodeAccountingPostPaymentTitle": "Post the payment to the book",
   "nodeAccountingLedgerReadyTitle": "Is there a ledger to write to",
   "accountingLedgerReconnectTitle": "Connect Google again (with Sheets access) to keep the ledger",
   "nodeLeadEnsureTitle": "Make sure the customer is known",
@@ -129,5 +129,10 @@
   "detailClose": "Close",
   "effectChatMessagePropose": "Draft a reply for approval",
   "nodeChatbotDraftReplyTitle": "Draft a reply for approval",
-  "nodeChatbotSendApprovedTitle": "Send the approved reply"
+  "nodeChatbotSendApprovedTitle": "Send the approved reply",
+  "conversationContactClose": "Close",
+  "conversationProposalMore": "More",
+  "blockAccountingBook": "Accounting book",
+  "blockAccountingEntryDetail": "Entry detail",
+  "blockAccountingQuestions": "Accounting questions"
 }

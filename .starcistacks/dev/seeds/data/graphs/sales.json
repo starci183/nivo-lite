@@ -65,7 +65,7 @@
     {
       "key": "request-payment",
       "kind": "output",
-      "step": "payment.request",
+      "step": "payment.request-sepay",
       "input": {
         "orderId": { "$ref": "record.orderId" },
         "conversationId": { "$ref": "trigger.conversationId" },

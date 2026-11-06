@@ -49,7 +49,7 @@
   "nodeOrderNeedsApprovalTitle": "Cần chủ duyệt?",
   "nodeOrderRecordTitle": "Ghi đơn hàng",
   "nodePaymentClaimAckTitle": "Ghi nhận và phản hồi khách báo đã chuyển khoản",
-  "nodePaymentRequestTitle": "Gửi yêu cầu thanh toán",
+  "nodePaymentRequestSepayTitle": "Yêu cầu chuyển khoản SePay",
   "answerGap": "Em chưa có thông tin về nội dung này ạ.",
   "answerNeutral": "Em đã nhận được tin nhắn của bạn ạ.",
   "claimOrderRecorded": "đã ghi nhận đơn\nđã đặt đơn\nđã tạo đơn\nđã gửi duyệt\nđơn đã được ghi nhận",
@@ -73,7 +73,7 @@
   "paymentRequestOutro": "Chuyển khoản xong bạn nhắn lại cho shop nhé.",
   "paymentRequestCurrency": "đ",
   "paymentRequestNoAccount": "Đơn {{order}} chưa gửi được thông tin thanh toán: chưa kết nối SePay có đủ số tài khoản",
-  "nodeAccountingLedgerAppendTitle": "Ghi sổ kế toán",
+  "nodeAccountingPostPaymentTitle": "Ghi khoản thu vào sổ",
   "nodeAccountingLedgerReadyTitle": "Có sổ kế toán để ghi không",
   "accountingLedgerReconnectTitle": "Kết nối lại Google (có quyền Sheets) để ghi sổ kế toán",
   "nodeLeadEnsureTitle": "Xác định khách hàng",
@@ -129,5 +129,10 @@
   "detailClose": "Đóng",
   "effectChatMessagePropose": "Soạn sẵn câu trả lời chờ duyệt",
   "nodeChatbotDraftReplyTitle": "Soạn câu trả lời chờ duyệt",
-  "nodeChatbotSendApprovedTitle": "Gửi câu trả lời đã duyệt"
+  "nodeChatbotSendApprovedTitle": "Gửi câu trả lời đã duyệt",
+  "conversationContactClose": "Đóng",
+  "conversationProposalMore": "Thêm",
+  "blockAccountingBook": "Sổ kế toán",
+  "blockAccountingEntryDetail": "Chi tiết chứng từ",
+  "blockAccountingQuestions": "Câu hỏi của kế toán"
 }

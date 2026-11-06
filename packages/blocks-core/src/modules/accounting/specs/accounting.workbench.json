@@ -217,7 +217,7 @@
         "key": "tab_book"
       },
       "root": {
-        "id": "root",
+        "id": "book-root",
         "block": "core.master-detail",
         "props": {
           "emptyTitle": {
@@ -229,142 +229,46 @@
         },
         "children": [
           {
-            "id": "pane",
-            "block": "core.list-pane",
+            "id": "book-book",
+            "block": "accounting.book",
             "props": {
-              "search": true,
-              "searchParam": "q",
+              "title": {
+                "key": "tab_book"
+              },
               "searchLabel": {
                 "key": "search"
-              }
+              },
+              "empty": {
+                "key": "entries_empty"
+              },
+              "emptySearch": {
+                "key": "entries_empty_search"
+              },
+              "searchParam": "q",
+              "filterParam": "status",
+              "selectParam": "selected",
+              "periodParam": "period"
             },
-            "children": [
-              {
-                "id": "tabs",
-                "block": "core.filter-tabs",
-                "props": {
-                  "param": "status",
-                  "all": {
-                    "key": "filter_all"
-                  },
-                  "items": [
-                    {
-                      "value": "paid",
-                      "label": {
-                        "key": "tab_paid"
-                      }
-                    },
-                    {
-                      "value": "open",
-                      "label": {
-                        "key": "tab_open"
-                      }
-                    },
-                    {
-                      "value": "expense",
-                      "label": {
-                        "key": "tab_expense"
-                      }
-                    },
-                    {
-                      "value": "review",
-                      "label": {
-                        "key": "tab_review"
-                      }
-                    }
-                  ]
-                },
-                "bind": {
-                  "counts": {
-                    "read": "accounting.status-counts",
-                    "variables": {
-                      "q": "$q"
-                    }
-                  }
+            "bind": {
+              "rows": {
+                "read": "accounting.entries",
+                "variables": {
+                  "q": "$q",
+                  "status": "$status",
+                  "sort": "$sort"
                 }
               },
-              {
-                "id": "rows",
-                "block": "core.table",
-                "props": {
-                  "label": {
-                    "key": "entries"
-                  },
-                  "empty": {
-                    "key": "entries_empty"
-                  },
-                  "idPath": "id",
-                  "currency": "VND",
-                  "labels": {
-                    "status": {
-                      "paid": {
-                        "key": "status_paid"
-                      },
-                      "open": {
-                        "key": "status_open"
-                      },
-                      "expense": {
-                        "key": "status_expense"
-                      },
-                      "review": {
-                        "key": "status_review"
-                      }
-                    }
-                  },
-                  "selectParam": "selected",
-                  "columns": [
-                    {
-                      "term": {
-                        "key": "col_date"
-                      },
-                      "path": "entryDate",
-                      "format": "day"
-                    },
-                    {
-                      "term": {
-                        "key": "col_entry"
-                      },
-                      "path": "title"
-                    },
-                    {
-                      "term": {
-                        "key": "col_amount"
-                      },
-                      "path": "amountVnd",
-                      "format": "money",
-                      "align": "end"
-                    },
-                    {
-                      "term": {
-                        "key": "col_status"
-                      },
-                      "path": "status",
-                      "format": "badge"
-                    }
-                  ],
-                  "tones": {
-                    "paid": "success",
-                    "open": "warning",
-                    "expense": "neutral",
-                    "review": "danger"
-                  }
-                },
-                "bind": {
-                  "rows": {
-                    "read": "accounting.entries",
-                    "variables": {
-                      "q": "$q",
-                      "status": "$status",
-                      "sort": "$sort"
-                    }
-                  }
+              "counts": {
+                "read": "accounting.status-counts",
+                "variables": {
+                  "q": "$q"
                 }
               }
-            ]
+            }
           },
           {
-            "id": "detail",
-            "block": "core.detail",
+            "id": "book-detail",
+            "block": "accounting.entry-detail",
             "props": {
               "label": {
                 "key": "entry"
@@ -372,77 +276,10 @@
               "idle": {
                 "key": "entry_idle"
               },
-              "idPath": "id",
-              "currency": "VND",
-              "items": [
-                {
-                  "term": {
-                    "key": "fact_date"
-                  },
-                  "path": "entryDate",
-                  "format": "date"
-                },
-                {
-                  "term": {
-                    "key": "fact_kind"
-                  },
-                  "path": "kind",
-                  "format": "badge"
-                },
-                {
-                  "term": {
-                    "key": "fact_amount"
-                  },
-                  "path": "amountVnd",
-                  "format": "money"
-                },
-                {
-                  "term": {
-                    "key": "fact_note"
-                  },
-                  "path": "note",
-                  "format": "text"
-                },
-                {
-                  "term": {
-                    "key": "fact_source"
-                  },
-                  "path": "sourceEntity",
-                  "format": "text"
-                }
-              ],
-              "labels": {
-                "kind": {
-                  "income": {
-                    "key": "kind_income"
-                  },
-                  "expense": {
-                    "key": "kind_expense"
-                  },
-                  "invoice": {
-                    "key": "kind_invoice"
-                  },
-                  "reversal": {
-                    "key": "kind_reversal"
-                  },
-                  "adjustment": {
-                    "key": "kind_adjustment"
-                  }
-                }
-              },
-              "titlePath": "note",
               "kind": {
                 "key": "entry_kind"
               },
-              "closeParam": "selected",
-              "timeline": {
-                "title": {
-                  "key": "lineage"
-                },
-                "listPath": "lineage",
-                "textPath": "title",
-                "notePath": "detail"
-              }
+              "closeParam": "selected"
             },
             "bind": {
               "record": {
@@ -450,6 +287,9 @@
                 "variables": {
                   "id": "$selected"
                 }
+              },
+              "adjust": {
+                "action": "accounting.adjust"
               }
             }
           }
@@ -468,63 +308,108 @@
       },
       "root": {
         "id": "questions-root",
-        "block": "core.decision-queue",
+        "block": "accounting.questions",
         "props": {
-          "surface": "section",
           "label": {
-            "key": "questions_label"
+            "key": "questions_title"
           },
-          "emptyTitle": {
+          "empty": {
             "key": "questions_empty_title"
-          },
-          "emptyBody": {
-            "key": "questions_empty_body"
-          },
-          "seeWhy": {
-            "key": "decisions_see_why"
-          },
-          "moreMenu": {
-            "key": "decisions_more"
-          },
-          "commands": [
-            {
-              "id": "edit",
-              "label": {
-                "key": "answer_command"
-              }
-            }
-          ],
-          "edit": {
-            "label": {
-              "key": "answer_form"
-            },
-            "submitLabel": {
-              "key": "answer_submit"
-            },
-            "cancelLabel": {
-              "key": "answer_cancel"
-            },
-            "fields": [
-              {
-                "name": "answer",
-                "label": {
-                  "key": "answer_field"
-                },
-                "kind": "textarea",
-                "required": true,
-                "max": 2000
-              }
-            ]
           }
         },
         "bind": {
-          "queue": {
+          "questions": {
             "read": "accounting.questions"
           },
-          "command": {
+          "answer": {
             "action": "accounting.answer-question"
           }
         }
+      }
+    },
+    {
+      "id": "ledger",
+      "label": {
+        "key": "tab_ledger"
+      },
+      "root": {
+        "id": "ledger-root",
+        "block": "core.master-detail",
+        "props": {
+          "emptyTitle": {
+            "key": "entry_empty_title"
+          },
+          "emptyBody": {
+            "key": "entry_empty_body"
+          }
+        },
+        "children": [
+          {
+            "id": "ledger-book",
+            "block": "accounting.book",
+            "props": {
+              "title": {
+                "key": "tab_ledger"
+              },
+              "searchLabel": {
+                "key": "search"
+              },
+              "empty": {
+                "key": "entries_empty"
+              },
+              "emptySearch": {
+                "key": "entries_empty_search"
+              },
+              "searchParam": "q",
+              "filterParam": "status",
+              "selectParam": "selected",
+              "periodParam": "period"
+            },
+            "bind": {
+              "rows": {
+                "read": "accounting.entries",
+                "variables": {
+                  "q": "$q",
+                  "status": "$status",
+                  "sort": "$sort"
+                }
+              },
+              "counts": {
+                "read": "accounting.status-counts",
+                "variables": {
+                  "q": "$q"
+                }
+              }
+            }
+          },
+          {
+            "id": "ledger-detail",
+            "block": "accounting.entry-detail",
+            "props": {
+              "label": {
+                "key": "entry"
+              },
+              "idle": {
+                "key": "entry_idle"
+              },
+              "kind": {
+                "key": "entry_kind"
+              },
+              "closeParam": "selected"
+            },
+            "bind": {
+              "record": {
+                "read": "accounting.entry",
+                "variables": {
+                  "id": "$selected"
+                }
+              },
+              "adjust": {
+                "action": "accounting.adjust"
+              }
+            }
+          }
+        ]
       }
     },
     {

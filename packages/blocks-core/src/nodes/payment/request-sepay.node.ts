@@ -88,15 +88,15 @@ const instructionOf = async (
 }
 
 /**
- * `payment.request`: asks the customer to pay a confirmed order. The business rules are here: only a confirmed order with an amount,
+ * `payment.request-sepay`: asks the customer to pay a confirmed order. The business rules are here: only a confirmed order with an amount,
  * the order number reduced to letters and digits as the transfer content, and one request per order across runs (dedupe key
  * `payment-request:<orderId>`). The account and the QR link come from the `payment.instruction` tool; when it fails or no provider is
  * connected, nothing is sent and a work item (`connect_sepay`) goes to the owner.
  */
-export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
-    id: "payment.request",
+export const paymentRequestSepayNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
+    id: "payment.request-sepay",
     role: "output",
-    title: bilingualOf("nodePaymentRequestTitle"),
+    title: bilingualOf("nodePaymentRequestSepayTitle"),
     params,
     input,
     output,

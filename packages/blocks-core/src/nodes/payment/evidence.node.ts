@@ -72,9 +72,9 @@ const NONE: EvidenceOutput = { arrival: null, evidenced: [], claims: [], transac
 const arrivalOf = (row: TransactionRow): Arrival => ({
     id: row.id,
     amount: row.amountVnd,
-    text: row.content,
-    names: row.counterpartName === null ? [] : [row.counterpartName],
-    at: atOf(row.receivedAt),
+    text: row.reference,
+    names: row.payer === null ? [] : [row.payer],
+    at: atOf(row.occurredAt),
 })
 
 const candidateOf = (order: PricedOrder, name: string | null): Candidate => ({
