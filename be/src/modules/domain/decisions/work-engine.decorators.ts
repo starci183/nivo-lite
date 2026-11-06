@@ -10,7 +10,7 @@ import type {
     OutboundAccessGate,
     WorkItemClosedHook,
 } from "./work-engine.port"
-import type { WorkAgentDirectory } from "./work-lines.contracts"
+import type { WorkAgentDirectory, WorkAskCards } from "./work-lines.contracts"
 
 /** Token of the inbound event status port; the app root binds it to the inbox capability. */
 export const INBOUND_EVENT_STATUS: unique symbol = Symbol("domain.decisions.inbound-event-status")
@@ -58,3 +58,9 @@ export const WORK_AGENT_DIRECTORY: unique symbol = Symbol("domain.decisions.work
 /** Injects the port that names the agent of a department. Parameter type: WorkAgentDirectory. */
 export const InjectWorkAgentDirectory = (): TypedParameterDecorator<WorkAgentDirectory> =>
     injector<WorkAgentDirectory>(WORK_AGENT_DIRECTORY)
+
+/** Token of the port that tells whether the approval card of a decision was posted. */
+export const WORK_ASK_CARDS: unique symbol = Symbol("domain.decisions.work-ask-cards")
+
+/** Injects the approval card port, absent where the team chat posts none. Parameter type: WorkAskCards. */
+export const InjectWorkAskCards = (): TypedParameterDecorator<WorkAskCards> => injector<WorkAskCards>(WORK_ASK_CARDS)

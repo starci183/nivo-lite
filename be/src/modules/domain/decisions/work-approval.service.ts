@@ -1,18 +1,18 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { AuthorityRulesService, InjectWorkBranchDecider, isOverLimit } from "@modules/domain/authority-rules"
+import { InjectWorkBranchDecider, isOverLimit } from "@modules/domain/authority-rules"
 import type { WorkBranchDecider } from "@modules/domain/authority-rules"
 import { ExecutionsService } from "@modules/domain/executions"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import type { WorkAgentDirectory } from "./work-lines.contracts"
+import type { WorkAgentDirectory, WorkAskCards } from "./work-lines.contracts"
 import { WorkLinesService } from "./work-lines.service"
 import type { GateVerdict, OptionalAuthorityRule, Proposal, WorkContext, WorkItem } from "./decisions.contracts"
 import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
 import type { Judgement } from "./work-engine.contracts"
-import { InjectInboundEventStatus, InjectWorkAgentDirectory } from "./work-engine.decorators"
+import { InjectInboundEventStatus, InjectWorkAgentDirectory, InjectWorkAskCards } from "./work-engine.decorators"
 import { formatVnd } from "./work-engine.policy"
 import type { InboundEventStatus } from "./work-engine.port"
 
@@ -34,19 +34,18 @@ export class WorkApprovalService {
         private readonly modules: ModuleCatalogService,
         private readonly evidence: EvidenceService,
         private readonly lines: WorkLinesService,
-        private readonly rules: AuthorityRulesService,
         private readonly responsibilities: ResponsibilityJournalService,
+        @InjectWorkAskCards() private readonly cards: WorkAskCards,
         @Optional() @InjectWorkBranchDecider() private readonly branches?: WorkBranchDecider,
     ) {}
 
     /**
-     * Whether an approval card will be posted for this ask: the rule names approvers (roles, rooms or members), and the card the
-     * approval hook posts to their rooms is then the one message of the ask. Without approvers no card goes anywhere and the ask
-     * is one line to the owner.
+     * Whether the approval hook posted a card for the decision of this ask. The card is then the one message of the ask; an ask with no
+     * decision, or whose decision has no card (no request opened, nobody to show it to), is said as one line to the owner.
      */
-    private async cardPosted(ctx: WorkContext, item: WorkItem): Promise<boolean> {
-        const group = (await this.rules.approvalSetup(ctx.workspaceId, item.action))?.group
-        return group !== undefined && group.roles.length + group.rooms.length + group.members.length > 0
+    private async cardPosted(ctx: WorkContext, decisionId: string | undefined): Promise<boolean> {
+        if (decisionId === undefined) return false
+        return (await this.cards.cardsOf(ctx.workspaceId, decisionId)) > 0
     }
 
     /** The names of the fields in the language of the reader; a field without a label shows as it is. */
@@ -85,7 +84,7 @@ export class WorkApprovalService {
             summary: `${reason}: ${proposal.summary}`,
             evidence: notes.length === 0 ? null : notes.join(SEPARATOR),
         })
-        if (!(await this.cardPosted(ctx, waiting))) {
+        if (!(await this.cardPosted(ctx, judgement.branchDecisionId))) {
             await this.lines.say(ctx, {
                 department: waiting.department,
                 installationId: waiting.installation_id,

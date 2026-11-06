@@ -45,3 +45,9 @@ export interface WorkLine {
 
 /** What the line service needs of the engine's context. */
 export type WorkLineScope = Pick<WorkContext, "workspaceId">
+
+/** Where the approval card of a decision stands: how many rooms the approval hook posted it to. The root binds the team chat. */
+export interface WorkAskCards {
+    /** The rooms that hold the approval card of the decision; 0 when no card was posted (no request opened, or nobody to show it to). */
+    cardsOf(workspaceId: string, decisionId: string): Promise<number>
+}

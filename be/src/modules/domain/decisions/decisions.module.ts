@@ -41,7 +41,9 @@ import {
     MODULE_CATALOG_SOURCE,
     OUTBOUND_ACCESS_GATE,
     WORK_AGENT_DIRECTORY,
+    WORK_ASK_CARDS,
 } from "./work-engine.decorators"
+import { NoAskCardsService } from "./work-ask-cards.service"
 import { WorkLinesService } from "./work-lines.service"
 import { WorkPerformersService } from "./work-performers.service"
 import { WorkRecorderService } from "./work-recorder.service"
@@ -77,6 +79,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 { provide: AGENT_RUN_ITEM_VERDICTS, useExisting: AgentRunItemVerdictsService },
                 { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },
                 { provide: WORK_AGENT_DIRECTORY, useExisting: options.ports.agentDirectory },
+                { provide: WORK_ASK_CARDS, useClass: NoAskCardsService },
                 { provide: INBOUND_EVENT_STATUS, useClass: options.ports.inboundEventStatus },
                 { provide: LEAD_DIRECTORY, useExisting: options.ports.leadDirectory },
                 { provide: LEAD_GEN_FLOW, useExisting: options.ports.leadGenFlow },
