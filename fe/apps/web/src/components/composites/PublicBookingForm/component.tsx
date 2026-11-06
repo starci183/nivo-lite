@@ -11,8 +11,9 @@ import {
     Text,
     TextAction,
 } from "@starci/grammar/common"
+import type { ReactNode } from "react"
 import { parseDate } from "@internationalized/date"
-import type { Band } from "@starci/grammar/common"
+import type { FooterZone, HeaderZone } from "@starci/grammar/common"
 import { PublicBookingContact } from "@/components/branches/PublicBookingContact"
 import type { PublicBookingContactProps } from "@/components/branches/PublicBookingContact"
 
@@ -96,22 +97,29 @@ const ServiceChoice = (props: PublicBookingFormProps) => {
     )
 }
 
+/** One step of the booking card: its name over its content. */
+const stepOf = (label: string, content: ReactNode): ReactNode => (
+    <Stack gap="row">
+        <Text isStrong>{label}</Text>
+        {content}
+    </Stack>
+)
+
 /** Band 1: the services, one choice each with its duration and price. */
-const serviceBand = (props: PublicBookingFormProps): Band => ({
-    kind: "body",
-    label: props.props.labels.step1,
-    children: <ServiceChoice {...props} />,
+const serviceBand = (props: PublicBookingFormProps): HeaderZone => ({
+    kind: "custom",
+    children: stepOf(props.props.labels.step1, <ServiceChoice {...props} />),
 })
 
 /** Band 2: the day row, then the free times of that day as pills; a day with none says so. */
-const timeBand = (props: PublicBookingFormProps): Band => {
+const timeBand = (props: PublicBookingFormProps): HeaderZone => {
     const { props: p, on } = props
     const first = p.days[0]
     const last = p.days.at(-1)
     return {
-        kind: "body",
-        label: p.labels.step2,
-        children: (
+        kind: "custom",
+        children: stepOf(
+            p.labels.step2,
             <Stack gap="row">
                 <Calendar
                     label={p.labels.step2}
@@ -134,16 +142,16 @@ const timeBand = (props: PublicBookingFormProps): Band => {
                     onValueChange={(start) => on.change({ start })}
                     empty={<Text tone="muted">{p.labels.noTimes}</Text>}
                 />
-            </Stack>
+            </Stack>,
         ),
     }
 }
 
 /** The last band: the choice in one line, what is missing or what the shop refused, and the one primary command. */
-const sendBand = (props: PublicBookingFormProps): Band => {
+const sendBand = (props: PublicBookingFormProps): FooterZone => {
     const { props: p, on } = props
     return {
-        kind: "body",
+        kind: "custom",
         children: (
             <Stack gap="row">
                 {p.refusal === undefined ? null : (
@@ -202,20 +210,13 @@ const PublicBookingFormBody = (props: PublicBookingFormProps) => {
     return (
         <Form label={p.formLabel} isPending={p.isBusy} validationBehavior="aria" onSubmit={on.submit}>
             <SurfaceCard
-                kind="bands"
                 ariaLabel={p.formLabel}
                 isLoading={props.isLoading === true}
-                bands={[
-                    serviceBand(props),
-                    timeBand(props),
-                    {
-                        kind: "body",
-                        label: p.labels.step3,
-                        children: <PublicBookingContact {...contactPropsOf(props)} />,
-                    },
-                    sendBand(props),
-                ]}
-            />
+                headers={[serviceBand(props), timeBand(props)]}
+                footers={[sendBand(props)]}
+            >
+                {stepOf(p.labels.step3, <PublicBookingContact {...contactPropsOf(props)} />)}
+            </SurfaceCard>
         </Form>
     )
 }

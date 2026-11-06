@@ -33,14 +33,13 @@ interface LandingCommitmentBaseProps {
 export const LandingCommitmentBase = (props: LandingCommitmentBaseProps) => (
     <div id="commitment" className={ANCHOR}>
         <SurfaceCard
-            kind="bands"
             label={props.props.titleLines.join(" ")}
             ariaLabel={props.props.regionLabel}
             fact={props.props.eyebrow}
             headingLevel={2}
-            bands={[
+            headers={[
                 {
-                    kind: "body",
+                    kind: "custom",
                     children: (
                         <Stack gap="row">
                             <Stack gap="inline">
@@ -65,7 +64,7 @@ export const LandingCommitmentBase = (props: LandingCommitmentBaseProps) => (
                     ),
                 },
                 {
-                    kind: "body",
+                    kind: "custom",
                     children: (
                         <Stack gap="row">
                             <Heading level={3}>{props.props.quote}</Heading>
@@ -78,20 +77,16 @@ export const LandingCommitmentBase = (props: LandingCommitmentBaseProps) => (
                         </Stack>
                     ),
                 },
-                {
-                    kind: "body",
-                    children: (
-                        <DescriptionList
-                            layout="columns"
-                            items={props.props.principles.map((principle) => ({
-                                id: principle.id,
-                                term: principle.title,
-                                description: principle.text,
-                            }))}
-                        />
-                    ),
-                },
             ]}
-        />
+        >
+            <DescriptionList
+                layout="columns"
+                items={props.props.principles.map((principle) => ({
+                    id: principle.id,
+                    term: principle.title,
+                    description: principle.text,
+                }))}
+            />
+        </SurfaceCard>
     </div>
 )

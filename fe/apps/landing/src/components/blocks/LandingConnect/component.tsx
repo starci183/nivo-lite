@@ -30,33 +30,25 @@ interface LandingConnectBaseProps {
 export const LandingConnectBase = (props: LandingConnectBaseProps) => (
     <div id={props.props.headingId}>
         <SurfaceCard
-            kind="bands"
+            kind="list"
             label={props.props.title}
             fact={props.props.eyebrow}
             headingLevel={2}
-            footer={props.props.note}
-            bands={[
-                {
-                    kind: "body",
-                    children: <Text>{props.props.lead}</Text>,
-                },
-                {
-                    kind: "list",
-                    items: props.props.channels.map((channel) => ({
-                        id: channel.id,
-                        title: channel.name,
-                        description: channel.text,
-                        badges: [
-                            {
-                                label: channel.isLive ? props.props.liveLabel : props.props.roadmapLabel,
-                                tone: channel.isLive ? "success" : "neutral",
-                                isDot: channel.isLive,
-                            },
-                        ],
-                    })),
-                    empty: <EmptyNotice message={props.props.emptyLabel} />,
-                },
-            ]}
+            note={props.props.note}
+            headers={[{ kind: "custom", children: <Text>{props.props.lead}</Text> }]}
+            items={props.props.channels.map((channel) => ({
+                id: channel.id,
+                title: channel.name,
+                description: channel.text,
+                badges: [
+                    {
+                        label: channel.isLive ? props.props.liveLabel : props.props.roadmapLabel,
+                        tone: channel.isLive ? "success" : "neutral",
+                        isDot: channel.isLive,
+                    },
+                ],
+            }))}
+            empty={<EmptyNotice message={props.props.emptyLabel} />}
         />
     </div>
 )

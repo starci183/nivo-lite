@@ -9,7 +9,7 @@ import {
     Stack,
     SurfaceCard,
     Text,
-    type Band,
+    type HeaderZone,
 } from "@starci/grammar/common"
 
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -71,10 +71,10 @@ export interface ApiKeysSectionBaseProps {
     }
 }
 /** The create form and the read/write notices in their existing body band. */
-const createKeyBandOf = (props: ApiKeysSectionBaseProps): Band => {
+const createKeyBandOf = (props: ApiKeysSectionBaseProps): HeaderZone => {
     const view = props.props
     return {
-        kind: "body" as const,
+        kind: "custom" as const,
         children: (
             <Stack gap="section">
                 <Text size="sm" tone="muted">
@@ -117,13 +117,13 @@ const createKeyBandOf = (props: ApiKeysSectionBaseProps): Band => {
 }
 
 /** The once-shown key and its exact copy/dismiss controls, when a key was created. */
-const freshKeyBandsOf = (props: ApiKeysSectionBaseProps): ReadonlyArray<Band> => {
+const freshKeyBandsOf = (props: ApiKeysSectionBaseProps): ReadonlyArray<HeaderZone> => {
     const view = props.props
     return view.fresh === undefined
         ? []
         : [
               {
-                  kind: "body" as const,
+                  kind: "custom" as const,
                   children: (
                       <Stack gap="section">
                           <Alert tone="cautionary" title={view.fresh.warning} />
@@ -151,44 +151,37 @@ const freshKeyBandsOf = (props: ApiKeysSectionBaseProps): ReadonlyArray<Band> =>
 /** Draws the API keys card: create a key (shown once), then the list with revoke confirmed through a dialog. */
 export const ApiKeysSectionBase = (props: ApiKeysSectionBaseProps) => {
     const view = props.props
-    const bands: ReadonlyArray<Band> = [createKeyBandOf(props), ...freshKeyBandsOf(props)]
+    const zones: ReadonlyArray<HeaderZone> = [createKeyBandOf(props), ...freshKeyBandsOf(props)]
     return (
         <>
             <SurfaceCard
-                kind="bands"
+                kind="list"
                 label={view.title}
                 headingLevel={2}
-                bands={[
-                    ...bands,
-                    {
-                        kind: "list",
-                        items: view.items.map((item) => ({
-                            id: item.id,
-                            leading: { icon: nivoIconSource("password", "leading") },
-                            title: item.name,
-                            description: `${item.prefixText} · ${item.datesText}`,
-                            badges: [
-                                { label: item.statusLabel, tone: item.isRevoked ? "neutral" : "success", isDot: true },
-                            ],
-                            ...(item.isRevoked
-                                ? {}
-                                : {
-                                      menu: {
-                                          label: item.name,
-                                          entries: [
-                                              {
-                                                  id: "revoke",
-                                                  label: view.revokeLabel,
-                                                  tone: "danger",
-                                                  onAction: () => props.on.askRevoke(item.id),
-                                              },
-                                          ],
+                headers={zones}
+                items={view.items.map((item) => ({
+                    id: item.id,
+                    leading: { icon: nivoIconSource("password", "leading") },
+                    title: item.name,
+                    description: `${item.prefixText} · ${item.datesText}`,
+                    badges: [{ label: item.statusLabel, tone: item.isRevoked ? "neutral" : "success", isDot: true }],
+                    ...(item.isRevoked
+                        ? {}
+                        : {
+                              menu: {
+                                  label: item.name,
+                                  entries: [
+                                      {
+                                          id: "revoke",
+                                          label: view.revokeLabel,
+                                          tone: "danger",
+                                          onAction: () => props.on.askRevoke(item.id),
                                       },
-                                  }),
-                        })),
-                        empty: <EmptyNotice message={view.emptyLabel ?? view.title} />,
-                    },
-                ]}
+                                  ],
+                              },
+                          }),
+                }))}
+                empty={<EmptyNotice message={view.emptyLabel ?? view.title} />}
             />
             {view.revoking === undefined ? null : (
                 <AlertDialog

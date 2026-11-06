@@ -36,10 +36,10 @@ export const FirstRunCard = (props: FirstRunCardProps) => {
         return (
             <Stack gap="section" measure="form">
                 <SurfaceCard
-                    kind="bands"
                     ariaLabel={props.title}
-                    bands={[{ kind: "body", children: head }, props.collection]}
-                    footer={actions}
+                    headers={[{ kind: "custom", children: head }]}
+                    footers={[{ kind: "custom", children: actions }]}
+                    {...props.collection}
                 />
             </Stack>
         )

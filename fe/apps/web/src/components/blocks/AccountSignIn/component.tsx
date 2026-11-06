@@ -168,13 +168,13 @@ export const AccountSignInBase = (props: AccountSignInBaseProps) => (
             onRetry={props.on.retry}
             render={(view, isSkeleton) => (
                 <SurfaceCard
-                    kind="bands"
+                    kind="list"
                     label={props.props.title}
                     headingLevel={2}
                     isLoading={isSkeleton}
-                    bands={[
+                    headers={[
                         {
-                            kind: "body",
+                            kind: "custom",
                             children: (
                                 <Stack gap="row">
                                     <DescriptionList
@@ -194,12 +194,9 @@ export const AccountSignInBase = (props: AccountSignInBaseProps) => (
                                 </Stack>
                             ),
                         },
-                        {
-                            kind: "list",
-                            items: methodRows(props, view),
-                            empty: <EmptyNotice message={props.props.labels.empty} />,
-                        },
                     ]}
+                    items={methodRows(props, view)}
+                    empty={<EmptyNotice message={props.props.labels.empty} />}
                 />
             )}
         />

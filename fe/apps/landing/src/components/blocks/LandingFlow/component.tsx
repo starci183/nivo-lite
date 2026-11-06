@@ -37,7 +37,7 @@ export const LandingFlowBase = (props: LandingFlowBaseProps) => (
             label={props.props.title}
             fact={props.props.eyebrow}
             headingLevel={2}
-            footer={props.props.lead}
+            note={props.props.lead}
             items={props.props.steps.map((step, index): ListRowData => ({
                 id: step.id,
                 title: step.title,

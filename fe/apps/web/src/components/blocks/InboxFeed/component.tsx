@@ -133,7 +133,7 @@ const InboxDetail = (props: InboxDetailProps) => {
                     <Quote source={copy.quoteSource} text={row.body} isLoading={props.isWaiting} />
                 </SurfaceCard>
             )}
-            <SurfaceCard label={copy.detailsTitle} isLoading={props.isWaiting} footer={copy.duplicatesNote}>
+            <SurfaceCard label={copy.detailsTitle} isLoading={props.isWaiting} note={copy.duplicatesNote}>
                 <DescriptionList items={items} isLoading={props.isWaiting} />
             </SurfaceCard>
         </>

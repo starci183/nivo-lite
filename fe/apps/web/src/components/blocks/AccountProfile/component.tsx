@@ -105,15 +105,13 @@ export const AccountProfileBase = (props: AccountProfileBaseProps) => (
         onRetry={props.on.retry}
         render={(_, isSkeleton) => (
             <SurfaceCard
-                kind="bands"
                 label={props.props.title}
                 headingLevel={2}
                 isLoading={isSkeleton}
-                bands={[
-                    { kind: "body", children: <PictureBand {...props} isSkeleton={isSkeleton} /> },
-                    { kind: "body", children: <NameBand {...props} isSkeleton={isSkeleton} /> },
-                ]}
-            />
+                headers={[{ kind: "custom", children: <PictureBand {...props} isSkeleton={isSkeleton} /> }]}
+            >
+                <NameBand {...props} isSkeleton={isSkeleton} />
+            </SurfaceCard>
         )}
     />
 )

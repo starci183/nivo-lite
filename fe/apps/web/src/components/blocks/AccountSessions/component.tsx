@@ -1,4 +1,4 @@
-import { AlertDialog, Button, EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common"
+import { AlertDialog, Button, EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import { FormNotice } from "@/components/composites/FormNotice"
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -118,11 +118,7 @@ export const AccountSessionsBase = (props: AccountSessionsBaseProps) => (
                         {...(rows.some((row) => !row.isCurrent)
                             ? { labelEnd: <OthersAction base={props} isSkeleton={isSkeleton} /> }
                             : {})}
-                        footer={
-                            <Text size="sm" tone="muted">
-                                {props.props.hint}
-                            </Text>
-                        }
+                        note={props.props.hint}
                         empty={<EmptyNotice message={props.props.labels.empty} />}
                         items={rowsOf(props, rows)}
                     />
