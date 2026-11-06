@@ -115,14 +115,38 @@ describe("pgFailureOf failures that are not a taken constraint", () => {
 
         expect(policy.pgFailureOf({ code, constraint: "records_sales_lead_phone_short" }, declared)).toEqual({
             kind: "invalid",
+            sqlstate: code,
             constraint: "records_sales_lead_phone_short",
+            column: null,
+        })
+    })
+
+    it("names the column the database reports, from the error or its driver error, and never reads the detail", async () => {
+        const policy = await build()
+
+        expect(policy.pgFailureOf({ code: "23502", column: "amount_vnd", detail: "secret value" }, declared)).toEqual({
+            kind: "invalid",
+            sqlstate: "23502",
+            constraint: null,
+            column: "amount_vnd",
+        })
+        expect(policy.pgFailureOf({ driverError: { code: "22P02", column: "id" } }, declared)).toEqual({
+            kind: "invalid",
+            sqlstate: "22P02",
+            constraint: null,
+            column: "id",
         })
     })
 
     it("answers invalid without a constraint when the error names none", async () => {
         const policy = await build()
 
-        expect(policy.pgFailureOf({ code: "22P02" }, declared)).toEqual({ kind: "invalid", constraint: null })
+        expect(policy.pgFailureOf({ code: "22P02" }, declared)).toEqual({
+            kind: "invalid",
+            sqlstate: "22P02",
+            constraint: null,
+            column: null,
+        })
     })
 
     it("answers scope for 42501 (row-level security)", async () => {

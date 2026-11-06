@@ -46,6 +46,7 @@ const options = {
     mcpGateway: { remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 4000 },
     ai: { gatewayUrl: null, virtualKey: null, chatModel: "work", embeddingModel: "embed" },
     sepay: { apiBase: "https://sepay.invalid", timeoutMs: 1000 },
+    entityEngine: { cursorKey: new Secret(Buffer.alloc(32, 9).toString("base64")), buildId: undefined },
 }
 
 /** The existing database and queue tokens of the real registered modules, each answered by a double that refuses to run. */
@@ -152,6 +153,11 @@ type BuildWiringProofResultOptionsServerShape = {
     port: number
 }
 
+type BuildWiringProofResultOptionsEntityEngineShape = {
+    cursorKey: Secret
+    buildId: undefined
+}
+
 type BuildWiringProofResultOptionsSepayShape = {
     apiBase: string
     timeoutMs: number
@@ -166,6 +172,7 @@ type BuildWiringProofResultOptionsShape = {
     mcpGateway: BuildWiringProofResultOptionsMcpGatewayShape
     ai: BuildWiringProofResultOptionsAiShape
     sepay: BuildWiringProofResultOptionsSepayShape
+    entityEngine: BuildWiringProofResultOptionsEntityEngineShape
 }
 
 type BuildWiringProofResultShape = {

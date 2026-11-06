@@ -11,6 +11,7 @@ import type { Logger } from "@modules/platform/logging"
 import { InjectChannelSenderRegistry } from "./channels.decorators"
 import type { ChannelSenderRegistry, DeliveryRequest, DeliveryReceipt, PersonMessage } from "./channels.contracts"
 import { ChannelPlanNoticeService } from "./channel-plan-notice.service"
+import { customerIdOf } from "./customer-id.policy"
 import { deliveryFailureFieldsOf } from "./delivery-failure-fields.policy"
 import { RECIPIENT_NOT_LINKED, recipientLinked } from "./delivery-recipient.policy"
 import { ChannelsLogEvent } from "./channels.log-events"
@@ -27,20 +28,6 @@ const deliveryErrorOf = (receipt: DeliveryReceipt): string | undefined => {
     if (receipt.delivered) return undefined
     if (receipt.outcome === "ambiguous") return CHAT_DELIVERY_UNKNOWN
     return receipt.failure ?? "delivery_rejected"
-}
-
-/** Archived conversations carry `<chat id>:<timestamp>`; the customer's id on the channel is the part before the colon. */
-const customerIdOf = (externalId: string): string => {
-    // A suffix belongs to the final logical line; earlier line breaks keep their stored text.
-    const lineStart =
-        Math.max(
-            externalId.lastIndexOf("\n"),
-            externalId.lastIndexOf("\r"),
-            externalId.lastIndexOf(" "),
-            externalId.lastIndexOf(" "),
-        ) + 1
-    const suffix = externalId.indexOf(":", lineStart)
-    return suffix < 0 ? externalId : externalId.slice(0, suffix)
 }
 
 @Injectable()

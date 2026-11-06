@@ -19,6 +19,7 @@ describe("threadRowsOf", () => {
         expect(rows[0]).toEqual({
             id: "t1",
             name: THREAD_RECORDS[0]?.name,
+            avatar: "",
             preview: THREAD_RECORDS[0]?.lastText,
             at: "2026-11-06T01:58:00.000Z",
             status: "needs",
@@ -33,6 +34,12 @@ describe("threadRowsOf", () => {
         expect(rows[2]?.handledBy).toBe(THREAD_RECORDS[2]?.handledBy)
     })
 
+    it("carries the picture link the channel gave, and none when it gave none", () => {
+        const [named] = threadRowsOf([{ id: "z", name: "Minh", avatarUrl: "https://zalo.test/minh.png" }], WORDS) ?? []
+        expect(named?.avatar).toBe("https://zalo.test/minh.png")
+        expect(rows.map((row) => row.avatar)).toEqual(["", "", "", ""])
+    })
+
     it("names an unnamed visitor so a row never has an empty title", () => {
         expect(rows[3]?.name).toBe("Visitor")
     })
@@ -41,7 +48,7 @@ describe("threadRowsOf", () => {
         expect(threadRowsOf([{ name: "no id" }], WORDS)).toBeNull()
         expect(threadRowsOf([], WORDS)).toBeNull()
         expect(threadRowsOf([{ id: "x" }, { name: "no id" }], WORDS)).toEqual([
-            { id: "x", name: "Visitor", preview: "", at: "", status: null, handledBy: "", channel: "" },
+            { id: "x", name: "Visitor", avatar: "", preview: "", at: "", status: null, handledBy: "", channel: "" },
         ])
     })
 })

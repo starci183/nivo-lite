@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { AgentOwnershipService, AgentsModule } from "@modules/domain/agents"
+import { AGENTS_ROOMS, AgentOwnershipService, AgentsModule } from "@modules/domain/agents"
 import {
     APPROVAL_REQUESTS_ERROR_KINDS,
     APPROVAL_REQUESTS_MESSAGES,
@@ -14,8 +14,9 @@ import {
     AuthorityRulesModule,
 } from "@modules/domain/authority-rules"
 import { EventsModule } from "@modules/domain/events"
+import { ChatRoomDirectoryModule, ChatRoomDirectoryService } from "@modules/domain/chat-room-directory"
+import { teamChatEntities } from "@modules/domain/team-chat"
 import { MEMBER_GRANTS_ERROR_KINDS, MEMBER_GRANTS_MESSAGES, MemberGrantsModule } from "@modules/domain/member-grants"
-import { OfficeRoomDirectoryService } from "@modules/domain/office-rooms"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
@@ -23,6 +24,7 @@ import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
 import { I18nModule } from "@modules/platform/i18n"
 import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
+import { OfficeChainQueueProofModule } from "./office-chain-queue-proof.module"
 
 /** The token of the Auth account directory of the office chain proofs. */
 const OFFICE_ACCOUNTS = Symbol("proof.office-chain.accounts")
@@ -44,11 +46,11 @@ class OfficeAgentOwnersModule {
             global: true,
             providers: [
                 AgentOwnershipService,
-                OfficeRoomDirectoryService,
+                { provide: AGENTS_ROOMS, useExisting: ChatRoomDirectoryService },
                 AuthorityActionsService,
                 { provide: OFFICE_ACCOUNTS, useClass: UnreadAccountDirectory },
             ],
-            exports: [AgentOwnershipService, OfficeRoomDirectoryService, AuthorityActionsService, OFFICE_ACCOUNTS],
+            exports: [AgentOwnershipService, AuthorityActionsService, OFFICE_ACCOUNTS],
         }
     }
 }
@@ -74,7 +76,9 @@ export const OFFICE_CHAIN_MODULES: Array<DynamicModule> = [
     WorkspaceMembersModule.register({ isGlobal: true, accounts: OFFICE_ACCOUNTS }),
     ModuleInstallationsModule.register({ isGlobal: true }),
     AuthorityRulesModule.register({ isGlobal: true }),
+    ChatRoomDirectoryModule.register({ isGlobal: true, rooms: teamChatEntities[0], seats: teamChatEntities[1] }),
     MemberGrantsModule.register({ isGlobal: true }),
+    { module: OfficeChainQueueProofModule, global: true },
     ApprovalRequestsModule.register({
         isGlobal: true,
         ports: { agentOwners: AgentOwnershipService },

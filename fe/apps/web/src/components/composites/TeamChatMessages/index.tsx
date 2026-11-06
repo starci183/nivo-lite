@@ -1,31 +1,13 @@
-import { Fragment } from "react"
+import { Fragment, useEffect, useRef } from "react"
 import { Alert, Badge, Button, Cluster, Divider, IconButton, MessageBubble, Stack, Text } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { ChatMessageFiles } from "@/components/leaves/ChatMessageFiles"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
-import type { TeamChatApprovalView, TeamChatMessageRow } from "@/modules/teamChat"
-
-/** The words of the cards and controls of a thread. */
-export interface TeamChatMessagesCopy {
-    readonly pin: string
-    readonly unpin: string
-    readonly pinned: string
-    readonly report: string
-    readonly approvalPending: string
-    readonly approvalApproved: string
-    readonly approvalRefused: string
-    readonly approvalExpired: string
-    readonly approve: string
-    readonly refuse: string
-    readonly olderLabel: string
-    readonly openRun: string
-    /** "by {name}" and "at {time}" are composed from these parts, because module words take no placeholders. */
-    readonly decidedBy: string
-}
+import type { TeamChatApprovalView, TeamChatMessageRow, TeamChatMessagesCopy } from "@/modules/types"
 
 /** The messages of the open room and what a person may do with them. */
-export interface TeamChatMessagesProps {
+interface TeamChatMessagesProps {
     readonly rows: ReadonlyArray<TeamChatMessageRow>
     readonly copy: TeamChatMessagesCopy
     /** The messages are still loading: the thread draws waiting bubbles. */
@@ -52,12 +34,15 @@ const settledOf = (approval: TeamChatApprovalView, copy: TeamChatMessagesCopy) =
 }
 
 /** The approval card under a message: the two answers while it waits and the viewer may answer, else the outcome. */
-const ApprovalCard = (props: {
+/** What an approval card draws: the decision, the words, whether its answer is in flight, and the answer. */
+interface ApprovalCardProps {
     readonly approval: TeamChatApprovalView
     readonly copy: TeamChatMessagesCopy
     readonly isDeciding: boolean
     readonly onDecide: TeamChatMessagesProps["onDecide"]
-}) => {
+}
+
+const ApprovalCard = (props: ApprovalCardProps) => {
     const { approval, copy } = props
     if (approval.status !== "pending") {
         const settled = settledOf(approval, copy)
@@ -122,17 +107,17 @@ const avatarOf = (row: TeamChatMessageRow) =>
 
 /** The thread of one room: day dividers, bubbles on both sides, centred system lines, report and approval cards. */
 export const TeamChatMessages = (props: TeamChatMessagesProps) => {
+    const endRef = useRef<HTMLDivElement>(null)
+    const newestId = props.rows.at(-1)?.id
+    useEffect(() => {
+        endRef.current?.scrollIntoView({ block: "end" })
+    }, [newestId])
     if (props.isLoading) return <MessageBubble isLoading hasAvatar />
     return (
         <Stack gap="row">
             {props.hasOlder ? (
                 <Cluster gap="inline" justify="center">
-                    <Button
-                        intent="neutral"
-                        size="sm"
-                        isPending={props.isLoadingOlder}
-                        onPress={props.onOlder}
-                    >
+                    <Button intent="neutral" size="sm" isPending={props.isLoadingOlder} onPress={props.onOlder}>
                         {props.copy.olderLabel}
                     </Button>
                 </Cluster>
@@ -162,10 +147,13 @@ export const TeamChatMessages = (props: TeamChatMessagesProps) => {
                             avatar={isOwn ? undefined : avatarOf(row)}
                             meta={row.timeLabel}
                             status={
-                                row.kind === "report" ? (
-                                    <Badge tone="neutral">{props.copy.report}</Badge>
-                                ) : row.pinned ? (
-                                    <Badge tone="neutral">{props.copy.pinned}</Badge>
+                                row.kind === "report" || row.pinned ? (
+                                    <Cluster gap="inline">
+                                        {row.kind === "report" ? (
+                                            <Badge tone="neutral">{props.copy.report}</Badge>
+                                        ) : null}
+                                        {row.pinned ? <Badge tone="neutral">{props.copy.pinned}</Badge> : null}
+                                    </Cluster>
                                 ) : undefined
                             }
                             actions={
@@ -183,6 +171,7 @@ export const TeamChatMessages = (props: TeamChatMessagesProps) => {
                 )
             })}
             {props.decideError === null ? null : <Alert tone="negative" title={props.decideError} />}
+            <div ref={endRef} />
         </Stack>
     )
 }

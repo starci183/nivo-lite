@@ -6,20 +6,13 @@ import {
     WorkspaceMemberSeatsService,
     WorkspaceMembersService,
 } from "@modules/domain/workspace-members"
-import { OfficeRoomDirectoryService } from "@modules/domain/office-rooms"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import {
-    ROOM_KEYS,
-    isAssignableRole,
-    mayAssign,
-    mayTag,
-    ownerCardOf,
-    resolveOwners,
-    rolesOf,
-} from "./agent-ownership.policy"
+import { isAssignableRole, mayAssign, mayTag, ownerCardOf, resolveOwners, rolesOf } from "./agent-ownership.policy"
 import type { AgentOwners, AgentOwnership, OwnershipChange } from "./agents.contracts"
 import type { TagGrants } from "./agent-tag-grants.contracts"
+import { InjectAgentRooms } from "./agents.decorators"
+import type { AgentRooms } from "./agents.port"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
 import type { AssignContext, MemberState, TagContext } from "./agents-reads.contracts"
 import { AgentEntity } from "./persistence/entities"
@@ -58,7 +51,7 @@ export class AgentOwnershipService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
-        private readonly rooms: OfficeRoomDirectoryService,
+        @InjectAgentRooms() private readonly rooms: AgentRooms,
         private readonly seats: WorkspaceMemberSeatsService,
         private readonly directory: WorkspaceMemberDirectoryService,
     ) {}
@@ -115,7 +108,7 @@ export class AgentOwnershipService {
         })
     }
 
-    /** Whether a member may hand an agent work: by role or by a seat in a room the agent is open to; nobody may for a paused agent. */
+    /** Whether a member may hand an agent work: by role or by a seat in a team-chat group the agent is open to; nobody may for a paused agent. */
     async canAssign(memberId: string, agentId: string): Promise<boolean> {
         const agent = await this.entityManager.findOne(AgentEntity, { where: { id: agentId } })
         if (agent === null) return false
@@ -187,7 +180,7 @@ export class AgentOwnershipService {
         const targets = [...new Set(change.canTagAgentIds)]
         if (!(await this.membersCounted(workspaceId, people))) throw this.invalidOwnership("owner")
         if (!roles.every(isAssignableRole)) throw this.invalidOwnership("assignableRoles")
-        if (!rooms.every((room) => ROOM_KEYS.includes(room))) throw this.invalidOwnership("assignableRooms")
+        if (!(await this.roomsCounted(workspaceId, rooms))) throw this.invalidOwnership("assignableRooms")
         if (targets.includes(agentId) || !(await this.agentsCounted(workspaceId, targets)))
             throw this.invalidOwnership("canTagAgentIds")
         this.expectChanged(
@@ -214,6 +207,12 @@ export class AgentOwnershipService {
     private async membersCounted(workspaceId: string, ids: ReadonlyArray<string>): Promise<boolean> {
         const counted = await this.seats.countActiveAmong(workspaceId, ids)
         return counted === ids.length
+    }
+
+    /** True when every given room is a team-chat group of the workspace; an empty list is trivially so. */
+    private async roomsCounted(workspaceId: string, ids: ReadonlyArray<string>): Promise<boolean> {
+        if (ids.length === 0) return true
+        return (await this.rooms.labelsOf(workspaceId, ids, ids.length)).length === ids.length
     }
 
     /** True when every given agent belongs to the workspace; an empty list is trivially so. */
@@ -243,7 +242,7 @@ export class AgentOwnershipService {
         return owners
     }
 
-    /** The given members with the first department room each sits in. */
+    /** The given members with the first team-chat group each sits in. */
     private async memberStates(workspaceId: string, ids: ReadonlyArray<string>): Promise<ReadonlyArray<MemberState>> {
         const members = await this.seats.seatsByIds(workspaceId, ids, MEMBER_LIMIT)
         const rooms = await this.seatRooms(
@@ -259,12 +258,12 @@ export class AgentOwnershipService {
         }))
     }
 
-    /** The names of the department rooms of a workspace by key. */
+    /** The names of the team-chat groups of a workspace by room id. */
     private roomLabels(workspaceId: string, keys: ReadonlyArray<string>): Promise<ReadonlyArray<RoomLabel>> {
         return this.rooms.labelsOf(workspaceId, keys, ROOM_LIMIT)
     }
 
-    /** The department rooms the given accounts sit in, the first room of each account first. */
+    /** The team-chat groups the given accounts sit in, the first group of each account first. */
     private seatRooms(workspaceId: string, userIds: ReadonlyArray<string>): Promise<ReadonlyArray<SeatRoomRow>> {
         return this.rooms.seatRoomsOf(workspaceId, userIds, MEMBER_ROOMS_LIMIT)
     }

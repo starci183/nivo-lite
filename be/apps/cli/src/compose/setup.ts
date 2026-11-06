@@ -7,6 +7,8 @@ import { KnowledgeGapsModule } from "@modules/domain/knowledge-gaps"
 import { InstallationDirectoryService, MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule } from "@modules/domain/modules"
 import { OPENCLAW_RELOAD_SETTLE_MS, OpenclawAgentSyncModule } from "@modules/domain/openclaw-agent-sync"
 import { OpenclawModule } from "@modules/integrations/openclaw"
+import { ChatRoomDirectoryModule, ChatRoomDirectoryService } from "@modules/domain/chat-room-directory"
+import { teamChatEntities } from "@modules/domain/team-chat"
 import type { CliAppOptions } from "../cli.options"
 
 /**
@@ -22,9 +24,11 @@ export const cliSetupModules = (options: CliAppOptions): Array<DynamicModule> =>
             installations: InstallationDirectoryService,
             modules: ModuleProfilesService,
             connections: AgentBindingsService,
+            rooms: ChatRoomDirectoryService,
         },
         syncFreshMs: AGENTS_SYNC_FRESH_MS,
     }),
+    ChatRoomDirectoryModule.register({ isGlobal: true, rooms: teamChatEntities[0], seats: teamChatEntities[1] }),
     OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
     BrainFactsModule.register({ isGlobal: true }),
     KnowledgeGapsModule.register({ isGlobal: true }),

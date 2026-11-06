@@ -11,6 +11,7 @@ import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { stepViewOf } from "./agent-runs.mapper"
 import { jsonValueOf } from "./policies/json-value.policy"
+import { RESUMABLE_RUN, UNDONE_STEP } from "./policies/run-status.policy"
 import { subjectOfRun } from "./policies/run-subject.policy"
 import type {
     OptionalFailedStep,
@@ -59,8 +60,9 @@ export class AgentRunParkStoreService {
     }
 
     /**
-     * Puts a parked run back on its failed step and writes the job that drives it, in one transaction: the job exists exactly when the reset
-     * does. `input` replaces the failed step's input when a handler re-read it; `auto` bounds the tries of the machine by `max`.
+     * Puts a run that stopped on a failed step (parked, failed after its tries, or dead) back on that step with a fresh budget of tries and
+     * writes the job that drives it, in one transaction: the job exists exactly when the reset does. The job's key is the version of the failed
+     * step the request read, so one request is one job: a second request finds the step already moved and the run running, and does nothing. `input` replaces the failed step's input when a handler re-read it; `auto` bounds the tries of the machine by `max`.
      */
     resumeRun(request: ResumeWrite): Promise<ResumeAnswer> {
         return this.entityManager.transaction(async (tx) => {
@@ -69,7 +71,7 @@ export class AgentRunParkStoreService {
                 await this.queue.enqueueAdvance(
                     { workspaceId: answer.workspaceId, runId: request.runId },
                     answer.stepKey,
-                    `resume-${String(answer.at)}`,
+                    answer.effectKey,
                     tx,
                 )
             }
@@ -81,8 +83,10 @@ export class AgentRunParkStoreService {
         const run = await this.records.run(scoped, request.runId)
         if (run === null) return { kind: "not_found" }
         if (run.status === "compensated" || run.status === "compensating") return { kind: "compensated" }
-        if (run.status !== "parked") return { kind: "not_parked" }
-        const failed = (await this.records.stepsOf(scoped, request.runId)).find((step) => step.status === "failed")
+        if (!RESUMABLE_RUN.includes(run.status)) return { kind: "not_parked" }
+        const steps = await this.records.stepsOf(scoped, request.runId)
+        if (steps.some((step) => UNDONE_STEP.includes(step.status))) return { kind: "compensated" }
+        const failed = steps.find((step) => step.status === "failed")
         if (failed === undefined) return { kind: "no_failed_step" }
         if (request.auto && run.resumeAttempts >= request.max) return { kind: "exhausted" }
         const now = this.clock.now()
@@ -121,7 +125,7 @@ export class AgentRunParkStoreService {
             stepKey: failed.stepKey,
             workspaceId: request.workspaceId,
             errorCode: failed.errorCode,
-            at: now.getTime(),
+            effectKey: `resume-${failed.version}`,
         }
     }
 
@@ -157,19 +161,25 @@ export class AgentRunParkStoreService {
         })
     }
 
-    /** The parked runs of a workspace for a person to look at, newest first, at most `limit`; a run with no failed step is left out. */
+    /** The runs of a workspace that stopped on a failed step (parked, failed or dead) for a person to look at, newest first, at most `limit`; a run with no failed step is left out. */
     parkedFacts(workspaceId: string, limit: number): Promise<ReadonlyArray<ParkedFacts>> {
         return this.store.at(workspaceId, undefined, async (scoped) => {
-            const runs = await this.records.runsOf(
-                scoped,
-                "parked",
-                null,
-                [
-                    ["resumeNotBefore", "asc"],
-                    ["id", "asc"],
-                ],
-                Math.min(limit, CANDIDATES_MAX),
-            )
+            const runs = (
+                await Promise.all(
+                    RESUMABLE_RUN.map((status) =>
+                        this.records.runsOf(
+                            scoped,
+                            status,
+                            null,
+                            [
+                                ["resumeNotBefore", "asc"],
+                                ["id", "asc"],
+                            ],
+                            Math.min(limit, CANDIDATES_MAX),
+                        ),
+                    ),
+                )
+            ).flat()
             const newestFirst = runs.toSorted(
                 (a, b) => (b.endedAt?.getTime() ?? 0) - (a.endedAt?.getTime() ?? 0) || b.id.localeCompare(a.id),
             )
@@ -189,13 +199,15 @@ export class AgentRunParkStoreService {
                     parkedAt: (run.endedAt ?? new Date(0)).toISOString(),
                 })
             })
-            return found
+            return found.slice(0, limit)
         })
     }
 
     /** Where one run of the workspace stands; null when the workspace has no such run. */
     async standingOf(workspaceId: string, runId: string): Promise<OptionalRunStanding> {
         const run = await this.store.runById(workspaceId, runId)
-        return run?.workspaceId === workspaceId ? { agentId: run.agentId, parked: run.status === "parked" } : null
+        return run?.workspaceId === workspaceId
+            ? { agentId: run.agentId, parked: RESUMABLE_RUN.includes(run.status) }
+            : null
     }
 }

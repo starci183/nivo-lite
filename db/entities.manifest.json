@@ -308,6 +308,7 @@
       "partition": "records_chat_conversation",
       "checks": [
         "records_chat_conversation_agent_id_chk",
+        "records_chat_conversation_avatar_url_chk",
         "records_chat_conversation_channel_chk",
         "records_chat_conversation_connection_id_chk",
         "records_chat_conversation_connector_party_id_chk",
@@ -322,6 +323,8 @@
         "records_chat_conversation_lead_id_chk",
         "records_chat_conversation_message_count_chk",
         "records_chat_conversation_name_chk",
+        "records_chat_conversation_profile_at_chk",
+        "records_chat_conversation_profile_tried_at_chk",
         "records_chat_conversation_status_chk",
         "records_chat_conversation_unanswered_chk",
         "records_chat_conversation_waiting_chk"
@@ -333,6 +336,7 @@
         "records_chat_conversation_customer",
         "records_chat_conversation_key",
         "records_chat_conversation_last_text_trgm_idx",
+        "records_chat_conversation_lead_created",
         "records_chat_conversation_lead_recent",
         "records_chat_conversation_name_trgm_idx",
         "records_chat_conversation_recent",
@@ -535,7 +539,8 @@
         "records_payment_claim_key",
         "records_payment_claim_lead_claimed",
         "records_payment_claim_settled_transaction_key",
-        "records_payment_claim_status_claimed"
+        "records_payment_claim_status_claimed",
+        "records_payment_claim_status_recent"
       ]
     },
     {
@@ -556,13 +561,16 @@
         "records_payment_transaction_status_chk"
       ],
       "indexes": [
+        "records_payment_transaction_amount_recent",
         "records_payment_transaction_direction_occurred",
         "records_payment_transaction_direction_status_occurred",
         "records_payment_transaction_external_ref_key",
         "records_payment_transaction_invoice",
+        "records_payment_transaction_key",
         "records_payment_transaction_occurred",
         "records_payment_transaction_order_key",
-        "records_payment_transaction_status_occurred"
+        "records_payment_transaction_status_occurred",
+        "records_payment_transaction_status_recent"
       ]
     },
     {
@@ -594,6 +602,7 @@
         "records_sales_lead_due",
         "records_sales_lead_email_key",
         "records_sales_lead_email_trgm_idx",
+        "records_sales_lead_key",
         "records_sales_lead_name",
         "records_sales_lead_need_trgm_idx",
         "records_sales_lead_needs",

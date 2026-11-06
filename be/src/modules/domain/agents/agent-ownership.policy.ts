@@ -6,9 +6,6 @@ import type { AgentEntity } from "./persistence/entities"
 /** The workspace roles an agent can be assigned to, in the order the page shows them. */
 export const ASSIGNABLE_ROLES: ReadonlyArray<WorkspaceRole> = ["owner", "manager", "staff"]
 
-/** The keys of the department rooms (the Hub rooms table accepts exactly these). */
-export const ROOM_KEYS: ReadonlyArray<string> = ["executive", "frontdesk", "sales", "marketing", "care", "accounting"]
-
 const ROLE_NAMES: ReadonlySet<string> = new Set(ASSIGNABLE_ROLES)
 
 /** Whether a text names a workspace role an agent can be assigned by. */

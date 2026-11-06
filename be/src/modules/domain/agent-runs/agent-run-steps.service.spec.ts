@@ -125,7 +125,7 @@ describe("AgentRunStepsService.execute", () => {
             kind: "failed",
             code: "no_handler",
         })
-        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", "turn", "no_handler")
+        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", "turn", "no_handler", {})
     })
 })
 
@@ -167,7 +167,7 @@ describe("AgentRunStepsService.execute failures", () => {
             expect.anything(),
         )
         expect(resume.markParked).toHaveBeenCalledWith("ws-1", "run-1")
-        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", "turn", "handler_threw")
+        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", "turn", "handler_threw", {})
     })
 
     it("parks a step the handler answered failed instead of undoing the steps done before it", async () => {
@@ -198,6 +198,61 @@ describe("AgentRunStepsService.execute failures", () => {
             expect.anything(),
             expect.objectContaining({ code: "SLOW_TIMEOUT" }),
         )
+    })
+})
+
+describe("AgentRunStepsService the cause of a failure", () => {
+    class Coded extends DomainError<string> {}
+    const PARAMS = { problem: "QUERY_NOT_INDEXED", at: "order", entity: "chat.message" }
+
+    it("logs the code and the secret-free params of a domain error a handler throws, with the failed step and the park", async () => {
+        const { service, logger, deadLetter } = await build(
+            new Coded({ code: "ENTITY_ENGINE_QUERY_INVALID", params: PARAMS }),
+            {
+                steps: [doneDoor],
+            },
+        )
+
+        await service.execute(stepViewOf(), SIGNAL)
+
+        expect(logger.error).toHaveBeenCalledWith(AgentRunsLogEvent.HandlerThrew, expect.any(Error), {
+            runId: "run-1",
+            stepKey: "turn",
+            code: "ENTITY_ENGINE_QUERY_INVALID",
+            params: PARAMS,
+        })
+        expect(logger.warn).toHaveBeenCalledWith(AgentRunsLogEvent.StepFailed, {
+            runId: "run-1",
+            stepKey: "turn",
+            code: "ENTITY_ENGINE_QUERY_INVALID",
+            params: PARAMS,
+        })
+        expect(logger.warn).toHaveBeenCalledWith(AgentRunsLogEvent.RunParked, {
+            runId: "run-1",
+            stepKey: "turn",
+            code: "ENTITY_ENGINE_QUERY_INVALID",
+            params: PARAMS,
+        })
+        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", "turn", "ENTITY_ENGINE_QUERY_INVALID", PARAMS)
+    })
+
+    it("logs no params for an error that carries none, and the params of a retry", async () => {
+        const { service, logger } = await build(Object.assign(new Error("reset"), { code: "ECONNRESET" }))
+
+        await service.execute(stepViewOf({ attempt: 1 }), SIGNAL)
+
+        expect(logger.error).toHaveBeenCalledWith(AgentRunsLogEvent.HandlerThrew, expect.any(Error), {
+            runId: "run-1",
+            stepKey: "turn",
+            code: "handler_threw",
+            params: {},
+        })
+        expect(logger.warn).toHaveBeenCalledWith(AgentRunsLogEvent.StepRetry, {
+            runId: "run-1",
+            stepKey: "turn",
+            code: "handler_threw",
+            params: {},
+        })
     })
 })
 
@@ -280,7 +335,7 @@ describe("AgentRunStepsService.fail undoing and parking", () => {
             expect.anything(),
         )
         expect(compensation.run).not.toHaveBeenCalled()
-        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", "turn", "bad")
+        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", "turn", "bad", {})
     })
 
     it("sends an unknown tool outcome to a person at once and never retries it", async () => {
@@ -292,7 +347,7 @@ describe("AgentRunStepsService.fail undoing and parking", () => {
             kind: "failed",
             code: TOOL_OUTCOME_UNKNOWN,
         })
-        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", "turn", TOOL_OUTCOME_UNKNOWN)
+        expect(deadLetter.tell).toHaveBeenCalledWith("ws-1", "run-1", "turn", TOOL_OUTCOME_UNKNOWN, {})
     })
 })
 

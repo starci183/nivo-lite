@@ -49,6 +49,9 @@ export const transactionEntity: EntityDefinition<TransactionFields> = defineEnti
         invoice: { kind: "toOne", target: "accounting.invoice" },
     },
     indexes: [
+        { name: "key", on: ["id"] },
+        { name: "amount_recent", on: ["amountVnd", { desc: "createdAt" }, { desc: "id" }] },
+        { name: "status_recent", on: ["status", { desc: "createdAt" }, { desc: "id" }] },
         { name: "occurred", on: [{ desc: "occurredAt" }, { desc: "id" }] },
         { name: "status_occurred", on: ["status", { desc: "occurredAt" }, { desc: "id" }] },
         { name: "direction_occurred", on: ["direction", { desc: "occurredAt" }, { desc: "id" }] },

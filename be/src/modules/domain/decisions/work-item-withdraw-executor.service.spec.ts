@@ -88,7 +88,7 @@ describe("WorkItemWithdrawExecutorService", () => {
 
     it("lets any other failure through, so the undo is tried again", async () => {
         const { engine, executor } = await build()
-        const failure = new DecisionsError({ code: DecisionsErrorCode.StateChanged })
+        const failure = new DecisionsError({ code: DecisionsErrorCode.WorkBusy })
         engine.resumeWork.mockRejectedValueOnce(failure).mockRejectedValueOnce(new Error("db down"))
 
         await expect(executor.execute(TURN, { id: "item-1" }, CALL)).rejects.toBe(failure)

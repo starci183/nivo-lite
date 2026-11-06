@@ -121,7 +121,7 @@ const options = {
     sepay: { apiBase: "https://sepay.invalid", timeoutMs: 1000 },
     connectionPoll: { schedule: WIRING_POLL_SCHEDULE, redis: undefined },
     redis: { connectTimeoutMs: 1000 },
-    entityEngine: { cursorKey: new Secret("wiring-fixture-cursor-key"), buildId: undefined },
+    entityEngine: { cursorKey: new Secret(Buffer.alloc(32, 9).toString("base64")), buildId: undefined },
     remoteFiles: { maxBytes: 10 * 1024 * 1024, timeoutMs: 1000, maxRedirects: 3 },
     zaloProvider: { replyWindowMs: 7 * DAY_MS, staleAfterMs: DAY_MS },
     agentWork: { debounceMs: 0 },

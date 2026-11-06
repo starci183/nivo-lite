@@ -5,7 +5,15 @@ import { isRecord } from "@modules/platform/primitives"
 import { ZaloError, ZaloErrorCode } from "./errors/zalo.error"
 import { InjectZaloOptions } from "./zalo.decorators"
 import { RENEWAL_GRANT_FIELD } from "./zalo.contracts"
-import type { ZaloChatMessage, ZaloData, ZaloMethod, ZaloTokens, ZnsMessage, ZnsReceipt } from "./zalo.contracts"
+import type {
+    ZaloChatMessage,
+    ZaloData,
+    ZaloMethod,
+    ZaloTokens,
+    ZaloUserProfile,
+    ZnsMessage,
+    ZnsReceipt,
+} from "./zalo.contracts"
 import type { ZaloOptions } from "./zalo.options"
 import { zaloErrorCodeOf } from "./zalo-failure.policy"
 import { challengeOf } from "./zalo-oauth.policy"
@@ -147,15 +155,24 @@ export class ZaloClient {
         return { messageId: typeof data.msg_id === "string" ? data.msg_id : "" }
     }
 
-    /** The customer's display name, or an empty text when Zalo does not say: the name only labels the conversation. */
-    async userDisplayName(accessToken: string, userId: string): Promise<string> {
+    /** What Zalo says of a customer (the user detail): the display name and the picture link, each an empty text when Zalo does not say. */
+    async userProfile(accessToken: string, userId: string): Promise<ZaloUserProfile> {
         const data = await this.call(
             accessToken,
             "GET",
             `/v3.0/oa/user/detail?data=${encodeURIComponent(JSON.stringify({ user_id: userId }))}`,
         )
         const name = data.display_name ?? data.user_alias
-        return typeof name === "string" ? name.trim() : ""
+        const avatar = data.avatar
+        return {
+            name: typeof name === "string" ? name.trim() : "",
+            avatarUrl: typeof avatar === "string" ? avatar.trim() : "",
+        }
+    }
+
+    /** The customer's display name, or an empty text when Zalo does not say: the name only labels the conversation. */
+    async userDisplayName(accessToken: string, userId: string): Promise<string> {
+        return (await this.userProfile(accessToken, userId)).name
     }
 
     /**

@@ -3,23 +3,30 @@ import { ChatConversationsService, ChatMessagesService } from "@modules/domain/c
 import type { ChatStoredReply } from "@modules/domain/chat-records"
 import { McpGatewayError, McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
+import { ChannelCustomerProfileService } from "./channel-customer-profile.service"
 import { ChannelDeliveryService } from "./channel-delivery.service"
-import { CHAT_SEND_INPUT_SCHEMA, CHAT_SEND_SCHEMA } from "./chat-send-native.schema"
+import {
+    CHAT_PROFILE_INPUT_SCHEMA,
+    CHAT_PROFILE_SCHEMA,
+    CHAT_SEND_INPUT_SCHEMA,
+    CHAT_SEND_SCHEMA,
+} from "./chat-send-native.schema"
 import type { ChatSendInput } from "./chat-send-native.schema"
 
 /** The shape of the id of a record: only a replay key of this shape can name a line already stored in the conversation. */
 const MESSAGE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-/** The expected reasons `chat.send` refuses with. */
-type ChatSendRefusal = "not_found" | "connection_refused" | "delivery_unknown"
+/** The expected reasons `chat.send` and `chat.profile` refuse with. */
+type ChatSendRefusal = "not_found" | "connection_refused" | "delivery_unknown" | "profile_unavailable"
 
 /** The refusal of an expected case: an answer to the caller, never a failure of the connector. */
 const refusal = (reason: ChatSendRefusal): McpGatewayError =>
     new McpGatewayError({ code: McpGatewayErrorCode.NativeRefused, params: { reason } })
 
 /**
- * The chat capability of the NIVO MCP door: `chat.send` says one text in a customer conversation on its own channel. It is for
- * internal callers only (a declared job or a graph effect), never for a customer or a customer-facing agent.
+ * The chat capability of the NIVO MCP door: `chat.send` says one text in a customer conversation on its own channel, and `chat.profile`
+ * reads what that channel says of the customer (name and picture). Both are for internal callers only (a declared job, a graph effect or
+ * the profile round), never for a customer or a customer-facing agent.
  */
 export const CHAT_MANIFEST: NativeConnectorManifest = {
     key: "chat",
@@ -39,6 +46,17 @@ export const CHAT_MANIFEST: NativeConnectorManifest = {
             domain: "chat.send",
             internalOnly: true,
         },
+        {
+            name: "profile",
+            description:
+                "Reads what the channel says of the customer of a conversation: their display name and picture link, each empty when the channel gives none. Refused when the channel cannot say.",
+            scope: "read",
+            defaultMode: "auto",
+            inputSchema: CHAT_PROFILE_INPUT_SCHEMA,
+            argumentSchema: CHAT_PROFILE_SCHEMA,
+            domain: "chat.profile",
+            internalOnly: true,
+        },
     ],
 }
 
@@ -51,15 +69,29 @@ export class ChatSendNativeService implements NativeAdapter {
         private readonly conversations: ChatConversationsService,
         private readonly messages: ChatMessagesService,
         private readonly delivery: ChannelDeliveryService,
+        private readonly customers: ChannelCustomerProfileService,
     ) {}
 
     /** Runs one chat tool. */
     async invoke(workspaceId: string, tool: string, args: GatewayJson, _caller: NativeCaller): Promise<GatewayJson> {
+        if (tool === "profile") return this.profile(workspaceId, args)
         if (tool !== "send") throw new McpGatewayError({ code: McpGatewayErrorCode.UnknownTool, params: { tool } })
         const parsed = CHAT_SEND_SCHEMA.safeParse(args)
         if (!parsed.success) throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool } })
         await this.send(workspaceId, parsed.data)
         return { ok: true }
+    }
+
+    /** What the channel says of the customer of the conversation; refused when the conversation is not there or the channel cannot say. */
+    private async profile(workspaceId: string, args: GatewayJson): Promise<GatewayJson> {
+        const parsed = CHAT_PROFILE_SCHEMA.safeParse(args)
+        if (!parsed.success)
+            throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool: "profile" } })
+        const target = await this.conversations.targetOf(workspaceId, parsed.data.conversationId)
+        if (target.kind !== "ok") throw refusal("not_found")
+        const profile = await this.customers.profileOf(target.value)
+        if (profile === null) throw refusal("profile_unavailable")
+        return { name: profile.name, avatarUrl: profile.avatarUrl }
     }
 
     private async send(workspaceId: string, input: ChatSendInput): Promise<void> {

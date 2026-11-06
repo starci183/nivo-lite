@@ -8,8 +8,8 @@ export enum WorkEngineLogEvent {
     MarkFailedFailed = "decisions.mark_failed_failed",
     /** A line of the evidence log could not be written; the work goes on. */
     EvidenceFailed = "decisions.evidence_failed",
-    /** A line of the Office thread could not be written; the work goes on. */
-    OfficeFailed = "decisions.office_failed",
+    /** A line to the team chat could not be written; the work goes on. */
+    LineFailed = "decisions.line_failed",
     /** The status of an inbound event could not be set; the work goes on. */
     InboundStatusFailed = "decisions.inbound_status_failed",
     /** The receiving instance of a command could not be resolved; the database trigger still attributes the item. */

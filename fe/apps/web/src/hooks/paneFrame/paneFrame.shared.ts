@@ -52,38 +52,3 @@ export const paneGridOf = (input: PaneGridInput): PaneGridLayout => {
         rows: { base: ["auto", "fill"], medium: ["auto", "fill"], wide: ["auto", "fill"] },
     }
 }
-
-/** What decides the arrangement of a chat surface: the rooms list beside the thread, or the thread alone (the panel of one agent). */
-interface ChatGridInput {
-    /** The surface has the list of rooms (`listHead`, `list`). */
-    readonly hasList: boolean
-    /** The one pane a phone shows when there is a list. */
-    readonly phone: "list" | "main"
-}
-
-/**
- * The areas and tracks of a chat surface: a head band, the thread that scrolls and the composer pinned under it, beside the rooms
- * list from 48rem. A phone shows the list or the thread alone. Without a list the three areas stand in one column.
- */
-export const chatGridOf = (input: ChatGridInput): PaneGridLayout => {
-    const thread = ["head", "thread", "composer"]
-    if (!input.hasList) {
-        return {
-            areas: { base: thread, medium: thread },
-            columns: { base: ["fill"], medium: ["fill"] },
-            rows: { base: ["auto", "fill", "auto"], medium: ["auto", "fill", "auto"] },
-        }
-    }
-    const isListShown = input.phone === "list"
-    return {
-        areas: {
-            base: isListShown ? ["listHead", "list"] : thread,
-            medium: ["listHead head", "list thread", "list composer"],
-        },
-        columns: { base: ["fill"], medium: ["wide", "fill"] },
-        rows: {
-            base: isListShown ? ["auto", "fill"] : ["auto", "fill", "auto"],
-            medium: ["auto", "fill", "auto"],
-        },
-    }
-}

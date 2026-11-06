@@ -64,6 +64,7 @@
     "consoleTitle": "Bảng điều khiển đội NIVO",
     "accountDescription": "Quản trị nền tảng",
     "navWorkspaces": "Workspace",
+    "workspacesEyebrow": "Workspace",
     "navHealth": "Sức khỏe nền tảng",
     "empty": "—",
     "none": "không có",
@@ -230,7 +231,6 @@
     "errorBody": "Không tải được các cuộc trò chuyện. Thử lại sau ít phút.",
     "members": "thành viên",
     "groupLine": "Nhóm",
-    "openFull": "Mở đầy đủ",
     "noMessageYet": "Chưa có tin nhắn",
     "attachmentLine": "Đã gửi một tệp",
     "dayToday": "Hôm nay",
@@ -3431,12 +3431,13 @@
     "catalogTitle": "Danh mục agent",
     "catalogDescription": "Mua agent để thêm một trợ lý AI vào đội ngũ. Agent có sẵn có thể dùng ngay.",
     "open": "Mở {name}",
-    "statusPaused": "Tạm dừng",
     "chat": "Chat",
-    "suggestTitle": "Gợi ý thiết lập bằng AI",
-    "kindCustomer": "Khách hàng"
+    "suggestTitle": "Gợi ý thiết lập bằng AI"
   },
   "agentWork": {
+    "viewsLabel": "Công việc của trợ lý",
+    "viewWork": "Việc đang làm",
+    "viewRuns": "Lượt chạy",
     "saved": "Đã lưu",
     "paneLabel": "Công việc của trợ lý",
     "emptyWork": "Trợ lý này chưa có công việc nào để hiển thị.",
@@ -3840,9 +3841,7 @@
   },
   "promoAds": {
     "leadsRowTitle": "Khách hàng từ website có thể được ghi nhận tự động",
-    "welcomeClose": "Ẩn lời chào",
     "welcomeTitle": "Chào mừng đến Founding 50",
-    "welcomeText": "Giá sáng lập của bạn đã được giữ. Bước tiếp theo: dùng thử Chatbot như một khách hàng.",
     "summaryTitle": "Tóm tắt đơn hàng"
   },
   "secondBrain": {
@@ -3980,8 +3979,6 @@
     "stage_proposal": "đề xuất",
     "stage_won": "chốt được",
     "stage_lost": "không chốt",
-    "takenOver": "{user} đã tiếp quản hội thoại — AI tạm im lặng",
-    "returnedToAi": "{user} đã trả hội thoại lại cho AI",
     "demoHBody": "Nhờ xác nhận đơn nội thất showroom, 45 triệu đồng.",
     "demoPayBody": "Nhận chuyển khoản, nội dung không rõ"
   },

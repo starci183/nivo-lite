@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useEffect, useRef } from "react"
-import { useBrainTodoCount } from "@/hooks/brain"
+import { useBrainTodoCount } from "./useBrainTodoCount"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref, workspaceHref } from "@/modules/routes"
 import { isDocumentActive } from "@/modules/documents"

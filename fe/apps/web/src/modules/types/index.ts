@@ -27,7 +27,7 @@ export type {
 export type { ConsoleIconName, ConsoleNavItem, ConsoleSessionView, ConsoleWorkspace } from "./console"
 export { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "./console"
 export type { Access, Environment, Provider, ProviderKind, Purpose, AgentOption, Connection } from "./connections"
-export type { ConnectionAgentRowView, ConnectionStatus, ConnectionTone, ConnectionCheck } from "./connections"
+export type { ConnectionStatus, ConnectionTone, ConnectionCheck } from "./connections"
 export type { ConnectionFactView, ConnectionHeadView, ConnectionPageHeadView } from "./connections"
 export type { ConnectionPageHeadCommands, ConnectionLineView, ConnectionRailLinesView } from "./connections"
 export type { ConnectionRefusalView, ConnectionNotice, ConnectionTilesView, ConnectorAudience } from "./connections"
@@ -148,7 +148,6 @@ export type { InviteAction, InviteRowView, TeamPanesBaseProps } from "./team"
 export type { AccountSignInView, SessionRowView } from "./account"
 export type {
     ZaloCheckLineView,
-    ZaloEventLineView,
     ZaloFactView,
     ZaloHeadView,
     ZaloPasteView,
@@ -204,3 +203,16 @@ export { textFieldsOf, type TextFieldItem } from "./form-fields"
 export type { BookingServiceView, BookingResourceView } from "./booking"
 export type { HiringCandidateDialog, HiringRequestOutcome } from "./hiring-model-workbench-candidate"
 export type { HiringWorkbenchCopy } from "./hiring-model-workbench-copy"
+export type { ChatParty, ChatPartyKind, TeamChatApprovalStatus, TeamChatApprovalView } from "./team-chat"
+export type { TeamChatMessageRow, TeamChatRoomRow, TeamChatVerdict } from "./team-chat"
+export type {
+    TeamChatComposerProps,
+    TeamChatMessagesCopy,
+    NewChatOption,
+    TeamChatNewChatProps,
+    TeamChatRoomCopy,
+    TeamChatRoomViewProps,
+    TeamChatRoomHandlers,
+    TeamChatRoomsViewProps,
+    TeamChatRoomsHandlers,
+} from "./team-chat"

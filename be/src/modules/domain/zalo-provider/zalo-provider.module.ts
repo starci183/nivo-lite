@@ -5,6 +5,8 @@ import { MessageInboxPollSourcesService } from "./message-inbox-poll-sources.ser
 import { ZaloInboxPollerService } from "./zalo-inbox-poller.service"
 import { ZaloInboxPollTriggerService } from "./zalo-poll-trigger.service"
 import { ZaloInboxPollService } from "./zalo-poll.service"
+import { ZaloProfileService } from "./zalo-profile.service"
+import { ZaloReconcileService } from "./zalo-reconcile.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./zalo-provider.module-definition"
 
 const PROVIDERS = [
@@ -12,6 +14,8 @@ const PROVIDERS = [
     ZaloInboxPollService,
     ZaloInboxPollTriggerService,
     MessageInboxPollSourcesService,
+    ZaloProfileService,
+    ZaloReconcileService,
 ]
 
 @Module({})

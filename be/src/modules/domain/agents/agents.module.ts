@@ -2,9 +2,9 @@ import { Module } from "@nestjs/common"
 import { AGENT_TAG_RIGHTS } from "@modules/domain/agent-work"
 import { AgentTagEffectService } from "./agent-tag-effect.service"
 import type { DynamicModule } from "@nestjs/common"
-import { OFFICE_ROOMS_AGENTS } from "@modules/domain/office-rooms"
 import { AgentsQueueModule } from "@modules/queues/agents"
 import { AgentBundleService } from "./agent-bundle.service"
+import { OFFICE_ROOMS_AGENTS } from "@modules/domain/office-rooms"
 import { AgentDirectoryModule } from "./agent-directory.module"
 import { AgentCreationService } from "./agent-creation.service"
 import { AgentDirectoryService } from "./agent-directory.service"
@@ -13,6 +13,7 @@ import { AgentLensesService } from "./agent-lenses.service"
 import { AgentOwnershipService } from "./agent-ownership.service"
 import {
     AGENTS_CONNECTIONS,
+    AGENTS_ROOMS,
     AGENTS_INSTALLATIONS,
     AGENTS_KNOWLEDGE,
     AGENTS_MODULES,
@@ -48,11 +49,12 @@ export class AgentsModule extends ConfigurableModuleClass {
             { provide: AGENTS_INSTALLATIONS, useClass: options.ports.installations },
             { provide: AGENTS_MODULES, useClass: options.ports.modules },
             { provide: AGENTS_CONNECTIONS, useExisting: options.ports.connections },
+            { provide: AGENTS_ROOMS, useExisting: options.ports.rooms },
+            { provide: OFFICE_ROOMS_AGENTS, useExisting: AgentDirectoryService },
             PauseClient,
             AgentsService,
             AgentCreationService,
             EngineStatusService,
-            { provide: OFFICE_ROOMS_AGENTS, useExisting: AgentDirectoryService },
             AgentIdentityService,
             AgentBundleService,
             AgentOwnershipService,

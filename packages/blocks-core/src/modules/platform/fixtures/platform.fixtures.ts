@@ -1,5 +1,8 @@
 import type { ConnectionsRegionView, ItemsRegionView, KnowledgeRegionView } from "../../../views/views.types"
 import type { ModuleFixtures } from "../../module-fixtures"
+import { RUN_PARKED } from "../../../fixtures/run-timeline.fixtures"
+import type { AgentRunCounts, AgentRunRow } from "../agent-runs"
+import { PLATFORM_MESSAGES } from "../platform-messages"
 import type { InstallationFacts, InstallationView, ParkedRunsView } from "../platform.types"
 
 /** An installation with one enabled module and one the workspace has not enabled. */
@@ -118,8 +121,8 @@ export const KNOWLEDGE_VIEW: KnowledgeRegionView = {
 /** What the agent knows, with no open gap. */
 export const KNOWLEDGE_NONE: KnowledgeRegionView = { ...KNOWLEDGE_VIEW, gaps: null }
 
-/** Two runs the engine parked, about two orders. */
-export const PARKED_RUNS_VIEW: ParkedRunsView = {
+/** The view of two runs the engine parked, about two orders, with the words of one language of the platform messages. */
+const parkedRunsIn = (words: Readonly<Record<string, string>>): ParkedRunsView => ({
     count: "2",
     rows: [
         {
@@ -127,9 +130,9 @@ export const PARKED_RUNS_VIEW: ParkedRunsView = {
             module: "sales",
             subjectKind: "sales.order",
             subjectId: "order-2",
-            step: "confirm",
+            step: words["parked_step_confirm"] ?? "",
             errorCode: "DELIVERY_FAILED",
-            errorWords: "The message could not be sent",
+            errorWords: words["parked_error_delivery_failed"] ?? "",
             parkedAt: "2026-11-04T10:30:00.000Z",
         },
         {
@@ -137,19 +140,48 @@ export const PARKED_RUNS_VIEW: ParkedRunsView = {
             module: "sales",
             subjectKind: "sales.order",
             subjectId: "order-1",
-            step: "notify",
+            step: words["parked_step_notify"] ?? "",
             errorCode: "TIMEOUT",
-            errorWords: "The channel did not answer",
+            errorWords: words["parked_error_timeout"] ?? "",
             parkedAt: "2026-11-04T09:10:00.000Z",
         },
     ],
-}
+})
+
+/** Two runs the engine parked, in the default language (Vietnamese): the words are those of the platform messages. */
+export const PARKED_RUNS_VIEW: ParkedRunsView = parkedRunsIn(PLATFORM_MESSAGES.vi)
+
+/** The same two parked runs in English. */
+export const PARKED_RUNS_VIEW_EN: ParkedRunsView = parkedRunsIn(PLATFORM_MESSAGES.en)
 
 /** No run is parked. */
 export const PARKED_RUNS_NONE: ParkedRunsView = {
     count: null,
     rows: [],
 }
+
+/** The runs of an agent: one parked on a refused send, one failed, one running and one done. */
+export const AGENT_RUNS_VIEW: { readonly rows: ReadonlyArray<AgentRunRow>; readonly cursor: string | null } = {
+    rows: [
+        { id: "run-3", status: "parked", trigger: "zalo.message", when: "05/11/2026 15:00", duration: "1:12" },
+        { id: "run-4", status: "failed", trigger: "schedule.daily", when: "05/11/2026 09:00", duration: "0:04" },
+        { id: "run-5", status: "running", trigger: "zalo.message", when: "05/11/2026 15:20", duration: "0:09" },
+        { id: "run-1", status: "done", trigger: "zalo.message", when: "05/11/2026 08:00", duration: "1:07" },
+    ],
+    cursor: null,
+}
+
+/** The agent has not run yet. */
+export const AGENT_RUNS_NONE: { readonly rows: ReadonlyArray<AgentRunRow>; readonly cursor: string | null } = {
+    rows: [],
+    cursor: null,
+}
+
+/** How many runs the agent has under each filter. */
+export const AGENT_RUN_COUNTS: AgentRunCounts = { counts: { running: 1, parked: 1, done: 1, failed: 1 }, total: 4 }
+
+/** The agent has no run. */
+export const AGENT_RUN_COUNTS_NONE: AgentRunCounts = { counts: { running: 0, parked: 0, done: 0, failed: 0 }, total: 0 }
 
 /** What the prototype data port answers for the platform module. */
 export const PLATFORM_FIXTURES: ModuleFixtures = {
@@ -158,7 +190,14 @@ export const PLATFORM_FIXTURES: ModuleFixtures = {
         "platform.agent-done": { ready: DONE_VIEW, empty: DONE_NONE },
         "platform.agent-connections": { ready: CONNECTIONS_VIEW, empty: CONNECTIONS_NONE },
         "platform.agent-knowledge": { ready: KNOWLEDGE_VIEW, empty: KNOWLEDGE_NONE },
-        "platform.parked-runs": { ready: PARKED_RUNS_VIEW, empty: PARKED_RUNS_NONE },
+        "platform.parked-runs": {
+            ready: PARKED_RUNS_VIEW,
+            readyIn: { vi: PARKED_RUNS_VIEW, en: PARKED_RUNS_VIEW_EN },
+            empty: PARKED_RUNS_NONE,
+        },
+        "platform.agent-runs": { ready: AGENT_RUNS_VIEW, empty: AGENT_RUNS_NONE },
+        "platform.agent-run-counts": { ready: AGENT_RUN_COUNTS, empty: AGENT_RUN_COUNTS_NONE },
+        "platform.agent-run": { ready: RUN_PARKED },
     },
     actions: { "platform.resume-run": { ok: true } },
 }

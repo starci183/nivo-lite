@@ -270,3 +270,34 @@ export type OptionalChatLeadId = string | null
 
 /** The installation of a conversation (the one of its agent), or null when it has none. */
 export type OptionalChatInstallationId = string | null
+
+/** Which conversations of a connection owe a customer profile: never read, or read before a moment, and not tried since another moment. */
+export interface ChatProfileDue {
+    /** The connection whose customers are read. */
+    readonly connectionId: string
+    /** A profile read before this moment is stale. */
+    readonly refreshedBefore: Date
+    /** A conversation tried (read or failed) after this moment waits for the next round. */
+    readonly triedBefore: Date
+    /** The most conversations to answer. */
+    readonly limit: number
+}
+
+/** A conversation whose customer's profile is owed. */
+export interface ChatProfileCandidate {
+    /** The conversation. */
+    readonly id: string
+    /** The customer's id on the channel. */
+    readonly externalId: string
+}
+
+/** What a channel said of a customer, or null when it said nothing. */
+export type OptionalChatCustomerProfile = ChatCustomerProfile | null
+
+/** What a channel said of a customer. */
+export interface ChatCustomerProfile {
+    /** The display name; empty when the channel gave none. */
+    readonly name: string
+    /** The picture link; empty when the channel gave none. */
+    readonly avatarUrl: string
+}

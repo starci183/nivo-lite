@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useBrainTodoCount } from "@/hooks/brain"
+import { useBrainTodoCount } from "@/hooks/knowledge"
 import { useQueryChatUnreadSwr } from "@/hooks/swr"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"

@@ -5,7 +5,7 @@ import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { SetChatTypingMutation, SetChatTypingMutationVariables } from "../__generated__/graphql"
 
 /** Generated input of the SetChatTyping mutation. */
-export type MutateSetChatTypingRequest = WireInput<SetChatTypingMutationVariables["input"]>
+type MutateSetChatTypingRequest = WireInput<SetChatTypingMutationVariables["input"]>
 
 type MutateSetChatTypingResponse = SetChatTypingMutation
 

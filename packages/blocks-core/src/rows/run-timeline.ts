@@ -105,7 +105,7 @@ export const runStepsOf = (run: RunView, context: CellContext): ReadonlyArray<Ru
                 summary: call.summary ?? "",
             })),
             approvalPath: step.state === "waiting" ? (step.approvalPath ?? null) : null,
-            canResume: index === firstParked,
+            canResume: index === firstParked || step.canResume === true,
         }
     })
 }

@@ -2,7 +2,6 @@ import { builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
 import type { WorkBranchDecider } from "@modules/domain/authority-rules"
-import { OfficeLinesService } from "@modules/domain/messages"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -11,8 +10,10 @@ import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
 import type { Judgement } from "./work-engine.contracts"
-import { INBOUND_EVENT_STATUS } from "./work-engine.decorators"
+import { INBOUND_EVENT_STATUS, WORK_ASK_CARDS } from "./work-engine.decorators"
 import type { InboundEventStatus } from "./work-engine.port"
+import type { WorkAskCards } from "./work-lines.contracts"
+import { WorkLinesService } from "./work-lines.service"
 
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "An", locale: "en" }
 
@@ -74,9 +75,10 @@ const catalogDouble = mock<MessageCatalog>({
     }),
 })
 
-const build = async (waiting: WorkItem = waitingOf()) => {
+const build = async (waiting: WorkItem = waitingOf(), cards: number = 0) => {
     const evidence = jest.fn().mockResolvedValue(undefined)
     const office = jest.fn().mockResolvedValue(undefined)
+    const cardRooms = jest.fn().mockResolvedValue(cards)
     const inbound = jest.fn().mockResolvedValue(undefined)
     const markWaiting = jest.fn().mockResolvedValue(waiting)
     const route = jest.fn().mockResolvedValue(undefined)
@@ -91,7 +93,8 @@ const build = async (waiting: WorkItem = waitingOf()) => {
                 useValue: mock<ModuleCatalogService>({ nameOf: jest.fn().mockResolvedValue("Sales AI") }),
             },
             { provide: EvidenceService, useValue: mock<EvidenceService>({ log: evidence }) },
-            { provide: OfficeLinesService, useValue: mock<OfficeLinesService>({ post: office }) },
+            { provide: WORK_ASK_CARDS, useValue: mock<WorkAskCards>({ cardRooms }) },
+            { provide: WorkLinesService, useValue: mock<WorkLinesService>({ say: office }) },
             { provide: WORK_BRANCH_DECIDER, useValue: mock<WorkBranchDecider>({ route }) },
         ],
     }).compile()
@@ -99,6 +102,7 @@ const build = async (waiting: WorkItem = waitingOf()) => {
         service: moduleRef.get(WorkApprovalService),
         evidence,
         office,
+        cardRooms,
         inbound,
         markWaiting,
         route,
@@ -139,13 +143,30 @@ describe("WorkApprovalService", () => {
                 evidence: "engine.limitReached(limit=₫1,000,amount=₫5,000)",
             })
             expect(office).toHaveBeenCalledWith(ctx, {
-                dept: "sales",
+                department: "sales",
+                installationId: "inst-1",
                 body: "engine.ask(dept=Sales AI,reason=engine.reason.over_authority(),summary=Quote)",
-                lead_id: "lead-1",
-                work_item_id: "item-1",
-                installation_id: "inst-1",
+                key: "ask:item-1",
             })
             expect(inbound).toHaveBeenCalledWith(ctx, "in-1", "needs_decision", "lead-1")
+        })
+
+        it("says the line when the ask has no decision, or its decision has no card: approvers named, request not opened", async () => {
+            const noDecision = await build(waitingOf(), 3)
+            await noDecision.service.ask(ctx, itemOf(), proposalOf(), askOf())
+            expect(noDecision.office).toHaveBeenCalledTimes(1)
+            expect(noDecision.cardRooms).not.toHaveBeenCalled()
+
+            const notOpened = await build(waitingOf(), 0)
+            await notOpened.service.ask(ctx, itemOf(), proposalOf(), { ...askOf(), branchDecisionId: "decision-1" })
+            expect(notOpened.cardRooms).toHaveBeenCalledWith("ws-1", "decision-1")
+            expect(notOpened.office).toHaveBeenCalledTimes(1)
+        })
+
+        it("says no line when the approval card of its decision was posted: the card is the one message", async () => {
+            const posted = await build(waitingOf(), 2)
+            await posted.service.ask(ctx, itemOf(), proposalOf(), { ...askOf(), branchDecisionId: "decision-1" })
+            expect(posted.office).not.toHaveBeenCalled()
         })
 
         it("names missing fields before the limit and skips an absent inbound event", async () => {

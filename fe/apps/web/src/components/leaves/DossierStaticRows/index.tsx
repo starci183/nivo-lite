@@ -23,5 +23,3 @@ export const DossierStaticRows = (props: DossierStaticRowsProps) => (
         }))}
     />
 )
-
-export type { EvidenceItemView } from "@/hooks/brain"

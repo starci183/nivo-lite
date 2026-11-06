@@ -266,7 +266,7 @@ export type ResumeAnswer =
           readonly stepKey: string
           readonly workspaceId: string
           readonly errorCode: string | null
-          readonly at: number
+          readonly effectKey: string
       }
     | { readonly kind: "not_found" | "compensated" | "not_parked" | "no_failed_step" | "exhausted" }
 
@@ -338,7 +338,7 @@ export interface ParkedFacts {
 export interface RunStanding {
     /** The agent it works for. */
     readonly agentId: string
-    /** Whether it is parked now. */
+    /** Whether it stopped on a failed step and may be run again now: parked for a fix, failed after its tries, or dead. */
     readonly parked: boolean
 }
 

@@ -187,7 +187,7 @@ export class EntityMutationService {
                 return failure.constraint === null
                     ? { ok: false, reason: "invalid" }
                     : { ok: false, reason: "invalid", constraint: failure.constraint }
-            return this.failures.fail(cause, failure)
+            return this.failures.fail(cause, failure, entity)
         }
     }
 }

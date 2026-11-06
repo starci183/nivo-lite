@@ -1,3 +1,4 @@
+import type { ErrorParams } from "@modules/platform/errors"
 /** A JSON object a step keeps: bounded, masked, and enough to resume from the row alone. */
 export type StepJson = Readonly<Record<string, unknown>>
 
@@ -118,12 +119,16 @@ export type StepAnswer =
           readonly kind: "retry"
           /** Why. */
           readonly code: string
+          /** The secret-free parameters of the failure (the cause of an engine error): logged with the step, never stored. */
+          readonly params?: ErrorParams | undefined
       }
     | {
           /** The step cannot succeed. */
           readonly kind: "failed"
           /** Why. */
           readonly code: string
+          /** The secret-free parameters of the failure (the cause of an engine error): logged with the step, never stored. */
+          readonly params?: ErrorParams | undefined
       }
 
 /** A person's verdict on the work item a wait step holds. */

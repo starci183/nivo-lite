@@ -8,7 +8,8 @@ import { AGENTS_ROUTE, APP_ROUTES, workspaceHref } from "@/modules/routes"
 import { AgentsErrorPageBase } from "./component"
 
 /** Where in the agents area the failure happened. */
-type AgentsErrorScope = "catalog" | "frame" | "list" | "setup" | "settings" | "workbench" | "performance" | "work" | "chat"
+type AgentsErrorScope =
+    "catalog" | "frame" | "list" | "setup" | "settings" | "workbench" | "performance" | "work" | "chat"
 
 type AgentsErrorPageProps = {
     readonly scope: AgentsErrorScope

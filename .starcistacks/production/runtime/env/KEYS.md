@@ -79,7 +79,6 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `CHANNEL_BOT_TOKEN` | Bot token of the channel provisioning helper; optional. |
 | `ZALO_APP_SECRET` | Zalo app secret the channel provisioning cli (`connect-channel zalo`) seals into the new connection; read only through `ZALO_APP_SECRET_FILE` on the operator machine for that run, optional, and granted to no service. |
 | `ZALO_OA_SECRET` | Zalo Official Account secret key the same cli seals beside the app secret; read only through `ZALO_OA_SECRET_FILE`, optional, and granted to no service. |
-| `VPS_SSH_KEY` | SSH key the n8n host helper uses to reach the VPS; optional, the helper is off while absent. |
 | `HTTP_SECURITY_TRUSTED_PROXY_HOPS` | `0`, `1` or `2`: trusted proxy hops before the api; optional. |
 | `AI_BASE_URL` | The AI gateway base URL (`http://ai-router:8788/v1`), a stack value of the api and openclaw; the port is the declared `port` of the `ai-router` component. |
 | `STARCI_AI_KEY` | The one virtual key of the AI gateway (`sk-starci-nivo-...`), sealed in `ai`, read through `STARCI_AI_KEY_FILE` by the api and exported by the entrypoint wrapper for openclaw. |
@@ -132,6 +131,8 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 | `POSTGRES_PASSWORD` | `postgres` (declared, not yet sealed) | Superuser password of `db` (`POSTGRES_PASSWORD_FILE`); also read by `nivo-postgres-backup` for pg_dump. Migrations use it through `DATABASE_URL` (shell only, see the README). |
 | `VPS_HOST` | `vps` | The manager account `starci app stack` verbs connect to from the owner machine. |
 | `VPS_USER` | `vps` | The manager account `starci app stack` verbs connect to from the owner machine. |
+| `VPS_SSH_KEY` | `vps-ci` | The CI-only deploy key (`starci app stack connect` reads it from the sealed member `vps-ci`); no app container reads it. |
+| `VPS_KNOWN_HOSTS` | `vps-ci` | The pinned host keys of the swarm manager (`starci app stack connect` reads them from the sealed member `vps-ci`); no app container reads them. |
 | `DEMO_EMAIL` | `test-accounts` | Demo accounts of the post-deploy smoke tests. |
 | `DEMO_PASSWORD` | `test-accounts` | Demo accounts of the post-deploy smoke tests. |
 | `DEMO_STAFF_PASSWORD` | `test-accounts` | Demo accounts of the post-deploy smoke tests. |
