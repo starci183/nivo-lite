@@ -23,7 +23,13 @@ export const APPROVE_AND_SEND: ActionDefinition = defineAction({
     input: z.object({ id: z.string().min(1).max(MAX_ID), text: z.string().max(MAX_BODY).optional() }),
     ports: { conversations: CONVERSATIONS, messages: MESSAGES, members: membersPort, outbox: outboxPort },
     transactional: true,
-    refreshes: ["chatbot.proposals", "chatbot.messages", "chatbot.threads", "chatbot.thread-counts", "chatbot.channel-counts"],
+    refreshes: [
+        "chatbot.proposals",
+        "chatbot.messages",
+        "chatbot.threads",
+        "chatbot.thread-counts",
+        "chatbot.channel-counts",
+    ],
     run: async ({ conversations, messages, members, outbox }, input, context) => {
         const memberId = context.memberId
         const member = memberId === null ? null : await members.get(memberId)

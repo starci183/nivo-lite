@@ -38,7 +38,11 @@ const reject = (world: MemoryWorld, input: unknown) =>
     REJECT_PROPOSAL.execute?.(memoryProvider(world), input, STAFF_CONTEXT)
 
 /** A provider whose port `target` refuses every update with the given reason. */
-const failingUpdate = (world: MemoryWorld, target: PortDefinition<unknown>, reason: "stale" | "missing"): PortProvider => {
+const failingUpdate = (
+    world: MemoryWorld,
+    target: PortDefinition<unknown>,
+    reason: "stale" | "missing",
+): PortProvider => {
     const base = memoryProvider(world)
     const real = target.id === MESSAGES.id ? messageApi(world) : base.implementationOf(target)
     return {
@@ -83,7 +87,10 @@ describe("the chatbot.approve-and-send action", () => {
 
     it("refuses a line that is gone, already posted, or not a line", async () => {
         const world = await worldWithProposal()
-        expect(await approve(world, { id: "missing" })).toMatchObject({ ok: false, message: { key: "proposal_closed" } })
+        expect(await approve(world, { id: "missing" })).toMatchObject({
+            ok: false,
+            message: { key: "proposal_closed" },
+        })
         await messageApi(world).insert({ ...proposedLine, status: "posted" }, { conversation: "c2" })
         expect(await approve(world, { id: "m2" })).toMatchObject({ ok: false, message: { key: "proposal_closed" } })
         await messageApi(world).insert({ junk: 1 }, {})
@@ -156,9 +163,17 @@ describe("the chatbot.reject-proposal action", () => {
 
     it("refuses when the line moved or is gone", async () => {
         const world = await worldWithProposal()
-        const stale = await REJECT_PROPOSAL.execute?.(failingUpdate(world, MESSAGES, "stale"), { id: "m1" }, STAFF_CONTEXT)
+        const stale = await REJECT_PROPOSAL.execute?.(
+            failingUpdate(world, MESSAGES, "stale"),
+            { id: "m1" },
+            STAFF_CONTEXT,
+        )
         expect(stale).toMatchObject({ ok: false, reason: "conflict" })
-        const gone = await REJECT_PROPOSAL.execute?.(failingUpdate(world, MESSAGES, "missing"), { id: "m1" }, STAFF_CONTEXT)
+        const gone = await REJECT_PROPOSAL.execute?.(
+            failingUpdate(world, MESSAGES, "missing"),
+            { id: "m1" },
+            STAFF_CONTEXT,
+        )
         expect(gone).toMatchObject({ ok: false, reason: "refused" })
     })
 })
