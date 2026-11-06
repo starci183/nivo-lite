@@ -10,6 +10,7 @@ export const entityEngineStoreModules = (options: McpAppOptions): Array<DynamicM
         storeOnly: true,
         entities: FLOW_F_ENTITIES,
         jobs: [],
-        ...options.entityEngine,
+        cursorKey: options.entityEngine.cursorKey,
+        buildId: options.entityEngine.buildId,
     }),
 ]

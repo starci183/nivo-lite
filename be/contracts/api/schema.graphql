@@ -368,80 +368,6 @@ type AgentAvatarUploadType {
   token: String!
 }
 
-type AgentChatConversationType {
-  channel: String!
-  createdAt: String!
-  handledBy: String
-  id: ID!
-  kind: String!
-  leadId: ID
-  visitorName: String
-}
-
-input AgentChatConversationsInput {
-  agentId: ID! @inputBounds(maxLength: 36)
-}
-
-type AgentChatFileType {
-  contentType: String!
-  id: ID!
-  name: String!
-  url: String!
-}
-
-type AgentChatFileUploadType {
-  path: String!
-  signedUrl: String!
-}
-
-type AgentChatHolderType {
-  conversationId: ID!
-  handledBy: String
-}
-
-type AgentChatMessageType {
-  body: String!
-  createdAt: String!
-  files: [AgentChatFileType!]!
-  id: ID!
-  role: String!
-}
-
-input AgentChatMessagesInput {
-  conversationId: ID! @inputBounds(maxLength: 36)
-}
-
-input AgentChatPageInput {
-  agentId: ID! @inputBounds(maxLength: 36)
-  welcome: Boolean! = false
-}
-
-type AgentChatPageType {
-  avatarUrl: String
-  handle: String!
-  hasCustomerChannel: Boolean!
-  id: ID!
-  isActive: Boolean!
-  module: String!
-  name: String!
-  role: String!
-  showWelcome: Boolean!
-  workspaceId: ID!
-}
-
-input AgentChatTurnStatusInput {
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type AgentChatTurnStatusType {
-  conversationId: ID!
-  errorCode: String
-  id: ID!
-  jobId: ID!
-  resultMessageId: ID
-  status: String!
-}
-
 type AgentConnectionCandidateType {
   access: String
   accountMasked: String
@@ -1537,15 +1463,6 @@ type ChannelValueType {
   value: Int!
 }
 
-input ChatAnswerStatusInput {
-  workItemId: ID! @inputBounds(maxLength: 36)
-}
-
-type ChatHandlingType {
-  conversationId: ID!
-  handledBy: String
-}
-
 type ChatLastOwnMessageType {
   id: ID!
   seenBy: [ChatSeenMemberType!]!
@@ -1569,27 +1486,13 @@ enum ChatMessageStatus {
 }
 
 input ChatMuteInput {
-  conversationId: ID = null @inputBounds(maxLength: 36)
   muted: Boolean!
   room: String = null @inputBounds(maxLength: 20)
 }
 
 input ChatReceiptInput {
-  conversationId: ID = null @inputBounds(maxLength: 36)
   messageId: ID! @inputBounds(maxLength: 36)
   room: String = null @inputBounds(maxLength: 20)
-}
-
-type ChatReplyProgressType {
-  delivery: String
-  errorCode: String
-  id: ID!
-  messageId: ID
-  status: String!
-}
-
-input ChatReplyStatusInput {
-  messageId: ID! @inputBounds(maxLength: 36)
 }
 
 type ChatSeenMemberType {
@@ -1600,7 +1503,6 @@ type ChatSeenMemberType {
 }
 
 input ChatTargetInput {
-  conversationId: ID = null @inputBounds(maxLength: 36)
   room: String = null @inputBounds(maxLength: 20)
 }
 
@@ -1613,137 +1515,7 @@ type ChatTypingSignalType {
 }
 
 input ChatTypingTargetInput {
-  conversationId: String = null @inputBounds(maxLength: 36)
   room: String = null @inputBounds(maxLength: 20)
-}
-
-type ChatbotConversationLeadType {
-  company: String!
-  need: String!
-  stage: String!
-}
-
-type ChatbotConversationType {
-  channel: String!
-  handledBy: String
-  id: ID!
-  lastAt: String!
-  lastRole: String
-  lastText: String!
-  lead: ChatbotConversationLeadType
-  leadId: ID
-  messageCount: Int!
-  name: String!
-  respondentKind: String!
-  respondentName: String
-  unanswered: Boolean!
-  waiting: Boolean!
-}
-
-type ChatbotEscalationType {
-  draft: String!
-  question: String!
-  since: String!
-  staffName: String
-  workItemId: ID!
-}
-
-type ChatbotGapsType {
-  gaps: [ChatbotKnowledgeGapType!]!
-  lenses: [ChatbotLensType!]!
-}
-
-type ChatbotKnowledgeGapType {
-  attributeGuess: String
-  count: Int!
-  exampleConversationId: ID
-  firstSeenAt: String!
-  id: ID!
-  lastSeenAt: String!
-  module: String!
-  question: String!
-  reopenedCount: Int!
-  status: String!
-  topic: String
-}
-
-type ChatbotLeadType {
-  company: String!
-  email: String
-  id: ID!
-  name: String!
-  need: String!
-  phone: String
-  stage: String!
-}
-
-type ChatbotLensType {
-  audience: String!
-  module: String!
-  name: String!
-}
-
-type ChatbotMessageFileType {
-  contentType: String!
-  id: ID!
-  name: String!
-  url: String!
-}
-
-type ChatbotMessageType {
-  authorKind: String!
-  authorName: String
-  body: String!
-  createdAt: String!
-  delivery: String
-  deliveryError: String
-  files: [ChatbotMessageFileType!]!
-  id: ID!
-  role: String!
-}
-
-type ChatbotMetricsType {
-  leadsCaptured7d: Int!
-  p50FirstResponseMin: Float
-  sample: Int!
-  today: Int!
-  waiting: Int!
-}
-
-input ChatbotOverviewInput {
-  installationId: ID @inputBounds(maxLength: 36)
-}
-
-type ChatbotOverviewType {
-  conversations: [ChatbotConversationType!]!
-  metrics: ChatbotMetricsType!
-  nowIso: String!
-  waiting: [ChatbotWaitingType!]!
-  workspaceId: ID!
-}
-
-input ChatbotThreadInput {
-  conversationId: ID! @inputBounds(maxLength: 36)
-}
-
-type ChatbotThreadType {
-  conversation: ChatbotConversationType!
-  escalation: ChatbotEscalationType
-  externalId: String
-  handledAt: String
-  lead: ChatbotLeadType
-  messages: [ChatbotMessageType!]!
-}
-
-type ChatbotWaitingType {
-  channel: String!
-  conversationId: ID!
-  draft: String!
-  name: String!
-  question: String!
-  since: String!
-  staffName: String
-  workItemId: ID!
 }
 
 input CheckConnectionInput {
@@ -2328,10 +2100,6 @@ input CreateWorkspaceInput {
 }
 
 type CreateWorkspaceType {
-  id: ID!
-}
-
-type CreatedAgentChatConversationType {
   id: ID!
 }
 
@@ -4039,16 +3807,8 @@ input ListTelegramChatsInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
-input ListTelegramEventsInput {
-  connectionId: ID! @inputBounds(maxLength: 64)
-}
-
 input ListVideoProjectsInput {
   includeArchived: Boolean
-}
-
-input ListZaloEventsInput {
-  connectionId: ID! @inputBounds(maxLength: 64)
 }
 
 type ListingCardType {
@@ -4905,11 +4665,8 @@ type Mutation {
   renameModuleInstallation(input: RenameModuleInstallationInput!): ModuleInstallationType!
   reopenDossierFinding(input: DossierFindingRefInput!): DossierFindingType!
   requestAgentAvatarUpload(input: RequestAgentAvatarUploadInput!): AgentAvatarUploadType!
-  requestAgentChatFileUpload(input: RequestAgentChatFileUploadInput!): AgentChatFileUploadType!
   requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
   requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
-  requestChatAnswer(input: RequestChatAnswerInput!): ChatReplyProgressType!
-  requestChatReply(input: RequestChatReplyInput!): ChatReplyProgressType!
   requestContentDraft(input: RequestContentDraftInput!): ContentAiRequestedType!
   requestContentMediaUpload(input: RequestContentMediaUploadInput!): ContentMediaUploadType!
   requestContentMonthPlan(input: RequestContentMonthPlanInput!): ContentAiRequestedType!
@@ -4993,7 +4750,6 @@ type Mutation {
   saveVideoBrand(input: SaveVideoBrandInput!): VideoBrandType!
   saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
   saveZnsRenewal(input: SaveZnsRenewalInput!): ZnsRenewalType
-  sendAgentChatMessage(input: SendAgentChatMessageInput!): QueuedAgentChatTurnType!
   sendSmtpTest(input: SendSmtpTestInput!): SmtpTestResultType!
   sendZaloTestMessage(input: SendZaloTestInput!): ZaloTestSendType!
   setAgentAvatar(input: SetAgentAvatarInput!): AgentAckType!
@@ -5003,7 +4759,6 @@ type Mutation {
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
   setAgentWork(input: SetAgentWorkInput!): AgentWorkStateType!
-  setChatHandling(input: SetChatHandlingInput!): ChatHandlingType!
   setChatMuted(input: ChatMuteInput!): ChatMarkerAckType!
   setChatTyping(input: SetChatTypingInput!): ChatTypingSignalType!
   setConnectionAgents(input: SetConnectionAgentsInput!): Boolean!
@@ -5027,7 +4782,6 @@ type Mutation {
   setWorkspaceAgentWork(input: SetWorkspaceAgentWorkInput!): WorkspaceAgentWorkType!
   settleWonDeal(input: SettleWonDealInput!): LeadActionQueuedType!
   shareVideoProject(input: ShareVideoProjectInput!): VideoShareType!
-  startAgentChatConversation(input: StartAgentChatConversationInput!): CreatedAgentChatConversationType!
   startFirstWorkspace: StartFirstWorkspaceType!
   startMoneyConnection(input: StartMoneyConnectionInput!): WizardConnectionType!
   startSmtpConnection(input: StartSmtpConnectionInput!): SmtpConnectionType!
@@ -5046,7 +4800,6 @@ type Mutation {
   syncLoyaltyMembers: SyncLoyaltyMembersType!
   syncMcpConnector(input: SyncMcpConnectorInput!): Int!
   takeInventoryStock(input: TakeInventoryStockInput!): TakeStockType!
-  takeOverAgentChatConversation(input: TakeOverAgentChatConversationInput!): AgentChatHolderType!
   testWebhookConnection(input: TestWebhookConnectionInput!): WebhookTestResultType!
   toggleHiringOnboarding(input: ToggleHiringOnboardingInput!): Boolean!
   transferInventoryStock(input: TransferInventoryStockInput!): TransferStockType!
@@ -5569,10 +5322,6 @@ type Query {
   adminSession: AdminSessionType!
   adminWorkspace(input: AdminWorkspaceInput!): AdminWorkspaceDetailType!
   adminWorkspaces(input: AdminWorkspacesInput!): AdminWorkspaceListType!
-  agentChatConversations(input: AgentChatConversationsInput!): [AgentChatConversationType!]!
-  agentChatMessages(input: AgentChatMessagesInput!): [AgentChatMessageType!]!
-  agentChatPage(input: AgentChatPageInput!): AgentChatPageType!
-  agentChatTurnStatus(input: AgentChatTurnStatusInput!): AgentChatTurnStatusType!
   agentConnectionCandidates(input: AgentConnectionCandidatesInput!): [AgentConnectionCandidateType!]!
   agentConnections(input: AgentIdInput!): [AgentConnectionType!]!
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
@@ -5602,12 +5351,7 @@ type Query {
   brainDossiers: [BrainDossierType!]!
   brainTodo: BrainTodoType!
   brandProposals(input: BrandProposalsInput!): [BrandProposalType!]!
-  chatAnswerStatus(input: ChatAnswerStatusInput!): ChatReplyProgressType!
   chatMarkerState(input: ChatTargetInput!): ChatMarkerStateType!
-  chatReplyStatus(input: ChatReplyStatusInput!): ChatReplyProgressType!
-  chatbotGaps: ChatbotGapsType!
-  chatbotOverview(input: ChatbotOverviewInput!): ChatbotOverviewType!
-  chatbotThread(input: ChatbotThreadInput!): ChatbotThreadType!
   connectionAgents: [ConnectionAgentType!]!
   connectionFirstEvent(input: GetConnectionFirstEventInput!): FirstEventStateType!
   connections: [ConnectionType!]!
@@ -5720,7 +5464,6 @@ type Query {
   setupVersions(input: ModuleInstallationIdInput!): SetupVersionsType!
   shiftsMine: ShiftsMineType!
   shiftsWorkbench(week: String): ShiftsBenchType!
-  telegramEvents(input: ListTelegramEventsInput!): [TelegramEventType!]!
   telegramPage(input: GetTelegramPageInput!): TelegramPageType!
   telegramUserReady: TelegramUserReadyType!
   templateReviewQueue: [ListingType!]!
@@ -5744,14 +5487,7 @@ type Query {
   workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
   workspaceStaff: [StaffOptionType!]!
   zaloConnection(input: GetZaloConnectionInput!): ZaloWizardConnectionType!
-  zaloConnectionEvents(input: ListZaloEventsInput!): [ZaloEventType!]!
   zaloConnectionPage(input: GetZaloPageInput!): ZaloPageType!
-}
-
-type QueuedAgentChatTurnType {
-  conversationId: ID!
-  id: ID!
-  status: String!
 }
 
 input ReadLeadGenCommentStatusInput {
@@ -5960,12 +5696,6 @@ input RequestAgentAvatarUploadInput {
   sizeBytes: Int! @inputBounds(min: 1, max: 2097152)
 }
 
-input RequestAgentChatFileUploadInput {
-  contentType: String! @inputBounds(maxLength: 32)
-  conversationId: ID! @inputBounds(maxLength: 36)
-  sizeBytes: Int! @inputBounds(min: 1, max: 10485760)
-}
-
 input RequestAgentGenerationInput {
   kind: String! @inputBounds(maxLength: 40)
   messages: [AgentGenMessageInput!]! @inputBounds(maxItems: 60)
@@ -5978,19 +5708,6 @@ input RequestAgentGenerationInput {
 input RequestAgentSyncInput {
   force: Boolean
   installationId: ID @inputBounds(maxLength: 36)
-}
-
-input RequestChatAnswerInput {
-  conversationId: ID! @inputBounds(maxLength: 36)
-  locale: String! = "vi"
-  text: String @inputBounds(maxLength: 4000)
-  workItemId: ID! @inputBounds(maxLength: 36)
-}
-
-input RequestChatReplyInput {
-  body: String! @inputBounds(maxLength: 4000)
-  conversationId: ID! @inputBounds(maxLength: 36)
-  locale: String! = "vi"
 }
 
 input RequestContentDraftInput {
@@ -6952,12 +6669,6 @@ type SavedFactType {
   outcome: String!
 }
 
-input SendAgentChatMessageInput {
-  body: String! @inputBounds(maxLength: 4000)
-  conversationId: ID! @inputBounds(maxLength: 36)
-  file: SentAgentChatFileInput = null
-}
-
 input SendSmtpTestInput {
   connectionId: ID! @inputBounds(maxLength: 64)
   makeDefault: Boolean!
@@ -6968,11 +6679,6 @@ input SendZaloTestInput {
   connectionId: ID! @inputBounds(maxLength: 64)
   recipientId: String! @inputBounds(maxLength: 64)
   text: String! @inputBounds(maxLength: 500)
-}
-
-input SentAgentChatFileInput {
-  name: String! @inputBounds(maxLength: 255)
-  path: String! @inputBounds(maxLength: 255)
 }
 
 type SepayConnectionType {
@@ -7053,12 +6759,6 @@ input SetAgentTextsInput {
 input SetAgentWorkInput {
   enabled: Boolean!
   installationId: ID! @inputBounds(maxLength: 36)
-}
-
-input SetChatHandlingInput {
-  conversationId: ID! @inputBounds(maxLength: 36)
-  locale: String! = "vi"
-  takeOver: Boolean!
 }
 
 input SetChatTypingInput {
@@ -7564,12 +7264,6 @@ type StaffOptionType {
   role: String!
 }
 
-input StartAgentChatConversationInput {
-  agentId: ID! @inputBounds(maxLength: 36)
-  kind: String!
-  visitorName: String = null @inputBounds(maxLength: 80)
-}
-
 type StartFirstWorkspaceType {
   id: ID
 }
@@ -7684,12 +7378,6 @@ input TakeInventoryStockInput {
   counts: [StockTakeCountInput!]! @inputBounds(maxItems: 500)
 }
 
-input TakeOverAgentChatConversationInput {
-  conversationId: ID! @inputBounds(maxLength: 36)
-  line: String! = "" @inputBounds(maxLength: 400)
-  take: Boolean!
-}
-
 type TakeStockType {
   applied: Int!
   same: Int!
@@ -7706,15 +7394,6 @@ type TelegramChatChoiceType {
 type TelegramConnectedType {
   connection: ConnectionType!
   webhookRegistered: Boolean!
-}
-
-type TelegramEventType {
-  at: String!
-  id: ID!
-  kind: String!
-  outcome: String!
-  reason: String
-  who: String!
 }
 
 type TelegramLoginStageType {
@@ -8287,16 +7966,6 @@ type ZaloCheckType {
   key: String!
   names: [String!]!
   state: String!
-}
-
-type ZaloEventType {
-  at: String!
-  id: ID!
-  kind: String!
-  outcome: String!
-  reason: String
-  text: String!
-  who: String!
 }
 
 type ZaloPageType {

@@ -56,7 +56,8 @@ export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
         entities: FLOW_F_ENTITIES,
         jobs: MODULE_JOBS,
         alerts: AgentRunEngineAlertsService,
-        ...options.entityEngine,
+        cursorKey: options.entityEngine.cursorKey,
+        buildId: options.entityEngine.buildId,
     }),
     GraphNodesModule.register({
         isGlobal: true,
