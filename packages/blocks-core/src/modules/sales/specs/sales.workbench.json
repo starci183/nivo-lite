@@ -176,7 +176,8 @@
             },
             "bind": {
               "rows": {
-                "read": "sales.attention"
+                "read": "sales.attention",
+                "path": "rows"
               },
               "open": {
                 "action": "sales.confirm-order"
