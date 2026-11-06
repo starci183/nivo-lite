@@ -12,7 +12,7 @@ import { agentGraphs, agentRunSteps, agentRuns } from "../ports"
 import { agentOfInstallation } from "./agent-run-scope"
 
 /** The steps one statement reads: the engine refuses a page over its bound, so a long run is read in pages of at most this. */
-export const STEPS_PAGE = Math.min(RUN_STEPS_MAX, QUERY_BOUNDS.pageSize)
+export const STEPS_PAGE: number = Math.min(RUN_STEPS_MAX, QUERY_BOUNDS.pageSize)
 
 /** The steps of a run in order, read page by page from the cursor `after` up to the cap the timeline draws. */
 const stepsOf = async (
