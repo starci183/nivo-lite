@@ -9,22 +9,15 @@ const parses = (items: ReadonlyArray<Item>): boolean =>
     filterTabsBlock.props.safeParse({ param: "stage", all: WORD, items }).success
 
 describe("filterTabsBlock", () => {
-    it("is the core filter tabs, with a counts read of one record, an optional read of the tabs and no children", () => {
+    it("is the core filter tabs, with a counts read of one record and no children", () => {
         expect(filterTabsBlock.id).toBe("core.filter-tabs")
-        expect(filterTabsBlock.slots).toEqual({
-            counts: { kind: "read", shape: "record", required: true },
-            items: { kind: "read", shape: "list", required: false },
-        })
+        expect(filterTabsBlock.slots).toEqual({ counts: { kind: "read", shape: "record", required: true } })
         expect(filterTabsBlock.children).toBe(false)
     })
 
     it("takes the param, the all tab and the filter values with their words", () => {
         expect(filterTabsBlock.props.safeParse(FILTER_TABS_PROPS).success).toBe(true)
         expect(parses([])).toBe(true)
-    })
-
-    it("takes no literal items, for tabs that come from the bound items read", () => {
-        expect(filterTabsBlock.props.safeParse({ param: "tier", all: WORD }).success).toBe(true)
     })
 
     it("refuses a missing param or all tab", () => {
@@ -71,7 +64,7 @@ describe("the filter tabs fixtures", () => {
     })
 
     it("choose a tab the props list", () => {
-        const values = (FILTER_TABS_PROPS.items ?? []).map((item) => item.value)
+        const values = FILTER_TABS_PROPS.items.map((item) => item.value)
         const selected = FILTER_TABS_FIXTURES.find((fixture) => fixture.state === "selected")
         expect(values).toContain(selected?.selected)
     })

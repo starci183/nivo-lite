@@ -7,8 +7,6 @@ import {
     tabEntriesOf,
     TAB_COUNTS_PLACEHOLDER,
     tabParamValue,
-    tabRowsView,
-    tabSpecsOf,
 } from "./filter-tabs"
 import type { TabSpec } from "./filter-tabs"
 
@@ -92,87 +90,5 @@ describe("EMPTY_TAB_COUNTS", () => {
         const entries = tabEntriesOf("All", SPECS, EMPTY_TAB_COUNTS)
         expect(entries.length).toBe(SPECS.length + 1)
         expect(entries.every((entry) => entry.count === 0)).toBe(true)
-    })
-})
-
-describe("tabEntriesOf with the counts of a read's rows", () => {
-    const counted: ReadonlyArray<TabSpec> = [
-        { value: "gold", label: "Gold", attention: false, count: 84 },
-        { value: "risk", label: "At risk", attention: true, count: 96 },
-        { value: "none", label: "None", attention: true, count: 0 },
-    ]
-
-    it("draws the count a row gives while no counts read is known, with the warning for a count above zero", () => {
-        expect(tabEntriesOf("All", counted, null)).toEqual([
-            { id: ALL_TAB, label: "All" },
-            { id: "gold", label: "Gold", count: 84 },
-            { id: "risk", label: "At risk", count: 96, isAttention: true },
-            { id: "none", label: "None", count: 0 },
-        ])
-    })
-
-    it("lets the counts read override the count of a row", () => {
-        expect(tabEntriesOf("All", counted, { counts: { gold: 1 }, total: 1 })[1]).toEqual({
-            id: "gold",
-            label: "Gold",
-            count: 1,
-        })
-    })
-})
-
-describe("tabRowsView", () => {
-    it("accepts rows of a value and its words, as text or as a message, with an optional count and attention", () => {
-        const rows = [
-            { value: "gold", label: "Gold", count: 3, attention: true },
-            { value: "risk", label: { key: "tierRisk", values: { days: 60 } } },
-        ]
-        expect(tabRowsView.safeParse(rows).success).toBe(true)
-        expect(tabRowsView.safeParse([]).success).toBe(true)
-    })
-
-    it.each([
-        ["a row without a value", [{ label: "Gold" }]],
-        ["an empty value", [{ value: "", label: "Gold" }]],
-        ["a count that is no whole number", [{ value: "a", label: "A", count: 1.5 }]],
-        ["a label that is neither text nor a message", [{ value: "a", label: 4 }]],
-    ])("refuses %s", (_name, rows) => {
-        expect(tabRowsView.safeParse(rows).success).toBe(false)
-    })
-
-    it("refuses more rows than a block lists tabs", () => {
-        const rows = Array.from({ length: 51 }, (_, index) => ({ value: `v${index}`, label: "V" }))
-        expect(tabRowsView.safeParse(rows).success).toBe(false)
-    })
-})
-
-describe("tabSpecsOf", () => {
-    const translate = (key: string): string => (key === "risk" ? "At risk since {days} days" : key)
-
-    it("makes a tab per row with its words translated and its count and warning", () => {
-        expect(
-            tabSpecsOf(
-                [
-                    { value: "gold", label: "Gold", count: 84 },
-                    { value: "risk", label: { key: "risk", values: { days: 60 } }, attention: true },
-                ],
-                translate,
-            ),
-        ).toEqual([
-            { value: "gold", label: "Gold", attention: false, count: 84 },
-            { value: "risk", label: "At risk since 60 days", attention: true },
-        ])
-    })
-
-    it("leaves out the row of the all tab and a row that repeats a value", () => {
-        expect(
-            tabSpecsOf(
-                [
-                    { value: ALL_TAB, label: "All" },
-                    { value: "a", label: "A" },
-                    { value: "a", label: "Again" },
-                ],
-                translate,
-            ),
-        ).toEqual([{ value: "a", label: "A", attention: false }])
     })
 })
