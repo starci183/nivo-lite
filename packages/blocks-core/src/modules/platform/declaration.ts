@@ -1,6 +1,9 @@
 import { defineModule } from "@nivo-lite/agent-sdk/module"
 import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
 import { PLATFORM_MODULE_KEY, PLATFORM_VIEW } from "./constants"
+import { agentConnectionsRead } from "./reads/agent-connections.read"
+import { agentDoneRead } from "./reads/agent-done.read"
+import { agentKnowledgeRead } from "./reads/agent-knowledge.read"
 import { installationRead } from "./reads/installation.read"
 
 /**
@@ -11,7 +14,7 @@ export const platformModule: ModuleDeclaration = defineModule({
     key: PLATFORM_MODULE_KEY,
     namespace: PLATFORM_MODULE_KEY,
     permissions: [PLATFORM_VIEW],
-    reads: [installationRead],
+    reads: [installationRead, agentDoneRead, agentConnectionsRead, agentKnowledgeRead],
     actions: [],
     specs: [],
 })

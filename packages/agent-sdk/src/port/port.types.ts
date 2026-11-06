@@ -41,4 +41,6 @@ export interface RunContext {
     readonly memberId: string | null
     /** The instant of the run, so a rule never reads the clock itself. */
     readonly now: Date
+    /** The IANA time zone of the workspace (for example `Asia/Ho_Chi_Minh`), in which "today", "this week" and "this month" begin. */
+    readonly timeZone: string
 }

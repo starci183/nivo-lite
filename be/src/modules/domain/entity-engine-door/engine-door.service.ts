@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { McpGatewayService, argsHashOf, domainNameIn, gatewayArgumentsSchema } from "@modules/domain/mcp-gateway"
 import type { GatewayCaller } from "@modules/domain/mcp-gateway"
+import type { EngineDoorProvider } from "@modules/domain/entity-engine"
 import { agentIdFor } from "@modules/integrations/openclaw"
 import { isDomainTool } from "@nivo-lite/agent-sdk/mutation"
 import type { DoorApi, DoorCallResult } from "@nivo-lite/agent-sdk/mutation"
@@ -27,7 +28,7 @@ const NO_PROVIDER: DoorCallResult = { ok: false, reason: "unknown_tool", message
  * an effect. A domain tool (`<group>.<action>`, `chat.send`) names no provider: the door resolves it to the tool of the workspace's own
  * connection that plays it (`domainNameIn` over the connectors of the workspace), and answers `unknown_tool` when the workspace has none.
  */
-export class EngineDoorService {
+export class EngineDoorService implements EngineDoorProvider {
     constructor(
         private readonly gateway: McpGatewayService,
         @InjectEntityEngineDoorOptions() private readonly options: EntityEngineDoorOptions,

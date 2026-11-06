@@ -4,10 +4,15 @@ import { platformModule } from "./declaration"
 import { installationRead } from "./reads/installation.read"
 
 describe("platform module", () => {
-    it("declares the installation read behind one permission, and no action or screen", () => {
+    it("declares the installation read and the three agent reads behind one permission, and no action or screen", () => {
         expect(platformModule.key).toBe("platform")
         expect(platformModule.permissions).toEqual(["platform.view"])
-        expect(platformModule.reads.map((read) => read.id)).toEqual(["platform.installation"])
+        expect(platformModule.reads.map((read) => read.id)).toEqual([
+            "platform.installation",
+            "platform.agent-done",
+            "platform.agent-connections",
+            "platform.agent-knowledge",
+        ])
         expect(platformModule.actions).toEqual([])
         expect(platformModule.specs).toEqual([])
         expect(seedSpecProblems(platformModule, coreBlocks)).toEqual([])

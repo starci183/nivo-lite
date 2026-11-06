@@ -216,7 +216,7 @@ describe("WorkbenchDoorService.read", () => {
         expect(read).toHaveBeenCalledWith(
             provider,
             { q: "an" },
-            { workspaceId: WORKSPACE, memberId: "member-1", now: new Date(NOW) },
+            { workspaceId: WORKSPACE, memberId: "member-1", now: new Date(NOW), timeZone: "Asia/Ho_Chi_Minh" },
         )
     })
 
@@ -318,7 +318,7 @@ describe("WorkbenchDoorService.act", () => {
         expect(act).toHaveBeenCalledWith(
             provider,
             { id: "lead-1" },
-            { workspaceId: WORKSPACE, memberId: "member-1", now: new Date(NOW) },
+            { workspaceId: WORKSPACE, memberId: "member-1", now: new Date(NOW), timeZone: "Asia/Ho_Chi_Minh" },
         )
         expect(engine.scoped).not.toHaveBeenCalled()
         const run: DoorRun | undefined = ports.providerFor.mock.calls[0]?.[0]

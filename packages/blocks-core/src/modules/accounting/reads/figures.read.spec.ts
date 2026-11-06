@@ -13,7 +13,12 @@ import type { MemoryWorld } from "../fixtures/accounting.memory"
 import { closeCheckRead } from "./close-check.read"
 import { figuresRead } from "./figures.read"
 
-const CONTEXT: RunContext = { workspaceId: "w1", memberId: "m1", now: new Date("2026-11-04T11:30:00.000Z") }
+const CONTEXT: RunContext = {
+    workspaceId: "w1",
+    memberId: "m1",
+    now: new Date("2026-11-04T11:30:00.000Z"),
+    timeZone: "Asia/Ho_Chi_Minh",
+}
 
 const SOURCE = "payment.transaction"
 

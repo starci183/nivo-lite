@@ -41,5 +41,8 @@
   "reply_forbidden": "You cannot reply to this conversation.",
   "handling_conflict": "The conversation just changed. Try again.",
   "notice_taken_over": "{name} took over the conversation.",
-  "notice_released": "{name} handed the conversation back to the AI."
+  "notice_released": "{name} handed the conversation back to the AI.",
+  "action_approve_and_send": "Approve and send",
+  "action_reject_proposal": "Reject the AI draft",
+  "proposal_closed": "This draft was already handled or is gone."
 }

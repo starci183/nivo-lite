@@ -14,6 +14,16 @@ export interface ChannelSend {
     readonly attachments?: ReadonlyArray<{ readonly url: string; readonly name: string }> | undefined
 }
 
+/** A reply the AI drafted for a person to approve. */
+export interface ProposeReply {
+    /** The conversation. */
+    readonly conversationId: string
+    /** The words of the draft. */
+    readonly text: string
+    /** What the customer asked, so the owner sees what the draft answers. */
+    readonly asked: string
+}
+
 /** How many rows a query asks for, kept between one and the most a read answers. */
 export const limitOf = (query: NodeQuery): number => Math.min(Math.max(query.limit ?? NODE_ROWS_MAX, 1), NODE_ROWS_MAX)
 
@@ -54,3 +64,9 @@ const UNREACHABLE_FAILURES: ReadonlySet<string> = new Set(["zalo_recipient", "za
 /** True when the channel refused a message because of who it was for, not because of the window, the quota or its own state. */
 export const recipientRefused = (failure: string | null): boolean =>
     failure !== null && UNREACHABLE_FAILURES.has(failure)
+
+/** Who holds the conversation a record stores: the name of the person, or null when the AI does (or the record says nothing). */
+export const handledByOf = (data: Readonly<Record<string, unknown>>): string | null => {
+    const held = data["handledBy"]
+    return typeof held === "string" ? held : null
+}

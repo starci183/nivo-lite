@@ -22,6 +22,7 @@ import { holdsPermission } from "./door-permission.policy"
 import { DoorPortsService } from "./door-ports.service"
 import { servableModulesOf } from "./door-servable.policy"
 import { registryOf } from "./door-registry.policy"
+import { timeZoneOfWorkspace } from "./workspace-time-zone.policy"
 import { InjectWorkbenchDoorOptions } from "./workbench-door.decorators"
 import { WorkbenchDoorError, WorkbenchDoorErrorCode } from "./errors/workbench-door.error"
 import type { ActionAnswered, DoorAction, DoorAnswer, DoorCall, DoorRegistry } from "./workbench-door.contracts"
@@ -166,7 +167,12 @@ export class WorkbenchDoorService {
     }
 
     private contextOf(call: DoorCall, caller: Caller): RunContext {
-        return { workspaceId: call.workspaceId, memberId: caller.memberId, now: this.clock.now() }
+        return {
+            workspaceId: call.workspaceId,
+            memberId: caller.memberId,
+            now: this.clock.now(),
+            timeZone: timeZoneOfWorkspace(call.workspaceId),
+        }
     }
 
     private failure(

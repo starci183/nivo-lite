@@ -41,5 +41,8 @@
   "reply_forbidden": "Bạn không thể trả lời cuộc trò chuyện này.",
   "handling_conflict": "Cuộc trò chuyện vừa thay đổi. Hãy thử lại.",
   "notice_taken_over": "{name} đã tiếp nhận cuộc trò chuyện.",
-  "notice_released": "{name} đã giao lại cuộc trò chuyện cho AI."
+  "notice_released": "{name} đã giao lại cuộc trò chuyện cho AI.",
+  "action_approve_and_send": "Duyệt và gửi",
+  "action_reject_proposal": "Từ chối bản AI soạn",
+  "proposal_closed": "Bản soạn này đã được xử lý hoặc không còn."
 }

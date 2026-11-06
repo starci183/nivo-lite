@@ -4,6 +4,7 @@ import { syncAgentTurnsJob } from "./agent-turn-sync.policy"
 import { ENTITY_ENGINE_DOOR_JOBS, ENTITY_ENGINE_DOOR_OPTIONS } from "./entity-engine-door.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./entity-engine-door.module-definition"
 import { AgentNativeService } from "./agent-native.service"
+import { EngineDoorBindingService } from "./engine-door-binding.service"
 import { EngineDoorService } from "./engine-door.service"
 
 @Module({})
@@ -19,6 +20,7 @@ export class EntityEngineDoorModule extends ConfigurableModuleClass {
                 { provide: ENTITY_ENGINE_DOOR_OPTIONS, useValue: options },
                 { provide: ENTITY_ENGINE_DOOR_JOBS, useValue: [syncAgentTurnsJob] },
                 EngineDoorService,
+                EngineDoorBindingService,
                 AgentNativeService,
             ],
             exports: [EngineDoorService, AgentNativeService, ENTITY_ENGINE_DOOR_JOBS],

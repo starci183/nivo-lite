@@ -5,7 +5,12 @@ import { installationPort } from "../ports"
 import type { InstallationSource } from "../platform.types"
 import { installationRead } from "./installation.read"
 
-const CONTEXT = { workspaceId: "ws-1", memberId: "member-1", now: new Date("2026-11-05T01:00:00.000Z") }
+const CONTEXT = {
+    workspaceId: "ws-1",
+    memberId: "member-1",
+    now: new Date("2026-11-05T01:00:00.000Z"),
+    timeZone: "Asia/Ho_Chi_Minh",
+}
 
 const providerOf = (source: InstallationSource): PortProvider => ({
     implementationOf: (port) => (port.id === installationPort.id ? source : undefined),

@@ -11,7 +11,12 @@ import { orderRead } from "./order.read"
 import { orderCountsRead, ordersRead } from "./orders.read"
 import { ordersWaitingRead, waitingHrefOf } from "./orders-waiting.read"
 
-const CONTEXT: RunContext = { workspaceId: "w1", memberId: "m1", now: new Date(SAMPLE_NOW) }
+const CONTEXT: RunContext = {
+    workspaceId: "w1",
+    memberId: "m1",
+    now: new Date(SAMPLE_NOW),
+    timeZone: "Asia/Ho_Chi_Minh",
+}
 
 const page = z.object({
     rows: z.array(z.object({ id: z.string().max(100) })).max(100),

@@ -24,6 +24,9 @@ export interface ThreadRow extends ConversationState {
     readonly handledAt: string | null
 }
 
+/** Where a line stands: posted in the thread, proposed by the AI and waiting for a person, or refused. */
+export type MessageStatus = "posted" | "proposed" | "rejected"
+
 /** One stored line of a conversation (the `chat.message` record). */
 export interface MessageRecord {
     /** The id of the record. */
@@ -44,6 +47,8 @@ export interface MessageRecord {
     readonly authorName: string | null
     /** The member who wrote an agent line. */
     readonly authorUserId: string | null
+    /** Whether the line is posted in the thread, a reply the AI proposed for a person to approve, or a proposal that was refused. */
+    readonly status: MessageStatus
     /** The state of the push to the channel; null when none was made. */
     readonly deliveryStatus: "sent" | "failed" | null
     /** Why the push failed, as a stable code; null when it did not. */
@@ -94,4 +99,16 @@ export interface ThreadView {
     readonly phone: string
     /** The email of the customer. */
     readonly email: string
+}
+
+/** The reply the AI proposed for a conversation, as the thread draws it. */
+export interface ProposalView {
+    /** The id of the proposed line. */
+    readonly id: string
+    /** What the customer asked, which the reply answers. */
+    readonly asked: string
+    /** The reply the AI proposes. */
+    readonly text: string
+    /** A note under the reply. */
+    readonly note: string
 }

@@ -37,6 +37,7 @@ export const STAFF_CONTEXT: RunContext = {
     workspaceId: "w1",
     memberId: STAFF_ID,
     now: new Date("2026-11-05T03:00:00.000Z"),
+    timeZone: "Asia/Ho_Chi_Minh",
 }
 
 /** The instant every fake record was created and last written at. */
@@ -240,7 +241,7 @@ const inserted = (table: Table, values: WriteValues, links: WriteLinks = {}): En
         version: "1",
         createdAt: CREATED,
         updatedAt: CREATED,
-        data: values,
+        data: table.entity === "chat.message" ? { status: "posted", ...values } : values,
     }
     table.rows.push(row)
     for (const [relation, to] of Object.entries(links))

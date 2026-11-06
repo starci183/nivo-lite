@@ -48,7 +48,7 @@ export type DeliverReplyPortMap = {
 
 /**
  * How a delivery ended: `sent` and `failed` are recorded on the line, `skipped` found nothing to do (the line or its conversation is
- * gone, or the line was already sent), `retry` left the line as it was because the channel may succeed later.
+ * gone, the line is not a posted one, or it was already sent), `retry` left the line as it was because the channel may succeed later.
  */
 export type DeliverOutcome = "sent" | "failed" | "skipped" | "retry"
 
@@ -75,7 +75,7 @@ export const deliverReply = async (
 ): Promise<DeliverOutcome> => {
     const stored = await ports.messages.get(input.messageId)
     const line = stored === null ? null : messageRecordOf(stored)
-    if (line === null || line.deliveryStatus === "sent") return "skipped"
+    if (line === null || line.status !== "posted" || line.deliveryStatus === "sent") return "skipped"
     const found = await ports.conversations.get(line.conversationId)
     const conversation = found === null ? null : threadRowOf(found)
     if (conversation === null) return "skipped"

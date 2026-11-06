@@ -213,12 +213,15 @@
         "records_chat_message_in_reply_to_chk",
         "records_chat_message_role_chk",
         "records_chat_message_sent_at_chk",
+        "records_chat_message_status_chk",
         "records_chat_message_text_chk"
       ],
       "indexes": [
         "records_chat_message_channel_ref",
         "records_chat_message_channel_ref_key",
         "records_chat_message_conversation_sent",
+        "records_chat_message_conversation_status_sent",
+        "records_chat_message_one_proposal_key",
         "records_chat_message_reply_of",
         "records_chat_message_reply_once_key",
         "records_chat_message_role_recent"

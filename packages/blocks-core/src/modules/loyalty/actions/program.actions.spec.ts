@@ -11,6 +11,7 @@ const contextOf = (memberId: string | null): RunContext => ({
     workspaceId: "w1",
     memberId,
     now: new Date(SAMPLE_NOW),
+    timeZone: "Asia/Ho_Chi_Minh",
 })
 
 /** What running stands in for an action that does not run in the package, which the expectation before it already failed. */
