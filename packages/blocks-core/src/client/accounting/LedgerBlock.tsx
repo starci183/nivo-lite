@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
+import { EmptyNotice, Stack, SurfaceCard } from "@starci/grammar/common"
 import type { TableColumnData, TableGroupData } from "@starci/grammar/common"
 import type { accountingLedgerBlock } from "../../blocks/accounting/ledger.block"
 import { bookPeriodOf } from "../../rules/accounting/book-view"
@@ -87,7 +87,7 @@ export const LedgerBlock = (props: RenderOf<typeof accountingLedgerBlock>): Reac
             onRetry={read.retry}
             frame={(notice) => <SurfaceCard {...head}>{notice}</SurfaceCard>}
             render={(ledger, isLoading) => (
-                <>
+                <Stack gap="section">
                     <SurfaceCard
                         kind="figures"
                         ariaLabel={words(props.props.title)}
@@ -102,7 +102,7 @@ export const LedgerBlock = (props: RenderOf<typeof accountingLedgerBlock>): Reac
                         groups={groupsOf(sectionsOf(ledger, kindWord), words({ key: "ledger_day_balance" }))}
                         empty={<EmptyNotice message={labels.empty} />}
                     />
-                </>
+                </Stack>
             )}
         />
     )
