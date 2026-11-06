@@ -1,4 +1,5 @@
 import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
+import { accountingBlocks } from "./accounting/accounting-blocks"
 import { asideDetailBlock } from "./aside-detail.block"
 import { boardBlock } from "./board.block"
 import { cardGridBlock } from "./card-grid.block"
@@ -22,7 +23,7 @@ import { graphBlock } from "./graph.block"
 import { runTimelineBlock } from "./run-timeline.block"
 import { waitingBlock } from "./waiting.block"
 
-/** The definitions of every core block, React-free so the back end validates specs against them without loading React. */
+/** The definitions of every core block and of the blocks of each module, React-free so the back end validates specs against them without loading React. */
 export const coreBlocks: ReadonlyArray<BlockDefinition> = [
     stackBlock,
     cardGridBlock,
@@ -46,4 +47,5 @@ export const coreBlocks: ReadonlyArray<BlockDefinition> = [
     explanationBlock,
     graphBlock,
     runTimelineBlock,
+    ...accountingBlocks,
 ]

@@ -24,6 +24,7 @@ import {
 import { boardBlock } from "../blocks/board.block"
 import { graphBlock } from "../blocks/graph.block"
 import { runTimelineBlock } from "../blocks/run-timeline.block"
+import { accountingRenderers } from "./accounting/accounting-renderers"
 import { AsideDetailBlock } from "./blocks/AsideDetailBlock"
 import { BoardBlock } from "./blocks/BoardBlock"
 import { CardGridBlock } from "./blocks/CardGridBlock"
@@ -71,4 +72,5 @@ export const coreBlocks: ReadonlyArray<BlockRenderer> = [
     defineRenderer(explanationBlock, ExplanationBlock),
     defineRenderer(graphBlock, GraphBlock),
     defineRenderer(runTimelineBlock, RunTimelineBlock),
+    ...accountingRenderers,
 ]
