@@ -31,7 +31,6 @@ const PLACEHOLDER: InstanceHeaderView = {
     subtitle: "-",
     needs: { lines: [], linkLabel: "-", href: "#" },
     setup: null,
-    chatHref: null,
     profileHref: null,
     packageHref: null,
 }
@@ -105,7 +104,6 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                     href: hrefOf(tab),
                 })),
                 earlyLabel: t("earlyBadge"),
-                chatLabel: t("privateChat"),
                 profileLabel: t("profileShort"),
                 packageLabel: tt("packageTitle"),
                 notice: query.get("notice") === OWNER_SETUP_NOTICE ? t("ownerSetupNotice") : "",
@@ -134,7 +132,6 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                                   isSetupPending(resolved.lifecycle) && selected !== "setup" && tabs.includes("setup")
                                       ? { label: t(setupLabelKey(resolved.lifecycle)), href: hrefOf("setup") }
                                       : null,
-                              chatHref: resolved.chatHref,
                               profileHref: resolved.profileHref,
                               packageHref: isManager(member)
                                   ? workspaceHref(

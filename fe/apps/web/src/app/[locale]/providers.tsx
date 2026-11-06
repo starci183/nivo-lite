@@ -39,7 +39,7 @@ const GrammarRouting = (props: LayerProps) => {
 /**
  * Reads with a function `refreshInterval` start polling again when newer data makes it answer above zero after it stopped
  * (`pollingRestart` of `@starci/next-data`). A focus regain revalidates at most once per interval instead of on every tab switch. Reads that want to keep their last
- * answer while a new one is in flight opt in per read (useBookingRange, useBookingBoard, useQueryAgentChatPageSwr).
+ * answer while a new one is in flight opt in per read (useBookingRange, useBookingBoard).
  */
 const READ_DEFAULTS = { focusThrottleInterval: 30_000 } as const
 
