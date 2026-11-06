@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ModuleJobsQueueModule } from "@modules/queues/module-jobs"
-import { ENTITY_ENGINE_OPTIONS } from "./entity-engine.decorators"
+import { ENGINE_FAILURE_ALERTS, ENTITY_ENGINE_OPTIONS } from "./entity-engine.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./entity-engine.module-definition"
 import { EngineFailureService } from "./engine-failure.service"
 import { EntityEngineService } from "./entity-engine.service"
@@ -9,6 +9,7 @@ import { EntityMutationService } from "./entity-mutation.service"
 import { EntityPortsService } from "./entity-ports.service"
 import { ListSourceService } from "./list-source.service"
 import { ModuleJobRunnerService } from "./module-job-runner.service"
+import { EntityNodePortsService } from "./entity-node-ports.service"
 
 @Module({})
 /** The generic entity engine over the records tables: the scoped transactions, the ports of blocks-core code, the generic list source and the runner of declared jobs. */
@@ -22,12 +23,14 @@ export class EntityEngineModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 { provide: ENTITY_ENGINE_OPTIONS, useValue: options },
+                { provide: ENGINE_FAILURE_ALERTS, useClass: options.alerts },
                 EngineFailureService,
                 EntityEngineService,
                 EntityMutationService,
                 EntityPortsService,
                 ListSourceService,
                 ModuleJobRunnerService,
+                EntityNodePortsService,
             ],
             exports: [
                 EntityEngineService,
@@ -35,6 +38,7 @@ export class EntityEngineModule extends ConfigurableModuleClass {
                 EntityPortsService,
                 ListSourceService,
                 ModuleJobRunnerService,
+                EntityNodePortsService,
             ],
         }
     }
