@@ -1,4 +1,4 @@
-import { entriesOf, messagesOf } from "../rows/conversation"
+import { entriesOf, messagesOf } from "../../rows/chatbot/conversation"
 import {
     CONVERSATION_FIXTURES,
     CONVERSATION_PATHS,

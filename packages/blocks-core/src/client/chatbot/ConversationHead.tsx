@@ -1,6 +1,13 @@
 import type { ReactNode } from "react"
 import { Avatar, Button, Cluster, Heading, PaneSection, Stack, Text } from "@starci/grammar/common"
-import type { ThreadHead } from "../../rows/conversation.types"
+
+/** What the head of a thread names: who it is with, and one line about it. */
+export interface ThreadHead {
+    /** The name of the customer. */
+    readonly title: string
+    /** One line under the name, such as the channel; empty draws none. */
+    readonly subtitle: string
+}
 
 /** One thing a person may do with the open thread. */
 export interface ConversationHeadAction {
@@ -31,8 +38,8 @@ interface ConversationHeadProps {
     /** Who the thread is with; null draws the name of the pane. */
     readonly thread: ThreadHead | null
     readonly actions: ReadonlyArray<ConversationHeadAction>
-    /** The control of the contact pane; null when the thread has none. */
-    readonly contact: ConversationContactToggle | null
+    /** The control of the contact pane. */
+    readonly contact: ConversationContactToggle
 }
 
 /** Who the thread is with: the avatar, the name and the line under it; the name of the pane when the thread has none. */
@@ -53,30 +60,21 @@ const HeadTitle = (props: Pick<ConversationHeadProps, "label" | "thread">): Reac
     )
 }
 
-/** The head band of the thread pane: who it is with, and the actions that hand the thread to a person or close it. */
+/** The head band of the thread pane: who it is with, the control that takes the thread over or hands it back, and the contact toggle. */
 export const ConversationHead = (props: ConversationHeadProps): ReactNode => (
     <PaneSection align="center">
         <Cluster gap="row" wrap={false} justify="between">
             <HeadTitle label={props.label} thread={props.thread} />
-            {props.actions.length === 0 && props.contact === null ? null : (
-                <Cluster gap="inline" wrap={false} align="center">
-                    {props.actions.map((action) => (
-                        <Button
-                            key={action.id}
-                            intent="alternative"
-                            isPending={action.isRunning}
-                            onPress={action.onPress}
-                        >
-                            {action.label}
-                        </Button>
-                    ))}
-                    {props.contact === null ? null : (
-                        <Button intent="neutral" aria-pressed={props.contact.isOpen} onPress={props.contact.onToggle}>
-                            {props.contact.label}
-                        </Button>
-                    )}
-                </Cluster>
-            )}
+            <Cluster gap="inline" wrap={false} align="center">
+                {props.actions.map((action) => (
+                    <Button key={action.id} intent="alternative" isPending={action.isRunning} onPress={action.onPress}>
+                        {action.label}
+                    </Button>
+                ))}
+                <Button intent="neutral" aria-pressed={props.contact.isOpen} onPress={props.contact.onToggle}>
+                    {props.contact.label}
+                </Button>
+            </Cluster>
         </Cluster>
     </PaneSection>
 )

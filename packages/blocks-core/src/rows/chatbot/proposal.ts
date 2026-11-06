@@ -1,19 +1,9 @@
-import { textOf, valueAt } from "../slots/paths"
-import type { ProposalPaths, ProposalRow, ThreadHead } from "./conversation.types"
+import { textOf, valueAt } from "../../slots/paths"
+import type { ProposalPaths, ProposalRow } from "./conversation.types"
 
 /** The text at an optional path of a record; nothing without a path. */
 const textAt = (record: unknown, path: string | undefined): string =>
     path === undefined ? "" : textOf(valueAt(record, path))
-
-/** The head of a thread from its record: nothing when the record has no name. */
-export const threadHeadOf = (
-    record: unknown,
-    titlePath: string,
-    subtitlePath: string | undefined,
-): ThreadHead | null => {
-    const title = textOf(valueAt(record, titlePath))
-    return title === "" ? null : { title, subtitle: textAt(record, subtitlePath) }
-}
 
 /** The reply proposed in a record: nothing when the record has no id or no words. */
 export const proposalOf = (record: unknown, paths: ProposalPaths): ProposalRow | null => {

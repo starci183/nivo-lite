@@ -5,25 +5,25 @@ import type { SpecText } from "@nivo-lite/agent-sdk/schema"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@nivo-lite/agent-sdk/client"
 import { PaneSection } from "@starci/grammar/common"
-import type { conversationBlock } from "../../blocks/conversation.block"
-import { DEFAULT_MAX_LENGTH, draftIssue } from "../../rows/conversation-draft"
-import { slotWithPending } from "../../rows/conversation-pending"
-import { entriesOf, messagesOf } from "../../rows/conversation"
-import type { MessageRow } from "../../rows/conversation.types"
-import { threadViewOf } from "../../rows/conversation-view"
-import type { ThreadClock, ThreadWords } from "../../rows/conversation-view"
-import { threadHeadOf } from "../../rows/conversation-head"
+import type { inboxBlock } from "../../blocks/chatbot/inbox.block"
+import { draftIssue } from "../../rows/chatbot/conversation-draft"
+import { REPLY_MAX } from "../../rules/chatbot/reply"
+import { slotWithPending } from "../../rows/chatbot/conversation-pending"
+import { entriesOf, messagesOf } from "../../rows/chatbot/conversation"
+import type { MessageRow } from "../../rows/chatbot/conversation.types"
+import { threadViewOf } from "../../rows/chatbot/conversation-view"
+import type { ThreadClock, ThreadWords } from "../../rows/chatbot/conversation-view"
+import { contactOf } from "../../rows/chatbot/contact"
+import { THREAD_LINE_FIELDS } from "../../rows/chatbot/inbox-fields"
 import { recordsView } from "../../rows/rows"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
 import type { RenderOf } from "../render-props"
 import { ConversationComposer } from "./ConversationComposer"
 import { ConversationHead } from "./ConversationHead"
-import { ProposalBand } from "./ProposalBand"
-import type { ProposalBandProps } from "./ProposalBand"
 import type { ConversationContactToggle, ConversationHeadAction } from "./ConversationHead"
 import { ConversationThread } from "./ConversationThread"
 import type { ConversationOlder } from "./ConversationThread"
-import { useBlockWords, useSlotLabels } from "./useBlockWords"
+import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import { useConversationSend } from "./useConversationSend"
 import type { ConversationSend } from "./useConversationSend"
 
@@ -31,10 +31,11 @@ import type { ConversationSend } from "./useConversationSend"
 interface ConversationPaneProps {
     /** The thread whose messages are drawn. The pane is keyed by it, so a draft never moves to another thread. */
     readonly threadId: string
-    readonly props: RenderOf<typeof conversationBlock>["props"]
-    readonly slots: RenderOf<typeof conversationBlock>["slots"]
-    /** The control of the contact pane beside the thread; null when the block has none. */
-    readonly contact: ConversationContactToggle | null
+    readonly slots: RenderOf<typeof inboxBlock>["slots"]
+    /** The control of the contact pane beside the thread. */
+    readonly contact: ConversationContactToggle
+    /** The approval card the spec placed in the inbox; null when it placed none. */
+    readonly approval: ReactNode
 }
 
 /** What the skeleton of a thread draws instead of messages. */
@@ -115,8 +116,8 @@ interface ThreadBandProps {
     /** Reads the messages again. */
     readonly onRetry: () => void
     readonly composer: ConversationSend
-    /** The block's props and slots, for the proposed reply that stands under the messages. */
-    readonly proposal: ProposalBandProps
+    /** The approval card of the reply the AI drafted, which stands under the messages. */
+    readonly approval: ReactNode
 }
 
 /** The scrolling band of the thread: its messages in the states of the data, and the controls of the failed sends. */
@@ -154,7 +155,7 @@ const ThreadBand = (props: ThreadBandProps): ReactNode => {
                     />
                 )}
             />
-            <ProposalBand {...props.proposal} />
+            {props.approval}
         </PaneSection>
     )
 }
@@ -163,13 +164,13 @@ const ThreadBand = (props: ThreadBandProps): ReactNode => {
 export const ConversationPane = (props: ConversationPaneProps): ReactNode => {
     const host = useBlockHost()
     const words = useBlockWords()
-    const labels = useSlotLabels(props.props.empty)
+    const labels = useSlotLabels({ key: "inbox_thread_empty" })
     const threadWords = useThreadWords()
     const nowMs = useReadingTime()
-    const { messages, send, handoff, close } = props.slots
-    const maxLength = props.props.maxLength ?? DEFAULT_MAX_LENGTH
+    const { messages, send, handoff, release } = props.slots
+    const maxLength = REPLY_MAX
     const serverRows = derivedSlot(parsedSlot(messages.slot, recordsView), (records) =>
-        messagesOf(records, props.props),
+        messagesOf(records, THREAD_LINE_FIELDS),
     )
     const lastId = "items" in serverRows ? (serverRows.items.at(-1)?.id ?? null) : null
     const composer = useConversationSend(props.threadId, send, maxLength, lastId)
@@ -185,28 +186,29 @@ export const ConversationPane = (props: ConversationPaneProps): ReactNode => {
             .catch(() => actionFailed(host, words))
     }
     const issue = draftIssue(composer.draft, maxLength)
-    const label = words(props.props.label)
+    const label = words({ key: "inbox_thread_label" })
     const clock = { locale: host.locale(), zone: undefined, nowMs }
     const older = olderOf(messages.page, words)
-    const headPaths = props.props.head
     const threadRecord = props.slots.thread.slot
-    const threadHead =
-        headPaths === undefined || !("items" in threadRecord)
-            ? null
-            : threadHeadOf(threadRecord.items, headPaths.titlePath, headPaths.subtitlePath)
+    const contact = "items" in threadRecord ? contactOf(threadRecord.items, words({ key: "inbox_untitled" })) : null
+    const isHeld = contact !== null && contact.handledBy !== ""
     return (
         <>
             <ConversationHead
                 label={label}
-                thread={threadHead}
+                thread={
+                    contact === null
+                        ? null
+                        : {
+                              title: contact.name,
+                              subtitle:
+                                  contact.channelName === ""
+                                      ? ""
+                                      : words({ key: "inbox_channel_line" }).replace("{channel}", contact.channelName),
+                          }
+                }
                 contact={props.contact}
-                actions={headActionsOf(
-                    [
-                        ["handoff", handoff],
-                        ["close", close],
-                    ],
-                    runAction,
-                )}
+                actions={headActionsOf([isHeld ? ["release", release] : ["handoff", handoff]], runAction)}
             />
             <ThreadBand
                 label={label}
@@ -219,23 +221,21 @@ export const ConversationPane = (props: ConversationPaneProps): ReactNode => {
                 older={older}
                 onRetry={messages.retry}
                 composer={composer}
-                proposal={{ props: props.props, slots: props.slots }}
+                approval={props.approval}
             />
-            {props.props.composer ? (
-                <ConversationComposer
-                    label={words({ key: "conversationComposerLabel" })}
-                    placeholder={words({ key: "conversationComposerPlaceholder" })}
-                    sendLabel={send.label}
-                    lockedText={send.isAllowed ? null : words({ key: "conversationLocked" })}
-                    draft={composer.draft}
-                    maxLength={maxLength}
-                    problem={issue === "tooLong" ? words({ key: "conversationTooLong" }) : null}
-                    isSending={send.isRunning}
-                    canSend={composer.canSend}
-                    onDraft={composer.setDraft}
-                    onSend={composer.send}
-                />
-            ) : null}
+            <ConversationComposer
+                label={words({ key: "conversationComposerLabel" })}
+                placeholder={words({ key: "conversationComposerPlaceholder" })}
+                sendLabel={send.label}
+                lockedText={send.isAllowed && isHeld ? null : words({ key: "conversationLocked" })}
+                draft={composer.draft}
+                maxLength={maxLength}
+                problem={issue === "tooLong" ? words({ key: "conversationTooLong" }) : null}
+                isSending={send.isRunning}
+                canSend={composer.canSend}
+                onDraft={composer.setDraft}
+                onSend={composer.send}
+            />
         </>
     )
 }

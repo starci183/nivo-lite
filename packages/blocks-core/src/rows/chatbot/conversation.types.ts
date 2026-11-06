@@ -111,11 +111,3 @@ export interface ProposalPaths {
     /** The path of the line of guidance. */
     readonly notePath?: string | undefined
 }
-
-/** What the head of a thread names: who the thread is with, and one line about it. */
-export interface ThreadHead {
-    /** The name of the thread. */
-    readonly title: string
-    /** One line under the name, such as the channel; empty draws none. */
-    readonly subtitle: string
-}

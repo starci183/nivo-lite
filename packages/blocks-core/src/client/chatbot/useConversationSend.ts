@@ -1,8 +1,8 @@
 import { useEffect, useReducer, useRef, useState } from "react"
 import type { ActionHandle } from "@nivo-lite/agent-sdk/block"
-import { canSend, textToSend } from "../../rows/conversation-draft"
-import { pendingReducer } from "../../rows/conversation-pending"
-import type { PendingSend } from "../../rows/conversation.types"
+import { canSend, textToSend } from "../../rows/chatbot/conversation-draft"
+import { pendingReducer } from "../../rows/chatbot/conversation-pending"
+import type { PendingSend } from "../../rows/chatbot/conversation.types"
 
 /** What the composer of one thread keeps locally and the ways it changes it. */
 export interface ConversationSend {

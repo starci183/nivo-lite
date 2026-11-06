@@ -102,5 +102,8 @@
   "sampleGiao25NguyenHueDuocKhong": "giao 25 Nguyễn Huệ được không",
   "sample3TranPhu": "3 Trần Phú",
   "sampleSoTienKhopLoiBaoCuaKhach": "Số tiền khớp lời báo của khách nhưng không có đơn nào 2.000đ",
-  "sampleAnhBienLaiMoMoEmDaChuyen": "[ảnh biên lai MoMo] Em đã chuyển 2.000đ"
+  "sampleAnhBienLaiMoMoEmDaChuyen": "[ảnh biên lai MoMo] Em đã chuyển 2.000đ",
+  "sampleDraftQuestion": "Spa có mở cửa mùng 2 Tết không ạ?",
+  "sampleDraftGrounded": "Mùng 2 Tết spa mở từ 9:00 đến 17:00.",
+  "sampleDraftReply": "Dạ chị ơi, mùng 2 Tết spa mở từ 9:00 đến 17:00 ạ. Chị muốn em giữ chỗ giờ nào ạ?"
 }

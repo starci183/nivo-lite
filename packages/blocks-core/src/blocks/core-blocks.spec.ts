@@ -1,5 +1,5 @@
 import { asideDetailBlock } from "./aside-detail.block"
-import { conversationBlock } from "./conversation.block"
+import { chatbotBlocks } from "./chatbot/chatbot-blocks"
 import { filterTabsBlock } from "./filter-tabs.block"
 import { formBlock } from "./form.block"
 import { listEditorBlock } from "./list-editor.block"
@@ -42,10 +42,11 @@ const EXPLANATION_WORDS = [
 ]
 
 describe("coreBlocks", () => {
-    it("lists every core block once, under an id of the core namespace", () => {
+    it("lists every block once: the core ones under the core namespace, the Chatbot's own under its own", () => {
         const ids = coreBlocks.map((block) => block.id)
-        expect(new Set(ids).size).toBe(22)
-        expect(ids.every((id) => id.startsWith("core."))).toBe(true)
+        expect(new Set(ids).size).toBe(24)
+        expect(ids.filter((id) => id.startsWith("core."))).toHaveLength(21)
+        expect(ids.filter((id) => id.startsWith("chatbot."))).toHaveLength(3)
     })
 
     it("carries the JSON Schema of every block's props", () => {
@@ -68,7 +69,7 @@ describe("coreBlocks", () => {
             listEditorBlock,
             tabbedPanelBlock,
             asideDetailBlock,
-            conversationBlock,
+            ...chatbotBlocks,
             waitingBlock,
             decisionQueueBlock,
             dashboardCardsBlock,
