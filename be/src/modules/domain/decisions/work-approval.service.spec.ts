@@ -78,10 +78,10 @@ const catalogDouble = mock<MessageCatalog>({
     }),
 })
 
-const build = async (waiting: WorkItem = waitingOf(), agent: OptionalAgentIdentity = null, cardRooms: number = 0) => {
+const build = async (waiting: WorkItem = waitingOf(), agent: OptionalAgentIdentity = null, cards: number = 0) => {
     const evidence = jest.fn().mockResolvedValue(undefined)
     const office = jest.fn().mockResolvedValue(undefined)
-    const cardsOf = jest.fn().mockResolvedValue(cardRooms)
+    const cardRooms = jest.fn().mockResolvedValue(cards)
     const inbound = jest.fn().mockResolvedValue(undefined)
     const agents = jest.fn().mockResolvedValue(agent)
     const markWaiting = jest.fn().mockResolvedValue(waiting)
@@ -102,7 +102,7 @@ const build = async (waiting: WorkItem = waitingOf(), agent: OptionalAgentIdenti
                 useValue: mock<ModuleCatalogService>({ nameOf: jest.fn().mockResolvedValue("Sales AI") }),
             },
             { provide: EvidenceService, useValue: mock<EvidenceService>({ log: evidence }) },
-            { provide: WORK_ASK_CARDS, useValue: mock<WorkAskCards>({ cardsOf }) },
+            { provide: WORK_ASK_CARDS, useValue: mock<WorkAskCards>({ cardRooms }) },
             { provide: WorkLinesService, useValue: mock<WorkLinesService>({ say: office }) },
             {
                 provide: ResponsibilityJournalService,
@@ -115,7 +115,7 @@ const build = async (waiting: WorkItem = waitingOf(), agent: OptionalAgentIdenti
         service: moduleRef.get(WorkApprovalService),
         evidence,
         office,
-        cardsOf,
+        cardRooms,
         inbound,
         agents,
         markWaiting,
@@ -172,11 +172,11 @@ describe("WorkApprovalService", () => {
             const noDecision = await build(waitingOf(), null, 3)
             await noDecision.service.ask(ctx, itemOf(), proposalOf(), askOf())
             expect(noDecision.office).toHaveBeenCalledTimes(1)
-            expect(noDecision.cardsOf).not.toHaveBeenCalled()
+            expect(noDecision.cardRooms).not.toHaveBeenCalled()
 
             const notOpened = await build(waitingOf(), null, 0)
             await notOpened.service.ask(ctx, itemOf(), proposalOf(), { ...askOf(), branchDecisionId: "decision-1" })
-            expect(notOpened.cardsOf).toHaveBeenCalledWith("ws-1", "decision-1")
+            expect(notOpened.cardRooms).toHaveBeenCalledWith("ws-1", "decision-1")
             expect(notOpened.office).toHaveBeenCalledTimes(1)
         })
 

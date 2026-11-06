@@ -642,6 +642,17 @@ export class TeamChatService {
         return rooms.length
     }
 
+    /** In how many rooms the approval card of a decision stands; 0 when none was posted (no request opened, or nobody to show it to). */
+    cardRooms(workspaceId: string, decisionId: string): Promise<number> {
+        return this.entityManager
+            .createQueryBuilder(ChatRoomMessageEntity, "m")
+            .where("m.workspace_id = :workspaceId AND m.kind = 'approval' AND m.ref->>'decision_id' = :decisionId", {
+                workspaceId,
+                decisionId,
+            })
+            .getCount()
+    }
+
     /**
      * Writes one line of an agent (or of the system when no agent speaks) into a room: the replacement of the old Office lines. The room is
      * named, or the line goes to one person and the direct room between them and the agent is opened on demand. The same key from the same
@@ -677,7 +688,11 @@ export class TeamChatService {
         const created = inserted[0]
         if (created !== undefined) return { roomId, messageId: created.id }
         const kept = await this.entityManager.findOneOrFail(ChatRoomMessageEntity, {
-            where: { roomId, authorId: line.authorAgentId ?? undefined, clientId: line.key ?? undefined },
+            where: {
+                roomId,
+                ...(line.authorAgentId === null ? {} : { authorId: line.authorAgentId }),
+                ...(line.key === null ? {} : { clientId: line.key }),
+            },
         })
         return { roomId, messageId: kept.id }
     }

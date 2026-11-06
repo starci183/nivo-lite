@@ -45,7 +45,7 @@ export class WorkApprovalService {
      */
     private async cardPosted(ctx: WorkContext, decisionId: string | undefined): Promise<boolean> {
         if (decisionId === undefined) return false
-        return (await this.cards.cardsOf(ctx.workspaceId, decisionId)) > 0
+        return (await this.cards.cardRooms(ctx.workspaceId, decisionId)) > 0
     }
 
     /** The names of the fields in the language of the reader; a field without a label shows as it is. */
