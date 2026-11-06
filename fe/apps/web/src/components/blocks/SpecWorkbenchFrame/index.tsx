@@ -8,7 +8,6 @@ import { SpecWorkbenchFrameBase } from "./component"
 /** What the route hands the frame: the module, its spec and the view the route opens. */
 type SpecWorkbenchFrameProps = {
     readonly module: string
-    readonly title: string
     readonly spec: StoredSpec
     readonly fallback: StoredSpec | null
     readonly tab: string | null
@@ -23,7 +22,6 @@ export const SpecWorkbenchFrame = (props: SpecWorkbenchFrameProps) => {
     return (
         <SpecWorkbenchFrameBase
             props={{
-                title: props.title,
                 spec: props.spec,
                 fallback: props.fallback,
                 reads: declaration.reads,

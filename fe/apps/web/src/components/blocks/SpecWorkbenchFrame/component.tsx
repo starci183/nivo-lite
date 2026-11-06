@@ -6,7 +6,6 @@ import type { StoredSpec } from "@nivo-lite/agent-sdk/spec"
 /** Resolved atoms of one workbench: its spec and what the spec may bind. */
 export interface SpecWorkbenchFrameBaseProps {
     readonly props: {
-        readonly title: string
         readonly spec: StoredSpec
         readonly fallback: StoredSpec | null
         readonly reads: ReadonlyArray<ReadDefinition>
@@ -19,9 +18,9 @@ export interface SpecWorkbenchFrameBaseProps {
     }
 }
 
-/** The page of a workbench: its heading over the spec drawn with the blocks the host mounted at the app root installed, which also serves every port. */
+/** The page of a workbench: the spec drawn with the blocks the host mounted at the app root installed, which also serves every port. */
 export const SpecWorkbenchFrameBase = (props: SpecWorkbenchFrameBaseProps) => (
-    <Page header={{ title: props.props.title }}>
+    <Page measure="full">
         <SpecWorkbench
             spec={props.props.spec}
             fallback={props.props.fallback}
