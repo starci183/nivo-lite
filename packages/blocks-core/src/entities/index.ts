@@ -1,6 +1,17 @@
 export { adjustmentEntity } from "./accounting/adjustment.entity"
 export { bookEntryEntity } from "./accounting/book-entry.entity"
 export { invoiceEntity } from "./accounting/invoice.entity"
+export {
+    agentGraphDecisionEntity,
+    DECISION_CLOSED_AS,
+    DECISION_GATE_VERDICTS,
+    DECISION_OUTCOMES,
+    DECISION_ROADS,
+} from "./agent/graph-decision.entity"
+export { agentGraphProposalEntity, PROPOSAL_KINDS, PROPOSAL_STATUSES } from "./agent/graph-proposal.entity"
+export { agentGraphSourceEntity } from "./agent/graph-source.entity"
+export { agentGraphVersionEntity, GRAPH_CHANGE_KINDS } from "./agent/graph-version.entity"
+export { agentGraphEntity, GRAPH_MODES } from "./agent/graph.entity"
 export { agentNodeEffectEntity } from "./agent/node-effect.entity"
 export { agentRunStepEntity, RUN_STEP_STATUSES } from "./agent/run-step.entity"
 export { agentRunEntity, RUN_STATUSES } from "./agent/run.entity"
