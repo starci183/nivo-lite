@@ -68,229 +68,6 @@ CREATE FUNCTION be_access.user_emails(p_ids uuid[]) RETURNS TABLE(id uuid, email
 $$;
 
 --
--- Name: accept_invite(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.accept_invite(token text) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public', 'extensions', 'auth'
-    AS $$
-declare
-  inv public.workspace_invites;
-  uid uuid := auth.uid();
-  mail text;
-begin
-  if uid is null then raise exception 'not_signed_in' using errcode = 'P0001'; end if;
-  select * into inv from public.workspace_invites i where i.token_hash = encode(extensions.digest(token, 'sha256'), 'hex') for update;
-  if not found then raise exception 'invite_invalid' using errcode = 'P0001'; end if;
-  if inv.revoked_at is not null then raise exception 'invite_revoked' using errcode = 'P0001'; end if;
-  if inv.accepted_at is not null then raise exception 'invite_used' using errcode = 'P0001'; end if;
-  if inv.expires_at < now() then raise exception 'invite_expired' using errcode = 'P0001'; end if;
-  select u.email into mail from auth.users u where u.id = uid;
-  if lower(coalesce(mail, '')) <> lower(inv.email) then raise exception 'invite_email_mismatch' using errcode = 'P0001'; end if;
-  insert into public.workspace_members (workspace_id, user_id, role, staff_id, display_name)
-  values (inv.workspace_id, uid, inv.role, inv.staff_id,
-          coalesce((select s.name from public.staff s where s.id = inv.staff_id), public.display_name_of(uid)))
-  on conflict (workspace_id, user_id) do update
-    set role = case when public.workspace_members.role = 'owner' then 'owner' else excluded.role end,
-        staff_id = coalesce(excluded.staff_id, public.workspace_members.staff_id), status = 'active';
-  update public.workspace_invites set accepted_at = now(), accepted_by = uid where id = inv.id;
-  return inv.workspace_id;
-end;
-$$;
-
---
--- Name: admin_console_audit(text, uuid, jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.admin_console_audit(p_action text, p_workspace uuid DEFAULT NULL::uuid, p_data jsonb DEFAULT '{}'::jsonb) RETURNS void
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  if not public.is_platform_admin() then
-    raise exception 'not_platform_admin' using errcode = '42501';
-  end if;
-  insert into public.platform_audit (actor_email, actor_id, action, workspace_id, data)
-  values (lower(btrim(auth.jwt() ->> 'email')), auth.uid(), left(p_action, 80), p_workspace, coalesce(p_data, '{}'::jsonb));
-end;
-$$;
-
---
--- Name: admin_console_quota(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.admin_console_quota(p_workspace uuid) RETURNS jsonb
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_result jsonb;
-begin
-  if not public.is_platform_admin() then
-    raise exception 'not_platform_admin' using errcode = '42501';
-  end if;
-  select jsonb_build_object('credits_used', q.credits_used, 'credits_limit', q.credits_limit, 'cost_usd', q.cost_usd)
-    into v_result
-    from public.ai_quota_status(p_workspace) q
-    limit 1;
-  return v_result;
-end;
-$$;
-
---
--- Name: admin_console_signups(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.admin_console_signups(p_days integer DEFAULT 14) RETURNS TABLE(day date, signups integer)
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  if not public.is_platform_admin() then
-    raise exception 'not_platform_admin' using errcode = '42501';
-  end if;
-  return query select s.day, s.signups from public.admin_signups_per_day(p_days) s;
-end;
-$$;
-
---
--- Name: admin_console_user_emails(uuid[]); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.admin_console_user_emails(p_ids uuid[]) RETURNS TABLE(id uuid, email text, last_sign_in_at timestamp with time zone)
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  if not public.is_platform_admin() then
-    raise exception 'not_platform_admin' using errcode = '42501';
-  end if;
-  return query
-    select u.id, u.email::text, u.last_sign_in_at from auth.users u where u.id = any (p_ids);
-end;
-$$;
-
---
--- Name: admin_console_workspace_stats(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.admin_console_workspace_stats() RETURNS TABLE(workspace_id uuid, members integer, last_customer_message_at timestamp with time zone, messages_7d integer, open_decisions integer)
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  if not public.is_platform_admin() then
-    raise exception 'not_platform_admin' using errcode = '42501';
-  end if;
-  return query select s.workspace_id, s.members, s.last_customer_message_at, s.messages_7d, s.open_decisions from public.admin_workspace_stats() s;
-end;
-$$;
-
---
--- Name: admin_extend_subscription(uuid, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.admin_extend_subscription(p_workspace uuid, p_days integer) RETURNS timestamp with time zone
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_before timestamptz;
-  v_after timestamptz;
-begin
-  if not public.is_platform_admin() then
-    raise exception 'not_platform_admin' using errcode = '42501';
-  end if;
-  if p_days is null or p_days < 1 or p_days > 3650 then
-    raise exception 'days_invalid' using errcode = '22023';
-  end if;
-  select w.paid_until into v_before from public.workspaces w where w.id = p_workspace for update;
-  if not found then
-    raise exception 'WORKSPACES_NOT_FOUND' using errcode = 'P0002';
-  end if;
-  v_after := greatest(coalesce(v_before, to_timestamp(0)), now()) + make_interval(days => p_days);
-  perform set_config('nivo.billing_writer', 'on', true);
-  update public.workspaces set paid_until = v_after where id = p_workspace;
-  perform set_config('nivo.billing_writer', 'off', true);
-  insert into public.platform_audit (actor_email, actor_id, action, workspace_id, data)
-  values (lower(btrim(auth.jwt() ->> 'email')), auth.uid(), 'workspace.extend', p_workspace,
-          jsonb_build_object('days', p_days, 'from', v_before, 'to', v_after));
-  return v_after;
-end;
-$$;
-
---
--- Name: admin_set_workspace_plan(uuid, text, bigint); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.admin_set_workspace_plan(p_workspace uuid, p_plan text, p_credits bigint DEFAULT NULL::bigint) RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_before text;
-  v_plan text;
-begin
-  if not public.is_platform_admin() then
-    raise exception 'not_platform_admin' using errcode = '42501';
-  end if;
-  if p_credits is not null and p_credits < 0 then
-    raise exception 'credits_invalid' using errcode = '22023';
-  end if;
-  select p.code into v_plan from public.plans p where p.code = p_plan and p.active = true;
-  if not found then
-    raise exception 'WORKSPACES_PLAN_UNKNOWN' using errcode = 'P0002';
-  end if;
-  select w.plan_code into v_before from public.workspaces w where w.id = p_workspace for update;
-  if not found then
-    raise exception 'WORKSPACES_NOT_FOUND' using errcode = 'P0002';
-  end if;
-  perform set_config('nivo.billing_writer', 'on', true);
-  update public.workspaces set plan_code = v_plan where id = p_workspace;
-  perform set_config('nivo.billing_writer', 'off', true);
-  insert into public.ai_quota_overrides (workspace_id, credits_limit, updated_at)
-  values (p_workspace, p_credits, now())
-  on conflict (workspace_id) do update set credits_limit = excluded.credits_limit, updated_at = excluded.updated_at;
-  insert into public.platform_audit (actor_email, actor_id, action, workspace_id, data)
-  values (lower(btrim(auth.jwt() ->> 'email')), auth.uid(), 'workspace.set_plan', p_workspace,
-          jsonb_build_object('from', v_before, 'to', v_plan, 'creditsTo', p_credits));
-  return jsonb_build_object('planCode', v_plan, 'creditsLimit', p_credits);
-end;
-$$;
-
---
--- Name: admin_set_workspace_status(uuid, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.admin_set_workspace_status(p_workspace uuid, p_status text) RETURNS text
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_before text;
-begin
-  if not public.is_platform_admin() then
-    raise exception 'not_platform_admin' using errcode = '42501';
-  end if;
-  if p_status not in ('active', 'past_due') then
-    raise exception 'status_invalid' using errcode = '22023';
-  end if;
-  select w.status into v_before from public.workspaces w where w.id = p_workspace for update;
-  if not found then
-    raise exception 'WORKSPACES_NOT_FOUND' using errcode = 'P0002';
-  end if;
-  perform set_config('nivo.billing_writer', 'on', true);
-  update public.workspaces set status = p_status where id = p_workspace;
-  perform set_config('nivo.billing_writer', 'off', true);
-  insert into public.platform_audit (actor_email, actor_id, action, workspace_id, data)
-  values (lower(btrim(auth.jwt() ->> 'email')), auth.uid(), 'workspace.set_status', p_workspace,
-          jsonb_build_object('from', v_before, 'to', p_status));
-  return p_status;
-end;
-$$;
-
---
 -- Name: admin_signups_per_day(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -493,64 +270,6 @@ begin
 end $$;
 
 --
--- Name: api_key_create(uuid, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.api_key_create(p_workspace uuid, p_name text) RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public', 'extensions'
-    AS $$
-declare
-  v_name text := left(regexp_replace(btrim(coalesce(p_name, '')), '\s+', ' ', 'g'), 60);
-  v_key text;
-  v_row public.api_keys;
-  v_actor text;
-begin
-  if not public.is_manager(p_workspace) then raise exception 'not allowed' using errcode = '42501'; end if;
-  if char_length(v_name) < 2 then raise exception 'name too short' using errcode = '22023'; end if;
-  if (select count(*) from public.api_keys where workspace_id = p_workspace and revoked_at is null) >= 20 then
-    raise exception 'too many active keys' using errcode = '23514';
-  end if;
-  v_key := 'nvk_' || translate(trim(trailing '=' from encode(gen_random_bytes(32), 'base64')), '+/', '-_');
-  insert into public.api_keys (workspace_id, name, key_prefix, key_hash, created_by)
-  values (p_workspace, v_name, left(v_key, 12), encode(digest(v_key, 'sha256'), 'hex'), auth.uid())
-  returning * into v_row;
-  select m.display_name into v_actor from public.workspace_members m where m.workspace_id = p_workspace and m.user_id = auth.uid();
-  insert into public.events (workspace_id, kind, actor, summary, evidence)
-  values (p_workspace, 'api.key_created', coalesce(v_actor, ''), 'API key created: ' || v_name, v_row.key_prefix);
-  return jsonb_build_object(
-    'key', v_key,
-    'item', jsonb_build_object('id', v_row.id, 'name', v_row.name, 'prefix', v_row.key_prefix, 'createdAt', v_row.created_at, 'lastUsedAt', null, 'revokedAt', null)
-  );
-end $$;
-
---
--- Name: api_key_revoke(uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.api_key_revoke(p_workspace uuid, p_key uuid) RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_row public.api_keys;
-  v_actor text;
-begin
-  if not public.is_manager(p_workspace) then raise exception 'not allowed' using errcode = '42501'; end if;
-  update public.api_keys set revoked_at = now()
-  where id = p_key and workspace_id = p_workspace and revoked_at is null
-  returning * into v_row;
-  if not found then raise exception 'key not found' using errcode = '22023'; end if;
-  select m.display_name into v_actor from public.workspace_members m where m.workspace_id = p_workspace and m.user_id = auth.uid();
-  insert into public.events (workspace_id, kind, actor, summary, evidence)
-  values (p_workspace, 'api.key_revoked', coalesce(v_actor, ''), 'API key revoked: ' || v_row.name, v_row.key_prefix);
-  return jsonb_build_object(
-    'id', v_row.id, 'name', v_row.name, 'prefix', v_row.key_prefix, 'createdAt', v_row.created_at,
-    'lastUsedAt', v_row.last_used_at, 'revokedAt', v_row.revoked_at
-  );
-end $$;
-
---
 -- Name: api_rate_hit(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -634,115 +353,6 @@ end;
 $$;
 
 --
--- Name: booking_peak_load(uuid, timestamp with time zone, timestamp with time zone, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.booking_peak_load(p_resource uuid, p_start timestamp with time zone, p_block_end timestamp with time zone, p_exclude uuid) RETURNS integer
-    LANGUAGE sql STABLE
-    SET search_path TO 'public'
-    AS $$
-  select coalesce(max(load), 0)::int from (
-    select (select coalesce(sum(b2.party_size), 0) from public.bookings b2
-             where b2.resource_id = p_resource and b2.holds_slot and b2.status in ('requested', 'confirmed', 'rescheduled')
-               and (p_exclude is null or b2.id <> p_exclude)
-               and b2.start_at <= t.t and b2.block_end_at > t.t) as load
-      from (
-        select p_start as t
-        union
-        select b.start_at from public.bookings b
-         where b.resource_id = p_resource and b.holds_slot and b.status in ('requested', 'confirmed', 'rescheduled')
-           and (p_exclude is null or b.id <> p_exclude)
-           and b.start_at > p_start and b.start_at < p_block_end
-      ) t
-  ) q;
-$$;
-
---
--- Name: booking_rate_hit(text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.booking_rate_hit(p_key text, p_limit integer, p_window_sec integer) RETURNS boolean
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_window timestamptz := to_timestamp(floor(extract(epoch from now()) / p_window_sec) * p_window_sec);
-  v_hits int;
-begin
-  insert into public.booking_rate (key, window_start, hits) values (p_key, v_window, 1)
-  on conflict (key, window_start) do update set hits = public.booking_rate.hits + 1
-  returning hits into v_hits;
-  delete from public.booking_rate where window_start < now() - interval '2 days';
-  return v_hits <= p_limit;
-end $$;
-
---
--- Name: booking_relocate(uuid, uuid, timestamp with time zone, timestamp with time zone, timestamp with time zone, boolean); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.booking_relocate(p_booking uuid, p_resource uuid, p_start timestamp with time zone, p_end timestamp with time zone, p_block_end timestamp with time zone, p_force boolean DEFAULT false) RETURNS boolean
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_ws uuid;
-  v_party int;
-  v_cap int;
-  v_old timestamptz;
-  v_status text;
-begin
-  select workspace_id, party_size, start_at, status into v_ws, v_party, v_old, v_status from public.bookings where id = p_booking;
-  if v_ws is null then raise exception 'booking not found'; end if;
-  perform pg_advisory_xact_lock(hashtextextended(p_resource::text, 0));
-  select capacity into v_cap from public.booking_resources where id = p_resource and workspace_id = v_ws;
-  if v_cap is null then raise exception 'resource not found'; end if;
-  if not p_force and public.booking_peak_load(p_resource, p_start, p_block_end, p_booking) + v_party > v_cap then
-    return false;
-  end if;
-  update public.bookings
-     set resource_id = p_resource, start_at = p_start, end_at = p_end, block_end_at = p_block_end, holds_slot = true,
-         rescheduled_from = case when p_start <> v_old then v_old else rescheduled_from end,
-         reschedule_count = reschedule_count + case when p_start <> v_old then 1 else 0 end,
-         status = case when p_start <> v_old and v_status in ('confirmed', 'rescheduled') then 'rescheduled' else v_status end,
-         conflict_note = '', updated_at = now()
-   where id = p_booking;
-  return true;
-end $$;
-
---
--- Name: booking_reserve(jsonb, boolean); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.booking_reserve(p jsonb, p_force boolean DEFAULT false) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_res uuid := (p ->> 'resource_id')::uuid;
-  v_cap int;
-  v_party int := coalesce((p ->> 'party_size')::int, 1);
-  v_id uuid;
-  v_holds boolean := coalesce((p ->> 'holds_slot')::boolean, true);
-begin
-  perform pg_advisory_xact_lock(hashtextextended(v_res::text, 0));
-  select capacity into v_cap from public.booking_resources where id = v_res and workspace_id = (p ->> 'workspace_id')::uuid;
-  if v_cap is null then raise exception 'resource not found'; end if;
-  if v_holds and not p_force
-     and public.booking_peak_load(v_res, (p ->> 'start_at')::timestamptz, (p ->> 'block_end_at')::timestamptz, null) + v_party > v_cap then
-    return null;
-  end if;
-  insert into public.bookings (workspace_id, lead_id, conversation_id, customer_name, customer_phone, customer_email, service_id, resource_id, start_at, end_at, block_end_at,
-                               party_size, status, holds_slot, source_channel, price_vnd, deposit_vnd, deposit_status, note, conflict_note, origin, idempotency_key)
-  values ((p ->> 'workspace_id')::uuid, nullif(p ->> 'lead_id', '')::uuid, nullif(p ->> 'conversation_id', '')::uuid, coalesce(p ->> 'customer_name', ''), nullif(p ->> 'customer_phone', ''),
-          nullif(p ->> 'customer_email', ''), (p ->> 'service_id')::uuid, v_res, (p ->> 'start_at')::timestamptz, (p ->> 'end_at')::timestamptz, (p ->> 'block_end_at')::timestamptz,
-          v_party, coalesce(p ->> 'status', 'requested'), v_holds, coalesce(p ->> 'source_channel', 'manual'), nullif(p ->> 'price_vnd', '')::bigint,
-          coalesce((p ->> 'deposit_vnd')::bigint, 0), coalesce(p ->> 'deposit_status', 'none'), coalesce(p ->> 'note', ''), coalesce(p ->> 'conflict_note', ''),
-          coalesce(p ->> 'origin', 'live'), nullif(p ->> 'idempotency_key', ''))
-  returning id into v_id;
-  return v_id;
-end $$;
-
---
 -- Name: bookings_fill_installation(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -791,51 +401,6 @@ begin
 end $$;
 
 --
--- Name: brain_command(uuid, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.brain_command(p_workspace uuid, p_kind text, p_payload jsonb) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_id uuid;
-begin
-  if auth.uid() is null or not public.is_member(p_workspace) then
-    raise exception 'not allowed' using errcode = '42501';
-  end if;
-  insert into public.brain_commands (workspace_id, requested_by, kind, payload)
-  values (p_workspace, auth.uid(), p_kind, coalesce(p_payload, '{}'::jsonb))
-  returning id into v_id;
-  perform public.job_enqueue(p_workspace, 'knowledge', 'brain.command', jsonb_build_object('commandId', v_id, 'workspaceId', p_workspace), 'brain.command:' || v_id);
-  return v_id;
-end $$;
-
---
--- Name: brain_command_wait(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.brain_command_wait(p_id uuid) RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_row public.brain_commands;
-  v_looks int := 0;
-begin
-  loop
-    select * into v_row from public.brain_commands where id = p_id and requested_by = auth.uid();
-    if not found then
-      raise exception 'not found' using errcode = 'P0002';
-    end if;
-    exit when v_row.status in ('done', 'failed') or v_looks >= 10;
-    perform pg_sleep(0.5);
-    v_looks := v_looks + 1;
-  end loop;
-  return jsonb_build_object('status', v_row.status, 'result', v_row.result, 'errorCode', v_row.error_code);
-end $$;
-
---
 -- Name: connection_command_submit(uuid, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -861,28 +426,6 @@ begin
     'connection.command:' || v_id::text
   );
   return v_id;
-end $$;
-
---
--- Name: connection_command_take(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.connection_command_take(p_id uuid) RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  r public.connection_commands;
-begin
-  select * into r from public.connection_commands where id = p_id and user_id = auth.uid();
-  if not found then
-    return jsonb_build_object('status', 'missing');
-  end if;
-  if r.status = 'pending' then
-    return jsonb_build_object('status', 'pending');
-  end if;
-  delete from public.connection_commands where id = p_id;
-  return jsonb_build_object('status', 'done', 'outcome', r.outcome);
 end $$;
 
 --
@@ -919,33 +462,6 @@ CREATE FUNCTION public.content_settings_touch() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 begin new.updated_at := now(); return new; end $$;
-
---
--- Name: create_free_workspace(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.create_free_workspace(p_name text) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_uid uuid := auth.uid();
-  v_name text := btrim(coalesce(p_name, ''));
-  v_id uuid;
-begin
-  if v_uid is null then
-    raise exception 'not_signed_in' using errcode = '42501';
-  end if;
-  if not exists (select 1 from public.platform_flags f where f.key = 'workspace_signup_enabled' and f.enabled) then
-    raise exception 'WORKSPACES_SIGNUP_DISABLED' using errcode = 'P0001';
-  end if;
-  if v_name = '' or char_length(v_name) > 120 then
-    raise exception 'WORKSPACES_NAME_INVALID' using errcode = '22023';
-  end if;
-  insert into public.workspaces (owner_id, name, status) values (v_uid, v_name, 'active') returning id into v_id;
-  return v_id;
-end;
-$$;
 
 --
 -- Name: credit_usd_value(); Type: FUNCTION; Schema: public; Owner: -
@@ -1356,17 +872,6 @@ end
 $$;
 
 --
--- Name: hiring_new_token(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.hiring_new_token() RETURNS text
-    LANGUAGE sql
-    SET search_path TO 'public'
-    AS $$
-  select replace(gen_random_uuid()::text, '-', '');
-$$;
-
---
 -- Name: hiring_offer_answer(text, boolean, text[], text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1492,27 +997,6 @@ begin
   return v_count > 0;
 end
 $$;
-
---
--- Name: hiring_ops_status(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.hiring_ops_status() RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare v_jobs jsonb := '[]'::jsonb; v_due int;
-begin
-  begin
-    select coalesce(jsonb_agg(jsonb_build_object('jobname', jobname, 'schedule', schedule, 'active', active)), '[]'::jsonb)
-      into v_jobs from cron.job where jobname like 'hiring-%';
-  exception when others then
-    v_jobs := '[]'::jsonb;
-  end;
-  select count(*) into v_due from public.hiring_candidates c join public.hiring_settings s on s.workspace_id = c.workspace_id
-    where c.stage in ('rejected', 'withdrawn') and c.stage_changed_at < now() - make_interval(days => s.retention_days);
-  return jsonb_build_object('cron', v_jobs, 'retention_due', v_due);
-end $$;
 
 --
 -- Name: hiring_retention_log_add(uuid, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: -
@@ -2006,25 +1490,6 @@ end
 $$;
 
 --
--- Name: invite_preview(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.invite_preview(token text) RETURNS TABLE(workspace_name text, email text, role text, staff_name text, state text)
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO 'public', 'extensions'
-    AS $$
-  select w.name, i.email, i.role, s.name,
-         case when i.revoked_at is not null then 'revoked'
-              when i.accepted_at is not null then 'accepted'
-              when i.expires_at < now() then 'expired'
-              else 'pending' end
-  from public.workspace_invites i
-  join public.workspaces w on w.id = i.workspace_id
-  left join public.staff s on s.id = i.staff_id
-  where i.token_hash = encode(extensions.digest(token, 'sha256'), 'hex');
-$$;
-
---
 -- Name: is_manager(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2047,17 +1512,6 @@ CREATE FUNCTION public.is_member(ws uuid) RETURNS boolean
 $$;
 
 --
--- Name: is_owner(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.is_owner(ws uuid) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-  select coalesce(public.member_role(ws) = 'owner', false);
-$$;
-
---
 -- Name: is_platform_admin(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2071,40 +1525,6 @@ CREATE FUNCTION public.is_platform_admin() RETURNS boolean
       where a.email = lower(btrim(coalesce(auth.jwt() ->> 'email', '')))
     );
 $$;
-
---
--- Name: job_ack(text, bigint); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.job_ack(p_queue text, p_msg_id bigint) RETURNS boolean
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_ok boolean;
-begin
-  v_ok := pgmq.delete(p_queue, p_msg_id);
-  delete from public.job_slots where queue = p_queue and msg_id = p_msg_id;
-  update public.job_outbox set state = 'done', finished_at = now(), last_error = null where queue = p_queue and msg_id = p_msg_id;
-  return coalesce(v_ok, false);
-end $$;
-
---
--- Name: job_archive(text, bigint, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.job_archive(p_queue text, p_msg_id bigint, p_error text DEFAULT NULL::text) RETURNS boolean
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_ok boolean;
-begin
-  v_ok := pgmq.archive(p_queue, p_msg_id);
-  delete from public.job_slots where queue = p_queue and msg_id = p_msg_id;
-  update public.job_outbox set state = 'failed', finished_at = now(), last_error = left(p_error, 1000) where queue = p_queue and msg_id = p_msg_id;
-  return coalesce(v_ok, false);
-end $$;
 
 --
 -- Name: job_enqueue(uuid, text, text, jsonb, text); Type: FUNCTION; Schema: public; Owner: -
@@ -2129,86 +1549,6 @@ begin
   select pgmq.send(p_queue, public.job_message(p_name, p_payload, p_dedupe, v_id)) into v_msg;
   update public.job_outbox set msg_id = v_msg, sent_at = now() where id = v_id;
   return v_id;
-end $$;
-
---
--- Name: job_fail(text, bigint, integer, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.job_fail(p_queue text, p_msg_id bigint, p_delay_s integer, p_error text DEFAULT NULL::text) RETURNS boolean
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  perform pgmq.set_vt(p_queue, p_msg_id, greatest(0, p_delay_s));
-  delete from public.job_slots where queue = p_queue and msg_id = p_msg_id;
-  update public.job_outbox set state = 'queued', last_error = left(p_error, 1000) where queue = p_queue and msg_id = p_msg_id;
-  return true;
-end $$;
-
---
--- Name: job_message(text, jsonb, text, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.job_message(p_name text, p_payload jsonb, p_dedupe text, p_outbox uuid) RETURNS jsonb
-    LANGUAGE sql IMMUTABLE
-    AS $$ select jsonb_build_object('name', p_name, 'payload', coalesce(p_payload, '{}'::jsonb), 'dedupe', p_dedupe, 'outbox_id', p_outbox) $$;
-
---
--- Name: job_read(text, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.job_read(p_queue text, p_vt integer, p_qty integer, p_ws_limit integer DEFAULT 2) RETURNS TABLE(msg_id bigint, attempt integer, enqueued_at timestamp with time zone, message jsonb)
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $_$
-declare
-  r record;
-  v_ws uuid;
-  v_ws_text text;
-  v_busy int;
-  v_attempt int;
-begin
-  for r in select * from pgmq.read(p_queue, greatest(5, p_vt), greatest(1, least(p_qty, 100))) loop
-    v_ws_text := r.message->'payload'->>'workspaceId';
-    v_ws := case when v_ws_text ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then v_ws_text::uuid end;
-    if v_ws is not null then
-      perform pg_advisory_xact_lock(hashtextextended('nivo.job-ws:' || v_ws::text, 0));
-      delete from public.job_slots s where s.workspace_id = v_ws and s.lease_until < now();
-      select count(*) into v_busy from public.job_slots s where s.workspace_id = v_ws and not (s.queue = p_queue and s.msg_id = r.msg_id);
-      if v_busy >= greatest(1, p_ws_limit) then
-        perform pgmq.set_vt(p_queue, r.msg_id, 3 + floor(random() * 2)::int);
-        continue;
-      end if;
-      insert into public.job_slots as s (queue, msg_id, workspace_id, lease_until)
-      values (p_queue, r.msg_id, v_ws, now() + make_interval(secs => greatest(5, p_vt)))
-      on conflict on constraint job_slots_pkey do update set lease_until = excluded.lease_until;
-    end if;
-    v_attempt := null;
-    update public.job_outbox o set attempts = o.attempts + 1, state = 'running', started_at = now()
-     where o.queue = p_queue and o.msg_id = r.msg_id
-    returning o.attempts into v_attempt;
-    return query select r.msg_id, coalesce(v_attempt, r.read_ct), r.enqueued_at, r.message;
-  end loop;
-end $_$;
-
---
--- Name: job_requeue(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.job_requeue(p_outbox uuid) RETURNS bigint
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  o public.job_outbox;
-  v_msg bigint;
-begin
-  select * into o from public.job_outbox where id = p_outbox and state = 'failed' for update;
-  if o.id is null then return null; end if;
-  select pgmq.send(o.queue, public.job_message(o.name, o.payload, o.dedupe_key, o.id)) into v_msg;
-  update public.job_outbox set msg_id = v_msg, sent_at = now(), state = 'queued', attempts = 0, finished_at = null where id = o.id;
-  return v_msg;
 end $$;
 
 --
@@ -2264,20 +1604,6 @@ CREATE FUNCTION public.job_status(p_workspace_id uuid, p_queue text, p_name text
         and o.dedupe_key = p_dedupe_key
     limit 1;
 $$;
-
---
--- Name: job_touch(text, bigint, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.job_touch(p_queue text, p_msg_id bigint, p_vt integer) RETURNS boolean
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  perform pgmq.set_vt(p_queue, p_msg_id, greatest(0, p_vt));
-  update public.job_slots set lease_until = now() + make_interval(secs => greatest(5, p_vt)) where queue = p_queue and msg_id = p_msg_id;
-  return found;
-end $$;
 
 --
 -- Name: knowledge_chunk_visibility_sync(); Type: FUNCTION; Schema: public; Owner: -
@@ -2406,111 +1732,6 @@ begin
 end $$;
 
 --
--- Name: lead_actor_name(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.lead_actor_name(p_workspace uuid) RETURNS text
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_name text;
-begin
-  if auth.uid() is null then
-    raise exception 'not_signed_in' using errcode = '42501';
-  end if;
-  select m.display_name into v_name from public.workspace_members m
-   where m.workspace_id = p_workspace and m.user_id = auth.uid() and m.status = 'active';
-  if not found then
-    raise exception 'WORKSPACE_MEMBERS_NOT_MEMBER' using errcode = '42501';
-  end if;
-  return v_name;
-end;
-$$;
-
---
--- Name: lead_step_owner(uuid, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.lead_step_owner(p_workspace uuid, p_owner text, p_actor text, OUT o_kind text, OUT o_agent uuid, OUT o_name text) RETURNS record
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $_$
-begin
-  if p_owner = 'human' then
-    o_kind := 'human';
-    o_agent := null;
-    o_name := p_actor;
-    return;
-  end if;
-  if p_owner !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then
-    raise exception 'RESPONSIBILITIES_AGENT_NOT_FOUND' using errcode = 'P0002';
-  end if;
-  select a.id, a.name into o_agent, o_name from public.agents a where a.workspace_id = p_workspace and a.id = p_owner::uuid;
-  if not found then
-    raise exception 'RESPONSIBILITIES_AGENT_NOT_FOUND' using errcode = 'P0002';
-  end if;
-  o_kind := 'agent';
-end;
-$_$;
-
---
--- Name: match_knowledge(uuid, text, extensions.vector, text, integer, text, text, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.match_knowledge(p_workspace uuid, p_module text, p_query_embedding extensions.vector DEFAULT NULL::extensions.vector, p_query text DEFAULT ''::text, p_limit integer DEFAULT 8, p_audience text DEFAULT 'internal'::text, p_query_model text DEFAULT NULL::text, p_installation uuid DEFAULT NULL::uuid) RETURNS TABLE(layer text, id uuid, source_id uuid, module text, kind text, title text, content text, score real, visibility text, topic text)
-    LANGUAGE plpgsql STABLE
-    SET search_path TO 'public', 'extensions'
-    AS $$
-declare
-  q tsquery;
-  words text;
-  use_vec boolean := p_query_embedding is not null and p_query_model is not null;
-begin
-  if not (public.is_member(p_workspace) or coalesce(auth.role(), '') = 'service_role') then
-    return;
-  end if;
-  words := trim(regexp_replace(public.knowledge_fold(p_query), '[^a-z0-9]+', ' ', 'g'));
-  if words <> '' then
-    q := to_tsquery('simple', array_to_string(regexp_split_to_array(words, '\s+'), ' | '));
-  end if;
-
-  return query
-  with business as (
-    select 'business'::text as layer, c.id, c.source_id, c.module, s.kind, s.title, c.content,
-           (case when use_vec and c.embedding is not null and c.embedding_model = p_query_model then greatest(0, 1 - (c.embedding <=> p_query_embedding)) * 0.7 else 0 end
-            + case when q is not null then least(1, ts_rank(c.fts, q)) * 0.3 else 0 end)::real as score,
-           c.visibility, s.topic,
-           (use_vec and c.embedding is not null and c.embedding_model = p_query_model and (c.embedding <=> p_query_embedding) < 0.8)
-             or (q is not null and c.fts @@ q) as hit
-    from public.knowledge_chunks c
-    join public.knowledge_sources s on s.id = c.source_id
-    where c.workspace_id = p_workspace and (c.module is null or c.module = p_module)
-      and (p_audience <> 'customer' or c.visibility = 'public')
-      -- a document restricted to one instance is read by that instance only
-      and (s.installation_id is null or s.installation_id = p_installation)
-  ),
-  nivo as (
-    select 'nivo'::text as layer, k.id, null::uuid as source_id, k.module, k.kind, k.title, k.body as content,
-           (case when use_vec and k.embedding is not null and k.embedding_model = p_query_model then greatest(0, 1 - (k.embedding <=> p_query_embedding)) * 0.7 else 0 end
-            + case when q is not null then least(1, ts_rank(k.fts, q)) * 0.3 else 0 end)::real as score,
-           'internal'::text as visibility, null::text as topic,
-           (use_vec and k.embedding is not null and k.embedding_model = p_query_model and (k.embedding <=> p_query_embedding) < 0.8)
-             or (q is not null and k.fts @@ q) as hit
-    from public.nivo_knowledge k
-    where k.module in (p_module, 'core')
-  ),
-  merged as (
-    select * from business union all select * from nivo
-  )
-  select m.layer, m.id, m.source_id, m.module, m.kind, m.title, m.content, m.score, m.visibility, m.topic
-  from merged m where m.hit
-  order by m.score desc
-  limit greatest(1, least(coalesce(p_limit, 8), 40));
-end;
-$$;
-
---
 -- Name: member_role(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2566,82 +1787,6 @@ CREATE FUNCTION public.module_type_name(p_key text) RETURNS text
 $$;
 
 --
--- Name: my_sessions(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.my_sessions() RETURNS TABLE(id uuid, created_at timestamp with time zone, last_active_at timestamp with time zone, user_agent text, ip text)
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-  select s.id,
-         s.created_at,
-         coalesce(s.refreshed_at at time zone 'utc', s.updated_at, s.created_at) as last_active_at,
-         s.user_agent,
-         host(s.ip) as ip
-    from auth.sessions s
-   where s.user_id = auth.uid()
-     and (s.not_after is null or s.not_after > now())
-   order by 3 desc nulls last;
-$$;
-
---
--- Name: my_staff_id(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.my_staff_id(ws uuid) RETURNS uuid
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-  select m.staff_id from public.workspace_members m
-  where m.workspace_id = ws and m.user_id = auth.uid() and m.status = 'active';
-$$;
-
---
--- Name: owns_workspace(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.owns_workspace(ws uuid) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-  select coalesce(public.member_role(ws) = 'owner', false);
-$$;
-
---
--- Name: payment_order_request(uuid, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.payment_order_request(p_workspace uuid, p_kind text, p_target text) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $_$
-declare
-    v_id uuid;
-begin
-    if auth.uid() is null or not public.is_manager(p_workspace) then
-        raise exception 'not allowed' using errcode = '42501';
-    end if;
-    if p_kind not in ('plan', 'renew', 'topup', 'upgrade') then
-        raise exception 'unknown kind %', p_kind using errcode = '22023';
-    end if;
-    if p_kind <> 'renew' and (p_target is null or p_target !~ '^[a-z0-9_-]{1,40}$') then
-        raise exception 'a target is required' using errcode = '22023';
-    end if;
-    insert into public.payment_order_requests (workspace_id, requested_by, kind, target)
-    values (p_workspace, auth.uid(), p_kind, case when p_kind = 'renew' then null else p_target end)
-    returning id into v_id;
-    perform public.job_enqueue(
-        p_workspace,
-        'payment_order_requested',
-        'payment_order_requested',
-        jsonb_build_object('workspaceId', p_workspace, 'requestId', v_id),
-        'payment-order-request:' || v_id::text
-    );
-    return v_id;
-end;
-$_$;
-
---
 -- Name: post_ai_usage_notice(uuid, date, text, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2673,30 +1818,6 @@ CREATE FUNCTION public.post_office_notice(p_workspace uuid, p_body text) RETURNS
     AS $$
     insert into public.messages (workspace_id, author_kind, author_name, body)
     values (p_workspace, 'system', 'NIVO', p_body)
-$$;
-
---
--- Name: read_app_command(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.read_app_command(p_id uuid) RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  c public.app_commands;
-  v_result jsonb;
-begin
-  select * into c from public.app_commands where id = p_id and requested_by = auth.uid();
-  if not found then
-    raise exception 'COMMAND_NOT_FOUND' using errcode = 'P0002';
-  end if;
-  v_result := c.result;
-  if c.state = 'done' and c.result ? 'link' then
-    update public.app_commands set result = c.result - 'link' where id = c.id;
-  end if;
-  return jsonb_build_object('state', c.state, 'result', v_result, 'errorCode', c.error_code);
-end;
 $$;
 
 --
@@ -2737,33 +1858,6 @@ end;
 $$;
 
 --
--- Name: request_agent_sync(uuid, uuid, boolean); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.request_agent_sync(p_workspace uuid, p_installation uuid DEFAULT NULL::uuid, p_force boolean DEFAULT false) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_subject text := coalesce(p_installation::text, 'ws:' || p_workspace::text);
-begin
-  if auth.uid() is null or not public.is_manager(p_workspace) then
-    raise exception 'not allowed' using errcode = '42501';
-  end if;
-  if p_installation is not null and not exists (
-    select 1 from public.module_installations i where i.id = p_installation and i.workspace_id = p_workspace
-  ) then
-    raise exception 'installation not found' using errcode = 'P0002';
-  end if;
-  return public.job_enqueue(
-    p_workspace, 'agents', 'agents.sync',
-    jsonb_strip_nulls(jsonb_build_object(
-      'workspaceId', p_workspace, 'installationId', p_installation, 'force', coalesce(p_force, false),
-      'requestedAt', (extract(epoch from now()) * 1000)::bigint)),
-    'agents.sync:' || v_subject || ':' || floor(extract(epoch from now()) / 60)::bigint::text);
-end $$;
-
---
 -- Name: request_invite_command(uuid, text, uuid, text, text, uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2802,56 +1896,6 @@ end;
 $$;
 
 --
--- Name: request_office_confirm(uuid, uuid, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.request_office_confirm(p_workspace uuid, p_candidate uuid, p_locale text DEFAULT 'vi'::text) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  if auth.uid() is null or not public.is_manager(p_workspace) then
-    raise exception 'not allowed' using errcode = '42501';
-  end if;
-  if not exists (
-    select 1 from public.office_command_candidates c where c.id = p_candidate and c.workspace_id = p_workspace and c.status = 'pending'
-  ) then
-    raise exception 'command card is not pending' using errcode = 'P0002';
-  end if;
-  return public.job_enqueue(
-    p_workspace, 'decisions', 'office.confirm-command',
-    jsonb_build_object(
-      'workspaceId', p_workspace, 'userId', auth.uid(), 'locale', case when p_locale = 'en' then 'en' else 'vi' end,
-      'candidateId', p_candidate),
-    'office.confirm-command:' || p_candidate::text);
-end $$;
-
---
--- Name: request_office_propose(uuid, uuid, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.request_office_propose(p_workspace uuid, p_message uuid, p_locale text DEFAULT 'vi'::text) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  if auth.uid() is null or not public.is_manager(p_workspace) then
-    raise exception 'not allowed' using errcode = '42501';
-  end if;
-  if not exists (
-    select 1 from public.messages m where m.id = p_message and m.workspace_id = p_workspace and m.author_kind = 'human'
-  ) then
-    raise exception 'message not found' using errcode = 'P0002';
-  end if;
-  return public.job_enqueue(
-    p_workspace, 'decisions', 'office.propose-command',
-    jsonb_build_object(
-      'workspaceId', p_workspace, 'userId', auth.uid(), 'locale', case when p_locale = 'en' then 'en' else 'vi' end,
-      'messageId', p_message),
-    'office.propose-command:' || p_message::text);
-end $$;
-
---
 -- Name: request_video_render(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2883,34 +1927,6 @@ end;
 $$;
 
 --
--- Name: request_work_decision(uuid, uuid, text, jsonb, text, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.request_work_decision(p_workspace uuid, p_work_item uuid, p_decision text, p_edits jsonb DEFAULT NULL::jsonb, p_note text DEFAULT NULL::text, p_basis text DEFAULT NULL::text, p_locale text DEFAULT 'vi'::text) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  if auth.uid() is null or not public.is_member(p_workspace) then
-    raise exception 'not allowed' using errcode = '42501';
-  end if;
-  if p_decision not in ('approved', 'rejected') then
-    raise exception 'unknown decision %', p_decision using errcode = '22023';
-  end if;
-  if not exists (
-    select 1 from public.work_items w where w.id = p_work_item and w.workspace_id = p_workspace and w.status = 'waiting_decision'
-  ) then
-    raise exception 'work item is not waiting for a decision' using errcode = 'P0002';
-  end if;
-  return public.job_enqueue(
-    p_workspace, 'decisions', 'decisions.decide-work',
-    jsonb_build_object(
-      'workspaceId', p_workspace, 'userId', auth.uid(), 'locale', case when p_locale = 'en' then 'en' else 'vi' end,
-      'workItemId', p_work_item, 'decision', p_decision, 'edits', p_edits, 'note', left(p_note, 1000), 'basis', left(p_basis, 1000)),
-    'decisions.decide-work:' || p_work_item::text);
-end $$;
-
---
 -- Name: resolve_installation(uuid, text, uuid, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2935,73 +1951,6 @@ begin
   end if;
   return query select i.id, 'first'::text from public.module_installations i where i.workspace_id = p_ws and i.module_key = p_module order by i.created_at limit 1;
 end;
-$$;
-
---
--- Name: revoke_my_session(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.revoke_my_session(session_id uuid) RETURNS boolean
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-declare removed int;
-begin
-  if auth.uid() is null then
-    return false;
-  end if;
-  delete from auth.sessions s where s.id = session_id and s.user_id = auth.uid();
-  get diagnostics removed = row_count;
-  return removed > 0;
-end;
-$$;
-
---
--- Name: revoke_workspace_invite(uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.revoke_workspace_invite(p_workspace uuid, p_invite uuid) RETURNS void
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_actor text;
-  v_email text;
-begin
-  if auth.uid() is null or not public.is_manager(p_workspace) then
-    raise exception 'WORKSPACE_MEMBERS_ROLE_FORBIDDEN' using errcode = '42501';
-  end if;
-  update public.workspace_invites
-     set revoked_at = now()
-   where id = p_invite and workspace_id = p_workspace and accepted_at is null and revoked_at is null
-  returning email into v_email;
-  if not found then
-    raise exception 'WORKSPACE_INVITES_NOT_FOUND' using errcode = 'P0002';
-  end if;
-  select m.display_name into v_actor from public.workspace_members m
-   where m.workspace_id = p_workspace and m.user_id = auth.uid() and m.status = 'active';
-  insert into public.events (workspace_id, kind, actor, summary)
-  values (p_workspace, 'member.invite_revoked', coalesce(v_actor, ''), v_email);
-end;
-$$;
-
---
--- Name: session_bootstrap(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.session_bootstrap() RETURNS jsonb
-    LANGUAGE sql STABLE
-    SET search_path TO 'public'
-    AS $$
-  select coalesce(jsonb_agg(jsonb_build_object(
-           'member', to_jsonb(m),
-           'workspace', to_jsonb(w),
-           'demo_seeded', (a.demo_seeded_at is not null)
-         ) order by m.created_at), '[]'::jsonb)
-  from public.workspace_members m
-  left join public.workspaces w on w.id = m.workspace_id
-  left join public.authority a on a.workspace_id = m.workspace_id
-  where m.user_id = auth.uid();
 $$;
 
 --
@@ -3168,24 +2117,6 @@ CREATE FUNCTION public.shell_data(ws uuid, founding_from timestamp with time zon
 $$;
 
 --
--- Name: shifts_add_availability(uuid, uuid, smallint, date, time without time zone, time without time zone, boolean, text, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_add_availability(p_ws uuid, p_staff uuid, p_weekday smallint, p_date date, p_start time without time zone, p_end time without time zone, p_available boolean, p_note text, p_status text, p_decider text) RETURNS uuid
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_id uuid;
-begin
-  insert into public.shifts_availability (workspace_id, staff_id, weekday, shift_date, start_time, end_time, available, note, status, decided_by)
-  values (p_ws, p_staff, p_weekday, p_date, p_start, p_end, p_available, coalesce(p_note, ''), p_status, p_decider)
-  returning id into v_id;
-  return v_id;
-end
-$$;
-
---
 -- Name: shifts_add_shifts(uuid, uuid, date[], time without time zone[], time without time zone[], uuid[], uuid[], text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3201,28 +2132,6 @@ begin
   from unnest(p_dates, p_starts, p_ends, p_positions, p_staff) as t(d, s, e, pos, st);
   get diagnostics v_count = row_count;
   return v_count;
-end
-$$;
-
---
--- Name: shifts_check_in(uuid, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_check_in(p_ws uuid, p_shift uuid, p_staff uuid) RETURNS timestamp with time zone
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_at timestamptz;
-begin
-  insert into public.shifts_attendance (workspace_id, shift_id, staff_id)
-  values (p_ws, p_shift, p_staff)
-  on conflict (shift_id, staff_id) do nothing
-  returning checked_in_at into v_at;
-  if v_at is null then
-    select checked_in_at into v_at from public.shifts_attendance where shift_id = p_shift and staff_id = p_staff;
-  end if;
-  return v_at;
 end
 $$;
 
@@ -3253,20 +2162,6 @@ declare v_id uuid;
 begin
   insert into public.shifts_swap_requests (workspace_id, kind, shift_id, from_staff_id, to_staff_id, reason) values (p_ws, p_kind, p_shift, p_from, p_to, p_reason) returning id into v_id;
   return v_id;
-end
-$$;
-
---
--- Name: shifts_decide_availability(uuid, uuid, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_decide_availability(p_ws uuid, p_id uuid, p_status text, p_decider text) RETURNS void
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-begin
-  update public.shifts_availability set status = p_status, decided_by = p_decider
-  where workspace_id = p_ws and id = p_id and status = 'pending';
 end
 $$;
 
@@ -3363,59 +2258,6 @@ end
 $$;
 
 --
--- Name: shifts_link_leave(uuid, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_link_leave(p_ws uuid, p_leave uuid, p_work uuid) RETURNS void
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-begin
-  update public.shifts_leave_requests set work_item_id = p_work where id = p_leave and workspace_id = p_ws;
-end
-$$;
-
---
--- Name: shifts_link_schedule(uuid, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_link_schedule(p_ws uuid, p_schedule uuid, p_work uuid) RETURNS void
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-begin
-  update public.shifts_schedules set work_item_id = p_work where id = p_schedule and workspace_id = p_ws;
-end
-$$;
-
---
--- Name: shifts_link_swap(uuid, uuid, jsonb, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_link_swap(p_ws uuid, p_swap uuid, p_checks jsonb, p_work uuid) RETURNS void
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-begin
-  update public.shifts_swap_requests set checks = coalesce(p_checks, '[]'::jsonb), work_item_id = p_work where id = p_swap and workspace_id = p_ws;
-end
-$$;
-
---
--- Name: shifts_my_profile(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_my_profile(ws uuid) RETURNS uuid
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-  select s.id from public.shifts_staff s
-  where s.workspace_id = ws and s.active
-    and (s.user_id = auth.uid() or (s.staff_id is not null and s.staff_id = public.my_staff_id(ws)))
-  order by s.created_at limit 1;
-$$;
-
---
 -- Name: shifts_publish(uuid, uuid, jsonb, uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3453,148 +2295,6 @@ end
 $$;
 
 --
--- Name: shifts_record_notice(uuid, uuid, uuid, uuid, text, text, text, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_record_notice(p_ws uuid, p_staff uuid, p_schedule uuid, p_shift uuid, p_kind text, p_channel text, p_status text, p_body text, p_error text) RETURNS void
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-begin
-  insert into public.shifts_notifications (workspace_id, staff_id, schedule_id, shift_id, kind, channel, status, body, error)
-  values (p_ws, p_staff, p_schedule, p_shift, p_kind, p_channel, p_status, left(coalesce(p_body, ''), 4000), left(p_error, 500));
-end
-$$;
-
---
--- Name: shifts_record_notification(uuid, uuid, uuid, uuid, text, text, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_record_notification(p_ws uuid, p_staff uuid, p_schedule uuid, p_shift uuid, p_kind text, p_channel text, p_status text, p_body text) RETURNS void
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-begin
-  insert into public.shifts_notifications (workspace_id, staff_id, schedule_id, shift_id, kind, channel, status, body)
-  values (p_ws, p_staff, p_schedule, p_shift, p_kind, p_channel, p_status, left(coalesce(p_body, ''), 4000));
-end
-$$;
-
---
--- Name: shifts_remove_availability(uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_remove_availability(p_ws uuid, p_id uuid) RETURNS void
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-begin
-  delete from public.shifts_availability where workspace_id = p_ws and id = p_id;
-end
-$$;
-
---
--- Name: shifts_remove_coverage(uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_remove_coverage(p_ws uuid, p_id uuid) RETURNS void
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-begin
-  delete from public.shifts_coverage where workspace_id = p_ws and id = p_id;
-end
-$$;
-
---
--- Name: shifts_remove_position(uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_remove_position(p_ws uuid, p_id uuid) RETURNS void
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-begin
-  update public.shifts_positions set active = false where workspace_id = p_ws and id = p_id;
-end
-$$;
-
---
--- Name: shifts_remove_shift(uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_remove_shift(p_ws uuid, p_shift uuid) RETURNS void
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-begin
-  delete from public.shifts_shifts where id = p_shift and workspace_id = p_ws and status = 'draft';
-end
-$$;
-
---
--- Name: shifts_save_coverage(uuid, uuid, smallint[], time without time zone, time without time zone, uuid, integer, integer, boolean); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_save_coverage(p_ws uuid, p_id uuid, p_weekdays smallint[], p_start time without time zone, p_end time without time zone, p_position uuid, p_min integer, p_ideal integer, p_peak boolean) RETURNS void
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-begin
-  if p_id is null then
-    insert into public.shifts_coverage (workspace_id, weekday, start_time, end_time, position_id, min_staff, ideal_staff, is_peak)
-    select p_ws, day, p_start, p_end, p_position, p_min, p_ideal, p_peak
-    from unnest(p_weekdays) as day;
-  else
-    update public.shifts_coverage
-    set weekday = p_weekdays[1], start_time = p_start, end_time = p_end, position_id = p_position,
-        min_staff = p_min, ideal_staff = p_ideal, is_peak = p_peak
-    where workspace_id = p_ws and id = p_id;
-  end if;
-end
-$$;
-
---
--- Name: shifts_save_pay(uuid, uuid, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_save_pay(p_ws uuid, p_staff uuid, p_wage integer) RETURNS void
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-begin
-  insert into public.shifts_staff_pay (staff_id, workspace_id, hourly_wage_vnd, updated_at)
-  values (p_staff, p_ws, p_wage, now())
-  on conflict (staff_id) do update set hourly_wage_vnd = excluded.hourly_wage_vnd, updated_at = excluded.updated_at;
-end
-$$;
-
---
--- Name: shifts_save_position(uuid, uuid, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_save_position(p_ws uuid, p_id uuid, p_name text, p_color text) RETURNS uuid
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_id uuid;
-begin
-  if p_id is null then
-    insert into public.shifts_positions (workspace_id, name, color)
-    values (p_ws, p_name, coalesce(p_color, '#2f6fed'))
-    on conflict (workspace_id, name) do update set color = excluded.color
-    returning id into v_id;
-  else
-    update public.shifts_positions set name = p_name, color = coalesce(p_color, color)
-    where workspace_id = p_ws and id = p_id
-    returning id into v_id;
-  end if;
-  return v_id;
-end
-$$;
-
---
 -- Name: shifts_save_schedule(uuid, date, bigint, jsonb, jsonb, integer, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3613,128 +2313,6 @@ begin
   returning id into v_id;
   return v_id;
 end
-$$;
-
---
--- Name: shifts_save_settings(uuid, jsonb, integer, integer, integer, integer, numeric); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_save_settings(p_ws uuid, p_opening jsonb, p_swap integer, p_leave integer, p_remind integer, p_noshow integer, p_overtime numeric) RETURNS void
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-begin
-  insert into public.shifts_settings (workspace_id, opening_hours, swap_notice_hours, leave_notice_days, remind_minutes, noshow_minutes, overtime_hours_week, updated_at)
-  values (p_ws, p_opening, p_swap, p_leave, p_remind, p_noshow, p_overtime, now())
-  on conflict (workspace_id) do update set
-    opening_hours = excluded.opening_hours,
-    swap_notice_hours = excluded.swap_notice_hours,
-    leave_notice_days = excluded.leave_notice_days,
-    remind_minutes = excluded.remind_minutes,
-    noshow_minutes = excluded.noshow_minutes,
-    overtime_hours_week = excluded.overtime_hours_week,
-    updated_at = excluded.updated_at;
-end
-$$;
-
---
--- Name: shifts_save_staff(uuid, uuid, jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_save_staff(p_ws uuid, p_id uuid, p_row jsonb) RETURNS uuid
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_id uuid;
-begin
-  if p_id is null then
-    insert into public.shifts_staff (workspace_id, name, staff_id, phone, telegram_chat_id, zalo_user_id, position_ids, max_hours_week, max_hours_day, min_rest_hours, active)
-    values (p_ws,
-      p_row->>'name',
-      nullif(p_row->>'staffRowId', '')::uuid,
-      nullif(p_row->>'phone', ''),
-      nullif(p_row->>'telegramChatId', ''),
-      nullif(p_row->>'zaloUserId', ''),
-      coalesce((select array_agg(x::uuid) from jsonb_array_elements_text(p_row->'positionIds') x), '{}'::uuid[]),
-      coalesce(nullif(p_row->>'maxWeek', '')::numeric, 48),
-      coalesce(nullif(p_row->>'maxDay', '')::numeric, 10),
-      coalesce(nullif(p_row->>'minRest', '')::numeric, 10),
-      coalesce((p_row->>'active')::boolean, true))
-    returning id into v_id;
-  else
-    update public.shifts_staff
-    set name = p_row->>'name',
-        staff_id = nullif(p_row->>'staffRowId', '')::uuid,
-        phone = nullif(p_row->>'phone', ''),
-        telegram_chat_id = nullif(p_row->>'telegramChatId', ''),
-        zalo_user_id = nullif(p_row->>'zaloUserId', ''),
-        position_ids = coalesce((select array_agg(x::uuid) from jsonb_array_elements_text(p_row->'positionIds') x), '{}'::uuid[]),
-        max_hours_week = coalesce(nullif(p_row->>'maxWeek', '')::numeric, max_hours_week),
-        max_hours_day = coalesce(nullif(p_row->>'maxDay', '')::numeric, max_hours_day),
-        min_rest_hours = coalesce(nullif(p_row->>'minRest', '')::numeric, min_rest_hours),
-        active = coalesce((p_row->>'active')::boolean, true)
-    where workspace_id = p_ws and id = p_id
-    returning id into v_id;
-  end if;
-  return v_id;
-end
-$$;
-
---
--- Name: shifts_set_explanation(uuid, uuid, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.shifts_set_explanation(p_ws uuid, p_schedule uuid, p_text text, p_evidence jsonb) RETURNS void
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-begin
-  update public.shifts_schedules set explanation = p_text, evidence = p_evidence where id = p_schedule and workspace_id = p_ws;
-end
-$$;
-
---
--- Name: storage_ws_manager(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.storage_ws_manager(p_name text) RETURNS boolean
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  return public.is_manager(split_part(p_name, '/', 1)::uuid);
-exception when others then
-  return false;
-end $$;
-
---
--- Name: storage_ws_member(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.storage_ws_member(p_name text) RETURNS boolean
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  return public.is_member(split_part(p_name, '/', 1)::uuid);
-exception when others then
-  return false;
-end $$;
-
---
--- Name: update_my_profile(uuid, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.update_my_profile(ws uuid, new_display_name text) RETURNS void
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  if length(trim(coalesce(new_display_name, ''))) < 2 then raise exception 'display_name_required' using errcode = 'P0001'; end if;
-  update public.workspace_members set display_name = trim(new_display_name)
-    where workspace_id = ws and user_id = auth.uid() and status = 'active';
-end;
 $$;
 
 --
@@ -3757,35 +2335,6 @@ begin
     return true;
 end;
 $$;
-
---
--- Name: usage_quota_status(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.usage_quota_status(p_workspace uuid) RETURNS TABLE(period_start date, messages_used bigint, tokens_used bigint, cost_usd numeric, messages_limit integer, tokens_limit bigint, fallback_reply text, credits_used numeric, credits_limit bigint, credits_carried numeric, topup_balance bigint)
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-    select q.* from public.ai_quota_status(p_workspace) q where public.is_member(p_workspace);
-$$;
-
---
--- Name: video_renders_reap(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.video_renders_reap() RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare v_n int;
-begin
-  with r as (
-    update public.video_renders set status = 'failed', error = coalesce(error, 'timed out'), finished_at = now()
-     where status in ('queued', 'rendering') and created_at < now() - interval '30 minutes'
-    returning 1)
-  select count(*) into v_n from r;
-  return v_n;
-end $$;
 
 --
 -- Name: video_renders_touch(); Type: FUNCTION; Schema: public; Owner: -
@@ -3827,42 +2376,6 @@ begin
   end if;
   return new;
 end;
-$$;
-
---
--- Name: workspace_member_contacts(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.workspace_member_contacts(p_workspace uuid) RETURNS TABLE(user_id uuid, email text, last_sign_in_at timestamp with time zone)
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  if auth.uid() is null or not public.is_manager(p_workspace) then
-    return;
-  end if;
-  return query
-    select m.user_id, u.email::text, u.last_sign_in_at
-      from public.workspace_members m
-      join auth.users u on u.id = m.user_id
-     where m.workspace_id = p_workspace;
-end;
-$$;
-
---
--- Name: workspace_members_directory(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.workspace_members_directory(ws uuid) RETURNS TABLE(user_id uuid, role text, staff_id uuid, display_name text, status text, created_at timestamp with time zone, email text, last_sign_in_at timestamp with time zone)
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO 'public', 'auth'
-    AS $$
-  select m.user_id, m.role, m.staff_id, m.display_name, m.status, m.created_at,
-         case when public.is_manager(ws) then u.email::text else null end,
-         u.last_sign_in_at
-  from public.workspace_members m join auth.users u on u.id = m.user_id
-  where m.workspace_id = ws and public.is_member(ws)
-  order by case m.role when 'owner' then 0 when 'manager' then 1 else 2 end, m.created_at;
 $$;
 
 --
@@ -3970,112 +2483,6 @@ begin
     );
     return v_connection;
 end $$;
-
---
--- Name: zalo_wizard_begin(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.zalo_wizard_begin(p_connection uuid) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-    v_workspace uuid;
-    v_ticket uuid := gen_random_uuid();
-begin
-    select workspace_id into v_workspace from public.connections where id = p_connection and provider = 'zalo_oa';
-    if v_workspace is null or not public.is_owner(v_workspace) then
-        raise exception 'only the owner of the workspace connects a channel' using errcode = '42501';
-    end if;
-    update public.connections
-    set public_meta = public_meta || jsonb_build_object('wizard', jsonb_build_object('ticket', v_ticket, 'command', 'begin', 'state', 'queued'))
-    where id = p_connection;
-    perform public.job_enqueue(
-        v_workspace,
-        'zalo_wizard',
-        'run-zalo-wizard',
-        jsonb_build_object('workspaceId', v_workspace, 'connectionId', p_connection, 'command', 'begin', 'ticket', v_ticket),
-        'zalo-wizard:' || v_ticket
-    );
-    return v_ticket;
-end $$;
-
---
--- Name: zalo_wizard_oa_secret(uuid, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.zalo_wizard_oa_secret(p_connection uuid, p_oa_secret text) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-    v_workspace uuid;
-    v_ticket uuid := gen_random_uuid();
-    v_key text := btrim(coalesce(p_oa_secret, ''));
-begin
-    select workspace_id into v_workspace from public.connections where id = p_connection and provider = 'zalo_oa';
-    if v_workspace is null or not public.is_owner(v_workspace) then
-        raise exception 'only the owner of the workspace connects a channel' using errcode = '42501';
-    end if;
-    if length(v_key) < 8 or length(v_key) > 200 then
-        raise exception 'zalo_keys' using errcode = '23514';
-    end if;
-    insert into public.zalo_wizard_drafts (connection_id, oa_secret) values (p_connection, v_key)
-    on conflict (connection_id) do update set oa_secret = excluded.oa_secret;
-    update public.connections
-    set public_meta = public_meta || jsonb_build_object('wizard', jsonb_build_object('ticket', v_ticket, 'command', 'oa', 'state', 'queued'))
-    where id = p_connection;
-    perform public.job_enqueue(
-        v_workspace,
-        'zalo_wizard',
-        'run-zalo-wizard',
-        jsonb_build_object('workspaceId', v_workspace, 'connectionId', p_connection, 'command', 'oa', 'ticket', v_ticket),
-        'zalo-wizard:' || v_ticket
-    );
-    return v_ticket;
-end $$;
-
---
--- Name: zalo_wizard_start(uuid, text, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.zalo_wizard_start(p_workspace uuid, p_name text, p_app_id text, p_app_secret text) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $_$
-declare
-    v_connection uuid;
-    v_ticket uuid := gen_random_uuid();
-    v_name text := left(btrim(coalesce(p_name, '')), 60);
-    v_app text := left(btrim(coalesce(p_app_id, '')), 40);
-    v_secret text := btrim(coalesce(p_app_secret, ''));
-begin
-    if p_workspace is null or not public.is_owner(p_workspace) then
-        raise exception 'only the owner of the workspace connects a channel' using errcode = '42501';
-    end if;
-    if length(v_name) < 2 then
-        raise exception 'zalo_name' using errcode = '23514';
-    end if;
-    if v_app !~ '^[0-9]{6,30}$' or length(v_secret) < 8 then
-        raise exception 'zalo_fields' using errcode = '23514';
-    end if;
-    insert into public.connections (workspace_id, provider, name, status, created_by, public_meta)
-    values (p_workspace, 'zalo_oa', v_name, 'pending', auth.uid(),
-            jsonb_build_object('app_id', v_app, 'wizard', jsonb_build_object('ticket', v_ticket, 'command', 'app', 'state', 'queued')))
-    returning id into v_connection;
-    -- The sealed keys arrive from the back end; until then the credential is empty and no webhook verifies.
-    insert into public.connection_secrets (connection_id, ciphertext, webhook_secret)
-    values (v_connection, '', replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''));
-    insert into public.zalo_wizard_drafts (connection_id, app_id, app_secret) values (v_connection, v_app, v_secret);
-    perform public.job_enqueue(
-        p_workspace,
-        'zalo_wizard',
-        'run-zalo-wizard',
-        jsonb_build_object('workspaceId', p_workspace, 'connectionId', v_connection, 'command', 'app', 'ticket', v_ticket),
-        'zalo-wizard:' || v_ticket
-    );
-    return v_connection;
-end $_$;
 
 --
 -- Name: agent_access_log; Type: TABLE; Schema: public; Owner: -
@@ -10549,12 +8956,6 @@ CREATE POLICY agent_access_log_app_be_insert ON public.agent_access_log FOR INSE
 CREATE POLICY agent_access_log_app_be_select ON public.agent_access_log FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
 
 --
--- Name: agent_access_log agent_access_log_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agent_access_log_manager_select ON public.agent_access_log FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
-
---
 -- Name: agent_connections; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -10583,18 +8984,6 @@ CREATE POLICY agent_connections_app_be_select ON public.agent_connections FOR SE
 --
 
 CREATE POLICY agent_connections_app_be_update ON public.agent_connections FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: agent_connections agent_connections_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agent_connections_member_select ON public.agent_connections FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: agent_connections agent_connections_owner_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agent_connections_owner_all ON public.agent_connections TO authenticated USING (public.is_owner(workspace_id)) WITH CHECK (public.is_owner(workspace_id));
 
 --
 -- Name: agents; Type: ROW SECURITY; Schema: public; Owner: -
@@ -10627,30 +9016,6 @@ CREATE POLICY agents_app_be_select ON public.agents FOR SELECT TO app_be USING (
 CREATE POLICY agents_app_be_update ON public.agents FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: agents agents_manager_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agents_manager_delete ON public.agents FOR DELETE TO authenticated USING (public.is_manager(workspace_id));
-
---
--- Name: agents agents_manager_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agents_manager_insert ON public.agents FOR INSERT TO authenticated WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: agents agents_manager_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agents_manager_update ON public.agents FOR UPDATE TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: agents agents_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agents_member_select ON public.agents FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: ai_generations; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -10679,12 +9044,6 @@ CREATE POLICY ai_generations_app_be_select ON public.ai_generations FOR SELECT T
 --
 
 CREATE POLICY ai_generations_app_be_update ON public.ai_generations FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: ai_generations ai_generations_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY ai_generations_member_select ON public.ai_generations FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: ai_quota_overrides; Type: ROW SECURITY; Schema: public; Owner: -
@@ -10717,18 +9076,6 @@ CREATE POLICY ai_quota_overrides_app_be_select ON public.ai_quota_overrides FOR 
 CREATE POLICY ai_quota_overrides_app_be_update ON public.ai_quota_overrides FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: ai_quota_overrides ai_quota_overrides_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY ai_quota_overrides_manager_select ON public.ai_quota_overrides FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
-
---
--- Name: ai_quota_overrides ai_quota_overrides_platform_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY ai_quota_overrides_platform_admin_select ON public.ai_quota_overrides FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
-
---
 -- Name: ai_usage_events; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -10745,12 +9092,6 @@ CREATE POLICY ai_usage_events_app_be_insert ON public.ai_usage_events FOR INSERT
 --
 
 CREATE POLICY ai_usage_events_app_be_select ON public.ai_usage_events FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: ai_usage_events ai_usage_events_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY ai_usage_events_member_select ON public.ai_usage_events FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: ai_usage_notices; Type: ROW SECURITY; Schema: public; Owner: -
@@ -10787,12 +9128,6 @@ CREATE POLICY ai_usage_notices_app_be_update ON public.ai_usage_notices FOR UPDA
 --
 
 ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;
-
---
--- Name: api_keys api_keys_authenticated_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY api_keys_authenticated_select ON public.api_keys FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
 
 --
 -- Name: api_rate_limits; Type: ROW SECURITY; Schema: public; Owner: -
@@ -10843,12 +9178,6 @@ CREATE POLICY app_commands_app_be_select ON public.app_commands FOR SELECT TO ap
 CREATE POLICY app_commands_app_be_update ON public.app_commands FOR UPDATE TO app_be USING ((id IS NOT NULL)) WITH CHECK ((id IS NOT NULL));
 
 --
--- Name: app_commands app_commands_requester_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY app_commands_requester_select ON public.app_commands FOR SELECT TO authenticated USING ((requested_by = ( SELECT auth.uid() AS uid)));
-
---
 -- Name: app_errors; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -10865,12 +9194,6 @@ CREATE POLICY app_errors_app_be_insert ON public.app_errors FOR INSERT TO app_be
 --
 
 CREATE POLICY app_errors_app_be_select ON public.app_errors FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: app_errors app_errors_platform_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY app_errors_platform_admin_select ON public.app_errors FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
 
 --
 -- Name: authority; Type: ROW SECURITY; Schema: public; Owner: -
@@ -10903,12 +9226,6 @@ CREATE POLICY authority_actions_app_be_select ON public.authority_actions FOR SE
 CREATE POLICY authority_actions_app_be_update ON public.authority_actions FOR UPDATE TO app_be USING ((action IS NOT NULL)) WITH CHECK ((action IS NOT NULL));
 
 --
--- Name: authority_actions authority_actions_authenticated_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY authority_actions_authenticated_select ON public.authority_actions FOR SELECT TO authenticated USING ((( SELECT auth.uid() AS uid) IS NOT NULL));
-
---
 -- Name: authority authority_app_be_delete; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -10931,30 +9248,6 @@ CREATE POLICY authority_app_be_select ON public.authority FOR SELECT TO app_be U
 --
 
 CREATE POLICY authority_app_be_update ON public.authority FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: authority authority_manager_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY authority_manager_delete ON public.authority FOR DELETE TO authenticated USING (public.is_manager(workspace_id));
-
---
--- Name: authority authority_manager_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY authority_manager_insert ON public.authority FOR INSERT TO authenticated WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: authority authority_manager_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY authority_manager_update ON public.authority FOR UPDATE TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: authority authority_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY authority_member_select ON public.authority FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: authority_rules; Type: ROW SECURITY; Schema: public; Owner: -
@@ -10987,30 +9280,6 @@ CREATE POLICY authority_rules_app_be_select ON public.authority_rules FOR SELECT
 CREATE POLICY authority_rules_app_be_update ON public.authority_rules FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: authority_rules authority_rules_manager_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY authority_rules_manager_delete ON public.authority_rules FOR DELETE TO authenticated USING (public.is_manager(workspace_id));
-
---
--- Name: authority_rules authority_rules_manager_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY authority_rules_manager_insert ON public.authority_rules FOR INSERT TO authenticated WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: authority_rules authority_rules_manager_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY authority_rules_manager_update ON public.authority_rules FOR UPDATE TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: authority_rules authority_rules_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY authority_rules_member_select ON public.authority_rules FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: automation_pipelines; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -11041,18 +9310,6 @@ CREATE POLICY automation_pipelines_app_be_select ON public.automation_pipelines 
 CREATE POLICY automation_pipelines_app_be_update ON public.automation_pipelines FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: automation_pipelines automation_pipelines_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY automation_pipelines_manager_all ON public.automation_pipelines TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: automation_pipelines automation_pipelines_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY automation_pipelines_member_select ON public.automation_pipelines FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: automation_templates; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -11075,12 +9332,6 @@ CREATE POLICY automation_templates_app_be_select ON public.automation_templates 
 --
 
 CREATE POLICY automation_templates_app_be_update ON public.automation_templates FOR UPDATE TO app_be USING ((key IS NOT NULL)) WITH CHECK ((key IS NOT NULL));
-
---
--- Name: automation_templates automation_templates_authenticated_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY automation_templates_authenticated_select ON public.automation_templates FOR SELECT TO authenticated USING ((( SELECT auth.uid() AS uid) IS NOT NULL));
 
 --
 -- Name: billing_config; Type: ROW SECURITY; Schema: public; Owner: -
@@ -11113,18 +9364,6 @@ CREATE POLICY billing_events_app_be_insert ON public.billing_events FOR INSERT T
 CREATE POLICY billing_events_app_be_select ON public.billing_events FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
 
 --
--- Name: billing_events billing_events_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY billing_events_manager_select ON public.billing_events FOR SELECT TO authenticated USING (((workspace_id IS NOT NULL) AND public.is_manager(workspace_id)));
-
---
--- Name: billing_events billing_events_platform_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY billing_events_platform_admin_select ON public.billing_events FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
-
---
 -- Name: booking_exceptions; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -11155,18 +9394,6 @@ CREATE POLICY booking_exceptions_app_be_select ON public.booking_exceptions FOR 
 CREATE POLICY booking_exceptions_app_be_update ON public.booking_exceptions FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: booking_exceptions booking_exceptions_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_exceptions_manager_all ON public.booking_exceptions TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: booking_exceptions booking_exceptions_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_exceptions_member_select ON public.booking_exceptions FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: booking_hours; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -11195,18 +9422,6 @@ CREATE POLICY booking_hours_app_be_select ON public.booking_hours FOR SELECT TO 
 --
 
 CREATE POLICY booking_hours_app_be_update ON public.booking_hours FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: booking_hours booking_hours_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_hours_manager_all ON public.booking_hours TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: booking_hours booking_hours_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_hours_member_select ON public.booking_hours FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: booking_rate; Type: ROW SECURITY; Schema: public; Owner: -
@@ -11269,18 +9484,6 @@ CREATE POLICY booking_reminders_app_be_select ON public.booking_reminders FOR SE
 CREATE POLICY booking_reminders_app_be_update ON public.booking_reminders FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: booking_reminders booking_reminders_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_reminders_manager_all ON public.booking_reminders TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: booking_reminders booking_reminders_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_reminders_member_select ON public.booking_reminders FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: booking_resources; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -11309,18 +9512,6 @@ CREATE POLICY booking_resources_app_be_select ON public.booking_resources FOR SE
 --
 
 CREATE POLICY booking_resources_app_be_update ON public.booking_resources FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: booking_resources booking_resources_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_resources_manager_all ON public.booking_resources TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: booking_resources booking_resources_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_resources_member_select ON public.booking_resources FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: booking_services; Type: ROW SECURITY; Schema: public; Owner: -
@@ -11353,18 +9544,6 @@ CREATE POLICY booking_services_app_be_select ON public.booking_services FOR SELE
 CREATE POLICY booking_services_app_be_update ON public.booking_services FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: booking_services booking_services_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_services_manager_all ON public.booking_services TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: booking_services booking_services_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_services_member_select ON public.booking_services FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: booking_settings; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -11393,18 +9572,6 @@ CREATE POLICY booking_settings_app_be_select ON public.booking_settings FOR SELE
 --
 
 CREATE POLICY booking_settings_app_be_update ON public.booking_settings FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: booking_settings booking_settings_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_settings_manager_all ON public.booking_settings TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: booking_settings booking_settings_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_settings_member_select ON public.booking_settings FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: booking_waitlist; Type: ROW SECURITY; Schema: public; Owner: -
@@ -11437,18 +9604,6 @@ CREATE POLICY booking_waitlist_app_be_select ON public.booking_waitlist FOR SELE
 CREATE POLICY booking_waitlist_app_be_update ON public.booking_waitlist FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: booking_waitlist booking_waitlist_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_waitlist_manager_all ON public.booking_waitlist TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: booking_waitlist booking_waitlist_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_waitlist_member_select ON public.booking_waitlist FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: bookings; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -11477,18 +9632,6 @@ CREATE POLICY bookings_app_be_select ON public.bookings FOR SELECT TO app_be USI
 --
 
 CREATE POLICY bookings_app_be_update ON public.bookings FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: bookings bookings_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY bookings_manager_all ON public.bookings TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: bookings bookings_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY bookings_member_select ON public.bookings FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: brain_commands; Type: ROW SECURITY; Schema: public; Owner: -
@@ -11521,12 +9664,6 @@ CREATE POLICY brain_commands_app_be_select ON public.brain_commands FOR SELECT T
 CREATE POLICY brain_commands_app_be_update ON public.brain_commands FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: brain_commands brain_commands_authenticated_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY brain_commands_authenticated_select ON public.brain_commands FOR SELECT TO authenticated USING ((requested_by = auth.uid()));
-
---
 -- Name: brain_eval_cases; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -11555,12 +9692,6 @@ CREATE POLICY brain_eval_cases_app_be_select ON public.brain_eval_cases FOR SELE
 --
 
 CREATE POLICY brain_eval_cases_app_be_update ON public.brain_eval_cases FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: brain_eval_cases brain_eval_cases_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY brain_eval_cases_manager_select ON public.brain_eval_cases FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
 
 --
 -- Name: brain_extractions; Type: ROW SECURITY; Schema: public; Owner: -
@@ -11593,12 +9724,6 @@ CREATE POLICY brain_extractions_app_be_select ON public.brain_extractions FOR SE
 CREATE POLICY brain_extractions_app_be_update ON public.brain_extractions FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: brain_extractions brain_extractions_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY brain_extractions_manager_select ON public.brain_extractions FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
-
---
 -- Name: brain_facts; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -11627,12 +9752,6 @@ CREATE POLICY brain_facts_app_be_select ON public.brain_facts FOR SELECT TO app_
 --
 
 CREATE POLICY brain_facts_app_be_update ON public.brain_facts FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: brain_facts brain_facts_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY brain_facts_manager_select ON public.brain_facts FOR SELECT TO authenticated USING ((public.is_manager(workspace_id) OR ((scope <> 'restricted'::text) AND public.is_member(workspace_id))));
 
 --
 -- Name: brain_lessons; Type: ROW SECURITY; Schema: public; Owner: -
@@ -11665,12 +9784,6 @@ CREATE POLICY brain_lessons_app_be_select ON public.brain_lessons FOR SELECT TO 
 CREATE POLICY brain_lessons_app_be_update ON public.brain_lessons FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: brain_lessons brain_lessons_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY brain_lessons_member_select ON public.brain_lessons FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: brain_source_profiles; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -11699,12 +9812,6 @@ CREATE POLICY brain_source_profiles_app_be_select ON public.brain_source_profile
 --
 
 CREATE POLICY brain_source_profiles_app_be_update ON public.brain_source_profiles FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: brain_source_profiles brain_source_profiles_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY brain_source_profiles_manager_select ON public.brain_source_profiles FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
 
 --
 -- Name: channel_receipts; Type: ROW SECURITY; Schema: public; Owner: -
@@ -11803,18 +9910,6 @@ CREATE POLICY connections_app_be_select ON public.connections FOR SELECT TO app_
 CREATE POLICY connections_app_be_update ON public.connections FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: connections connections_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY connections_member_select ON public.connections FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: connections connections_platform_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY connections_platform_admin_select ON public.connections FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
-
---
 -- Name: connector_interest; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -11843,12 +9938,6 @@ CREATE POLICY connector_interest_app_be_select ON public.connector_interest FOR 
 --
 
 CREATE POLICY connector_interest_app_be_update ON public.connector_interest FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: connector_interest connector_interest_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY connector_interest_member_select ON public.connector_interest FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: content_cadence; Type: ROW SECURITY; Schema: public; Owner: -
@@ -11881,18 +9970,6 @@ CREATE POLICY content_cadence_app_be_select ON public.content_cadence FOR SELECT
 CREATE POLICY content_cadence_app_be_update ON public.content_cadence FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: content_cadence content_cadence_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY content_cadence_manager_all ON public.content_cadence TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: content_cadence content_cadence_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY content_cadence_member_select ON public.content_cadence FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: content_items; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -11921,18 +9998,6 @@ CREATE POLICY content_items_app_be_select ON public.content_items FOR SELECT TO 
 --
 
 CREATE POLICY content_items_app_be_update ON public.content_items FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: content_items content_items_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY content_items_manager_all ON public.content_items TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: content_items content_items_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY content_items_member_select ON public.content_items FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: content_pillars; Type: ROW SECURITY; Schema: public; Owner: -
@@ -11965,18 +10030,6 @@ CREATE POLICY content_pillars_app_be_select ON public.content_pillars FOR SELECT
 CREATE POLICY content_pillars_app_be_update ON public.content_pillars FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: content_pillars content_pillars_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY content_pillars_manager_all ON public.content_pillars TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: content_pillars content_pillars_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY content_pillars_member_select ON public.content_pillars FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: content_plans; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12005,18 +10058,6 @@ CREATE POLICY content_plans_app_be_select ON public.content_plans FOR SELECT TO 
 --
 
 CREATE POLICY content_plans_app_be_update ON public.content_plans FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: content_plans content_plans_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY content_plans_manager_all ON public.content_plans TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: content_plans content_plans_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY content_plans_member_select ON public.content_plans FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: content_settings; Type: ROW SECURITY; Schema: public; Owner: -
@@ -12049,18 +10090,6 @@ CREATE POLICY content_settings_app_be_select ON public.content_settings FOR SELE
 CREATE POLICY content_settings_app_be_update ON public.content_settings FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: content_settings content_settings_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY content_settings_manager_all ON public.content_settings TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: content_settings content_settings_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY content_settings_member_select ON public.content_settings FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: credit_pack_purchases; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12073,12 +10102,6 @@ ALTER TABLE public.credit_pack_purchases ENABLE ROW LEVEL SECURITY;
 CREATE POLICY credit_pack_purchases_app_be_select ON public.credit_pack_purchases FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
 
 --
--- Name: credit_pack_purchases credit_pack_purchases_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY credit_pack_purchases_manager_select ON public.credit_pack_purchases FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
-
---
 -- Name: credit_packs; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12089,12 +10112,6 @@ ALTER TABLE public.credit_packs ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY credit_packs_app_be_select ON public.credit_packs FOR SELECT TO app_be USING ((code IS NOT NULL));
-
---
--- Name: credit_packs credit_packs_authenticated_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY credit_packs_authenticated_select ON public.credit_packs FOR SELECT TO authenticated USING ((auth.uid() IS NOT NULL));
 
 --
 -- Name: credit_topup_draws; Type: ROW SECURITY; Schema: public; Owner: -
@@ -12127,12 +10144,6 @@ CREATE POLICY credit_topup_draws_app_be_select ON public.credit_topup_draws FOR 
 CREATE POLICY credit_topup_draws_app_be_update ON public.credit_topup_draws FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: credit_topup_draws credit_topup_draws_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY credit_topup_draws_manager_select ON public.credit_topup_draws FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
-
---
 -- Name: credit_topups; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12161,12 +10172,6 @@ CREATE POLICY credit_topups_app_be_select ON public.credit_topups FOR SELECT TO 
 --
 
 CREATE POLICY credit_topups_app_be_update ON public.credit_topups FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: credit_topups credit_topups_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY credit_topups_manager_select ON public.credit_topups FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
 
 --
 -- Name: data_records; Type: ROW SECURITY; Schema: public; Owner: -
@@ -12199,12 +10204,6 @@ CREATE POLICY data_records_app_be_select ON public.data_records FOR SELECT TO ap
 CREATE POLICY data_records_app_be_update ON public.data_records FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: data_records data_records_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY data_records_manager_select ON public.data_records FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
-
---
 -- Name: data_sync_runs; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12235,12 +10234,6 @@ CREATE POLICY data_sync_runs_app_be_select ON public.data_sync_runs FOR SELECT T
 CREATE POLICY data_sync_runs_app_be_update ON public.data_sync_runs FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: data_sync_runs data_sync_runs_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY data_sync_runs_manager_select ON public.data_sync_runs FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
-
---
 -- Name: decisions; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12257,18 +10250,6 @@ CREATE POLICY decisions_app_be_insert ON public.decisions FOR INSERT TO app_be W
 --
 
 CREATE POLICY decisions_app_be_select ON public.decisions FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: decisions decisions_member_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY decisions_member_insert ON public.decisions FOR INSERT TO authenticated WITH CHECK (public.is_member(workspace_id));
-
---
--- Name: decisions decisions_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY decisions_member_select ON public.decisions FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: email_messages; Type: ROW SECURITY; Schema: public; Owner: -
@@ -12301,12 +10282,6 @@ CREATE POLICY email_messages_app_be_select ON public.email_messages FOR SELECT T
 CREATE POLICY email_messages_app_be_update ON public.email_messages FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: email_messages email_messages_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY email_messages_member_select ON public.email_messages FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: events; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12323,18 +10298,6 @@ CREATE POLICY events_app_be_insert ON public.events FOR INSERT TO app_be WITH CH
 --
 
 CREATE POLICY events_app_be_select ON public.events FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: events events_member_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY events_member_insert ON public.events FOR INSERT TO authenticated WITH CHECK (public.is_member(workspace_id));
-
---
--- Name: events events_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY events_member_select ON public.events FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: hiring_apply_hits; Type: ROW SECURITY; Schema: public; Owner: -
@@ -12397,18 +10360,6 @@ CREATE POLICY hiring_availability_app_be_select ON public.hiring_availability FO
 CREATE POLICY hiring_availability_app_be_update ON public.hiring_availability FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: hiring_availability hiring_availability_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY hiring_availability_manager_all ON public.hiring_availability TO authenticated USING ((public.is_manager(workspace_id) OR (public.is_member(workspace_id) AND (member_user_id = auth.uid())))) WITH CHECK ((public.is_manager(workspace_id) OR (public.is_member(workspace_id) AND (member_user_id = auth.uid()))));
-
---
--- Name: hiring_availability hiring_availability_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY hiring_availability_member_select ON public.hiring_availability FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: hiring_candidates; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12439,12 +10390,6 @@ CREATE POLICY hiring_candidates_app_be_select ON public.hiring_candidates FOR SE
 CREATE POLICY hiring_candidates_app_be_update ON public.hiring_candidates FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: hiring_candidates hiring_candidates_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY hiring_candidates_manager_all ON public.hiring_candidates TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
 -- Name: hiring_consents; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12463,12 +10408,6 @@ CREATE POLICY hiring_consents_app_be_insert ON public.hiring_consents FOR INSERT
 CREATE POLICY hiring_consents_app_be_select ON public.hiring_consents FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
 
 --
--- Name: hiring_consents hiring_consents_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY hiring_consents_manager_select ON public.hiring_consents FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
-
---
 -- Name: hiring_events; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12485,12 +10424,6 @@ CREATE POLICY hiring_events_app_be_insert ON public.hiring_events FOR INSERT TO 
 --
 
 CREATE POLICY hiring_events_app_be_select ON public.hiring_events FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: hiring_events hiring_events_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY hiring_events_manager_select ON public.hiring_events FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
 
 --
 -- Name: hiring_interviews; Type: ROW SECURITY; Schema: public; Owner: -
@@ -12523,18 +10456,6 @@ CREATE POLICY hiring_interviews_app_be_select ON public.hiring_interviews FOR SE
 CREATE POLICY hiring_interviews_app_be_update ON public.hiring_interviews FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: hiring_interviews hiring_interviews_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY hiring_interviews_manager_all ON public.hiring_interviews TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: hiring_interviews hiring_interviews_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY hiring_interviews_member_select ON public.hiring_interviews FOR SELECT TO authenticated USING (((interviewer_user_id = auth.uid()) AND public.is_member(workspace_id)));
-
---
 -- Name: hiring_jobs; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12563,18 +10484,6 @@ CREATE POLICY hiring_jobs_app_be_select ON public.hiring_jobs FOR SELECT TO app_
 --
 
 CREATE POLICY hiring_jobs_app_be_update ON public.hiring_jobs FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: hiring_jobs hiring_jobs_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY hiring_jobs_manager_all ON public.hiring_jobs TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: hiring_jobs hiring_jobs_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY hiring_jobs_member_select ON public.hiring_jobs FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: hiring_offers; Type: ROW SECURITY; Schema: public; Owner: -
@@ -12607,12 +10516,6 @@ CREATE POLICY hiring_offers_app_be_select ON public.hiring_offers FOR SELECT TO 
 CREATE POLICY hiring_offers_app_be_update ON public.hiring_offers FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: hiring_offers hiring_offers_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY hiring_offers_manager_all ON public.hiring_offers TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
 -- Name: hiring_onboarding; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12643,12 +10546,6 @@ CREATE POLICY hiring_onboarding_app_be_select ON public.hiring_onboarding FOR SE
 CREATE POLICY hiring_onboarding_app_be_update ON public.hiring_onboarding FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: hiring_onboarding hiring_onboarding_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY hiring_onboarding_manager_all ON public.hiring_onboarding TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
 -- Name: hiring_retention_log; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12665,12 +10562,6 @@ CREATE POLICY hiring_retention_log_app_be_insert ON public.hiring_retention_log 
 --
 
 CREATE POLICY hiring_retention_log_app_be_select ON public.hiring_retention_log FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: hiring_retention_log hiring_retention_log_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY hiring_retention_log_manager_select ON public.hiring_retention_log FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
 
 --
 -- Name: hiring_settings; Type: ROW SECURITY; Schema: public; Owner: -
@@ -12703,18 +10594,6 @@ CREATE POLICY hiring_settings_app_be_select ON public.hiring_settings FOR SELECT
 CREATE POLICY hiring_settings_app_be_update ON public.hiring_settings FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: hiring_settings hiring_settings_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY hiring_settings_manager_all ON public.hiring_settings TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: hiring_settings hiring_settings_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY hiring_settings_member_select ON public.hiring_settings FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: inbound_events; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12743,18 +10622,6 @@ CREATE POLICY inbound_events_app_be_select ON public.inbound_events FOR SELECT T
 --
 
 CREATE POLICY inbound_events_app_be_update ON public.inbound_events FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: inbound_events inbound_events_member_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY inbound_events_member_all ON public.inbound_events TO authenticated USING (public.is_member(workspace_id)) WITH CHECK (public.is_member(workspace_id));
-
---
--- Name: inbound_events inbound_events_owner_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY inbound_events_owner_all ON public.inbound_events TO authenticated USING (public.owns_workspace(workspace_id)) WITH CHECK (public.owns_workspace(workspace_id));
 
 --
 -- Name: inventory_items; Type: ROW SECURITY; Schema: public; Owner: -
@@ -12787,12 +10654,6 @@ CREATE POLICY inventory_items_app_be_select ON public.inventory_items FOR SELECT
 CREATE POLICY inventory_items_app_be_update ON public.inventory_items FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: inventory_items inventory_items_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY inventory_items_member_select ON public.inventory_items FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: inventory_locations; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12823,12 +10684,6 @@ CREATE POLICY inventory_locations_app_be_select ON public.inventory_locations FO
 CREATE POLICY inventory_locations_app_be_update ON public.inventory_locations FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: inventory_locations inventory_locations_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY inventory_locations_member_select ON public.inventory_locations FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: inventory_movements; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12845,12 +10700,6 @@ CREATE POLICY inventory_movements_app_be_insert ON public.inventory_movements FO
 --
 
 CREATE POLICY inventory_movements_app_be_select ON public.inventory_movements FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: inventory_movements inventory_movements_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY inventory_movements_member_select ON public.inventory_movements FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: inventory_po_lines; Type: ROW SECURITY; Schema: public; Owner: -
@@ -12883,12 +10732,6 @@ CREATE POLICY inventory_po_lines_app_be_select ON public.inventory_po_lines FOR 
 CREATE POLICY inventory_po_lines_app_be_update ON public.inventory_po_lines FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: inventory_po_lines inventory_po_lines_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY inventory_po_lines_member_select ON public.inventory_po_lines FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: inventory_purchase_orders; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12917,12 +10760,6 @@ CREATE POLICY inventory_purchase_orders_app_be_select ON public.inventory_purcha
 --
 
 CREATE POLICY inventory_purchase_orders_app_be_update ON public.inventory_purchase_orders FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: inventory_purchase_orders inventory_purchase_orders_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY inventory_purchase_orders_member_select ON public.inventory_purchase_orders FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: inventory_receipts; Type: ROW SECURITY; Schema: public; Owner: -
@@ -12955,12 +10792,6 @@ CREATE POLICY inventory_receipts_app_be_select ON public.inventory_receipts FOR 
 CREATE POLICY inventory_receipts_app_be_update ON public.inventory_receipts FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: inventory_receipts inventory_receipts_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY inventory_receipts_member_select ON public.inventory_receipts FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: inventory_recipe_lines; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12989,12 +10820,6 @@ CREATE POLICY inventory_recipe_lines_app_be_select ON public.inventory_recipe_li
 --
 
 CREATE POLICY inventory_recipe_lines_app_be_update ON public.inventory_recipe_lines FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: inventory_recipe_lines inventory_recipe_lines_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY inventory_recipe_lines_member_select ON public.inventory_recipe_lines FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: inventory_recipes; Type: ROW SECURITY; Schema: public; Owner: -
@@ -13027,12 +10852,6 @@ CREATE POLICY inventory_recipes_app_be_select ON public.inventory_recipes FOR SE
 CREATE POLICY inventory_recipes_app_be_update ON public.inventory_recipes FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: inventory_recipes inventory_recipes_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY inventory_recipes_member_select ON public.inventory_recipes FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: inventory_stock_levels; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -13061,12 +10880,6 @@ CREATE POLICY inventory_stock_levels_app_be_select ON public.inventory_stock_lev
 --
 
 CREATE POLICY inventory_stock_levels_app_be_update ON public.inventory_stock_levels FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: inventory_stock_levels inventory_stock_levels_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY inventory_stock_levels_member_select ON public.inventory_stock_levels FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: inventory_suppliers; Type: ROW SECURITY; Schema: public; Owner: -
@@ -13099,12 +10912,6 @@ CREATE POLICY inventory_suppliers_app_be_select ON public.inventory_suppliers FO
 CREATE POLICY inventory_suppliers_app_be_update ON public.inventory_suppliers FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: inventory_suppliers inventory_suppliers_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY inventory_suppliers_member_select ON public.inventory_suppliers FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: invoices; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -13133,12 +10940,6 @@ CREATE POLICY invoices_app_be_select ON public.invoices FOR SELECT TO app_be USI
 --
 
 CREATE POLICY invoices_app_be_update ON public.invoices FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: invoices invoices_member_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY invoices_member_all ON public.invoices TO authenticated USING (public.is_member(workspace_id)) WITH CHECK (public.is_member(workspace_id));
 
 --
 -- Name: job_outbox; Type: ROW SECURITY; Schema: public; Owner: -
@@ -13207,18 +11008,6 @@ CREATE POLICY knowledge_chunks_app_be_select ON public.knowledge_chunks FOR SELE
 CREATE POLICY knowledge_chunks_app_be_update ON public.knowledge_chunks FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: knowledge_chunks knowledge_chunks_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY knowledge_chunks_manager_all ON public.knowledge_chunks TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: knowledge_chunks knowledge_chunks_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY knowledge_chunks_member_select ON public.knowledge_chunks FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: knowledge_gaps; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -13247,12 +11036,6 @@ CREATE POLICY knowledge_gaps_app_be_select ON public.knowledge_gaps FOR SELECT T
 --
 
 CREATE POLICY knowledge_gaps_app_be_update ON public.knowledge_gaps FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: knowledge_gaps knowledge_gaps_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY knowledge_gaps_manager_select ON public.knowledge_gaps FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
 
 --
 -- Name: knowledge_sources; Type: ROW SECURITY; Schema: public; Owner: -
@@ -13285,24 +11068,6 @@ CREATE POLICY knowledge_sources_app_be_select ON public.knowledge_sources FOR SE
 CREATE POLICY knowledge_sources_app_be_update ON public.knowledge_sources FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: knowledge_sources knowledge_sources_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY knowledge_sources_manager_all ON public.knowledge_sources TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: knowledge_sources knowledge_sources_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY knowledge_sources_member_select ON public.knowledge_sources FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: knowledge_sources knowledge_sources_platform_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY knowledge_sources_platform_admin_select ON public.knowledge_sources FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
-
---
 -- Name: knowledge_suggestion_state; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -13333,18 +11098,6 @@ CREATE POLICY knowledge_suggestion_state_app_be_select ON public.knowledge_sugge
 CREATE POLICY knowledge_suggestion_state_app_be_update ON public.knowledge_suggestion_state FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: knowledge_suggestion_state knowledge_suggestion_state_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY knowledge_suggestion_state_manager_all ON public.knowledge_suggestion_state TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: knowledge_suggestion_state knowledge_suggestion_state_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY knowledge_suggestion_state_member_select ON public.knowledge_suggestion_state FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: messages; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -13373,12 +11126,6 @@ CREATE POLICY messages_app_be_select ON public.messages FOR SELECT TO app_be USI
 --
 
 CREATE POLICY messages_app_be_update ON public.messages FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: messages messages_member_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY messages_member_all ON public.messages TO authenticated USING (public.is_member(workspace_id)) WITH CHECK (public.is_member(workspace_id));
 
 --
 -- Name: meta_comments; Type: ROW SECURITY; Schema: public; Owner: -
@@ -13495,12 +11242,6 @@ CREATE POLICY module_context_notes_app_be_select ON public.module_context_notes 
 CREATE POLICY module_context_notes_app_be_update ON public.module_context_notes FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: module_context_notes module_context_notes_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY module_context_notes_manager_all ON public.module_context_notes TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
 -- Name: module_context_versions; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -13529,24 +11270,6 @@ CREATE POLICY module_context_versions_app_be_select ON public.module_context_ver
 --
 
 CREATE POLICY module_context_versions_app_be_update ON public.module_context_versions FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: module_context_versions module_context_versions_manager_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY module_context_versions_manager_insert ON public.module_context_versions FOR INSERT TO authenticated WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: module_context_versions module_context_versions_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY module_context_versions_member_select ON public.module_context_versions FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: module_context_versions module_context_versions_platform_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY module_context_versions_platform_admin_select ON public.module_context_versions FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
 
 --
 -- Name: module_installations; Type: ROW SECURITY; Schema: public; Owner: -
@@ -13579,36 +11302,6 @@ CREATE POLICY module_installations_app_be_select ON public.module_installations 
 CREATE POLICY module_installations_app_be_update ON public.module_installations FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: module_installations module_installations_manager_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY module_installations_manager_delete ON public.module_installations FOR DELETE TO authenticated USING (public.is_manager(workspace_id));
-
---
--- Name: module_installations module_installations_manager_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY module_installations_manager_insert ON public.module_installations FOR INSERT TO authenticated WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: module_installations module_installations_manager_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY module_installations_manager_update ON public.module_installations FOR UPDATE TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: module_installations module_installations_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY module_installations_member_select ON public.module_installations FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: module_installations module_installations_platform_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY module_installations_platform_admin_select ON public.module_installations FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
-
---
 -- Name: module_setup_messages; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -13637,12 +11330,6 @@ CREATE POLICY module_setup_messages_app_be_select ON public.module_setup_message
 --
 
 CREATE POLICY module_setup_messages_app_be_update ON public.module_setup_messages FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: module_setup_messages module_setup_messages_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY module_setup_messages_manager_all ON public.module_setup_messages TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
 
 --
 -- Name: module_setup_sessions; Type: ROW SECURITY; Schema: public; Owner: -
@@ -13675,12 +11362,6 @@ CREATE POLICY module_setup_sessions_app_be_select ON public.module_setup_session
 CREATE POLICY module_setup_sessions_app_be_update ON public.module_setup_sessions FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: module_setup_sessions module_setup_sessions_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY module_setup_sessions_manager_all ON public.module_setup_sessions TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
 -- Name: module_setup_writes; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -13711,12 +11392,6 @@ CREATE POLICY module_setup_writes_app_be_select ON public.module_setup_writes FO
 CREATE POLICY module_setup_writes_app_be_update ON public.module_setup_writes FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: module_setup_writes module_setup_writes_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY module_setup_writes_manager_all ON public.module_setup_writes TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
 -- Name: modules; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -13739,12 +11414,6 @@ CREATE POLICY modules_app_be_select ON public.modules FOR SELECT TO app_be USING
 --
 
 CREATE POLICY modules_app_be_update ON public.modules FOR UPDATE TO app_be USING ((key IS NOT NULL)) WITH CHECK ((key IS NOT NULL));
-
---
--- Name: modules modules_authenticated_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY modules_authenticated_select ON public.modules FOR SELECT TO authenticated USING ((( SELECT auth.uid() AS uid) IS NOT NULL));
 
 --
 -- Name: nivo_knowledge; Type: ROW SECURITY; Schema: public; Owner: -
@@ -13777,12 +11446,6 @@ CREATE POLICY nivo_knowledge_app_be_select ON public.nivo_knowledge FOR SELECT T
 CREATE POLICY nivo_knowledge_app_be_update ON public.nivo_knowledge FOR UPDATE TO app_be USING ((id IS NOT NULL)) WITH CHECK ((id IS NOT NULL));
 
 --
--- Name: nivo_knowledge nivo_knowledge_authenticated_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY nivo_knowledge_authenticated_select ON public.nivo_knowledge FOR SELECT TO authenticated USING ((( SELECT auth.uid() AS uid) IS NOT NULL));
-
---
 -- Name: office_command_candidates; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -13811,18 +11474,6 @@ CREATE POLICY office_command_candidates_app_be_select ON public.office_command_c
 --
 
 CREATE POLICY office_command_candidates_app_be_update ON public.office_command_candidates FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: office_command_candidates office_command_candidates_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY office_command_candidates_manager_all ON public.office_command_candidates TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: office_command_candidates office_command_candidates_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY office_command_candidates_manager_select ON public.office_command_candidates FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
 
 --
 -- Name: openclaw_agent_sync; Type: ROW SECURITY; Schema: public; Owner: -
@@ -13855,18 +11506,6 @@ CREATE POLICY openclaw_agent_sync_app_be_select ON public.openclaw_agent_sync FO
 CREATE POLICY openclaw_agent_sync_app_be_update ON public.openclaw_agent_sync FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: openclaw_agent_sync openclaw_agent_sync_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY openclaw_agent_sync_member_select ON public.openclaw_agent_sync FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
--- Name: openclaw_agent_sync openclaw_agent_sync_platform_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY openclaw_agent_sync_platform_admin_select ON public.openclaw_agent_sync FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
-
---
 -- Name: payment_order_requests; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -13889,12 +11528,6 @@ CREATE POLICY payment_order_requests_app_be_select ON public.payment_order_reque
 --
 
 CREATE POLICY payment_order_requests_app_be_update ON public.payment_order_requests FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: payment_order_requests payment_order_requests_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY payment_order_requests_manager_select ON public.payment_order_requests FOR SELECT TO authenticated USING ((public.is_manager(workspace_id) AND (requested_by = auth.uid())));
 
 --
 -- Name: payment_orders; Type: ROW SECURITY; Schema: public; Owner: -
@@ -13927,18 +11560,6 @@ CREATE POLICY payment_orders_app_be_select ON public.payment_orders FOR SELECT T
 CREATE POLICY payment_orders_app_be_update ON public.payment_orders FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: payment_orders payment_orders_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY payment_orders_member_select ON public.payment_orders FOR SELECT TO authenticated USING ((public.is_member(workspace_id) OR (created_by = auth.uid())));
-
---
--- Name: payment_orders payment_orders_platform_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY payment_orders_platform_admin_select ON public.payment_orders FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
-
---
 -- Name: plan_usage_tiers; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -13951,12 +11572,6 @@ ALTER TABLE public.plan_usage_tiers ENABLE ROW LEVEL SECURITY;
 CREATE POLICY plan_usage_tiers_app_be_select ON public.plan_usage_tiers FOR SELECT TO app_be USING ((plan_code IS NOT NULL));
 
 --
--- Name: plan_usage_tiers plan_usage_tiers_authenticated_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY plan_usage_tiers_authenticated_select ON public.plan_usage_tiers FOR SELECT TO authenticated USING ((auth.uid() IS NOT NULL));
-
---
 -- Name: plans; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -13967,12 +11582,6 @@ ALTER TABLE public.plans ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY plans_app_be_select ON public.plans FOR SELECT TO app_be USING ((code IS NOT NULL));
-
---
--- Name: plans plans_authenticated_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY plans_authenticated_select ON public.plans FOR SELECT TO authenticated USING ((auth.uid() IS NOT NULL));
 
 --
 -- Name: platform_admins; Type: ROW SECURITY; Schema: public; Owner: -
@@ -13997,12 +11606,6 @@ CREATE POLICY platform_audit_app_be_insert ON public.platform_audit FOR INSERT T
 --
 
 CREATE POLICY platform_audit_app_be_select ON public.platform_audit FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: platform_audit platform_audit_platform_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY platform_audit_platform_admin_select ON public.platform_audit FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
 
 --
 -- Name: platform_flags; Type: ROW SECURITY; Schema: public; Owner: -
@@ -14083,20 +11686,6 @@ CREATE POLICY sepay_transactions_app_be_select ON public.sepay_transactions FOR 
 CREATE POLICY sepay_transactions_app_be_update ON public.sepay_transactions FOR UPDATE TO app_be USING ((id IS NOT NULL)) WITH CHECK ((id IS NOT NULL));
 
 --
--- Name: sepay_transactions sepay_transactions_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY sepay_transactions_manager_select ON public.sepay_transactions FOR SELECT TO authenticated USING ((EXISTS ( SELECT 1
-   FROM public.payment_orders o
-  WHERE ((o.id = sepay_transactions.matched_order_id) AND public.is_manager(o.workspace_id)))));
-
---
--- Name: sepay_transactions sepay_transactions_platform_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY sepay_transactions_platform_admin_select ON public.sepay_transactions FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
-
---
 -- Name: shifts_attendance; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -14125,24 +11714,6 @@ CREATE POLICY shifts_attendance_app_be_select ON public.shifts_attendance FOR SE
 --
 
 CREATE POLICY shifts_attendance_app_be_update ON public.shifts_attendance FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: shifts_attendance shifts_attendance_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_attendance_manager_all ON public.shifts_attendance TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: shifts_attendance shifts_attendance_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_attendance_manager_select ON public.shifts_attendance FOR SELECT TO authenticated USING ((public.is_manager(workspace_id) OR (public.is_member(workspace_id) AND (staff_id = public.shifts_my_profile(workspace_id)))));
-
---
--- Name: shifts_attendance shifts_attendance_own_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_attendance_own_insert ON public.shifts_attendance FOR INSERT TO authenticated WITH CHECK ((public.is_member(workspace_id) AND (staff_id = public.shifts_my_profile(workspace_id))));
 
 --
 -- Name: shifts_availability; Type: ROW SECURITY; Schema: public; Owner: -
@@ -14175,24 +11746,6 @@ CREATE POLICY shifts_availability_app_be_select ON public.shifts_availability FO
 CREATE POLICY shifts_availability_app_be_update ON public.shifts_availability FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: shifts_availability shifts_availability_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_availability_manager_all ON public.shifts_availability TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: shifts_availability shifts_availability_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_availability_manager_select ON public.shifts_availability FOR SELECT TO authenticated USING ((public.is_manager(workspace_id) OR (public.is_member(workspace_id) AND (staff_id = public.shifts_my_profile(workspace_id)))));
-
---
--- Name: shifts_availability shifts_availability_own_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_availability_own_insert ON public.shifts_availability FOR INSERT TO authenticated WITH CHECK ((public.is_member(workspace_id) AND (staff_id = public.shifts_my_profile(workspace_id)) AND (status = 'pending'::text)));
-
---
 -- Name: shifts_coverage; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -14221,18 +11774,6 @@ CREATE POLICY shifts_coverage_app_be_select ON public.shifts_coverage FOR SELECT
 --
 
 CREATE POLICY shifts_coverage_app_be_update ON public.shifts_coverage FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: shifts_coverage shifts_coverage_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_coverage_manager_all ON public.shifts_coverage TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: shifts_coverage shifts_coverage_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_coverage_manager_select ON public.shifts_coverage FOR SELECT TO authenticated USING (public.is_manager(workspace_id));
 
 --
 -- Name: shifts_leave_requests; Type: ROW SECURITY; Schema: public; Owner: -
@@ -14265,24 +11806,6 @@ CREATE POLICY shifts_leave_requests_app_be_select ON public.shifts_leave_request
 CREATE POLICY shifts_leave_requests_app_be_update ON public.shifts_leave_requests FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: shifts_leave_requests shifts_leave_requests_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_leave_requests_manager_all ON public.shifts_leave_requests TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: shifts_leave_requests shifts_leave_requests_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_leave_requests_manager_select ON public.shifts_leave_requests FOR SELECT TO authenticated USING ((public.is_manager(workspace_id) OR (public.is_member(workspace_id) AND (staff_id = public.shifts_my_profile(workspace_id)))));
-
---
--- Name: shifts_leave_requests shifts_leave_requests_member_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_leave_requests_member_insert ON public.shifts_leave_requests FOR INSERT TO authenticated WITH CHECK ((public.is_member(workspace_id) AND (staff_id = public.shifts_my_profile(workspace_id)) AND (status = 'pending'::text)));
-
---
 -- Name: shifts_notifications; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -14311,12 +11834,6 @@ CREATE POLICY shifts_notifications_app_be_select ON public.shifts_notifications 
 --
 
 CREATE POLICY shifts_notifications_app_be_update ON public.shifts_notifications FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: shifts_notifications shifts_notifications_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_notifications_manager_select ON public.shifts_notifications FOR SELECT TO authenticated USING ((public.is_manager(workspace_id) OR (public.is_member(workspace_id) AND (staff_id = public.shifts_my_profile(workspace_id)))));
 
 --
 -- Name: shifts_positions; Type: ROW SECURITY; Schema: public; Owner: -
@@ -14349,18 +11866,6 @@ CREATE POLICY shifts_positions_app_be_select ON public.shifts_positions FOR SELE
 CREATE POLICY shifts_positions_app_be_update ON public.shifts_positions FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: shifts_positions shifts_positions_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_positions_manager_all ON public.shifts_positions TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: shifts_positions shifts_positions_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_positions_member_select ON public.shifts_positions FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: shifts_schedules; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -14389,18 +11894,6 @@ CREATE POLICY shifts_schedules_app_be_select ON public.shifts_schedules FOR SELE
 --
 
 CREATE POLICY shifts_schedules_app_be_update ON public.shifts_schedules FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: shifts_schedules shifts_schedules_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_schedules_manager_all ON public.shifts_schedules TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: shifts_schedules shifts_schedules_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_schedules_manager_select ON public.shifts_schedules FOR SELECT TO authenticated USING ((public.is_manager(workspace_id) OR (public.is_member(workspace_id) AND (status = 'published'::text))));
 
 --
 -- Name: shifts_settings; Type: ROW SECURITY; Schema: public; Owner: -
@@ -14433,18 +11926,6 @@ CREATE POLICY shifts_settings_app_be_select ON public.shifts_settings FOR SELECT
 CREATE POLICY shifts_settings_app_be_update ON public.shifts_settings FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: shifts_settings shifts_settings_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_settings_manager_all ON public.shifts_settings TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: shifts_settings shifts_settings_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_settings_member_select ON public.shifts_settings FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: shifts_shifts; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -14473,18 +11954,6 @@ CREATE POLICY shifts_shifts_app_be_select ON public.shifts_shifts FOR SELECT TO 
 --
 
 CREATE POLICY shifts_shifts_app_be_update ON public.shifts_shifts FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: shifts_shifts shifts_shifts_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_shifts_manager_all ON public.shifts_shifts TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: shifts_shifts shifts_shifts_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_shifts_manager_select ON public.shifts_shifts FOR SELECT TO authenticated USING ((public.is_manager(workspace_id) OR (public.is_member(workspace_id) AND (status = ANY (ARRAY['published'::text, 'swapped'::text])))));
 
 --
 -- Name: shifts_staff; Type: ROW SECURITY; Schema: public; Owner: -
@@ -14517,18 +11986,6 @@ CREATE POLICY shifts_staff_app_be_select ON public.shifts_staff FOR SELECT TO ap
 CREATE POLICY shifts_staff_app_be_update ON public.shifts_staff FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: shifts_staff shifts_staff_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_staff_manager_all ON public.shifts_staff TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: shifts_staff shifts_staff_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_staff_member_select ON public.shifts_staff FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: shifts_staff_pay; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -14557,12 +12014,6 @@ CREATE POLICY shifts_staff_pay_app_be_select ON public.shifts_staff_pay FOR SELE
 --
 
 CREATE POLICY shifts_staff_pay_app_be_update ON public.shifts_staff_pay FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: shifts_staff_pay shifts_staff_pay_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_staff_pay_manager_all ON public.shifts_staff_pay TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
 
 --
 -- Name: shifts_swap_requests; Type: ROW SECURITY; Schema: public; Owner: -
@@ -14595,24 +12046,6 @@ CREATE POLICY shifts_swap_requests_app_be_select ON public.shifts_swap_requests 
 CREATE POLICY shifts_swap_requests_app_be_update ON public.shifts_swap_requests FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: shifts_swap_requests shifts_swap_requests_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_swap_requests_manager_all ON public.shifts_swap_requests TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: shifts_swap_requests shifts_swap_requests_manager_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_swap_requests_manager_select ON public.shifts_swap_requests FOR SELECT TO authenticated USING ((public.is_manager(workspace_id) OR (public.is_member(workspace_id) AND ((from_staff_id = public.shifts_my_profile(workspace_id)) OR (to_staff_id = public.shifts_my_profile(workspace_id))))));
-
---
--- Name: shifts_swap_requests shifts_swap_requests_member_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY shifts_swap_requests_member_insert ON public.shifts_swap_requests FOR INSERT TO authenticated WITH CHECK ((public.is_member(workspace_id) AND (status = 'pending'::text) AND ((from_staff_id = public.shifts_my_profile(workspace_id)) OR ((kind = 'claim'::text) AND (to_staff_id = public.shifts_my_profile(workspace_id))))));
-
---
 -- Name: staff; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -14641,30 +12074,6 @@ CREATE POLICY staff_app_be_select ON public.staff FOR SELECT TO app_be USING ((w
 --
 
 CREATE POLICY staff_app_be_update ON public.staff FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: staff staff_manager_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY staff_manager_delete ON public.staff FOR DELETE TO authenticated USING (public.is_manager(workspace_id));
-
---
--- Name: staff staff_manager_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY staff_manager_insert ON public.staff FOR INSERT TO authenticated WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: staff staff_manager_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY staff_manager_update ON public.staff FOR UPDATE TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: staff staff_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY staff_member_select ON public.staff FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: telegram_inbox; Type: ROW SECURITY; Schema: public; Owner: -
@@ -14721,18 +12130,6 @@ CREATE POLICY video_brand_kits_app_be_select ON public.video_brand_kits FOR SELE
 CREATE POLICY video_brand_kits_app_be_update ON public.video_brand_kits FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: video_brand_kits video_brand_kits_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY video_brand_kits_manager_all ON public.video_brand_kits TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: video_brand_kits video_brand_kits_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY video_brand_kits_member_select ON public.video_brand_kits FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: video_project_versions; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -14761,18 +12158,6 @@ CREATE POLICY video_project_versions_app_be_select ON public.video_project_versi
 --
 
 CREATE POLICY video_project_versions_app_be_update ON public.video_project_versions FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: video_project_versions video_project_versions_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY video_project_versions_manager_all ON public.video_project_versions TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: video_project_versions video_project_versions_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY video_project_versions_member_select ON public.video_project_versions FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: video_projects; Type: ROW SECURITY; Schema: public; Owner: -
@@ -14805,18 +12190,6 @@ CREATE POLICY video_projects_app_be_select ON public.video_projects FOR SELECT T
 CREATE POLICY video_projects_app_be_update ON public.video_projects FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: video_projects video_projects_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY video_projects_manager_all ON public.video_projects TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK (public.is_manager(workspace_id));
-
---
--- Name: video_projects video_projects_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY video_projects_member_select ON public.video_projects FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: video_renders; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -14847,12 +12220,6 @@ CREATE POLICY video_renders_app_be_select ON public.video_renders FOR SELECT TO 
 CREATE POLICY video_renders_app_be_update ON public.video_renders FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: video_renders video_renders_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY video_renders_member_select ON public.video_renders FOR SELECT TO authenticated USING (public.is_member(workspace_id));
-
---
 -- Name: work_items; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -14881,30 +12248,6 @@ CREATE POLICY work_items_app_be_select ON public.work_items FOR SELECT TO app_be
 --
 
 CREATE POLICY work_items_app_be_update ON public.work_items FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: work_items work_items_manager_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY work_items_manager_delete ON public.work_items FOR DELETE TO authenticated USING (public.is_manager(workspace_id));
-
---
--- Name: work_items work_items_manager_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY work_items_manager_update ON public.work_items FOR UPDATE TO authenticated USING ((public.is_member(workspace_id) AND (public.is_manager(workspace_id) OR (status <> 'waiting_decision'::text) OR (assigned_staff_id = public.my_staff_id(workspace_id))))) WITH CHECK (public.is_member(workspace_id));
-
---
--- Name: work_items work_items_member_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY work_items_member_insert ON public.work_items FOR INSERT TO authenticated WITH CHECK (public.is_member(workspace_id));
-
---
--- Name: work_items work_items_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY work_items_member_select ON public.work_items FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: api_keys workspace_api_keys_app_be_delete; Type: POLICY; Schema: public; Owner: -
@@ -14961,18 +12304,6 @@ CREATE POLICY workspace_invites_app_be_select ON public.workspace_invites FOR SE
 CREATE POLICY workspace_invites_app_be_update ON public.workspace_invites FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: workspace_invites workspace_invites_manager_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY workspace_invites_manager_all ON public.workspace_invites TO authenticated USING (public.is_manager(workspace_id)) WITH CHECK ((public.is_manager(workspace_id) AND (role = ANY (ARRAY['manager'::text, 'staff'::text]))));
-
---
--- Name: workspace_invites workspace_invites_platform_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY workspace_invites_platform_admin_select ON public.workspace_invites FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
-
---
 -- Name: workspace_members; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -15003,36 +12334,6 @@ CREATE POLICY workspace_members_app_be_select ON public.workspace_members FOR SE
 CREATE POLICY workspace_members_app_be_update ON public.workspace_members FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: workspace_members workspace_members_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY workspace_members_member_select ON public.workspace_members FOR SELECT TO authenticated USING (((user_id = auth.uid()) OR public.is_member(workspace_id)));
-
---
--- Name: workspace_members workspace_members_owner_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY workspace_members_owner_delete ON public.workspace_members FOR DELETE TO authenticated USING ((public.is_manager(workspace_id) AND ((role <> 'owner'::text) OR (public.member_role(workspace_id) = 'owner'::text))));
-
---
--- Name: workspace_members workspace_members_owner_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY workspace_members_owner_insert ON public.workspace_members FOR INSERT TO authenticated WITH CHECK ((public.is_manager(workspace_id) AND ((role <> 'owner'::text) OR (public.member_role(workspace_id) = 'owner'::text))));
-
---
--- Name: workspace_members workspace_members_owner_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY workspace_members_owner_update ON public.workspace_members FOR UPDATE TO authenticated USING ((public.is_manager(workspace_id) AND ((role <> 'owner'::text) OR (public.member_role(workspace_id) = 'owner'::text)))) WITH CHECK ((public.is_manager(workspace_id) AND ((role <> 'owner'::text) OR (public.member_role(workspace_id) = 'owner'::text))));
-
---
--- Name: workspace_members workspace_members_platform_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY workspace_members_platform_admin_select ON public.workspace_members FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
-
---
 -- Name: workspaces; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -15061,30 +12362,6 @@ CREATE POLICY workspaces_app_be_select ON public.workspaces FOR SELECT TO app_be
 --
 
 CREATE POLICY workspaces_app_be_update ON public.workspaces FOR UPDATE TO app_be USING ((id IS NOT NULL)) WITH CHECK ((id IS NOT NULL));
-
---
--- Name: workspaces workspaces_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY workspaces_member_select ON public.workspaces FOR SELECT TO authenticated USING (((owner_id = auth.uid()) OR public.is_member(id)));
-
---
--- Name: workspaces workspaces_owner_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY workspaces_owner_delete ON public.workspaces FOR DELETE TO authenticated USING ((public.member_role(id) = 'owner'::text));
-
---
--- Name: workspaces workspaces_owner_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY workspaces_owner_update ON public.workspaces FOR UPDATE TO authenticated USING ((public.member_role(id) = 'owner'::text)) WITH CHECK ((public.member_role(id) = 'owner'::text));
-
---
--- Name: workspaces workspaces_platform_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY workspaces_platform_admin_select ON public.workspaces FOR SELECT TO authenticated USING (( SELECT public.is_platform_admin() AS is_platform_admin));
 
 --
 -- Name: zalo_inbox; Type: ROW SECURITY; Schema: public; Owner: -
@@ -15288,69 +12565,6 @@ REVOKE EXECUTE ON FUNCTION be_access.user_emails(p_ids uuid[]) FROM PUBLIC, anon
 GRANT EXECUTE ON FUNCTION be_access.user_emails(p_ids uuid[]) TO app_be;
 
 --
--- Name: FUNCTION accept_invite(token text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.accept_invite(token text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.accept_invite(token text) TO authenticated;
-
---
--- Name: FUNCTION admin_console_audit(p_action text, p_workspace uuid, p_data jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.admin_console_audit(p_action text, p_workspace uuid, p_data jsonb) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.admin_console_audit(p_action text, p_workspace uuid, p_data jsonb) TO authenticated;
-
---
--- Name: FUNCTION admin_console_quota(p_workspace uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.admin_console_quota(p_workspace uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.admin_console_quota(p_workspace uuid) TO authenticated;
-
---
--- Name: FUNCTION admin_console_signups(p_days integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.admin_console_signups(p_days integer) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.admin_console_signups(p_days integer) TO authenticated;
-
---
--- Name: FUNCTION admin_console_user_emails(p_ids uuid[]); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.admin_console_user_emails(p_ids uuid[]) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.admin_console_user_emails(p_ids uuid[]) TO authenticated;
-
---
--- Name: FUNCTION admin_console_workspace_stats(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.admin_console_workspace_stats() FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.admin_console_workspace_stats() TO authenticated;
-
---
--- Name: FUNCTION admin_extend_subscription(p_workspace uuid, p_days integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.admin_extend_subscription(p_workspace uuid, p_days integer) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.admin_extend_subscription(p_workspace uuid, p_days integer) TO authenticated;
-
---
--- Name: FUNCTION admin_set_workspace_plan(p_workspace uuid, p_plan text, p_credits bigint); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.admin_set_workspace_plan(p_workspace uuid, p_plan text, p_credits bigint) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.admin_set_workspace_plan(p_workspace uuid, p_plan text, p_credits bigint) TO authenticated;
-
---
--- Name: FUNCTION admin_set_workspace_status(p_workspace uuid, p_status text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.admin_set_workspace_status(p_workspace uuid, p_status text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.admin_set_workspace_status(p_workspace uuid, p_status text) TO authenticated;
-
---
 -- Name: FUNCTION admin_signups_per_day(p_days integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15398,20 +12612,6 @@ REVOKE EXECUTE ON FUNCTION public.api_key_auth(p_hash text) FROM PUBLIC, anon, a
 GRANT EXECUTE ON FUNCTION public.api_key_auth(p_hash text) TO app_be;
 
 --
--- Name: FUNCTION api_key_create(p_workspace uuid, p_name text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.api_key_create(p_workspace uuid, p_name text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.api_key_create(p_workspace uuid, p_name text) TO authenticated;
-
---
--- Name: FUNCTION api_key_revoke(p_workspace uuid, p_key uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.api_key_revoke(p_workspace uuid, p_key uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.api_key_revoke(p_workspace uuid, p_key uuid) TO authenticated;
-
---
 -- Name: FUNCTION api_rate_hit(p_key uuid); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15446,30 +12646,6 @@ REVOKE EXECUTE ON FUNCTION public.be_revoke_session(p_user uuid, p_session uuid)
 GRANT EXECUTE ON FUNCTION public.be_revoke_session(p_user uuid, p_session uuid) TO app_be;
 
 --
--- Name: FUNCTION booking_peak_load(p_resource uuid, p_start timestamp with time zone, p_block_end timestamp with time zone, p_exclude uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.booking_peak_load(p_resource uuid, p_start timestamp with time zone, p_block_end timestamp with time zone, p_exclude uuid) FROM PUBLIC, anon, authenticated;
-
---
--- Name: FUNCTION booking_rate_hit(p_key text, p_limit integer, p_window_sec integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.booking_rate_hit(p_key text, p_limit integer, p_window_sec integer) FROM PUBLIC, anon, authenticated;
-
---
--- Name: FUNCTION booking_relocate(p_booking uuid, p_resource uuid, p_start timestamp with time zone, p_end timestamp with time zone, p_block_end timestamp with time zone, p_force boolean); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.booking_relocate(p_booking uuid, p_resource uuid, p_start timestamp with time zone, p_end timestamp with time zone, p_block_end timestamp with time zone, p_force boolean) FROM PUBLIC, anon, authenticated;
-
---
--- Name: FUNCTION booking_reserve(p jsonb, p_force boolean); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.booking_reserve(p jsonb, p_force boolean) FROM PUBLIC, anon, authenticated;
-
---
 -- Name: FUNCTION bookings_fill_installation(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15482,32 +12658,11 @@ REVOKE EXECUTE ON FUNCTION public.bookings_fill_installation() FROM PUBLIC, anon
 REVOKE EXECUTE ON FUNCTION public.bookings_notify() FROM PUBLIC, anon, authenticated;
 
 --
--- Name: FUNCTION brain_command(p_workspace uuid, p_kind text, p_payload jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.brain_command(p_workspace uuid, p_kind text, p_payload jsonb) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.brain_command(p_workspace uuid, p_kind text, p_payload jsonb) TO authenticated;
-
---
--- Name: FUNCTION brain_command_wait(p_id uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.brain_command_wait(p_id uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.brain_command_wait(p_id uuid) TO authenticated;
-
---
 -- Name: FUNCTION connection_command_submit(p_workspace uuid, p_kind text, p_input jsonb); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE EXECUTE ON FUNCTION public.connection_command_submit(p_workspace uuid, p_kind text, p_input jsonb) FROM PUBLIC, anon, authenticated;
 GRANT ALL ON FUNCTION public.connection_command_submit(p_workspace uuid, p_kind text, p_input jsonb) TO authenticated;
-
---
--- Name: FUNCTION connection_command_take(p_id uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.connection_command_take(p_id uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.connection_command_take(p_id uuid) TO authenticated;
 
 --
 -- Name: FUNCTION connection_mark_fed(p_connection uuid, p_at timestamp with time zone, p_first_event jsonb); Type: ACL; Schema: public; Owner: -
@@ -15529,13 +12684,6 @@ GRANT ALL ON FUNCTION public.content_items_touch() TO authenticated;
 
 GRANT ALL ON FUNCTION public.content_settings_touch() TO anon;
 GRANT ALL ON FUNCTION public.content_settings_touch() TO authenticated;
-
---
--- Name: FUNCTION create_free_workspace(p_name text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.create_free_workspace(p_name text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.create_free_workspace(p_name text) TO authenticated;
 
 --
 -- Name: FUNCTION credit_usd_value(); Type: ACL; Schema: public; Owner: -
@@ -15685,13 +12833,6 @@ REVOKE EXECUTE ON FUNCTION public.hiring_jobs_expire(p_ws uuid) FROM PUBLIC, ano
 GRANT EXECUTE ON FUNCTION public.hiring_jobs_expire(p_ws uuid) TO app_be;
 
 --
--- Name: FUNCTION hiring_new_token(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.hiring_new_token() FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.hiring_new_token() TO app_be;
-
---
 -- Name: FUNCTION hiring_offer_answer(p_token text, p_accept boolean, p_items text[], p_actor text, p_line text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15739,12 +12880,6 @@ GRANT EXECUTE ON FUNCTION public.hiring_offers_expire(p_ws uuid, p_line text) TO
 
 REVOKE EXECUTE ON FUNCTION public.hiring_onboarding_toggle(p_ws uuid, p_id uuid, p_done boolean) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.hiring_onboarding_toggle(p_ws uuid, p_id uuid, p_done boolean) TO app_be;
-
---
--- Name: FUNCTION hiring_ops_status(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.hiring_ops_status() FROM PUBLIC, anon, authenticated;
 
 --
 -- Name: FUNCTION hiring_retention_log_add(p_ws uuid, p_candidates integer, p_files integer, p_days integer); Type: ACL; Schema: public; Owner: -
@@ -15942,13 +13077,6 @@ REVOKE EXECUTE ON FUNCTION public.inventory_set_po_status(p_po uuid, p_status te
 GRANT EXECUTE ON FUNCTION public.inventory_set_po_status(p_po uuid, p_status text) TO app_be;
 
 --
--- Name: FUNCTION invite_preview(token text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.invite_preview(token text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.invite_preview(token text) TO authenticated;
-
---
 -- Name: FUNCTION is_manager(ws uuid); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15965,13 +13093,6 @@ GRANT ALL ON FUNCTION public.is_member(ws uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_member(ws uuid) TO app_be;
 
 --
--- Name: FUNCTION is_owner(ws uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.is_owner(ws uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.is_owner(ws uuid) TO authenticated;
-
---
 -- Name: FUNCTION is_platform_admin(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15979,52 +13100,11 @@ REVOKE EXECUTE ON FUNCTION public.is_platform_admin() FROM PUBLIC, anon, authent
 GRANT ALL ON FUNCTION public.is_platform_admin() TO authenticated;
 
 --
--- Name: FUNCTION job_ack(p_queue text, p_msg_id bigint); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.job_ack(p_queue text, p_msg_id bigint) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.job_ack(p_queue text, p_msg_id bigint) TO app_be;
-
---
--- Name: FUNCTION job_archive(p_queue text, p_msg_id bigint, p_error text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.job_archive(p_queue text, p_msg_id bigint, p_error text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.job_archive(p_queue text, p_msg_id bigint, p_error text) TO app_be;
-
---
 -- Name: FUNCTION job_enqueue(p_workspace uuid, p_queue text, p_name text, p_payload jsonb, p_dedupe text); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE EXECUTE ON FUNCTION public.job_enqueue(p_workspace uuid, p_queue text, p_name text, p_payload jsonb, p_dedupe text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.job_enqueue(p_workspace uuid, p_queue text, p_name text, p_payload jsonb, p_dedupe text) TO app_be;
-
---
--- Name: FUNCTION job_fail(p_queue text, p_msg_id bigint, p_delay_s integer, p_error text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.job_fail(p_queue text, p_msg_id bigint, p_delay_s integer, p_error text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.job_fail(p_queue text, p_msg_id bigint, p_delay_s integer, p_error text) TO app_be;
-
---
--- Name: FUNCTION job_message(p_name text, p_payload jsonb, p_dedupe text, p_outbox uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.job_message(p_name text, p_payload jsonb, p_dedupe text, p_outbox uuid) FROM PUBLIC, anon, authenticated;
-
---
--- Name: FUNCTION job_read(p_queue text, p_vt integer, p_qty integer, p_ws_limit integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.job_read(p_queue text, p_vt integer, p_qty integer, p_ws_limit integer) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.job_read(p_queue text, p_vt integer, p_qty integer, p_ws_limit integer) TO app_be;
-
---
--- Name: FUNCTION job_requeue(p_outbox uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.job_requeue(p_outbox uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.job_requeue(p_outbox uuid) TO app_be;
 
 --
 -- Name: FUNCTION job_stats(); Type: ACL; Schema: public; Owner: -
@@ -16046,13 +13126,6 @@ GRANT EXECUTE ON FUNCTION public.job_status(p_workspace uuid, p_queue text, p_de
 
 REVOKE EXECUTE ON FUNCTION public.job_status(p_workspace_id uuid, p_queue text, p_name text, p_dedupe_key text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.job_status(p_workspace_id uuid, p_queue text, p_name text, p_dedupe_key text) TO app_be;
-
---
--- Name: FUNCTION job_touch(p_queue text, p_msg_id bigint, p_vt integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.job_touch(p_queue text, p_msg_id bigint, p_vt integer) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.job_touch(p_queue text, p_msg_id bigint, p_vt integer) TO app_be;
 
 --
 -- Name: FUNCTION knowledge_chunk_visibility_sync(); Type: ACL; Schema: public; Owner: -
@@ -16081,25 +13154,6 @@ GRANT ALL ON FUNCTION public.knowledge_fold(t text) TO authenticated;
 
 REVOKE EXECUTE ON FUNCTION public.knowledge_retry_source(p_source uuid) FROM PUBLIC, anon, authenticated;
 GRANT ALL ON FUNCTION public.knowledge_retry_source(p_source uuid) TO authenticated;
-
---
--- Name: FUNCTION lead_actor_name(p_workspace uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.lead_actor_name(p_workspace uuid) FROM PUBLIC, anon, authenticated;
-
---
--- Name: FUNCTION lead_step_owner(p_workspace uuid, p_owner text, p_actor text, OUT o_kind text, OUT o_agent uuid, OUT o_name text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.lead_step_owner(p_workspace uuid, p_owner text, p_actor text, OUT o_kind text, OUT o_agent uuid, OUT o_name text) FROM PUBLIC, anon, authenticated;
-
---
--- Name: FUNCTION match_knowledge(p_workspace uuid, p_module text, p_query_embedding extensions.vector, p_query text, p_limit integer, p_audience text, p_query_model text, p_installation uuid); Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON FUNCTION public.match_knowledge(p_workspace uuid, p_module text, p_query_embedding extensions.vector, p_query text, p_limit integer, p_audience text, p_query_model text, p_installation uuid) TO anon;
-GRANT ALL ON FUNCTION public.match_knowledge(p_workspace uuid, p_module text, p_query_embedding extensions.vector, p_query text, p_limit integer, p_audience text, p_query_model text, p_installation uuid) TO authenticated;
 
 --
 -- Name: FUNCTION member_role(ws uuid); Type: ACL; Schema: public; Owner: -
@@ -16131,36 +13185,6 @@ GRANT ALL ON FUNCTION public.module_type_name(p_key text) TO anon;
 GRANT ALL ON FUNCTION public.module_type_name(p_key text) TO authenticated;
 
 --
--- Name: FUNCTION my_sessions(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.my_sessions() FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.my_sessions() TO authenticated;
-
---
--- Name: FUNCTION my_staff_id(ws uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.my_staff_id(ws uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.my_staff_id(ws uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.my_staff_id(ws uuid) TO app_be;
-
---
--- Name: FUNCTION owns_workspace(ws uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.owns_workspace(ws uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.owns_workspace(ws uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.owns_workspace(ws uuid) TO app_be;
-
---
--- Name: FUNCTION payment_order_request(p_workspace uuid, p_kind text, p_target text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.payment_order_request(p_workspace uuid, p_kind text, p_target text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.payment_order_request(p_workspace uuid, p_kind text, p_target text) TO authenticated;
-
---
 -- Name: FUNCTION post_ai_usage_notice(p_workspace uuid, p_period date, p_level text, p_body text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -16173,13 +13197,6 @@ GRANT EXECUTE ON FUNCTION public.post_ai_usage_notice(p_workspace uuid, p_period
 
 REVOKE EXECUTE ON FUNCTION public.post_office_notice(p_workspace uuid, p_body text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.post_office_notice(p_workspace uuid, p_body text) TO app_be;
-
---
--- Name: FUNCTION read_app_command(p_id uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.read_app_command(p_id uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.read_app_command(p_id uuid) TO authenticated;
 
 --
 -- Name: FUNCTION record_ai_usage(p_workspace uuid, p_kind text, p_module text, p_model text, p_prompt integer, p_completion integer, p_cost numeric, p_estimated boolean); Type: ACL; Schema: public; Owner: -
@@ -16196,32 +13213,11 @@ REVOKE EXECUTE ON FUNCTION public.request_admin_invite_resend(p_workspace uuid, 
 GRANT ALL ON FUNCTION public.request_admin_invite_resend(p_workspace uuid, p_invite uuid) TO authenticated;
 
 --
--- Name: FUNCTION request_agent_sync(p_workspace uuid, p_installation uuid, p_force boolean); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.request_agent_sync(p_workspace uuid, p_installation uuid, p_force boolean) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.request_agent_sync(p_workspace uuid, p_installation uuid, p_force boolean) TO authenticated;
-
---
 -- Name: FUNCTION request_invite_command(p_workspace uuid, p_action text, p_invite uuid, p_email text, p_role text, p_staff uuid); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE EXECUTE ON FUNCTION public.request_invite_command(p_workspace uuid, p_action text, p_invite uuid, p_email text, p_role text, p_staff uuid) FROM PUBLIC, anon, authenticated;
 GRANT ALL ON FUNCTION public.request_invite_command(p_workspace uuid, p_action text, p_invite uuid, p_email text, p_role text, p_staff uuid) TO authenticated;
-
---
--- Name: FUNCTION request_office_confirm(p_workspace uuid, p_candidate uuid, p_locale text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.request_office_confirm(p_workspace uuid, p_candidate uuid, p_locale text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.request_office_confirm(p_workspace uuid, p_candidate uuid, p_locale text) TO authenticated;
-
---
--- Name: FUNCTION request_office_propose(p_workspace uuid, p_message uuid, p_locale text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.request_office_propose(p_workspace uuid, p_message uuid, p_locale text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.request_office_propose(p_workspace uuid, p_message uuid, p_locale text) TO authenticated;
 
 --
 -- Name: FUNCTION request_video_render(p_project uuid); Type: ACL; Schema: public; Owner: -
@@ -16231,40 +13227,12 @@ REVOKE EXECUTE ON FUNCTION public.request_video_render(p_project uuid) FROM PUBL
 GRANT ALL ON FUNCTION public.request_video_render(p_project uuid) TO authenticated;
 
 --
--- Name: FUNCTION request_work_decision(p_workspace uuid, p_work_item uuid, p_decision text, p_edits jsonb, p_note text, p_basis text, p_locale text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.request_work_decision(p_workspace uuid, p_work_item uuid, p_decision text, p_edits jsonb, p_note text, p_basis text, p_locale text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.request_work_decision(p_workspace uuid, p_work_item uuid, p_decision text, p_edits jsonb, p_note text, p_basis text, p_locale text) TO authenticated;
-
---
 -- Name: FUNCTION resolve_installation(p_ws uuid, p_module text, p_conversation uuid, p_lead uuid, p_chain uuid); Type: ACL; Schema: public; Owner: -
 --
 
 GRANT ALL ON FUNCTION public.resolve_installation(p_ws uuid, p_module text, p_conversation uuid, p_lead uuid, p_chain uuid) TO anon;
 GRANT ALL ON FUNCTION public.resolve_installation(p_ws uuid, p_module text, p_conversation uuid, p_lead uuid, p_chain uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.resolve_installation(p_ws uuid, p_module text, p_conversation uuid, p_lead uuid, p_chain uuid) TO app_be;
-
---
--- Name: FUNCTION revoke_my_session(session_id uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.revoke_my_session(session_id uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.revoke_my_session(session_id uuid) TO authenticated;
-
---
--- Name: FUNCTION revoke_workspace_invite(p_workspace uuid, p_invite uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.revoke_workspace_invite(p_workspace uuid, p_invite uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.revoke_workspace_invite(p_workspace uuid, p_invite uuid) TO authenticated;
-
---
--- Name: FUNCTION session_bootstrap(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.session_bootstrap() FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.session_bootstrap() TO authenticated;
 
 --
 -- Name: FUNCTION settle_credit_topups(p_workspace uuid, p_force boolean); Type: ACL; Schema: public; Owner: -
@@ -16288,25 +13256,11 @@ GRANT ALL ON FUNCTION public.shell_data(ws uuid, founding_from timestamp with ti
 GRANT EXECUTE ON FUNCTION public.shell_data(ws uuid, founding_from timestamp with time zone, founding_to timestamp with time zone) TO app_be;
 
 --
--- Name: FUNCTION shifts_add_availability(p_ws uuid, p_staff uuid, p_weekday smallint, p_date date, p_start time without time zone, p_end time without time zone, p_available boolean, p_note text, p_status text, p_decider text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_add_availability(p_ws uuid, p_staff uuid, p_weekday smallint, p_date date, p_start time without time zone, p_end time without time zone, p_available boolean, p_note text, p_status text, p_decider text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_add_availability(p_ws uuid, p_staff uuid, p_weekday smallint, p_date date, p_start time without time zone, p_end time without time zone, p_available boolean, p_note text, p_status text, p_decider text) TO app_be;
-
---
 -- Name: FUNCTION shifts_add_shifts(p_ws uuid, p_schedule uuid, p_dates date[], p_starts time without time zone[], p_ends time without time zone[], p_positions uuid[], p_staff uuid[], p_source text); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE EXECUTE ON FUNCTION public.shifts_add_shifts(p_ws uuid, p_schedule uuid, p_dates date[], p_starts time without time zone[], p_ends time without time zone[], p_positions uuid[], p_staff uuid[], p_source text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.shifts_add_shifts(p_ws uuid, p_schedule uuid, p_dates date[], p_starts time without time zone[], p_ends time without time zone[], p_positions uuid[], p_staff uuid[], p_source text) TO app_be;
-
---
--- Name: FUNCTION shifts_check_in(p_ws uuid, p_shift uuid, p_staff uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_check_in(p_ws uuid, p_shift uuid, p_staff uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_check_in(p_ws uuid, p_shift uuid, p_staff uuid) TO app_be;
 
 --
 -- Name: FUNCTION shifts_create_leave(p_ws uuid, p_staff uuid, p_from date, p_to date, p_reason text); Type: ACL; Schema: public; Owner: -
@@ -16321,13 +13275,6 @@ GRANT EXECUTE ON FUNCTION public.shifts_create_leave(p_ws uuid, p_staff uuid, p_
 
 REVOKE EXECUTE ON FUNCTION public.shifts_create_swap(p_ws uuid, p_kind text, p_shift uuid, p_from uuid, p_to uuid, p_reason text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.shifts_create_swap(p_ws uuid, p_kind text, p_shift uuid, p_from uuid, p_to uuid, p_reason text) TO app_be;
-
---
--- Name: FUNCTION shifts_decide_availability(p_ws uuid, p_id uuid, p_status text, p_decider text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_decide_availability(p_ws uuid, p_id uuid, p_status text, p_decider text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_decide_availability(p_ws uuid, p_id uuid, p_status text, p_decider text) TO app_be;
 
 --
 -- Name: FUNCTION shifts_decide_leave(p_ws uuid, p_leave uuid, p_status text, p_by text, p_work uuid, p_note text); Type: ACL; Schema: public; Owner: -
@@ -16351,34 +13298,6 @@ REVOKE EXECUTE ON FUNCTION public.shifts_import_apply(p_ws uuid, p_positions jso
 GRANT EXECUTE ON FUNCTION public.shifts_import_apply(p_ws uuid, p_positions jsonb, p_staff jsonb, p_blocks jsonb) TO app_be;
 
 --
--- Name: FUNCTION shifts_link_leave(p_ws uuid, p_leave uuid, p_work uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_link_leave(p_ws uuid, p_leave uuid, p_work uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_link_leave(p_ws uuid, p_leave uuid, p_work uuid) TO app_be;
-
---
--- Name: FUNCTION shifts_link_schedule(p_ws uuid, p_schedule uuid, p_work uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_link_schedule(p_ws uuid, p_schedule uuid, p_work uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_link_schedule(p_ws uuid, p_schedule uuid, p_work uuid) TO app_be;
-
---
--- Name: FUNCTION shifts_link_swap(p_ws uuid, p_swap uuid, p_checks jsonb, p_work uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_link_swap(p_ws uuid, p_swap uuid, p_checks jsonb, p_work uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_link_swap(p_ws uuid, p_swap uuid, p_checks jsonb, p_work uuid) TO app_be;
-
---
--- Name: FUNCTION shifts_my_profile(ws uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_my_profile(ws uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.shifts_my_profile(ws uuid) TO authenticated;
-
---
 -- Name: FUNCTION shifts_publish(p_ws uuid, p_schedule uuid, p_evidence jsonb, p_work uuid); Type: ACL; Schema: public; Owner: -
 --
 
@@ -16393,69 +13312,6 @@ REVOKE EXECUTE ON FUNCTION public.shifts_reassign(p_ws uuid, p_shift uuid, p_sta
 GRANT EXECUTE ON FUNCTION public.shifts_reassign(p_ws uuid, p_shift uuid, p_staff uuid) TO app_be;
 
 --
--- Name: FUNCTION shifts_record_notice(p_ws uuid, p_staff uuid, p_schedule uuid, p_shift uuid, p_kind text, p_channel text, p_status text, p_body text, p_error text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_record_notice(p_ws uuid, p_staff uuid, p_schedule uuid, p_shift uuid, p_kind text, p_channel text, p_status text, p_body text, p_error text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_record_notice(p_ws uuid, p_staff uuid, p_schedule uuid, p_shift uuid, p_kind text, p_channel text, p_status text, p_body text, p_error text) TO app_be;
-
---
--- Name: FUNCTION shifts_record_notification(p_ws uuid, p_staff uuid, p_schedule uuid, p_shift uuid, p_kind text, p_channel text, p_status text, p_body text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_record_notification(p_ws uuid, p_staff uuid, p_schedule uuid, p_shift uuid, p_kind text, p_channel text, p_status text, p_body text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_record_notification(p_ws uuid, p_staff uuid, p_schedule uuid, p_shift uuid, p_kind text, p_channel text, p_status text, p_body text) TO app_be;
-
---
--- Name: FUNCTION shifts_remove_availability(p_ws uuid, p_id uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_remove_availability(p_ws uuid, p_id uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_remove_availability(p_ws uuid, p_id uuid) TO app_be;
-
---
--- Name: FUNCTION shifts_remove_coverage(p_ws uuid, p_id uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_remove_coverage(p_ws uuid, p_id uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_remove_coverage(p_ws uuid, p_id uuid) TO app_be;
-
---
--- Name: FUNCTION shifts_remove_position(p_ws uuid, p_id uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_remove_position(p_ws uuid, p_id uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_remove_position(p_ws uuid, p_id uuid) TO app_be;
-
---
--- Name: FUNCTION shifts_remove_shift(p_ws uuid, p_shift uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_remove_shift(p_ws uuid, p_shift uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_remove_shift(p_ws uuid, p_shift uuid) TO app_be;
-
---
--- Name: FUNCTION shifts_save_coverage(p_ws uuid, p_id uuid, p_weekdays smallint[], p_start time without time zone, p_end time without time zone, p_position uuid, p_min integer, p_ideal integer, p_peak boolean); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_save_coverage(p_ws uuid, p_id uuid, p_weekdays smallint[], p_start time without time zone, p_end time without time zone, p_position uuid, p_min integer, p_ideal integer, p_peak boolean) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_save_coverage(p_ws uuid, p_id uuid, p_weekdays smallint[], p_start time without time zone, p_end time without time zone, p_position uuid, p_min integer, p_ideal integer, p_peak boolean) TO app_be;
-
---
--- Name: FUNCTION shifts_save_pay(p_ws uuid, p_staff uuid, p_wage integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_save_pay(p_ws uuid, p_staff uuid, p_wage integer) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_save_pay(p_ws uuid, p_staff uuid, p_wage integer) TO app_be;
-
---
--- Name: FUNCTION shifts_save_position(p_ws uuid, p_id uuid, p_name text, p_color text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_save_position(p_ws uuid, p_id uuid, p_name text, p_color text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_save_position(p_ws uuid, p_id uuid, p_name text, p_color text) TO app_be;
-
---
 -- Name: FUNCTION shifts_save_schedule(p_ws uuid, p_week date, p_cost bigint, p_summary jsonb, p_evidence jsonb, p_ms integer, p_by text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -16463,66 +13319,11 @@ REVOKE EXECUTE ON FUNCTION public.shifts_save_schedule(p_ws uuid, p_week date, p
 GRANT EXECUTE ON FUNCTION public.shifts_save_schedule(p_ws uuid, p_week date, p_cost bigint, p_summary jsonb, p_evidence jsonb, p_ms integer, p_by text) TO app_be;
 
 --
--- Name: FUNCTION shifts_save_settings(p_ws uuid, p_opening jsonb, p_swap integer, p_leave integer, p_remind integer, p_noshow integer, p_overtime numeric); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_save_settings(p_ws uuid, p_opening jsonb, p_swap integer, p_leave integer, p_remind integer, p_noshow integer, p_overtime numeric) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_save_settings(p_ws uuid, p_opening jsonb, p_swap integer, p_leave integer, p_remind integer, p_noshow integer, p_overtime numeric) TO app_be;
-
---
--- Name: FUNCTION shifts_save_staff(p_ws uuid, p_id uuid, p_row jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_save_staff(p_ws uuid, p_id uuid, p_row jsonb) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_save_staff(p_ws uuid, p_id uuid, p_row jsonb) TO app_be;
-
---
--- Name: FUNCTION shifts_set_explanation(p_ws uuid, p_schedule uuid, p_text text, p_evidence jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.shifts_set_explanation(p_ws uuid, p_schedule uuid, p_text text, p_evidence jsonb) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.shifts_set_explanation(p_ws uuid, p_schedule uuid, p_text text, p_evidence jsonb) TO app_be;
-
---
--- Name: FUNCTION storage_ws_manager(p_name text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.storage_ws_manager(p_name text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.storage_ws_manager(p_name text) TO authenticated;
-
---
--- Name: FUNCTION storage_ws_member(p_name text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.storage_ws_member(p_name text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.storage_ws_member(p_name text) TO authenticated;
-
---
--- Name: FUNCTION update_my_profile(ws uuid, new_display_name text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.update_my_profile(ws uuid, new_display_name text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.update_my_profile(ws uuid, new_display_name text) TO authenticated;
-
---
 -- Name: FUNCTION usage_notice_post(p_workspace uuid, p_period date, p_level text, p_body text); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE EXECUTE ON FUNCTION public.usage_notice_post(p_workspace uuid, p_period date, p_level text, p_body text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.usage_notice_post(p_workspace uuid, p_period date, p_level text, p_body text) TO app_be;
-
---
--- Name: FUNCTION usage_quota_status(p_workspace uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.usage_quota_status(p_workspace uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.usage_quota_status(p_workspace uuid) TO authenticated;
-
---
--- Name: FUNCTION video_renders_reap(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.video_renders_reap() FROM PUBLIC, anon, authenticated;
 
 --
 -- Name: FUNCTION video_renders_touch(); Type: ACL; Schema: public; Owner: -
@@ -16543,20 +13344,6 @@ GRANT ALL ON FUNCTION public.video_touch() TO authenticated;
 --
 
 REVOKE EXECUTE ON FUNCTION public.work_items_fill_installation() FROM PUBLIC, anon, authenticated;
-
---
--- Name: FUNCTION workspace_member_contacts(p_workspace uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.workspace_member_contacts(p_workspace uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.workspace_member_contacts(p_workspace uuid) TO authenticated;
-
---
--- Name: FUNCTION workspace_members_directory(ws uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.workspace_members_directory(ws uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.workspace_members_directory(ws uuid) TO authenticated;
 
 --
 -- Name: FUNCTION workspace_members_guard(); Type: ACL; Schema: public; Owner: -
@@ -16589,27 +13376,6 @@ REVOKE EXECUTE ON FUNCTION public.workspaces_billing_guard() FROM PUBLIC, anon, 
 
 REVOKE EXECUTE ON FUNCTION public.zalo_authorization_return(p_state text, p_code text, p_oa_id text) FROM PUBLIC, anon, authenticated;
 GRANT ALL ON FUNCTION public.zalo_authorization_return(p_state text, p_code text, p_oa_id text) TO authenticated;
-
---
--- Name: FUNCTION zalo_wizard_begin(p_connection uuid); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.zalo_wizard_begin(p_connection uuid) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.zalo_wizard_begin(p_connection uuid) TO authenticated;
-
---
--- Name: FUNCTION zalo_wizard_oa_secret(p_connection uuid, p_oa_secret text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.zalo_wizard_oa_secret(p_connection uuid, p_oa_secret text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.zalo_wizard_oa_secret(p_connection uuid, p_oa_secret text) TO authenticated;
-
---
--- Name: FUNCTION zalo_wizard_start(p_workspace uuid, p_name text, p_app_id text, p_app_secret text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.zalo_wizard_start(p_workspace uuid, p_name text, p_app_id text, p_app_secret text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.zalo_wizard_start(p_workspace uuid, p_name text, p_app_id text, p_app_secret text) TO authenticated;
 
 --
 -- Name: TABLE agent_access_log; Type: ACL; Schema: public; Owner: -
@@ -17652,14 +14418,6 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('knowledge-uploads', 'knowledge-uploads', false, 12582912, ARRAY['text/plain', 'text/markdown', 'text/x-markdown', 'text/csv', 'application/csv', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip', 'application/x-zip-compressed', 'application/octet-stream']) ON CONFLICT (id) DO NOTHING;
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('media', 'media', false, 52428800, ARRAY['video/mp4', 'audio/mpeg', 'image/png', 'image/webp', 'image/jpeg', 'video/webm', 'video/quicktime']) ON CONFLICT (id) DO NOTHING;
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES ('videos', 'videos', false, 52428800, ARRAY['video/mp4', 'image/jpeg']) ON CONFLICT (id) DO NOTHING;
-CREATE POLICY objects_hiring_cv_manager_delete ON storage.objects AS PERMISSIVE FOR DELETE TO authenticated USING (((bucket_id = 'hiring'::text) AND public.storage_ws_manager(name)));
-CREATE POLICY objects_hiring_cv_manager_select ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'hiring'::text) AND public.storage_ws_manager(name)));
-CREATE POLICY objects_knowledge_uploads_manager_insert ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'knowledge-uploads'::text) AND public.storage_ws_manager(name)));
-CREATE POLICY objects_media_manager_delete ON storage.objects AS PERMISSIVE FOR DELETE TO authenticated USING (((bucket_id = 'media'::text) AND public.storage_ws_manager(name)));
-CREATE POLICY objects_media_member_insert ON storage.objects AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((bucket_id = 'media'::text) AND public.storage_ws_member(name)));
-CREATE POLICY objects_media_member_select ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'media'::text) AND public.storage_ws_member(name)));
-CREATE POLICY objects_videos_manager_delete ON storage.objects AS PERMISSIVE FOR DELETE TO authenticated USING (((bucket_id = 'videos'::text) AND public.storage_ws_manager(name)));
-CREATE POLICY objects_videos_member_select ON storage.objects AS PERMISSIVE FOR SELECT TO authenticated USING (((bucket_id = 'videos'::text) AND public.storage_ws_member(name)));
 
 -- Reference data the product ships with.
 --
@@ -18303,258 +15061,18 @@ REVOKE ALL ON TABLE public.workspace_invites FROM anon, authenticated;
 REVOKE ALL ON TABLE public.workspace_members FROM anon, authenticated;
 REVOKE ALL ON TABLE public.workspaces FROM anon, authenticated;
 REVOKE ALL ON SEQUENCE public.hiring_apply_hits_id_seq FROM anon, authenticated;
-
--- Policies of the browser roles (public tables and storage.objects).
-DROP POLICY IF EXISTS agent_access_log_manager_select ON public.agent_access_log;
-DROP POLICY IF EXISTS agent_connections_member_select ON public.agent_connections;
-DROP POLICY IF EXISTS agent_connections_owner_all ON public.agent_connections;
-DROP POLICY IF EXISTS agents_manager_delete ON public.agents;
-DROP POLICY IF EXISTS agents_manager_insert ON public.agents;
-DROP POLICY IF EXISTS agents_manager_update ON public.agents;
-DROP POLICY IF EXISTS agents_member_select ON public.agents;
-DROP POLICY IF EXISTS ai_generations_member_select ON public.ai_generations;
-DROP POLICY IF EXISTS ai_quota_overrides_manager_select ON public.ai_quota_overrides;
-DROP POLICY IF EXISTS ai_quota_overrides_platform_admin_select ON public.ai_quota_overrides;
-DROP POLICY IF EXISTS ai_usage_events_member_select ON public.ai_usage_events;
-DROP POLICY IF EXISTS api_keys_authenticated_select ON public.api_keys;
-DROP POLICY IF EXISTS app_commands_requester_select ON public.app_commands;
-DROP POLICY IF EXISTS app_errors_platform_admin_select ON public.app_errors;
-DROP POLICY IF EXISTS authority_actions_authenticated_select ON public.authority_actions;
-DROP POLICY IF EXISTS authority_rules_manager_delete ON public.authority_rules;
-DROP POLICY IF EXISTS authority_rules_manager_insert ON public.authority_rules;
-DROP POLICY IF EXISTS authority_rules_manager_update ON public.authority_rules;
-DROP POLICY IF EXISTS authority_rules_member_select ON public.authority_rules;
-DROP POLICY IF EXISTS authority_manager_delete ON public.authority;
-DROP POLICY IF EXISTS authority_manager_insert ON public.authority;
-DROP POLICY IF EXISTS authority_manager_update ON public.authority;
-DROP POLICY IF EXISTS authority_member_select ON public.authority;
-DROP POLICY IF EXISTS automation_pipelines_manager_all ON public.automation_pipelines;
-DROP POLICY IF EXISTS automation_pipelines_member_select ON public.automation_pipelines;
-DROP POLICY IF EXISTS automation_templates_authenticated_select ON public.automation_templates;
-DROP POLICY IF EXISTS billing_events_manager_select ON public.billing_events;
-DROP POLICY IF EXISTS billing_events_platform_admin_select ON public.billing_events;
-DROP POLICY IF EXISTS booking_exceptions_manager_all ON public.booking_exceptions;
-DROP POLICY IF EXISTS booking_exceptions_member_select ON public.booking_exceptions;
-DROP POLICY IF EXISTS booking_hours_manager_all ON public.booking_hours;
-DROP POLICY IF EXISTS booking_hours_member_select ON public.booking_hours;
-DROP POLICY IF EXISTS booking_reminders_manager_all ON public.booking_reminders;
-DROP POLICY IF EXISTS booking_reminders_member_select ON public.booking_reminders;
-DROP POLICY IF EXISTS booking_resources_manager_all ON public.booking_resources;
-DROP POLICY IF EXISTS booking_resources_member_select ON public.booking_resources;
-DROP POLICY IF EXISTS booking_services_manager_all ON public.booking_services;
-DROP POLICY IF EXISTS booking_services_member_select ON public.booking_services;
-DROP POLICY IF EXISTS booking_settings_manager_all ON public.booking_settings;
-DROP POLICY IF EXISTS booking_settings_member_select ON public.booking_settings;
-DROP POLICY IF EXISTS booking_waitlist_manager_all ON public.booking_waitlist;
-DROP POLICY IF EXISTS booking_waitlist_member_select ON public.booking_waitlist;
-DROP POLICY IF EXISTS bookings_manager_all ON public.bookings;
-DROP POLICY IF EXISTS bookings_member_select ON public.bookings;
-DROP POLICY IF EXISTS brain_commands_authenticated_select ON public.brain_commands;
-DROP POLICY IF EXISTS brain_eval_cases_manager_select ON public.brain_eval_cases;
-DROP POLICY IF EXISTS brain_extractions_manager_select ON public.brain_extractions;
-DROP POLICY IF EXISTS brain_facts_manager_select ON public.brain_facts;
-DROP POLICY IF EXISTS brain_lessons_member_select ON public.brain_lessons;
-DROP POLICY IF EXISTS brain_source_profiles_manager_select ON public.brain_source_profiles;
-DROP POLICY IF EXISTS connections_member_select ON public.connections;
-DROP POLICY IF EXISTS connections_platform_admin_select ON public.connections;
-DROP POLICY IF EXISTS connector_interest_member_select ON public.connector_interest;
-DROP POLICY IF EXISTS content_cadence_manager_all ON public.content_cadence;
-DROP POLICY IF EXISTS content_cadence_member_select ON public.content_cadence;
-DROP POLICY IF EXISTS content_items_manager_all ON public.content_items;
-DROP POLICY IF EXISTS content_items_member_select ON public.content_items;
-DROP POLICY IF EXISTS content_pillars_manager_all ON public.content_pillars;
-DROP POLICY IF EXISTS content_pillars_member_select ON public.content_pillars;
-DROP POLICY IF EXISTS content_plans_manager_all ON public.content_plans;
-DROP POLICY IF EXISTS content_plans_member_select ON public.content_plans;
-DROP POLICY IF EXISTS content_settings_manager_all ON public.content_settings;
-DROP POLICY IF EXISTS content_settings_member_select ON public.content_settings;
-DROP POLICY IF EXISTS credit_pack_purchases_manager_select ON public.credit_pack_purchases;
-DROP POLICY IF EXISTS credit_packs_authenticated_select ON public.credit_packs;
-DROP POLICY IF EXISTS credit_topup_draws_manager_select ON public.credit_topup_draws;
-DROP POLICY IF EXISTS credit_topups_manager_select ON public.credit_topups;
-DROP POLICY IF EXISTS data_records_manager_select ON public.data_records;
-DROP POLICY IF EXISTS data_sync_runs_manager_select ON public.data_sync_runs;
-DROP POLICY IF EXISTS decisions_member_insert ON public.decisions;
-DROP POLICY IF EXISTS decisions_member_select ON public.decisions;
-DROP POLICY IF EXISTS email_messages_member_select ON public.email_messages;
-DROP POLICY IF EXISTS events_member_insert ON public.events;
-DROP POLICY IF EXISTS events_member_select ON public.events;
-DROP POLICY IF EXISTS hiring_availability_manager_all ON public.hiring_availability;
-DROP POLICY IF EXISTS hiring_availability_member_select ON public.hiring_availability;
-DROP POLICY IF EXISTS hiring_candidates_manager_all ON public.hiring_candidates;
-DROP POLICY IF EXISTS hiring_consents_manager_select ON public.hiring_consents;
-DROP POLICY IF EXISTS hiring_events_manager_select ON public.hiring_events;
-DROP POLICY IF EXISTS hiring_interviews_manager_all ON public.hiring_interviews;
-DROP POLICY IF EXISTS hiring_interviews_member_select ON public.hiring_interviews;
-DROP POLICY IF EXISTS hiring_jobs_manager_all ON public.hiring_jobs;
-DROP POLICY IF EXISTS hiring_jobs_member_select ON public.hiring_jobs;
-DROP POLICY IF EXISTS hiring_offers_manager_all ON public.hiring_offers;
-DROP POLICY IF EXISTS hiring_onboarding_manager_all ON public.hiring_onboarding;
-DROP POLICY IF EXISTS hiring_retention_log_manager_select ON public.hiring_retention_log;
-DROP POLICY IF EXISTS hiring_settings_manager_all ON public.hiring_settings;
-DROP POLICY IF EXISTS hiring_settings_member_select ON public.hiring_settings;
-DROP POLICY IF EXISTS inbound_events_member_all ON public.inbound_events;
-DROP POLICY IF EXISTS inbound_events_owner_all ON public.inbound_events;
-DROP POLICY IF EXISTS inventory_items_member_select ON public.inventory_items;
-DROP POLICY IF EXISTS inventory_locations_member_select ON public.inventory_locations;
-DROP POLICY IF EXISTS inventory_movements_member_select ON public.inventory_movements;
-DROP POLICY IF EXISTS inventory_po_lines_member_select ON public.inventory_po_lines;
-DROP POLICY IF EXISTS inventory_purchase_orders_member_select ON public.inventory_purchase_orders;
-DROP POLICY IF EXISTS inventory_receipts_member_select ON public.inventory_receipts;
-DROP POLICY IF EXISTS inventory_recipe_lines_member_select ON public.inventory_recipe_lines;
-DROP POLICY IF EXISTS inventory_recipes_member_select ON public.inventory_recipes;
-DROP POLICY IF EXISTS inventory_stock_levels_member_select ON public.inventory_stock_levels;
-DROP POLICY IF EXISTS inventory_suppliers_member_select ON public.inventory_suppliers;
-DROP POLICY IF EXISTS invoices_member_all ON public.invoices;
-DROP POLICY IF EXISTS knowledge_chunks_manager_all ON public.knowledge_chunks;
-DROP POLICY IF EXISTS knowledge_chunks_member_select ON public.knowledge_chunks;
-DROP POLICY IF EXISTS knowledge_gaps_manager_select ON public.knowledge_gaps;
-DROP POLICY IF EXISTS knowledge_sources_manager_all ON public.knowledge_sources;
-DROP POLICY IF EXISTS knowledge_sources_member_select ON public.knowledge_sources;
-DROP POLICY IF EXISTS knowledge_sources_platform_admin_select ON public.knowledge_sources;
-DROP POLICY IF EXISTS knowledge_suggestion_state_manager_all ON public.knowledge_suggestion_state;
-DROP POLICY IF EXISTS knowledge_suggestion_state_member_select ON public.knowledge_suggestion_state;
-DROP POLICY IF EXISTS messages_member_all ON public.messages;
-DROP POLICY IF EXISTS module_context_notes_manager_all ON public.module_context_notes;
-DROP POLICY IF EXISTS module_context_versions_manager_insert ON public.module_context_versions;
-DROP POLICY IF EXISTS module_context_versions_member_select ON public.module_context_versions;
-DROP POLICY IF EXISTS module_context_versions_platform_admin_select ON public.module_context_versions;
-DROP POLICY IF EXISTS module_installations_manager_delete ON public.module_installations;
-DROP POLICY IF EXISTS module_installations_manager_insert ON public.module_installations;
-DROP POLICY IF EXISTS module_installations_manager_update ON public.module_installations;
-DROP POLICY IF EXISTS module_installations_member_select ON public.module_installations;
-DROP POLICY IF EXISTS module_installations_platform_admin_select ON public.module_installations;
-DROP POLICY IF EXISTS module_setup_messages_manager_all ON public.module_setup_messages;
-DROP POLICY IF EXISTS module_setup_sessions_manager_all ON public.module_setup_sessions;
-DROP POLICY IF EXISTS module_setup_writes_manager_all ON public.module_setup_writes;
-DROP POLICY IF EXISTS modules_authenticated_select ON public.modules;
-DROP POLICY IF EXISTS nivo_knowledge_authenticated_select ON public.nivo_knowledge;
-DROP POLICY IF EXISTS office_command_candidates_manager_all ON public.office_command_candidates;
-DROP POLICY IF EXISTS office_command_candidates_manager_select ON public.office_command_candidates;
-DROP POLICY IF EXISTS openclaw_agent_sync_member_select ON public.openclaw_agent_sync;
-DROP POLICY IF EXISTS openclaw_agent_sync_platform_admin_select ON public.openclaw_agent_sync;
-DROP POLICY IF EXISTS payment_order_requests_manager_select ON public.payment_order_requests;
-DROP POLICY IF EXISTS payment_orders_member_select ON public.payment_orders;
-DROP POLICY IF EXISTS payment_orders_platform_admin_select ON public.payment_orders;
-DROP POLICY IF EXISTS plan_usage_tiers_authenticated_select ON public.plan_usage_tiers;
-DROP POLICY IF EXISTS plans_authenticated_select ON public.plans;
-DROP POLICY IF EXISTS platform_audit_platform_admin_select ON public.platform_audit;
-DROP POLICY IF EXISTS sepay_transactions_manager_select ON public.sepay_transactions;
-DROP POLICY IF EXISTS sepay_transactions_platform_admin_select ON public.sepay_transactions;
-DROP POLICY IF EXISTS shifts_attendance_manager_all ON public.shifts_attendance;
-DROP POLICY IF EXISTS shifts_attendance_manager_select ON public.shifts_attendance;
-DROP POLICY IF EXISTS shifts_attendance_own_insert ON public.shifts_attendance;
-DROP POLICY IF EXISTS shifts_availability_manager_all ON public.shifts_availability;
-DROP POLICY IF EXISTS shifts_availability_manager_select ON public.shifts_availability;
-DROP POLICY IF EXISTS shifts_availability_own_insert ON public.shifts_availability;
-DROP POLICY IF EXISTS shifts_coverage_manager_all ON public.shifts_coverage;
-DROP POLICY IF EXISTS shifts_coverage_manager_select ON public.shifts_coverage;
-DROP POLICY IF EXISTS shifts_leave_requests_manager_all ON public.shifts_leave_requests;
-DROP POLICY IF EXISTS shifts_leave_requests_manager_select ON public.shifts_leave_requests;
-DROP POLICY IF EXISTS shifts_leave_requests_member_insert ON public.shifts_leave_requests;
-DROP POLICY IF EXISTS shifts_notifications_manager_select ON public.shifts_notifications;
-DROP POLICY IF EXISTS shifts_positions_manager_all ON public.shifts_positions;
-DROP POLICY IF EXISTS shifts_positions_member_select ON public.shifts_positions;
-DROP POLICY IF EXISTS shifts_schedules_manager_all ON public.shifts_schedules;
-DROP POLICY IF EXISTS shifts_schedules_manager_select ON public.shifts_schedules;
-DROP POLICY IF EXISTS shifts_settings_manager_all ON public.shifts_settings;
-DROP POLICY IF EXISTS shifts_settings_member_select ON public.shifts_settings;
-DROP POLICY IF EXISTS shifts_shifts_manager_all ON public.shifts_shifts;
-DROP POLICY IF EXISTS shifts_shifts_manager_select ON public.shifts_shifts;
-DROP POLICY IF EXISTS shifts_staff_pay_manager_all ON public.shifts_staff_pay;
-DROP POLICY IF EXISTS shifts_staff_manager_all ON public.shifts_staff;
-DROP POLICY IF EXISTS shifts_staff_member_select ON public.shifts_staff;
-DROP POLICY IF EXISTS shifts_swap_requests_manager_all ON public.shifts_swap_requests;
-DROP POLICY IF EXISTS shifts_swap_requests_manager_select ON public.shifts_swap_requests;
-DROP POLICY IF EXISTS shifts_swap_requests_member_insert ON public.shifts_swap_requests;
-DROP POLICY IF EXISTS staff_manager_delete ON public.staff;
-DROP POLICY IF EXISTS staff_manager_insert ON public.staff;
-DROP POLICY IF EXISTS staff_manager_update ON public.staff;
-DROP POLICY IF EXISTS staff_member_select ON public.staff;
-DROP POLICY IF EXISTS video_brand_kits_manager_all ON public.video_brand_kits;
-DROP POLICY IF EXISTS video_brand_kits_member_select ON public.video_brand_kits;
-DROP POLICY IF EXISTS video_project_versions_manager_all ON public.video_project_versions;
-DROP POLICY IF EXISTS video_project_versions_member_select ON public.video_project_versions;
-DROP POLICY IF EXISTS video_projects_manager_all ON public.video_projects;
-DROP POLICY IF EXISTS video_projects_member_select ON public.video_projects;
-DROP POLICY IF EXISTS video_renders_member_select ON public.video_renders;
-DROP POLICY IF EXISTS work_items_manager_delete ON public.work_items;
-DROP POLICY IF EXISTS work_items_manager_update ON public.work_items;
-DROP POLICY IF EXISTS work_items_member_insert ON public.work_items;
-DROP POLICY IF EXISTS work_items_member_select ON public.work_items;
-DROP POLICY IF EXISTS workspace_invites_manager_all ON public.workspace_invites;
-DROP POLICY IF EXISTS workspace_invites_platform_admin_select ON public.workspace_invites;
-DROP POLICY IF EXISTS workspace_members_member_select ON public.workspace_members;
-DROP POLICY IF EXISTS workspace_members_owner_delete ON public.workspace_members;
-DROP POLICY IF EXISTS workspace_members_owner_insert ON public.workspace_members;
-DROP POLICY IF EXISTS workspace_members_owner_update ON public.workspace_members;
-DROP POLICY IF EXISTS workspace_members_platform_admin_select ON public.workspace_members;
-DROP POLICY IF EXISTS workspaces_member_select ON public.workspaces;
-DROP POLICY IF EXISTS workspaces_owner_delete ON public.workspaces;
-DROP POLICY IF EXISTS workspaces_owner_update ON public.workspaces;
-DROP POLICY IF EXISTS workspaces_platform_admin_select ON public.workspaces;
-DROP POLICY IF EXISTS objects_hiring_cv_manager_delete ON storage.objects;
-DROP POLICY IF EXISTS objects_hiring_cv_manager_select ON storage.objects;
-DROP POLICY IF EXISTS objects_knowledge_uploads_manager_insert ON storage.objects;
-DROP POLICY IF EXISTS objects_media_manager_delete ON storage.objects;
-DROP POLICY IF EXISTS objects_media_member_insert ON storage.objects;
-DROP POLICY IF EXISTS objects_media_member_select ON storage.objects;
-DROP POLICY IF EXISTS objects_videos_manager_delete ON storage.objects;
-DROP POLICY IF EXISTS objects_videos_member_select ON storage.objects;
-
--- The realtime publication carried the tables of the retired browser subscriptions; it is recreated empty (the platform expects it to exist).
-
--- Definer functions are not callable by the browser roles (the back end keeps its own grants).
-REVOKE EXECUTE ON FUNCTION public.accept_invite(text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_console_audit(text, uuid, jsonb) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_console_quota(uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_console_signups(pg_catalog.int4) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_console_user_emails(uuid[]) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_console_workspace_stats() FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_extend_subscription(uuid, pg_catalog.int4) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_set_workspace_plan(uuid, text, pg_catalog.int8) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_set_workspace_status(uuid, text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.api_key_create(uuid, text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.api_key_revoke(uuid, uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.brain_command(uuid, text, jsonb) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.brain_command_wait(uuid) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.connection_command_submit(uuid, text, jsonb) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.connection_command_take(uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.create_free_workspace(text) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.display_name_of(uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.invite_preview(text) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.is_manager(uuid) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.is_member(uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.is_owner(uuid) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.is_platform_admin() FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.knowledge_enqueue_source(uuid, text, text, text, text, jsonb) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.knowledge_retry_source(uuid) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.member_role(uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.my_sessions() FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.my_staff_id(uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.owns_workspace(uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.payment_order_request(uuid, text, text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.read_app_command(uuid) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.request_admin_invite_resend(uuid, uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.request_agent_sync(uuid, uuid, pg_catalog.bool) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.request_invite_command(uuid, text, uuid, text, text, uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.request_office_confirm(uuid, uuid, text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.request_office_propose(uuid, uuid, text) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.request_video_render(uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.request_work_decision(uuid, uuid, text, jsonb, text, text, text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.revoke_my_session(uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.revoke_workspace_invite(uuid, uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.shifts_my_profile(uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.storage_ws_manager(text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.storage_ws_member(text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.update_my_profile(uuid, text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.usage_quota_status(uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.workspace_member_contacts(uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.workspace_members_directory(uuid) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.zalo_authorization_return(text, text, text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.zalo_wizard_begin(uuid) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.zalo_wizard_oa_secret(uuid, text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.zalo_wizard_start(uuid, text, text, text) FROM anon, authenticated;
 
 -- The back end reaches pgmq only through the public.job_* definer functions and the grants on the tables of its own queues.
 REVOKE USAGE ON SCHEMA pgmq FROM app_be;
@@ -18578,13 +15096,11 @@ REVOKE EXECUTE ON FUNCTION public.content_settings_touch() FROM PUBLIC, anon, au
 REVOKE EXECUTE ON FUNCTION public.knowledge_chunk_visibility_sync() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.knowledge_fold(text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.knowledge_fold(text) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.match_knowledge(uuid, text, extensions.vector, text, pg_catalog.int4, text, text, uuid) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.module_context_versions_immutable() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.module_installations_fill() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.module_type_name(text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.module_type_name(text) TO app_be;
 REVOKE EXECUTE ON FUNCTION public.resolve_installation(uuid, text, uuid, uuid, uuid) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.session_bootstrap() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.shell_data(uuid, pg_catalog.timestamptz, pg_catalog.timestamptz) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.video_renders_touch() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.video_touch() FROM PUBLIC, anon, authenticated;
@@ -18594,51 +15110,10 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authen
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon, authenticated;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
 
--- ---- from 20261026000200_engine_contract_retire.sql ----
--- Retires the schema of the old engine. Nothing in the back end or the front end reads it: the api runs its jobs on pgmq and its ticks are the cron
--- jobs of 20261026000300_job-ticks.sql. Idempotent: on a database created from the baseline and on a database that already ran the earlier
--- drop-engine-schema migration, every statement checks for existence first.
---
--- The vault secret `engine_sweep_secret` that authorised the old pg_cron -> /api/engine/sweep call is not touched here (a migration never writes
--- to the vault): a database that still holds it has it removed by the operator, in the Supabase dashboard (Vault).
-
--- 1. pg_cron: nothing to unschedule here. The legacy engine jobs (engine-sweep, engine-openclaw-agent-sync, engine-connection-health, zalo-refresh,
---    nivo-automation-tick, nivo-content-tick, nivo-n8n-pipelines) were unscheduled by name in the archived migrations production already ran; the operator checks
---    that `select jobname from cron.job` lists only jobs this repository declares (see be/docs/runbooks/cutover.md).
-
--- 2. The engine functions and the pg_net refresh tick (the engine job functions return rows of engine_jobs, so they go first).
-DROP FUNCTION IF EXISTS public.engine_claim_jobs(text, text[], integer, integer);
-DROP FUNCTION IF EXISTS public.engine_complete_job(uuid, text, jsonb);
-DROP FUNCTION IF EXISTS public.engine_enqueue(uuid, text, jsonb, text, timestamp with time zone, integer);
-DROP FUNCTION IF EXISTS public.engine_enqueue_agent_sync(uuid, boolean);
-DROP FUNCTION IF EXISTS public.engine_enqueue_workspace_sync(uuid);
-DROP FUNCTION IF EXISTS public.engine_fail_job(uuid, text, text, integer, boolean);
-DROP FUNCTION IF EXISTS public.engine_heartbeat_job(uuid, text, integer);
-DROP FUNCTION IF EXISTS public.engine_mark_connection_health(uuid, uuid, jsonb);
-DROP FUNCTION IF EXISTS public.engine_release_job(uuid, text);
-DROP FUNCTION IF EXISTS public.engine_schedule_agent_sync();
-DROP FUNCTION IF EXISTS public.engine_schedule_connection_health();
-DROP FUNCTION IF EXISTS public.engine_status();
-DROP FUNCTION IF EXISTS public.engine_sweep_authorized(text);
-DROP FUNCTION IF EXISTS public.engine_sweep_claim();
-DROP FUNCTION IF EXISTS public.engine_worker_heartbeat(text, text, text[], jsonb);
-DROP FUNCTION IF EXISTS public.zalo_refresh_tick();
-
 -- 3. The engine tables and the cron target list (the HTTP endpoints and secret the old pg_net ticks used).
 DROP TABLE IF EXISTS public.engine_jobs;
 DROP TABLE IF EXISTS public.engine_workers;
 DROP TABLE IF EXISTS public.cron_targets;
-
--- ---- from 20261026000300_job-ticks.sql ----
--- The recurring ticks of the back end, declared by the migrations (a cron command is one pgmq.send to an existing queue). The message is the body the
--- queue worker routes by `name`, the same body the back end's scheduler used to send; the jobs are upserted by name, so a database whose api already
--- registered them at boot keeps one job each. The pruning, reaping and hiring jobs of the old baseline are not declared here: they are queue jobs of the
--- back end (see be/docs/runbooks/cutover.md).
-
--- ---- from 20261026000400_job-schedule_contract_drop.sql ----
--- The back end no longer registers its ticks at boot (they are the cron jobs of 20261026000300_job-ticks.sql), so the definer function it used to
--- ask for that, public.job_schedule, goes.
-DROP FUNCTION IF EXISTS public.job_schedule(text, text, text, text);
 
 -- ---- from 20261026000500_webhook-receipt-queues.sql ----
 -- Deferred webhook receipt queues. pgmq and job_enqueue share the receipt transaction.
@@ -19330,44 +15805,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.content_weekly_reports TO a
 -- The AI Marketing tick (be/src/features/jobs/run-marketing-tick): every quarter hour it publishes the Zalo OA articles whose
 -- moment has come and posts the weekly report cards that are due.
 SELECT pgmq.create('marketing_tick');
-
--- ---- from 20261101000906_origin-columns_contract_drop.sql ----
--- NIVO records only real input (owner ruling, 2026-10-21: production is cleaned at the v0.3.0 deploy). The rows of the retired
--- simulator and simulated bank door are deleted, children before parents (every foreign key below cascades or sets null), and
--- the origin columns and their checks are dropped. The functions that read or wrote origin are replaced first, so none of them
--- names a dropped column. The retired simulated bank door leaves nothing behind either: its pending jobs, its receipt
--- table (with its policies and grants) and its pgmq queue are removed.
-
-CREATE OR REPLACE FUNCTION public.booking_reserve(p jsonb, p_force boolean DEFAULT false) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_res uuid := (p ->> 'resource_id')::uuid;
-  v_cap int;
-  v_party int := coalesce((p ->> 'party_size')::int, 1);
-  v_id uuid;
-  v_holds boolean := coalesce((p ->> 'holds_slot')::boolean, true);
-begin
-  perform pg_advisory_xact_lock(hashtextextended(v_res::text, 0));
-  select capacity into v_cap from public.booking_resources where id = v_res and workspace_id = (p ->> 'workspace_id')::uuid;
-  if v_cap is null then raise exception 'resource not found'; end if;
-  if v_holds and not p_force
-     and public.booking_peak_load(v_res, (p ->> 'start_at')::timestamptz, (p ->> 'block_end_at')::timestamptz, null) + v_party > v_cap then
-    return null;
-  end if;
-  insert into public.bookings (workspace_id, lead_id, conversation_id, customer_name, customer_phone, customer_email, service_id, resource_id, start_at, end_at, block_end_at,
-                               party_size, status, holds_slot, source_channel, price_vnd, deposit_vnd, deposit_status, note, conflict_note, idempotency_key)
-  values ((p ->> 'workspace_id')::uuid, nullif(p ->> 'lead_id', '')::uuid, nullif(p ->> 'conversation_id', '')::uuid, coalesce(p ->> 'customer_name', ''), nullif(p ->> 'customer_phone', ''),
-          nullif(p ->> 'customer_email', ''), (p ->> 'service_id')::uuid, v_res, (p ->> 'start_at')::timestamptz, (p ->> 'end_at')::timestamptz, (p ->> 'block_end_at')::timestamptz,
-          v_party, coalesce(p ->> 'status', 'requested'), v_holds, coalesce(p ->> 'source_channel', 'manual'), nullif(p ->> 'price_vnd', '')::bigint,
-          coalesce((p ->> 'deposit_vnd')::bigint, 0), coalesce(p ->> 'deposit_status', 'none'), coalesce(p ->> 'note', ''), coalesce(p ->> 'conflict_note', ''),
-          nullif(p ->> 'idempotency_key', ''))
-  returning id into v_id;
-  return v_id;
-end $$;
-
-REVOKE EXECUTE ON FUNCTION public.booking_reserve(p jsonb, p_force boolean) FROM PUBLIC, anon, authenticated;
 DELETE FROM public.bookings WHERE origin <> 'live';
 DELETE FROM public.invoices WHERE origin <> 'live';
 DELETE FROM public.work_items WHERE origin <> 'live';
@@ -20002,68 +16439,6 @@ SET LOCAL lock_timeout = '15s';
 LOCK TABLE public.job_outbox, public.job_slots, public.jobs IN ACCESS EXCLUSIVE MODE;
 ALTER TABLE public.job_outbox ADD COLUMN IF NOT EXISTS run_lease_until timestamptz;
 
-CREATE FUNCTION public.job_cutover_adopt(
-    p_queue text, p_msg_id bigint, p_enqueued_at timestamptz, p_message jsonb,
-    p_attempt integer, p_visible_at timestamptz, p_archived boolean
-) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-  v_id uuid;
-  v_name text := coalesce(p_message->>'name', p_queue);
-  v_payload jsonb := coalesce(p_message->'payload', '{}'::jsonb);
-  v_dedupe text := coalesce(nullif(p_message->>'dedupe', ''), 'pgmq-cutover:' || p_queue || ':' || p_msg_id);
-  v_workspace uuid;
-  v_existing public.job_outbox;
-begin
-  if p_message->>'outbox_id' is not null then
-    v_id := (p_message->>'outbox_id')::uuid;
-  end if;
-  select * into v_existing from public.job_outbox o
-  where (v_id is not null and o.id = v_id) or (o.queue = p_queue and o.msg_id = p_msg_id)
-  order by (o.id = v_id) desc nulls last limit 1;
-  if v_existing.id is null then
-    select * into v_existing from public.job_outbox o where o.dedupe_key = v_dedupe;
-  end if;
-  if v_existing.id is not null then
-    if (v_id is not null and v_id <> v_existing.id)
-       or v_existing.queue <> p_queue or v_existing.name <> v_name or v_existing.payload <> v_payload then
-      raise exception 'Conflicting pgmq cutover identity in queue %, message %', p_queue, p_msg_id;
-    end if;
-    v_id := v_existing.id;
-    if not p_archived and v_existing.state in ('queued', 'running') then
-      update public.job_outbox set sent_at = null,
-        run_lease_until = greatest(run_lease_until, case when p_attempt > 0 then p_visible_at end)
-      where id = v_id;
-    end if;
-  else
-    v_id := coalesce(v_id, md5('nivo.pgmq-cutover:' || p_queue || ':' || p_msg_id)::uuid);
-    if v_payload->>'workspaceId' is not null then
-      v_workspace := (v_payload->>'workspaceId')::uuid;
-    end if;
-    insert into public.job_outbox
-      (id, workspace_id, queue, name, payload, dedupe_key, created_at, msg_id, state, attempts,
-       started_at, finished_at, last_error, run_lease_until)
-    values
-      (v_id, v_workspace, p_queue, v_name, v_payload, v_dedupe, p_enqueued_at, p_msg_id,
-       case when p_archived then 'failed' when p_attempt > 0 then 'running' else 'queued' end,
-       greatest(p_attempt, 0), case when p_attempt > 0 then p_enqueued_at end,
-       case when p_archived then now() end,
-       case when p_archived then 'Migrated pgmq dead letter; original envelope retained in pgmq archive' end,
-       case when not p_archived and p_attempt > 0 then p_visible_at end);
-  end if;
-  -- Raw ticks used queue:msg_id as their fenced key. Keep their existing claim and progress under the new delivery id.
-  if p_message->>'outbox_id' is null then
-    update public.jobs set job_key = v_id::text
-    where kind in (v_name, p_queue) and job_key = p_queue || ':' || p_msg_id;
-  end if;
-  return v_id;
-end $$;
-
-REVOKE EXECUTE ON FUNCTION public.job_cutover_adopt(text, bigint, timestamptz, jsonb, integer, timestamptz, boolean)
-FROM PUBLIC, anon, authenticated, app_be;
-
 -- Old producers switch first. The following contract migration installs this same outbox-only entry point.
 CREATE OR REPLACE FUNCTION public.job_enqueue(p_workspace uuid, p_queue text, p_name text, p_payload jsonb, p_dedupe text) RETURNS uuid
     LANGUAGE plpgsql SECURITY DEFINER
@@ -20078,20 +16453,6 @@ begin
   if v_id is null then select id into v_id from public.job_outbox where dedupe_key = p_dedupe; end if;
   return v_id;
 end $$;
-
--- Fence legacy consumers while their already-running fenced claims settle. They cannot ack a newly migrated delivery.
-CREATE OR REPLACE FUNCTION public.job_read(p_queue text, p_vt integer, p_qty integer, p_ws_limit integer DEFAULT 2)
-    RETURNS TABLE(msg_id bigint, attempt integer, enqueued_at timestamptz, message jsonb)
-    LANGUAGE sql SECURITY DEFINER SET search_path TO 'public'
-    AS $$ select null::bigint, null::integer, null::timestamptz, null::jsonb where false $$;
-CREATE OR REPLACE FUNCTION public.job_ack(p_queue text, p_msg_id bigint) RETURNS boolean
-    LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS $$ select false $$;
-CREATE OR REPLACE FUNCTION public.job_touch(p_queue text, p_msg_id bigint, p_vt integer) RETURNS boolean
-    LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS $$ select false $$;
-CREATE OR REPLACE FUNCTION public.job_fail(p_queue text, p_msg_id bigint, p_delay_s integer, p_error text DEFAULT NULL::text) RETURNS boolean
-    LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS $$ select false $$;
-CREATE OR REPLACE FUNCTION public.job_archive(p_queue text, p_msg_id bigint, p_error text DEFAULT NULL::text) RETURNS boolean
-    LANGUAGE sql SECURITY DEFINER SET search_path TO 'public' AS $$ select false $$;
 
 -- An old function already executing may still write its pgmq sent marker after the redirect trigger returns.
 CREATE FUNCTION public.job_cutover_legacy_marker() RETURNS trigger
@@ -20108,31 +16469,11 @@ REVOKE EXECUTE ON FUNCTION public.job_cutover_legacy_marker() FROM PUBLIC, anon,
 CREATE TRIGGER job_cutover_legacy_marker BEFORE UPDATE OF msg_id ON public.job_outbox
 FOR EACH ROW EXECUTE FUNCTION public.job_cutover_legacy_marker();
 
-CREATE FUNCTION public.job_cutover_redirect() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
-    AS $$
-begin
-  perform public.job_cutover_adopt(TG_ARGV[0], new.msg_id, new.enqueued_at, new.message, new.read_ct, new.vt, false);
-  execute format('delete from %I.%I where msg_id = $1', TG_TABLE_SCHEMA, TG_TABLE_NAME) using new.msg_id;
-  return new;
-end $$;
-REVOKE EXECUTE ON FUNCTION public.job_cutover_redirect() FROM PUBLIC, anon, authenticated, app_be;
-
 -- (a queue cutover block of the former chain: a no-op on a clean database, left out)
 
 -- The redefined entry points stay backend-only.
 REVOKE EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.job_read(text, integer, integer, integer) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.job_read(text, integer, integer, integer) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.job_ack(text, bigint) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.job_ack(text, bigint) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.job_touch(text, bigint, integer) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.job_touch(text, bigint, integer) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.job_fail(text, bigint, integer, text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.job_fail(text, bigint, integer, text) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.job_archive(text, bigint, text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.job_archive(text, bigint, text) TO app_be;
 
 -- ---- from 20261105000000_queue-bullmq_contract_pgmq-drop.sql ----
 -- BullMQ transports jobs; PostgreSQL remains the durable, fenced source of truth.
@@ -20333,8 +16674,6 @@ begin
   delete from public.job_slots where job_id = p_id;
   return true;
 end $$;
-
-DROP FUNCTION public.job_requeue(uuid);
 CREATE FUNCTION public.job_reopen(p_outbox uuid) RETURNS uuid
     LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
 declare o public.job_outbox;
@@ -20422,14 +16761,6 @@ SELECT pgmq.drop_queue('zalo-delivery');
 SELECT pgmq.drop_queue('sepay-delivery');
 SELECT pgmq.drop_queue('vietcombank-delivery');
 SELECT pgmq.drop_queue('bank-feed-delivery');
-
--- The cutover has drained live pgmq job tables before this contract step; event-bus pgmq functions stay.
-DROP FUNCTION public.job_read(text, integer, integer, integer);
-DROP FUNCTION public.job_touch(text, bigint, integer);
-DROP FUNCTION public.job_ack(text, bigint);
-DROP FUNCTION public.job_fail(text, bigint, integer, text);
-DROP FUNCTION public.job_archive(text, bigint, text);
-DROP FUNCTION public.job_message(text, jsonb, text, uuid);
 
 CREATE INDEX job_outbox_pending ON public.job_outbox (created_at) WHERE sent_at IS NULL AND state IN ('queued', 'running');
 CREATE INDEX job_outbox_reconcile_due ON public.job_outbox (reconcile_at, queue) WHERE state IN ('queued', 'running');
@@ -20833,19 +17164,6 @@ end $$;
 REVOKE EXECUTE ON FUNCTION public.system_history_sweep(integer, integer, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.system_history_sweep(integer, integer, integer) TO app_be;
 
-CREATE OR REPLACE FUNCTION public.hiring_ops_status() RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare v_due int;
-begin
-  select count(*) into v_due from public.hiring_candidates c join public.hiring_settings s on s.workspace_id = c.workspace_id
-    where c.stage in ('rejected', 'withdrawn') and c.stage_changed_at < now() - make_interval(days => s.retention_days);
-  return jsonb_build_object('cron', '[]'::jsonb, 'retention_due', v_due);
-end $$;
-
-REVOKE EXECUTE ON FUNCTION public.hiring_ops_status() FROM PUBLIC, anon, authenticated;
-
 -- ---- from 20261109000552_job-ticks.sql ----
 -- The scheduler ticks of platform/jobs (R335): one row per tick holds the last UTC minute it fired. Every replica's
 -- @nestjs/schedule fires the tick; under advisoryXactLock('tick:<name>') job_tick_claim moves the row to the new minute and
@@ -21197,73 +17515,12 @@ begin
 end;
 $$;
 
--- Opens a device session; the refresh tokens hang on it, and be_revoke_session already ends it.
-CREATE FUNCTION public.be_auth_open_session(p_id uuid, p_user uuid, p_now timestamp with time zone, p_agent text, p_ip text) RETURNS void
-    LANGUAGE sql VOLATILE SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-  insert into auth.sessions (id, user_id, created_at, updated_at, refreshed_at, user_agent, ip)
-  values (p_id, p_user, p_now, p_now, (p_now at time zone 'utc'), left(p_agent, 512), p_ip::inet);
-$$;
-
--- Marks a session active now.
-CREATE FUNCTION public.be_auth_touch_session(p_session uuid, p_now timestamp with time zone) RETURNS boolean
-    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-declare changed int;
-begin
-  update auth.sessions set updated_at = p_now, refreshed_at = (p_now at time zone 'utc') where id = p_session;
-  get diagnostics changed = row_count;
-  return changed > 0;
-end;
-$$;
-
--- Ends a session; its refresh tokens go with it.
-CREATE FUNCTION public.be_auth_close_session(p_session uuid) RETURNS boolean
-    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-declare removed int;
-begin
-  delete from auth.sessions where id = p_session;
-  get diagnostics removed = row_count;
-  return removed > 0;
-end;
-$$;
-
 -- Confirms the mailbox of a person who spent a signup link.
 CREATE FUNCTION public.be_auth_confirm_email(p_user uuid, p_now timestamp with time zone) RETURNS void
     LANGUAGE sql VOLATILE SECURITY DEFINER
     SET search_path TO ''
     AS $$
   update auth.users set email_confirmed_at = coalesce(email_confirmed_at, p_now), updated_at = p_now where id = p_user;
-$$;
-
--- Ends every session of a person except the one they keep (sign out of other devices).
-CREATE FUNCTION public.be_auth_close_other_sessions(p_user uuid, p_keep uuid) RETURNS integer
-    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-declare removed int;
-begin
-  delete from auth.sessions where user_id = p_user and id <> p_keep;
-  get diagnostics removed = row_count;
-  return removed;
-end;
-$$;
-
--- Ends every session of a person (after a password reset); their refresh tokens go with them.
-CREATE FUNCTION public.be_auth_close_user_sessions(p_user uuid) RETURNS integer
-    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-declare removed int;
-begin
-  delete from auth.sessions where user_id = p_user;
-  get diagnostics removed = row_count;
-  return removed;
-end;
 $$;
 
 REVOKE EXECUTE ON FUNCTION public.be_auth_user_by_email(text) FROM PUBLIC, anon, authenticated;
@@ -21282,18 +17539,8 @@ REVOKE EXECUTE ON FUNCTION public.be_auth_set_password(uuid, text, timestamp wit
 GRANT EXECUTE ON FUNCTION public.be_auth_set_password(uuid, text, timestamp with time zone) TO app_be;
 REVOKE EXECUTE ON FUNCTION public.be_auth_set_avatar(uuid, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.be_auth_set_avatar(uuid, text) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.be_auth_open_session(uuid, uuid, timestamp with time zone, text, text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.be_auth_open_session(uuid, uuid, timestamp with time zone, text, text) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.be_auth_touch_session(uuid, timestamp with time zone) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.be_auth_touch_session(uuid, timestamp with time zone) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.be_auth_close_session(uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.be_auth_close_session(uuid) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.be_auth_close_user_sessions(uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.be_auth_close_user_sessions(uuid) TO app_be;
 REVOKE EXECUTE ON FUNCTION public.be_auth_confirm_email(uuid, timestamp with time zone) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.be_auth_confirm_email(uuid, timestamp with time zone) TO app_be;
-REVOKE EXECUTE ON FUNCTION public.be_auth_close_other_sessions(uuid, uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.be_auth_close_other_sessions(uuid, uuid) TO app_be;
 
 -- ---- from 20261109000710_identity-account-doors.sql ----
 -- Operator account doors (the workspace seed and cleanup commands): list people and delete one, in the same SECURITY DEFINER style as the
@@ -21905,42 +18152,23 @@ ALTER TABLE public.hiring_consents ADD COLUMN IF NOT EXISTS updated_at timestamp
 ALTER TABLE public.hiring_events ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.hiring_retention_log ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.hiring_retention_log ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
-
-DROP TRIGGER IF EXISTS agent_access_log_set_updated_at ON public.agent_access_log;
 CREATE TRIGGER agent_access_log_set_updated_at BEFORE UPDATE ON public.agent_access_log FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS agent_connections_set_updated_at ON public.agent_connections;
 CREATE TRIGGER agent_connections_set_updated_at BEFORE UPDATE ON public.agent_connections FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS ai_usage_events_set_updated_at ON public.ai_usage_events;
 CREATE TRIGGER ai_usage_events_set_updated_at BEFORE UPDATE ON public.ai_usage_events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS app_errors_set_updated_at ON public.app_errors;
 CREATE TRIGGER app_errors_set_updated_at BEFORE UPDATE ON public.app_errors FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS billing_events_set_updated_at ON public.billing_events;
 CREATE TRIGGER billing_events_set_updated_at BEFORE UPDATE ON public.billing_events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS booking_hours_set_updated_at ON public.booking_hours;
 CREATE TRIGGER booking_hours_set_updated_at BEFORE UPDATE ON public.booking_hours FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS brain_eval_cases_set_updated_at ON public.brain_eval_cases;
 CREATE TRIGGER brain_eval_cases_set_updated_at BEFORE UPDATE ON public.brain_eval_cases FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS channel_connections_sepay_events_set_updated_at ON public.channel_connections_sepay_events;
 CREATE TRIGGER channel_connections_sepay_events_set_updated_at BEFORE UPDATE ON public.channel_connections_sepay_events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS channel_receipts_set_updated_at ON public.channel_receipts;
 CREATE TRIGGER channel_receipts_set_updated_at BEFORE UPDATE ON public.channel_receipts FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS connector_interest_set_updated_at ON public.connector_interest;
 CREATE TRIGGER connector_interest_set_updated_at BEFORE UPDATE ON public.connector_interest FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS content_plans_set_updated_at ON public.content_plans;
 CREATE TRIGGER content_plans_set_updated_at BEFORE UPDATE ON public.content_plans FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS content_weekly_reports_set_updated_at ON public.content_weekly_reports;
 CREATE TRIGGER content_weekly_reports_set_updated_at BEFORE UPDATE ON public.content_weekly_reports FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS email_messages_set_updated_at ON public.email_messages;
 CREATE TRIGGER email_messages_set_updated_at BEFORE UPDATE ON public.email_messages FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS events_set_updated_at ON public.events;
 CREATE TRIGGER events_set_updated_at BEFORE UPDATE ON public.events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS hiring_apply_hits_set_updated_at ON public.hiring_apply_hits;
 CREATE TRIGGER hiring_apply_hits_set_updated_at BEFORE UPDATE ON public.hiring_apply_hits FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS hiring_consents_set_updated_at ON public.hiring_consents;
 CREATE TRIGGER hiring_consents_set_updated_at BEFORE UPDATE ON public.hiring_consents FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS hiring_events_set_updated_at ON public.hiring_events;
 CREATE TRIGGER hiring_events_set_updated_at BEFORE UPDATE ON public.hiring_events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS hiring_retention_log_set_updated_at ON public.hiring_retention_log;
 CREATE TRIGGER hiring_retention_log_set_updated_at BEFORE UPDATE ON public.hiring_retention_log FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ---- from 20261109100220_entity-base-timestamps-logs-i-z.sql ----
@@ -21959,22 +18187,13 @@ ALTER TABLE public.module_setup_messages ADD COLUMN IF NOT EXISTS updated_at tim
 ALTER TABLE public.platform_audit ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.realtime_events ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.video_project_versions ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
-
-DROP TRIGGER IF EXISTS inbox_set_updated_at ON public.inbox;
 CREATE TRIGGER inbox_set_updated_at BEFORE UPDATE ON public.inbox FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS inventory_movements_set_updated_at ON public.inventory_movements;
 CREATE TRIGGER inventory_movements_set_updated_at BEFORE UPDATE ON public.inventory_movements FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS mcp_call_log_set_updated_at ON public.mcp_call_log;
 CREATE TRIGGER mcp_call_log_set_updated_at BEFORE UPDATE ON public.mcp_call_log FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS module_context_versions_set_updated_at ON public.module_context_versions;
 CREATE TRIGGER module_context_versions_set_updated_at BEFORE UPDATE ON public.module_context_versions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS module_setup_messages_set_updated_at ON public.module_setup_messages;
 CREATE TRIGGER module_setup_messages_set_updated_at BEFORE UPDATE ON public.module_setup_messages FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS platform_audit_set_updated_at ON public.platform_audit;
 CREATE TRIGGER platform_audit_set_updated_at BEFORE UPDATE ON public.platform_audit FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS realtime_events_set_updated_at ON public.realtime_events;
 CREATE TRIGGER realtime_events_set_updated_at BEFORE UPDATE ON public.realtime_events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS video_project_versions_set_updated_at ON public.video_project_versions;
 CREATE TRIGGER video_project_versions_set_updated_at BEFORE UPDATE ON public.video_project_versions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ---- from 20261109100221_entity-base-timestamps-leftover-tables.sql ----
@@ -21993,16 +18212,10 @@ ALTER TABLE public.platform_admins ADD COLUMN IF NOT EXISTS created_at timestamp
 ALTER TABLE public.platform_admins ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.platform_flags ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.platform_flags ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
-
-DROP TRIGGER IF EXISTS ai_usage_notices_set_updated_at ON public.ai_usage_notices;
 CREATE TRIGGER ai_usage_notices_set_updated_at BEFORE UPDATE ON public.ai_usage_notices FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS http_security_set_updated_at ON public.http_security;
 CREATE TRIGGER http_security_set_updated_at BEFORE UPDATE ON public.http_security FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS inventory_receipts_set_updated_at ON public.inventory_receipts;
 CREATE TRIGGER inventory_receipts_set_updated_at BEFORE UPDATE ON public.inventory_receipts FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS platform_admins_set_updated_at ON public.platform_admins;
 CREATE TRIGGER platform_admins_set_updated_at BEFORE UPDATE ON public.platform_admins FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS platform_flags_set_updated_at ON public.platform_flags;
 CREATE TRIGGER platform_flags_set_updated_at BEFORE UPDATE ON public.platform_flags FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ---- from 20261109100222_infra-tables-entity-base.sql ----
@@ -22020,14 +18233,9 @@ ALTER TABLE public.job_slots ADD COLUMN IF NOT EXISTS created_at timestamptz NOT
 ALTER TABLE public.job_slots ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.job_ticks ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.job_ticks ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
-
-DROP TRIGGER IF EXISTS queue_set_updated_at ON public.queue;
 CREATE TRIGGER queue_set_updated_at BEFORE UPDATE ON public.queue FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS api_rate_limits_set_updated_at ON public.api_rate_limits;
 CREATE TRIGGER api_rate_limits_set_updated_at BEFORE UPDATE ON public.api_rate_limits FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS job_slots_set_updated_at ON public.job_slots;
 CREATE TRIGGER job_slots_set_updated_at BEFORE UPDATE ON public.job_slots FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS job_ticks_set_updated_at ON public.job_ticks;
 CREATE TRIGGER job_ticks_set_updated_at BEFORE UPDATE ON public.job_ticks FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ---- from 20261109100223_entity-base-billing-rate-brain-draws.sql ----
@@ -22044,14 +18252,9 @@ ALTER TABLE public.brain_source_profiles ADD COLUMN IF NOT EXISTS created_at tim
 ALTER TABLE public.brain_source_profiles ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.credit_topup_draws ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.credit_topup_draws ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
-
-DROP TRIGGER IF EXISTS billing_config_set_updated_at ON public.billing_config;
 CREATE TRIGGER billing_config_set_updated_at BEFORE UPDATE ON public.billing_config FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS booking_rate_set_updated_at ON public.booking_rate;
 CREATE TRIGGER booking_rate_set_updated_at BEFORE UPDATE ON public.booking_rate FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS brain_source_profiles_set_updated_at ON public.brain_source_profiles;
 CREATE TRIGGER brain_source_profiles_set_updated_at BEFORE UPDATE ON public.brain_source_profiles FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS credit_topup_draws_set_updated_at ON public.credit_topup_draws;
 CREATE TRIGGER credit_topup_draws_set_updated_at BEFORE UPDATE ON public.credit_topup_draws FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ---- from 20261109100224_dossier-review.sql ----
@@ -22366,78 +18569,6 @@ AS $function$
     'workspace_members', (select count(*) from public.workspace_members where workspace_id = p_workspace)
   )
 $function$;
-
-
--- Functions, by exact signature.
-DROP FUNCTION IF EXISTS public.accept_invite(text);
-DROP FUNCTION IF EXISTS public.admin_console_audit(text,uuid,jsonb);
-DROP FUNCTION IF EXISTS public.admin_console_quota(uuid);
-DROP FUNCTION IF EXISTS public.admin_console_signups(integer);
-DROP FUNCTION IF EXISTS public.admin_console_user_emails(uuid[]);
-DROP FUNCTION IF EXISTS public.admin_console_workspace_stats();
-DROP FUNCTION IF EXISTS public.admin_extend_subscription(uuid,integer);
-DROP FUNCTION IF EXISTS public.admin_set_workspace_plan(uuid,text,bigint);
-DROP FUNCTION IF EXISTS public.admin_set_workspace_status(uuid,text);
-DROP FUNCTION IF EXISTS public.api_key_create(uuid,text);
-DROP FUNCTION IF EXISTS public.api_key_revoke(uuid,uuid);
-DROP FUNCTION IF EXISTS public.booking_peak_load(uuid,timestamp with time zone,timestamp with time zone,uuid);
-DROP FUNCTION IF EXISTS public.booking_rate_hit(text,integer,integer);
-DROP FUNCTION IF EXISTS public.booking_relocate(uuid,uuid,timestamp with time zone,timestamp with time zone,timestamp with time zone,boolean);
-DROP FUNCTION IF EXISTS public.booking_reserve(jsonb,boolean);
-DROP FUNCTION IF EXISTS public.brain_command(uuid,text,jsonb);
-DROP FUNCTION IF EXISTS public.brain_command_wait(uuid);
-DROP FUNCTION IF EXISTS public.connection_command_take(uuid);
-DROP FUNCTION IF EXISTS public.create_free_workspace(text);
-DROP FUNCTION IF EXISTS public.hiring_new_token();
-DROP FUNCTION IF EXISTS public.hiring_ops_status();
-DROP FUNCTION IF EXISTS public.invite_preview(text);
-DROP FUNCTION IF EXISTS public.is_owner(uuid);
-DROP FUNCTION IF EXISTS public.job_cutover_adopt(text,bigint,timestamp with time zone,jsonb,integer,timestamp with time zone,boolean);
-DROP FUNCTION IF EXISTS public.job_cutover_redirect();
-DROP FUNCTION IF EXISTS public.lead_actor_name(uuid);
-DROP FUNCTION IF EXISTS public.lead_step_owner(uuid,text,text);
-DROP FUNCTION IF EXISTS public.match_knowledge(uuid,text,extensions.vector,text,integer,text,text,uuid);
-DROP FUNCTION IF EXISTS public.my_sessions();
-DROP FUNCTION IF EXISTS public.my_staff_id(uuid);
-DROP FUNCTION IF EXISTS public.owns_workspace(uuid);
-DROP FUNCTION IF EXISTS public.payment_order_request(uuid,text,text);
-DROP FUNCTION IF EXISTS public.read_app_command(uuid);
-DROP FUNCTION IF EXISTS public.request_agent_sync(uuid,uuid,boolean);
-DROP FUNCTION IF EXISTS public.request_office_confirm(uuid,uuid,text);
-DROP FUNCTION IF EXISTS public.request_office_propose(uuid,uuid,text);
-DROP FUNCTION IF EXISTS public.request_work_decision(uuid,uuid,text,jsonb,text,text,text);
-DROP FUNCTION IF EXISTS public.revoke_my_session(uuid);
-DROP FUNCTION IF EXISTS public.revoke_workspace_invite(uuid,uuid);
-DROP FUNCTION IF EXISTS public.session_bootstrap();
-DROP FUNCTION IF EXISTS public.shifts_add_availability(uuid,uuid,smallint,date,time without time zone,time without time zone,boolean,text,text,text);
-DROP FUNCTION IF EXISTS public.shifts_check_in(uuid,uuid,uuid);
-DROP FUNCTION IF EXISTS public.shifts_decide_availability(uuid,uuid,text,text);
-DROP FUNCTION IF EXISTS public.shifts_link_leave(uuid,uuid,uuid);
-DROP FUNCTION IF EXISTS public.shifts_link_schedule(uuid,uuid,uuid);
-DROP FUNCTION IF EXISTS public.shifts_link_swap(uuid,uuid,jsonb,uuid);
-DROP FUNCTION IF EXISTS public.shifts_my_profile(uuid);
-DROP FUNCTION IF EXISTS public.shifts_record_notice(uuid,uuid,uuid,uuid,text,text,text,text,text);
-DROP FUNCTION IF EXISTS public.shifts_record_notification(uuid,uuid,uuid,uuid,text,text,text,text);
-DROP FUNCTION IF EXISTS public.shifts_remove_availability(uuid,uuid);
-DROP FUNCTION IF EXISTS public.shifts_remove_coverage(uuid,uuid);
-DROP FUNCTION IF EXISTS public.shifts_remove_position(uuid,uuid);
-DROP FUNCTION IF EXISTS public.shifts_remove_shift(uuid,uuid);
-DROP FUNCTION IF EXISTS public.shifts_save_coverage(uuid,uuid,smallint[],time without time zone,time without time zone,uuid,integer,integer,boolean);
-DROP FUNCTION IF EXISTS public.shifts_save_pay(uuid,uuid,integer);
-DROP FUNCTION IF EXISTS public.shifts_save_position(uuid,uuid,text,text);
-DROP FUNCTION IF EXISTS public.shifts_save_settings(uuid,jsonb,integer,integer,integer,integer,numeric);
-DROP FUNCTION IF EXISTS public.shifts_save_staff(uuid,uuid,jsonb);
-DROP FUNCTION IF EXISTS public.shifts_set_explanation(uuid,uuid,text,jsonb);
-DROP FUNCTION IF EXISTS public.storage_ws_manager(text);
-DROP FUNCTION IF EXISTS public.storage_ws_member(text);
-DROP FUNCTION IF EXISTS public.update_my_profile(uuid,text);
-DROP FUNCTION IF EXISTS public.usage_quota_status(uuid);
-DROP FUNCTION IF EXISTS public.video_renders_reap();
-DROP FUNCTION IF EXISTS public.workspace_member_contacts(uuid);
-DROP FUNCTION IF EXISTS public.workspace_members_directory(uuid);
-DROP FUNCTION IF EXISTS public.zalo_wizard_begin(uuid);
-DROP FUNCTION IF EXISTS public.zalo_wizard_oa_secret(uuid,text);
-DROP FUNCTION IF EXISTS public.zalo_wizard_start(uuid,text,text,text);
 
 -- Tables (their policies, triggers and indexes go with them).
 DROP TABLE IF EXISTS public.booking_rate;
@@ -23549,13 +19680,6 @@ begin
 end;
 $$;
 
--- The back end writes the package tables itself now; the doors over auth.sessions have no caller left.
-DROP FUNCTION public.be_auth_open_session(uuid, uuid, timestamp with time zone, text, text);
-DROP FUNCTION public.be_auth_touch_session(uuid, timestamp with time zone);
-DROP FUNCTION public.be_auth_close_session(uuid);
-DROP FUNCTION public.be_auth_close_other_sessions(uuid, uuid);
-DROP FUNCTION public.be_auth_close_user_sessions(uuid);
-
 -- ---- from 20261111100000_agent-templates.sql ----
 -- agent-templates: the process of an agent packaged as data, so it can be installed again in another workspace and updated without
 -- overwriting what the buyer changed. Expand only: four new tables, nothing existing altered.
@@ -23877,38 +20001,6 @@ revoke all on table public.identity_attempts from public;
 grant select, insert, update, delete on table public.identity_attempts to app_be;
 create policy identity_attempts_app_be_all on public.identity_attempts
     for all to app_be using (current_user = 'app_be') with check (current_user = 'app_be');
-
--- ---- from 20261111100400_signup-name-door.sql ----
--- Sign-up keeps the full name the person typed (the template sign-up door takes the address and the password only). Right after the
--- sign-up door answered, the web form calls the public setSignupName mutation, which reaches this door: it writes the profile key
--- full_name of an account whose mailbox is still unconfirmed and that has no name yet, and answers whether it did. It never touches a
--- confirmed account, a name already set or any other key, so it cannot rename a person who exists; the caller always answers the same.
-CREATE FUNCTION public.be_auth_set_signup_name(p_email text, p_name text) RETURNS boolean
-    LANGUAGE plpgsql VOLATILE SECURITY DEFINER
-    SET search_path TO ''
-    AS $$
-declare changed int;
-begin
-  update auth.users u
-     set raw_user_meta_data = coalesce(u.raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('full_name', p_name),
-         updated_at = now()
-   where lower(u.email) = p_email
-     and u.is_anonymous = false
-     and u.email_confirmed_at is null
-     and coalesce(u.raw_user_meta_data ->> 'full_name', '') = '';
-  get diagnostics changed = row_count;
-  return changed > 0;
-end;
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.be_auth_set_signup_name(text, text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.be_auth_set_signup_name(text, text) TO app_be;
-
--- ---- from 20261111100600_contract_drop-signup-name-door.sql ----
--- contract_drop-signup-name-door: forward-only; the contract step of 20261111100400_signup-name-door.
--- The managed sign-up door of @starci/auth 0.3.0 takes the person's name itself, so Nivo's own door has no caller left. Applied after
--- the release that stopped calling it is accepted (expand before deploy, contract after accept).
-DROP FUNCTION public.be_auth_set_signup_name(text, text);
 
 -- ---- from 20261111100700_connection-secrets-api-token.sql ----
 -- A connection may hold a second sealed secret: the API token NIVO sends TO the provider to read its data (a bank feed poll), beside the
