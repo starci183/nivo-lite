@@ -32,7 +32,6 @@ export const useTelegramPageHead = (connectionId: string | undefined): UseTelegr
     const notices = useTelegramNotices(connectionId, notice)
     const failure = readFailureNotice(head, slotLabels(""), () => router.refresh())
     const [isAsking, setIsAsking] = useState(false)
-    const [isRailOpen, setRailOpen] = useState(false)
     const headState = connectionHeadStateOf(head)
     const view: ConnectionPageHeadView = {
         ...headState,
@@ -44,7 +43,6 @@ export const useTelegramPageHead = (connectionId: string | undefined): UseTelegr
         }),
         gridLabel: t("title"),
         mainLabel: t("mainLabel"),
-        rail: { label: t("eventsTitle"), openLabel: t("eventsOpen"), closeLabel: t("eventsClose"), isOpen: isRailOpen },
         action: { label: t("recheck"), intent: "neutral", isPending: isRechecking },
         notices: failure === undefined ? notices : [failure, ...notices],
         ...(isOwner && isLive
@@ -70,7 +68,6 @@ export const useTelegramPageHead = (connectionId: string | undefined): UseTelegr
         askDisconnect: () => setIsAsking(true),
         confirmDisconnect: () => void disconnect(),
         dismiss: () => setIsAsking(false),
-        openRail: setRailOpen,
         retry: () => router.refresh(),
     }
     return { view, on, isMissing }
