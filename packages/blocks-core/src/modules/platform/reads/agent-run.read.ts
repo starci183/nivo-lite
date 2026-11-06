@@ -21,13 +21,14 @@ export const agentRunRead: ReadDefinition = defineRead({
     shape: "record",
     fields: ["id", "status", "steps"],
     paths: { steps: "list" },
-    variables: z.object({ installation: z.string().uuid(), id: z.string().min(1).max(MAX_ID) }),
+    variables: z.object({ installation: z.uuid(), id: z.string().min(1).max(MAX_ID) }),
     permission: PLATFORM_VIEW,
     ports: { graphs: agentGraphs, runs: agentRuns, steps: agentRunSteps },
     run: async ({ graphs, runs, steps }, { installation, id }): Promise<RunView | null> => {
         const agent = await agentOfInstallation(graphs, installation)
         const run = agent === null ? null : await runs.get(id)
-        if (run === null || run.data["agentId"] !== agent) return null
+        const own = run?.data["agentId"] === agent ? run : null
+        if (own === null) return null
         const listed = await steps.list({
             select: STEP_FIELDS,
             where: q.eq("runId", id),
@@ -38,7 +39,7 @@ export const agentRunRead: ReadDefinition = defineRead({
             page: { size: RUN_STEPS_MAX },
         })
         return runViewOf(
-            run,
+            own,
             listed.rows.map((step) => step.row),
         )
     },

@@ -5,7 +5,7 @@ import type { FilterExpr } from "@nivo-lite/agent-sdk/query"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { ALL_RUNS, RUN_FIELDS, RUN_FILTERS, runRowOf, statusesOf } from "../agent-runs"
-import type { AgentRunRow, RunFilter } from "../agent-runs"
+import type { AgentRunsPage, RunFilter } from "../agent-runs"
 import { PLATFORM_VIEW } from "../constants"
 import { agentGraphs, agentRuns, agentRunsList } from "../ports"
 import { agentOfInstallation } from "./agent-run-scope"
@@ -15,14 +15,6 @@ export const RUNS_PAGE = 20
 
 /** The most runs a page lists at all. */
 export const RUNS_PAGE_MAX = 50
-
-/** One page of the runs of an installation: the rows and the cursor of the next page. */
-interface AgentRunsPage {
-    /** The runs, newest first. */
-    readonly rows: ReadonlyArray<AgentRunRow>
-    /** The cursor of the next page; null on the last. */
-    readonly cursor: string | null
-}
 
 /** The condition of a page: the runs of the agent, narrowed to the statuses of a filter. */
 const whereOf = (agent: string, filter: RunFilter | undefined): FilterExpr => {
@@ -54,7 +46,7 @@ const runsRead: ReadDefinition = defineRead({
     fields: ["id", "status", "trigger", "when", "duration"],
     paths: { rows: "list" },
     variables: z.object({
-        installation: z.string().uuid(),
+        installation: z.uuid(),
         status: z.enum([ALL_RUNS, ...RUN_FILTERS]).optional(),
         cursor: z.string().min(1).max(MAX_ID).optional(),
         limit: z.number().int().min(1).max(RUNS_PAGE_MAX).default(RUNS_PAGE),

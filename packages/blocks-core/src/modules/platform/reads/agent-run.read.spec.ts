@@ -3,7 +3,7 @@ import {
     GRAPH_ROW,
     INSTALLATION_ID,
     RUNS_CONTEXT,
-    fakeEntity,
+    recordedEntity,
     recordRow,
     runsProvider,
 } from "../fixtures/agent-runs.ports"
@@ -14,9 +14,9 @@ const OTHER = recordRow("run-9", { agentId: "11111111-1111-4111-8111-11111111111
 const STEP = recordRow("s1", { stepKey: "send", nodeKey: "send-quote", status: "failed", errorCode: "REFUSED" })
 
 const run = (id: string, graphs = [GRAPH_ROW]) => {
-    const graph = fakeEntity(graphs)
-    const runs = fakeEntity([RUN, OTHER])
-    const steps = fakeEntity([STEP])
+    const graph = recordedEntity(graphs)
+    const runs = recordedEntity([RUN, OTHER])
+    const steps = recordedEntity([STEP])
     return {
         runs,
         steps,

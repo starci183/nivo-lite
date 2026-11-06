@@ -1,9 +1,9 @@
 import { agentRuns } from "../ports"
-import { fakeEntity, recordRow, runsProvider } from "./agent-runs.ports"
+import { recordedEntity, recordRow, runsProvider } from "./agent-runs.ports"
 
 describe("the fake entities of the runs specs", () => {
     it("list the rows with no next page and no group unless told, and get a row by id", async () => {
-        const entity = fakeEntity([recordRow("a", {})])
+        const entity = recordedEntity([recordRow("a", {})])
         await expect(entity.api.list({ select: [], order: [["id", "asc"]], page: { size: 1 } })).resolves.toMatchObject(
             {
                 next: null,
@@ -16,7 +16,7 @@ describe("the fake entities of the runs specs", () => {
     })
 
     it("refuse every write", async () => {
-        const { api } = fakeEntity([])
+        const { api } = recordedEntity([])
         const refused = [
             api.insert({}),
             api.update("a", "1", {}),
@@ -30,7 +30,7 @@ describe("the fake entities of the runs specs", () => {
     })
 
     it("serve the ports of the reads", () => {
-        const [graphs, runs, steps] = [fakeEntity([]).api, fakeEntity([]).api, fakeEntity([]).api]
+        const [graphs, runs, steps] = [recordedEntity([]).api, recordedEntity([]).api, recordedEntity([]).api]
         const provider = runsProvider({ graphs, runs, steps })
         expect(provider.implementationOf(agentRuns)).toBe(runs)
     })
