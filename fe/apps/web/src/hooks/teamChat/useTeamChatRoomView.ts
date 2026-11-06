@@ -1,16 +1,24 @@
-import type { useTranslations } from "next-intl"
-import { CHAT_FILE_ACCEPT, isChatRefusal, mentionTriggerOf, suggestionsOf } from "@/hooks/teamChat"
-import type { TeamChatRoomState } from "@/hooks/teamChat"
-import { isWaitingOf } from "@/hooks/slot"
-import type { TeamChatMessagesCopy } from "@/components/composites/TeamChatMessages"
-import type { DataSlot, SlotLabels, TeamChatMessageRow } from "@/modules/types"
-import type { TeamChatRoomCopy, TeamChatRoomViewProps } from "./types"
+"use client"
+
+import { useTranslations } from "next-intl"
+import { CHAT_FILE_ACCEPT, isChatRefusal, mentionTriggerOf, suggestionsOf } from "@/modules/teamChat"
+import type { TeamChatRoomState } from "./useTeamChatRoomState"
+import { usePaneCopy } from "@/hooks/paneFrame"
+import { isWaitingOf, useSlotLabels } from "@/hooks/slot"
+import type {
+    DataSlot,
+    SlotLabels,
+    TeamChatMessageRow,
+    TeamChatMessagesCopy,
+    TeamChatRoomCopy,
+    TeamChatRoomViewProps,
+} from "@/modules/types"
 
 /** The translator of the team chat words. */
 type Words = ReturnType<typeof useTranslations<"teamChat">>
 
 /** What the room is made of: the state of it, the words, and where it stands. */
-export interface RoomViewContext {
+interface RoomViewContext {
     readonly room: TeamChatRoomState
     readonly t: Words
     /** The shared words of every pane frame (the way back to the list). */
@@ -96,7 +104,7 @@ const noRoomSlotOf = (rooms: RoomViewContext["room"]["rooms"]["slot"]): DataSlot
     "items" in rooms ? { isEmpty: true } : rooms
 
 /** What the room draws, from its state. */
-export const roomViewPropsOf = (context: RoomViewContext): TeamChatRoomViewProps => {
+const roomViewPropsOf = (context: RoomViewContext): TeamChatRoomViewProps => {
     const { room, t } = context
     const { rooms, thread, cards } = room
     return {
@@ -119,4 +127,25 @@ export const roomViewPropsOf = (context: RoomViewContext): TeamChatRoomViewProps
         decideError: cards.decideRefusal === null ? null : refusalWordsOf(t, cards.decideRefusal),
         composer: composerOf(context),
     }
+}
+
+/** Where the room stands on its page: opened by a direct room with an agent, and whether its head leads back to the list. */
+interface RoomMode {
+    readonly withAgent: boolean
+    readonly canGoBack: boolean
+}
+
+/** What the room draws, from its state, in the viewer's words. */
+export const useTeamChatRoomView = (room: TeamChatRoomState, mode: RoomMode): TeamChatRoomViewProps => {
+    const t = useTranslations("teamChat")
+    const pane = usePaneCopy()
+    const slotLabels = useSlotLabels()
+    return roomViewPropsOf({
+        room,
+        t,
+        backLabel: pane.backToList,
+        labels: { ...slotLabels(t("roomsEmpty")), error: t("errorTitle") },
+        withAgent: mode.withAgent,
+        canGoBack: mode.canGoBack,
+    })
 }

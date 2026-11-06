@@ -1,48 +1,5 @@
 import { Alert, Button, CheckboxGroup, Drawer, Input, Select, Stack, Text } from "@starci/grammar/common"
-
-/** The words of the new-chat drawer. */
-interface TeamChatNewChatCopy {
-    readonly title: string
-    readonly description: string
-    readonly closeLabel: string
-    readonly directTitle: string
-    readonly directLabel: string
-    readonly directPlaceholder: string
-    readonly directStart: string
-    readonly groupTitle: string
-    readonly groupNameLabel: string
-    readonly groupMembersLabel: string
-    readonly groupCreate: string
-    readonly empty: string
-}
-
-/** One party the drawer offers: its key, its name and its kind in words. */
-interface NewChatOption {
-    readonly id: string
-    readonly label: string
-    readonly description: string
-}
-
-/** What the drawer draws and holds: the form values live in the block, so the drawer stays a picture of them. */
-export interface TeamChatNewChatProps {
-    readonly isOpen: boolean
-    readonly copy: TeamChatNewChatCopy
-    /** The people and agents to pick from, with the kind each one is. */
-    readonly options: ReadonlyArray<NewChatOption>
-    /** The party picked for a direct room, as "kind:id", or null. */
-    readonly direct: string | null
-    readonly groupName: string
-    /** The parties ticked for a group, as "kind:id". */
-    readonly groupMembers: ReadonlyArray<string>
-    readonly isPending: boolean
-    readonly error: string | null
-    readonly onOpenChange: (isOpen: boolean) => void
-    readonly onDirect: (value: string | null) => void
-    readonly onGroupName: (value: string) => void
-    readonly onGroupMembers: (value: ReadonlyArray<string>) => void
-    readonly onStartDirect: () => void
-    readonly onCreateGroup: () => void
-}
+import type { NewChatOption, TeamChatNewChatProps } from "@/modules/types"
 
 /** What the direct chat form draws. */
 interface DirectFormProps {

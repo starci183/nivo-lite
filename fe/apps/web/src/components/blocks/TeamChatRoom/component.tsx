@@ -6,7 +6,13 @@ import { TeamChatMessages } from "@/components/composites/TeamChatMessages"
 import { TeamChatRoomHead } from "@/components/frames/TeamChatRoomHead"
 import { TeamChatThread } from "@/components/frames/TeamChatThread"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import type { TeamChatRoomBaseProps } from "./types"
+import type { TeamChatRoomHandlers, TeamChatRoomViewProps } from "@/modules/types"
+
+/** Props for the pure half of the room. */
+export interface TeamChatRoomBaseProps {
+    readonly props: TeamChatRoomViewProps
+    readonly on: TeamChatRoomHandlers
+}
 
 /** The thread of the open room with its tabs; its messages through the slot's one status recipe. */
 const ThreadContent = (props: TeamChatRoomBaseProps) => (

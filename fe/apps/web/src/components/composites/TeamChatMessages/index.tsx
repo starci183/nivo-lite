@@ -4,25 +4,7 @@ import { AgentMark } from "@/components/leaves/AgentMark"
 import { ChatMessageFiles } from "@/components/leaves/ChatMessageFiles"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { PersonAvatar } from "@/components/leaves/PersonAvatar"
-import type { TeamChatApprovalView, TeamChatMessageRow } from "@/modules/types"
-
-/** The words of the cards and controls of a thread. */
-export interface TeamChatMessagesCopy {
-    readonly pin: string
-    readonly unpin: string
-    readonly pinned: string
-    readonly report: string
-    readonly approvalPending: string
-    readonly approvalApproved: string
-    readonly approvalRefused: string
-    readonly approvalExpired: string
-    readonly approve: string
-    readonly refuse: string
-    readonly olderLabel: string
-    readonly openRun: string
-    /** "by {name}" and "at {time}" are composed from these parts, because module words take no placeholders. */
-    readonly decidedBy: string
-}
+import type { TeamChatApprovalView, TeamChatMessageRow, TeamChatMessagesCopy } from "@/modules/types"
 
 /** The messages of the open room and what a person may do with them. */
 interface TeamChatMessagesProps {
