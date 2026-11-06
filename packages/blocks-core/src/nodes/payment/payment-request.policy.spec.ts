@@ -1,6 +1,7 @@
 import {
     itemsTextOf,
     noAccountTitleOf,
+    notPayableTitleOf,
     orderHeldMessageOf,
     paymentMessageOf,
     transferContentOf,
@@ -59,5 +60,10 @@ describe("payment request policy", () => {
             "We have recorded your order: 2 x tea · 300,000 VND. The shop will send you the payment details as soon as they are ready.",
         )
         expect(orderHeldMessageOf({ amountVnd: 300_000, lines: [] }, "vi")).toContain("— · ")
+    })
+
+    it("titles the owner item of an order that cannot be paid yet in the language asked", () => {
+        expect(notPayableTitleOf("o1", "en")).toBe("Order o1 cannot be paid yet: it is not confirmed or has no amount")
+        expect(notPayableTitleOf("o1", "vi")).toContain("o1")
     })
 })

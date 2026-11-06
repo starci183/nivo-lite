@@ -83,8 +83,8 @@ describe("ChannelSendExecutorService storing", () => {
         expect(executor.effect).toBe("channel.send")
     })
 
-    it("stores the text, pushes it through the outbound path and answers the stored message", async () => {
-        const { executor, messages, delivery } = await build()
+    it("stores the text, pushes it through the outbound path and answers the stored message, logging that the channel took it", async () => {
+        const { executor, messages, delivery, logger } = await build()
 
         await expect(
             executor.execute(TURN, { ...SEND, attachments: [{ url: "https://x/menu", name: "Menu" }] }, CALL),
@@ -101,6 +101,7 @@ describe("ChannelSendExecutorService storing", () => {
             messageId: "m1",
             text: "Hello\nMenu: https://x/menu",
         })
+        expect(logger.info).toHaveBeenCalledWith("chat_node_ports.sent", { turnId: TURN.turnId, messageId: "m1" })
     })
 
     it("refuses a payload that is not a conversation and a text", async () => {
@@ -164,8 +165,8 @@ describe("ChannelSendExecutorService Zalo window and delivery", () => {
         expect(delivery.deliver).toHaveBeenCalledTimes(2)
     })
 
-    it("throws when the channel refused or did not confirm", async () => {
-        const { executor, delivery } = await build()
+    it("throws when the channel refused or did not confirm, logging the code and never the words", async () => {
+        const { executor, delivery, logger } = await build()
         delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: null, outcome: "rejected" })
         await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
             code: ChatNodePortsErrorCode.DeliveryRejected,
@@ -174,6 +175,22 @@ describe("ChannelSendExecutorService Zalo window and delivery", () => {
         await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
             code: ChatNodePortsErrorCode.DeliveryUnconfirmed,
         })
+        expect(logger.warn).toHaveBeenCalledWith("chat_node_ports.send_failed", {
+            turnId: TURN.turnId,
+            code: ChatNodePortsErrorCode.DeliveryRejected,
+        })
+        expect(logger.warn).toHaveBeenCalledWith("chat_node_ports.send_failed", {
+            turnId: TURN.turnId,
+            code: ChatNodePortsErrorCode.DeliveryUnconfirmed,
+        })
+        expect(JSON.stringify(logger.warn.mock.calls)).not.toContain("Hello")
+    })
+
+    it("logs nothing about a failure that is not a refusal of the send (an unknown error passes through)", async () => {
+        const { executor, delivery, logger } = await build()
+        delivery.deliver.mockRejectedValueOnce(new Error("boom"))
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toThrow("boom")
+        expect(logger.warn).not.toHaveBeenCalled()
     })
 
     it("speaks in any conversation of the workspace when the turn serves none", async () => {

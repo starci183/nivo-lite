@@ -65,3 +65,7 @@ export const paymentMessageOf = (
 /** The title of the work item that tells the owner the payment request could not go out. */
 export const noAccountTitleOf = (orderNo: string, locale: RequestLocale): string =>
     fill(REQUEST_WORDS[locale].noAccount, { order: orderNo })
+
+/** The title of the work item that tells the owner an order reached the payment request without being confirmed or having an amount. */
+export const notPayableTitleOf = (orderId: string, locale: RequestLocale): string =>
+    fill(REQUEST_WORDS[locale].notPayable, { order: orderId })

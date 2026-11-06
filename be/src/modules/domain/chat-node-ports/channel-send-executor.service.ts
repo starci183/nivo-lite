@@ -56,6 +56,20 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
      * never reported as done.
      */
     async execute(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<SubjectRef> {
+        try {
+            const sent = await this.send(turn, payload, call)
+            this.logger.info(ChatNodePortsLogEvent.Sent, { turnId: turn.turnId, messageId: sent.id })
+            return sent
+        } catch (cause) {
+            if (cause instanceof ChatNodePortsError) {
+                this.logger.warn(ChatNodePortsLogEvent.SendFailed, { turnId: turn.turnId, code: cause.code })
+            }
+            throw cause
+        }
+    }
+
+    /** The send itself: the checks, the store, the push and the verdict. */
+    private async send(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<SubjectRef> {
         const parsed = channelSendSchema.safeParse(payload)
         if (!parsed.success) throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.InvalidPayload })
         const conversation = await this.conversationOf(turn, parsed.data.conversationId)
