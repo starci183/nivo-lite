@@ -1,4 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common"
+import type { ErrorParams } from "@modules/platform/errors"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentRunAlertsService } from "./agent-run-alerts.service"
@@ -38,7 +39,13 @@ export class AgentRunDeadLetterService {
     ) {}
 
     /** Calls the dead letter of the run's handler when nobody was told yet; `stepKey` names the failed step when the caller knows it. */
-    async tell(workspaceId: string, runId: string, stepKey: string | null, code: string): Promise<void> {
+    async tell(
+        workspaceId: string,
+        runId: string,
+        stepKey: string | null,
+        code: string,
+        params: ErrorParams = {},
+    ): Promise<void> {
         const run = await this.store.runById(workspaceId, runId)
         if (run === null || run.spoken) return
         const steps = await this.store.viewsOf(workspaceId, runId)
@@ -46,18 +53,18 @@ export class AgentRunDeadLetterService {
         const voice = this.voiceOf(failed, steps)
         if (!(await this.noticed(run, failed ?? steps.at(-1), code))) return
         if (voice === null) {
-            this.logger.warn(AgentRunsLogEvent.DeadWithoutVoice, { runId, code })
+            this.logger.warn(AgentRunsLogEvent.DeadWithoutVoice, { runId, code, params })
             await this.store.spoken(workspaceId, runId)
             return
         }
         try {
             await voice.handler.deadLetter?.(voice.step, code)
         } catch (cause) {
-            this.logger.error(AgentRunsLogEvent.DeadLetterFailed, cause, { runId, code })
+            this.logger.error(AgentRunsLogEvent.DeadLetterFailed, cause, { runId, code, params })
             return
         }
         if (await this.store.spoken(workspaceId, runId))
-            this.logger.info(AgentRunsLogEvent.DeadLettered, { runId, code })
+            this.logger.info(AgentRunsLogEvent.DeadLettered, { runId, code, params })
     }
 
     /** Raises the one owner item of a parked run; false when it could not, so the run stays untold and the sweep tries again. */

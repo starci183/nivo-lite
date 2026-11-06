@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import type { ErrorParams } from "@modules/platform/errors"
 import { InjectIds } from "@modules/platform/ids"
 import type { Ids } from "@modules/platform/ids"
 import { InjectLogger } from "@modules/platform/logging"
@@ -7,6 +8,14 @@ import { EntityEngineLogEvent } from "./entity-engine.log-events"
 import { EntityEngineError, EntityEngineErrorCode } from "./errors/entity-engine.error"
 import { pgFailureOf } from "./pg-failure.policy"
 import type { PgFailure } from "./pg-failure.policy"
+
+/** The secret-free cause of an invalid statement: its SQLSTATE, the entity, and the constraint and column the database names; never a value. */
+const invalidParamsOf = (failure: Extract<PgFailure, { readonly kind: "invalid" }>, entity: string): ErrorParams => ({
+    sqlstate: failure.sqlstate,
+    entity,
+    ...(failure.constraint === null ? {} : { constraint: failure.constraint }),
+    ...(failure.column === null ? {} : { column: failure.column }),
+})
 
 @Injectable()
 /**
@@ -21,13 +30,13 @@ export class EngineFailureService {
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
-    /** Runs a read; a failure of the database is thrown as the engine error that says what it means. */
-    async reading<T>(work: () => Promise<T>): Promise<T> {
-        return await work().catch((cause: unknown) => this.fail(cause, pgFailureOf(cause, [])))
+    /** Runs a read of `entity`; a failure of the database is thrown as the engine error that says what it means. */
+    async reading<T>(entity: string, work: () => Promise<T>): Promise<T> {
+        return await work().catch((cause: unknown) => this.fail(cause, pgFailureOf(cause, []), entity))
     }
 
-    /** Throws the engine error a failure stands for. */
-    fail(cause: unknown, failure: PgFailure): never {
+    /** Throws the engine error a failure stands for; `entity` names what the statement was about. */
+    fail(cause: unknown, failure: PgFailure, entity: string): never {
         if (cause instanceof EntityEngineError) throw cause
         const correlationId = this.ids.next()
         if (failure.kind === "scope") {
@@ -51,7 +60,11 @@ export class EngineFailureService {
                 cause,
             })
         }
-        if (failure.kind === "invalid") throw new EntityEngineError({ code: EntityEngineErrorCode.QueryInvalid, cause })
+        if (failure.kind === "invalid") {
+            const params = invalidParamsOf(failure, entity)
+            this.logger.warn(EntityEngineLogEvent.QueryInvalid, { ...params, correlationId })
+            throw new EntityEngineError({ code: EntityEngineErrorCode.QueryInvalid, params, cause })
+        }
         this.logger.error(EntityEngineLogEvent.StatementFailed, cause, { correlationId })
         throw new EntityEngineError({ code: EntityEngineErrorCode.Failed, params: { correlationId }, cause })
     }

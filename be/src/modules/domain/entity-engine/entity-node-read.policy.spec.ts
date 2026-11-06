@@ -3,7 +3,7 @@ import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
 import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
 import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
 import { queryProblems } from "@nivo-lite/agent-sdk/query"
-import type { EntityCatalog } from "@nivo-lite/agent-sdk/query"
+import type { EntityCatalog, FilterExpr, OrderBy, Query } from "@nivo-lite/agent-sdk/query"
 import type { EntityNodeTurn } from "./entity-node.contracts"
 import { isLookup, limitOf, nodeReadPlanOf, nodeRowOf, turnPathOf } from "./entity-node-read.policy"
 
@@ -348,4 +348,128 @@ describe("the data reads of the payment and accounting nodes", () => {
             expect(plan?.query.order).toEqual(newest)
         }
     })
+})
+
+/** One static read of the be outside the node reads: where it lives, the entity, the condition and the order it lists in. */
+interface BeRead {
+    readonly name: string
+    readonly query: Query
+}
+
+const EQ = (field: string): FilterExpr => ({ op: "eq", field, value: "x" })
+const AND = (...of: ReadonlyArray<FilterExpr>): FilterExpr => ({ op: "and", of })
+const IN = (field: string): FilterExpr => ({ op: "in", field, values: ["x"] })
+const RECENT = (field: string): OrderBy => [
+    [field, "desc"],
+    ["id", "desc"],
+]
+const BY_ID: OrderBy = [["id", "asc"]]
+const read = (name: string, from: string, where: FilterExpr, order: OrderBy): BeRead => ({
+    name,
+    query: { from, select: [], where, order, page: { size: 5 } },
+})
+
+/**
+ * The static reads the be makes through the engine outside the node reads: the run machinery (agent-run-records), the chat records, the
+ * conversation and customer lookups, the payment feed and the workspace settings. A new static read of the be is added here, so a list
+ * no declared index serves is caught by this spec and not by a parked run.
+ */
+const BE_READS: ReadonlyArray<BeRead> = [
+    read("agent-run-records: the run of a wake", "agent.run", EQ("wakeId"), BY_ID),
+    read("agent-run-records: the steps of a run", "agent.run-step", EQ("runId"), [
+        ["ordinal", "asc"],
+        ["id", "asc"],
+    ]),
+    read("agent-run-records: the steps waiting on a work item", "agent.run-step", EQ("waitItemId"), BY_ID),
+    read(
+        "agent-run-records: the steps of a kind about a work item",
+        "agent.run-step",
+        AND(EQ("kind"), EQ("workItemId")),
+        BY_ID,
+    ),
+    read(
+        "chat-message-propose-executor: the proposed line of a conversation",
+        "chat.message",
+        AND(EQ("conversationId"), EQ("status")),
+        RECENT("sentAt"),
+    ),
+    read(
+        "chat-messages: the lines of a role in a conversation, oldest first",
+        "chat.message",
+        AND(EQ("conversationId"), IN("role")),
+        [
+            ["sentAt", "asc"],
+            ["id", "asc"],
+        ],
+    ),
+    read(
+        "chat-messages: the lines of a role in a conversation, newest first",
+        "chat.message",
+        AND(EQ("conversationId"), IN("role")),
+        RECENT("sentAt"),
+    ),
+    read(
+        "chat-messages: the transcript without system lines",
+        "chat.message",
+        AND(EQ("conversationId"), { op: "ne", field: "role", value: "system" }),
+        RECENT("sentAt"),
+    ),
+    read("chat-messages: the line of a channel key", "chat.message", EQ("channelRef"), BY_ID),
+    read(
+        "chat-conversations: the followers of a connection",
+        "chat.conversation",
+        AND(EQ("channel"), EQ("connectionId"), { op: "gt", field: "lastAt", value: "x" }),
+        RECENT("lastAt"),
+    ),
+    read("chat-conversations: the conversations of some ids", "chat.conversation", IN("id"), RECENT("lastAt")),
+    read(
+        "chat-conversations: the newest conversations",
+        "chat.conversation",
+        { op: "ne", field: "channel", value: "" },
+        RECENT("lastAt"),
+    ),
+    read(
+        "chat-conversations: the conversation of a customer",
+        "chat.conversation",
+        AND(EQ("channel"), EQ("connectionId"), EQ("externalId")),
+        BY_ID,
+    ),
+    read("chat-conversations: one conversation by id", "chat.conversation", EQ("id"), BY_ID),
+    read(
+        "chat-followers: the customer lines after a moment",
+        "chat.message",
+        AND(IN("conversationId"), EQ("role"), { op: "gt", field: "sentAt", value: "x" }),
+        RECENT("sentAt"),
+    ),
+    read("workspace-time-zone: the settings of the workspace", "workspace.settings", EQ("key"), [
+        ["key", "asc"],
+        ["id", "asc"],
+    ]),
+    read(
+        "payment-transactions: the movements of a direction",
+        "payment.transaction",
+        EQ("direction"),
+        RECENT("occurredAt"),
+    ),
+    read(
+        "payment-transactions: the movements of a direction and status",
+        "payment.transaction",
+        AND(EQ("direction"), EQ("status")),
+        RECENT("occurredAt"),
+    ),
+    read(
+        "payment-transactions: the movements of a direction since a moment",
+        "payment.transaction",
+        AND(EQ("direction"), { op: "gte", field: "occurredAt", value: "x" }),
+        RECENT("occurredAt"),
+    ),
+]
+
+describe("the static reads of the be outside the node reads", () => {
+    it.each(BE_READS.map((one) => [one.name, one.query] as const))(
+        "%s is a query the planner accepts",
+        (_name, query) => {
+            expect(queryProblems(query, CATALOG)).toEqual([])
+        },
+    )
 })

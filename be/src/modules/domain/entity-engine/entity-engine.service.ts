@@ -94,7 +94,7 @@ export class EntityEngineService {
 
     /** One record of the scope's workspace, or null. */
     async get(tx: ScopedTx, entity: string, id: string): Promise<OptionalRecordRow> {
-        return await this.failures.reading(() => getRecord(tx, this.definition(entity).name, id))
+        return await this.failures.reading(entity, () => getRecord(tx, this.definition(entity).name, id))
     }
 
     /**
@@ -104,9 +104,9 @@ export class EntityEngineService {
     async list(tx: ScopedTx, query: Query, scope: string): Promise<ListPage> {
         this.assertQuery(query)
         const after = query.page.after === undefined ? null : this.positionOf(query.page.after, scope)
-        const found = await this.failures.reading(() => listRecords(tx, this.catalog, { query, after }))
+        const found = await this.failures.reading(query.from, () => listRecords(tx, this.catalog, { query, after }))
         const page = found.slice(0, query.page.size)
-        const included = await this.failures.reading(() => this.includedOf(tx, query, page))
+        const included = await this.failures.reading(query.from, () => this.includedOf(tx, query, page))
         return {
             rows: page.map((row) => ({ ...row, included: included.get(row.row.id) ?? {} })),
             next: found.length > query.page.size ? this.cursorAfter(page, scope) : null,
@@ -116,7 +116,7 @@ export class EntityEngineService {
     /** The groups and measures of an aggregate. */
     async aggregate(tx: ScopedTx, aggregate: Aggregate): Promise<ReadonlyArray<AggregateRow>> {
         this.assertQuery(aggregate)
-        return await this.failures.reading(() => aggregateRecords(tx, this.catalog, aggregate))
+        return await this.failures.reading(aggregate.from, () => aggregateRecords(tx, this.catalog, aggregate))
     }
 
     private assertQuery(tree: Query | Aggregate): void {
@@ -124,7 +124,7 @@ export class EntityEngineService {
         if (first !== undefined)
             throw new EntityEngineError({
                 code: EntityEngineErrorCode.QueryInvalid,
-                params: { problem: first.code, at: first.at },
+                params: { problem: first.code, at: first.at, entity: tree.from },
             })
     }
 

@@ -114,6 +114,53 @@ describe("AgentRunDeadLetterService.tell", () => {
     })
 })
 
+describe("AgentRunDeadLetterService.tell the cause of the failure", () => {
+    const PARAMS = { problem: "QUERY_NOT_INDEXED", at: "order", entity: "chat.message" }
+
+    it("logs the params of the failure with the dead letter, and with a run that has no voice", async () => {
+        const record = tally()
+        const spoken = await build([speaking("door", record)], record)
+        const mutes = await build([mute("door")], tally())
+
+        await spoken.service.tell("ws-1", "run-1", "door", "ENTITY_ENGINE_QUERY_INVALID", PARAMS)
+        await mutes.service.tell("ws-1", "run-1", "door", "ENTITY_ENGINE_QUERY_INVALID", PARAMS)
+
+        expect(spoken.logger.info).toHaveBeenCalledWith(AgentRunsLogEvent.DeadLettered, {
+            runId: "run-1",
+            code: "ENTITY_ENGINE_QUERY_INVALID",
+            params: PARAMS,
+        })
+        expect(mutes.logger.warn).toHaveBeenCalledWith(AgentRunsLogEvent.DeadWithoutVoice, {
+            runId: "run-1",
+            code: "ENTITY_ENGINE_QUERY_INVALID",
+            params: PARAMS,
+        })
+    })
+
+    it("logs the params when the dead letter itself failed, and none when the caller gave none", async () => {
+        const record = tally()
+        const failing: AgentStepHandler = {
+            ...speaking("door", record),
+            deadLetter: () => Promise.reject(new Error("x")),
+        }
+        const { service, logger } = await build([failing], record)
+
+        await service.tell("ws-1", "run-1", "door", "x", PARAMS)
+        await service.tell("ws-1", "run-1", "door", "y")
+
+        expect(logger.error).toHaveBeenCalledWith(AgentRunsLogEvent.DeadLetterFailed, expect.any(Error), {
+            runId: "run-1",
+            code: "x",
+            params: PARAMS,
+        })
+        expect(logger.error).toHaveBeenCalledWith(AgentRunsLogEvent.DeadLetterFailed, expect.any(Error), {
+            runId: "run-1",
+            code: "y",
+            params: {},
+        })
+    })
+})
+
 describe("AgentRunDeadLetterService.tell when there is nothing to do or nothing works", () => {
     it("does nothing for a run that was told already, or is gone", async () => {
         const record = tally()
