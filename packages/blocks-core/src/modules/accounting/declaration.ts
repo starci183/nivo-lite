@@ -2,6 +2,7 @@ import { defineModule } from "@nivo-lite/agent-sdk/module"
 import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
 import { answerQuestionAction } from "./actions/answer-question.action"
 import { adjustAction } from "./actions/adjust.action"
+import { resolveUnmatchedPaymentAction } from "./actions/resolve-unmatched-payment.action"
 import { saveSettingsAction } from "./actions/save-settings.action"
 import { settleAction } from "./actions/settle.action"
 import { closeCheckRead } from "./reads/close-check.read"
@@ -41,7 +42,7 @@ export const accountingModule: ModuleDeclaration = defineModule({
         closeCheckRead,
         settingsRead,
     ],
-    actions: [adjustAction, saveSettingsAction, answerQuestionAction],
+    actions: [adjustAction, saveSettingsAction, answerQuestionAction, resolveUnmatchedPaymentAction],
     tools: ["ledger.status", "ledger.append"],
     specs: [accountingSpecDocument],
 })

@@ -163,5 +163,12 @@
   "weekly_empty": "Nothing collected in this period.",
   "ageing_total": "· '{count}' invoices",
   "ageing_count": "'{count}' invoices",
-  "ageing_empty": "No open invoice."
+  "ageing_empty": "No open invoice.",
+  "resolve_unmatched": "Resolve an unmatched payment",
+  "resolve_transaction_missing": "The transaction was not found.",
+  "resolve_transaction_not_credit": "This transaction is money out, not money in.",
+  "resolve_transaction_not_open": "This payment has already been resolved.",
+  "action_assign_order": "Assign to an order",
+  "action_other_income": "Record as other income",
+  "state_payment_other_income": "Other income"
 }

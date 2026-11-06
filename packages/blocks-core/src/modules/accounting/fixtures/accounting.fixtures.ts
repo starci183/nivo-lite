@@ -289,6 +289,7 @@ export const ACCOUNTING_FIXTURES: ModuleFixtures = {
         "accounting.adjust": { ok: true, data: { id: "00000000-0000-4000-8000-0000000001a2" } },
         "accounting.save-settings": { ok: true },
         "accounting.answer-question": { ok: true },
+        "accounting.resolve-unmatched-payment": { ok: true, data: { result: "other-income" } },
     },
 }
 

@@ -43,7 +43,7 @@ const transactionData = z.object({
     payer: nullableText(MAX_LINE),
     orderId: nullableText(MAX_ID),
     occurredAt: z.string().max(MAX_TIME),
-    status: z.enum(["unmatched", "matched", "needs_review"]),
+    status: z.enum(["unmatched", "matched", "needs_review", "other_income"]),
 })
 
 /** The declared fields of a `sales.order` record the module reads. */

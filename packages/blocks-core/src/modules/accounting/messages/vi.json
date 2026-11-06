@@ -163,5 +163,12 @@
   "weekly_empty": "Chưa thu khoản nào trong kỳ.",
   "ageing_total": "· '{count}' hóa đơn",
   "ageing_count": "'{count}' hóa đơn",
-  "ageing_empty": "Chưa có hóa đơn mở."
+  "ageing_empty": "Chưa có hóa đơn mở.",
+  "resolve_unmatched": "Xử lý khoản tiền chưa khớp",
+  "resolve_transaction_missing": "Không tìm thấy giao dịch.",
+  "resolve_transaction_not_credit": "Giao dịch này là tiền ra, không phải tiền vào.",
+  "resolve_transaction_not_open": "Khoản tiền này đã được xử lý.",
+  "action_assign_order": "Gán đơn",
+  "action_other_income": "Ghi thu khác",
+  "state_payment_other_income": "Thu khác"
 }
