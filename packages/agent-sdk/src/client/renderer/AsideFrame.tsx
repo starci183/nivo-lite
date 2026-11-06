@@ -96,7 +96,7 @@ export const AsideFrame = (props: AsideFrameProps): ReactNode => {
                     }}
                 >
                     {summary === null ? null : (
-                        <Pane area="summary" surface>
+                        <Pane area="summary">
                             <PaneSection>
                                 <Alert
                                     tone="accent"
@@ -111,13 +111,13 @@ export const AsideFrame = (props: AsideFrameProps): ReactNode => {
                             </PaneSection>
                         </Pane>
                     )}
-                    <Pane area="tabs" surface>
+                    <Pane area="tabs">
                         <PaneSection align="center">{props.tabs}</PaneSection>
                     </Pane>
-                    <Pane area="main" label={text({ key: "renderer.main" })} surface>
+                    <Pane area="main" label={text({ key: "renderer.main" })}>
                         <PaneSection>{props.main}</PaneSection>
                     </Pane>
-                    <Pane area="aside" label={label} surface>
+                    <Pane area="aside" label={label}>
                         <PaneSection align="center">
                             <PaneHeader
                                 title={label}
