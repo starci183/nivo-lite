@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react"
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ReadHandle } from "@nivo-lite/agent-sdk/block"
@@ -16,7 +15,6 @@ import {
     memberEntriesOf,
     memberLineOf,
     memberTabsOf,
-    nextParamWrite,
     paramsOfTab,
     selectedMemberTab,
     sortKeyOf,
@@ -54,28 +52,6 @@ const tiersOf = (handle: ReadHandle): ReadonlyArray<MemberTier> => {
     return "items" in parsed ? parsed.items : []
 }
 
-/**
- * Writes the two params of a chosen tab one at a time: each write waits for the address to change, so the second does not start
- * from the address as it was and undo the first.
- */
-const useTabWrites = (props: Props, current: TabParams): ((tab: string) => void) => {
-    const target = useRef<TabParams | null>(null)
-    const write = (): void => {
-        if (target.current === null) return
-        const next = nextParamWrite(current, target.current)
-        if (next === null) {
-            target.current = null
-            return
-        }
-        props.params.set(next.param === "tier" ? props.props.tierParam : props.props.activityParam, next.value)
-    }
-    useEffect(write, [current.tier, current.activity])
-    return (tab) => {
-        target.current = paramsOfTab(tab)
-        write()
-    }
-}
-
 /** The members of the programme as the owner reads them: a head with the sort, a search, the tier tabs and the rows. */
 export const MembersBlock = (props: Props): ReactNode => {
     const host = useBlockHost()
@@ -87,7 +63,10 @@ export const MembersBlock = (props: Props): ReactNode => {
         tier: props.params.value(props.props.tierParam),
         activity: props.params.value(props.props.activityParam),
     }
-    const choose = useTabWrites(props, params)
+    const choose = (tab: string): void => {
+        const chosen = paramsOfTab(tab)
+        props.params.setMany({ [props.props.tierParam]: chosen.tier, [props.props.activityParam]: chosen.activity })
+    }
     const searched = props.params.value(props.props.searchParam)
     const labels = useSlotLabels(
         searched === null || searched === ""

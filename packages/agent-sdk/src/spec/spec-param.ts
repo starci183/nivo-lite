@@ -85,6 +85,17 @@ export interface ParamSource {
     readonly setQueryValues: (entries: Readonly<Record<string, string | null>>) => void
 }
 
+/** Writes the URL keys of the given params in one step, with the `cursor` param dropped; a name the spec does not declare is left out. */
+const setParams = (source: ParamSource, entries: Readonly<Record<string, string | null>>): void => {
+    const keys = Object.entries(entries).flatMap(([name, value]) => {
+        const param = source.params[name]
+        return param === undefined ? [] : [[param.url, value] as const]
+    })
+    if (keys.length === 0) return
+    const cursor = Object.keys(entries).includes(CURSOR_PARAM) ? undefined : source.params[CURSOR_PARAM]
+    source.setQueryValues({ ...Object.fromEntries(keys), ...(cursor === undefined ? {} : { [cursor.url]: null }) })
+}
+
 /**
  * The handle blocks reach the spec params by: a value is the URL value of the param's key when the param allows it, else its
  * default, else null (an empty URL value counts as absent). Writing a param writes its URL key and, in the same step, drops the
@@ -100,10 +111,6 @@ export const paramHandleOf = (source: ParamSource): ParamHandle => ({
             raw !== null && raw !== "" && (allowed === null || allowed === undefined || allowed.includes(raw))
         return usable ? raw : (param.default ?? null)
     },
-    set: (name, value) => {
-        const param = source.params[name]
-        if (param === undefined) return
-        const cursor = name === CURSOR_PARAM ? undefined : source.params[CURSOR_PARAM]
-        source.setQueryValues({ [param.url]: value, ...(cursor === undefined ? {} : { [cursor.url]: null }) })
-    },
+    set: (name, value) => setParams(source, { [name]: value }),
+    setMany: (entries) => setParams(source, entries),
 })

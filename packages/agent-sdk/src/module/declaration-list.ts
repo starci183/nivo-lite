@@ -44,7 +44,9 @@ const derivedShape = (list: ListShape): z.ZodRawShape => ({
     ...Object.fromEntries(
         Object.entries(list.filters ?? {}).map(([name, filter]) => [
             name,
-            z.enum([...valuesOf(filter), "all"]).optional(),
+            "open" in filter && filter.open === true
+                ? z.string().min(1).max(KEY_MAX).optional()
+                : z.enum([...valuesOf(filter), "all"]).optional(),
         ]),
     ),
 })

@@ -11,6 +11,7 @@ import {
     memberRead,
     memberRewardsRead,
     membersRead,
+    withKnownTiers,
     tierCountsRead,
 } from "./members.read"
 import { pendingCountRead, pendingRead, pendingWaitingRead } from "./pending.read"
@@ -184,6 +185,26 @@ describe("the tier filter of loyalty.members and loyalty.tier-counts", () => {
         expect(await run(membersRead, { tier: "dong", sort: "name" })).toMatchObject({
             rows: [{ id: "m-3" }, { id: "m-5" }],
         })
+    })
+
+    it("takes any tier of the ladder the workspace saved, a renamed one included", async () => {
+        const state = sampleState()
+        state.program = {
+            ...SAMPLE_PROGRAM,
+            config: {
+                ...SAMPLE_PROGRAM.config,
+                tiers: SAMPLE_PROGRAM.config.tiers.map((tier) => ({ ...tier, key: `${tier.key}-2` })),
+            },
+        }
+        expect(await run(membersRead, { tier: "dong-2" }, state)).toEqual({ rows: [], cursor: null })
+        expect(await run(membersRead, { tier: "dong" }, state)).toEqual({
+            refused: [{ code: "INPUT_INVALID", at: "tier" }],
+        })
+    })
+
+    it("refuses when the list underneath cannot run", async () => {
+        const bare = withKnownTiers({ ...membersRead, execute: undefined })
+        expect(await run(bare, {})).toEqual({ refused: [{ code: "INPUT_INVALID", at: "." }] })
     })
 
     it("refuses a tier the list does not know", async () => {

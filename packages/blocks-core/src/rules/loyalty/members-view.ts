@@ -103,25 +103,6 @@ export const paramsOfTab = (tab: string): TabParams => {
     return tab === AT_RISK ? { tier: null, activity: AT_RISK } : { tier: tab, activity: null }
 }
 
-/** One write of a param. */
-export interface ParamWrite {
-    /** Which of the two params to write. */
-    readonly param: "tier" | "activity"
-    /** The value to write; null clears it. */
-    readonly value: string | null
-}
-
-/**
- * The next write that brings the params to the target, or null when they are there. The params are written one at a time: a second
- * write in the same step would start from the address as it was and undo the first, so the block writes the next one when the
- * address has changed.
- */
-export const nextParamWrite = (current: TabParams, target: TabParams): ParamWrite | null => {
-    if (current.tier !== target.tier) return { param: "tier", value: target.tier }
-    if (current.activity !== target.activity) return { param: "activity", value: target.activity }
-    return null
-}
-
 /** A phone or email with the middle hidden: the first four digits and the last three, or the first letter of an email. */
 export const maskedContact = (contact: string): string => {
     const at = contact.indexOf("@")

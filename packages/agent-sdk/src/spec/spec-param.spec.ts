@@ -211,3 +211,30 @@ describe("paramHandleOf set", () => {
         expect(source.writes).toEqual([])
     })
 })
+
+describe("paramHandleOf setMany", () => {
+    const params = {
+        status: { type: "string", url: "status" },
+        moved: { type: "string", url: "moved" },
+        cursor: { type: "string", url: "cursor" },
+    } as const
+
+    it("writes several params in one step and resets the cursor in it", () => {
+        const source = sourceOf(params)
+        paramHandleOf(source).setMany({ status: null, moved: "$today" })
+        expect(source.writes).toEqual([{ status: null, moved: "$today", cursor: null }])
+    })
+
+    it("leaves a name the spec does not declare out, and writes nothing when none is declared", () => {
+        const source = sourceOf(params)
+        paramHandleOf(source).setMany({ status: "needs", nope: "x" })
+        paramHandleOf(source).setMany({ nope: "x" })
+        expect(source.writes).toEqual([{ status: "needs", cursor: null }])
+    })
+
+    it("does not reset the cursor it is told to write", () => {
+        const source = sourceOf(params)
+        paramHandleOf(source).setMany({ cursor: "c2" })
+        expect(source.writes).toEqual([{ cursor: "c2" }])
+    })
+})

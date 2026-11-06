@@ -1,5 +1,6 @@
 import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ListShape, ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import type { ListShape, ReadDefinition, ReadRunResult } from "@nivo-lite/agent-sdk/block"
+import { portsOf } from "@nivo-lite/agent-sdk/port"
 import { countsRead, listRead } from "@nivo-lite/agent-sdk/module"
 import type { ListReadDefinition } from "@nivo-lite/agent-sdk/module"
 import { z } from "zod"
@@ -16,7 +17,7 @@ import type { LedgerRowView, MemberDetail, RedeemableRowView } from "../views.ty
 /** The activities a members list can be narrowed to. */
 const ACTIVITIES: ReadonlyArray<string> = ["active", "at_risk", "new"]
 
-/** The tier keys a members list can be narrowed to: the starter ladder (a ladder the owner renamed is read by `loyalty.tiers`). */
+/** The tier keys the starter ladder holds; the filter is open, and the read judges the key against the ladder the workspace saved. */
 const TIER_KEYS: ReadonlyArray<string> = DEFAULT_CONFIG.tiers.map((tier) => tier.key)
 
 /** What the members list accepts: a search over the name and contact, the activity and the tier as filters, four sorts. */
@@ -24,7 +25,7 @@ export const MEMBERS_LIST: ListShape = {
     search: { fields: ["name", "contact"] },
     filters: {
         activity: { field: "activity", op: "eq", of: ACTIVITIES },
-        tier: { field: "tierKey", op: "eq", of: TIER_KEYS },
+        tier: { field: "tierKey", op: "eq", of: TIER_KEYS, open: true },
     },
     sort: {
         recent: [["lastVisitAt", "desc"]],
@@ -48,8 +49,7 @@ const ROW_FIELDS: ReadonlyArray<keyof MemberListRow> = [
     "activity",
 ]
 
-/** `loyalty.members`: the customers, searched, narrowed by activity and sorted. */
-export const membersRead: ListReadDefinition = listRead({
+const listed: ListReadDefinition = listRead({
     id: "loyalty.members",
     dataKind: "loyalty-member",
     permission: LOYALTY_VIEW,
@@ -57,6 +57,35 @@ export const membersRead: ListReadDefinition = listRead({
     list: MEMBERS_LIST,
     source: loyaltyMembersList,
 })
+
+/** The tier the raw variables ask for; null for none or for every tier. */
+const askedTierOf = (raw: unknown): string | null => {
+    const tier = typeof raw === "object" && raw !== null ? Reflect.get(raw, "tier") : undefined
+    return typeof tier === "string" && tier !== "all" ? tier : null
+}
+
+/** The refusal of a variable the read does not take: the problem at its name. */
+const refusedAt = (at: string): ReadRunResult => ({ ok: false, problems: [{ code: "INPUT_INVALID", at }] })
+
+/**
+ * The members read with its tier judged against the ladder the workspace saved: any key of that ladder is taken (a renamed ladder
+ * works), and a key that is not on it is refused as the problem at `tier`, so a stale link does not silently show nobody.
+ */
+export const withKnownTiers = (read: ListReadDefinition): ListReadDefinition => ({
+    ...read,
+    execute: async (provider, raw, context) => {
+        const asked = askedTierOf(raw)
+        if (asked !== null) {
+            const { program } = portsOf(provider, { program: loyaltyProgram })
+            const ladder = (await configOf(program)).tiers.map((tier) => tier.key)
+            if (!ladder.includes(asked)) return refusedAt("tier")
+        }
+        return read.execute === undefined ? refusedAt(".") : read.execute(provider, raw, context)
+    },
+})
+
+/** `loyalty.members`: the customers, searched, narrowed by activity and by any tier of the saved ladder, and sorted. */
+export const membersRead: ListReadDefinition = withKnownTiers(listed)
 
 /** `loyalty.member-counts`: how many customers each activity holds, under the same search. */
 export const memberCountsRead: ReadDefinition = countsRead({

@@ -5,7 +5,6 @@ import {
     memberEntriesOf,
     memberLineOf,
     memberTabsOf,
-    nextParamWrite,
     paramsOfTab,
     selectedMemberTab,
     sortKeyOf,
@@ -77,19 +76,11 @@ describe("selectedMemberTab", () => {
     })
 })
 
-describe("paramsOfTab and nextParamWrite", () => {
-    it("map a tab to the two params", () => {
+describe("paramsOfTab", () => {
+    it("maps a tab to the two params", () => {
         expect(paramsOfTab("all")).toEqual({ tier: null, activity: null })
         expect(paramsOfTab(AT_RISK)).toEqual({ tier: null, activity: AT_RISK })
         expect(paramsOfTab("gold")).toEqual({ tier: "gold", activity: null })
-    })
-
-    it("write one param at a time, the tier first, until the params are where the tab wants them", () => {
-        const target = paramsOfTab(AT_RISK)
-        const start = { tier: "gold", activity: null }
-        expect(nextParamWrite(start, target)).toEqual({ param: "tier", value: null })
-        expect(nextParamWrite({ tier: null, activity: null }, target)).toEqual({ param: "activity", value: AT_RISK })
-        expect(nextParamWrite(target, target)).toBeNull()
     })
 })
 
