@@ -1,7 +1,7 @@
 # Deferred webhook receipt rollout
 
-Apply `db/migrations/20261026000500_webhook-receipt-queues.sql` and
-`db/migrations/20261026000600_webhook-receipt-backfill.sql` before starting the new API workers.
+Apply the webhook receipt queues migration (folded into the baseline) and
+the webhook receipt backfill migration (folded into the baseline) before starting the new API workers.
 The API hosts all six receipt consumers; the CLI runs producers only and disables workers.
 Keep the existing `meta_inbound` consumer: Meta receipt processing publishes its downstream jobs there.
 

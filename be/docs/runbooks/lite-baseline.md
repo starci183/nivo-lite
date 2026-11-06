@@ -1,6 +1,6 @@
 # Lite conversion baseline
 
-Historical record of the start of the conversion (the engine it mentions was retired at the cutover). The database baseline that replaced the migration history is `db/migrations/archive/20261013142504_lite-baseline.sql` (archived since the canon restamp; the chain now starts at `db/migrations/20261026000000_baseline.sql`); the dead engine objects it still carried are dropped by `db/migrations/archive/20261020110000_drop-engine-schema.sql`.
+Historical record of the start of the conversion (the engine it mentions was retired at the cutover). The database baseline that replaced the migration history is the lite baseline migration (history, no longer kept) (archived since the canon restamp; the chain now starts at the baseline migration (folded into the baseline)); the dead engine objects it still carried are dropped by the drop engine schema migration (history, no longer kept).
 
 Recorded at the end of Wave 0 on branch lite/convert with `starci app check` (ruling worktree D:/starci-lanes/lite-ruling, manifest 2.2.0).
 
