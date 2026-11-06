@@ -15,6 +15,8 @@ export interface NodeTurn extends TurnRef {
     readonly origin?: RunOrigin
     /** The member behind the turn, when a person is. */
     readonly memberId?: string | null
+    /** The agent that handed its conversation to this run (the wake was a hand-off tag), or null when the run was not woken by one. */
+    readonly handedOffBy?: string | null
 }
 
 /** A row a data port answers: only the fields asked. */
