@@ -1,4 +1,5 @@
 import { AgentRunResumeService } from "../../../modules/domain/agent-runs/agent-run-resume.service"
+import { AgentRunStoreService } from "../../../modules/domain/agent-runs/agent-run-store.service"
 import { AgentRunsService } from "../../../modules/domain/agent-runs/agent-runs.service"
 import { useTestWorld } from "../../world/use-test-world"
 import { AGENT_RUNS_MODULES } from "../../world/agent-runs-capabilities.options"
@@ -10,6 +11,7 @@ const scene = sceneOf(world)
 
 const script = () => world.resolve(ScriptedWorld)
 const runs = () => world.resolve(AgentRunsService)
+const store = () => world.resolve(AgentRunStoreService)
 const resumer = () => world.resolve(AgentRunResumeService)
 const SIGNAL = new AbortController().signal
 const em = () => world.db.primary
@@ -63,5 +65,46 @@ describe("agent-runs/park-resume: a run that stopped for a fix runs again from i
         ).resolves.toEqual({
             kind: "not_parked",
         })
+    })
+})
+
+describe("agent-runs/park-resume: a dead-lettered run runs again from its failed step", () => {
+    it("agent-runs/park-resume: a dead-lettered run runs again from its failed step once, and a second resume does not run it twice", async () => {
+        const { runId, wakeId } = await scene.newRun("dead-then-resume")
+        script().toolTries = [{ kind: "failed", code: "invalid_step_input" }]
+        await em().transaction((tx) =>
+            runs().append(scene.workspaceId, tx, runId, [chainFrom("door", wakeId), chainFrom("tool", wakeId)]),
+        )
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
+        await store().route(scene.workspaceId, runId, {
+            from: "parked",
+            to: "dead",
+            code: "dead_lettered",
+            compensate: [],
+        })
+        expect(await scene.runRow(runId)).toMatchObject({ status: "dead" })
+
+        const request = { workspaceId: scene.workspaceId, runId, actor: "member-1", reason: "fix deployed" }
+        await expect(resumer().resume(request)).resolves.toMatchObject({ kind: "resumed", stepKey: "tool" })
+        await expect(resumer().resume(request)).resolves.toEqual({ kind: "not_parked" })
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
+
+        expect(await statuses(runId)).toEqual(["turn:done", "door:done", "tool:done"])
+        expect(script().performed).toEqual([`door:${wakeId}`, `tool:${wakeId}`])
+        expect(await scene.runRow(runId)).toMatchObject({ status: "done", resumedBy: "member-1" })
+    })
+
+    it("agent-runs/park-resume: a dead run whose done steps are being undone is refused", async () => {
+        const { runId, wakeId } = await scene.newRun("dead-undone")
+        script().toolTries = [{ kind: "failed", code: "invalid_step_input" }]
+        await em().transaction((tx) =>
+            runs().append(scene.workspaceId, tx, runId, [chainFrom("door", wakeId), chainFrom("tool", wakeId)]),
+        )
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
+        await store().route(scene.workspaceId, runId, { from: "parked", to: "dead", code: "x", compensate: ["door"] })
+
+        await expect(
+            resumer().resume({ workspaceId: scene.workspaceId, runId, actor: "member-1", reason: "x" }),
+        ).resolves.toEqual({ kind: "compensated" })
     })
 })

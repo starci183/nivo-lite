@@ -218,6 +218,21 @@ describe("the timeline of a run", () => {
         expect(waiting.steps.map((step) => step.state)).toEqual(["done", "failed", "waiting"])
     })
 
+    it.each(["failed", "dead"])("offers to run a %s run again from its first failed step only", (status) => {
+        const view = runViewOf(record("run-7", { status }), STEPS)
+        expect(view.steps.map((step) => step.canResume)).toEqual([undefined, true, undefined])
+        expect(view.steps[1]?.state).toBe("failed")
+    })
+
+    it("offers nothing on a failed run when one of its steps was undone, or when it has no failed step", () => {
+        const undone = [record("s1", { status: "compensated" }), ...STEPS.slice(1)]
+        expect(runViewOf(record("run-8", { status: "dead" }), undone).steps.some((step) => step.canResume)).toBe(false)
+        expect(
+            runViewOf(record("run-9", { status: "failed" }), [STEPS[0] as RecordRow]).steps[0]?.canResume,
+        ).toBeUndefined()
+        expect(runViewOf(record("run-3", { status: "parked" }), STEPS).steps.some((step) => step.canResume)).toBe(false)
+    })
+
     it("has no parked step when a parked run has finished every step, and falls back to the record id for a step with no keys", () => {
         const view = runViewOf(record("run-6", { status: "parked" }), [record("s9", { status: "compensated" })])
         expect(view.steps).toEqual([

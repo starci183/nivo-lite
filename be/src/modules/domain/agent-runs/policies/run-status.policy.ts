@@ -26,3 +26,12 @@ export const statusAfter = (steps: ReadonlyArray<StatusStep>, more: boolean): "r
 
 /** The statuses of a run that has ended or been given away: no step is appended or claimed. */
 export const CLOSED_RUN: ReadonlyArray<string> = ["done", "failed", "parked", "dead", "compensating", "compensated"]
+
+/**
+ * The statuses of a run that stopped on a failed step and may be run again from it: parked for a fix, failed after its tries, or given to
+ * a person (dead). A run that was undone, is being undone, is done or still runs is not on this list.
+ */
+export const RESUMABLE_RUN: ReadonlyArray<string> = ["parked", "failed", "dead"]
+
+/** The statuses of a step that say the run undid, or is undoing, what it had done: nothing is left to run again from. */
+export const UNDONE_STEP: ReadonlyArray<string> = ["compensating", "compensated"]

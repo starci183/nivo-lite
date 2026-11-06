@@ -192,6 +192,12 @@ export const callsOf = (value: unknown): ReadonlyArray<RunCallView> => {
 /** Whether a step reached its end (finished, or undone). */
 const isFinished = (status: unknown): boolean => status === "done" || status === "compensated"
 
+/** The engine statuses of a run that stopped on a failed step and may be run again from it, as the engine's resume takes them. */
+const RESUMABLE_STATUSES: ReadonlyArray<string> = ["failed", "dead"]
+
+/** Whether a step was undone or is being undone: a run with such a step has nothing left to run again from. */
+const isUndone = (status: unknown): boolean => status === "compensated" || status === "compensating"
+
 /** The state of a step that is not the one a parked run stopped at. */
 const stepStateOf = (status: unknown, runIsWaiting: boolean, waitsOnItem: boolean): RunState => {
     if (status === "failed") return "failed"
@@ -201,11 +207,16 @@ const stepStateOf = (status: unknown, runIsWaiting: boolean, waitsOnItem: boolea
 
 /**
  * The timeline of one run: its steps in order. In a parked run the first step that did not finish is the one it stopped at: it is
- * drawn parked, with the reason the engine parked it, and is the one that offers to run again.
+ * drawn parked, with the reason the engine parked it, and is the one that offers to run again. A failed or dead run (one that stopped after
+ * its tries or was given to a person) offers to run again from its first failed step, drawn failed, unless one of its steps was undone.
  */
 export const runViewOf = (run: RecordRow, steps: ReadonlyArray<RecordRow>): RunView => {
     const status = run.data["status"]
     const parkedAt = status === "parked" ? steps.findIndex((step) => !isFinished(step.data["status"])) : -1
+    const resumableAt =
+        RESUMABLE_STATUSES.includes(String(status)) && !steps.some((step) => isUndone(step.data["status"]))
+            ? steps.findIndex((step) => step.data["status"] === "failed")
+            : -1
     const parkReason = run.data["parkReason"]
     return {
         id: run.id,
@@ -235,6 +246,7 @@ export const runViewOf = (run: RecordRow, steps: ReadonlyArray<RecordRow>): RunV
                 effectKey: typeof effectKey === "string" ? effectKey : null,
                 reason: typeof reason === "string" ? reason : null,
                 approvalPath: null,
+                ...(index === resumableAt ? { canResume: true } : {}),
             }
         }),
     }
