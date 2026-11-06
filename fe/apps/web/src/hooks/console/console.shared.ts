@@ -12,6 +12,7 @@ export type ConsoleDestination = {
     readonly label:
         | "navAuthority"
         | "navInbox"
+        | "navChat"
         | "navBrain"
         | "navModules"
         | "navTeam"
@@ -31,6 +32,7 @@ export type ConsoleDestination = {
 /** The Brain owns the business memory, so its documents are no separate destination. */
 export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
     { key: "inbox", label: "navInbox", route: "/inbox", icon: "email", group: "work" },
+    { key: "chat", label: "navChat", route: "/chat", icon: "chat", group: "work" },
     { key: "brain", label: "navBrain", route: "/brain", icon: "brain", group: "operate", also: ["/knowledge"] },
     { key: "authority", label: "navAuthority", route: "/authority", icon: "password", group: "operate" },
     { key: "modules", label: "navModules", route: "/agents", icon: "apps", group: "setup" },

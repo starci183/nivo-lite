@@ -1,4 +1,4 @@
-/** One destination in the console rail; `badge` is a real count (the Second Brain only). */
+/** One destination in the console rail; `badge` is a real count (the Second Brain, the team chat unread). */
 export type ConsoleNavItem = {
     readonly id: string
     readonly label: string
@@ -17,6 +17,7 @@ export type ConsoleIconName =
     | "account"
     | "review"
     | "email"
+    | "chat"
     | "brain"
     | "password"
     | "saved"

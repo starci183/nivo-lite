@@ -201,6 +201,9 @@ namespaces:
   team:
     - key: "loadFailTitle"
       reason: 'Read as the string "loadFailTitle" in components/blocks/AuthorityGoals/index.tsx, components/blocks/AuthorityLimits/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+  teamChat:
+    - prefix: "refusal_"
+      reason: "Key family built at run time as `refusal_${code}` in components/blocks/TeamChat/index.tsx: the code is the closed refusal vocabulary of the chat doors (modules/teamChat ChatRefusalCode), so each key is a literal there."
   video:
     - key: "actionFailed"
       reason: 'Read as the string "actionFailed" in hooks/chatbotView/useChatbotInbox.ts, hooks/content/useContentCommand.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'

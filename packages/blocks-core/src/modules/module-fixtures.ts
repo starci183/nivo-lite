@@ -9,6 +9,8 @@ import { SALES_FIXTURES } from "./sales"
 export interface ReadFixture {
     /** The data the read answers when ready. */
     readonly ready: unknown
+    /** The data the read answers when ready for a viewer whose language is not the default (Vietnamese): a language that is absent reads `ready`. */
+    readonly readyIn?: Readonly<Partial<Record<"vi" | "en", unknown>>>
     /** The data the read answers when it has nothing; absent when the read cannot be empty. */
     readonly empty?: unknown
     /** The data of a read that waits for the owner, when the read has such a state. */

@@ -25,8 +25,7 @@ export { useMutateResolveDossierFindingSwr, useMutateSaveDossierRemedyDraftSwr }
 export { QUERY_KNOWLEDGE_SOURCE_SWR_KEY, QUERY_KNOWLEDGE_SUGGESTIONS_SWR_KEY } from "./api"
 export { QUERY_MODULE_INSTALLATIONS_SWR_KEY, QUERY_MY_ACCOUNT_SWR_KEY, QUERY_MY_WORKSPACES_SWR_KEY } from "./api"
 export { useSubscribeKnowledgeProgressSwr } from "./api"
-export { QUERY_OFFICE_ROOMS_SWR_KEY } from "./api"
-export { useQueryOfficeRoomsSwr, QUERY_OPEN_PLAN_PAYMENT_ORDER_SWR_KEY, QUERY_PAYMENT_ORDERS_SWR_KEY } from "./api"
+export { QUERY_OPEN_PLAN_PAYMENT_ORDER_SWR_KEY, QUERY_PAYMENT_ORDERS_SWR_KEY } from "./api"
 export { QUERY_SETUP_STATE_SWR_KEY, QUERY_SETUP_VERSIONS_SWR_KEY } from "./api"
 export { QUERY_VIDEO_BRAND_SWR_KEY } from "./api"
 export { QUERY_VIDEO_FIGURES_SWR_KEY, QUERY_VIDEO_MEDIA_SWR_KEY, QUERY_VIDEO_PROJECTS_SWR_KEY } from "./api"
@@ -255,3 +254,5 @@ export {
     useMutateSubmitTemplateListingSwr,
 } from "./api"
 export { useMutateWorkbenchActionSwr, useQueryWorkbenchMoreSwr, useQueryWorkbenchReadSwr } from "./api"
+export { QUERY_CHAT_ROOMS_SWR_KEY, useQueryChatMessagesSwr, useQueryChatRoomsSwr, useQueryChatUnreadSwr } from "./api"
+export type { ChatRoomsFilter } from "./api"
