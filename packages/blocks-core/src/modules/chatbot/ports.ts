@@ -9,6 +9,7 @@ import type {
     MessagePatch,
     MessageRecord,
     NewMessage,
+    ProposalPatch,
     ThreadPatch,
     ThreadRow,
     UpdateOutcome,
@@ -37,9 +38,15 @@ export interface MessageStore {
     readonly get: (id: string) => Promise<MessageRecord | null>
     /** Stores a line and answers the stored record. */
     readonly insert: (message: NewMessage) => Promise<MessageRecord>
-    /** Sets the outcome of a push when the version of the line is still the expected one. */
-    readonly update: (id: string, expected: string, patch: MessagePatch) => Promise<UpdateOutcome<MessageRecord>>
-    /** A keyset page of the lines of one conversation, newest first; the cursor continues to older ones. */
+    /** Sets the outcome of a push, or the answer to a proposal, when the version of the line is still the expected one. */
+    readonly update: (
+        id: string,
+        expected: string,
+        patch: MessagePatch | ProposalPatch,
+    ) => Promise<UpdateOutcome<MessageRecord>>
+    /** The reply the AI proposed in a conversation and nobody answered yet; null when there is none. */
+    readonly proposed: (conversationId: string) => Promise<MessageRecord | null>
+    /** A keyset page of the posted lines of one conversation, newest first; the cursor continues to older ones. */
     readonly page: (conversationId: string, cursor: string | null, size: number) => Promise<ListPage<MessageRecord>>
 }
 

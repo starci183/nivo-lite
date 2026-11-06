@@ -29,6 +29,9 @@ export interface ThreadRow extends ConversationState {
 /** The fields an update of a conversation may set. */
 export type ThreadPatch = Partial<Omit<ThreadRow, "id" | "version">>
 
+/** Where a line stands: posted in the thread, proposed by the AI and waiting for a person, or refused. */
+export type MessageStatus = "posted" | "proposed" | "rejected"
+
 /** One stored line of a conversation (the `chat.message` record). */
 export interface MessageRecord {
     /** The id of the record. */
@@ -49,6 +52,8 @@ export interface MessageRecord {
     readonly authorName: string | null
     /** The member who wrote an agent line. */
     readonly authorUserId: string | null
+    /** Whether the line is posted in the thread, a reply the AI proposed for a person to approve, or a proposal that was refused. */
+    readonly status: MessageStatus
     /** The state of the push to the channel; null when none was made. */
     readonly deliveryStatus: "sent" | "failed" | null
     /** Why the push failed, as a stable code; null when it did not. */
@@ -59,7 +64,10 @@ export interface MessageRecord {
 export type NewMessage = Pick<
     MessageRecord,
     "conversationId" | "role" | "text" | "sentAt" | "authorKind" | "authorName" | "authorUserId"
->
+> & {
+    /** Where the line starts: posted when absent. */
+    readonly status?: MessageStatus
+}
 
 /** The fields an update of a line may set: the outcome of its push. */
 export interface MessagePatch {
@@ -126,3 +134,25 @@ export interface ChatSendInput {
 /** What the channel answered: sent, or refused with a stable code and whether trying again may work. */
 export type ChatSendResult =
     { readonly ok: true } | { readonly ok: false; readonly failure: string; readonly transient: boolean }
+
+/** What a person's answer to a proposed reply sets on its line: the new status, and the words when they were changed. */
+export interface ProposalPatch {
+    /** Posted when approved, rejected when refused. */
+    readonly status: MessageStatus
+    /** The words after the person changed them; absent keeps the proposed ones. */
+    readonly text?: string
+    /** When the reply was posted, ISO text. */
+    readonly sentAt?: string
+}
+
+/** The reply the AI proposed for a conversation, as the thread draws it. */
+export interface ProposalView {
+    /** The id of the proposed line. */
+    readonly id: string
+    /** What the customer asked, which the reply answers. */
+    readonly asked: string
+    /** The reply the AI proposes. */
+    readonly text: string
+    /** A note under the reply. */
+    readonly note: string
+}

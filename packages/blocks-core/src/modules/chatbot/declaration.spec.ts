@@ -25,12 +25,15 @@ describe("the Chatbot module declaration", () => {
             "chatbot.messages",
             "chatbot.figures",
             "chatbot.decisions",
+            "chatbot.proposals",
         ])
         expect(chatbotModule.actions.map((action) => action.id)).toEqual([
             "chatbot.reply",
             "chatbot.handoff",
             "chatbot.release",
             "chatbot.decide",
+            "chatbot.approve-and-send",
+            "chatbot.reject-proposal",
         ])
     })
 
@@ -87,7 +90,7 @@ describe("the Chatbot seed spec", () => {
     it("words the action labels and refusals with catalogue keys too", () => {
         const known = new Set(chatbotCopyKeys("en"))
         const labels = chatbotModule.actions.flatMap((action) => keysIn(action.label))
-        expect(labels).toHaveLength(4)
+        expect(labels).toHaveLength(6)
         expect(labels.filter((key) => !known.has(key))).toEqual([])
     })
 

@@ -113,6 +113,7 @@ export const messageStore = (world: MemoryWorld): MessageStore => ({
             ...message,
             id: `m${world.lines.length + 1}`,
             version: "1",
+            status: message.status ?? "posted",
             deliveryStatus: null,
             deliveryError: null,
         }
@@ -128,9 +129,19 @@ export const messageStore = (world: MemoryWorld): MessageStore => ({
         world.lines[index] = next
         return Promise.resolve({ ok: true, row: next })
     },
+    proposed: (conversationId) =>
+        Promise.resolve(
+            world.lines.find((line) => line.conversationId === conversationId && line.status === "proposed") ?? null,
+        ),
     page: (conversationId, cursor, size) =>
         Promise.resolve(
-            slicePage(world.lines.filter((line) => line.conversationId === conversationId).toReversed(), cursor, size),
+            slicePage(
+                world.lines
+                    .filter((line) => line.conversationId === conversationId && line.status === "posted")
+                    .toReversed(),
+                cursor,
+                size,
+            ),
         ),
 })
 

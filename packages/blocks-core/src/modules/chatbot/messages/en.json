@@ -62,5 +62,8 @@
   "tab_customers": "Customers in progress",
   "tab_unanswered": "Unanswered",
   "customers_section": "Customers in progress",
-  "unanswered_section": "Unanswered"
+  "unanswered_section": "Unanswered",
+  "action_approve_and_send": "Approve and send",
+  "action_reject_proposal": "Reject the AI draft",
+  "proposal_closed": "This draft was already handled or is gone."
 }
