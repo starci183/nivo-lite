@@ -40,6 +40,22 @@ const entriesSlot = (handle: ReadHandle, entriesOf: typeof attentionEntriesOf) =
         return entries.length === 0 ? null : entries
     })
 
+/** Reads again every read the card is made of. */
+const retryReads = (props: Props): void => {
+    props.slots.attention.retry()
+    props.slots.awaitingReply.retry()
+    props.slots.parkedRuns.retry()
+}
+
+/** The name and the line of a row: the words of a step or failure the list knows, else the raw ones the read gave. */
+const wordsOf = (
+    item: AttentionEntry,
+    word: (key: string) => string,
+): { readonly title: string; readonly description: string } => ({
+    title: item.titleKey === undefined ? item.title : word(item.titleKey),
+    description: item.descriptionKey === undefined ? item.description : word(item.descriptionKey),
+})
+
 /**
  * What needs the owner on the Sales "needs attention" view: customers waiting for a reply, deals past their next step, questions the
  * assistant has for the owner, orders over the limit and steps that failed, each with a chip that says why and one command.
@@ -80,11 +96,12 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
     const rowOf = (item: AttentionEntry): ListRowData => {
         const view = ATTENTION_KIND_VIEWS[item.kind]
         const handle = commands[view.command]
+        const { title, description } = wordsOf(item, word)
         return {
             id: `${item.kind}:${item.id}`,
-            title: item.title,
-            ...(item.description === "" ? {} : { description: item.description }),
-            leading: { avatar: { name: item.title } },
+            title,
+            ...(description === "" ? {} : { description }),
+            leading: { avatar: { name: title } },
             badges: [{ label: word(view.chipKey), tone: view.tone }],
             ...(item.at === "" ? {} : { meta: { text: formatValue(item.at, "day", context) } }),
             ...(handle.isAllowed
@@ -94,11 +111,6 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
                 ? { onPress: () => props.params.set(selectParam, item.id) }
                 : {}),
         }
-    }
-    const retry = (): void => {
-        props.slots.attention.retry()
-        props.slots.awaitingReply.retry()
-        props.slots.parkedRuns.retry()
     }
     const count = "items" in display ? display.items.length : null
     return (
@@ -111,7 +123,7 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
                 slot={display}
                 labels={labels}
                 placeholder={PLACEHOLDER}
-                onRetry={retry}
+                onRetry={() => retryReads(props)}
                 frame={(notice) => <SurfaceCard ariaLabel={words(props.props.label)}>{notice}</SurfaceCard>}
                 render={(items, isLoading) => (
                     <SurfaceCard

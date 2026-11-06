@@ -142,5 +142,13 @@
   "tab_orders": "Đơn hàng",
   "tab_pipeline": "Tiến trình bán",
   "tab_settings": "Quy tắc",
-  "waiting_owner": "Đơn chờ chủ quyết định"
+  "waiting_owner": "Đơn chờ chủ quyết định",
+  "failed_step_confirm": "Xác nhận đơn",
+  "failed_step_notify": "Báo cho khách",
+  "failed_step_invoice": "Xuất hóa đơn",
+  "failed_step_order_complete": "Hoàn tất đơn",
+  "failed_step_order_ask_missing": "Hỏi thông tin còn thiếu",
+  "failed_reason_delivery": "Không gửi được tin nhắn",
+  "failed_reason_invoice": "Không nối được dịch vụ hóa đơn",
+  "failed_reason_timeout": "Kênh không trả lời"
 }
