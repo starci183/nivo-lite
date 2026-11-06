@@ -1,6 +1,6 @@
-import { AgentWorkbenchLoadingPage } from "@/features/pages/AgentWorkbenchLoadingPage"
+import { SpecWorkbenchLoadingPage } from "@/features/pages/SpecWorkbenchLoadingPage"
 
 /** The workbench route while it loads. */
-const Loading = () => <AgentWorkbenchLoadingPage />
+const Loading = () => <SpecWorkbenchLoadingPage />
 
 export default Loading
