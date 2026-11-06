@@ -1,10 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { teamChatEntities } from "@modules/domain/team-chat"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { ChatRoomDirectory, ChatRoomName, ChatSeatRoom } from "./chat-room-directory.contracts"
-
-const [ChatRoomEntity, ChatRoomMemberEntity] = teamChatEntities
+import { InjectChatRoomDirectoryOptions } from "./chat-room-directory.decorators"
+import type { ChatRoomDirectoryOptions } from "./chat-room-directory.options"
 
 /** The kind of room a person is seated in: a group of the team, never a direct room. */
 const GROUP = "group"
@@ -18,13 +17,16 @@ const USER = "user"
  * named by its id; a direct room between a person and an agent is never a group and is never listed here.
  */
 export class ChatRoomDirectoryService implements ChatRoomDirectory {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectChatRoomDirectoryOptions() private readonly options: ChatRoomDirectoryOptions,
+    ) {}
 
     /** The names of the groups of a workspace by room id, in room order. */
     async labelsOf(workspaceId: string, roomIds: ReadonlyArray<string>, limit: number): Promise<Array<ChatRoomName>> {
         if (roomIds.length === 0) return []
         const rooms = await this.entityManager
-            .createQueryBuilder(ChatRoomEntity, "r")
+            .createQueryBuilder(this.options.rooms, "r")
             .where("r.workspace_id = :workspaceId AND r.kind = :kind AND r.id IN (:...roomIds)", {
                 workspaceId,
                 kind: GROUP,
@@ -45,11 +47,16 @@ export class ChatRoomDirectoryService implements ChatRoomDirectory {
     ): Promise<Array<ChatSeatRoom>> {
         if (userIds.length === 0) return []
         const seats = await this.entityManager
-            .createQueryBuilder(ChatRoomMemberEntity, "m")
-            .innerJoin(ChatRoomEntity, "r", "r.id = m.room_id AND r.workspace_id = :workspaceId AND r.kind = :kind", {
-                workspaceId,
-                kind: GROUP,
-            })
+            .createQueryBuilder(this.options.seats, "m")
+            .innerJoin(
+                this.options.rooms,
+                "r",
+                "r.id = m.room_id AND r.workspace_id = :workspaceId AND r.kind = :kind",
+                {
+                    workspaceId,
+                    kind: GROUP,
+                },
+            )
             .where("m.member_kind = :user AND m.member_id IN (:...userIds)", { user: USER, userIds })
             .orderBy("r.position", "ASC")
             .addOrderBy("r.id", "ASC")

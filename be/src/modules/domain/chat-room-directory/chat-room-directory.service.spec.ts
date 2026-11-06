@@ -2,12 +2,20 @@ import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueSubQueryBuilders } from "@tests/fixtures/builders/sub-query-builder.builder"
+import { CHAT_ROOM_DIRECTORY_OPTIONS } from "./chat-room-directory.decorators"
 import { ChatRoomDirectoryService } from "./chat-room-directory.service"
+
+class RoomRow {}
+class SeatRow {}
 
 const build = async () => {
     const em = mockEntityManager()
     const moduleRef = await Test.createTestingModule({
-        providers: [ChatRoomDirectoryService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        providers: [
+            ChatRoomDirectoryService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: CHAT_ROOM_DIRECTORY_OPTIONS, useValue: { rooms: RoomRow, seats: SeatRow } },
+        ],
     }).compile()
     return { service: moduleRef.get(ChatRoomDirectoryService), em }
 }
