@@ -1,0 +1,6 @@
+{
+  "action_resume_run": "Run again",
+  "refusal_forbidden": "Only an owner, a manager or someone who manages this module can run it again",
+  "refusal_missing": "This run was not found",
+  "refusal_not_parked": "This run is not stopped, there is nothing to run again"
+}

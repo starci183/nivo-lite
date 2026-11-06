@@ -1,0 +1,6 @@
+{
+  "action_resume_run": "Chạy lại",
+  "refusal_forbidden": "Chỉ chủ, quản lý hoặc người quản lý module này mới chạy lại được",
+  "refusal_missing": "Không tìm thấy lượt chạy này",
+  "refusal_not_parked": "Lượt chạy này không đang dừng, không có gì để chạy lại"
+}

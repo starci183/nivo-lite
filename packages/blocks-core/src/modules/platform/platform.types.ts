@@ -1,4 +1,4 @@
-import type { ConnectionsRegionView, ItemsRegionView, KnowledgeRegionView } from "../../views/views.types"
+import type { ConnectionsRegionView, KnowledgeRegionView } from "../../views/views.types"
 
 /** What the installed registry holds of one module, as the back end reads it from the module declarations. */
 export interface InstalledModuleFacts {
@@ -64,20 +64,6 @@ export interface RightsDirectory {
     readonly holds: (memberId: string | null, permission: string) => Promise<boolean>
 }
 
-/** What the agent finished in the last days, as the region lists it. */
-export interface DoneSummary {
-    /** How many things the agent finished in all. */
-    readonly total: number
-    /** The newest ones, at most the limit asked. */
-    readonly rows: ItemsRegionView["rows"]
-}
-
-/** The data the agent page asks of the platform about one agent. */
-export interface AgentDone {
-    /** What the agent finished lately: the count and the newest items. */
-    readonly recent: (agentId: string, limit: number) => Promise<DoneSummary>
-}
-
 /** The connections bound to one agent. */
 export interface AgentConnections {
     /** The connections region of the agent, with the words of the viewer's workspace. */
@@ -88,4 +74,55 @@ export interface AgentConnections {
 export interface AgentKnowledge {
     /** The knowledge region of the agent, with its open gaps. */
     readonly of: (agentId: string) => Promise<KnowledgeRegionView>
+}
+
+/** One run the engine parked: it stopped at a step and waits for a person or a build to resume it. */
+export interface ParkedRunRow {
+    /** The run id. */
+    readonly id: string
+    /** The module the run works for (the key before the dot of its subject kind). */
+    readonly module: string
+    /** The kind of the record the run is about, for instance `sales.order`. */
+    readonly subjectKind: string
+    /** The id of the record the run is about. */
+    readonly subjectId: string
+    /** The step the run stopped at. */
+    readonly step: string
+    /** The code of the error that parked it. */
+    readonly errorCode: string
+    /** What the error says, in words a person reads. */
+    readonly errorWords: string
+    /** When it was parked, ISO text. */
+    readonly parkedAt: string
+}
+
+/** Which parked runs a read asks for; every field narrows, none given lists all of the workspace. */
+export interface ParkedRunFilter {
+    /** Only the runs of this module. */
+    readonly module?: string | undefined
+    /** Only the runs about records of this kind. */
+    readonly subjectKind?: string | undefined
+    /** Only the runs about this record. */
+    readonly subjectId?: string | undefined
+}
+
+/** What the back end knows of one run a person asks to resume. */
+export interface RunStanding {
+    /** The module the run works for. */
+    readonly module: string
+    /** Whether the run is parked now; false when it runs, waits or ended. */
+    readonly parked: boolean
+}
+
+/** The runs the engine parked, and the one door that resumes them: the engine owns retry and resume, a module only asks. */
+export interface ParkedRuns {
+    /** The newest parked runs matching the filter, at most the limit, with how many match in all. */
+    readonly list: (
+        filter: ParkedRunFilter,
+        limit: number,
+    ) => Promise<{ readonly total: number; readonly rows: ReadonlyArray<ParkedRunRow> }>
+    /** The standing of one run; null when the workspace has no such run. */
+    readonly find: (runId: string) => Promise<RunStanding | null>
+    /** Resumes a parked run; false when it was no longer parked by the time the engine looked. */
+    readonly resume: (runId: string) => Promise<boolean>
 }

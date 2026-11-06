@@ -1,11 +1,14 @@
+import { entityPort } from "@nivo-lite/agent-sdk/entity/port"
+import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import { definePort } from "@nivo-lite/agent-sdk/port"
 import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
+import { agentRunEntity } from "../../entities/agent/run.entity"
 import type {
     AgentConnections,
-    AgentDone,
     AgentKnowledge,
     InstallationSource,
     MemberDirectory,
+    ParkedRuns,
     RightsDirectory,
 } from "./platform.types"
 
@@ -19,8 +22,8 @@ export const membersPort: PortDefinition<MemberDirectory> = definePort<MemberDir
 /** The permissions the members of the workspace hold: owners and managers hold every one, staff those the workspace granted. The door provides it. */
 export const rightsPort: PortDefinition<RightsDirectory> = definePort<RightsDirectory>("platform.rights")
 
-/** What the agents finished (the agent's work log of the workspace). */
-export const agentDonePort: PortDefinition<AgentDone> = definePort<AgentDone>("platform.agent-done")
+/** The runs of the agents (`agent.run`): what the agent finished is read from them, through the engine. */
+export const agentRuns: PortDefinition<EntityApi> = entityPort(agentRunEntity)
 
 /** The connections of the workspace bound to an agent. */
 export const agentConnectionsPort: PortDefinition<AgentConnections> =
@@ -28,3 +31,6 @@ export const agentConnectionsPort: PortDefinition<AgentConnections> =
 
 /** The knowledge an agent reads and its open gaps. */
 export const agentKnowledgePort: PortDefinition<AgentKnowledge> = definePort<AgentKnowledge>("platform.agent-knowledge")
+
+/** The runs the engine parked and the resume of them. The door provides it, over the engine's park and resume of runs. */
+export const parkedRunsPort: PortDefinition<ParkedRuns> = definePort<ParkedRuns>("platform.parked-runs")
