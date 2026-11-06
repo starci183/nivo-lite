@@ -102,12 +102,19 @@ describe("the seed of the demo flower shop", () => {
                 sources.textOf(workspaceId, source.id),
             ),
         )
-        const priceList = texts.find((found) => found?.content.includes("2.500.000 ₫") === true)?.content ?? ""
+        const priceList = texts.find((found) => found?.content.includes("9.500 ₫") === true)?.content ?? ""
         const prices = items.map((item) => Number(item.sellPriceVnd))
+        const priceOf = (sku: string): number | undefined => {
+            const found = items.find((item) => item.sku === sku)
+            return found === undefined ? undefined : Number(found.sellPriceVnd)
+        }
 
-        expect(items).toHaveLength(13)
+        expect(items).toHaveLength(14)
         expect(items.every((item) => item.active)).toBe(true)
-        expect(prices).toEqual(expect.arrayContaining([5_000, 2_000, 2_500_000]))
+        expect(priceOf("CHAU-HOA")).toBe(5_000)
+        expect(priceOf("GIO-HOA-NHO")).toBe(2_000)
+        expect(prices.every((price) => price >= 1_000 && price <= 10_000)).toBe(true)
+        expect(new Set(prices).size).toBe(prices.length)
         expect([...amountsIn(priceList)].sort((left, right) => left - right)).toEqual(
             [...prices].sort((left, right) => left - right),
         )
