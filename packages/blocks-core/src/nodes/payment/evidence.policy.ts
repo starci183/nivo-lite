@@ -7,7 +7,7 @@ const AMOUNT_POINTS = 40
 const NAME_POINTS = 25
 
 /** The words a transaction carries to compare names with: the transfer content and the name the bank gave. */
-const wordsOf = (row: TransactionRow): string => `${row.content} ${row.counterpartName ?? ""}`
+const wordsOf = (row: TransactionRow): string => `${row.reference} ${row.payer ?? ""}`
 
 /** The names a claim gives, with the customer's own name when known. */
 const namesOf = (claim: ClaimRow, leadName: string | null): ReadonlyArray<string> =>
@@ -28,7 +28,7 @@ export const bestTransaction = (
     const claimedAt = atOf(claim.claimedAt)
     const names = namesOf(claim, leadName)
     const scored = rows
-        .filter((row) => row.orderId === null && Math.abs(atOf(row.receivedAt) - claimedAt) <= windowMs)
+        .filter((row) => row.orderId === null && Math.abs(atOf(row.occurredAt) - claimedAt) <= windowMs)
         .map((row) => {
             const amount = claim.amountVnd !== null && claim.amountVnd === row.amountVnd
             const name = names.some((one) => mentionsName(wordsOf(row), one))
@@ -36,7 +36,7 @@ export const bestTransaction = (
                 row,
                 eligible: claim.amountVnd === null ? name : amount,
                 score: (amount ? AMOUNT_POINTS : 0) + (name ? NAME_POINTS : 0),
-                distance: Math.abs(atOf(row.receivedAt) - claimedAt),
+                distance: Math.abs(atOf(row.occurredAt) - claimedAt),
             }
         })
         .filter((one) => one.eligible)

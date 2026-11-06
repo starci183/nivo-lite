@@ -1,6 +1,7 @@
 export { createAttachAccessTokenLink } from "./attach-access-token"
 export { createAttachWorkspaceIdLink } from "./attach-workspace-id"
 export { createErrorLink } from "./error"
+export { createFixtureLink } from "./fixture"
 export { createHttpLink } from "./http"
 export { createAttachLocaleLink } from "./locale"
 export { defaultOptions } from "./options"

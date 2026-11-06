@@ -46,9 +46,17 @@ describe("accounting module", () => {
             "overview",
             "book",
             "questions",
+            "ledger",
             "settings",
         ])
         expect(view?.id).toBe("book")
+        const placed = (id: string): ReadonlyArray<string> =>
+            (accountingSpecDocument.views.find((each) => each.id === id)?.root.children ?? []).map((node) => node.block)
+        expect(placed("book")).toEqual(["accounting.book", "accounting.entry-detail"])
+        expect(placed("ledger")).toEqual(["accounting.book", "accounting.entry-detail"])
+        expect(accountingSpecDocument.views.find((each) => each.id === "questions")?.root.block).toBe(
+            "accounting.questions",
+        )
         expect(Object.keys(accountingSpecDocument.params ?? {})).toEqual([
             "q",
             "sort",

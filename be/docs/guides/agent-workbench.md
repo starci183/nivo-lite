@@ -9,9 +9,10 @@ from the repository root.
 
 - A workbench is a spec, not a page. A module declares its workbench as data in `packages/blocks-core` (the generic blocks in
   `packages/blocks-core/src/blocks`, the module declarations, fixtures and messages in `packages/blocks-core/src/modules/<module>`).
-- One page draws every spec: `SpecWorkbenchPage` in `fe/apps/web/src/features/pages/SpecWorkbenchPage`, mounted at `/w/<module>`
-  by `fe/apps/web/src/app/[locale]/(console)/w/[module]/[[...view]]/page.tsx`. The host that reads the spec, runs its reads and
-  actions and answers the blocks is `fe/apps/web/src/modules/workbench-host`.
+- One route draws every spec: the agent workbench slot `fe/apps/web/src/features/pages/AgentWorkbenchPage`, mounted at
+  `/workspaces/<workspaceId>/agents/<module>/<installation>/workbench` by
+  `fe/apps/web/src/app/[locale]/workspaces/[workspaceId]/(console)/agents/[module]/[installation]/workbench/page.tsx`, inside the agent
+  frame. The host that reads the spec, runs its reads and actions and answers the blocks is `fe/apps/web/src/modules/workbench-host`.
 - Blocks are generic and named for what they are (table, calendar, decision queue, conversation); no block carries a module name,
   takes children, JSX or class strings. A number no record backs is not drawn.
 - Prototype or live is chosen once at the app root by a provider, never by an if/else on the mode in a page, a block or a hook.

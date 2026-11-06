@@ -1,5 +1,6 @@
 import { asideDetailBlock } from "./aside-detail.block"
-import { conversationBlock } from "./conversation.block"
+import { accountingBlocks } from "./accounting/accounting-blocks"
+import { chatbotBlocks } from "./chatbot/chatbot-blocks"
 import { filterTabsBlock } from "./filter-tabs.block"
 import { formBlock } from "./form.block"
 import { listEditorBlock } from "./list-editor.block"
@@ -44,11 +45,12 @@ const EXPLANATION_WORDS = [
 ]
 
 describe("coreBlocks", () => {
-    it("lists every block once: the 22 core blocks and each agent's own, under the namespace of the agent", () => {
+    it("lists every block once: the core ones under the core namespace, those of each module under its own", () => {
         const ids = coreBlocks.map((block) => block.id)
         expect(new Set(ids).size).toBe(ids.length)
-        expect(ids.filter((id) => id.startsWith("core."))).toHaveLength(22)
-        expect(ids.filter((id) => !id.startsWith("core.")).every((id) => /^(sales|loyalty)\./.test(id))).toBe(true)
+        expect(ids.filter((id) => id.startsWith("core."))).toHaveLength(21)
+        expect(ids.filter((id) => id.startsWith("chatbot."))).toHaveLength(chatbotBlocks.length)
+        expect(ids.filter((id) => id.startsWith("accounting."))).toHaveLength(accountingBlocks.length)
     })
 
     it("carries the JSON Schema of every block's props", () => {
@@ -71,7 +73,7 @@ describe("coreBlocks", () => {
             listEditorBlock,
             tabbedPanelBlock,
             asideDetailBlock,
-            conversationBlock,
+            ...chatbotBlocks,
             waitingBlock,
             decisionQueueBlock,
             dashboardCardsBlock,
@@ -81,6 +83,7 @@ describe("coreBlocks", () => {
             runTimelineBlock,
             ...salesBlocks,
             ...loyaltyBlocks,
+            ...accountingBlocks,
         ])
     })
 })

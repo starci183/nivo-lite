@@ -28,9 +28,9 @@
         "fields": [
           "id",
           "amountVnd",
-          "content",
-          "counterpartName",
-          "receivedAt",
+          "reference",
+          "payer",
+          "occurredAt",
           "orderId",
           "status"
         ]
@@ -319,7 +319,7 @@
     {
       "key": "ledger-code",
       "kind": "output",
-      "step": "accounting.ledger-append",
+      "step": "accounting.post-payment",
       "params": {
         "reconnectTitle": "Kết nối lại Google (có quyền Sheets) để ghi sổ kế toán"
       },
@@ -352,7 +352,7 @@
     {
       "key": "ledger-judged",
       "kind": "output",
-      "step": "accounting.ledger-append",
+      "step": "accounting.post-payment",
       "params": {
         "reconnectTitle": "Kết nối lại Google (có quyền Sheets) để ghi sổ kế toán"
       },

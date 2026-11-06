@@ -63,6 +63,7 @@
     "tools": [],
     "effects": [
       "channel.send",
+      "chat-message.propose",
       "payment-claim.record",
       "agent.tag",
       "work-item.raise",
@@ -172,17 +173,20 @@
         },
         "recordedEffects": []
       },
-      "next": "reply"
+      "next": "draft"
     },
     {
-      "key": "reply",
+      "key": "draft",
       "kind": "output",
-      "step": "core.reply",
+      "step": "chatbot.draft-reply",
       "input": {
         "conversationId": {
           "$ref": "trigger.conversationId"
         },
-        "text": {
+        "question": {
+          "$ref": "trigger.text"
+        },
+        "grounded": {
           "$ref": "answer.reply"
         }
       },
