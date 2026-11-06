@@ -1,11 +1,11 @@
 /** The private bucket the files of the chat sit in, under the workspace and the room. */
-export const TEAM_CHAT_FILE_BUCKET = "media"
+export const TEAM_CHAT_FILE_BUCKET: string = "media"
 
 /** The largest file of a message, in bytes: 25 MB. */
 export const TEAM_CHAT_FILE_MAX_BYTES: number = 25 * 1024 * 1024
 
 /** How long a signed address to read or write a file lasts, in seconds. */
-export const TEAM_CHAT_FILE_URL_SECONDS = 15 * 60
+export const TEAM_CHAT_FILE_URL_SECONDS: number = 15 * 60
 
 /** The types a message may carry, each with the extension it is stored under. */
 const EXTENSION_OF: Readonly<Record<string, string>> = {
@@ -26,7 +26,8 @@ const EXTENSION_OF: Readonly<Record<string, string>> = {
 /** The longest file name kept. */
 const NAME_MAX = 120
 
-const UUID = "[\\da-f]{8}-[\\da-f]{4}-[\\da-f]{4}-[\\da-f]{4}-[\\da-f]{12}"
+/** The text of the shape of an id, as one part of a key pattern. */
+const UUID: string = String.raw`[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}`
 
 /** Whether the type is one a message may carry. */
 export const isAcceptedType = (mimeType: string): boolean => EXTENSION_OF[mimeType] !== undefined

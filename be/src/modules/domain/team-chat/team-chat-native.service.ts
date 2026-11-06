@@ -11,7 +11,7 @@ import {
     POST_REPORT_SCHEMA,
 } from "./team-chat-native.schema"
 import { approvalCardOf, groupOf } from "./approval-card.policy"
-import { TeamChatService } from "./team-chat.service"
+import { TeamChatRoomsService } from "./team-chat.service"
 
 /** The language the cards of the chat are written in: a job runs for no viewer, so the workspace default. */
 const LOCALE = "vi"
@@ -62,7 +62,7 @@ export class TeamChatNativeService implements NativeAdapter {
     readonly manifest: NativeConnectorManifest = TEAM_CHAT_MANIFEST
 
     constructor(
-        private readonly chat: TeamChatService,
+        private readonly chat: TeamChatRoomsService,
         private readonly rules: AuthorityRulesService,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
     ) {}

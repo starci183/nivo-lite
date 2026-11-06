@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { AgentTagService } from "@modules/domain/agent-work"
-import { AgentOwnershipService } from "./agent-ownership.service"
+import { AgentOwnershipService } from "@modules/domain/agents"
 import { TeamChatTagsService } from "./team-chat-tags.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"

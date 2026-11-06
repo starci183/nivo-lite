@@ -1,30 +1,37 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
-import { OBJECT_STORAGE_ERROR_CODES } from "@starci/object-storage"
+import { FakeClock, fakeIds, mock } from "@starci/jest-preset"
 import type { StorageObjectsPort } from "@modules/integrations/object-storage"
+import { CLOCK } from "@modules/platform/clock"
 import { IDS } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
 import { TeamChatFilesService } from "./team-chat-files.service"
 import { TEAM_CHAT_STORAGE } from "./team-chat.decorators"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const ROOM = "22222222-2222-4222-8222-222222222222"
-const FILE_ID = "33333333-3333-4333-8333-333333333333"
+const FILE_ID = "00000000-0000-4000-8000-000000000001"
 const KEY = `${WS}/team-chat/${ROOM}/${FILE_ID}/plan.pdf`
 const ASK = { fileName: "plan.pdf", mimeType: "application/pdf", sizeBytes: 1000 }
 
 const build = async (withStorage = true) => {
     const storage = mock<StorageObjectsPort>()
-    const ids = mock<Ids>()
-    ids.next.mockReturnValue(FILE_ID)
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            TeamChatFilesService,
-            { provide: IDS, useValue: ids },
-            ...(withStorage ? [{ provide: TEAM_CHAT_STORAGE, useValue: storage }] : []),
-        ],
-    }).compile()
+    const clock = new FakeClock("2026-11-06T10:00:00.000Z")
+    const moduleRef = withStorage
+        ? await Test.createTestingModule({
+              providers: [
+                  TeamChatFilesService,
+                  { provide: IDS, useValue: fakeIds() },
+                  { provide: CLOCK, useValue: clock },
+                  { provide: TEAM_CHAT_STORAGE, useValue: storage },
+              ],
+          }).compile()
+        : await Test.createTestingModule({
+              providers: [
+                  TeamChatFilesService,
+                  { provide: IDS, useValue: fakeIds() },
+                  { provide: CLOCK, useValue: clock },
+              ],
+          }).compile()
     return { service: moduleRef.get(TeamChatFilesService), storage }
 }
 
@@ -60,7 +67,7 @@ describe("TeamChatFilesService requestUpload", () => {
             ok: false,
             refusal: TeamChatErrorCode.FileTooLarge,
         })
-        storage.signedUpload.mockResolvedValue({ kind: "refused", code: OBJECT_STORAGE_ERROR_CODES.Unavailable })
+        storage.signedUpload.mockResolvedValue({ kind: "refused", code: "OBJECT_STORAGE_UNAVAILABLE" })
         await expect(service.requestUpload(WS, ROOM, ASK)).resolves.toEqual({
             ok: false,
             refusal: TeamChatErrorCode.StorageUnavailable,
@@ -94,7 +101,7 @@ describe("TeamChatFilesService verify", () => {
             ok: false,
             refusal: TeamChatErrorCode.FileTypeNotAllowed,
         })
-        storage.sizeOf.mockResolvedValue({ kind: "refused", code: OBJECT_STORAGE_ERROR_CODES.ObjectNotFound })
+        storage.sizeOf.mockResolvedValue({ kind: "refused", code: "OBJECT_STORAGE_NOT_FOUND" })
         await expect(service.verify(WS, ROOM, [KEY])).resolves.toEqual({
             ok: false,
             refusal: TeamChatErrorCode.StorageUnavailable,
@@ -124,7 +131,7 @@ describe("TeamChatFilesService urlsOf", () => {
         storage.signedUrls.mockResolvedValue({ kind: "ok", value: [{ path: KEY, signedUrl: "https://get" }] })
         await expect(service.urlsOf([KEY])).resolves.toEqual(new Map([[KEY, "https://get"]]))
         await expect(service.urlsOf([])).resolves.toEqual(new Map())
-        storage.signedUrls.mockResolvedValue({ kind: "refused", code: OBJECT_STORAGE_ERROR_CODES.Unavailable })
+        storage.signedUrls.mockResolvedValue({ kind: "refused", code: "OBJECT_STORAGE_UNAVAILABLE" })
         await expect(service.urlsOf([KEY])).resolves.toEqual(new Map())
         const bare = await build(false)
         await expect(bare.service.urlsOf([KEY])).resolves.toEqual(new Map())

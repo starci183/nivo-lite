@@ -34,14 +34,16 @@ export interface OpenedForCard {
     readonly requestedByAgentId: string | null
 }
 
+/** Whether the value is a list of texts, as the lists of a stored approver group are. */
+const texts = (value: unknown): value is ReadonlyArray<string> =>
+    Array.isArray(value) && value.every((item) => typeof item === "string")
+
 /** A stored approver group as the group it is, or null when it is not one (a request of a rule stores none). */
 export const groupOf = (stored: unknown): ApproverGroup | null => {
     if (typeof stored !== "object" || stored === null) return null
     const roles: unknown = Reflect.get(stored, "roles")
     const rooms: unknown = Reflect.get(stored, "rooms")
     const members: unknown = Reflect.get(stored, "members")
-    const texts = (value: unknown): value is ReadonlyArray<string> =>
-        Array.isArray(value) && value.every((item) => typeof item === "string")
     return texts(roles) && texts(rooms) && texts(members)
         ? {
               roles: roles.filter(

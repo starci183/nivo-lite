@@ -14,5 +14,6 @@ export class DecideChatApprovalInput {
     /** Approve or reject. */
     @Field(() => ChatVerdict)
     @IsIn(["approve", "reject"])
+    @MaxLength(10)
     verdict!: string
 }

@@ -1,4 +1,13 @@
 import { ApprovalRequestsErrorCode } from "@modules/domain/approval-requests"
+import type { ApprovalState } from "./team-chat.contracts"
+
+/** What a person answers to a decision. */
+export type DecideVerdict = "approve" | "reject"
+
+/** How a decision verdict ended: the state every card of the decision now shows, or why the verdict was refused. */
+export type DecideOutcome =
+    | { readonly ok: true; readonly approval: ApprovalState }
+    | { readonly ok: false; readonly refusal: "decision_not_found" | "not_an_approver" | "decision_closed" }
 
 /** Why a verdict was refused, as the chat names it; null for a failure that is not a refusal of the decision. */
 export const refusalOfDecision = (

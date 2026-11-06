@@ -5,7 +5,7 @@ import type { ApprovalSetup } from "@modules/domain/authority-rules"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { TeamChatNativeService, TEAM_CHAT_MANIFEST } from "./team-chat-native.service"
-import { TeamChatService } from "./team-chat.service"
+import { TeamChatRoomsService } from "./team-chat.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const RUN = "22222222-2222-4222-8222-222222222222"
@@ -16,14 +16,14 @@ const DECISION = "66666666-6666-4666-8666-666666666666"
 const CALLER = { agentId: AGENT, conversationId: null }
 
 const build = async () => {
-    const chat = mock<TeamChatService>()
+    const chat = mock<TeamChatRoomsService>()
     const rules = mock<AuthorityRulesService>()
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, params) => `${key}:${JSON.stringify(params)}`)
     const moduleRef = await Test.createTestingModule({
         providers: [
             TeamChatNativeService,
-            { provide: TeamChatService, useValue: chat },
+            { provide: TeamChatRoomsService, useValue: chat },
             { provide: AuthorityRulesService, useValue: rules },
             { provide: MESSAGE_CATALOG, useValue: catalog },
         ],
@@ -78,7 +78,9 @@ describe("TeamChatNativeService", () => {
             code: "MCP_GATEWAY_UNKNOWN_TOOL",
         })
     })
+})
 
+describe("TeamChatNativeService approval cards", () => {
     it("posts the card of a request to the rooms and seats of the group it stored", async () => {
         const { service, chat } = await build()
         chat.approvalRequest.mockResolvedValue({

@@ -1,11 +1,15 @@
 import assert from "node:assert/strict"
-import { TeamChatService } from "@modules/domain/team-chat"
-import type { TeamChatResult } from "@modules/domain/team-chat"
-import { workspaceMembersEntities } from "@modules/domain/workspace-members"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
+import type { DecideOutcome, TeamChatResult } from "@modules/domain/team-chat"
 import { DecideChatApprovalCommand } from "../../../features/api/team-chat/application/decide-chat-approval.command"
 import { DecideChatApprovalHandler } from "../../../features/api/team-chat/application/decide-chat-approval.handler"
-import type { DecideOutcome } from "../../../features/api/team-chat/application/team-chat.contracts"
 import { persistGraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
+import {
+    openApprovalRequest,
+    persistStaffSeat,
+    persistStranger,
+    seatIdOf,
+} from "../../fixtures/builders/team-chat.builder"
 import type { GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { backendRoleSandbox, currentRole } from "../../world/backend-role-sandbox.service"
@@ -16,8 +20,6 @@ import { useTestWorld } from "../../world/use-test-world"
 /** The real app opens in about a minute on the world; the whole suite shares that one boot. */
 jest.setTimeout(240_000)
 
-const [WorkspaceMemberEntity] = workspaceMembersEntities
-
 const world = useTestWorld({ modules: API_APP_MODULES, sandbox: backendRoleSandbox() })
 const seed = useSeedConnection(world)
 
@@ -26,46 +28,27 @@ const STAFF = world.id()
 const STRANGER = world.id()
 const principal = (id: string) => ({ id, role: "authenticated" as const })
 
-interface SeatRow {
-    readonly id: string
-}
-
-const seatOf = async (userId: string): Promise<string> => {
-    const rows: Array<SeatRow> = await seed.manager.query(
-        "SELECT id FROM public.workspace_members WHERE workspace_id = $1 AND user_id = $2",
-        [who.workspaceId, userId],
-    )
-    return rows[0]?.id ?? ""
-}
+const seatOf = (userId: string): Promise<string> => seatIdOf(seed.manager, who.workspaceId, userId)
 
 beforeAll(async () => {
     await persistGraphTenant(seed.manager, who)
-    await seed.manager.insert("auth.users", { id: STAFF })
-    await seed.manager.insert("auth.users", { id: STRANGER })
-    await seed.manager.insert(WorkspaceMemberEntity, {
-        workspaceId: who.workspaceId,
-        userId: STAFF,
-        role: "staff",
-        displayName: "Staff",
-        status: "active",
-    })
+    await persistStaffSeat(seed.manager, { workspaceId: who.workspaceId, userId: STAFF, displayName: "Staff" })
+    await persistStranger(seed.manager, STRANGER)
     world.cleanup(async () => {
         await removeWorkspace(seed.manager, who.workspaceId)
         await removeAuthUsers(seed.manager, [who.userId, STAFF, STRANGER])
     })
 })
 
-const chat = (): TeamChatService => world.resolve(TeamChatService)
+const chat = (): TeamChatRoomsService => world.resolve(TeamChatRoomsService)
 
 const decide = (userId: string, decisionId: string, verdict: "approve" | "reject"): Promise<DecideOutcome> =>
-    world
-        .resolve(DecideChatApprovalHandler)
-        .execute(
-            new DecideChatApprovalCommand({
-                request: { workspaceId: who.workspaceId, decisionId, verdict },
-                principal: principal(userId),
-            }),
-        )
+    world.resolve(DecideChatApprovalHandler).execute(
+        new DecideChatApprovalCommand({
+            request: { workspaceId: who.workspaceId, decisionId, verdict },
+            principal: principal(userId),
+        }),
+    )
 
 const valueOf = <V>(result: TeamChatResult<V>): V => {
     assert(result.ok, "expected a value, got a refusal")
@@ -75,18 +58,14 @@ const valueOf = <V>(result: TeamChatResult<V>): V => {
 /** A pending request that names the owner as its approver, and its card in a group of the owner and the staff and in the owner direct room with the agent. */
 const askedOfOwner = async (): Promise<{ readonly decisionId: string; readonly roomId: string }> => {
     const ownerSeat = await seatOf(who.userId)
-    const rows: Array<SeatRow> = await seed.manager.query(
-        `INSERT INTO public.approval_requests
-             (workspace_id, chain_step_id, department, action, policy, approvers, timeout_minutes, expires_at, requested_by_agent_id)
-         VALUES ($1, gen_random_uuid(), 'accounting', 'refund', 'any', $2::jsonb, 30, now() + interval '30 minutes', $3)
-         RETURNING id`,
-        [
-            who.workspaceId,
-            JSON.stringify([{ memberId: ownerSeat, name: "Owner", role: "owner", roomId: null }]),
-            who.agentId,
-        ],
-    )
-    const decisionId = rows[0]?.id ?? ""
+    const decisionId = await openApprovalRequest(seed.manager, {
+        workspaceId: who.workspaceId,
+        id: world.id(),
+        chainStepId: world.id(),
+        seatIds: [ownerSeat],
+        agentId: who.agentId,
+        department: "accounting",
+    })
     const room = valueOf(
         await chat().createRoom(who.workspaceId, who.userId, {
             kind: "group",
@@ -127,7 +106,8 @@ describe("decideChatApproval on the real decisions core, as the back-end role", 
     it("refuses from a card, and every card shows the refusal", async () => {
         const { decisionId, roomId } = await askedOfOwner()
         const outcome = await decide(who.userId, decisionId, "reject")
-        expect(outcome).toMatchObject({ ok: true, approval: { status: "refused", decidedByName: expect.any(String) } })
+        expect(outcome).toMatchObject({ ok: true, approval: { status: "refused" } })
+        expect(outcome.ok && outcome.approval.decidedByName).not.toBeNull()
         expect(await cardStates(roomId)).toEqual(["refused", "refused"])
     })
 

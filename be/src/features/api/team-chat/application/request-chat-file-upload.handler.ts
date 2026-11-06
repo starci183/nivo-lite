@@ -1,5 +1,5 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import type { ChatUpload, TeamChatResult } from "@modules/domain/team-chat"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
@@ -14,13 +14,17 @@ export class RequestChatFileUploadHandler extends ICQRSHandler<
 > {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly chat: TeamChatService,
+        private readonly chat: TeamChatRoomsService,
     ) {
         super(logger)
     }
 
     protected override process(command: RequestChatFileUploadCommand): Promise<TeamChatResult<ChatUpload>> {
-        const { principal: p, request: r } = command.params
-        return this.chat.requestUpload(r.workspaceId, p.id, r.roomId, r)
+        return this.chat.requestUpload(
+            command.params.request.workspaceId,
+            command.params.principal.id,
+            command.params.request.roomId,
+            command.params.request,
+        )
     }
 }

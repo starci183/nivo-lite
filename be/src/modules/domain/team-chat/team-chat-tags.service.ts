@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { AgentTagService } from "@modules/domain/agent-work"
-import type { TeamChatTags } from "@modules/domain/team-chat"
-import { AgentOwnershipService } from "./agent-ownership.service"
+import { AgentOwnershipService } from "@modules/domain/agents"
+import type { TeamChatTag, TeamChatTags } from "./team-chat.port"
 
 @Injectable()
 /**
@@ -16,16 +16,7 @@ export class TeamChatTagsService implements TeamChatTags {
     ) {}
 
     /** Writes the tag wake of one message for one agent; false when the person may not hand work to it or the tag was written before. */
-    async handOff(
-        workspaceId: string,
-        tag: {
-            readonly userId: string
-            readonly agentId: string
-            readonly roomId: string
-            readonly messageId: string
-            readonly text: string
-        },
-    ): Promise<boolean> {
+    async handOff(workspaceId: string, tag: TeamChatTag): Promise<boolean> {
         const personId = await this.ownership.memberIdOf(tag.userId, workspaceId)
         if (!(await this.ownership.canAssign(personId, tag.agentId))) return false
         const result = await this.tags.tagAgent({

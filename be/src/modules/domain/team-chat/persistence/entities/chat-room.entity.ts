@@ -1,5 +1,6 @@
 import { UuidAbstractEntity } from "@modules/platform/database"
 import { Column, Entity } from "typeorm"
+import type { RoomKind } from "../../team-chat.contracts"
 
 @Entity({ schema: "public", name: "chat_rooms" })
 /** One row of public.chat_rooms: a direct room of two members or a named group of any number. */
@@ -10,7 +11,7 @@ export class ChatRoomEntity extends UuidAbstractEntity {
 
     /** `direct` or `group`. */
     @Column({ type: "text" })
-    kind!: string
+    kind!: RoomKind
 
     /** The name of a group; null for a direct room. */
     @Column({ type: "text", nullable: true })

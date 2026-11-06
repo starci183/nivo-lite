@@ -8,6 +8,7 @@ export class ChatMemberRefInput {
     /** memberKind */
     @Field(() => ChatMemberKind)
     @IsIn(["user", "agent"])
+    @MaxLength(10)
     memberKind!: string
 
     /** memberId */

@@ -1,4 +1,4 @@
-import type { ApprovalState, MemberRef, UploadAsk } from "@modules/domain/team-chat"
+import type { ChatMemberRef, UploadAsk } from "@modules/domain/team-chat"
 
 /** The workspace selected by X-Workspace-Id; the service proves the caller's seat. */
 export interface TeamChatScope {
@@ -37,13 +37,13 @@ export interface CreateRoomRequest extends TeamChatScope {
     /** The name of a group. */
     readonly name: string | null
     /** The other members. */
-    readonly members: ReadonlyArray<MemberRef>
+    readonly members: ReadonlyArray<ChatMemberRef>
 }
 
 /** A member added to or removed from a room. */
 export interface RoomMemberRequest extends RoomRequest {
     /** The member. */
-    readonly member: MemberRef
+    readonly member: ChatMemberRef
 }
 
 /** A message to send. */
@@ -51,11 +51,11 @@ export interface SendMessageRequest extends TeamChatScope {
     /** The room; null for the first message to a member. */
     readonly roomId: string | null
     /** The member a first message goes to. */
-    readonly to: MemberRef | null
+    readonly to: ChatMemberRef | null
     /** The text. */
     readonly body: string
     /** The members it mentions. */
-    readonly mentions: ReadonlyArray<MemberRef>
+    readonly mentions: ReadonlyArray<ChatMemberRef>
     /** The files it carries. */
     readonly fileKeys: ReadonlyArray<string>
     /** The retry key. */
@@ -84,11 +84,6 @@ export interface DecideRequest extends TeamChatScope {
     /** Approve or reject. */
     readonly verdict: "approve" | "reject"
 }
-
-/** How a decision verdict ended: the state every card of the decision now shows, or why the verdict was refused. */
-export type DecideOutcome =
-    | { readonly ok: true; readonly approval: ApprovalState }
-    | { readonly ok: false; readonly refusal: "decision_not_found" | "not_an_approver" | "decision_closed" }
 
 /** A pin of one message. */
 export interface PinRequest extends RoomRequest {

@@ -1,12 +1,21 @@
 import { Injectable, Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { TEAM_CHAT_STORAGE, TEAM_CHAT_TAGS, TeamChatFilesService, TeamChatService } from "@modules/domain/team-chat"
+import { ApprovalRequestsReadService } from "@modules/domain/approval-requests"
+import {
+    TEAM_CHAT_STORAGE,
+    TEAM_CHAT_TAGS,
+    TeamChatAccessService,
+    TeamChatApprovalsService,
+    TeamChatCardsService,
+    TeamChatFilesService,
+    TeamChatRoomsService,
+    TeamChatStoreService,
+    TeamChatViewsService,
+} from "@modules/domain/team-chat"
 import type { TeamChatTags } from "@modules/domain/team-chat"
-import { WorkspaceMemberSeatsService, WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { OBJECT_STORAGE_ERROR_CODES } from "@starci/object-storage"
 import type { StorageObjectsPort } from "@modules/integrations/object-storage"
-import { IdsModule } from "@modules/platform/ids"
 
 /** What a tag handed to the work core, as the proof records it. */
 export interface RecordedTag {
@@ -38,7 +47,7 @@ export class TeamChatProofStorage implements Pick<
     "signedUpload" | "sizeOf" | "signedUrls" | "remove"
 > {
     /** The size of each uploaded object, by path. */
-    readonly sizes = new Map<string, number>()
+    readonly sizes: Map<string, number> = new Map<string, number>()
     /** The paths that were removed. */
     readonly removed: Array<string> = []
     /** Whether the store answers. */
@@ -82,19 +91,22 @@ export class TeamChatProofStorage implements Pick<
 }
 
 @Module({
-    imports: [IdsModule.register({})],
     providers: [
-        TeamChatService,
+        TeamChatRoomsService,
+        TeamChatStoreService,
+        TeamChatAccessService,
+        TeamChatApprovalsService,
+        TeamChatViewsService,
+        TeamChatCardsService,
         TeamChatFilesService,
-        WorkspaceMemberSeatsService,
-        WorkspaceMembersReadService,
+        ApprovalRequestsReadService,
         AgentDirectoryService,
         TeamChatTagRecorder,
         TeamChatProofStorage,
         { provide: TEAM_CHAT_TAGS, useExisting: TeamChatTagRecorder },
         { provide: TEAM_CHAT_STORAGE, useExisting: TeamChatProofStorage },
     ],
-    exports: [TeamChatService, TeamChatTagRecorder, TeamChatProofStorage],
+    exports: [TeamChatRoomsService, TeamChatTagRecorder, TeamChatProofStorage],
 })
 /** Runs the team chat over the private PostgreSQL proof database with the capabilities it reads people and agents through. */
 export class TeamChatProofModule {

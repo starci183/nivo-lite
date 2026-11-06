@@ -1,13 +1,21 @@
 import assert from "node:assert/strict"
-import { TeamChatErrorCode, TeamChatService } from "@modules/domain/team-chat"
-import type { MemberRef, TeamChatResult } from "@modules/domain/team-chat"
-import { persistTeamChat, teamChatIdentity } from "../../fixtures/builders/team-chat.builder"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
+import type { ChatMemberRef, TeamChatResult } from "@modules/domain/team-chat"
+import {
+    TEAM_CHAT_CODES,
+    openApprovalRequest,
+    persistTeamChat,
+    rejectApprovalRequest,
+    seatIdOf,
+    teamChatIdentity,
+} from "../../fixtures/builders/team-chat.builder"
 import type { TeamChatIdentity } from "../../fixtures/builders/team-chat.builder"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
-import { TeamChatProofModule, TeamChatProofStorage, TeamChatTagRecorder } from "../../world/team-chat-proof.module"
+import { TEAM_CHAT_PROOF_MODULES } from "../../world/team-chat-capabilities.options"
+import { TeamChatProofStorage, TeamChatTagRecorder } from "../../world/team-chat-proof.module"
 import { useTestWorld } from "../../world/use-test-world"
 
-const world = useTestWorld({ modules: [TeamChatProofModule.register()] })
+const world = useTestWorld({ modules: TEAM_CHAT_PROOF_MODULES })
 
 const seed = async (): Promise<TeamChatIdentity> => {
     const identity = teamChatIdentity(() => world.id())
@@ -20,44 +28,29 @@ const seed = async (): Promise<TeamChatIdentity> => {
     return identity
 }
 
-const chat = (): TeamChatService => world.resolve(TeamChatService)
-const user = (memberId: string): MemberRef => ({ memberKind: "user", memberId })
+const chat = (): TeamChatRoomsService => world.resolve(TeamChatRoomsService)
+const user = (memberId: string): ChatMemberRef => ({ memberKind: "user", memberId })
 
 const valueOf = <V>(result: TeamChatResult<V>): V => {
     assert(result.ok, "expected a value, got a refusal")
     return result.value
 }
 
-const refusalOf = <V>(result: TeamChatResult<V>): TeamChatErrorCode | null => (result.ok ? null : result.refusal)
+const refusalOf = <V>(result: TeamChatResult<V>): string | null => (result.ok ? null : result.refusal)
 
-interface SeatRow {
-    readonly id: string
-}
+const seatOf = (workspaceId: string, userId: string): Promise<string> => seatIdOf(world.db.primary, workspaceId, userId)
 
-/** The seat id (workspace_members.id) of an account. */
-const seatOf = async (workspaceId: string, userId: string): Promise<string> => {
-    const rows: Array<SeatRow> = await world.db.primary.query(
-        "SELECT id FROM public.workspace_members WHERE workspace_id = $1 AND user_id = $2",
-        [workspaceId, userId],
-    )
-    return rows[0]?.id ?? ""
-}
+const openRequest = (workspaceId: string, seatIds: ReadonlyArray<string>, agentId: string): Promise<string> =>
+    openApprovalRequest(world.db.primary, {
+        id: world.id(),
+        chainStepId: world.id(),
+        workspaceId,
+        seatIds,
+        agentId,
+        department: "sales",
+    })
 
-/** Writes a pending approval request that names the given seats as approvers. */
-const openRequest = async (workspaceId: string, seatIds: ReadonlyArray<string>, agentId: string): Promise<string> => {
-    const rows: Array<SeatRow> = await world.db.primary.query(
-        `INSERT INTO public.approval_requests
-             (workspace_id, chain_step_id, department, action, policy, approvers, timeout_minutes, expires_at, requested_by_agent_id)
-         VALUES ($1, gen_random_uuid(), 'sales', 'refund', 'any', $2::jsonb, 30, now() + interval '30 minutes', $3)
-         RETURNING id`,
-        [
-            workspaceId,
-            JSON.stringify(seatIds.map((memberId) => ({ memberId, name: "x", role: "staff", roomId: null }))),
-            agentId,
-        ],
-    )
-    return rows[0]?.id ?? ""
-}
+type SendInput = Parameters<TeamChatRoomsService["send"]>[2]
 
 describe("report cards", () => {
     it("writes one report per run in the direct room of the agent and the owner, opened on demand", async () => {
@@ -144,10 +137,7 @@ describe("approval cards", () => {
         expect(direct[0]?.lastMessage?.approval?.canDecide).toBe(true)
         const staffOnly = await chat().messages(workspaceId, ownerId, room.id, 10, null, false)
         expect(staffOnly.nodes[0]?.approval?.canDecide).toBe(false)
-        await world.db.primary.query(
-            "UPDATE public.approval_requests SET status = 'rejected', resolved_at = now(), resolved_by = $2 WHERE id = $1",
-            [decisionId, firstSeat],
-        )
+        await rejectApprovalRequest(world.db.primary, decisionId, firstSeat)
         const settled = await chat().messages(workspaceId, first, room.id, 10, null, false)
         expect(settled.nodes[0]?.approval).toMatchObject({
             status: "refused",
@@ -383,14 +373,14 @@ describe("the tag trigger", () => {
     })
 })
 
-describe("files of a room", () => {
-    const facts = (extra: object = {}) => ({
-        fileName: "Bao gia.pdf",
-        mimeType: "application/pdf",
-        sizeBytes: 1000,
-        ...extra,
-    })
+const facts = (extra: object = {}) => ({
+    fileName: "Bao gia.pdf",
+    mimeType: "application/pdf",
+    sizeBytes: 1000,
+    ...extra,
+})
 
+describe("files of a room", () => {
     it("issues an upload address to a person of the room, refuses a bad type or size as data, and refuses a stranger", async () => {
         const identity = await seed()
         const { workspaceId, ownerId } = identity
@@ -411,24 +401,23 @@ describe("files of a room", () => {
                     facts({ mimeType: "application/x-msdownload" }),
                 ),
             ),
-        ).toBe(TeamChatErrorCode.FileTypeNotAllowed)
+        ).toBe(TEAM_CHAT_CODES.fileTypeNotAllowed)
         expect(
             refusalOf(await chat().requestUpload(workspaceId, first, room.id, facts({ sizeBytes: 26 * 1024 * 1024 }))),
-        ).toBe(TeamChatErrorCode.FileTooLarge)
+        ).toBe(TEAM_CHAT_CODES.fileTooLarge)
         expect(refusalOf(await chat().requestUpload(workspaceId, first, room.id, facts({ sizeBytes: 0 })))).toBe(
-            TeamChatErrorCode.FileTooLarge,
+            TEAM_CHAT_CODES.fileTooLarge,
         )
         expect(refusalOf(await chat().requestUpload(workspaceId, third, room.id, facts()))).toBe(
-            TeamChatErrorCode.NotFound,
+            TEAM_CHAT_CODES.notFound,
         )
         const store = world.resolve(TeamChatProofStorage)
         store.reachable = false
         expect(refusalOf(await chat().requestUpload(workspaceId, first, room.id, facts()))).toBe(
-            TeamChatErrorCode.StorageUnavailable,
+            TEAM_CHAT_CODES.storageUnavailable,
         )
         store.reachable = true
     })
-
     it("stores the checked files with the message and signs their read addresses, and removes a file over the limit", async () => {
         const identity = await seed()
         const { workspaceId, ownerId } = identity
@@ -447,7 +436,7 @@ describe("files of a room", () => {
                 fileKeys: keys,
                 clientId: null,
             })
-        expect(refusalOf(await send([upload.fileKey]))).toBe(TeamChatErrorCode.StorageUnavailable)
+        expect(refusalOf(await send([upload.fileKey]))).toBe(TEAM_CHAT_CODES.storageUnavailable)
         store.sizes.set(upload.fileKey, 1234)
         const sent = valueOf(await send([upload.fileKey]))
         expect(sent.attachments).toEqual([
@@ -463,11 +452,11 @@ describe("files of a room", () => {
         expect(thread.nodes[0]?.attachments[0]?.url).toBe(`https://store.test/get/${upload.fileKey}`)
         const big = valueOf(await chat().requestUpload(workspaceId, first, room.id, facts()))
         store.sizes.set(big.fileKey, 30 * 1024 * 1024)
-        expect(refusalOf(await send([big.fileKey]))).toBe(TeamChatErrorCode.FileTooLarge)
+        expect(refusalOf(await send([big.fileKey]))).toBe(TEAM_CHAT_CODES.fileTooLarge)
         expect(store.removed).toEqual([big.fileKey])
-        expect(refusalOf(await send(["somewhere/else.pdf"]))).toBe(TeamChatErrorCode.FileTypeNotAllowed)
+        expect(refusalOf(await send(["somewhere/else.pdf"]))).toBe(TEAM_CHAT_CODES.fileTypeNotAllowed)
         expect(refusalOf(await send([`${workspaceId}/team-chat/${room.id}/${world.id()}/run.exe`]))).toBe(
-            TeamChatErrorCode.FileTypeNotAllowed,
+            TEAM_CHAT_CODES.fileTypeNotAllowed,
         )
     })
 })
@@ -490,9 +479,9 @@ describe("mute", () => {
         const other = valueOf(
             await chat().createRoom(workspaceId, first, { kind: "group", name: "Other", members: [user(second)] }),
         )
-        expect(refusalOf(await chat().setMuted(workspaceId, ownerId, other.id, true))).toBe(TeamChatErrorCode.NotMember)
+        expect(refusalOf(await chat().setMuted(workspaceId, ownerId, other.id, true))).toBe(TEAM_CHAT_CODES.notMember)
         expect(refusalOf(await chat().setMuted(workspaceId, identity.staffIds[2], room.id, true))).toBe(
-            TeamChatErrorCode.NotFound,
+            TEAM_CHAT_CODES.notFound,
         )
     })
 })
