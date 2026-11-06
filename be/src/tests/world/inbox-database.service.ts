@@ -4,7 +4,7 @@ import { eventsEntities } from "@modules/domain/events"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
 import { mcpCallLogEntities } from "@modules/domain/mcp-call-log"
 import { mcpConnectorsEntities } from "@modules/domain/mcp-connectors"
-import { messagesEntities } from "@modules/domain/messages"
+import { teamChatEntities } from "@modules/domain/team-chat"
 import { inboxEntities } from "@modules/platform/inbox"
 import { sql } from "@modules/platform/database"
 
@@ -16,7 +16,7 @@ const [EventEntity] = eventsEntities
 const [InboundEventEntity] = inboundEventsEntities
 const [McpCallLogEntity] = mcpCallLogEntities
 const [McpConnectorEntity] = mcpConnectorsEntities
-const [MessageEntity] = messagesEntities
+const [, , ChatRoomMessageEntity] = teamChatEntities
 
 /** The most rows one proof read takes; the proofs seed far fewer. */
 const PROOF_ROWS_MAX = 1000
@@ -44,8 +44,8 @@ export interface HoldEvidenceRow {
     readonly evidence: string | null
 }
 
-/** One card line of an operation. */
-export interface NoteCardRow {
+/** One team-chat line an agent said under a client id. */
+export interface NoteLineRow {
     /** The message id. */
     readonly id: string
 }
@@ -131,13 +131,15 @@ export const holdEvidence = async (
     return rows.map((row) => ({ evidence: row.evidence }))
 }
 
-/** The operation's card lines. */
-export const noteCards = (manager: EntityManager, workspaceId: string, title: string): Promise<Array<NoteCardRow>> =>
-    manager
-        .createQueryBuilder(MessageEntity, "m")
-        .select("m.id", "id")
-        .where("m.workspace_id = :workspaceId AND m.card ->> 'title' = :title", { workspaceId, title })
-        .getRawMany<NoteCardRow>()
+/** The team-chat lines of the workspace written under one client id (the key of a line said once). */
+export const noteLines = async (
+    manager: EntityManager,
+    workspaceId: string,
+    clientId: string,
+): Promise<Array<NoteLineRow>> => {
+    const rows = await manager.find(ChatRoomMessageEntity, { where: { workspaceId, clientId }, take: PROOF_ROWS_MAX })
+    return rows.map((row) => ({ id: row.id }))
+}
 
 /** Fails the surrounding transaction with a database error, after the work before it was written. */
 export const failTransaction = async (manager: EntityManager): Promise<void> => {
