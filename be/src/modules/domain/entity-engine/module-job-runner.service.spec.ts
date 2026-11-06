@@ -5,7 +5,7 @@ import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
 import { Secret } from "@modules/platform/config"
 import type { DoorApi, JobDefinition } from "@nivo-lite/agent-sdk/mutation"
 import type { EngineDoorProvider, EngineFailureAlerts } from "./entity-engine.contracts"
-import { ENGINE_DOOR, ENGINE_FAILURE_ALERTS, ENTITY_ENGINE_OPTIONS } from "./entity-engine.decorators"
+import { ENGINE_FAILURE_ALERTS, ENTITY_ENGINE_OPTIONS } from "./entity-engine.decorators"
 import type { EntityEngineOptions } from "./entity-engine.options"
 import { EntityEngineService } from "./entity-engine.service"
 import { EntityPortsService } from "./entity-ports.service"
@@ -68,11 +68,12 @@ const build = async (buildId?: string, withDoor = true) => {
             },
             { provide: JOB_CLAIMS, useValue: claims },
             { provide: ENGINE_FAILURE_ALERTS, useValue: alerts },
-            ...(withDoor ? [{ provide: ENGINE_DOOR, useValue: door }] : []),
         ],
     }).compile()
+    const runner = moduleRef.get(ModuleJobRunnerService)
+    if (withDoor) runner.bindDoor(door)
     return {
-        runner: moduleRef.get(ModuleJobRunnerService),
+        runner,
         engine,
         ports,
         plain,

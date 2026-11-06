@@ -9,3 +9,5 @@ ALTER TABLE public."records_chat_message" ADD CONSTRAINT "records_chat_message_s
 ALTER TABLE public."records_chat_message" VALIDATE CONSTRAINT "records_chat_message_status_chk";
 -- create_index public.records_chat_message:index:records_chat_message_conversation_status_sent: on workspace_id, data->>'conversationid', data->>'status', data->>'sentat'desc, iddesc using btree
 CREATE INDEX "records_chat_message_conversation_status_sent" ON public."records_chat_message" USING btree (workspace_id, ((data->>'conversationId')::uuid), (data->>'status'), (data->>'sentAt') DESC, id DESC);
+-- add_unique public.records_chat_message:index:records_chat_message_one_proposal_key: on workspace_id, data->>'conversationid' using btree
+CREATE UNIQUE INDEX "records_chat_message_one_proposal_key" ON public."records_chat_message" USING btree (workspace_id, ((data->>'conversationId')::uuid)) WHERE (data->>'status') = 'proposed';

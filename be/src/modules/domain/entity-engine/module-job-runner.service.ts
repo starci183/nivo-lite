@@ -1,4 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import { InjectJobClaims } from "@modules/platform/jobs"
 import type { ClaimedJob, JobClaims, ParkWrite } from "@modules/platform/jobs"
 import { classifyFailure } from "@modules/platform/queue"
@@ -6,7 +6,7 @@ import { isModuleJobPayload, MODULE_JOBS_QUEUE } from "@modules/queues/module-jo
 import { DOOR_PORT_ID } from "@nivo-lite/agent-sdk/mutation"
 import type { JobContext, JobDefinition } from "@nivo-lite/agent-sdk/mutation"
 import { runDeclaredJob } from "./declared-job.policy"
-import { InjectEngineDoor, InjectEngineFailureAlerts, InjectEntityEngineOptions } from "./entity-engine.decorators"
+import { InjectEngineFailureAlerts, InjectEntityEngineOptions } from "./entity-engine.decorators"
 import type { EngineDoorProvider, EngineFailureAlerts, JobPorts, RunIn } from "./entity-engine.contracts"
 import type { EntityEngineOptions } from "./entity-engine.options"
 import { EntityEngineService } from "./entity-engine.service"
@@ -25,15 +25,21 @@ import { EntityEngineError, EntityEngineErrorCode } from "./errors/entity-engine
 export class ModuleJobRunnerService {
     private readonly jobs: ReadonlyMap<string, JobDefinition>
 
+    private door: EngineDoorProvider | null = null
+
     constructor(
         private readonly engine: EntityEngineService,
         private readonly ports: EntityPortsService,
         @InjectEngineFailureAlerts() private readonly alerts: EngineFailureAlerts,
         @InjectEntityEngineOptions() private readonly options: EntityEngineOptions,
         @InjectJobClaims() private readonly claims: JobClaims,
-        @Optional() @InjectEngineDoor() private readonly door: EngineDoorProvider | null = null,
     ) {
         this.jobs = new Map(this.options.jobs.map((job) => [job.name, job]))
+    }
+
+    /** The door capability binds itself here at boot; until it does (an app without one), a job that calls the door is parked. */
+    bindDoor(provider: EngineDoorProvider): void {
+        this.door = provider
     }
 
     /** Runs the declared job the claimed delivery addresses; a failure a retry cannot fix parks the job. */
