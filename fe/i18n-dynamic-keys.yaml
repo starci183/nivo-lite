@@ -28,9 +28,6 @@ namespaces:
       reason: "Key family built at run time as `${prefix}${kind}` in modules/agentWork/agentWork.words.ts: the kind (the event a trigger waits for) comes from data, so the detector cannot enumerate the keys."
     - prefix: "tool_"
       reason: "Key family built at run time as `${prefix}${kind}` in modules/agentWork/agentWork.words.ts: the kind (the tool a model named in a title) comes from data, so the detector cannot enumerate the keys."
-  approval:
-    - prefix: "step"
-      reason: "Key family built at run time as `step${key}` in hooks/overviewPromo/overviewPromo.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
   auth:
     - key: "errEmailNotConfirmed"
       reason: "Read by t(authErrorKey(code)) or t(strengthKey(passwordStrength(value))) in the auth forms; authErrorKey and strengthKey of @starci/auth/client return this closed key."
@@ -101,9 +98,6 @@ namespaces:
   connectorDatabase:
     - key: "stepOf"
       reason: 'Read as the string "stepOf" in components/blocks/CsvImportWizard/index.tsx, components/blocks/DatabaseWizard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-  decisions:
-    - key: "loadFailedTitle"
-      reason: 'Read as the string "loadFailedTitle" in components/blocks/AccountingFigures/index.tsx, components/blocks/BookingFigures/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   email:
     - prefix: "err_"
       reason: "Key family built at run time as `err_${message.deliveryError}` in hooks/chatbotThread/chatbotThread.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
@@ -133,15 +127,6 @@ namespaces:
       reason: 'Read as the string "open" in components/blocks/BookingDesk/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "urlHint"
       reason: 'Read as the string "urlHint" in components/blocks/WebhookWizard/component.tsx, components/blocks/WebhookWizard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-  leads:
-    - key: "description"
-      reason: 'Read as the string "description" in components/blocks/AuthorityHead/index.tsx, components/blocks/BookingServices/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - prefix: "filter"
-      reason: "Key family built at run time as `filter${id.charAt(0).toUpperCase()}${id.slice(1)}` in components/blocks/AdminWorkspaces/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - prefix: "step"
-      reason: "Key family built at run time as `step${key}` in hooks/overviewPromo/overviewPromo.shared.ts; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
-    - key: "verified"
-      reason: 'Read as the string "verified" in components/blocks/ResponsibilitiesBoard/index.tsx, hooks/overview/useOverviewOwners.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   metaWizard:
     - key: "pickPick"
       reason: 'Read as the string "pickPick" through the tm translator in hooks/meta-wizard/useMetaWizardActions.ts, a translator the detector does not bind to this namespace.'
@@ -166,36 +151,15 @@ namespaces:
   onboarding:
     - suffix: "Title"
       reason: "Key family built at run time as `${kind}Title` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."
-  overview:
-    - key: "pipeline"
-      reason: 'Read as the string "pipeline" in components/blocks/HiringFigures/index.tsx, features/pages/SalesWorkbenchPage/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "source"
-      reason: 'Read as the string "source" in app/[locale]/workspaces/[workspaceId]/(console)/knowledge/[id]/error.tsx, components/blocks/CsvImportWizard/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   promoAds:
     - suffix: "Title"
       reason: "Key family built at run time as `${kind}Title` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."
-  responsibilities:
-    - prefix: "filter"
-      reason: "Key family built at run time as `filter${id.charAt(0).toUpperCase()}${id.slice(1)}` in components/blocks/AdminWorkspaces/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
   shell:
     - key: "notFoundTitle"
       reason: 'Read as the string "notFoundTitle" in features/pages/AppNotFoundPage/index.tsx, features/pages/LeadNotFoundPage/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-  shifts:
-    - key: "loadFailBody"
-      reason: 'Read as the string "loadFailBody" in features/pages/AuthorityErrorPage/index.tsx, features/pages/InboxErrorPage/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "loadFailTitle"
-      reason: 'Read as the string "loadFailTitle" in components/blocks/AuthorityGoals/index.tsx, components/blocks/AuthorityLimits/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "gridHintEdit"
-      reason: 'Read by t(editable ? "gridHintEdit" : "gridHintView") in hooks/shiftsWorkbench/useShiftsGridView.ts; a conditional choice between two closed keys.'
-    - key: "gridHintView"
-      reason: 'Read by t(editable ? "gridHintEdit" : "gridHintView") in hooks/shiftsWorkbench/useShiftsGridView.ts; a conditional choice between two closed keys.'
-    - key: "openShift"
-      reason: 'Read as the string "openShift" by the helper functions of hooks/shiftsWorkbench/useShiftsGridView.ts, which receive the translator from the hook.'
   system:
     - suffix: "Body"
       reason: "Key family built at run time as `${kind}Body` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."
-    - key: "draftReady"
-      reason: 'Read as the string "draftReady" in components/blocks/ContentPostEditor/index.tsx, hooks/content/useRequestContentDraft.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - prefix: "stage_"
       reason: "Key family built at run time as `stage_${candidate.stage}` in components/blocks/HiringCandidate/index.tsx; the value comes from data (status, kind, id), so the detector cannot enumerate the keys."
   team:
@@ -205,8 +169,6 @@ namespaces:
     - prefix: "refusal_"
       reason: "Key family built at run time as `refusal_${code}` in components/blocks/TeamChat/index.tsx: the code is the closed refusal vocabulary of the chat doors (modules/teamChat ChatRefusalCode), so each key is a literal there."
   video:
-    - key: "actionFailed"
-      reason: 'Read as the string "actionFailed" in hooks/chatbotView/useChatbotInbox.ts, hooks/content/useContentCommand.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "description"
       reason: 'Read as the string "description" in components/blocks/AuthorityHead/index.tsx, components/blocks/BookingServices/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "eyebrow"
@@ -222,27 +184,3 @@ namespaces:
       reason: 'Read as the string "failed" in components/blocks/AutomationsBoard/component.tsx, components/blocks/AutomationsBoard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - suffix: "Title"
       reason: "Key family built at run time as `${kind}Title` in hooks/connection-rows/connection-rows.shared.ts; the stem comes from data, so the detector cannot enumerate the keys."
-  workbenchInventory:
-    - key: "failed"
-      reason: 'Read as the string "failed" in components/blocks/AutomationsBoard/component.tsx, components/blocks/AutomationsBoard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "loadFailedTitle"
-      reason: 'Read as the string "loadFailedTitle" in components/blocks/AccountingFigures/index.tsx, components/blocks/BookingFigures/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-  workbenchLeadGen:
-    - key: "actionFailed"
-      reason: 'Read as the string "actionFailed" in hooks/chatbotView/useChatbotInbox.ts, hooks/content/useContentCommand.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
-    - key: "commentAnonymous"
-      reason: 'Read as the string "commentAnonymous" in hooks/leadgenComments/leadgenComments.shared.ts; the translator that reaches it is handed in from the comments hook, whose namespace the detector does not bind.'
-    - key: "commentFrom"
-      reason: 'Read as the string "commentFrom" in hooks/leadgenComments/leadgenComments.shared.ts; the translator that reaches it is handed in from the comments hook, whose namespace the detector does not bind.'
-    - key: "commentsEmptyBody"
-      reason: 'Read as the string "commentsEmptyBody" in hooks/leadgenComments/leadgenComments.shared.ts; the translator that reaches it is handed in from the comments hook, whose namespace the detector does not bind.'
-    - key: "commentsEmptyTitle"
-      reason: 'Read as the string "commentsEmptyTitle" in hooks/leadgenComments/leadgenComments.shared.ts; the translator that reaches it is handed in from the comments hook, whose namespace the detector does not bind.'
-    - key: "commentsLabel"
-      reason: 'Read as the string "commentsLabel" in hooks/leadgenComments/leadgenComments.shared.ts; the translator that reaches it is handed in from the comments hook, whose namespace the detector does not bind.'
-    - key: "draftLabel"
-      reason: 'Read as the string "draftLabel" in hooks/leadgenComments/leadgenComments.shared.ts; the translator that reaches it is handed in from the comments hook, whose namespace the detector does not bind.'
-    - key: "noDraft"
-      reason: 'Read as the string "noDraft" in hooks/leadgenComments/leadgenComments.shared.ts; the translator that reaches it is handed in from the comments hook, whose namespace the detector does not bind.'
-    - key: "saveApprove"
-      reason: 'Read as the string "saveApprove" in hooks/leadgenComments/leadgenComments.shared.ts; the translator that reaches it is handed in from the comments hook, whose namespace the detector does not bind.'
