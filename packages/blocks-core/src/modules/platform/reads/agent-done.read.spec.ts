@@ -4,7 +4,12 @@ import type { AgentDone } from "../platform.types"
 import { agentDonePort } from "../ports"
 import { DONE_SHOWN, agentDoneRead } from "./agent-done.read"
 
-const CONTEXT: RunContext = { workspaceId: "w1", memberId: "m1", now: new Date("2026-11-04T11:30:00.000Z") }
+const CONTEXT: RunContext = {
+    workspaceId: "w1",
+    memberId: "m1",
+    now: new Date("2026-11-04T11:30:00.000Z"),
+    timeZone: "Asia/Ho_Chi_Minh",
+}
 
 const run = (total: number) => {
     const limits: Array<number> = []

@@ -3,7 +3,12 @@ import { CONNECTIONS_VIEW } from "../fixtures/platform.fixtures"
 import { agentConnectionsPort } from "../ports"
 import { agentConnectionsRead } from "./agent-connections.read"
 
-const CONTEXT: RunContext = { workspaceId: "w1", memberId: "m1", now: new Date("2026-11-04T11:30:00.000Z") }
+const CONTEXT: RunContext = {
+    workspaceId: "w1",
+    memberId: "m1",
+    now: new Date("2026-11-04T11:30:00.000Z"),
+    timeZone: "Asia/Ho_Chi_Minh",
+}
 
 describe("platform.agent-connections", () => {
     it("gives the connections the port finds for the agent", async () => {

@@ -39,7 +39,7 @@ describe("the Chatbot module declaration", () => {
     })
 
     it("gates every read on viewing and every action on replying, both declared", () => {
-        expect(CHATBOT_PERMISSIONS).toEqual(["chatbot.view", "chatbot.reply"])
+        expect(CHATBOT_PERMISSIONS).toEqual(["chatbot.view", "chatbot.reply", "chatbot.manage"])
         expect(new Set(chatbotModule.reads.map((read) => read.permission))).toEqual(new Set(["chatbot.view"]))
         expect(new Set(chatbotModule.actions.map((action) => action.permission))).toEqual(new Set(["chatbot.reply"]))
     })

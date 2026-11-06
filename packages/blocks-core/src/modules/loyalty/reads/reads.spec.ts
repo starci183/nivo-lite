@@ -10,7 +10,12 @@ import { pendingCountRead, pendingRead, pendingWaitingRead } from "./pending.rea
 import { campaignsRead, programRead } from "./program.read"
 import { rewardRead, rewardsRead } from "./rewards.read"
 
-const context: RunContext = { workspaceId: "w1", memberId: "owner-1", now: new Date(SAMPLE_NOW) }
+const context: RunContext = {
+    workspaceId: "w1",
+    memberId: "owner-1",
+    now: new Date(SAMPLE_NOW),
+    timeZone: "Asia/Ho_Chi_Minh",
+}
 
 /** Sixty points of the third member that expire within the warning window. */
 const expiringEntry: StoredEntry = {

@@ -3,7 +3,12 @@ import { KNOWLEDGE_VIEW } from "../fixtures/platform.fixtures"
 import { agentKnowledgePort } from "../ports"
 import { agentKnowledgeRead } from "./agent-knowledge.read"
 
-const CONTEXT: RunContext = { workspaceId: "w1", memberId: "m1", now: new Date("2026-11-04T11:30:00.000Z") }
+const CONTEXT: RunContext = {
+    workspaceId: "w1",
+    memberId: "m1",
+    now: new Date("2026-11-04T11:30:00.000Z"),
+    timeZone: "Asia/Ho_Chi_Minh",
+}
 
 describe("platform.agent-knowledge", () => {
     it("gives the knowledge the port finds for the agent", async () => {

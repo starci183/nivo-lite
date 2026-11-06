@@ -15,8 +15,8 @@ import { CHATBOT_WORKBENCH_SPEC } from "./specs/chatbot.workbench"
 /** The key of the Chatbot module: every read and action id starts with it. */
 export const CHATBOT_MODULE_KEY = "chatbot"
 
-/** The permissions of the Chatbot module: reading the inbox, and replying, taking over and handing back. */
-export const CHATBOT_PERMISSIONS: ReadonlyArray<string> = ["chatbot.view", "chatbot.reply"]
+/** The permissions of the Chatbot module: reading the inbox, replying, taking over and handing back, and managing its settings (owners and managers hold every permission of a module, so this is theirs). */
+export const CHATBOT_PERMISSIONS: ReadonlyArray<string> = ["chatbot.view", "chatbot.reply", "chatbot.manage"]
 
 /**
  * The Chatbot module: the inbox (the conversation list with search and status and channel filters, the chosen thread, the customer

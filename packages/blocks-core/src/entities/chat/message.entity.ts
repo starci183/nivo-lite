@@ -73,5 +73,12 @@ export const messageEntity: EntityDefinition<MessageFields> = defineEntity({
             },
             refusal: "reply-exists",
         },
+        {
+            kind: "unique",
+            name: "one_proposal_key",
+            on: ["conversationId"],
+            where: { op: "eq", field: "status", value: "proposed" },
+            refusal: "proposal-exists",
+        },
     ],
 })

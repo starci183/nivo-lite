@@ -10,7 +10,12 @@ import { moveStageAction } from "./move-stage.action"
 const OWNER = "owner-1"
 const STAFF = "staff-1"
 
-const contextOf = (memberId: string | null): RunContext => ({ workspaceId: "w1", memberId, now: new Date(SAMPLE_NOW) })
+const contextOf = (memberId: string | null): RunContext => ({
+    workspaceId: "w1",
+    memberId,
+    now: new Date(SAMPLE_NOW),
+    timeZone: "Asia/Ho_Chi_Minh",
+})
 
 const execute = (
     action: ActionDefinition,

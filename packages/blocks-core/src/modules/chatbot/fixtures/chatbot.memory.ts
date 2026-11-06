@@ -37,6 +37,7 @@ export const STAFF_CONTEXT: RunContext = {
     workspaceId: "w1",
     memberId: STAFF_ID,
     now: new Date("2026-11-05T03:00:00.000Z"),
+    timeZone: "Asia/Ho_Chi_Minh",
 }
 
 /** The instant every fake record was created and last written at. */
