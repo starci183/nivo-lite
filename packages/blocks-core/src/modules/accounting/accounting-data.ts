@@ -26,6 +26,7 @@ import {
     adjustmentOf,
     bookEntryOf,
     claimOf,
+    customerOf,
     invoiceOf,
     leadNameOf,
     openInvoiceOf,
@@ -371,7 +372,7 @@ export const answerQuestion = async (
     answeredBy: string,
 ): Promise<{ readonly ok: boolean }> => {
     const found = await questions.get(id)
-    if (found === null || found.data["status"] !== "open") return { ok: false }
+    if (found?.data["status"] !== "open") return { ok: false }
     const written = await questions.update(id, found.version, { status: "answered", answer, answeredBy })
     return { ok: written.ok }
 }
@@ -391,3 +392,26 @@ export const workspaceSettings = async (store: EntityApi): Promise<AccountingSet
 /** Saves the settings of the workspace: the one row is written, or rewritten. */
 export const saveWorkspaceSettings = (store: EntityApi, settings: AccountingSettings): Promise<unknown> =>
     store.upsert("scope_key", { scope: SETTINGS_KEY, ...settings })
+
+/** An order that waits for money, with the name of its customer. */
+export interface OpenOrderRecord {
+    /** The order. */
+    readonly order: OrderRecord
+    /** The name of the customer; null when the order has none. */
+    readonly customer: string | null
+}
+
+/** The orders that wait for money (confirmed or invoiced), newest first, at most `limit`: what a payment nobody matched may be assigned to. */
+export const openOrders = async (orders: EntityApi, limit: number): Promise<ReadonlyArray<OpenOrderRecord>> => {
+    const page = await orders.list({
+        select: ORDER_FIELDS,
+        join: { lead: LEAD_NAME_FIELDS },
+        where: q.in("status", ["confirmed", "invoiced"]),
+        order: [["id", "desc"]],
+        page: { size: Math.min(limit, PAGE_SIZE) },
+    })
+    return page.rows.flatMap((listed) => {
+        const order = orderOf(listed)
+        return order === null ? [] : [{ order, customer: customerOf(listed) }]
+    })
+}

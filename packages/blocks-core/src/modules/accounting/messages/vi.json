@@ -170,5 +170,11 @@
   "resolve_transaction_not_open": "Khoản tiền này đã được xử lý.",
   "action_assign_order": "Gán đơn",
   "action_other_income": "Ghi thu khác",
-  "state_payment_other_income": "Thu khác"
+  "state_payment_other_income": "Thu khác",
+  "picker_title": "Gán khoản tiền vào đơn",
+  "picker_search": "Tìm đơn hàng",
+  "picker_empty": "Không có đơn nào đang chờ thanh toán.",
+  "picker_cancel": "Huỷ",
+  "other_income_title": "Ghi khoản này là thu khác?",
+  "other_income_body": "Khoản tiền sẽ được ghi vào sổ như một khoản thu khác, không gắn với đơn hàng nào."
 }

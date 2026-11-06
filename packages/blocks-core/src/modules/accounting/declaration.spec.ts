@@ -16,6 +16,7 @@ describe("accounting module", () => {
             "accounting.due-soon",
             "accounting.weekly",
             "accounting.decisions",
+            "accounting.open-orders",
             "accounting.question-count",
             "accounting.questions",
             "accounting.close-check",

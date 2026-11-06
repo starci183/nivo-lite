@@ -141,5 +141,8 @@
   "blockAccountingPeriodFigures": "Period figures",
   "blockAccountingDueSoon": "Due soon",
   "blockAccountingWeekly": "Income by week",
-  "blockAccountingAgeing": "Receivable ageing"
+  "blockAccountingAgeing": "Receivable ageing",
+  "pickerMatchExact": "Same amount",
+  "pickerMatchNear": "Near the amount",
+  "pickerClose": "Close"
 }

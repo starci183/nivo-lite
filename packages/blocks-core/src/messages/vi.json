@@ -141,5 +141,8 @@
   "blockAccountingPeriodFigures": "Số liệu kỳ",
   "blockAccountingDueSoon": "Sắp đến hạn",
   "blockAccountingWeekly": "Thu nhập theo tuần",
-  "blockAccountingAgeing": "Tuổi nợ"
+  "blockAccountingAgeing": "Tuổi nợ",
+  "pickerMatchExact": "Đúng số tiền",
+  "pickerMatchNear": "Gần số tiền",
+  "pickerClose": "Đóng"
 }

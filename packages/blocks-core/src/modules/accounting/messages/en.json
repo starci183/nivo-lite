@@ -170,5 +170,11 @@
   "resolve_transaction_not_open": "This payment has already been resolved.",
   "action_assign_order": "Assign to an order",
   "action_other_income": "Record as other income",
-  "state_payment_other_income": "Other income"
+  "state_payment_other_income": "Other income",
+  "picker_title": "Assign the payment to an order",
+  "picker_search": "Search orders",
+  "picker_empty": "No order is waiting for payment.",
+  "picker_cancel": "Cancel",
+  "other_income_title": "Record this as other income?",
+  "other_income_body": "The payment is booked as other income and is not tied to any order."
 }
