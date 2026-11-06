@@ -18,7 +18,7 @@ describe("HiringLinksService", () => {
     it("uses the default public origin when the configured site is null", async () => {
         const { service } = await build()
 
-        expect(service.job("coffee-shop", "barista")).toBe("https://app.nivo.vn/j/coffee-shop/barista")
+        expect(service.job("coffee-shop", "barista")).toBe("https://app.nivo.vn/workspaces/coffee-shop/jobs/barista")
         expect(service.interview("interview-token")).toBe("https://app.nivo.vn/j/lich/interview-token")
         expect(service.offer("offer-token")).toBe("https://app.nivo.vn/j/thu/offer-token")
     })
@@ -26,7 +26,9 @@ describe("HiringLinksService", () => {
     it("uses the configured public origin for every candidate link", async () => {
         const { service } = await build({ siteUrl: "https://jobs.example.test" })
 
-        expect(service.job("shop-one", "team-lead")).toBe("https://jobs.example.test/j/shop-one/team-lead")
+        expect(service.job("shop-one", "team-lead")).toBe(
+            "https://jobs.example.test/workspaces/shop-one/jobs/team-lead",
+        )
         expect(service.interview("choose-time")).toBe("https://jobs.example.test/j/lich/choose-time")
         expect(service.offer("answer-offer")).toBe("https://jobs.example.test/j/thu/answer-offer")
     })
@@ -34,7 +36,7 @@ describe("HiringLinksService", () => {
     it("preserves an explicitly empty origin", async () => {
         const { service } = await build({ siteUrl: "" })
 
-        expect(service.job("shop", "cashier")).toBe("/j/shop/cashier")
+        expect(service.job("shop", "cashier")).toBe("/workspaces/shop/jobs/cashier")
         expect(service.interview("time-token")).toBe("/j/lich/time-token")
         expect(service.offer("letter-token")).toBe("/j/thu/letter-token")
     })
