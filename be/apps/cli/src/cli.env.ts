@@ -5,7 +5,6 @@ import { parseMcpGatewayConfig } from "@modules/domain/mcp-gateway"
 import { parseMcpConfig } from "@modules/integrations/mcp"
 import { parseConnectionsConfig } from "@modules/domain/connections"
 import { parseChannelSetupConfig } from "@modules/integrations/channel-setup"
-import { parseN8nHostConfig } from "@modules/integrations/n8n-host"
 import { parseOpenclawConfig } from "@modules/integrations/openclaw"
 import { parseObjectStorageConfig } from "@modules/integrations/object-storage"
 import { parseIdentityAuthConfig } from "@modules/domain/identity"
@@ -22,8 +21,6 @@ export interface CliAppOptions {
     readonly mcpGateway: ReturnType<typeof parseMcpGatewayConfig>
     /** The connections the built-in migrate and seed groups operate on. */
     readonly connections: ReadonlyArray<ReturnType<typeof parsePrimaryDatabaseConfig>>
-    /** Where the shared n8n container runs, for `sync-n8n`. */
-    readonly n8nHost: ReturnType<typeof parseN8nHostConfig>
     /** Our own access-token keys: the accounts the demo-workspace seed proves a password or a token against. */
     readonly passport: ReturnType<typeof parsePassportConfig>
     /** The web origin and lifetimes of sign-in, behind the account administration. */
@@ -55,7 +52,6 @@ export const readCliEnv = (env: EnvSource): CliAppOptions => ({
     workspaceSeed: parseWorkspaceSeedConfig(env),
     mcpGateway: parseMcpGatewayConfig(env, parseMcpConfig(env)),
     connections: [parsePrimaryDatabaseConfig(env)],
-    n8nHost: parseN8nHostConfig(env),
     passport: parsePassportConfig(env),
     identityAuth: parseIdentityAuthConfig(env),
     mail: parseMailConfig(env),

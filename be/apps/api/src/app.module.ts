@@ -44,7 +44,7 @@ export class AppModule {
                 ...authenticationModules(options),
                 ...identityModules(options),
                 ...connectionsModules(options),
-                ...automationsModules(options),
+                ...automationsModules(),
                 ...messagingModules(options),
                 ...videoModules(options),
                 ...businessModules(options),

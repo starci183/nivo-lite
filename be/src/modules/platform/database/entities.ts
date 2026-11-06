@@ -13,9 +13,7 @@ import { approvalRequestsEntities } from "@modules/domain/approval-requests"
 import { authorityEntities } from "@modules/domain/authority"
 import { authorityActionsEntities } from "@modules/domain/authority-actions"
 import { authorityRulesEntities } from "@modules/domain/authority-rules"
-import { automationCommandsEntities } from "@modules/domain/automation-commands"
 import { automationPipelinesEntities } from "@modules/domain/automation-pipelines"
-import { automationRunsEntities } from "@modules/domain/automation-runs"
 import { automationTemplatesEntities } from "@modules/domain/automation-templates"
 import { bankFeedInboxEntities } from "@modules/domain/bank-feed-inbox"
 import { connectionPollEntities } from "@modules/domain/connection-poll"
@@ -96,9 +94,7 @@ import { moduleSetupMessagesEntities } from "@modules/domain/module-setup-messag
 import { moduleSetupSessionsEntities } from "@modules/domain/module-setup-sessions"
 import { moduleSetupWritesEntities } from "@modules/domain/module-setup-writes"
 import { modulesEntities } from "@modules/domain/modules"
-import { n8nRunsEntities } from "@modules/domain/n8n-runs"
 import { nivoKnowledgeEntities } from "@modules/domain/nivo-knowledge"
-import { officeCommandCandidatesEntities } from "@modules/domain/office-command-candidates"
 import { officeRoomsEntities } from "@modules/domain/office-rooms"
 import { openclawAgentSyncEntities } from "@modules/domain/openclaw-agent-sync"
 import { ordersEntities } from "@modules/domain/orders"
@@ -114,8 +110,6 @@ import { shiftsEntities } from "@modules/domain/shifts"
 import { staffEntities } from "@modules/domain/staff"
 import { supplierPayablesEntities } from "@modules/domain/supplier-payables"
 import { telegramInboxEntities } from "@modules/domain/telegram-inbox"
-import { threadMessagesEntities } from "@modules/domain/thread-messages"
-import { threadWorkEntities } from "@modules/domain/thread-work"
 import { agentGraphsEntities } from "@modules/domain/agent-graphs"
 import { agentTemplatesEntities } from "@modules/domain/agent-templates"
 import { templateMarketplaceEntities } from "@modules/domain/template-marketplace"
@@ -127,9 +121,7 @@ import { videoDelegationsEntities } from "@modules/domain/video-delegations"
 import { videoProjectVersionsEntities } from "@modules/domain/video-project-versions"
 import { videoProjectsEntities } from "@modules/domain/video-projects"
 import { videoRendersEntities } from "@modules/domain/video-renders"
-import { workChainsEntities } from "@modules/domain/work-chains"
 import { workItemsEntities } from "@modules/domain/work-items"
-import { workThreadsEntities } from "@modules/domain/work-threads"
 import { workspaceInvitesEntities } from "@modules/domain/workspace-invites"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { workspacesEntities } from "@modules/domain/workspaces"
@@ -162,9 +154,7 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...authorityEntities,
     ...authorityActionsEntities,
     ...authorityRulesEntities,
-    ...automationCommandsEntities,
     ...automationPipelinesEntities,
-    ...automationRunsEntities,
     ...automationTemplatesEntities,
     ...bankFeedInboxEntities,
     ...connectionPollEntities,
@@ -245,9 +235,7 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...moduleSetupSessionsEntities,
     ...moduleSetupWritesEntities,
     ...modulesEntities,
-    ...n8nRunsEntities,
     ...nivoKnowledgeEntities,
-    ...officeCommandCandidatesEntities,
     ...officeRoomsEntities,
     ...openclawAgentSyncEntities,
     ...ordersEntities,
@@ -263,8 +251,6 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...staffEntities,
     ...supplierPayablesEntities,
     ...telegramInboxEntities,
-    ...threadMessagesEntities,
-    ...threadWorkEntities,
     ...agentGraphsEntities,
     ...agentTemplatesEntities,
     ...templateMarketplaceEntities,
@@ -276,9 +262,7 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...videoProjectVersionsEntities,
     ...videoProjectsEntities,
     ...videoRendersEntities,
-    ...workChainsEntities,
     ...workItemsEntities,
-    ...workThreadsEntities,
     ...workspaceInvitesEntities,
     ...workspaceMembersEntities,
     ...workspacesEntities,

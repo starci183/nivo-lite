@@ -199,10 +199,6 @@
           "reason": "owner member of a workspace"
         },
         {
-          "name": "public.automations_data",
-          "reason": "automation overview read"
-        },
-        {
           "name": "public.shell_data",
           "reason": "app shell bootstrap read"
         },

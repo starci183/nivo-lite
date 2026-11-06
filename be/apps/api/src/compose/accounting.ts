@@ -21,11 +21,6 @@ import {
     WORK_PERFORMERS_MESSAGES,
     WorkPerformersModule,
 } from "@modules/domain/work-performers"
-import {
-    OFFICE_COMMAND_CANDIDATES_ERROR_KINDS,
-    OFFICE_COMMAND_CANDIDATES_MESSAGES,
-    OfficeCommandCandidatesModule,
-} from "@modules/domain/office-command-candidates"
 import { OFFICE_ROOMS_ERROR_KINDS, OFFICE_ROOMS_MESSAGES, OfficeRoomsModule } from "@modules/domain/office-rooms"
 import { AI_TASKS_ERROR_KINDS, AI_TASKS_MESSAGES, AiTasksService } from "@modules/domain/ai-tasks"
 import type { ErrorKind } from "@modules/platform/errors"
@@ -41,7 +36,6 @@ export const accountingModules = (): Array<DynamicModule> => [
     TransactionsModule.register({ isGlobal: true }),
     EmailMessagesModule.register({ isGlobal: true }),
     WorkPerformersModule.register({ isGlobal: true, writer: AiTasksService }),
-    OfficeCommandCandidatesModule.register({ isGlobal: true, reader: AiTasksService }),
     OfficeRoomsModule.register({ isGlobal: true }),
 ]
 
@@ -53,7 +47,6 @@ export const accountingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKi
     TRANSACTIONS_ERROR_KINDS,
     WORK_PERFORMERS_ERROR_KINDS,
     AI_TASKS_ERROR_KINDS,
-    OFFICE_COMMAND_CANDIDATES_ERROR_KINDS,
     STAFF_ERROR_KINDS,
     ACCOUNTING_ERROR_KINDS,
     OFFICE_ROOMS_ERROR_KINDS,
@@ -67,7 +60,6 @@ export const accountingMessages: ReadonlyArray<MessageBundle> = [
     TRANSACTIONS_MESSAGES,
     WORK_PERFORMERS_MESSAGES,
     AI_TASKS_MESSAGES,
-    OFFICE_COMMAND_CANDIDATES_MESSAGES,
     STAFF_MESSAGES,
     ACCOUNTING_MESSAGES,
     OFFICE_ROOMS_MESSAGES,

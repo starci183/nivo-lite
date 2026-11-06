@@ -1,62 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import { AuthorityService } from "@modules/domain/authority"
-import { ModuleCatalogService, formatVnd } from "@modules/domain/decisions"
 import type { WorkContext } from "@modules/domain/decisions"
-import type { LeadRecordRow } from "@modules/domain/leads"
-import { authorityBrief } from "@modules/domain/ai-tasks"
-import type { AiTaskScope, LeadInput } from "@modules/domain/ai-tasks"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 
-/** The module whose knowledge lane the follow-up and care drafts read. */
-const SALES_LANE = "sales"
-
 @Injectable()
-/** What every performer reaches for: its texts, the owner's authority brief for prompts, the prompt scope, and the labels of departments and money. */
+/** What every performer reaches for: its texts in the language of the call. */
 export class PerformerKitService {
-    constructor(
-        @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        private readonly authority: AuthorityService,
-        private readonly modules: ModuleCatalogService,
-    ) {}
+    constructor(@InjectMessageCatalog() private readonly catalog: MessageCatalog) {}
 
     /** A performer text in the language of the call. */
     text(ctx: WorkContext, key: string, params: Readonly<Record<string, string | number>> = {}): string {
         return this.catalog.get(`performers.${key}`, params, ctx.locale)
-    }
-
-    /** An amount in dong, or "no amount yet" when there is none. */
-    money(ctx: WorkContext, amount: number | null | undefined): string {
-        return amount === null || amount === undefined ? this.text(ctx, "orderNoAmount") : formatVnd(amount, ctx.locale)
-    }
-
-    /** The owner's granted authority as a prompt section; empty when nothing is set. */
-    async brief(ctx: WorkContext): Promise<string> {
-        return authorityBrief(await this.authority.load({ workspaceId: ctx.workspaceId }))
-    }
-
-    /** Who and what language a prompt writes for. */
-    scope(ctx: WorkContext): AiTaskScope {
-        return { workspaceId: ctx.workspaceId, locale: ctx.locale }
-    }
-
-    /** The scope of a drafting prompt: the language and workspace, plus the customer lane of the sales agent its business notes come from. */
-    draftScope(ctx: WorkContext): AiTaskScope {
-        return { ...this.scope(ctx), lane: { module: SALES_LANE, installationId: null, audience: "customer" } }
-    }
-
-    /** The lead as a prompt reads it. */
-    leadInput(lead: LeadRecordRow): LeadInput {
-        return { contact_name: lead.contact_name, company: lead.company, channel: lead.channel, need: lead.need }
-    }
-
-    /** The name of a department in the language of the call. */
-    department(ctx: WorkContext, department: string): Promise<string> {
-        return this.modules.nameOf(department, ctx.locale)
-    }
-
-    /** The label of a lead stage. */
-    stage(ctx: WorkContext, stage: string): string {
-        return this.text(ctx, `stage.${stage}`)
     }
 }

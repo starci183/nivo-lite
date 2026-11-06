@@ -27,14 +27,6 @@ export const JOB_TICKS: ReadonlyArray<JobTick> = [
         payload: {},
     },
     {
-        name: "automation-tick",
-        cron: "*/1 * * * *",
-        timeZone: "UTC",
-        queue: "automation",
-        job: "automation.tick",
-        payload: {},
-    },
-    {
         name: "connection-health-tick",
         cron: "*/15 * * * *",
         timeZone: "UTC",
@@ -64,14 +56,6 @@ export const JOB_TICKS: ReadonlyArray<JobTick> = [
         timeZone: "UTC",
         queue: "decisions",
         job: "decisions.agent-graph-watch",
-        payload: {},
-    },
-    {
-        name: "decisions-drain-work",
-        cron: "*/1 * * * *",
-        timeZone: "UTC",
-        queue: "decisions",
-        job: "decisions.drain-work",
         payload: {},
     },
     {

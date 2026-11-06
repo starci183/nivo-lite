@@ -194,7 +194,6 @@ const localApiOptions = (): ApiOptions => ({
     },
     channelSetup: { zaloOauthBase: undefined, siteUrl: SITE, timeoutMs: 1000 },
     webhookDelivery: { timeoutMs: 1000 },
-    n8n: { signingSecret: new Secret("world-proof"), webhookBase: undefined, allowedHosts: [], timeoutMs: 1000 },
     ffmpeg: { nice: false },
     tts: { provider: "none", cacheDir: "world-proof/cache", workDir: "world-proof/work", minGapMs: 0 },
     video: { fontsDir: "world-proof/fonts", workDir: "world-proof/work", maxSeconds: 60, ffmpegThreads: 1 },

@@ -5,7 +5,6 @@ import { LeadReadService } from "@modules/domain/leads"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { DecisionEntry, EvidenceEntry, WorkContext } from "./decisions.contracts"
-import type { AccountingDecisionRow } from "./decision-log.rows"
 import { DecisionEntity } from "./persistence/entities"
 import type { DecisionHistoryQuery, LeadDecisionRecord } from "./decision-history.contracts"
 
@@ -64,25 +63,6 @@ export class EvidenceService {
             leadName: row.lead_id === null ? null : (names.get(row.lead_id) ?? null),
             decided_by: members.get(row.decidedByMemberId ?? "") ?? row.decided_by,
         }))
-    }
-
-    /** The newest accounting decisions' lineage for the accounting book. */
-    listAccounting(workspaceId: string, limit: number = 500): Promise<Array<AccountingDecisionRow>> {
-        return this.entityManager
-            .createQueryBuilder(DecisionEntity, "d")
-            .select("d.id", "id")
-            .addSelect("d.workItemId", "work_item_id")
-            .addSelect("d.action", "action")
-            .addSelect("d.decidedBy", "decided_by")
-            .addSelect("d.deciderKind", "decider_kind")
-            .addSelect("d.outcome", "outcome")
-            .addSelect("d.note", "note")
-            .addSelect("to_json(d.createdAt) #>> '{}'", "created_at")
-            .where("d.workspaceId = :workspaceId AND d.department = 'accounting'", { workspaceId })
-            .orderBy("d.createdAt", "DESC")
-            .addOrderBy("d.id", "DESC")
-            .limit(limit)
-            .getRawMany<AccountingDecisionRow>()
     }
 
     /** Appends one line to the workspace's evidence log; the events capability is its only writer. */

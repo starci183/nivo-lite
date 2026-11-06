@@ -1,18 +1,14 @@
 import type { DynamicModule } from "@nestjs/common"
 import { AgentWakesMessageModule } from "@features/reactors/agent-wakes"
 import { AgentSyncMessageModule } from "@features/reactors/agent-sync"
-import { AutomationTriggersMessageModule } from "@features/reactors/automation-triggers"
-import { BankCreditSettlementMessageModule } from "@features/reactors/bank-credit-settlement"
 import { BankFeedPollMessageModule } from "@features/reactors/bank-feed-poll"
 import { BookingEffectsMessageModule } from "@features/reactors/booking-effects"
 import { ContentDraftingMessageModule } from "@features/reactors/content-drafting"
 import { ConversationHandbackMessageModule } from "@features/reactors/conversation-handback"
 import { ContractRenewalMessageModule } from "@features/reactors/contract-renewal"
 import { InventoryDeductionMessageModule } from "@features/reactors/inventory-deduction"
-import { PaymentReceiptsMessageModule } from "@features/reactors/payment-receipts"
 import { SourceFactsMessageModule } from "@features/reactors/source-facts"
 import { AgentGraphApprovalsMessageModule } from "@features/reactors/agent-graph-approvals"
-import { ThreadOutcomesMessageModule } from "@features/reactors/thread-outcomes"
 import { VideoScriptingMessageModule } from "@features/reactors/video-scripting"
 import { ZaloInboxPollMessageModule } from "@features/reactors/zalo-inbox-poll"
 
@@ -21,17 +17,13 @@ export const API_REACTORS: Array<DynamicModule> = [
     AgentGraphApprovalsMessageModule.register({}),
     AgentSyncMessageModule.register({}),
     AgentWakesMessageModule.register({}),
-    AutomationTriggersMessageModule.register({}),
-    BankCreditSettlementMessageModule.register({}),
     BankFeedPollMessageModule.register({}),
     BookingEffectsMessageModule.register({}),
     ContentDraftingMessageModule.register({}),
     ContractRenewalMessageModule.register({}),
     ConversationHandbackMessageModule.register({}),
     InventoryDeductionMessageModule.register({}),
-    PaymentReceiptsMessageModule.register({}),
     SourceFactsMessageModule.register({}),
-    ThreadOutcomesMessageModule.register({}),
     VideoScriptingMessageModule.register({}),
     ZaloInboxPollMessageModule.register({}),
 ]

@@ -1,11 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import { WorkEngineService } from "@modules/domain/decisions"
 import { EmailMessagesService, WorkspaceMailService, isMailAddress } from "@modules/domain/email-messages"
-import type { SendEmailResult } from "@modules/domain/email-messages"
-import type { CustomerEmail, MailOutcome, N8nMailer, OwnerEmail } from "@modules/domain/n8n-runs"
-import { renderEmail } from "@modules/integrations/mail"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import type { CustomerEmail, MailOutcome, WorkspaceMailer } from "./workspace-mailer.contracts"
 
 /** The language of the owner layout and of the waiting decision. */
 const LOCALE: Locale = "vi"
@@ -21,56 +19,19 @@ const oneLine = (text: string, max: number): string =>
         .trim()
         .slice(0, max)
 
-const outcomeOf = (sent: SendEmailResult): MailOutcome => ({
-    status: sent.status,
-    via: sent.via,
-    emailMessageId: sent.emailMessageId,
-    messageId: sent.messageId ?? null,
-    error: sent.error ?? null,
-})
-
 @Injectable()
 /**
- * The mail of the product. An owner is mailed straight (with the files the workflow attached), through the workspace's own mail
- * account or, for an owner notice only, the platform sender. A customer email is the only way to reach a customer by mail: it becomes
+ * The mail of the product. A customer email is the only way to reach a customer by mail: it becomes
  * a `send_email` work item and the owner's authority gate decides; `auto` sends now, `ask` keeps the draft waiting in Decisions. A
  * workspace without its own SMTP connection cannot mail customers at all, so nothing is queued and the attempt is recorded as no_smtp.
  */
-export class WorkspaceMailerService implements N8nMailer {
+export class WorkspaceMailerService implements WorkspaceMailer {
     constructor(
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly mail: WorkspaceMailService,
         private readonly log: EmailMessagesService,
         private readonly engine: WorkEngineService,
     ) {}
-
-    /** Renders the shop layout and sends the email to the owner, attachments included. */
-    async sendOwnerEmail(email: OwnerEmail): Promise<MailOutcome> {
-        const rendered = renderEmail({
-            shopName: email.shopName,
-            title: email.subject,
-            body: email.text,
-            footer: this.catalog.get("performers.emailFooter", { shop: email.shopName }, LOCALE),
-            lang: LOCALE,
-        })
-        const sent = await this.mail.send({
-            workspaceId: email.workspaceId,
-            to: email.to,
-            subject: email.subject,
-            html: rendered.html,
-            text: rendered.text,
-            purpose: email.purpose,
-            refs: email.refs,
-            audience: "owner",
-            attachments: email.attachments.map((attachment) => ({
-                filename: attachment.filename,
-                content: attachment.content,
-                contentType: attachment.contentType,
-                encoding: attachment.encoding,
-            })),
-        })
-        return outcomeOf(sent)
-    }
 
     /** Asks for a customer email through the gate; one request per business event, so a retry never sends twice. */
     async requestCustomerEmail(email: CustomerEmail): Promise<MailOutcome> {

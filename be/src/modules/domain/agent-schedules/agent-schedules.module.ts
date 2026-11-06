@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { BackgroundWorkHandlerService } from "./background-work-handler.service"
 import { INBOX, InboxService } from "@modules/platform/inbox"
-import { WakeAgentExecutorService } from "./wake-agent-executor.service"
 import { AgentEventWakesService } from "./agent-event-wakes.service"
 import { AgentDrainJobService } from "./agent-drain-job.service"
 import { AgentProbesService } from "./agent-probes.service"
@@ -13,6 +12,7 @@ import { NewDocumentsProbeService } from "./probes/new-documents-probe.service"
 import { TasksDueProbeService } from "./probes/tasks-due-probe.service"
 import { AgentTriggerSyncService } from "./agent-trigger-sync.service"
 import { AgentWorkSweepService } from "./agent-work-sweep.service"
+import { BACKGROUND_VOICE } from "./agent-schedules.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-schedules.module-definition"
 
 @Module({})
@@ -30,8 +30,10 @@ export class AgentSchedulesModule extends ConfigurableModuleClass {
                 ? [
                       BackgroundWorkHandlerService,
                       AgentEventWakesService,
-                      WakeAgentExecutorService,
                       { provide: INBOX, useClass: InboxService },
+                      ...(options.voice === undefined
+                          ? []
+                          : [{ provide: BACKGROUND_VOICE, useExisting: options.voice }]),
                   ]
                 : []
         return {

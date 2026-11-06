@@ -1,12 +1,10 @@
 import { ACCOUNTING_DESK_QUEUE, ACCOUNTING_MORNING_JOB } from "@modules/queues/accounting-desk"
 import { AGENT_TURN_QUEUE, AgentTurnJob } from "@modules/queues/agent-turn"
 import { AGENTS_QUEUE, AgentsJob } from "@modules/queues/agents"
-import { AUTOMATION_QUEUE, AUTOMATION_TICK_JOB } from "@modules/queues/automation"
 import { CONNECTION_POLL_QUEUE, POLL_DUE_CONNECTIONS_JOB } from "@modules/queues/connection-poll"
 import { CONNECTION_HEALTH_QUEUE } from "@modules/queues/connection-health"
 import { CONTENT_TICK_QUEUE } from "@modules/queues/content-tick"
 import { DATA_SYNC_QUEUE } from "@modules/queues/data-sync"
-import { DECISIONS_QUEUE, DecisionsJob } from "@modules/queues/decisions"
 import { MARKETING_TICK_QUEUE } from "@modules/queues/marketing-tick"
 import { REALTIME_RETENTION_QUEUE } from "@modules/queues/realtime-retention"
 import { SYSTEM_HISTORY_RETENTION_QUEUE } from "@modules/queues/system-history-retention"
@@ -35,7 +33,6 @@ export const JOB_TICKS: Readonly<Record<string, JobTick>> = {
     },
     "agent-work-sweep": { queue: AGENT_TURN_QUEUE, job: AgentTurnJob.Sweep, payload: {}, minutes: 1 },
     "agents-sync-all": { queue: AGENTS_QUEUE, job: AgentsJob.Sync, payload: {}, minutes: 5 },
-    "automation-tick": { queue: AUTOMATION_QUEUE, job: AUTOMATION_TICK_JOB, payload: {}, minutes: 1 },
     "connection-health-tick": {
         queue: CONNECTION_HEALTH_QUEUE,
         job: CONNECTION_HEALTH_QUEUE,
@@ -50,7 +47,6 @@ export const JOB_TICKS: Readonly<Record<string, JobTick>> = {
     },
     "content-tick": { queue: CONTENT_TICK_QUEUE, job: CONTENT_TICK_QUEUE, payload: {}, minutes: 15 },
     "data-sync-tick": { queue: DATA_SYNC_QUEUE, job: DATA_SYNC_QUEUE, payload: { tick: true }, minutes: 1 },
-    "decisions-drain-work": { queue: DECISIONS_QUEUE, job: DecisionsJob.DrainWork, payload: {}, minutes: 1 },
     "marketing-tick": { queue: MARKETING_TICK_QUEUE, job: MARKETING_TICK_QUEUE, payload: {}, minutes: 15 },
     "realtime-retention-tick": {
         queue: REALTIME_RETENTION_QUEUE,

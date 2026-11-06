@@ -6,7 +6,6 @@ export { AgentEventWakesService } from "./agent-event-wakes.service"
 export { AgentProbesService } from "./agent-probes.service"
 export { AgentScheduleFireService } from "./agent-schedule-fire.service"
 export { AgentWorkSweepService } from "./agent-work-sweep.service"
-export { BACKGROUND_VOICE } from "./agent-schedules.decorators"
 export type {
     BackgroundLine,
     BackgroundVoice,

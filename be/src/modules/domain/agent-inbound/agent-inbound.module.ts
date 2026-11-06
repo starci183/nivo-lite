@@ -9,7 +9,7 @@ import { GenericWebhookJobService } from "./generic-webhook-job.service"
 import { InboundDoorService } from "./inbound-door.service"
 import { InboundWorkHandlerService } from "./inbound-work-handler.service"
 import { WebhookDoorStepService } from "./webhook-door-step.service"
-import { INBOUND_ADAPTER_REGISTRY } from "./agent-inbound.decorators"
+import { INBOUND_ADAPTER_REGISTRY, INBOUND_STOP_REPORTER } from "./agent-inbound.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-inbound.module-definition"
 
 @Module({})
@@ -28,6 +28,9 @@ export class AgentInboundModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 { provide: INBOX, useClass: InboxService },
+                ...(options.stopReporter === undefined
+                    ? []
+                    : [{ provide: INBOUND_STOP_REPORTER, useExisting: options.stopReporter }]),
                 InboundAdapterRegistryService,
                 { provide: INBOUND_ADAPTER_REGISTRY, useExisting: InboundAdapterRegistryService },
                 InboundDoorService,

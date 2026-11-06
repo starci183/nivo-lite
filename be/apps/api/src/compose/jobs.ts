@@ -12,15 +12,10 @@ import { DraftPublicDocumentQueueModule } from "@features/jobs/draft-public-docu
 import { RunBrainCommandQueueModule } from "@features/jobs/run-brain-command"
 import { IndexKnowledgeSourceQueueModule } from "@features/jobs/index-knowledge-source"
 import { ReembedKnowledgeQueueModule } from "@features/jobs/reembed-knowledge"
-import { EmitN8nEventQueueModule } from "@features/jobs/emit-n8n-event"
 import { EmitWebhookEventQueueModule } from "@features/jobs/emit-webhook-event"
-import { RunAutomationCommandQueueModule } from "@features/jobs/run-automation-command"
-import { RunAutomationTickQueueModule } from "@features/jobs/run-automation-tick"
-import { RunDecisionsQueueModule } from "@features/jobs/run-decisions"
 import { RunSetupTurnQueueModule } from "@features/jobs/run-setup-turn"
 import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
 import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
-import { DrainWorkQueueModule } from "@features/jobs/drain-work"
 import { ExpireApprovalsQueueModule } from "@features/jobs/expire-approvals"
 import { WatchAgentGraphsQueueModule } from "@features/jobs/watch-agent-graphs"
 import { DraftLoyaltyCampaignQueueModule } from "@features/jobs/draft-loyalty-campaign"
@@ -73,15 +68,10 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     RunBrainCommandQueueModule.register({}),
     IndexKnowledgeSourceQueueModule.register({}),
     ReembedKnowledgeQueueModule.register({}),
-    EmitN8nEventQueueModule.register({}),
     EmitWebhookEventQueueModule.register({}),
-    RunAutomationCommandQueueModule.register({}),
-    RunAutomationTickQueueModule.register({}),
-    RunDecisionsQueueModule.register({}),
     RunSetupTurnQueueModule.register({}),
     GenerateWithAgentQueueModule.register({}),
     SyncAgentsQueueModule.register({}),
-    DrainWorkQueueModule.register({}),
     ExpireApprovalsQueueModule.register({}),
     WatchAgentGraphsQueueModule.register({}),
     DraftLoyaltyCampaignQueueModule.register({}),

@@ -49,9 +49,6 @@ export const TEXTS: Readonly<Record<string, string>> = {
     "command.sender.owner": "Owner",
     "command.sender.inbound": "Customer",
     "command.mirror": "@{{to}} <- {{from}}: {{what}}",
-    "command.mirror.subject": "@{{to}} <- {{from}}: {{what}} for {{subject}}",
-    "command.subject.order": "order",
-    "command.subject.lead": "customer",
 }
 
 /** Builds a command addressed to the sales department. */

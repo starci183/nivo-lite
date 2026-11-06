@@ -1,3 +1,6 @@
+import type { Type } from "@nestjs/common"
+import type { BackgroundVoice } from "./agent-schedules.contracts"
+
 /** What the app root decides for the agent-schedules capability. */
 export interface AgentSchedulesOptions {
     /**
@@ -6,4 +9,6 @@ export interface AgentSchedulesOptions {
      * proves the clock leaves it off.
      */
     readonly reactive?: boolean
+    /** The class that says an agent's background line to its owner (the Office), reused as it is registered; only the reactive app needs it. */
+    readonly voice?: Type<BackgroundVoice>
 }
