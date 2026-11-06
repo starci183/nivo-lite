@@ -51,21 +51,6 @@
         },
         "children": [
           {
-            "id": "overview-waiting",
-            "block": "core.waiting",
-            "props": {
-              "label": {
-                "key": "waiting_owner"
-              }
-            },
-            "bind": {
-              "region": {
-                "read": "loyalty.pending-waiting"
-              }
-            },
-            "forbidden": "hide"
-          },
-          {
             "id": "overview-figures",
             "block": "core.figures",
             "props": {
@@ -123,6 +108,21 @@
                 "read": "loyalty.figures"
               }
             }
+          },
+          {
+            "id": "overview-waiting",
+            "block": "core.waiting",
+            "props": {
+              "label": {
+                "key": "waiting_owner"
+              }
+            },
+            "bind": {
+              "region": {
+                "read": "loyalty.pending-waiting"
+              }
+            },
+            "forbidden": "hide"
           },
           {
             "id": "overview-grid",

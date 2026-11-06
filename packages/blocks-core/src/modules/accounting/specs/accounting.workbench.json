@@ -30,66 +30,6 @@
       "default": "all"
     }
   },
-  "head": [
-    {
-      "id": "figures",
-      "block": "core.figures",
-      "props": {
-        "label": {
-          "key": "figures"
-        },
-        "items": [
-          {
-            "term": {
-              "key": "fig_income"
-            },
-            "path": "income.vnd",
-            "format": "money"
-          },
-          {
-            "term": {
-              "key": "fig_invoiced"
-            },
-            "path": "invoiced.vnd",
-            "format": "money"
-          },
-          {
-            "term": {
-              "key": "fig_adjustments"
-            },
-            "path": "adjustments.vnd",
-            "format": "money"
-          },
-          {
-            "term": {
-              "key": "fig_unmatched"
-            },
-            "path": "unmatched.vnd",
-            "format": "money"
-          },
-          {
-            "term": {
-              "key": "fig_receivable"
-            },
-            "path": "receivable.vnd",
-            "format": "money"
-          }
-        ],
-        "currency": "VND"
-      },
-      "bind": {
-        "data": {
-          "read": "accounting.figures",
-          "variables": {
-            "period": "$period"
-          }
-        }
-      },
-      "when": {
-        "permission": "accounting.view"
-      }
-    }
-  ],
   "views": [
     {
       "id": "overview",
@@ -103,6 +43,64 @@
           "gap": "region"
         },
         "children": [
+          {
+            "id": "figures",
+            "block": "core.figures",
+            "props": {
+              "label": {
+                "key": "figures"
+              },
+              "items": [
+                {
+                  "term": {
+                    "key": "fig_income"
+                  },
+                  "path": "income.vnd",
+                  "format": "money"
+                },
+                {
+                  "term": {
+                    "key": "fig_invoiced"
+                  },
+                  "path": "invoiced.vnd",
+                  "format": "money"
+                },
+                {
+                  "term": {
+                    "key": "fig_adjustments"
+                  },
+                  "path": "adjustments.vnd",
+                  "format": "money"
+                },
+                {
+                  "term": {
+                    "key": "fig_unmatched"
+                  },
+                  "path": "unmatched.vnd",
+                  "format": "money"
+                },
+                {
+                  "term": {
+                    "key": "fig_receivable"
+                  },
+                  "path": "receivable.vnd",
+                  "format": "money"
+                }
+              ],
+              "currency": "VND"
+            },
+            "bind": {
+              "data": {
+                "read": "accounting.figures",
+                "variables": {
+                  "period": "$period"
+                }
+              }
+            },
+            "when": {
+              "permission": "accounting.view"
+            }
+          },
           {
             "id": "weekly",
             "block": "core.figures",
