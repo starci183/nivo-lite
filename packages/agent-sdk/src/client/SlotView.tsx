@@ -17,6 +17,11 @@ export type SlotViewProps<T> = {
     readonly forbiddenDescription?: string
     /** Resolved supporting copy for the existing error notice. */
     readonly errorDescription?: string
+    /**
+     * Where the notices of a slot that is not ready sit: the one surface the block draws its content on, so the error, the forbidden
+     * and the empty notice are inside it like the ready content, and only the block's label stays outside. Absent: the notice stands bare.
+     */
+    readonly frame?: (notice: ReactNode) => ReactNode
     /** A slot with nothing in it: its notice (default), or nothing at all for a box that collapses when empty. */
     readonly empty?: "notice" | "collapse"
     /** Resolved supporting copy for the empty notice. */
@@ -82,23 +87,28 @@ const errorNotice = (
  */
 export const SlotView = <T,>(props: SlotViewProps<T>): ReactNode => {
     const { slot, labels } = props
+    const framed = (notice: ReactNode): ReactNode => (props.frame === undefined ? notice : props.frame(notice))
     if ("isLoading" in slot) return <>{props.render(props.placeholder, true)}</>
     if ("isForbidden" in slot)
-        return forbiddenNotice(props.forbidden, labels.forbidden, props.forbiddenDescription, props.forbiddenAction)
+        return framed(
+            forbiddenNotice(props.forbidden, labels.forbidden, props.forbiddenDescription, props.forbiddenAction),
+        )
     if ("isError" in slot)
-        return errorNotice(labels.error, props.errorDescription, labels.retry, props.onRetry, props.errorLayout)
+        return framed(errorNotice(labels.error, props.errorDescription, labels.retry, props.onRetry, props.errorLayout))
     if ("isEmpty" in slot) {
         return props.empty === "collapse" ? (
             <></>
         ) : (
-            <EmptyNotice
-                message={labels.empty}
-                {...(props.emptyDescription === undefined ? {} : { description: props.emptyDescription })}
-                {...(props.emptyIconSource === undefined ? {} : { iconSource: props.emptyIconSource })}
-                {...(props.emptyAction === undefined
-                    ? {}
-                    : { actionLabel: props.emptyAction.label, onAction: props.emptyAction.onAction })}
-            />
+            framed(
+                <EmptyNotice
+                    message={labels.empty}
+                    {...(props.emptyDescription === undefined ? {} : { description: props.emptyDescription })}
+                    {...(props.emptyIconSource === undefined ? {} : { iconSource: props.emptyIconSource })}
+                    {...(props.emptyAction === undefined
+                        ? {}
+                        : { actionLabel: props.emptyAction.label, onAction: props.emptyAction.onAction })}
+                />,
+            )
         )
     }
     return <>{props.render(slot.items, false)}</>

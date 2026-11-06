@@ -2,7 +2,7 @@ import { defineAction } from "@nivo-lite/agent-sdk/block"
 import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
-import { MAX_THRESHOLD_VND } from "../../../rules/sales/settings"
+import { MAX_DISCOUNT_PCT, MAX_REMIND_DAYS, MAX_THRESHOLD_VND } from "../../../rules/sales/settings"
 import { SALES_MANAGE } from "../constants"
 import { salesSettings } from "../ports"
 import { refusedWith } from "../refusals"
@@ -16,12 +16,20 @@ const input: z.ZodObject<{
     draftWithoutTotalNeedsApproval: typeof flag
     closedDealsCanFlip: typeof flag
     reopenNeedsApproval: typeof flag
+    maxDiscountPct: z.ZodOptional<z.ZodNullable<z.ZodNumber>>
+    remindAfterDays: z.ZodOptional<z.ZodNullable<z.ZodNumber>>
+    autoWon: typeof flag
+    notifyAccounting: typeof flag
 }> = z.object({
     id: z.string().max(MAX_ID).optional(),
     approvalThresholdVnd: z.number().int().min(0).max(MAX_THRESHOLD_VND).nullable().optional(),
     draftWithoutTotalNeedsApproval: flag,
     closedDealsCanFlip: flag,
     reopenNeedsApproval: flag,
+    maxDiscountPct: z.number().int().min(0).max(MAX_DISCOUNT_PCT).nullable().optional(),
+    remindAfterDays: z.number().int().min(1).max(MAX_REMIND_DAYS).nullable().optional(),
+    autoWon: flag,
+    notifyAccounting: flag,
 })
 
 /**
@@ -43,6 +51,10 @@ export const saveSettingsAction: ActionDefinition = defineAction({
                 given.draftWithoutTotalNeedsApproval ?? saved.draftWithoutTotalNeedsApproval,
             closedDealsCanFlip: given.closedDealsCanFlip ?? saved.closedDealsCanFlip,
             reopenNeedsApproval: given.reopenNeedsApproval ?? saved.reopenNeedsApproval,
+            maxDiscountPct: given.maxDiscountPct ?? saved.maxDiscountPct,
+            remindAfterDays: given.remindAfterDays ?? saved.remindAfterDays,
+            autoWon: given.autoWon ?? saved.autoWon,
+            notifyAccounting: given.notifyAccounting ?? saved.notifyAccounting,
         })
         return taken ? { ok: true } : refusedWith("settings_not_saved")
     },

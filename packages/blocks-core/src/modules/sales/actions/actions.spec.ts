@@ -1,8 +1,9 @@
 import type { ActionDefinition, ActionResult } from "@nivo-lite/agent-sdk/block"
-import type { PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
+import type { PortProvider } from "@nivo-lite/agent-sdk/port"
 import { SALES_SETTINGS_DEFAULTS } from "../../../rules/sales/settings"
 import type { SalesSettings } from "../../../rules/sales/settings"
 import { LEAD_NEW, ORDER_WAITING, sampleState, SAMPLE_NOW } from "../fixtures/sales.data"
+import { salesContextOf } from "../fixtures/sales.context"
 import { memoryProvider } from "../memory"
 import type { MemoryState } from "../memory"
 import { cancelOrderAction } from "./cancel-order.action"
@@ -13,14 +14,6 @@ import { saveSettingsAction } from "./save-settings.action"
 const OWNER = "owner-1"
 const STAFF = "staff-1"
 
-const contextOf = (memberId: string | null): RunContext => ({
-    workspaceId: "w1",
-    memberId,
-    now: new Date(SAMPLE_NOW),
-    timeZone: "Asia/Ho_Chi_Minh",
-    locale: "vi",
-})
-
 const execute = (
     action: ActionDefinition,
     provider: PortProvider,
@@ -28,7 +21,7 @@ const execute = (
     memberId: string | null,
 ): Promise<ActionResult> => {
     return (
-        action.execute?.(provider, raw, contextOf(memberId)) ??
+        action.execute?.(provider, raw, salesContextOf(memberId)) ??
         Promise.resolve({ ok: false, reason: "failed", message: { key: "not_run" } })
     )
 }
@@ -374,7 +367,28 @@ describe("sales.save-settings", () => {
             draftWithoutTotalNeedsApproval: false,
             closedDealsCanFlip: false,
             reopenNeedsApproval: true,
+            maxDiscountPct: 10,
+            remindAfterDays: 3,
+            autoWon: true,
+            notifyAccounting: true,
         })
+    })
+
+    it("saves the new rules of the quote, the reminder, the deal and the hand-over", async () => {
+        const state = sampleState([])
+        await run(
+            saveSettingsAction,
+            { maxDiscountPct: 15, remindAfterDays: 5, autoWon: false, notifyAccounting: false },
+            state,
+        )
+        expect(state.settings).toMatchObject({
+            maxDiscountPct: 15,
+            remindAfterDays: 5,
+            autoWon: false,
+            notifyAccounting: false,
+        })
+        expect(await run(saveSettingsAction, { maxDiscountPct: 101 }, state)).toMatchObject({ reason: "invalid" })
+        expect(await run(saveSettingsAction, { remindAfterDays: 0 }, state)).toMatchObject({ reason: "invalid" })
     })
 
     it("takes effect on the next confirmation", async () => {

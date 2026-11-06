@@ -1,7 +1,7 @@
 import { portsOf } from "@nivo-lite/agent-sdk/port"
-import type { RunContext } from "@nivo-lite/agent-sdk/port"
 import { SALES_SETTINGS_DEFAULTS } from "../../rules/sales/settings"
 import { sampleState } from "./fixtures/sales.data"
+import { salesContextOf } from "./fixtures/sales.context"
 import { memoryProvider } from "./memory"
 import { salesSettings } from "./ports"
 import { saveSettings, settingsOf } from "./settings-store"
@@ -56,22 +56,20 @@ describe("the orders that wait for the owner", () => {
     })
 })
 
-const CONTEXT: RunContext = {
-    workspaceId: "w1",
-    memberId: "m1",
-    now: new Date("2026-11-05T09:00:00.000Z"),
-    timeZone: "Asia/Ho_Chi_Minh",
-}
+const CONTEXT = salesContextOf()
 
 describe("sales.settings and sales.save-settings", () => {
     it("read the defaults and then what was saved", async () => {
         const state = sampleState([])
         const provider = memoryProvider(state)
-        expect(await settingsRead.execute?.(provider, {}, CONTEXT)).toEqual({ ok: true, data: SALES_SETTINGS_DEFAULTS })
+        expect(await settingsRead.execute?.(provider, {}, CONTEXT)).toEqual({
+            ok: true,
+            data: { ...SALES_SETTINGS_DEFAULTS, savedAt: null },
+        })
         await saveSettingsAction.execute?.(provider, { closedDealsCanFlip: false }, CONTEXT)
         expect(await settingsRead.execute?.(provider, {}, CONTEXT)).toEqual({
             ok: true,
-            data: { ...SALES_SETTINGS_DEFAULTS, closedDealsCanFlip: false },
+            data: { ...SALES_SETTINGS_DEFAULTS, closedDealsCanFlip: false, savedAt: "2026-11-05T09:00:00.000Z" },
         })
     })
 

@@ -94,7 +94,8 @@
                   "format": "number"
                 }
               ],
-              "currency": "VND"
+              "currency": "VND",
+              "variant": "ribbon"
             },
             "bind": {
               "data": {
@@ -863,7 +864,8 @@
                     "key": "kind_percent"
                   }
                 }
-              }
+              },
+              "surface": "card"
             },
             "bind": {
               "rows": {

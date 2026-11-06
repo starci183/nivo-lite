@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot } from "@nivo-lite/agent-sdk/client"
 import type { ActionHandle, ReadHandle } from "@nivo-lite/agent-sdk/block"
-import { EmptyNotice, Section } from "@starci/grammar/common"
+import { EmptyNotice, Section, SurfaceCard } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import type { salesAttentionCardBlock } from "../../blocks/sales/attention-card.block"
 import { countedWords } from "../../rows/counted-words"
@@ -86,7 +86,7 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
             ...(item.description === "" ? {} : { description: item.description }),
             leading: { avatar: { name: item.title } },
             badges: [{ label: word(view.chipKey), tone: view.tone }],
-            ...(item.at === "" ? {} : { meta: { text: formatValue(item.at, "dateTime", context) } }),
+            ...(item.at === "" ? {} : { meta: { text: formatValue(item.at, "day", context) } }),
             ...(handle.isAllowed
                 ? { action: { label: word(view.commandKey), press: () => run(handle, item.id) } }
                 : {}),
@@ -100,23 +100,29 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
         props.slots.awaitingReply.retry()
         props.slots.parkedRuns.retry()
     }
+    const count = "items" in display ? display.items.length : null
     return (
-        <SlotView
-            slot={display}
-            labels={labels}
-            placeholder={PLACEHOLDER}
-            onRetry={retry}
-            render={(items, isLoading) => (
-                <Section
-                    kind="list"
-                    title={words(props.props.label)}
-                    headingLevel={3}
-                    isLoading={isLoading}
-                    {...(isLoading ? {} : { fact: countedWords(word(ATTENTION_COUNT_KEY), items.length) })}
-                    items={items.map(rowOf)}
-                    empty={<EmptyNotice message={labels.empty} />}
-                />
-            )}
-        />
+        <Section
+            title={words(props.props.label)}
+            headingLevel={3}
+            {...(count === null ? {} : { fact: countedWords(word(ATTENTION_COUNT_KEY), count) })}
+        >
+            <SlotView
+                slot={display}
+                labels={labels}
+                placeholder={PLACEHOLDER}
+                onRetry={retry}
+                frame={(notice) => <SurfaceCard ariaLabel={words(props.props.label)}>{notice}</SurfaceCard>}
+                render={(items, isLoading) => (
+                    <SurfaceCard
+                        kind="list"
+                        ariaLabel={words(props.props.label)}
+                        isLoading={isLoading}
+                        items={items.map(rowOf)}
+                        empty={<EmptyNotice message={labels.empty} />}
+                    />
+                )}
+            />
+        </Section>
     )
 }

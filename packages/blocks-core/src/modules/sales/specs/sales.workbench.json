@@ -72,30 +72,35 @@
                     "key": "fig_open"
                   },
                   "path": "openCount",
-                  "format": "count"
+                  "format": "count",
+                  "hintPath": "openHint"
                 },
                 {
                   "term": {
                     "key": "fig_proposal"
                   },
                   "path": "proposalValueVnd",
-                  "format": "money"
+                  "format": "money",
+                  "hintPath": "proposalHint"
                 },
                 {
                   "term": {
                     "key": "fig_closed"
                   },
                   "path": "closedCount",
-                  "format": "count"
+                  "format": "count",
+                  "hintPath": "closedHint"
                 },
                 {
                   "term": {
                     "key": "fig_conversion"
                   },
                   "path": "conversion",
-                  "format": "percent"
+                  "format": "percent",
+                  "hintPath": "conversionHint"
                 }
-              ]
+              ],
+              "variant": "ribbon"
             },
             "bind": {
               "data": {
@@ -593,7 +598,8 @@
                             "key": "status_failed_system"
                           }
                         }
-                      }
+                      },
+                      "surface": "card"
                     },
                     "bind": {
                       "rows": {
@@ -792,6 +798,46 @@
                 "key": "settings_threshold_hint"
               },
               "kind": "money"
+            },
+            {
+              "name": "maxDiscountPct",
+              "label": {
+                "key": "settings_discount"
+              },
+              "hint": {
+                "key": "settings_discount_hint"
+              },
+              "kind": "number"
+            },
+            {
+              "name": "remindAfterDays",
+              "label": {
+                "key": "settings_remind"
+              },
+              "hint": {
+                "key": "settings_remind_hint"
+              },
+              "kind": "number"
+            },
+            {
+              "name": "autoWon",
+              "label": {
+                "key": "settings_auto_won"
+              },
+              "hint": {
+                "key": "settings_auto_won_hint"
+              },
+              "kind": "switch"
+            },
+            {
+              "name": "notifyAccounting",
+              "label": {
+                "key": "settings_notify"
+              },
+              "hint": {
+                "key": "settings_notify_hint"
+              },
+              "kind": "switch"
             },
             {
               "name": "draftWithoutTotalNeedsApproval",

@@ -1,11 +1,13 @@
 import type { ReactNode } from "react"
-import { BarChart, EmptyNotice, Meter, Section, Stack, Text } from "@starci/grammar/common"
+import { BarChart, EmptyNotice, Meter, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import type { Figure } from "@starci/grammar/common"
 import { proportionTotal } from "../../rows/figure-format"
 import type { ChartPoint } from "../../rows/figure-format"
 
 /** Props for {@link FiguresStrip}. */
 interface FiguresStripProps {
+    /** Draw the figures as one surface with dividers between them, not bare under the heading. */
+    readonly isRibbon: boolean
     readonly label: string
     /** The figure cells; while `isLoading`, their terms stay real and the values draw as skeleton lines. */
     readonly items: ReadonlyArray<Figure>
@@ -13,9 +15,12 @@ interface FiguresStripProps {
 }
 
 /** Draws a ribbon of figures as a strip with no surface of its own; the status of the read is drawn by the block through SlotView. */
-export const FiguresStrip = (props: FiguresStripProps): ReactNode => (
-    <Section kind="figures" ariaLabel={props.label} isLoading={props.isLoading} items={props.items} />
-)
+export const FiguresStrip = (props: FiguresStripProps): ReactNode =>
+    props.isRibbon ? (
+        <SurfaceCard kind="figures" ariaLabel={props.label} isLoading={props.isLoading} items={props.items} />
+    ) : (
+        <Section kind="figures" ariaLabel={props.label} isLoading={props.isLoading} items={props.items} />
+    )
 
 /** Props for the gauges of figures. */
 interface FiguresProportionProps {
