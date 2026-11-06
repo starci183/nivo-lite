@@ -61,15 +61,15 @@ export const memoryWorld = (): MemoryWorld => ({
     conversations: new Map(THREAD_ROWS.map((row) => [row.id, row])),
     lines: [],
     members: new Map([
-        [STAFF_ID, { displayName: "Thu Ha Le", isManager: false }],
+        [STAFF_ID, { displayName: "L\u00ea Thu H\u00e0", isManager: false }],
         [MANAGER_ID, { displayName: "Lan Pham", isManager: true }],
     ]),
     leads: new Map([
         [
             "l1",
             {
-                contactName: "Minh Anh Nguyen",
-                company: "Lotus Studio",
+                contactName: "Nguy\u1ec5n Minh Anh",
+                company: "Hoa Sen Studio",
                 stage: "qualified",
                 need: "Two flower pots",
                 phone: "0901234567",

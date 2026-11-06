@@ -69,7 +69,7 @@ describe("the fake ports", () => {
         const { members, leads } = portsOf(provider, { members: MEMBERS, leads: LEADS })
         expect(await members.get("nobody")).toBeNull()
         expect(await leads.get("nobody")).toBeNull()
-        expect(await leads.get("l1")).toMatchObject({ contactName: "Minh Anh Nguyen" })
+        expect(await leads.get("l1")).toMatchObject({ contactName: "Nguy\u1ec5n Minh Anh" })
         expect(provider.implementationOf(THREADS_LIST)).toBeDefined()
     })
 

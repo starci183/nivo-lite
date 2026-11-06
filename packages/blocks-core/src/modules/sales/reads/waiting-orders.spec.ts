@@ -35,7 +35,7 @@ describe("waitingOrdersOf", () => {
                 orderNo: ORDER_WAITING.orderNo,
                 items: ORDER_WAITING.items,
                 amountVnd: ORDER_WAITING.amountVnd,
-                customer: "Pham Quoc Dung",
+                customer: "Ph\u1ea1m Qu\u1ed1c D\u0169ng",
             },
         ])
     })

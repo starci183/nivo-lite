@@ -46,7 +46,7 @@ const harness = (setup: Setup = {}) => {
 const payload = {
     targetType: "invoice",
     targetId: INVOICE.id,
-    note: "  Discount agreed  by phone",
+    note: "  Gi\u1ea3m gi\u00e1 \u0111\u00e3 th\u1ecfa thu\u1eadn  qua \u0111i\u1ec7n tho\u1ea1i",
     correctedAmount: 1_800_000,
 }
 
@@ -74,7 +74,7 @@ describe("accounting.adjust", () => {
                 values: {
                     targetType: "invoice",
                     targetId: INVOICE.id,
-                    note: "Discount agreed by phone",
+                    note: "Gi\u1ea3m gi\u00e1 \u0111\u00e3 th\u1ecfa thu\u1eadn qua \u0111i\u1ec7n tho\u1ea1i",
                     correctedAmountVnd: 1_800_000,
                 },
                 createdBy: "m1",

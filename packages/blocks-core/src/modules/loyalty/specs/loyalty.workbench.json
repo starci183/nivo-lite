@@ -32,6 +32,12 @@
     "reward": {
       "type": "string",
       "url": "reward"
+    },
+    "pane": {
+      "type": "enum",
+      "of": ["list", "queue"],
+      "url": "pane",
+      "default": "list"
     }
   },
   "views": [
@@ -39,9 +45,6 @@
       "id": "overview",
       "label": {
         "key": "tab_overview"
-      },
-      "command": {
-        "action": "loyalty.sync-members"
       },
       "root": {
         "id": "overview-root",
@@ -58,13 +61,6 @@
                 "key": "figures_label"
               },
               "items": [
-                {
-                  "term": {
-                    "key": "fig_members"
-                  },
-                  "path": "members",
-                  "format": "number"
-                },
                 {
                   "term": {
                     "key": "fig_active"
@@ -84,13 +80,6 @@
                     "key": "fig_redemptions"
                   },
                   "path": "redemptions30d",
-                  "format": "number"
-                },
-                {
-                  "term": {
-                    "key": "fig_redeemed"
-                  },
-                  "path": "pointsRedeemed30d",
                   "format": "number"
                 },
                 {
@@ -1548,5 +1537,59 @@
         }
       }
     }
-  ]
+  ],
+  "aside": {
+    "id": "aside-pending",
+    "block": "core.decision-queue",
+    "props": {
+      "surface": "section",
+      "label": {
+        "key": "pending_label"
+      },
+      "emptyTitle": {
+        "key": "pending_empty_title"
+      },
+      "emptyBody": {
+        "key": "pending_empty_body"
+      },
+      "seeWhy": {
+        "key": "pending_see_why"
+      },
+      "moreMenu": {
+        "key": "pending_more"
+      },
+      "commands": [
+        {
+          "id": "approve",
+          "label": {
+            "key": "command_approve"
+          }
+        },
+        {
+          "id": "reject",
+          "label": {
+            "key": "command_reject"
+          },
+          "intent": "danger"
+        }
+      ]
+    },
+    "bind": {
+      "queue": {
+        "read": "loyalty.pending"
+      },
+      "command": {
+        "action": "loyalty.decide"
+      }
+    }
+  },
+  "asideSummary": {
+    "read": "loyalty.pending",
+    "path": "count",
+    "previewPath": "rows.0.title",
+    "label": {
+      "key": "aside_label"
+    },
+    "opens": "queue"
+  }
 }

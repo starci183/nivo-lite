@@ -30,11 +30,11 @@ describe("the in-memory list source", () => {
         const { leads } = sources()
         const page = await leads.page(LEADS_LIST, query({ sort: "name" }))
         expect(page.rows.map((lead) => lead.contactName)).toEqual([
-            "Hoang Thu Ha",
-            "Le Minh Chau",
-            "Nguyen Van An",
-            "Pham Quoc Dung",
-            "Tran Thi Binh",
+            "Ho\u00e0ng Thu H\u00e0",
+            "L\u00ea Minh Ch\u00e2u",
+            "Nguy\u1ec5n V\u0103n An",
+            "Ph\u1ea1m Qu\u1ed1c D\u0169ng",
+            "Tr\u1ea7n Th\u1ecb B\u00ecnh",
         ])
         expect(page.cursor).toBeNull()
     })
@@ -50,7 +50,7 @@ describe("the in-memory list source", () => {
         const { leads } = sources()
         const page = await leads.page(LEADS_LIST, query({ q: "NGUYEN van" }))
         expect(page.rows.map((lead) => lead.id)).toEqual(["lead-1"])
-        const byNeed = await leads.page(LEADS_LIST, query({ q: "wedding" }))
+        const byNeed = await leads.page(LEADS_LIST, query({ q: "DAM cuoi" }))
         expect(byNeed.rows.map((lead) => lead.id)).toEqual(["lead-3"])
     })
 
@@ -119,7 +119,7 @@ describe("the in-memory stores", () => {
     it("reads and updates a lead under its version, and bumps the version", async () => {
         const state = sampleState([])
         const { leads } = portsOf(memoryProvider(state), { leads: salesLeadStore })
-        expect((await leads.get("lead-1"))?.contactName).toBe("Nguyen Van An")
+        expect((await leads.get("lead-1"))?.contactName).toBe("Nguy\u1ec5n V\u0103n An")
         expect(await leads.get("lead-404")).toBeNull()
         const written = await leads.update("lead-1", "1", { stage: "qualified" })
         expect(written).toMatchObject({ ok: true, row: { stage: "qualified", version: "2", updatedAt: SAMPLE_NOW } })
@@ -130,7 +130,7 @@ describe("the in-memory stores", () => {
 
     it("names the leads that exist", async () => {
         const { leads } = portsOf(memoryProvider(sampleState([])), { leads: salesLeadStore })
-        expect(await leads.names(["lead-1", "lead-9"])).toEqual({ "lead-1": "Nguyen Van An" })
+        expect(await leads.names(["lead-1", "lead-9"])).toEqual({ "lead-1": "Nguy\u1ec5n V\u0103n An" })
     })
 
     it("lists the orders of a customer newest first and the orders that wait for the owner oldest first", async () => {

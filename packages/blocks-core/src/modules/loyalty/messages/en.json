@@ -63,8 +63,6 @@
   "fig_active": "Active members",
   "fig_at_risk": "At risk",
   "fig_issued": "Points issued, 30 days",
-  "fig_members": "Members",
-  "fig_redeemed": "Points redeemed, 30 days",
   "fig_redemptions": "Redemptions, 30 days",
   "figures_label": "Loyalty at a glance",
   "filter_all": "All",
@@ -193,7 +191,7 @@
   "tab_overview": "Overview",
   "tab_pending": "Pending",
   "tab_profile": "Details",
-  "tab_program": "Settings",
+  "tab_program": "Rules",
   "tab_promo": "Promotions",
   "tab_redeem": "Redeem",
   "tab_rewards": "Rewards",
@@ -209,5 +207,6 @@
   "state_active": "Open",
   "state_paused": "Paused",
   "command_approve": "Approve",
-  "command_reject": "Reject"
+  "command_reject": "Reject",
+  "aside_label": "Waiting for your approval"
 }

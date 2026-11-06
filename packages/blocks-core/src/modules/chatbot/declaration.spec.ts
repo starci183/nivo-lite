@@ -63,10 +63,10 @@ describe("the Chatbot seed spec", () => {
         expect(seedSpecProblems(chatbotModule, coreBlocks)).toEqual([])
     })
 
-    it("holds one inbox view and names the module of the declaration", () => {
+    it("holds the customers, the unanswered and the inbox views and names the module of the declaration", () => {
         const [spec] = chatbotModule.specs
         expect(spec?.module).toBe(CHATBOT_MODULE_KEY)
-        expect(spec?.views.map((view) => view.id)).toEqual(["inbox"])
+        expect(spec?.views.map((view) => view.id)).toEqual(["customers", "unanswered", "inbox"])
     })
 
     it("uses only generic blocks", () => {

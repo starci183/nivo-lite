@@ -20,39 +20,39 @@ const release = (
 describe("the chatbot.handoff action", () => {
     it("takes the conversation over under the member name and writes the notice line in one step", async () => {
         const world = memoryWorld()
-        expect(await handoff(world, { id: "c1" })).toEqual({ ok: true, data: { handledBy: "Thu Ha Le" } })
+        expect(await handoff(world, { id: "c1" })).toEqual({ ok: true, data: { handledBy: "L\u00ea Thu H\u00e0" } })
         expect(world.conversations.get("c1")).toMatchObject({
-            handledBy: "Thu Ha Le",
+            handledBy: "L\u00ea Thu H\u00e0",
             handledAt: "2026-11-05T03:00:00.000Z",
             status: "needs",
             unanswered: true,
             lastAt: "2026-11-05T03:00:00.000Z",
-            lastText: "Does this pot come with a root warranty?",
+            lastText: "Ch\u1eadu n\u00e0y c\u00f3 b\u1ea3o h\u00e0nh r\u1ec5 kh\u00f4ng \u1ea1?",
             messageCount: 5,
             version: "4",
         })
         expect(world.lines).toMatchObject([{ conversationId: "c1", role: "system", authorKind: null }])
-        expect(world.lines[0]?.text).toContain("Thu Ha Le")
+        expect(world.lines[0]?.text).toContain("L\u00ea Thu H\u00e0")
         expect(world.jobs).toEqual([])
     })
 
     it("words the notice in the language asked, Vietnamese by default", async () => {
         const english = memoryWorld()
         await handoff(english, { id: "c3", locale: "en" })
-        expect(english.lines[0]?.text).toBe("Thu Ha Le took over the conversation.")
+        expect(english.lines[0]?.text).toBe("L\u00ea Thu H\u00e0 took over the conversation.")
         const vietnamese = memoryWorld()
         await handoff(vietnamese, { id: "c3" })
-        expect(vietnamese.lines[0]?.text).not.toBe("Thu Ha Le took over the conversation.")
+        expect(vietnamese.lines[0]?.text).not.toBe("L\u00ea Thu H\u00e0 took over the conversation.")
         expect(vietnamese.conversations.get("c3")).toMatchObject({
             status: "handled",
-            lastText: "Yes, we deliver to Da Nang in two days.",
+            lastText: "D\u1ea1 b\u00ean em giao \u0110\u00e0 N\u1eb5ng trong hai ng\u00e0y \u1ea1.",
             lastAt: "2026-11-05T03:00:00.000Z",
         })
     })
 
     it("changes nothing when the member already holds the conversation", async () => {
         const world = memoryWorld()
-        expect(await handoff(world, { id: "c2" })).toEqual({ ok: true, data: { handledBy: "Thu Ha Le" } })
+        expect(await handoff(world, { id: "c2" })).toEqual({ ok: true, data: { handledBy: "L\u00ea Thu H\u00e0" } })
         expect(world.lines).toEqual([])
         expect(world.conversations.get("c2")).toBe(HANDLED_ROW)
     })
@@ -105,11 +105,11 @@ describe("the chatbot.release action", () => {
             handledBy: null,
             handledAt: null,
             status: "ai",
-            lastText: "I will send the invoice this afternoon.",
+            lastText: "Chi\u1ec1u nay em s\u1ebd g\u1eedi h\u00f3a \u0111\u01a1n cho ch\u1ecb \u1ea1.",
         })
         expect(world.lines[0]).toMatchObject({
             role: "system",
-            text: "Thu Ha Le handed the conversation back to the AI.",
+            text: "L\u00ea Thu H\u00e0 handed the conversation back to the AI.",
         })
     })
 

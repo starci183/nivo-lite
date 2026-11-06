@@ -6,7 +6,7 @@ const BARE = { id: "o2", orderNo: "DH-2", items: "", amountVnd: null, customer: 
 describe("attentionRowsOf", () => {
     it("names the order, its customer, its items and its amount, and why it needs a look", () => {
         expect(attentionRowsOf([WITH_CUSTOMER, BARE])).toEqual([
-            { id: "o1", title: "DH-1 · Lan", description: "2 x tea · 6,000,000 VND", reason: "owner" },
+            { id: "o1", title: "DH-1 · Lan", description: "2 x tea · 6.000.000\u00a0₫", reason: "owner" },
             { id: "o2", title: "DH-2", description: "", reason: "owner" },
         ])
     })
@@ -19,7 +19,7 @@ describe("salesDecisionQueueOf", () => {
         expect(queue.rows[0]).toMatchObject({
             id: "o1",
             title: "DH-1 · Lan",
-            amount: "6,000,000 VND",
+            amount: "6.000.000\u00a0₫",
             primary: { id: "approve" },
             menu: [{ id: "reject", isDanger: true }],
         })

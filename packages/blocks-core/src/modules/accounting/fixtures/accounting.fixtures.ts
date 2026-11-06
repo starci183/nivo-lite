@@ -31,7 +31,7 @@ export const ENTRY_ROWS: ReadonlyArray<EntryRow> = [
     },
     {
         id: "00000000-0000-4000-8000-0000000001a2",
-        title: "Lan / Discount agreed by phone",
+        title: "Lan / Gi\u1ea3m gi\u00e1 \u0111\u00e3 th\u1ecfa thu\u1eadn qua \u0111i\u1ec7n tho\u1ea1i",
         entryDate: "2026-11-02",
         kind: "adjustment",
         amountVnd: 1_800_000,
@@ -39,7 +39,7 @@ export const ENTRY_ROWS: ReadonlyArray<EntryRow> = [
     },
     {
         id: "00000000-0000-4000-8000-0000000001a3",
-        title: "INV-202611-0001 / Nguyen Van Dinh",
+        title: "INV-202611-0001 / Nguy\u1ec5n V\u0103n \u0110\u1ecbnh",
         entryDate: "2026-11-01",
         kind: "invoice",
         amountVnd: 2_000_000,

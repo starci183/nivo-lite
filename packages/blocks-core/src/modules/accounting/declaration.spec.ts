@@ -37,17 +37,23 @@ describe("accounting module", () => {
         expect(seedSpecProblems(paymentModule, coreBlocks)).toEqual([])
     })
 
-    it("draws figures on the overview only, a book view bound to the list, its counts and the detail, and a settings form", () => {
+    it("draws figures on the overview only, the queue in the aside, a book view bound to the list, its counts and the detail, and a settings form", () => {
         const view = accountingSpecDocument.views.find((each) => each.id === "book")
         expect(accountingSpecDocument.views.map((each) => each.id)).toEqual(["overview", "book", "settings"])
         expect(view?.id).toBe("book")
-        expect(Object.keys(accountingSpecDocument.params ?? {})).toEqual(["q", "sort", "selected", "period", "status"])
+        expect(Object.keys(accountingSpecDocument.params ?? {})).toEqual([
+            "q",
+            "sort",
+            "selected",
+            "period",
+            "status",
+            "pane",
+        ])
         expect(accountingSpecDocument.head).toBeUndefined()
         expect(accountingSpecDocument.views[0]?.root.children?.map((node) => node.id)).toEqual([
             "figures",
             "weekly",
             "ageing",
-            "decisions",
         ])
     })
 })

@@ -16,8 +16,8 @@ describe("sales.attention", () => {
             rows: [
                 {
                     id: "order-1",
-                    title: "DH-20261104-0001 · Pham Quoc Dung",
-                    description: "10 x gift set · 6,000,000 VND",
+                    title: "DH-20261104-0001 · Ph\u1ea1m Qu\u1ed1c D\u0169ng",
+                    description: "10 x h\u1ed9p qu\u00e0 · 6.000.000\u00a0₫",
                     reason: "owner",
                 },
             ],

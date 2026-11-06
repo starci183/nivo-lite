@@ -65,7 +65,7 @@ describe("sales.lead-counts", () => {
             counts: { new: 2, qualified: 1, proposal: 1, won: 1, lost: 0 },
             total: 5,
         })
-        expect(await dataOf(leadCountsRead, { q: "wedding" })).toMatchObject({ total: 1 })
+        expect(await dataOf(leadCountsRead, { q: "DAM cuoi" })).toMatchObject({ total: 1 })
     })
 })
 
@@ -104,11 +104,11 @@ describe("sales.lead", () => {
 describe("sales.orders", () => {
     it("lists the orders narrowed by status and searched by items", async () => {
         expect([...(await idsOf(ordersRead, { status: "draft" }))].sort()).toEqual(["order-1", "order-2"])
-        expect(await idsOf(ordersRead, { q: "tea" })).toEqual(["order-2"])
+        expect(await idsOf(ordersRead, { q: "tra" })).toEqual(["order-2"])
     })
 
     it("counts the orders of each status", async () => {
-        expect(await dataOf(orderCountsRead, { q: "gift" })).toMatchObject({
+        expect(await dataOf(orderCountsRead, { q: "hop qua" })).toMatchObject({
             counts: { draft: 1, confirmed: 1, paid: 0 },
             total: 2,
         })
@@ -119,7 +119,7 @@ describe("sales.order", () => {
     it("gives an order with its customer and says the owner decides a big draft", async () => {
         expect(await dataOf(orderRead, { id: "order-1" })).toMatchObject({
             orderNo: "DH-20261104-0001",
-            customer: "Pham Quoc Dung",
+            customer: "Ph\u1ea1m Qu\u1ed1c D\u0169ng",
             approval: "owner",
             thresholdVnd: 5_000_000,
         })
@@ -158,8 +158,8 @@ describe("sales.orders-waiting", () => {
             rows: [
                 {
                     id: "order-1",
-                    title: "DH-20261104-0001 · Pham Quoc Dung",
-                    description: "10 x gift set · 6,000,000 VND",
+                    title: "DH-20261104-0001 · Ph\u1ea1m Qu\u1ed1c D\u0169ng",
+                    description: "10 x h\u1ed9p qu\u00e0 · 6.000.000\u00a0₫",
                     href: "?tab=orders&order=order-1",
                 },
             ],

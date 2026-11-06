@@ -14,7 +14,7 @@ describe("sales.decisions", () => {
     it("draws the waiting order as a decision with approve and reject", async () => {
         expect(await dataOf()).toMatchObject({
             count: "1",
-            rows: [{ id: "order-1", amount: "6,000,000 VND", primary: { id: "approve" }, menu: [{ id: "reject" }] }],
+            rows: [{ id: "order-1", amount: "6.000.000\u00a0₫", primary: { id: "approve" }, menu: [{ id: "reject" }] }],
         })
     })
 

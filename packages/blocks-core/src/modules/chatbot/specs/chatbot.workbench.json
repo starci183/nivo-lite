@@ -15,16 +15,22 @@
     "selected": {
       "type": "string",
       "url": "thread"
+    },
+    "pane": {
+      "type": "enum",
+      "of": ["list", "queue"],
+      "url": "pane",
+      "default": "list"
     }
   },
   "views": [
     {
-      "id": "inbox",
+      "id": "customers",
       "label": {
-        "key": "tab_inbox"
+        "key": "tab_customers"
       },
       "root": {
-        "id": "inbox-page",
+        "id": "customers-page",
         "block": "core.stack",
         "props": {
           "gap": "region"
@@ -75,52 +81,11 @@
             }
           },
           {
-            "id": "decisions",
-            "block": "core.decision-queue",
+            "id": "customers-section",
+            "block": "core.section",
             "props": {
-              "surface": "section",
-              "label": {
-                "key": "decisions_label"
-              },
-              "emptyTitle": {
-                "key": "decisions_empty_title"
-              },
-              "emptyBody": {
-                "key": "decisions_empty_body"
-              },
-              "seeWhy": {
-                "key": "decisions_see_why"
-              },
-              "moreMenu": {
-                "key": "decisions_more"
-              },
-              "commands": [
-                {
-                  "id": "handoff",
-                  "label": {
-                    "key": "action_handoff"
-                  }
-                }
-              ]
-            },
-            "bind": {
-              "queue": {
-                "read": "chatbot.decisions"
-              },
-              "command": {
-                "action": "chatbot.decide"
-              }
-            }
-          },
-          {
-            "id": "inbox",
-            "block": "core.master-detail",
-            "props": {
-              "emptyTitle": {
-                "key": "master_empty_title"
-              },
-              "emptyBody": {
-                "key": "master_empty_body"
+              "title": {
+                "key": "customers_section"
               }
             },
             "children": [
@@ -241,156 +206,418 @@
                   }
                 ],
                 "bind": {}
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "unanswered",
+      "label": {
+        "key": "tab_unanswered"
+      },
+      "root": {
+        "id": "unanswered-page",
+        "block": "core.section",
+        "props": {
+          "title": {
+            "key": "unanswered_section"
+          }
+        },
+        "children": [
+          {
+            "id": "waiting-threads",
+            "block": "core.record-list",
+            "props": {
+              "label": {
+                "key": "list_label"
+              },
+              "empty": {
+                "key": "list_empty"
+              },
+              "emptySearch": {
+                "key": "list_empty_search"
+              },
+              "idPath": "id",
+              "titlePath": "name",
+              "descriptionPath": "lastText",
+              "badgePath": "status",
+              "labels": {
+                "status": {
+                  "needs": {
+                    "key": "row_needs"
+                  },
+                  "handled": {
+                    "key": "row_handled"
+                  },
+                  "ai": {
+                    "key": "row_ai"
+                  }
+                },
+                "channel": {
+                  "zalo": {
+                    "key": "channel_zalo"
+                  },
+                  "telegram": {
+                    "key": "channel_telegram"
+                  },
+                  "facebook": {
+                    "key": "channel_facebook"
+                  },
+                  "instagram": {
+                    "key": "channel_instagram"
+                  },
+                  "website": {
+                    "key": "channel_website"
+                  }
+                }
+              },
+              "avatar": true,
+              "chipPaths": ["channel"]
+            },
+            "bind": {
+              "rows": {
+                "read": "chatbot.threads",
+                "variables": {
+                  "q": "$q",
+                  "status": "needs"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "inbox",
+      "label": {
+        "key": "tab_inbox"
+      },
+      "root": {
+        "id": "inbox",
+        "block": "core.master-detail",
+        "props": {
+          "emptyTitle": {
+            "key": "master_empty_title"
+          },
+          "emptyBody": {
+            "key": "master_empty_body"
+          }
+        },
+        "children": [
+          {
+            "id": "pane-inbox",
+            "block": "core.list-pane",
+            "props": {
+              "search": true,
+              "searchParam": "q",
+              "searchLabel": {
+                "key": "search_label"
+              }
+            },
+            "children": [
+              {
+                "id": "statuses-inbox",
+                "block": "core.filter-tabs",
+                "props": {
+                  "param": "status",
+                  "label": {
+                    "key": "status_filter_label"
+                  },
+                  "all": {
+                    "key": "filter_all"
+                  },
+                  "items": [
+                    {
+                      "value": "needs",
+                      "label": {
+                        "key": "status_needs"
+                      },
+                      "attention": true
+                    },
+                    {
+                      "value": "handled",
+                      "label": {
+                        "key": "status_handled"
+                      }
+                    },
+                    {
+                      "value": "ai",
+                      "label": {
+                        "key": "status_ai"
+                      }
+                    }
+                  ]
+                },
+                "bind": {
+                  "counts": {
+                    "read": "chatbot.thread-counts",
+                    "variables": {
+                      "q": "$q"
+                    }
+                  }
+                }
               },
               {
-                "id": "thread-side",
-                "block": "core.aside-detail",
+                "id": "threads-inbox",
+                "block": "core.record-list",
                 "props": {
-                  "width": "medium"
-                },
-                "children": [
-                  {
-                    "id": "thread",
-                    "block": "core.conversation",
-                    "props": {
-                      "label": {
-                        "key": "thread_label"
+                  "label": {
+                    "key": "list_label"
+                  },
+                  "empty": {
+                    "key": "list_empty"
+                  },
+                  "emptySearch": {
+                    "key": "list_empty_search"
+                  },
+                  "idPath": "id",
+                  "titlePath": "name",
+                  "descriptionPath": "lastText",
+                  "selectParam": "selected",
+                  "searchParam": "q",
+                  "badgePath": "status",
+                  "labels": {
+                    "status": {
+                      "needs": {
+                        "key": "row_needs"
                       },
-                      "empty": {
-                        "key": "thread_empty"
+                      "handled": {
+                        "key": "row_handled"
                       },
-                      "pick": {
-                        "key": "thread_pick"
-                      },
-                      "idPath": "id",
-                      "textPath": "text",
-                      "authorPath": "who",
-                      "timePath": "at",
-                      "statusPath": "state",
-                      "sidePath": "side",
-                      "markPath": "mark",
-                      "composer": true,
-                      "selectParam": "selected",
-                      "maxLength": 4000
+                      "ai": {
+                        "key": "row_ai"
+                      }
                     },
-                    "bind": {
-                      "messages": {
-                        "read": "chatbot.messages",
-                        "path": "rows",
-                        "variables": {
-                          "threadId": "$selected"
-                        }
+                    "channel": {
+                      "zalo": {
+                        "key": "channel_zalo"
                       },
-                      "send": {
-                        "action": "chatbot.reply"
+                      "telegram": {
+                        "key": "channel_telegram"
                       },
-                      "handoff": {
-                        "action": "chatbot.handoff"
+                      "facebook": {
+                        "key": "channel_facebook"
+                      },
+                      "instagram": {
+                        "key": "channel_instagram"
+                      },
+                      "website": {
+                        "key": "channel_website"
                       }
                     }
                   },
-                  {
-                    "id": "customer",
-                    "block": "core.detail",
-                    "props": {
-                      "label": {
-                        "key": "customer_label"
+                  "avatar": true,
+                  "chipPaths": ["channel"]
+                },
+                "bind": {
+                  "rows": {
+                    "read": "chatbot.threads",
+                    "variables": {
+                      "q": "$q",
+                      "status": "$status"
+                    }
+                  }
+                }
+              }
+            ],
+            "bind": {}
+          },
+          {
+            "id": "thread-side",
+            "block": "core.aside-detail",
+            "props": {
+              "width": "medium"
+            },
+            "children": [
+              {
+                "id": "thread",
+                "block": "core.conversation",
+                "props": {
+                  "label": {
+                    "key": "thread_label"
+                  },
+                  "empty": {
+                    "key": "thread_empty"
+                  },
+                  "pick": {
+                    "key": "thread_pick"
+                  },
+                  "idPath": "id",
+                  "textPath": "text",
+                  "authorPath": "who",
+                  "timePath": "at",
+                  "statusPath": "state",
+                  "sidePath": "side",
+                  "markPath": "mark",
+                  "composer": true,
+                  "selectParam": "selected",
+                  "maxLength": 4000
+                },
+                "bind": {
+                  "messages": {
+                    "read": "chatbot.messages",
+                    "path": "rows",
+                    "variables": {
+                      "threadId": "$selected"
+                    }
+                  },
+                  "send": {
+                    "action": "chatbot.reply"
+                  },
+                  "handoff": {
+                    "action": "chatbot.handoff"
+                  }
+                }
+              },
+              {
+                "id": "customer",
+                "block": "core.detail",
+                "props": {
+                  "label": {
+                    "key": "customer_label"
+                  },
+                  "idle": {
+                    "key": "customer_idle"
+                  },
+                  "idPath": "id",
+                  "items": [
+                    {
+                      "term": {
+                        "key": "fact_name"
                       },
-                      "idle": {
-                        "key": "customer_idle"
-                      },
-                      "idPath": "id",
-                      "items": [
-                        {
-                          "term": {
-                            "key": "fact_name"
-                          },
-                          "path": "name"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_channel"
-                          },
-                          "path": "channelName"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_handled_by"
-                          },
-                          "path": "handledBy"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_stage"
-                          },
-                          "path": "stage"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_need"
-                          },
-                          "path": "need"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_company"
-                          },
-                          "path": "company"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_phone"
-                          },
-                          "path": "phone"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_email"
-                          },
-                          "path": "email"
-                        }
-                      ],
-                      "labels": {
-                        "stage": {
-                          "new": {
-                            "key": "stage_new"
-                          },
-                          "qualified": {
-                            "key": "stage_qualified"
-                          },
-                          "proposal": {
-                            "key": "stage_proposal"
-                          },
-                          "won": {
-                            "key": "stage_won"
-                          },
-                          "lost": {
-                            "key": "stage_lost"
-                          }
-                        }
-                      }
+                      "path": "name"
                     },
-                    "bind": {
-                      "record": {
-                        "read": "chatbot.thread",
-                        "variables": {
-                          "id": "$selected"
-                        }
+                    {
+                      "term": {
+                        "key": "fact_channel"
                       },
-                      "primary": {
-                        "action": "chatbot.handoff"
+                      "path": "channelName"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_handled_by"
                       },
-                      "secondary": {
-                        "action": "chatbot.release"
+                      "path": "handledBy"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_stage"
+                      },
+                      "path": "stage"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_need"
+                      },
+                      "path": "need"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_company"
+                      },
+                      "path": "company"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_phone"
+                      },
+                      "path": "phone"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_email"
+                      },
+                      "path": "email"
+                    }
+                  ],
+                  "labels": {
+                    "stage": {
+                      "new": {
+                        "key": "stage_new"
+                      },
+                      "qualified": {
+                        "key": "stage_qualified"
+                      },
+                      "proposal": {
+                        "key": "stage_proposal"
+                      },
+                      "won": {
+                        "key": "stage_won"
+                      },
+                      "lost": {
+                        "key": "stage_lost"
                       }
                     }
                   }
-                ]
+                },
+                "bind": {
+                  "record": {
+                    "read": "chatbot.thread",
+                    "variables": {
+                      "id": "$selected"
+                    }
+                  },
+                  "primary": {
+                    "action": "chatbot.handoff"
+                  },
+                  "secondary": {
+                    "action": "chatbot.release"
+                  }
+                }
               }
             ]
           }
         ]
       }
     }
-  ]
+  ],
+  "aside": {
+    "id": "decisions",
+    "block": "core.decision-queue",
+    "props": {
+      "surface": "section",
+      "label": {
+        "key": "decisions_label"
+      },
+      "emptyTitle": {
+        "key": "decisions_empty_title"
+      },
+      "emptyBody": {
+        "key": "decisions_empty_body"
+      },
+      "seeWhy": {
+        "key": "decisions_see_why"
+      },
+      "moreMenu": {
+        "key": "decisions_more"
+      },
+      "commands": [
+        {
+          "id": "handoff",
+          "label": {
+            "key": "action_handoff"
+          }
+        }
+      ]
+    },
+    "bind": {
+      "queue": {
+        "read": "chatbot.decisions"
+      },
+      "command": {
+        "action": "chatbot.decide"
+      }
+    }
+  },
+  "asideSummary": {
+    "read": "chatbot.decisions",
+    "path": "count",
+    "previewPath": "rows.0.title",
+    "label": {
+      "key": "aside_label"
+    },
+    "opens": "queue"
+  }
 }
