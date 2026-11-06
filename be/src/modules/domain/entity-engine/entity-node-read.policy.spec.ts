@@ -441,6 +441,12 @@ const BE_READS: ReadonlyArray<BeRead> = [
         AND(IN("conversationId"), EQ("role"), { op: "gt", field: "sentAt", value: "x" }),
         RECENT("sentAt"),
     ),
+    read(
+        "graph-node-effects: the ledger record of an effect key (a unique key)",
+        "agent.node-effect",
+        EQ("effectKey"),
+        BY_ID,
+    ),
     read("workspace-time-zone: the settings of the workspace", "workspace.settings", EQ("key"), [
         ["key", "asc"],
         ["id", "asc"],

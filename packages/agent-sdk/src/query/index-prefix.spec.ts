@@ -134,3 +134,55 @@ describe("isIndexed", () => {
         expect(isIndexed(OWNER, undefined, [["id", "asc"]])).toBe(false)
     })
 })
+
+describe("isIndexed with the unique constraints of the entity", () => {
+    const withConstraints = (constraints: NonNullable<EntityDefinition["constraints"]>): EntityDefinition => ({
+        ...LEAD,
+        indexes: [],
+        constraints,
+    })
+    const UNIQUE = { kind: "unique", name: "effect_key", on: ["stage"], refusal: "taken" } as const
+    const COMPOSITE = { kind: "unique", name: "pair", on: ["stage", "channel"], refusal: "taken" } as const
+
+    it("serves a lookup by a unique key in the order of the id, forward or backward", () => {
+        const entity = withConstraints([UNIQUE])
+        expect(isIndexed(entity, q.eq("stage", "won"), [["id", "asc"]])).toBe(true)
+        expect(isIndexed(entity, q.eq("stage", "won"), [["id", "desc"]])).toBe(true)
+    })
+
+    it("does not serve a unique key in any other order, or a field the key does not name", () => {
+        const entity = withConstraints([UNIQUE])
+        expect(isIndexed(entity, q.eq("stage", "won"), RECENT)).toBe(false)
+        expect(isIndexed(entity, q.eq("channel", "zalo"), [["id", "asc"]])).toBe(false)
+        expect(isIndexed(entity, undefined, [["id", "asc"]])).toBe(false)
+    })
+
+    it("serves a prefix of a composite key by the fields that follow it, and both fields by the id", () => {
+        const entity = withConstraints([COMPOSITE])
+        expect(
+            isIndexed(entity, q.eq("stage", "won"), [
+                ["channel", "asc"],
+                ["id", "asc"],
+            ]),
+        ).toBe(true)
+        expect(isIndexed(entity, q.eq("stage", "won"), [["id", "asc"]])).toBe(false)
+        expect(isIndexed(entity, q.and(q.eq("stage", "won"), q.eq("channel", "zalo")), [["id", "asc"]])).toBe(true)
+    })
+
+    it("leaves out a partial unique constraint and the constraints that are not unique", () => {
+        const partial = withConstraints([{ ...UNIQUE, where: q.eq("channel", "zalo") }])
+        const check = withConstraints([{ kind: "check", name: "positive", expr: q.gt("amountVnd", 0), refusal: "bad" }])
+        expect(isIndexed(partial, q.eq("stage", "won"), [["id", "asc"]])).toBe(false)
+        expect(isIndexed(check, q.eq("stage", "won"), [["id", "asc"]])).toBe(false)
+    })
+
+    it("serves a unique key beside the declared indexes", () => {
+        const entity: EntityDefinition = {
+            ...LEAD,
+            indexes: [{ name: "recent", on: [{ desc: "updatedAt" }, { desc: "id" }] }],
+            constraints: [UNIQUE],
+        }
+        expect(isIndexed(entity, undefined, RECENT)).toBe(true)
+        expect(isIndexed(entity, q.eq("stage", "won"), [["id", "asc"]])).toBe(true)
+    })
+})
