@@ -161,3 +161,29 @@ describe("approval cards", () => {
         expect(await chat().postApproval(workspaceId, { decisionId, body: "x", agentId: null, roomIds: [], approverSeatIds: [] })).toBe(0)
     })
 })
+
+describe("lines of an agent", () => {
+    it("writes a line of an agent to a named room or to one person, once per key, and a system line without an agent", async () => {
+        const identity = await seed()
+        const { workspaceId, ownerId, agentId } = identity
+        const [first] = identity.staffIds
+        const room = valueOf(await chat().createRoom(workspaceId, ownerId, { kind: "group", name: "Sales", members: [user(first)] }))
+        const named = await chat().postMessage(workspaceId, { authorAgentId: agentId, roomId: room.id, toUserId: null, body: " Hi ", key: "k1" })
+        assert(named !== null)
+        const repeated = await chat().postMessage(workspaceId, { authorAgentId: agentId, roomId: room.id, toUserId: null, body: "Hi", key: "k1" })
+        expect(repeated).toEqual(named)
+        const toPerson = await chat().postMessage(workspaceId, { authorAgentId: agentId, roomId: null, toUserId: first, body: "Private", key: null })
+        assert(toPerson !== null)
+        expect(toPerson.roomId).not.toBe(room.id)
+        const system = await chat().postMessage(workspaceId, { authorAgentId: null, roomId: room.id, toUserId: null, body: "Month closed", key: null })
+        assert(system !== null)
+        const thread = await chat().messages(workspaceId, first, room.id, 10, null, false)
+        expect(thread.nodes.map((node) => [node.authorKind, node.kind, node.body])).toEqual([
+            ["system", "system", "Month closed"],
+            ["agent", "text", "Hi"],
+        ])
+        expect(await chat().postMessage(workspaceId, { authorAgentId: agentId, roomId: world.id(), toUserId: null, body: "x", key: null })).toBeNull()
+        expect(await chat().postMessage(workspaceId, { authorAgentId: null, roomId: null, toUserId: first, body: "x", key: null })).toBeNull()
+        expect(await chat().postMessage(workspaceId, { authorAgentId: agentId, roomId: room.id, toUserId: null, body: "   ", key: null })).toBeNull()
+    })
+})

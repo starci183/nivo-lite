@@ -642,6 +642,58 @@ export class TeamChatService {
         return rooms.length
     }
 
+    /**
+     * Writes one line of an agent (or of the system when no agent speaks) into a room: the replacement of the old Office lines. The room is
+     * named, or the line goes to one person and the direct room between them and the agent is opened on demand. The same key from the same
+     * agent in the same room is the same line. Null when the room, the person or the agent is not of the workspace.
+     */
+    async postMessage(
+        workspaceId: string,
+        line: {
+            readonly authorAgentId: string | null
+            readonly roomId: string | null
+            readonly toUserId: string | null
+            readonly body: string
+            readonly key: string | null
+        },
+    ): Promise<{ readonly roomId: string; readonly messageId: string } | null> {
+        const roomId = await this.lineRoom(workspaceId, line)
+        const text = line.body.trim()
+        if (roomId === null || text.length === 0) return null
+        const inserted: Array<{ id: string }> = await this.entityManager.query(
+            `INSERT INTO public.chat_room_messages (room_id, workspace_id, author_kind, author_id, body, kind, client_id)
+                  VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT DO NOTHING RETURNING id`,
+            [
+                roomId,
+                workspaceId,
+                line.authorAgentId === null ? "system" : "agent",
+                line.authorAgentId,
+                text.slice(0, CARD_BODY_MAX),
+                line.authorAgentId === null ? "system" : "text",
+                line.key,
+            ],
+        )
+        const created = inserted[0]
+        if (created !== undefined) return { roomId, messageId: created.id }
+        const kept = await this.entityManager.findOneOrFail(ChatRoomMessageEntity, {
+            where: { roomId, authorId: line.authorAgentId ?? undefined, clientId: line.key ?? undefined },
+        })
+        return { roomId, messageId: kept.id }
+    }
+
+    private async lineRoom(
+        workspaceId: string,
+        line: { readonly authorAgentId: string | null; readonly roomId: string | null; readonly toUserId: string | null },
+    ): Promise<string | null> {
+        if (line.roomId !== null) {
+            const named = await this.entityManager.findOne(ChatRoomEntity, { where: { id: line.roomId, workspaceId } })
+            return named?.id ?? null
+        }
+        if (line.toUserId === null || line.authorAgentId === null) return null
+        return this.directRoomOf(workspaceId, line.toUserId, { memberKind: "agent", memberId: line.authorAgentId })
+    }
+
     /** Where each decision stands, for the viewer: pending, approved, refused or expired, who settled it, and whether the viewer may. */
     private async approvalStates(
         workspaceId: string,
