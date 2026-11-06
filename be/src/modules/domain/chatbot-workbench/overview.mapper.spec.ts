@@ -49,16 +49,7 @@ const waitingOf = builder<WaitingRow>({
 /** The desk being read, with no other agent and no staff named. */
 const DESK = { agentIds: ["agent-1"], agentNames: new Map<string, string>(), staffNames: new Map<string, string>() }
 
-const LEAD_HOA = {
-    id: "l-1",
-    contact_name: "Hoa",
-    company: "Hoa Shop",
-    need: "T-shirts",
-    stage: "qualified",
-    created_at: "2026-10-06T03:00:00.000Z",
-}
-
-const EMPTY_METRICS = { today: 0, waiting: 0, p50FirstResponseMin: null, sample: 0, leadsCaptured7d: 0 }
+const EMPTY_METRICS = { today: 0, waiting: 0, p50FirstResponseMin: null, sample: 0 }
 
 const EXPECTED_OVERVIEW = {
     workspaceId: "ws-1",
@@ -68,7 +59,6 @@ const EXPECTED_OVERVIEW = {
             id: "c-3",
             channel: "zalo",
             name: "",
-            leadId: "missing",
             lastText: "",
             lastRole: null,
             lastAt: "2026-10-13T02:00:00.000Z",
@@ -76,14 +66,12 @@ const EXPECTED_OVERVIEW = {
             handledBy: null,
             waiting: false,
             unanswered: false,
-            lead: null,
             respondent: { kind: "ai", name: null },
         },
         {
             id: "c-2",
             channel: "zalo",
             name: "",
-            leadId: null,
             lastText: "Hello",
             lastRole: "agent",
             lastAt: "2026-10-13T01:03:00.000Z",
@@ -91,14 +79,12 @@ const EXPECTED_OVERVIEW = {
             handledBy: null,
             waiting: false,
             unanswered: false,
-            lead: null,
             respondent: { kind: "ai", name: null },
         },
         {
             id: "c-1",
             channel: "zalo",
             name: "Hoa",
-            leadId: "l-1",
             lastText: "200k",
             lastRole: "agent",
             lastAt: "2026-10-13T01:02:00.000Z",
@@ -106,11 +92,10 @@ const EXPECTED_OVERVIEW = {
             handledBy: null,
             waiting: true,
             unanswered: false,
-            lead: { stage: "qualified", need: "T-shirts", company: "Hoa Shop" },
             respondent: { kind: "ai", name: null },
         },
     ],
-    metrics: { today: 2, waiting: 1, p50FirstResponseMin: 2, sample: 1, leadsCaptured7d: 1 },
+    metrics: { today: 2, waiting: 1, p50FirstResponseMin: 2, sample: 1 },
     waiting: [
         {
             workItemId: "w-2",
@@ -154,12 +139,11 @@ describe("chatbot overview mapper", () => {
                 conversations: [],
                 messages: [],
                 waiting: [],
-                leads: [],
             }),
         ).toEqual(subject.emptyChatbotOverview("ws-1", NOW))
     })
 
-    it("sorts by latest activity, counts the Vietnam day and includes the seven-day lead boundary", async () => {
+    it("sorts by latest activity and counts the Vietnam day", async () => {
         const subject = await buildSubject()
 
         const result = subject.buildChatbotOverview({
@@ -167,7 +151,7 @@ describe("chatbot overview mapper", () => {
             now: NOW,
             ...DESK,
             conversations: [
-                conversationOf(),
+                conversationOf({ visitor_name: "Hoa" }),
                 conversationOf({ id: "c-2", lead_id: null, created_at: "2026-10-12T16:59:59.999Z" }),
                 conversationOf({ id: "c-3", lead_id: "missing", created_at: "2026-10-13T02:00:00.000Z" }),
             ],
@@ -198,7 +182,6 @@ describe("chatbot overview mapper", () => {
                 }),
                 waitingOf({ id: "w-3" }),
             ],
-            leads: [LEAD_HOA, { ...LEAD_HOA, id: "old", contact_name: "Old", created_at: "2026-10-06T02:59:59.999Z" }],
             staffNames: new Map([["s-1", "Mai"]]),
         })
 
@@ -217,7 +200,6 @@ describe("chatbot overview mapper", () => {
             conversations: [conversationOf()],
             messages: [messageOf(), messageOf({ role: "agent" })],
             waiting: [],
-            leads: [],
         })
 
         expect(result.metrics).toEqual({ ...EMPTY_METRICS, today: 1 })
@@ -245,7 +227,6 @@ describe("chatbot overview mapper", () => {
             conversations,
             messages,
             waiting: [],
-            leads: [],
         })
 
         expect(result.metrics).toEqual({
@@ -273,7 +254,6 @@ describe("chatbot overview mapper respondent", () => {
             ],
             messages: [],
             waiting: [],
-            leads: [],
         })
 
         expect(Object.fromEntries(result.conversations.map((row) => [row.id, row.respondent]))).toEqual({
@@ -293,7 +273,6 @@ describe("chatbot overview mapper respondent", () => {
             conversations: [conversationOf()],
             messages: [],
             waiting: [waitingOf({ id: "w-9", subject_id: "elsewhere" })],
-            leads: [],
         })
 
         expect(result.waiting).toEqual([])
@@ -311,7 +290,6 @@ describe("chatbot overview mapper staff names", () => {
             conversations: [conversationOf()],
             messages: [],
             waiting: [waitingOf({ subject_id: "c-1", assigned_staff_id: "gone" })],
-            leads: [],
         })
 
         expect(result.waiting.map((item) => item.staffName)).toEqual([null])

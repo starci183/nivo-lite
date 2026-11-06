@@ -1,5 +1,4 @@
 import { Field, ID, Int, ObjectType } from "@nestjs/graphql"
-import { ChatbotConversationLeadType } from "./chatbot-conversation-lead.type"
 
 @ObjectType()
 /** A customer conversation in the workbench inbox. */
@@ -15,10 +14,6 @@ export class ChatbotConversationType {
     /** The name value. */
     @Field(() => String)
     name!: string
-
-    /** The lead id value. */
-    @Field(() => ID, { nullable: true })
-    leadId!: string | null
 
     /** The last text value. */
     @Field(() => String)
@@ -47,10 +42,6 @@ export class ChatbotConversationType {
     /** The unanswered value. */
     @Field(() => Boolean)
     unanswered!: boolean
-
-    /** The customer record, null while the customer was not captured. */
-    @Field(() => ChatbotConversationLeadType, { nullable: true })
-    lead!: ChatbotConversationLeadType | null
 
     /** Who answers next: ai, person or agent. */
     @Field(() => String)

@@ -10,7 +10,6 @@ import { FLOW_ENGINE_ERROR_KINDS, FLOW_ENGINE_MESSAGES } from "@modules/domain/f
 import { AUTHORITY_ERROR_KINDS, AUTHORITY_MESSAGES } from "@modules/domain/authority"
 import { AUTHORITY_RULES_ERROR_KINDS, AUTHORITY_RULES_MESSAGES } from "@modules/domain/authority-rules"
 import { MEMBER_GRANTS_ERROR_KINDS, MEMBER_GRANTS_MESSAGES } from "@modules/domain/member-grants"
-import { EXECUTIONS_ERROR_KINDS, EXECUTIONS_MESSAGES } from "@modules/domain/executions"
 import { WORK_ITEMS_ERROR_KINDS, WORK_ITEMS_MESSAGES } from "@modules/domain/work-items"
 import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
 import { API_ERROR_KINDS, EVENTS_MESSAGES } from "@modules/events/api"
@@ -28,7 +27,6 @@ export const platformErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind
     AUTHORITY_ERROR_KINDS,
     AUTHORITY_RULES_ERROR_KINDS,
     MEMBER_GRANTS_ERROR_KINDS,
-    EXECUTIONS_ERROR_KINDS,
     WORK_ITEMS_ERROR_KINDS,
     CONFIG_ERROR_KINDS,
     DATABASE_ERROR_KINDS,
@@ -50,7 +48,6 @@ export const platformMessages: ReadonlyArray<MessageBundle> = [
     AUTHORITY_MESSAGES,
     AUTHORITY_RULES_MESSAGES,
     MEMBER_GRANTS_MESSAGES,
-    EXECUTIONS_MESSAGES,
     WORK_ITEMS_MESSAGES,
     ERRORS_MESSAGES,
     HTTP_SECURITY_MESSAGES,

@@ -7,22 +7,11 @@ import { AGENTS_INSTALLATIONS } from "@modules/domain/agents"
 import type { InstallationDirectory } from "@modules/domain/agents"
 import { AgentTagService } from "../../modules/domain/agent-work/agent-tag.service"
 import { CustomerIntakeService } from "../../modules/domain/conversations/customer-intake.service"
-import { PaymentDemandService } from "../../modules/domain/orders/payment-demand.service"
 
 /**
  * Peers that sit behind an owner under proof but are not what the proof is about, bound as quiet doubles: each answers as if nothing
  * happened (the scheduler is told, no agent is woken, no graph speaks), so a world composes without the capability they belong to.
  */
-
-/** The poll scheduler's hint of the orders: no proof reads a bank-feed connection, so telling the scheduler is a no-op. */
-export const QUIET_PAYMENT_DEMAND: Provider = {
-    provide: PaymentDemandService,
-    useFactory: () =>
-        mock<PaymentDemandService>({
-            orderAwaitingPayment: jest.fn().mockResolvedValue(undefined),
-            claimOpen: jest.fn().mockResolvedValue(undefined),
-        }),
-}
 
 /** The tag door of the agent work store: a tag is told as written, and no wake exists. */
 export const QUIET_AGENT_TAGS: Provider = {

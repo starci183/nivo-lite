@@ -6,10 +6,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { AgentToolsService } from "@modules/domain/agent-tools"
 import { ApiKeysService } from "@modules/domain/api-keys"
-import { N8nRunsService } from "@modules/domain/n8n-runs"
 import { ApiCredentialAuthenticatorService } from "./api-credential-authenticator.service"
-
-const run = { runId: "run-1", workspaceId: "ws-1", templateKey: "daily", config: {} }
 
 const build = async () => {
     const posting = mock<HiringPostingService>()
@@ -18,7 +15,6 @@ const build = async () => {
     const invites = mock<WorkspaceInvitesService>()
     const keys = mock<ApiKeysService>()
     const tools = mock<AgentToolsService>()
-    const runs = mock<N8nRunsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ApiCredentialAuthenticatorService,
@@ -28,7 +24,6 @@ const build = async () => {
             { provide: WorkspaceInvitesService, useValue: invites },
             { provide: ApiKeysService, useValue: keys },
             { provide: AgentToolsService, useValue: tools },
-            { provide: N8nRunsService, useValue: runs },
         ],
     }).compile()
     return {
@@ -36,7 +31,6 @@ const build = async () => {
         posting,
         keys,
         tools,
-        runs,
         offers,
         interviews,
         invites,
@@ -68,32 +62,6 @@ describe("ApiCredentialAuthenticatorService", () => {
         })
         expect(tools.authenticate).toHaveBeenCalledWith("Bearer tool")
         expect(tools.runBearerTool).not.toHaveBeenCalled()
-    })
-
-    it("binds a completion credential to the requested run", async () => {
-        const { authenticator, runs } = await build()
-        runs.verifyRun.mockResolvedValue(run)
-        runs.requireRun.mockReturnValue(run)
-
-        await expect(authenticator.authenticate({ kind: "run-token" }, "Bearer run", "run-1")).resolves.toEqual({
-            kind: "run-token",
-            subject: "run-1",
-            workspaceId: "ws-1",
-        })
-        expect(runs.verifyRun).toHaveBeenCalledWith({ authorization: "Bearer run", expectedRunId: "run-1" })
-        expect(runs.requireRun).toHaveBeenCalledWith(run)
-    })
-
-    it("retains the workflow-specific refusal path for a data door", async () => {
-        const { authenticator, runs } = await build()
-        runs.verifyRun.mockResolvedValue(run)
-        runs.requireWorkflow.mockReturnValue(run)
-
-        await expect(
-            authenticator.authenticate({ kind: "run-token", workflow: "daily" }, "Bearer run", undefined),
-        ).resolves.toEqual({ kind: "run-token", subject: "run-1", workspaceId: "ws-1" })
-        expect(runs.requireWorkflow).toHaveBeenCalledWith(run, "daily")
-        expect(runs.requireRun).not.toHaveBeenCalled()
     })
 
     it("propagates credential failures", async () => {
@@ -133,14 +101,13 @@ describe("link credentials", () => {
     })
 
     it("propagates the domain refusal without trying another credential", async () => {
-        const { authenticator, offers, keys, runs } = await build()
+        const { authenticator, offers, keys } = await build()
         const refusal = new Error("link missing")
         offers.authenticateLink.mockRejectedValue(refusal)
         await expect(
             authenticator.authenticate({ kind: "link-token", workflow: "public-hiring-offer" }, "bad"),
         ).rejects.toBe(refusal)
         expect(keys.verifyCredential).not.toHaveBeenCalled()
-        expect(runs.verifyRun).not.toHaveBeenCalled()
     })
 })
 
@@ -174,7 +141,6 @@ describe("posting credentials", () => {
 describe("credential refusal ownership", () => {
     const doors: Array<CredentialMetadata> = [
         { kind: "api-key" },
-        { kind: "run-token" },
         { kind: "tool-token" },
         { kind: "posting", workflow: "apply-to-hiring-job" },
         { kind: "link-token", workflow: "public-hiring-offer" },
@@ -186,10 +152,9 @@ describe("credential refusal ownership", () => {
 
     it.each(doors)("preserves invalid and missing credential refusals for %p", async (metadata) => {
         for (const raw of ["invalid", ""]) {
-            const { authenticator, keys, runs, tools, posting, offers, interviews, invites } = await build()
+            const { authenticator, keys, tools, posting, offers, interviews, invites } = await build()
             const refusal = new IdentityError({ code: IdentityErrorCode.Unauthenticated })
             keys.verifyCredential.mockRejectedValue(refusal)
-            runs.verifyRun.mockRejectedValue(refusal)
             tools.authenticate.mockRejectedValue(refusal)
             posting.requireOpen.mockRejectedValue(refusal)
             offers.authenticateLink.mockRejectedValue(refusal)

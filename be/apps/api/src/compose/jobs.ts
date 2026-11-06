@@ -12,18 +12,12 @@ import { DraftPublicDocumentQueueModule } from "@features/jobs/draft-public-docu
 import { RunBrainCommandQueueModule } from "@features/jobs/run-brain-command"
 import { IndexKnowledgeSourceQueueModule } from "@features/jobs/index-knowledge-source"
 import { ReembedKnowledgeQueueModule } from "@features/jobs/reembed-knowledge"
-import { EmitN8nEventQueueModule } from "@features/jobs/emit-n8n-event"
 import { EmitWebhookEventQueueModule } from "@features/jobs/emit-webhook-event"
-import { RunAutomationCommandQueueModule } from "@features/jobs/run-automation-command"
-import { RunAutomationTickQueueModule } from "@features/jobs/run-automation-tick"
-import { RunDecisionsQueueModule } from "@features/jobs/run-decisions"
 import { RunSetupTurnQueueModule } from "@features/jobs/run-setup-turn"
 import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
 import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
-import { DrainWorkQueueModule } from "@features/jobs/drain-work"
 import { ExpireApprovalsQueueModule } from "@features/jobs/expire-approvals"
 import { WatchAgentGraphsQueueModule } from "@features/jobs/watch-agent-graphs"
-import { DraftLoyaltyCampaignQueueModule } from "@features/jobs/draft-loyalty-campaign"
 import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
 import { CompleteZaloAuthorizationQueueModule } from "@features/jobs/complete-zalo-authorization"
 import { RefreshZaloTokensQueueModule } from "@features/jobs/refresh-zalo-tokens"
@@ -32,7 +26,6 @@ import { ReconcileZaloInboxQueueModule } from "@features/jobs/reconcile-zalo-inb
 import { ReconcileBankFeedQueueModule } from "@features/jobs/reconcile-bank-feed"
 import { RunZaloWizardQueueModule } from "@features/jobs/run-zalo-wizard"
 import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
-import { RunLeadActionQueueModule } from "@features/jobs/run-lead-action"
 import { RunModuleJobQueueModule } from "@features/jobs/module-jobs"
 import { ParkedJobsQueueModule } from "@features/jobs/parked-jobs"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
@@ -48,7 +41,6 @@ import { HiringTickQueueModule } from "@features/jobs/hiring-tick"
 import { RunShiftsAlertsQueueModule } from "@features/jobs/run-shifts-alerts"
 import { RunAccountingMorningQueueModule } from "@features/jobs/run-accounting-morning"
 import { RunMarketingTickQueueModule } from "@features/jobs/run-marketing-tick"
-import { RunLeadGenQueueModule } from "@features/jobs/run-lead-gen"
 import { SweepRealtimeEventsQueueModule } from "@features/jobs/sweep-realtime-events"
 import { SweepSystemHistoryQueueModule } from "@features/jobs/sweep-system-history"
 import { DeliverGenericWebhookQueueModule } from "@features/jobs/deliver-generic-webhook"
@@ -73,18 +65,12 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     RunBrainCommandQueueModule.register({}),
     IndexKnowledgeSourceQueueModule.register({}),
     ReembedKnowledgeQueueModule.register({}),
-    EmitN8nEventQueueModule.register({}),
     EmitWebhookEventQueueModule.register({}),
-    RunAutomationCommandQueueModule.register({}),
-    RunAutomationTickQueueModule.register({}),
-    RunDecisionsQueueModule.register({}),
     RunSetupTurnQueueModule.register({}),
     GenerateWithAgentQueueModule.register({}),
     SyncAgentsQueueModule.register({}),
-    DrainWorkQueueModule.register({}),
     ExpireApprovalsQueueModule.register({}),
     WatchAgentGraphsQueueModule.register({}),
-    DraftLoyaltyCampaignQueueModule.register({}),
     CheckConnectionHealthQueueModule.register({}),
     CompleteZaloAuthorizationQueueModule.register({}),
     RefreshZaloTokensQueueModule.register({}),
@@ -92,14 +78,12 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     PollDueConnectionsQueueModule.register({}),
     RunZaloWizardQueueModule.register({}),
     RunChatTurnQueueModule.register({}),
-    RunLeadActionQueueModule.register({}),
     RunModuleJobQueueModule.register({}),
     ParkedJobsQueueModule.register({}),
     ProcessPublicApiQueueModule.register({}),
     CreatePaymentOrderQueueModule.register({}),
     PublishContentQueueModule.register({}),
     AcceptMetaEventQueueModule.register({}),
-    RunLeadGenQueueModule.register({}),
     SweepRealtimeEventsQueueModule.register({}),
     SweepSystemHistoryQueueModule.register({}),
     IssueInviteQueueModule.register({}),

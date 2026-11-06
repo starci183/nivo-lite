@@ -12,7 +12,6 @@ import { parseQueueConfig } from "@modules/platform/queue"
 import { parseRealtimeConfig } from "@modules/platform/realtime"
 import { parseChannelsConfig } from "@modules/domain/channels"
 import { parseConnectionSecretsConfig } from "@modules/domain/connection-secrets"
-import { parseLoyaltyOtpsConfig } from "@modules/domain/loyalty-otps"
 import { parseDataSourcesConfig } from "@modules/integrations/data-sources"
 import { parseTelegramUserConfig } from "@modules/integrations/telegram-user"
 import { parseMailConfig } from "@modules/integrations/mail"
@@ -28,7 +27,6 @@ import { parseWorkspacesConfig } from "@modules/domain/workspaces"
 import { parseDocumentsConfig } from "@modules/integrations/documents"
 import { parseAiGatewayConfig } from "@modules/integrations/ai-gateway"
 import { parseAiConfig } from "@modules/integrations/ai"
-import { parseN8nConfig } from "@modules/integrations/n8n"
 import { parseRedisConfig } from "@modules/integrations/redis"
 import { parseRemoteFilesConfig } from "@modules/integrations/remote-files"
 import { parseAiTasksConfig } from "@modules/domain/ai-tasks"
@@ -92,8 +90,6 @@ export interface ApiOptions {
     readonly aiTasks: ReturnType<typeof parseAiTasksConfig>
     /** The key that seals the credentials of the connections. */
     readonly connectionSecrets: ReturnType<typeof parseConnectionSecretsConfig>
-    /** The dedicated secret mixed into loyalty one-time code hashes. */
-    readonly loyaltyOtps: ReturnType<typeof parseLoyaltyOtpsConfig>
     /** The public origin of the web app, for provider return addresses. */
     readonly channels: ReturnType<typeof parseChannelsConfig>
     /** The Telegram Bot API host. */
@@ -136,8 +132,6 @@ export interface ApiOptions {
     readonly channelSetup: ReturnType<typeof parseChannelSetupConfig>
     /** Deliveries to tenant-supplied webhook addresses. */
     readonly webhookDelivery: ReturnType<typeof parseWebhookDeliveryConfig>
-    /** The signing secret and the webhook base of the shared n8n workflows. */
-    readonly n8n: ReturnType<typeof parseN8nConfig>
     /** The knowledge capability: the demo pacing knob of indexing (`KNOWLEDGE_INDEX_CHUNK_DELAY_MS`, 0 unless a demo asks). */
     readonly knowledge: ReturnType<typeof parseKnowledgeConfig>
     /** How ffmpeg is run. */
@@ -171,7 +165,6 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     agentTurns: parseAgentTurnsConfig(env),
     aiTasks: parseAiTasksConfig(env, parseAiConfig(env)),
     connectionSecrets: parseConnectionSecretsConfig(env),
-    loyaltyOtps: parseLoyaltyOtpsConfig(env),
     channels: parseChannelsConfig(env),
     telegram: parseTelegramConfig(env),
     sepay: parseSepayConfig(env),
@@ -192,7 +185,6 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     meta: parseMetaConfig(env),
     channelSetup: parseChannelSetupConfig(env),
     webhookDelivery: parseWebhookDeliveryConfig(env),
-    n8n: parseN8nConfig(env),
     knowledge: parseKnowledgeConfig(env),
     ffmpeg: parseFfmpegConfig(env),
     tts: parseTtsConfig(env),

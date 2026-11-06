@@ -28,7 +28,6 @@ import { agentApiModules } from "./compose/agent-api"
 import { modulesModules } from "./compose/modules"
 import { billingModules } from "./compose/billing"
 import { webhooksModules } from "./compose/webhooks"
-import { loyaltyModules } from "./compose/loyalty"
 import { apiModules } from "./compose/api"
 import { realtimeModules } from "./compose/realtime"
 
@@ -44,7 +43,7 @@ export class AppModule {
                 ...authenticationModules(options),
                 ...identityModules(options),
                 ...connectionsModules(options),
-                ...automationsModules(options),
+                ...automationsModules(),
                 ...messagingModules(options),
                 ...videoModules(options),
                 ...businessModules(options),
@@ -64,7 +63,6 @@ export class AppModule {
                 ...modulesModules(),
                 ...billingModules(options),
                 ...webhooksModules(),
-                ...loyaltyModules(options),
                 ...apiModules(options),
                 ...realtimeModules(),
             ],

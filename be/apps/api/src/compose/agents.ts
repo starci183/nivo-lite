@@ -27,8 +27,6 @@ import {
 } from "@modules/domain/ai-generations"
 import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { ApprovalRequestsModule } from "@modules/domain/approval-requests"
-import { ThreadAssignmentsService } from "@modules/domain/thread-messages"
-import { ThreadWorkService } from "@modules/domain/thread-work"
 import { DECISIONS_ERROR_KINDS, DECISIONS_MESSAGES, DecisionsModule } from "@modules/domain/decisions"
 import {
     OPENCLAW_AGENT_SYNC_ERROR_KINDS,
@@ -65,7 +63,7 @@ export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
         },
         syncFreshMs: AGENTS_SYNC_FRESH_MS,
     }),
-    AgentProfileModule.register({ isGlobal: true, threads: ThreadAssignmentsService, work: ThreadWorkService }),
+    AgentProfileModule.register({ isGlobal: true }),
     AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
     AiGenerationsModule.register({
         isGlobal: true,

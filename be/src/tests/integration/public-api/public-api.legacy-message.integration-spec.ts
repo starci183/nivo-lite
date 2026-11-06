@@ -12,8 +12,7 @@ describe("Public API legacy-message (persisted local integration)", () => {
     it("retains a historical inline message's original work dedupe and approval", async () => {
         const identity = await fixture()
         const conversationId = world.id()
-        const leadId = world.id()
-        await persistPublicApiConversation(world.db.primary, identity, conversationId, leadId)
+        await persistPublicApiConversation(world.db.primary, identity, conversationId)
         const dedupeKey = `api.message:historical:${world.id()}`
         const payload = {
             kind: "message",
@@ -21,7 +20,6 @@ describe("Public API legacy-message (persisted local integration)", () => {
             keyId: identity.keyId,
             keyName: "Public API proof",
             conversationId,
-            leadId,
             text: "Original historical draft",
             requireApproval: true,
             dedupeKey,

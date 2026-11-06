@@ -18,8 +18,4 @@ export class ChatbotMetricsType {
     /** The sample value. */
     @Field(() => Int)
     sample!: number
-
-    /** The leads captured7d value. */
-    @Field(() => Int)
-    leadsCaptured7d!: number
 }

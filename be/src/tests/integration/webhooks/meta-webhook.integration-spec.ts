@@ -104,7 +104,7 @@ const assertDownstreamDelivery = async (
 
 const registerHandoffProof = (world: LiteWorld, fixture: () => WebhookFixture) => {
     it("webhooks/accepted-delivery-publishes-once: concurrent redeliveries commit one receipt and job", async () => {
-        const { door, connections, conversations, taker, process, close } = await fixture().build()
+        const { door, connections, conversations, process, close } = await fixture().build()
         world.cleanup(close)
         const sent = fixture().delivery()
         cleanupWebhook(world, sent.mid, sent.deliveryId)
@@ -146,7 +146,6 @@ const registerHandoffProof = (world: LiteWorld, fixture: () => WebhookFixture) =
         await assertDownstreamDelivery(world, fixture(), sent)
         expect(connections.recordEvent).toHaveBeenCalledTimes(1)
         expect(conversations.acceptMeta).not.toHaveBeenCalled()
-        expect(taker.take).not.toHaveBeenCalled()
     })
 }
 

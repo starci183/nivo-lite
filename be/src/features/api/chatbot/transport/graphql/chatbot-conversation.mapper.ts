@@ -6,7 +6,6 @@ export const toChatbotConversationType = (conversation: ChatbotConversation): Ch
     id: conversation.id,
     channel: conversation.channel,
     name: conversation.name,
-    leadId: conversation.leadId,
     lastText: conversation.lastText,
     lastRole: conversation.lastRole,
     lastAt: conversation.lastAt,
@@ -14,7 +13,6 @@ export const toChatbotConversationType = (conversation: ChatbotConversation): Ch
     handledBy: conversation.handledBy,
     waiting: conversation.waiting,
     unanswered: conversation.unanswered,
-    lead: conversation.lead,
     respondentKind: conversation.respondent.kind,
     respondentName: conversation.respondent.name,
 })

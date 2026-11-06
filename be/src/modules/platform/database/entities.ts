@@ -13,9 +13,7 @@ import { approvalRequestsEntities } from "@modules/domain/approval-requests"
 import { authorityEntities } from "@modules/domain/authority"
 import { authorityActionsEntities } from "@modules/domain/authority-actions"
 import { authorityRulesEntities } from "@modules/domain/authority-rules"
-import { automationCommandsEntities } from "@modules/domain/automation-commands"
 import { automationPipelinesEntities } from "@modules/domain/automation-pipelines"
-import { automationRunsEntities } from "@modules/domain/automation-runs"
 import { automationTemplatesEntities } from "@modules/domain/automation-templates"
 import { bankFeedInboxEntities } from "@modules/domain/bank-feed-inbox"
 import { connectionPollEntities } from "@modules/domain/connection-poll"
@@ -51,7 +49,6 @@ import { contentPillarsEntities } from "@modules/domain/content-pillars"
 import { contentPlansEntities } from "@modules/domain/content-plans"
 import { contentSettingsEntities } from "@modules/domain/content-settings"
 import { contentWeeklyReportsEntities } from "@modules/domain/content-weekly-reports"
-import { contractsEntities } from "@modules/domain/contracts"
 import { conversationOwnershipEventsEntities } from "@modules/domain/conversation-ownership-events"
 import { creditsEntities } from "@modules/domain/credits"
 import { dataRecordsEntities } from "@modules/domain/data-records"
@@ -60,7 +57,6 @@ import { decisionsEntities } from "@modules/domain/decisions"
 import { dossierReviewEntities } from "@modules/domain/dossier-review"
 import { emailMessagesEntities } from "@modules/domain/email-messages"
 import { eventsEntities } from "@modules/domain/events"
-import { executionsEntities } from "@modules/domain/executions"
 import { hiringEntities } from "@modules/domain/hiring"
 import { identityEntities } from "@modules/domain/identity"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
@@ -70,16 +66,6 @@ import { knowledgeChunksEntities } from "@modules/domain/knowledge-chunks"
 import { knowledgeGapsEntities } from "@modules/domain/knowledge-gaps"
 import { knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
 import { knowledgeSuggestionStateEntities } from "@modules/domain/knowledge-suggestion-state"
-import { leadActionsEntities } from "@modules/domain/lead-actions"
-import { leadFlowsEntities } from "@modules/domain/lead-flows"
-import { leadsEntities } from "@modules/domain/leads"
-import { loyaltyCampaignsEntities } from "@modules/domain/loyalty-campaigns"
-import { loyaltyCustomerLinksEntities } from "@modules/domain/loyalty-customer-links"
-import { loyaltyCustomersEntities } from "@modules/domain/loyalty-customers"
-import { loyaltyLedgerEntities } from "@modules/domain/loyalty-ledger"
-import { loyaltyOtpsEntities } from "@modules/domain/loyalty-otps"
-import { loyaltyProgramsEntities } from "@modules/domain/loyalty-programs"
-import { loyaltyRewardsEntities } from "@modules/domain/loyalty-rewards"
 import { mcpCallLogEntities } from "@modules/domain/mcp-call-log"
 import { mcpConnectorsEntities } from "@modules/domain/mcp-connectors"
 import { mcpGatewayReceiptsEntities } from "@modules/domain/mcp-gateway-receipts"
@@ -96,26 +82,20 @@ import { moduleSetupMessagesEntities } from "@modules/domain/module-setup-messag
 import { moduleSetupSessionsEntities } from "@modules/domain/module-setup-sessions"
 import { moduleSetupWritesEntities } from "@modules/domain/module-setup-writes"
 import { modulesEntities } from "@modules/domain/modules"
-import { n8nRunsEntities } from "@modules/domain/n8n-runs"
 import { nivoKnowledgeEntities } from "@modules/domain/nivo-knowledge"
-import { officeCommandCandidatesEntities } from "@modules/domain/office-command-candidates"
 import { officeRoomsEntities } from "@modules/domain/office-rooms"
 import { openclawAgentSyncEntities } from "@modules/domain/openclaw-agent-sync"
-import { ordersEntities } from "@modules/domain/orders"
 import { paymentOrderRequestsEntities } from "@modules/domain/payment-order-requests"
 import { paymentOrdersEntities } from "@modules/domain/payment-orders"
 import { platformAdminEntities } from "@modules/domain/platform-admin"
 import { platformAuditEntities } from "@modules/domain/platform-audit"
 import { publicApiEntities } from "@modules/domain/public-api"
 import { publicDocumentsEntities } from "@modules/domain/public-documents"
-import { responsibilitiesEntities } from "@modules/domain/responsibilities"
 import { sepayTransactionsEntities } from "@modules/domain/sepay-transactions"
 import { shiftsEntities } from "@modules/domain/shifts"
 import { staffEntities } from "@modules/domain/staff"
 import { supplierPayablesEntities } from "@modules/domain/supplier-payables"
 import { telegramInboxEntities } from "@modules/domain/telegram-inbox"
-import { threadMessagesEntities } from "@modules/domain/thread-messages"
-import { threadWorkEntities } from "@modules/domain/thread-work"
 import { agentGraphsEntities } from "@modules/domain/agent-graphs"
 import { agentTemplatesEntities } from "@modules/domain/agent-templates"
 import { templateMarketplaceEntities } from "@modules/domain/template-marketplace"
@@ -127,9 +107,7 @@ import { videoDelegationsEntities } from "@modules/domain/video-delegations"
 import { videoProjectVersionsEntities } from "@modules/domain/video-project-versions"
 import { videoProjectsEntities } from "@modules/domain/video-projects"
 import { videoRendersEntities } from "@modules/domain/video-renders"
-import { workChainsEntities } from "@modules/domain/work-chains"
 import { workItemsEntities } from "@modules/domain/work-items"
-import { workThreadsEntities } from "@modules/domain/work-threads"
 import { workspaceInvitesEntities } from "@modules/domain/workspace-invites"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { workspacesEntities } from "@modules/domain/workspaces"
@@ -162,9 +140,7 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...authorityEntities,
     ...authorityActionsEntities,
     ...authorityRulesEntities,
-    ...automationCommandsEntities,
     ...automationPipelinesEntities,
-    ...automationRunsEntities,
     ...automationTemplatesEntities,
     ...bankFeedInboxEntities,
     ...connectionPollEntities,
@@ -201,7 +177,6 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...contentPlansEntities,
     ...contentSettingsEntities,
     ...contentWeeklyReportsEntities,
-    ...contractsEntities,
     ...conversationOwnershipEventsEntities,
     ...creditsEntities,
     ...dataRecordsEntities,
@@ -209,7 +184,6 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...decisionsEntities,
     ...emailMessagesEntities,
     ...eventsEntities,
-    ...executionsEntities,
     ...hiringEntities,
     ...identityEntities,
     ...inboundEventsEntities,
@@ -219,16 +193,6 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...knowledgeGapsEntities,
     ...knowledgeSourcesEntities,
     ...knowledgeSuggestionStateEntities,
-    ...leadActionsEntities,
-    ...leadFlowsEntities,
-    ...leadsEntities,
-    ...loyaltyCampaignsEntities,
-    ...loyaltyCustomerLinksEntities,
-    ...loyaltyCustomersEntities,
-    ...loyaltyLedgerEntities,
-    ...loyaltyOtpsEntities,
-    ...loyaltyProgramsEntities,
-    ...loyaltyRewardsEntities,
     ...mcpCallLogEntities,
     ...mcpConnectorsEntities,
     ...mcpGatewayReceiptsEntities,
@@ -245,26 +209,20 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...moduleSetupSessionsEntities,
     ...moduleSetupWritesEntities,
     ...modulesEntities,
-    ...n8nRunsEntities,
     ...nivoKnowledgeEntities,
-    ...officeCommandCandidatesEntities,
     ...officeRoomsEntities,
     ...openclawAgentSyncEntities,
-    ...ordersEntities,
     ...paymentOrderRequestsEntities,
     ...paymentOrdersEntities,
     ...platformAdminEntities,
     ...platformAuditEntities,
     ...publicApiEntities,
     ...publicDocumentsEntities,
-    ...responsibilitiesEntities,
     ...sepayTransactionsEntities,
     ...shiftsEntities,
     ...staffEntities,
     ...supplierPayablesEntities,
     ...telegramInboxEntities,
-    ...threadMessagesEntities,
-    ...threadWorkEntities,
     ...agentGraphsEntities,
     ...agentTemplatesEntities,
     ...templateMarketplaceEntities,
@@ -276,9 +234,7 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...videoProjectVersionsEntities,
     ...videoProjectsEntities,
     ...videoRendersEntities,
-    ...workChainsEntities,
     ...workItemsEntities,
-    ...workThreadsEntities,
     ...workspaceInvitesEntities,
     ...workspaceMembersEntities,
     ...workspacesEntities,

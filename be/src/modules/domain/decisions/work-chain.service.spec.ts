@@ -1,13 +1,9 @@
 import { builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { LeadReadService } from "@modules/domain/leads"
-import { WorkItemsLeadReadService } from "@modules/domain/work-items"
 import { CommandPlannerService } from "./command-planner.service"
 import type { ActionEntry, SendCommandInput, WorkContext, WorkItem, WorkSpec } from "./decisions.contracts"
 import { ModuleCatalogService } from "./module-catalog.service"
 import type { CommandPlan } from "./work-engine.contracts"
-import { LEAD_GEN_FLOW } from "./work-engine.decorators"
-import type { LeadGenFlow } from "./work-engine.port"
 import { WorkChainService } from "./work-chain.service"
 import { WorkIntakeService } from "./work-intake.service"
 
@@ -17,9 +13,9 @@ const itemOf = builder<WorkItem>({
     id: "item-1",
     workspace_id: "ws-1",
     department: "sales",
-    action: "classify_lead",
-    subject_type: "lead",
-    subject_id: "lead-1",
+    action: "confirm_order",
+    subject_type: "order",
+    subject_id: "order-1",
     lead_id: "lead-1",
     inbound_event_id: "in-1",
     parent_id: null,
@@ -51,37 +47,22 @@ const actionOf = (action: string, moduleKey: string, next: ReadonlyArray<string>
 })
 
 const ACTIONS: Readonly<Record<string, ActionEntry>> = {
-    classify_lead: actionOf("classify_lead", "sales", ["send_follow_up"]),
-    send_follow_up: actionOf("send_follow_up", "sales"),
-    handoff_lead: actionOf("handoff_lead", "chatbot", ["classify_lead"]),
     confirm_order: actionOf("confirm_order", "sales", ["issue_invoice"]),
     issue_invoice: actionOf("issue_invoice", "accounting"),
     reconcile_payment: actionOf("reconcile_payment", "accounting", ["send_care", "other_step", "unknown_step"]),
     send_care: actionOf("send_care", "sales"),
     other_step: actionOf("other_step", "sales"),
-    greet_prospect: actionOf("greet_prospect", "lead_gen", ["send_follow_up"]),
-    handoff_to_sales: actionOf("handoff_to_sales", "lead_gen", ["classify_lead"]),
 }
 
 interface Built {
     readonly service: WorkChainService
-    readonly leadGen: jest.Mock
-    readonly leads: LeadReadService
-    readonly waitingWork: WorkItemsLeadReadService
     readonly sent: Array<SendCommandInput>
     readonly inserted: Array<WorkSpec>
 }
 
-/** What the customer read answers: the stage (null when the customer cannot be read) and whether a follow-up already waits. */
-interface Customer {
-    readonly stage?: string | null
-    readonly waiting?: boolean
-}
-
-const build = async (customer: Customer = {}, refuse = false): Promise<Built> => {
+const build = async (refuse = false): Promise<Built> => {
     const sent: Array<SendCommandInput> = []
     const inserted: Array<WorkSpec> = []
-    const leadGen = jest.fn().mockResolvedValue(undefined)
     const plan = jest.fn((_ctx: WorkContext, input: SendCommandInput): Promise<CommandPlan> => {
         sent.push(input)
         if (refuse) return Promise.resolve({ ok: false, refused: "cycle", detail: "again" })
@@ -95,32 +76,6 @@ const build = async (customer: Customer = {}, refuse = false): Promise<Built> =>
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkChainService,
-            {
-                provide: LeadReadService,
-                useValue: mock<LeadReadService>({
-                    cardsOf: jest.fn().mockResolvedValue(
-                        customer.stage === undefined || customer.stage === null
-                            ? []
-                            : [
-                                  {
-                                      id: "lead-1",
-                                      contactName: "",
-                                      company: "",
-                                      channel: "",
-                                      stage: customer.stage,
-                                      email: null,
-                                  },
-                              ],
-                    ),
-                }),
-            },
-            {
-                provide: WorkItemsLeadReadService,
-                useValue: mock<WorkItemsLeadReadService>({
-                    hasWaiting: jest.fn().mockResolvedValue(customer.waiting ?? false),
-                }),
-            },
-            { provide: LEAD_GEN_FLOW, useValue: mock<LeadGenFlow>({ continueAfter: leadGen }) },
             {
                 provide: ModuleCatalogService,
                 useValue: mock<ModuleCatalogService>({
@@ -141,107 +96,42 @@ const build = async (customer: Customer = {}, refuse = false): Promise<Built> =>
     }).compile()
     return {
         service: moduleRef.get(WorkChainService),
-        leadGen,
-        leads: moduleRef.get(LeadReadService),
-        waitingWork: moduleRef.get(WorkItemsLeadReadService),
         sent,
         inserted,
     }
 }
 
 describe("WorkChainService", () => {
-    it("queues the classification after a hand-off", async () => {
-        const built = await build()
-
-        await built.service.continueChain(ctx, itemOf({ action: "handoff_lead", department: "chatbot" }))
-
-        expect(built.sent).toEqual([
-            {
-                from: "chatbot",
-                to: "sales",
-                command: "classify_lead",
-                parentId: "item-1",
-                chainId: "chain-1",
-                inboundEventId: "in-1",
-                queue: true,
-                reason: "handoff",
-                dedupeKey: "classify_lead:after:item-1",
-                payload: { subject_type: "lead", subject_id: "lead-1", lead_id: "lead-1" },
-            },
-        ])
-        expect(built.inserted.map((spec) => [spec.action, spec.queue])).toEqual([["classify_lead", true]])
-    })
-
     it("starts the chain at the item itself when it has no chain yet", async () => {
         const built = await build()
 
-        await built.service.continueChain(ctx, itemOf({ action: "handoff_lead", chain_id: null }))
+        await built.service.continueChain(ctx, itemOf({ chain_id: null }))
 
         expect(built.sent.map((input) => input.chainId)).toEqual(["item-1"])
     })
 
-    it("skips a step that needs a customer when the item has none", async () => {
+    it("keeps the chain of the item when it has one", async () => {
         const built = await build()
-
-        await built.service.continueChain(ctx, itemOf({ action: "handoff_lead", lead_id: null }))
-        await built.service.continueChain(ctx, itemOf({ action: "classify_lead", lead_id: null }))
-
-        expect(built.sent).toEqual([])
-    })
-
-    it("queues a follow-up for a customer who is neither lost, won nor waiting", async () => {
-        const built = await build({ stage: "new" })
 
         await built.service.continueChain(ctx, itemOf())
 
-        expect(built.sent.map((input) => [input.command, input.reason, input.dedupeKey])).toEqual([
-            ["send_follow_up", "classified", "send_follow_up:after:item-1"],
+        expect(built.sent).toEqual([
+            expect.objectContaining({
+                from: "sales",
+                to: "accounting",
+                parentId: "item-1",
+                chainId: "chain-1",
+                inboundEventId: "in-1",
+                queue: true,
+            }),
         ])
-        expect(built.leads.cardsOf).toHaveBeenCalledWith("ws-1", ["lead-1"])
-        expect(built.waitingWork.hasWaiting).toHaveBeenCalledWith("ws-1", "lead-1", "send_follow_up")
-    })
-
-    it("queues a follow-up when the customer cannot be read and nothing is probed", async () => {
-        const built = await build({ stage: null })
-
-        await built.service.continueChain(ctx, itemOf())
-
-        expect(built.sent).toHaveLength(1)
-    })
-})
-
-describe("WorkChainService", () => {
-    it("queues no follow-up for a lost lead", async () => {
-        const built = await build()
-
-        await built.service.continueChain(ctx, itemOf({ proposal: { summary: "S", fields: { stage: "lost" } } }))
-
-        expect(built.sent).toEqual([])
-    })
-
-    it("queues no follow-up for a customer who already bought", async () => {
-        const built = await build({ stage: "won" })
-
-        await built.service.continueChain(ctx, itemOf())
-
-        expect(built.sent).toEqual([])
-    })
-
-    it("queues no second follow-up while one waits for a decision", async () => {
-        const built = await build({ stage: "new", waiting: true })
-
-        await built.service.continueChain(ctx, itemOf())
-
-        expect(built.sent).toEqual([])
+        expect(built.inserted.map((spec) => [spec.action, spec.queue])).toEqual([["issue_invoice", true]])
     })
 
     it("queues the invoice of a confirmed order, once per order", async () => {
         const built = await build()
 
-        await built.service.continueChain(
-            ctx,
-            itemOf({ action: "confirm_order", subject_type: "order", subject_id: "order-1" }),
-        )
+        await built.service.continueChain(ctx, itemOf())
 
         expect(built.sent.map((input) => [input.to, input.command, input.dedupeKey, input.payload])).toEqual([
             [
@@ -256,11 +146,8 @@ describe("WorkChainService", () => {
     it("queues no invoice for an item that is not about an order", async () => {
         const built = await build()
 
-        await built.service.continueChain(ctx, itemOf({ action: "confirm_order", subject_type: "inbound" }))
-        await built.service.continueChain(
-            ctx,
-            itemOf({ action: "confirm_order", subject_type: "order", subject_id: null }),
-        )
+        await built.service.continueChain(ctx, itemOf({ subject_type: "inbound" }))
+        await built.service.continueChain(ctx, itemOf({ subject_id: null }))
 
         expect(built.sent).toEqual([])
     })
@@ -327,40 +214,19 @@ describe("WorkChainService", () => {
 })
 
 describe("WorkChainService", () => {
-    describe("lead generation", () => {
-        it("hands a lead generation step to the lead flow", async () => {
-            const built = await build()
-            const item = itemOf({ action: "greet_prospect", department: "lead_gen" })
-
-            await built.service.continueChain(ctx, item)
-
-            expect(built.leadGen).toHaveBeenCalledWith(ctx, item)
-            expect(built.sent).toEqual([])
-        })
-
-        it("lets the hand-off to sales use the generic loop", async () => {
-            const built = await build()
-
-            await built.service.continueChain(ctx, itemOf({ action: "handoff_to_sales", department: "lead_gen" }))
-
-            expect(built.leadGen).not.toHaveBeenCalled()
-            expect(built.sent.map((input) => input.command)).toEqual(["classify_lead"])
-        })
-    })
-
     it("queues nothing for an action with no next step or an unknown one", async () => {
         const built = await build()
 
-        await built.service.continueChain(ctx, itemOf({ action: "send_follow_up" }))
+        await built.service.continueChain(ctx, itemOf({ action: "issue_invoice" }))
         await built.service.continueChain(ctx, itemOf({ action: "mystery" }))
 
         expect(built.sent).toEqual([])
     })
 
     it("never inserts a command the planner refused", async () => {
-        const built = await build({}, true)
+        const built = await build(true)
 
-        await built.service.continueChain(ctx, itemOf({ action: "handoff_lead" }))
+        await built.service.continueChain(ctx, itemOf())
 
         expect(built.sent).toHaveLength(1)
         expect(built.inserted).toEqual([])

@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { DataSyncModule } from "@modules/queues/data-sync"
-import { ContractImportService } from "./contract-import.service"
 import { CsvImportSyncService } from "./csv-import-sync.service"
 import { CsvImportWizardService } from "./csv-import-wizard.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./data-hub.module-definition"
@@ -31,7 +30,6 @@ export class DataHubModule extends ConfigurableModuleClass {
                 DataSyncService,
                 CsvImportWizardService,
                 CsvImportSyncService,
-                ContractImportService,
                 DatabaseWizardService,
                 DatabaseSyncService,
                 ImapWizardService,
@@ -42,7 +40,6 @@ export class DataHubModule extends ConfigurableModuleClass {
                 TelegramUserSyncService,
             ],
             exports: [
-                ContractImportService,
                 DataHubService,
                 DataSyncService,
                 CsvImportWizardService,

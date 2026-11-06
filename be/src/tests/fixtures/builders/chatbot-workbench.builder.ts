@@ -3,7 +3,7 @@ import type { GapRecord } from "@modules/domain/knowledge-gaps"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
 import type { MessageBrief, ChatThreadLine } from "@modules/domain/agent-messages"
-import type { LeadBriefRow, LeadRow, WaitingRow } from "@modules/domain/chatbot-workbench"
+import type { WaitingRow } from "@modules/domain/chatbot-workbench"
 
 export const MEMBER: WorkspaceMember = {
     userId: "u-1",
@@ -51,25 +51,6 @@ export const waitingOf: (overrides?: Partial<WaitingRow>) => WaitingRow = builde
     assigned_staff_id: null,
     created_at: "2026-10-13T02:00:00.000Z",
 })
-
-export const LEAD_BRIEF: LeadBriefRow = {
-    id: "l-1",
-    contact_name: "Hoa",
-    company: "Hoa Shop",
-    need: "T-shirts",
-    stage: "new",
-    created_at: "2026-10-12T00:00:00.000Z",
-}
-
-export const LEAD: LeadRow = {
-    id: "l-1",
-    contact_name: "Hoa",
-    company: "Hoa Shop",
-    stage: "new",
-    need: "T-shirts",
-    phone: "0901000000",
-    email: null,
-}
 
 export const GAP: GapRecord = {
     id: "g-1",

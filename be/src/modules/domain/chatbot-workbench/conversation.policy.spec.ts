@@ -3,7 +3,6 @@ import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import {
     channelOf,
-    leadOf,
     proposalDraft,
     proposalQuestion,
     respondentOf,
@@ -19,7 +18,6 @@ const SUBJECT = Symbol("conversation.policy")
 type Subject = Pick<
     typeof SubjectModule,
     | "channelOf"
-    | "leadOf"
     | "proposalDraft"
     | "proposalQuestion"
     | "respondentOf"
@@ -35,7 +33,6 @@ const buildSubject = async () => {
                 provide: SUBJECT,
                 useValue: {
                     channelOf,
-                    leadOf,
                     proposalDraft,
                     proposalQuestion,
                     respondentOf,
@@ -63,7 +60,7 @@ const conversationOf = builder<CustomerConversationRow>({
 })
 
 /** A customer the AI of this desk answers, with no record behind it. */
-const PLAIN = { lead: null, respondent: { kind: "ai", name: null } } as const
+const PLAIN = { kind: "ai", name: null } as const
 
 const messageOf = builder<MessageBrief>({
     id: "m-1",
@@ -132,11 +129,10 @@ describe("conversation policy", () => {
     it("maps an empty conversation using its creation date and no display name", async () => {
         const subject = await buildSubject()
 
-        expect(subject.toConversation(conversationOf(), [], undefined, false, PLAIN)).toEqual({
+        expect(subject.toConversation(conversationOf(), [], false, PLAIN)).toEqual({
             id: "c-1",
             channel: "zalo",
             name: "",
-            leadId: "l-1",
             lastText: "",
             lastRole: null,
             lastAt: "2026-10-13T01:00:00.000Z",
@@ -144,7 +140,6 @@ describe("conversation policy", () => {
             handledBy: null,
             waiting: false,
             unanswered: false,
-            lead: null,
             respondent: { kind: "ai", name: null },
         })
     })
@@ -161,16 +156,10 @@ describe("conversation policy", () => {
         ]
 
         const conversation = conversationOf({ visitor_name: "  Minh  " })
-        expect(
-            subject.toConversation(conversation, messages, "Hoa", true, {
-                lead: { stage: "qualified", need: "T-shirts", company: "Hoa Shop" },
-                respondent: { kind: "agent", name: "Sales AI" },
-            }),
-        ).toEqual({
+        expect(subject.toConversation(conversation, messages, true, { kind: "agent", name: "Sales AI" })).toEqual({
             id: "c-1",
             channel: "zalo",
             name: "Minh",
-            leadId: "l-1",
             lastText: "Yes",
             lastRole: "agent",
             lastAt: "2026-10-13T01:03:00.000Z",
@@ -178,7 +167,6 @@ describe("conversation policy", () => {
             handledBy: null,
             waiting: true,
             unanswered: false,
-            lead: { stage: "qualified", need: "T-shirts", company: "Hoa Shop" },
             respondent: { kind: "agent", name: "Sales AI" },
         })
     })
@@ -189,13 +177,12 @@ describe("conversation policy", () => {
         const result = subject.toConversation(
             conversationOf({ visitor_name: "  " }),
             [messageOf({ role: "system", body: "Opened" })],
-            "Hoa",
             false,
             PLAIN,
         )
 
         expect(result).toMatchObject({
-            name: "Hoa",
+            name: "",
             lastText: "Opened",
             lastRole: "system",
             lastAt: "2026-10-13T01:01:00.000Z",
@@ -209,14 +196,14 @@ describe("conversation policy", () => {
 
         const body = "x".repeat(138) + "  more"
 
-        expect(subject.toConversation(conversationOf(), [messageOf({ body })], "", false, PLAIN).lastText).toBe(
+        expect(subject.toConversation(conversationOf(), [messageOf({ body })], false, PLAIN).lastText).toBe(
             "x".repeat(138) + "...",
         )
         expect(
-            subject.toConversation(conversationOf(), [messageOf({ body: "x".repeat(141) })], "", false, PLAIN).lastText,
+            subject.toConversation(conversationOf(), [messageOf({ body: "x".repeat(141) })], false, PLAIN).lastText,
         ).toBe("x".repeat(139) + "...")
         expect(
-            subject.toConversation(conversationOf(), [messageOf({ body: "x".repeat(140) })], "", false, PLAIN).lastText,
+            subject.toConversation(conversationOf(), [messageOf({ body: "x".repeat(140) })], false, PLAIN).lastText,
         ).toBe("x".repeat(140))
     })
 })
@@ -234,7 +221,6 @@ describe("conversation policy", () => {
             const result = subject.toConversation(
                 conversationOf({ handled_by: handledBy }),
                 [messageOf()],
-                undefined,
                 waiting,
                 PLAIN,
             )
@@ -246,19 +232,8 @@ describe("conversation policy", () => {
     )
 })
 
-describe("customer record and respondent", () => {
+describe("respondent", () => {
     const names = new Map([["agent-2", "Sales AI"]])
-
-    it("shows the stage, need and company of a customer, and nothing for a customer not captured", async () => {
-        const subject = await buildSubject()
-
-        expect(subject.leadOf({ stage: "proposal", need: "T-shirts", company: "Hoa Shop" })).toEqual({
-            stage: "proposal",
-            need: "T-shirts",
-            company: "Hoa Shop",
-        })
-        expect(subject.leadOf(undefined)).toBeNull()
-    })
 
     it("names the person who holds the chat before anything else", async () => {
         const subject = await buildSubject()

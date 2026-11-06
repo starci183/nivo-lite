@@ -17,7 +17,7 @@ export interface CredentialArgumentsInput {
 /** Alternate credentials accepted only by explicitly marked doors. */
 export interface CredentialMetadata {
     /** The credential family this door accepts. */
-    readonly kind: "api-key" | "run-token" | "tool-token" | "link-token" | "posting"
+    readonly kind: "api-key" | "tool-token" | "link-token" | "posting"
     /** The workflow or operation this credential must admit. */
     readonly workflow?: string | undefined
 }

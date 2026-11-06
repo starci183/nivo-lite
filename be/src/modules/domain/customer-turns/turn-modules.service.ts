@@ -2,10 +2,8 @@ import { Injectable } from "@nestjs/common"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
 import type { TurnConversation } from "@modules/domain/agent-conversations"
 import type { CustomerTurn } from "@modules/domain/conversations"
-import { EvidenceService, WorkEngineService } from "@modules/domain/decisions"
+import { EvidenceService } from "@modules/domain/decisions"
 import type { WorkContext } from "@modules/domain/decisions"
-import { LoyaltyChatService } from "@modules/domain/loyalty"
-import type { ChatCustomerRef } from "@modules/domain/loyalty-customer-links"
 import { BookingChatService } from "@modules/domain/work-performers"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -15,38 +13,30 @@ import { GatewayContextService } from "./gateway-context.service"
 const LOCALE = "vi"
 const ENGINE_ACTOR = "OpenClaw"
 const BOOKING = "booking"
-const LOYALTY = "loyalty"
 const NOTHING: ModuleOutcome = { reply: null, lines: [] }
 
 @Injectable()
 /**
- * The booking and loyalty parts of a customer turn. Before the AI step they add the facts the agent may use (the loyalty programme of
- * the customer, read from the ledger, and the booking rules) and the reply-contract members it may fill. After it they run what the
- * reply asked for: a booking request when the agent books or hands over to a booking agent, a reward redemption through the gate.
+ * The booking part of a customer turn. Before the AI step it adds the facts the agent may use (the booking rules) and the
+ * reply-contract members it may fill. After it, it runs what the reply asked for: a booking request when the agent books or hands
+ * over to a booking agent.
  */
 export class TurnModulesService {
     constructor(
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly bindings: AgentBindingsService,
-        private readonly engine: WorkEngineService,
         private readonly evidence: EvidenceService,
         private readonly booking: BookingChatService,
-        private readonly loyalty: LoyaltyChatService,
         private readonly connectors: GatewayContextService,
     ) {}
 
-    /** The context blocks of a turn: the loyalty facts when the shop runs a programme, the booking contract when the agent books. */
+    /** The context blocks of a turn: the booking contract when the agent books, and the connector block. */
     async briefs(conversation: TurnConversation): Promise<ReadonlyArray<string>> {
         const module = conversation.agent.module
-        const [loyalty, books, connectors] = await Promise.all([
-            this.loyalty.brief(this.refOf(conversation)),
-            this.booksIn(conversation),
-            this.connectorBrief(conversation),
-        ])
-        const loyaltyContract = loyalty !== "" && module !== LOYALTY ? this.text("bundle.loyaltyContract") : ""
+        const [books, connectors] = await Promise.all([this.booksIn(conversation), this.connectorBrief(conversation)])
         const bookingData = books ? await this.booking.brief(conversation.workspaceId) : ""
         const bookingContract = books && module !== BOOKING ? this.text("bundle.bookingAddendum") : ""
-        return [loyalty, loyaltyContract, bookingData, bookingContract, ...connectors].filter((part) => part !== "")
+        return [bookingData, bookingContract, ...connectors].filter((part) => part !== "")
     }
 
     /**
@@ -59,16 +49,15 @@ export class TurnModulesService {
     }
 
     /**
-     * Runs the booking request and the redemption the reply named; the booking answer replaces the reply when it has one. A customer
+     * Runs the booking request the reply named; the booking answer replaces the reply when it has one. A customer
      * who gave their name becomes a party of the connector that plays `identity.upsert`.
      */
     async settle(ctx: WorkContext, turn: CustomerTurn, reply: CustomerReply): Promise<ModuleOutcome> {
         const booking = reply.bookingRequest === null ? NOTHING : await this.settleBooking(ctx, turn, reply)
-        const redeem = reply.loyaltyRewardKey === null ? [] : await this.redeem(ctx, turn, reply.loyaltyRewardKey)
         if (reply.lead !== null && (await this.connectors.servesConnectors(turn.conversation))) {
             await this.connectors.remember(turn.conversation, reply.lead, turn.messageId)
         }
-        return { reply: booking.reply, lines: [...booking.lines, ...redeem] }
+        return { reply: booking.reply, lines: booking.lines }
     }
 
     private async settleBooking(ctx: WorkContext, turn: CustomerTurn, reply: CustomerReply): Promise<ModuleOutcome> {
@@ -95,47 +84,6 @@ export class TurnModulesService {
         return { reply: answer.reply, lines: [] }
     }
 
-    /** A clear redeem becomes a gated `redeem_reward` item (auto within the owner's limit, else a decision); a blocked one is noted. */
-    private async redeem(ctx: WorkContext, turn: CustomerTurn, rewardKey: string): Promise<ReadonlyArray<string>> {
-        const { conversation } = turn
-        const intent = await this.loyalty.redeemIntent(this.refOf(conversation), rewardKey)
-        if (intent.kind === "none") return []
-        const params = { name: intent.customerName, reward: intent.reward.name, cost: String(intent.reward.pointsCost) }
-        if (intent.kind === "blocked") {
-            await this.evidence.log(ctx, {
-                lead_id: conversation.leadId,
-                kind: "loyalty.redeem_blocked",
-                actor: ENGINE_ACTOR,
-                summary: this.text("customerTurns.redeemBlocked", { ...params, reason: intent.reason }),
-                evidence: turn.messageId,
-            })
-            return []
-        }
-        await this.engine.runWork(ctx, {
-            action: "redeem_reward",
-            subject_type: "conversation",
-            subject_id: conversation.id,
-            lead_id: conversation.leadId,
-            preset: true,
-            noChain: true,
-            dedupeKey: `redeem_reward:message:${turn.messageId}`,
-            seed: {
-                summary: this.text("performers.redeemSummary", params),
-                amount_vnd: intent.reward.valueVnd,
-                fields: {
-                    customer: intent.customerName,
-                    customer_id: intent.customerId,
-                    reward_id: intent.reward.id,
-                    reward: intent.reward.name,
-                    amount_vnd: intent.reward.valueVnd,
-                    conversation_id: conversation.id,
-                    source: "chat",
-                },
-            },
-        })
-        return [this.text("customerTurns.redeemAsked", params)]
-    }
-
     /** True when the agent books, or is the front door that hands over to a booking agent on this connection. */
     private async booksIn(conversation: TurnConversation): Promise<boolean> {
         if (conversation.agent.module === BOOKING) return true
@@ -143,16 +91,6 @@ export class TurnModulesService {
             module: conversation.agent.module,
         })
         return handovers.some((agent) => agent.module === BOOKING)
-    }
-
-    private refOf(conversation: TurnConversation): ChatCustomerRef {
-        return {
-            workspaceId: conversation.workspaceId,
-            conversationId: conversation.id,
-            leadId: conversation.leadId,
-            channel: conversation.channel,
-            externalId: conversation.externalId,
-        }
     }
 
     private text(key: string, params: Readonly<Record<string, string>> = {}): string {

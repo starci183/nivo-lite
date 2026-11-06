@@ -1,11 +1,8 @@
-import { ContractLinkService, ContractsService } from "@modules/domain/contracts"
 import { ConnectionsModule } from "@modules/domain/connections"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { DataRecordsReadService } from "@modules/domain/data-records"
 import { Injectable, Module } from "@nestjs/common"
-import { mock } from "@starci/jest-preset"
 import type { DynamicModule } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { AgentConversationsReadService, AgentConversationsService } from "@modules/domain/agent-conversations"
 import { AgentsModule, AgentsService } from "@modules/domain/agents"
@@ -13,19 +10,15 @@ import { AuthorityService } from "@modules/domain/authority"
 import { AuthorityActionsModule } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { DurableWorkService, EvidenceService, WorkEngineService } from "@modules/domain/decisions"
-import type { InboundEventStatus, LeadGenFlow, OutboundAccessGate } from "@modules/domain/decisions"
+import type { InboundEventStatus, OutboundAccessGate } from "@modules/domain/decisions"
 import { EventsModule } from "@modules/domain/events"
-import { ExecutionsModule } from "@modules/domain/executions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { ApiKnowledgeSourcesService, SourceQuotaService } from "@modules/domain/knowledge-sources"
 import { KNOWLEDGE_STORAGE } from "../../modules/domain/knowledge-sources/knowledge-sources.decorators"
-import { LeadReadService, LeadRecordsService } from "@modules/domain/leads"
 import { AGENT_DIRECTORY, OfficeLinesService } from "@modules/domain/messages"
 import type { AgentDirectory } from "@modules/domain/messages"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule, ModulesService } from "@modules/domain/modules"
 import { PublicApiModule } from "@modules/domain/public-api"
-import { RESPONSIBILITY_LEAD_DESK, ResponsibilitiesModule } from "@modules/domain/responsibilities"
-import type { LeadDesk } from "@modules/domain/responsibilities"
 import { StaffModule } from "@modules/domain/staff"
 import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { refused } from "@modules/platform/primitives"
@@ -37,8 +30,7 @@ import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { InstallationOperationsService, InstallationRecordsService } from "@modules/domain/module-installations"
 import { InvoicesLedgerService } from "@modules/domain/invoices"
-import { OrdersLabelReadService } from "@modules/domain/orders"
-import { WorkItemsChainReadService, WorkItemsLeadReadService, WorkItemsService } from "@modules/domain/work-items"
+import { WorkItemsChainReadService, WorkItemsService } from "@modules/domain/work-items"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { I18nModule } from "@modules/platform/i18n"
 import { INBOX, InboxService } from "@modules/platform/inbox"
@@ -53,7 +45,6 @@ import { WorkApprovalService } from "../../modules/domain/decisions/work-approva
 import { WorkChainService } from "../../modules/domain/decisions/work-chain.service"
 import {
     INBOUND_EVENT_STATUS,
-    LEAD_GEN_FLOW,
     MODULE_CATALOG_SOURCE,
     OUTBOUND_ACCESS_GATE,
 } from "../../modules/domain/decisions/work-engine.decorators"
@@ -63,8 +54,6 @@ import { WorkItemClosedService } from "../../modules/domain/decisions/work-item-
 import { WORK_PERFORMER_REGISTRY } from "../../modules/domain/decisions/work-performer.port"
 import { WorkPerformersService } from "../../modules/domain/decisions/work-performers.service"
 import { WorkRecorderService } from "../../modules/domain/decisions/work-recorder.service"
-import { HandoffLeadPerformerService } from "../../modules/domain/work-performers/handoff-lead-performer.service"
-import { LeadHandoverService } from "../../modules/domain/work-performers/lead-handover.service"
 import { PerformerKitService } from "../../modules/domain/work-performers/performer-kit.service"
 import { queueOptions } from "./test-capabilities.options"
 import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
@@ -92,14 +81,6 @@ export class PublicApiProofAccess implements OutboundAccessGate {
 
     accessOf(): ReturnType<OutboundAccessGate["accessOf"]> {
         return Promise.resolve(this.access)
-    }
-}
-
-/** A message explicitly has no chain; reaching another department is a failed proof. */
-@Injectable()
-class PublicApiProofChain implements LeadGenFlow {
-    continueAfter(): Promise<void> {
-        return Promise.reject(new TestWorldError({ code: TestWorldErrorCode.TransactionRefused }))
     }
 }
 
@@ -147,24 +128,6 @@ class PublicApiProofStorage implements StorageObjectsPort {
     }
 }
 
-@Injectable()
-/** The customers the journal shows: the real lead reads and the real hold, bound the way the leads capability binds them. */
-class PublicApiProofLeadDesk implements LeadDesk {
-    constructor(
-        private readonly reads: LeadReadService,
-        private readonly records: LeadRecordsService,
-    ) {}
-
-    async cardsOf(workspaceId: string, leadIds: ReadonlyArray<string>): ReturnType<LeadDesk["cardsOf"]> {
-        const cards = await this.reads.cardsOf(workspaceId, leadIds)
-        return cards.map(({ id, contactName, company, stage }) => ({ id, contactName, company, stage }))
-    }
-
-    hold(workspaceId: string, leadId: string, manager: EntityManager): Promise<boolean> {
-        return this.records.hold(workspaceId, leadId, manager)
-    }
-}
-
 @Module({})
 class PublicApiProofPeersModule {
     static register(): DynamicModule {
@@ -173,22 +136,17 @@ class PublicApiProofPeersModule {
             AgentConversationsService,
             AgentConversationsReadService,
             ApiKnowledgeSourcesService,
-            ContractsService,
-            ContractLinkService,
             DataRecordsReadService,
             AuthorityService,
             CommandPlannerService,
             DurableWorkService,
             EvidenceService,
             InboundEventsService,
-            LeadReadService,
-            LeadRecordsService,
             ModuleCatalogService,
             SourceQuotaService,
             OfficeLinesService,
             PublicApiProofDirectory,
             PublicApiProofAccess,
-            HandoffLeadPerformerService,
             PerformerKitService,
             WorkApprovalService,
             WorkBranchService,
@@ -198,11 +156,9 @@ class PublicApiProofPeersModule {
             WorkItemClosedService,
             WorkItemsService,
             WorkItemsChainReadService,
-            WorkItemsLeadReadService,
             InstallationRecordsService,
             InstallationOperationsService,
             InvoicesLedgerService,
-            OrdersLabelReadService,
             WorkPerformersService,
             WorkRecorderService,
             AuthorityRulesService,
@@ -213,18 +169,11 @@ class PublicApiProofPeersModule {
             imports: [KnowledgeQueueModule.register({})],
             providers: [
                 ...services,
-                // No sales agent is bound in these proofs, so a handover moves nothing.
-                {
-                    provide: LeadHandoverService,
-                    useFactory: () => mock<LeadHandoverService>({ toSales: jest.fn().mockResolvedValue(false) }),
-                },
                 { provide: KNOWLEDGE_STORAGE, useClass: PublicApiProofStorage },
-                { provide: RESPONSIBILITY_LEAD_DESK, useClass: PublicApiProofLeadDesk },
                 { provide: AGENT_DIRECTORY, useExisting: PublicApiProofDirectory },
                 { provide: AgentsService, useExisting: PublicApiProofDirectory },
                 { provide: INBOX, useClass: InboxService },
                 { provide: INBOUND_EVENT_STATUS, useClass: PublicApiProofInbound },
-                { provide: LEAD_GEN_FLOW, useClass: PublicApiProofChain },
                 { provide: MODULE_CATALOG_SOURCE, useExisting: ModulesService },
                 { provide: OUTBOUND_ACCESS_GATE, useExisting: PublicApiProofAccess },
                 { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },
@@ -237,7 +186,7 @@ class PublicApiProofPeersModule {
                     useFactory: (): Pick<WebhookEventsService, "publish"> => ({ publish: () => Promise.resolve() }),
                 },
             ],
-            exports: [...services, RESPONSIBILITY_LEAD_DESK],
+            exports: [...services],
         }
     }
 }
@@ -268,8 +217,6 @@ export const publicApiProofModules = (options: QueueOptions): Array<DynamicModul
     }),
     StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true, accounts: PublicApiProofDirectory }),
-    ResponsibilitiesModule.register({ isGlobal: true, agentDirectory: PublicApiProofDirectory }),
-    ExecutionsModule.register({ isGlobal: true }),
     ModulesModule.register({
         isGlobal: true,
         catalogOnly: true,

@@ -47,7 +47,7 @@ describe("Public API stale message (persisted local integration)", () => {
     it("holds a message admitted more than 24 hours ago for approval under automatic authority", async () => {
         const identity = await fixture()
         const conversationId = world.id()
-        await persistPublicApiConversation(world.db.primary, identity, conversationId, world.id())
+        await persistPublicApiConversation(world.db.primary, identity, conversationId)
         await world.resolve(PublicMessagesService).acceptMessage({
             authorization: identity.authorization,
             conversationId,
@@ -69,8 +69,7 @@ describe("Public API stale message (persisted local integration)", () => {
     it("holds a pre-ledger inline message for approval even when it asked for none", async () => {
         const identity = await fixture()
         const conversationId = world.id()
-        const leadId = world.id()
-        await persistPublicApiConversation(world.db.primary, identity, conversationId, leadId)
+        await persistPublicApiConversation(world.db.primary, identity, conversationId)
         const perform = automaticSender(world)
 
         await deliver(
@@ -80,7 +79,6 @@ describe("Public API stale message (persisted local integration)", () => {
                 keyId: identity.keyId,
                 keyName: "Public API proof",
                 conversationId,
-                leadId,
                 text: "Historical draft without approval",
                 requireApproval: false,
                 dedupeKey: `api.message:historical:${world.id()}`,

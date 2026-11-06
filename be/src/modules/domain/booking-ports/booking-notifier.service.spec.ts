@@ -6,8 +6,8 @@ import { AgentMessagesService } from "@modules/domain/agent-messages"
 import type { BookingNotice } from "@modules/domain/bookings"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import { EventsService } from "@modules/domain/events"
-import { N8N_MAILER } from "@modules/domain/n8n-runs"
-import type { N8nMailer } from "@modules/domain/n8n-runs"
+import { WORKSPACE_MAILER } from "@modules/domain/work-performers"
+import type { WorkspaceMailer } from "@modules/domain/work-performers"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
@@ -77,7 +77,7 @@ const build = async () => {
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key) => key)
     const logger = mock<Logger>()
-    const mailer = mock<N8nMailer>()
+    const mailer = mock<WorkspaceMailer>()
     mailer.requestCustomerEmail.mockResolvedValue({ status: "sent" })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -88,7 +88,7 @@ const build = async () => {
             { provide: EventsService, useValue: events },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
-            { provide: N8N_MAILER, useValue: mailer },
+            { provide: WORKSPACE_MAILER, useValue: mailer },
         ],
     }).compile()
     return {

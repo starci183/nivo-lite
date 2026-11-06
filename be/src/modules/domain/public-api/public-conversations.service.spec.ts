@@ -30,21 +30,4 @@ describe("PublicConversationsService", () => {
 
         await expect(service.find("ws-1", "missing", mockEntityManager())).resolves.toBeUndefined()
     })
-
-    it("finds the latest customer conversation of a customer", async () => {
-        const em = mockEntityManager()
-        const { service, chats } = await build()
-        chats.latestCustomerChatOfLead.mockResolvedValue({ id: "conv-1", leadId: "lead-1" })
-
-        await expect(service.ofLead("ws-1", "lead-1", em)).resolves.toEqual(CONVERSATION)
-
-        expect(chats.latestCustomerChatOfLead).toHaveBeenCalledWith("ws-1", "lead-1", em)
-    })
-
-    it("answers nothing for a customer without a conversation", async () => {
-        const { service, chats } = await build()
-        chats.latestCustomerChatOfLead.mockResolvedValue(null)
-
-        await expect(service.ofLead("ws-1", "lead-9", mockEntityManager())).resolves.toBeUndefined()
-    })
 })

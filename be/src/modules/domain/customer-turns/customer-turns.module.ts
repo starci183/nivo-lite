@@ -17,10 +17,8 @@ import { FinalReplyStepHandlerService } from "./final-reply-step-handler.service
 import { FinalReplyService } from "./final-reply.service"
 import { OutputStepHandlerService } from "./output-step-handler.service"
 import { OutputApprovalService } from "./output-approval.service"
-import { PaymentClaimsService } from "./payment-claims.service"
 import { StaffEscalationService } from "./staff-escalation.service"
 import { TurnModulesService } from "./turn-modules.service"
-import { TurnPurchasesService } from "./turn-purchases.service"
 import { GatewayContextService } from "./gateway-context.service"
 import { HubNotesService } from "./hub-notes.service"
 import { TurnGatewayPipelineService } from "./turn-gateway-pipeline.service"
@@ -44,9 +42,7 @@ export class CustomerTurnsModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
         const services = [
-            PaymentClaimsService,
             StaffEscalationService,
-            TurnPurchasesService,
             HubNotesService,
             GatewayContextService,
             TurnGatewayPipelineService,

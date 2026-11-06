@@ -12,40 +12,6 @@ export interface WaitingRow {
     readonly created_at: Date | string
 }
 
-/** The lead name, stage and capture time. */
-export interface LeadBriefRow {
-    /** The stored id value. */
-    readonly id: string
-    /** The stored contact name value. */
-    readonly contact_name: string
-    /** The stored company value. */
-    readonly company: string
-    /** The stored need value. */
-    readonly need: string
-    /** The stored stage value. */
-    readonly stage: string
-    /** The stored created at value. */
-    readonly created_at: Date | string
-}
-
-/** The customer facts beside a thread. */
-export interface LeadRow {
-    /** The stored id value. */
-    readonly id: string
-    /** The stored contact name value. */
-    readonly contact_name: string
-    /** The stored company value. */
-    readonly company: string
-    /** The stored stage value. */
-    readonly stage: string
-    /** The stored need value. */
-    readonly need: string
-    /** The stored phone value. */
-    readonly phone: string | null
-    /** The stored email value. */
-    readonly email: string | null
-}
-
 /** A Chatbot installation and its agent binding. */
 export interface ChatbotInstallationRow {
     /** The stored id value. */

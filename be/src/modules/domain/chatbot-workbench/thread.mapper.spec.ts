@@ -4,7 +4,7 @@ import { builder } from "@starci/jest-preset"
 import { buildChatbotThread } from "./thread.mapper"
 import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
 import type { ChatThreadLine } from "@modules/domain/agent-messages"
-import type { LeadRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
+import type { WaitingRow } from "./persistence/chatbot-workbench.rows"
 
 const SUBJECT = Symbol("thread.mapper")
 type Subject = Pick<typeof SubjectModule, "buildChatbotThread">
@@ -49,22 +49,11 @@ const waitingOf = builder<WaitingRow>({
     created_at: "2026-10-13T01:02:00.000Z",
 })
 
-const LEAD: LeadRow = {
-    id: "l-1",
-    contact_name: "Hoa",
-    company: "Hoa Shop",
-    stage: "new",
-    need: "T-shirts",
-    phone: "0901000000",
-    email: "hoa@example.test",
-}
-
 const EXPECTED_THREAD = {
     conversation: {
         id: "c-1",
         channel: "zalo",
         name: "Hoa",
-        leadId: "l-1",
         lastText: "Price?",
         lastRole: "user",
         lastAt: "2026-10-13T01:01:00.000Z",
@@ -72,7 +61,6 @@ const EXPECTED_THREAD = {
         handledBy: null,
         waiting: true,
         unanswered: false,
-        lead: { stage: "new", need: "T-shirts", company: "Hoa Shop" },
         respondent: { kind: "ai", name: null },
     },
     messages: [
@@ -121,15 +109,6 @@ const EXPECTED_THREAD = {
             files: [],
         },
     ],
-    lead: {
-        id: "l-1",
-        name: "Hoa",
-        company: "Hoa Shop",
-        stage: "new",
-        need: "T-shirts",
-        phone: "0901000000",
-        email: "hoa@example.test",
-    },
     escalation: {
         workItemId: "w-1",
         question: "Can you confirm?",
@@ -142,11 +121,11 @@ const EXPECTED_THREAD = {
 }
 
 describe("chatbot thread mapper", () => {
-    it("maps the conversation, complete lead, delivery states and first matching escalation", async () => {
+    it("maps the conversation, delivery states and first matching escalation", async () => {
         const subject = await buildSubject()
 
         const result = subject.buildChatbotThread({
-            conversation: conversationOf({ handled_at: new Date("2026-10-13T01:03:00.000Z") }),
+            conversation: conversationOf({ visitor_name: "Hoa", handled_at: new Date("2026-10-13T01:03:00.000Z") }),
             messages: [
                 messageOf(),
                 messageOf({
@@ -180,7 +159,6 @@ describe("chatbot thread mapper", () => {
                 }),
                 waitingOf({ id: "later", proposal: { summary: "Later question" } }),
             ],
-            lead: LEAD,
             staffName: "Minh",
             agentNames: new Map(),
         })
@@ -199,7 +177,6 @@ describe("chatbot thread mapper", () => {
                 messages: [],
                 files: [],
                 waiting: [],
-                lead: null,
                 staffName: null,
                 agentNames: new Map(),
             }),
@@ -208,7 +185,6 @@ describe("chatbot thread mapper", () => {
                 id: "c-1",
                 channel: "zalo",
                 name: "",
-                leadId: null,
                 lastText: "",
                 lastRole: null,
                 lastAt: "2026-10-13T01:00:00.000Z",
@@ -216,11 +192,9 @@ describe("chatbot thread mapper", () => {
                 handledBy: null,
                 waiting: false,
                 unanswered: false,
-                lead: null,
                 respondent: { kind: "ai", name: null },
             },
             messages: [],
-            lead: null,
             escalation: null,
             externalId: null,
             handledAt: null,
@@ -245,7 +219,6 @@ describe("chatbot thread mapper", () => {
             messages: [],
             files: [],
             waiting: [waitingOf({ proposal })],
-            lead: null,
             staffName: null,
             agentNames: new Map(),
         })
@@ -269,7 +242,6 @@ describe("chatbot thread mapper respondent", () => {
             messages: [],
             files: [],
             waiting: [],
-            lead: null,
             staffName: null,
             agentNames: new Map([["agent-2", "Sales AI"]]),
         }

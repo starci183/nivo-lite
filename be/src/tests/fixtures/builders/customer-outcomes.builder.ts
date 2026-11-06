@@ -140,17 +140,8 @@ export const proposalOf = (
     ...changes,
 })
 
-type CustomerReplyGraphCasesResultFoundShape = {
-    lines: Array<never>
-    changed: boolean
-    leadId: string
-    orderAmountVnd: number
-}
-
 type CustomerReplyGraphCasesResultShape = {
     ASK: GraphAnswer
-    found: CustomerReplyGraphCasesResultFoundShape
-    order: ChatTurnProposal
     askCases: readonly [
         readonly ["an earlier delivery already opened it", MockOf<WorkItem>, "waiting_decision"],
         readonly ["it was decided at once", null, "done"],
@@ -170,8 +161,6 @@ export const customerReplyGraphCases = (): CustomerReplyGraphCasesResultShape =>
     const DIVERT: GraphAnswer = { ...STOP, outcome: "divert", divert: HAND }
     return {
         ASK,
-        found: { lines: [], changed: false, leadId: "l1", orderAmountVnd: 50_000 },
-        order: proposalOf({ order: { items: "Tra sua", amount_vnd: 50_000 } }),
         askCases: [
             ["an earlier delivery already opened it", mock<WorkItem>({ id: "old" }), "waiting_decision"],
             ["it was decided at once", null, "done"],

@@ -35,7 +35,6 @@ import { connectionsErrorKinds, connectionsMessages } from "./connections"
 import { contentErrorKinds, contentMessages } from "./content"
 import { identityErrorKinds, identityMessages } from "./identity"
 import { knowledgeErrorKinds, knowledgeMessages } from "./knowledge"
-import { loyaltyErrorKinds, loyaltyMessages } from "./loyalty"
 import { messagingErrorKinds, messagingMessages } from "./messaging"
 import { agentGraphsErrorKinds, agentGraphsMessages } from "./agent-graphs"
 import { modulesErrorKinds, modulesMessages } from "./modules"
@@ -67,7 +66,6 @@ export const platformModules = (options: ApiOptions): Array<DynamicModule> => [
             ...contentMessages,
             ...identityMessages,
             ...knowledgeMessages,
-            ...loyaltyMessages,
             ...messagingMessages,
             ...modulesMessages,
             ...agentGraphsMessages,
@@ -95,7 +93,6 @@ export const platformModules = (options: ApiOptions): Array<DynamicModule> => [
             ...contentErrorKinds,
             ...identityErrorKinds,
             ...knowledgeErrorKinds,
-            ...loyaltyErrorKinds,
             ...messagingErrorKinds,
             ...modulesErrorKinds,
             ...agentGraphsErrorKinds,

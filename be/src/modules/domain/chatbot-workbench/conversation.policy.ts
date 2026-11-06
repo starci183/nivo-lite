@@ -1,11 +1,5 @@
 import { isoOf } from "@modules/domain/brain-facts"
-import type {
-    ChatbotChannel,
-    ChatbotConversation,
-    ChatbotConversationLead,
-    ChatbotRespondent,
-    ChatbotRole,
-} from "./chatbot-workbench.contracts"
+import type { ChatbotChannel, ChatbotConversation, ChatbotRespondent, ChatbotRole } from "./chatbot-workbench.contracts"
 import type { CustomerConversationRow } from "@modules/domain/agent-conversations"
 import type { MessageBrief } from "@modules/domain/agent-messages"
 import type { WaitingRow } from "./persistence/chatbot-workbench.rows"
@@ -48,20 +42,6 @@ export const proposalQuestion = (proposal: WaitingRow["proposal"]): string => {
     return summaryOf(proposal)
 }
 
-/** The customer record facts a list entry shows. */
-export interface ConversationLeadFacts {
-    /** The journey stage. */
-    readonly stage: string
-    /** What the customer needs. */
-    readonly need: string
-    /** The company, empty when unknown. */
-    readonly company: string
-}
-
-/** The customer record of a list entry; null while the customer was not captured. */
-export const leadOf = (lead: ConversationLeadFacts | undefined): ChatbotConversationLead | null =>
-    lead === undefined ? null : { stage: lead.stage, need: lead.need, company: lead.company }
-
 /**
  * Who answers next. A person who holds the chat answers; else the AI of the desk that owns the agent; else, when a hand-over moved
  * the conversation to another agent of the workspace, that agent under its name. `own` holds the agents of the desk being read.
@@ -80,9 +60,8 @@ export const respondentOf = (
 export const toConversation = (
     row: CustomerConversationRow,
     messages: ReadonlyArray<MessageBrief>,
-    leadName: string | undefined,
     waiting: boolean,
-    customer: Pick<ChatbotConversation, "lead" | "respondent">,
+    respondent: ChatbotConversation["respondent"],
 ): ChatbotConversation => {
     const talk = messages.filter((line) => line.role !== "system")
     const last = messages.at(-1)
@@ -92,8 +71,7 @@ export const toConversation = (
     return {
         id: row.id,
         channel: channelOf(row.channel),
-        name: row.visitor_name?.trim() || leadName || "",
-        leadId: row.lead_id,
+        name: row.visitor_name?.trim() ?? "",
         lastText: body.length > 140 ? body.slice(0, 139).trimEnd() + "..." : body,
         lastRole: shown === undefined ? null : roleOf(shown.role),
         lastAt: isoOf(last?.created_at ?? row.created_at),
@@ -101,7 +79,6 @@ export const toConversation = (
         handledBy: row.handled_by,
         waiting,
         unanswered: lastTalk?.role === "user" && (waiting || row.handled_by !== null),
-        lead: customer.lead,
-        respondent: customer.respondent,
+        respondent,
     }
 }

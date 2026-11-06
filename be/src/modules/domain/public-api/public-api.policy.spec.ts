@@ -3,8 +3,6 @@ import { PublicApiErrorCode } from "./errors/public-api.error"
 import {
     MESSAGE_AUTO_SEND_WINDOW_MS,
     SOURCE_CHARS_MAX,
-    contactParts as realContactParts,
-    normaliseContact as realNormaliseContact,
     dedupePrefix as realDedupePrefix,
     messageDedupeSuffix as realMessageDedupeSuffix,
     eventsSince as realEventsSince,
@@ -12,7 +10,6 @@ import {
     cleanTags as realCleanTags,
     checkContent as realCheckContent,
     clampLimit as realClampLimit,
-    leadFacts as realLeadFacts,
     visibilityOf as realVisibilityOf,
     trimmedField as realTrimmedField,
 } from "./public-api.policy"
@@ -28,7 +25,6 @@ type Subject = Pick<
     | "cleanTags"
     | "checkContent"
     | "clampLimit"
-    | "leadFacts"
     | "visibilityOf"
     | "trimmedField"
 >
@@ -46,7 +42,6 @@ const build = async () => {
                     cleanTags: realCleanTags,
                     checkContent: realCheckContent,
                     clampLimit: realClampLimit,
-                    leadFacts: realLeadFacts,
                     visibilityOf: realVisibilityOf,
                     trimmedField: realTrimmedField,
                 },
@@ -58,36 +53,11 @@ const build = async () => {
 
 const NOW = new Date("2026-10-12T10:00:00.000Z")
 
-describe("public-api policy / normaliseContact", () => {
-    it("turns a Vietnamese phone into 84 digits however it is written", () => {
-        expect(realNormaliseContact("0912 000 701")).toBe("84912000701")
-        expect(realNormaliseContact("+84 912 000 701")).toBe("84912000701")
-        expect(realNormaliseContact("912000701")).toBe("84912000701")
-    })
-    it("lowercases an email", () => {
-        expect(realNormaliseContact(" A@Example.COM ")).toBe("a@example.com")
-    })
-    it("answers null for nothing, blanks and text without digits", () => {
-        expect(realNormaliseContact(undefined)).toBeNull()
-        expect(realNormaliseContact(null)).toBeNull()
-        expect(realNormaliseContact("   ")).toBeNull()
-        expect(realNormaliseContact("abc")).toBeNull()
-    })
-})
-
-describe("public-api policy / contactParts", () => {
-    it("puts a phone in phone and an email in email", () => {
-        expect(realContactParts("0912000701")).toEqual({ phone: "84912000701", email: null })
-        expect(realContactParts("a@b.co")).toEqual({ phone: null, email: "a@b.co" })
-        expect(realContactParts(null)).toEqual({ phone: null, email: null })
-    })
-})
-
 describe("public-api policy / dedupePrefix", () => {
     it("names the kind of request and the key that sent it", async () => {
         const subject = await build()
 
-        expect(subject.dedupePrefix("lead", "key-1")).toBe("lead:key-1:")
+        expect(subject.dedupePrefix("knowledge", "key-1")).toBe("knowledge:key-1:")
         expect(subject.dedupePrefix("message", "key-2")).toBe("message:key-2:")
     })
 })
@@ -186,52 +156,6 @@ describe("public-api policy / clampLimit", () => {
         expect(subject.clampLimit("abc", 50, 200)).toBe(50)
         expect(subject.clampLimit("0", 50, 200)).toBe(50)
         expect(subject.clampLimit(undefined, 100, 500)).toBe(100)
-    })
-})
-
-describe("public-api policy / leadFacts", () => {
-    it("makes every absent text empty, defaults the channel to the API and drops an empty stage", async () => {
-        const subject = await build()
-
-        expect(subject.leadFacts({ authorization: undefined, name: "A", stage: "" })).toEqual({
-            name: "A",
-            phone: "",
-            email: "",
-            company: "",
-            need: "",
-            channel: "API",
-            externalId: "",
-            note: "",
-            stage: null,
-        })
-    })
-    it("keeps what the caller sent", async () => {
-        const subject = await build()
-
-        expect(
-            subject.leadFacts({
-                authorization: undefined,
-                name: "A",
-                phone: "1",
-                email: "e",
-                company: "c",
-                need: "n",
-                channel: "Zalo",
-                externalId: "x",
-                note: "t",
-                stage: "won",
-            }),
-        ).toEqual({
-            name: "A",
-            phone: "1",
-            email: "e",
-            company: "c",
-            need: "n",
-            channel: "Zalo",
-            externalId: "x",
-            note: "t",
-            stage: "won",
-        })
     })
 })
 

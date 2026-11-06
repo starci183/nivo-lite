@@ -46,18 +46,6 @@ export interface AssignWorkRequest {
     readonly locale: Locale
 }
 
-/** What deciding an approval card takes. */
-export interface ExecutionDecisionRequest {
-    /** The approval card. */
-    readonly executionId: string
-    /** Approve or reject. */
-    readonly decision: DecisionVerdict
-    /** The draft the person edited, when they did. */
-    readonly editedDraft?: string | null | undefined
-    /** The language of the generated text. */
-    readonly locale: Locale
-}
-
 /** Who is assigned to an item, in the terms the role policy reads. */
 export interface DecisionAssignee {
     /** `staff` when a staff member is assigned, else null. */

@@ -1,4 +1,5 @@
 import type { DynamicModule } from "@nestjs/common"
+import { OfficeBackgroundVoiceService, OfficeInboundStopReporterService } from "@modules/domain/messages"
 import {
     AGENT_SCHEDULES_ERROR_KINDS,
     AGENT_SCHEDULES_MESSAGES,
@@ -67,8 +68,8 @@ export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
     SalesEffectsModule.register({ isGlobal: true }),
     IntentContractsModule.register({ isGlobal: true }),
     AgentPluginsModule.register({ isGlobal: true }),
-    AgentInboundModule.register({ isGlobal: true }),
-    AgentSchedulesModule.register({ isGlobal: true, reactive: true }),
+    AgentInboundModule.register({ isGlobal: true, stopReporter: OfficeInboundStopReporterService }),
+    AgentSchedulesModule.register({ isGlobal: true, reactive: true, voice: OfficeBackgroundVoiceService }),
 ]
 
 /** The error kinds of the capabilities this group registers. */

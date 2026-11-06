@@ -135,10 +135,6 @@
           "reason": "settles a payment order and its credits atomically"
         },
         {
-          "name": "public.sales_action_find",
-          "reason": "sales action lookup by key or outbox id"
-        },
-        {
           "name": "public.seat_office_member",
           "reason": "seats a member in the office rooms"
         },
@@ -197,10 +193,6 @@
         {
           "name": "public.workspace_owner_member",
           "reason": "owner member of a workspace"
-        },
-        {
-          "name": "public.automations_data",
-          "reason": "automation overview read"
         },
         {
           "name": "public.shell_data",

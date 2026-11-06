@@ -6,7 +6,6 @@ import { AgentConversationsErrorCode, AgentConversationsReadService } from "@mod
 import { AgentMessagesReadService } from "@modules/domain/agent-messages"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import type { AgentCard, AgentLens } from "@modules/domain/agents"
-import { LeadAutomationReadService, LeadReadService } from "@modules/domain/leads"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesService } from "@modules/domain/modules"
 import type { ModuleDefinition } from "@modules/domain/modules"
@@ -27,7 +26,6 @@ import {
     messageOf,
     waitingOf,
 } from "@tests/fixtures/builders/chatbot-workbench.builder"
-import { LEAD_READ, LEAD_VIEW } from "@tests/fixtures/builders/chatbot-workbench-leads.builder"
 
 const NOW = "2026-10-13T03:00:00.000Z"
 
@@ -41,7 +39,6 @@ interface Facts {
     readonly messages: ReadonlyArray<ChatThreadLine>
     readonly waiting: ReadonlyArray<WaitingRow>
     readonly lenses: ReadonlyArray<AgentLens>
-    readonly leadViews: ReadonlyArray<typeof LEAD_VIEW>
     readonly cards: ReadonlyArray<AgentCard>
 }
 
@@ -59,10 +56,6 @@ const build = async (facts: Partial<Facts> = {}) => {
     work.waitingReplies.mockResolvedValue([...(facts.waiting ?? [])])
     const installs = mock<InstallationOperationsService>()
     installs.agentLinksOf.mockResolvedValue([...(facts.installations ?? [])])
-    const leads = mock<LeadReadService>()
-    leads.listByIds.mockResolvedValue([...(facts.leadViews ?? [])])
-    const leadFacts = mock<LeadAutomationReadService>()
-    leadFacts.lead.mockResolvedValue(undefined)
     const agentDirectory = mock<AgentDirectoryService>()
     agentDirectory.idsOfModule.mockResolvedValue([...(facts.agentIds ?? [])])
     agentDirectory.activeLensesOf.mockResolvedValue([...(facts.lenses ?? [])])
@@ -76,8 +69,6 @@ const build = async (facts: Partial<Facts> = {}) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChatbotWorkbenchService,
-            { provide: LeadReadService, useValue: leads },
-            { provide: LeadAutomationReadService, useValue: leadFacts },
             { provide: WorkItemsActivityService, useValue: work },
             { provide: InstallationOperationsService, useValue: installs },
             { provide: StaffDirectoryService, useValue: staff },
@@ -99,15 +90,13 @@ const build = async (facts: Partial<Facts> = {}) => {
         staff,
         work,
         installs,
-        leads,
-        leadFacts,
         agentDirectory,
         conversationReads,
         messageReads,
     }
 }
 
-const EMPTY_METRICS = { today: 0, waiting: 0, p50FirstResponseMin: null, sample: 0, leadsCaptured7d: 0 }
+const EMPTY_METRICS = { today: 0, waiting: 0, p50FirstResponseMin: null, sample: 0 }
 
 const EXPECTED_OVERVIEW = {
     workspaceId: "ws-1",
@@ -117,7 +106,6 @@ const EXPECTED_OVERVIEW = {
             id: "c-1",
             channel: "zalo",
             name: "Hoa",
-            leadId: "l-1",
             lastText: "Yes, it is",
             lastRole: "agent",
             lastAt: "2026-10-13T01:02:00.000Z",
@@ -125,14 +113,12 @@ const EXPECTED_OVERVIEW = {
             handledBy: null,
             waiting: false,
             unanswered: false,
-            lead: { stage: "new", need: "T-shirts", company: "Hoa Shop" },
             respondent: { kind: "ai", name: null },
         },
         {
             id: "c-2",
             channel: "website",
             name: "Minh",
-            leadId: null,
             lastText: "How much is it?",
             lastRole: "user",
             lastAt: "2026-10-10T05:00:00.000Z",
@@ -140,11 +126,10 @@ const EXPECTED_OVERVIEW = {
             handledBy: "s-1",
             waiting: true,
             unanswered: true,
-            lead: null,
             respondent: { kind: "person", name: "s-1" },
         },
     ],
-    metrics: { today: 1, waiting: 1, p50FirstResponseMin: 2, sample: 1, leadsCaptured7d: 1 },
+    metrics: { today: 1, waiting: 1, p50FirstResponseMin: 2, sample: 1 },
     waiting: [
         {
             workItemId: "w-1",
@@ -164,7 +149,6 @@ const EXPECTED_THREAD = {
         id: "c-1",
         channel: "zalo",
         name: "Hoa",
-        leadId: "l-1",
         lastText: "Yes, it is",
         lastRole: "agent",
         lastAt: "2026-10-13T01:02:00.000Z",
@@ -172,7 +156,6 @@ const EXPECTED_THREAD = {
         handledBy: null,
         waiting: true,
         unanswered: false,
-        lead: { stage: "new", need: "T-shirts", company: "Hoa Shop" },
         respondent: { kind: "ai", name: null },
     },
     messages: [
@@ -199,15 +182,6 @@ const EXPECTED_THREAD = {
             files: [],
         },
     ],
-    lead: {
-        id: "l-1",
-        name: "Hoa",
-        company: "Hoa Shop",
-        stage: "new",
-        need: "T-shirts",
-        phone: "0901000000",
-        email: null,
-    },
     escalation: {
         workItemId: "w-1",
         question: "How much is it?",
@@ -221,7 +195,7 @@ const EXPECTED_THREAD = {
 
 describe("ChatbotWorkbenchService overview", () => {
     it("lists every Chatbot conversation newest first with today's response figures", async () => {
-        const { service, members, leads, conversationReads, messageReads } = await build({
+        const { service, members, conversationReads, messageReads } = await build({
             agentIds: ["a-1"],
             conversations: [
                 conversationOf({
@@ -232,7 +206,7 @@ describe("ChatbotWorkbenchService overview", () => {
                     handled_by: "s-1",
                     created_at: "2026-10-10T05:00:00.000Z",
                 }),
-                conversationOf(),
+                conversationOf({ visitor_name: "Hoa" }),
             ],
             briefs: [
                 briefOf(),
@@ -245,7 +219,6 @@ describe("ChatbotWorkbenchService overview", () => {
                 }),
             ],
             waiting: [waitingOf()],
-            leadViews: [LEAD_VIEW],
         })
 
         await expect(service.overview("u-1", { workspaceId: "ws-1", installationId: null })).resolves.toEqual(
@@ -259,7 +232,6 @@ describe("ChatbotWorkbenchService overview", () => {
             new Date("2026-09-13T03:00:00.000Z"),
             6000,
         )
-        expect(leads.listByIds).toHaveBeenCalledWith("ws-1", ["l-1"])
     })
 })
 
@@ -274,18 +246,6 @@ describe("ChatbotWorkbenchService overview of installations", () => {
             metrics: EMPTY_METRICS,
             waiting: [],
         })
-    })
-
-    it("reads no leads when no conversation of the inbox has one", async () => {
-        const { service, leads } = await build({
-            agentIds: ["a-1"],
-            conversations: [conversationOf({ lead_id: null })],
-        })
-
-        const view = await service.overview("u-1", { workspaceId: "ws-1", installationId: null })
-
-        expect(view.conversations.map((row) => row.id)).toEqual(["c-1"])
-        expect(leads.listByIds).toHaveBeenCalledWith("ws-1", [])
     })
 
     it("reads only the installation's own agent when the workspace has several", async () => {
@@ -348,9 +308,9 @@ describe("ChatbotWorkbenchService overview after a hand-over", () => {
 })
 
 describe("ChatbotWorkbenchService thread", () => {
-    it("answers the thread with its lead and the escalation assigned to a staff member", async () => {
-        const { service, staff, leadFacts, messageReads } = await build({
-            conversation: conversationOf({ handled_at: "2026-10-13T02:30:00.000Z" }),
+    it("answers the thread with the escalation assigned to a staff member", async () => {
+        const { service, staff, messageReads } = await build({
+            conversation: conversationOf({ visitor_name: "Hoa", handled_at: "2026-10-13T02:30:00.000Z" }),
             messages: [
                 messageOf(),
                 messageOf({
@@ -375,11 +335,8 @@ describe("ChatbotWorkbenchService thread", () => {
                 }),
             ],
         })
-        leadFacts.lead.mockResolvedValue(LEAD_READ)
-
         await expect(service.thread("u-1", "ws-1", "c-1")).resolves.toEqual(EXPECTED_THREAD)
         expect(messageReads.threadOf).toHaveBeenCalledWith("ws-1", "c-1", 500)
-        expect(leadFacts.lead).toHaveBeenCalledWith("ws-1", "l-1")
         expect(staff.namesOf).toHaveBeenCalledWith("ws-1", ["st-1"])
     })
 
@@ -396,16 +353,15 @@ describe("ChatbotWorkbenchService thread", () => {
         expect(thread.escalation?.staffName).toBeNull()
     })
 
-    it("answers a thread without lead or escalation without reading staff", async () => {
-        const { service, staff, leadFacts } = await build({
-            conversation: conversationOf({ lead_id: null, visitor_name: "Minh" }),
+    it("answers a thread without an escalation without reading staff", async () => {
+        const { service, staff } = await build({
+            conversation: conversationOf({ visitor_name: "Minh" }),
             waiting: [waitingOf()],
         })
 
         const thread = await service.thread("u-1", "ws-1", "c-1")
 
         expect(staff.namesOf).not.toHaveBeenCalled()
-        expect(thread.lead).toBeNull()
         expect(thread.escalation).toBeNull()
         expect(thread.handledAt).toBeNull()
         expect(thread.conversation).toMatchObject({
@@ -413,7 +369,6 @@ describe("ChatbotWorkbenchService thread", () => {
             lastAt: "2026-10-13T01:00:00.000Z",
             lastRole: null,
         })
-        expect(leadFacts.lead).not.toHaveBeenCalled()
     })
 
     it("refuses a conversation of another workspace", async () => {

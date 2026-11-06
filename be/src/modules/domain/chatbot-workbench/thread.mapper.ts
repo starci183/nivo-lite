@@ -1,7 +1,6 @@
 import { isoOf } from "@modules/domain/brain-facts"
-import type { ChatbotLead, ChatbotMessage, ChatbotThread } from "./chatbot-workbench.contracts"
+import type { ChatbotMessage, ChatbotThread } from "./chatbot-workbench.contracts"
 import {
-    leadOf,
     proposalDraft,
     proposalQuestion,
     respondentOf,
@@ -13,7 +12,7 @@ import type { CustomerConversationRow } from "@modules/domain/agent-conversation
 import type { ChatThreadLine } from "@modules/domain/agent-messages"
 import { filesOfMessage } from "@modules/domain/chat-files"
 import type { ChatFileView } from "@modules/domain/chat-files"
-import type { LeadRow, WaitingRow } from "./persistence/chatbot-workbench.rows"
+import type { WaitingRow } from "./persistence/chatbot-workbench.rows"
 
 /** The authorized records of one customer thread. */
 export interface ThreadRecords {
@@ -25,8 +24,6 @@ export interface ThreadRecords {
     readonly files: ReadonlyArray<ChatFileView>
     /** The open customer-reply escalations. */
     readonly waiting: ReadonlyArray<WaitingRow>
-    /** The linked lead, when present in the workspace. */
-    readonly lead: LeadRow | null
     /** The assigned staff display name, when assigned. */
     readonly staffName: string | null
     /** The names of the agents that speak in the conversation, by agent id. */
@@ -45,27 +42,18 @@ const toMessage = (row: ChatThreadLine, files: ReadonlyArray<ChatFileView>): Cha
     files: filesOfMessage(files, row.id),
 })
 
-const toLead = (row: LeadRow): ChatbotLead => ({
-    id: row.id,
-    name: row.contact_name,
-    company: row.company,
-    stage: row.stage,
-    need: row.need,
-    phone: row.phone,
-    email: row.email,
-})
-
-/** One thread with normalized messages, customer facts and the first open escalation. */
+/** One thread with normalized messages and the first open escalation. */
 export const buildChatbotThread = (records: ThreadRecords): ChatbotThread => {
     const conversation = records.conversation
     const item = records.waiting.find((work) => waitingConversationId(work) === conversation.id) ?? null
     return {
-        conversation: toConversation(conversation, records.messages, records.lead?.contact_name, item !== null, {
-            lead: leadOf(records.lead ?? undefined),
-            respondent: respondentOf(conversation, new Set(), records.agentNames),
-        }),
+        conversation: toConversation(
+            conversation,
+            records.messages,
+            item !== null,
+            respondentOf(conversation, new Set(), records.agentNames),
+        ),
         messages: records.messages.map((row) => toMessage(row, records.files)),
-        lead: records.lead === null ? null : toLead(records.lead),
         escalation:
             item === null
                 ? null

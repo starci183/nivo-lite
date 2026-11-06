@@ -9,319 +9,6 @@ input AcceptTemplateUpdateInput {
   unitIds: [String!]! @inputBounds(maxItems: 200, itemMaxLength: 140)
 }
 
-type AccountingAgeingType {
-  d0: AccountingMeasureType!
-  d30: AccountingMeasureType!
-  d60: AccountingMeasureType!
-}
-
-type AccountingBookAdjustmentType {
-  correctedAmount: Float
-  createdAt: String!
-  createdBy: String!
-  id: String!
-  note: String!
-  targetId: String!
-  targetType: String!
-}
-
-type AccountingBookDecisionType {
-  action: String!
-  createdAt: String!
-  decidedBy: String!
-  deciderKind: String!
-  id: String!
-  note: String
-  outcome: String!
-  workItemId: String
-}
-
-type AccountingBookInboundType {
-  body: String!
-  channel: String!
-  eventId: String
-  senderName: String
-}
-
-type AccountingBookInvoiceType {
-  amountVnd: Float!
-  createdAt: String!
-  dueAt: String
-  id: String!
-  invoiceNo: String!
-  issuedAt: String
-  issuedBy: String
-  lead: AccountingBookLeadType
-  leadId: String
-  order: AccountingBookOrderBriefType
-  orderId: String
-  paidAt: String
-  status: String!
-  workspaceId: String!
-}
-
-type AccountingBookLeadType {
-  company: String
-  contactName: String
-}
-
-type AccountingBookOrderBriefType {
-  amountVnd: Float
-  items: String!
-  orderNo: String!
-  status: String!
-}
-
-type AccountingBookOrderType {
-  amountVnd: Float
-  carrier: String
-  confirmedAt: String
-  confirmedBy: String
-  createdAt: String!
-  id: String!
-  inboundEventId: String
-  items: String!
-  lead: AccountingBookLeadType
-  leadId: String
-  orderNo: String!
-  shippedAt: String
-  status: String!
-  trackingCode: String
-  workspaceId: String!
-}
-
-type AccountingBookTransactionType {
-  amountVnd: Float!
-  channel: String!
-  createdAt: String!
-  id: String!
-  inbound: AccountingBookInboundType
-  inboundEventId: String
-  invoiceId: String
-  occurredAt: String!
-  payer: String
-  reference: String
-  status: String!
-  workspaceId: String!
-}
-
-type AccountingBookType {
-  adjustments: [AccountingBookAdjustmentType!]!
-  adjustmentsReady: Boolean!
-  decisions: [AccountingBookDecisionType!]!
-  invoices: [AccountingBookInvoiceType!]!
-  orders: [AccountingBookOrderType!]!
-  transactions: [AccountingBookTransactionType!]!
-  works: [AccountingBookWorkType!]!
-}
-
-type AccountingBookWorkType {
-  action: String!
-  createdAt: String!
-  id: String!
-  status: String!
-  subjectId: String
-  subjectType: String!
-}
-
-type AccountingCandidateType {
-  amountVnd: Float!
-  id: String!
-  label: String!
-}
-
-type AccountingCreditType {
-  amount: Float!
-  id: String!
-  invoiceNo: String
-  match: String!
-  occurredAt: String!
-  payer: String
-  reference: String
-  sourceKind: String!
-}
-
-type AccountingInvoiceType {
-  amount: Float!
-  createdAt: String!
-  customer: String
-  dueAt: String
-  id: String!
-  invoiceNo: String!
-  issuedAt: String
-  orderNo: String
-  paidAt: String
-  status: String!
-}
-
-type AccountingLedgerEntryType {
-  adjustmentCount: Int!
-  amount: Float!
-  at: String!
-  description: String!
-  id: String!
-  kind: String!
-  lineage: [AccountingLineageType!]!
-  linked: String
-  status: String!
-  targetId: String!
-  targetType: String!
-}
-
-type AccountingLineageType {
-  amount: Float
-  at: String
-  detail: String
-  kind: String!
-  status: String
-  title: String!
-}
-
-type AccountingMeasureType {
-  count: Int!
-  vnd: Float!
-}
-
-type AccountingOrderType {
-  amount: Float
-  createdAt: String!
-  customer: String
-  id: String!
-  items: String!
-  orderNo: String!
-}
-
-type AccountingPeriodType {
-  fromIso: String!
-  income: AccountingMeasureType!
-  key: String!
-  receivable: AccountingMeasureType!
-  toIso: String!
-  unmatched: AccountingMeasureType!
-  weeks: [AccountingWeekType!]!
-}
-
-type AccountingPeriodsType {
-  last: AccountingPeriodType!
-  this: AccountingPeriodType!
-}
-
-type AccountingProposalFieldType {
-  name: String!
-  number: Float
-  text: String
-}
-
-type AccountingProposalType {
-  amountVnd: Float
-  candidates: [AccountingCandidateType!]!
-  confidence: Float
-  draft: String
-  fields: [AccountingProposalFieldType!]!
-  outcome: String
-  summary: String!
-}
-
-type AccountingQuestionLeadType {
-  channel: String!
-  company: String!
-  contactName: String!
-  id: String!
-}
-
-type AccountingQuestionType {
-  group: String!
-  item: AccountingQuestionWorkType!
-}
-
-type AccountingQuestionWorkType {
-  action: String!
-  assignedStaffId: String
-  assignedStaffName: String
-  chainId: String
-  completedAt: String
-  createdAt: String!
-  decidedPath: String
-  department: String!
-  depth: Int!
-  error: String
-  evidenceState: String!
-  executionId: String
-  id: String!
-  inboundEventId: String
-  installationId: String
-  lead: AccountingQuestionLeadType
-  leadId: String
-  missingFields: [String!]!
-  parentId: String
-  proposal: AccountingProposalType!
-  reason: String
-  reasons: [String!]!
-  result: AccountingWorkResultType
-  status: String!
-  subjectId: String
-  subjectType: String!
-  updatedAt: String!
-  workspaceId: String!
-}
-
-type AccountingStaffType {
-  active: Boolean!
-  createdAt: String!
-  email: String
-  id: String!
-  name: String!
-  role: String!
-  workspaceId: String!
-}
-
-type AccountingUpcomingDueType {
-  amountVnd: Float
-  daysLeft: Int!
-  dueOn: String!
-  kind: String!
-  note: String!
-  ref: String!
-  source: String!
-}
-
-type AccountingWaitingType {
-  count: Int!
-  knownVnd: Float!
-  unknownAmount: Int!
-}
-
-type AccountingWeekType {
-  startIso: String!
-  vnd: Float!
-}
-
-type AccountingWorkResultType {
-  href: String
-  summary: String!
-}
-
-type AccountingWorkbenchType {
-  adjustmentsReady: Boolean!
-  ageing: AccountingAgeingType!
-  canAdjust: Boolean!
-  credits: [AccountingCreditType!]!
-  creditsSource: String
-  excludedTest: Int!
-  invoices: [AccountingInvoiceType!]!
-  ledger: [AccountingLedgerEntryType!]!
-  now: String!
-  ordersWithoutInvoice: [AccountingOrderType!]!
-  ownerName: String!
-  payablesSource: String
-  periods: AccountingPeriodsType!
-  questions: [AccountingQuestionType!]!
-  reminderDays: Int
-  staff: [AccountingStaffType!]!
-  upcoming: [AccountingUpcomingDueType!]
-  waiting: AccountingWaitingType!
-}
-
 input AddBookingInput {
   date: String! @inputBounds(maxLength: 10)
   force: Boolean!
@@ -674,10 +361,6 @@ type AgentAppliedRuleType {
   note: String!
 }
 
-type AgentAssignmentType {
-  threadId: ID!
-}
-
 type AgentAvatarUploadType {
   path: String!
   publicUrl: String!
@@ -757,17 +440,6 @@ type AgentChatTurnStatusType {
   jobId: ID!
   resultMessageId: ID
   status: String!
-}
-
-type AgentCommandResultType {
-  chainId: ID
-  created: Boolean
-  depth: Int
-  detail: String
-  item: WorkItemType
-  missing: [String!]
-  ok: Boolean!
-  refused: String
 }
 
 type AgentConnectionCandidateType {
@@ -1265,13 +937,6 @@ input ApplyToHiringJobInput {
   ws: String! @inputBounds(maxLength: 80)
 }
 
-type ApprovalExecutionType {
-  draft: String!
-  id: ID!
-  status: String!
-  work_item_id: ID
-}
-
 input ApproveLeadGenCommentInput {
   draft: String @inputBounds(maxLength: 4000)
   workItemId: ID! @inputBounds(maxLength: 36)
@@ -1291,14 +956,6 @@ input ApproveVideoProjectInput {
   projectId: ID! @inputBounds(maxLength: 36)
 }
 
-type ApproverMemberType {
-  memberId: ID!
-  name: String!
-  role: String!
-  rooms: [String!]!
-  status: String!
-}
-
 input ArchiveVideoProjectInput {
   archived: Boolean!
   projectId: ID! @inputBounds(maxLength: 36)
@@ -1315,15 +972,6 @@ input AskKnowledgeInput {
   installationId: ID @inputBounds(maxLength: 36)
   module: String! @inputBounds(maxLength: 64)
   question: String! @inputBounds(maxLength: 600)
-}
-
-input AssignAgentWorkInput {
-  action: String @inputBounds(maxLength: 41)
-  agentId: ID! @inputBounds(maxLength: 36)
-  amount: Float @inputBounds(min: 0)
-  amountVnd: Float @inputBounds(min: 0)
-  leadId: ID @inputBounds(maxLength: 36)
-  text: String! @inputBounds(maxLength: 4000)
 }
 
 input AssignBrainDossierInput {
@@ -1346,82 +994,9 @@ input AssignResponsibilityInput {
   title: String = null @inputBounds(maxLength: 200)
 }
 
-input AssignWorkItemInput {
-  staffId: ID @inputBounds(maxLength: 36)
-  workItemId: ID! @inputBounds(maxLength: 36)
-}
-
 input AttachedFileInput {
   contentBase64: String! @inputBounds(maxLength: 28000000)
   name: String! @inputBounds(maxLength: 255)
-}
-
-input AuthorityPatchInput {
-  brand_voice: String @inputBounds(maxLength: 4000)
-  goal_first_reply_minutes: Int @inputBounds(min: 0, max: 100000)
-  goal_new_customers: Int @inputBounds(min: 0, max: 1000000)
-  goal_note: String @inputBounds(maxLength: 2000)
-  goal_revenue_vnd: Int @inputBounds(min: 0, max: 1000000000000000)
-  limits_note: String @inputBounds(maxLength: 4000)
-  policies: String @inputBounds(maxLength: 8000)
-  reply_style: String @inputBounds(maxLength: 4000)
-}
-
-type AuthorityProfileType {
-  brand_voice: String!
-  goal_first_reply_minutes: Int
-  goal_new_customers: Int
-  goal_note: String!
-  goal_revenue_vnd: Float
-  limits_note: String!
-  policies: String!
-  reply_style: String!
-  updated_at: String!
-  updated_by: String
-}
-
-input AuthorityRuleChangeInput {
-  action: String! @inputBounds(maxLength: 80)
-  agents: [ID!] @inputBounds(maxItems: 50)
-  approval_policy: String
-  approver_members: [ID!] @inputBounds(maxItems: 50)
-  approver_roles: [String!] @inputBounds(maxItems: 3)
-  approver_rooms: [String!] @inputBounds(maxItems: 20)
-  ask_max: Float @inputBounds(min: 0, max: 1000000000000)
-  auto_max: Float @inputBounds(min: 0, max: 1000000000000)
-  department: String! @inputBounds(maxLength: 40)
-  limit_vnd: Int = null @inputBounds(min: 0, max: 1000000000000)
-  mode: String!
-  note: String = null @inputBounds(maxLength: 500)
-  required_fields: [String!] = [] @inputBounds(maxItems: 30, itemMaxLength: 60)
-  timeout_minutes: Int @inputBounds(min: 1, max: 10080)
-  unit: String
-}
-
-type AuthorityRuleType {
-  action: String!
-  agents: [ID!]!
-  approval_policy: String!
-  approver_members: [ID!]!
-  approver_roles: [String!]!
-  approver_rooms: [String!]!
-  ask_max: Float
-  auto_max: Float
-  department: String!
-  id: ID!
-  limit_vnd: Float
-  mode: String!
-  note: String!
-  required_fields: [String!]!
-  timeout_minutes: Int!
-  unit: String!
-  updated_at: String!
-  workspace_id: ID!
-}
-
-type AuthoritySheetType {
-  profile: AuthorityProfileType
-  rules: [AuthorityRuleType!]!
 }
 
 input AuthorizeDriveInput {
@@ -1443,72 +1018,6 @@ type AuthorizeUrlType {
 
 input AuthorizeZaloInput {
   connectionId: ID! @inputBounds(maxLength: 64)
-}
-
-type AutomationCardType {
-  basedOnContext: Int
-  body: String
-  bodyStale: Boolean!
-  bodyVersion: Int!
-  comingSoon: Boolean!
-  config: JsonObject!
-  currentContext: Int
-  def: TemplateDefinitionType!
-  dismissed: Boolean!
-  enabled: Boolean!
-  gate: String
-  google: String
-  key: String!
-  lastRunAt: String
-  missing: [MissingRequirementType!]!
-  pipelineId: ID
-  proposed: Boolean!
-  runCount: Int!
-  sheetUrl: String
-  trust: TrustType!
-}
-
-type AutomationGoogleAccountType {
-  email: String!
-  id: ID!
-  status: String!
-}
-
-type AutomationRunType {
-  createdAt: String!
-  error: String
-  evidence: String
-  finishedAt: String
-  id: ID!
-  message: String
-  pipelineId: ID!
-  status: String!
-  steps: [RunStepType!]!
-  summary: String!
-  templateKey: String!
-  triggerRef: String!
-  workItemId: ID
-}
-
-input AutomationRunsInput {
-  template: String! = "" @inputBounds(maxLength: 61)
-}
-
-type AutomationSuggestionType {
-  key: String!
-  name: LocalizedTextType!
-  reason: LocalizedTextType!
-}
-
-input AutomationSuggestionsInput {
-  module: String! = "" @inputBounds(maxLength: 41)
-}
-
-type AutomationsOverviewType {
-  cards: [AutomationCardType!]!
-  runs: [AutomationRunType!]!
-  sample: PreviewSampleType!
-  shop: ShopContextType!
 }
 
 type BillingBankAccountType {
@@ -1642,12 +1151,6 @@ type BindingSuggestionType {
   parameter: String!
   target: String!
   termIndex: Int
-}
-
-type BodyProposalType {
-  body: String!
-  contextVersion: Int
-  generated: Boolean!
 }
 
 type BookingBoardEntryType {
@@ -2012,32 +1515,6 @@ input CardDecisionInput {
   situation: String @inputBounds(maxLength: 200)
   subjectLabel: String @inputBounds(maxLength: 160)
   value: String @inputBounds(maxLength: 2000)
-}
-
-type ChainStepType {
-  action: String!
-  actorId: String!
-  actorKind: String!
-  actorName: String!
-  actorRole: String!
-  approvalRequestId: String
-  decidedBy: String
-  detail: String!
-  finishedAt: String
-  id: ID!
-  kind: String!
-  rule: String
-  seq: Int!
-  startedAt: String!
-  status: String!
-  target: ThreadMentionRefType
-}
-
-type ChainSummaryType {
-  humanDecisions: Int!
-  minutes: Int!
-  state: String!
-  steps: Int!
 }
 
 input ChangeMemberRoleInput {
@@ -2766,23 +2243,6 @@ type ContractImportSkipType {
   row: Int!
 }
 
-input CreateAccountingAdjustmentInput {
-  correctedAmount: Float @inputBounds(min: 0, max: 9007199254740991)
-  note: String! @inputBounds(maxLength: 1000)
-  targetId: String! @inputBounds(maxLength: 36)
-  targetType: String!
-}
-
-type CreateAccountingAdjustmentType {
-  correctedAmount: Float
-  createdAt: String!
-  createdBy: String!
-  id: String!
-  note: String!
-  targetId: String!
-  targetType: String!
-}
-
 input CreateAgentInput {
   handle: String! @inputBounds(maxLength: 40)
   instructions: String! @inputBounds(maxLength: 20000)
@@ -2848,10 +2308,6 @@ input CreatePoLineInput {
   unitCost: String! @inputBounds(maxLength: 40)
 }
 
-input CreateResponsibilityInput {
-  input: NewResponsibilityInput!
-}
-
 input CreateVideoMediaUploadInput {
   name: String! @inputBounds(maxLength: 200)
   size: Int! @inputBounds(min: 1, max: 52428800)
@@ -2864,12 +2320,6 @@ input CreateVideoProjectInput {
   inputs: VideoInputsInput
   targetSeconds: Int! @inputBounds(min: 10, max: 90)
   title: String @inputBounds(maxLength: 120)
-}
-
-input CreateWorkThreadInput {
-  leadId: ID = null @inputBounds(maxLength: 36)
-  orderId: ID = null @inputBounds(maxLength: 36)
-  title: String! @inputBounds(maxLength: 200)
 }
 
 input CreateWorkspaceInput {
@@ -2996,220 +2446,6 @@ type CsvSavedImportType {
   summary: String!
 }
 
-type DashboardAgentType {
-  approvalRule: String!
-  createdAt: String!
-  greeting: String!
-  handle: String!
-  id: ID!
-  instructions: String!
-  knowledge: String!
-  module: String!
-  name: String!
-  role: String!
-  status: String!
-}
-
-type DashboardAuthorityType {
-  goalFirstReplyMinutes: Int
-  goalNewCustomers: Int
-  goalRevenueVnd: Float
-}
-
-type DashboardDecisionType {
-  action: String!
-  createdAt: String!
-  decidedBy: String!
-  deciderKind: String!
-  department: String!
-  id: ID!
-  leadId: ID
-  leadName: String
-  note: String
-  outcome: String!
-  reason: String
-  workItemId: ID
-}
-
-type DashboardEventType {
-  actor: String!
-  createdAt: String!
-  evidence: String
-  id: ID!
-  kind: String!
-  leadId: ID
-  summary: String!
-}
-
-type DashboardExceptionLeadType {
-  channel: String!
-  company: String!
-  contactName: String!
-  id: ID!
-}
-
-type DashboardExceptionType {
-  action: String!
-  assignedStaffName: String
-  contact: String
-  createdAt: String!
-  customer: String
-  department: String!
-  error: String
-  executionId: ID
-  id: ID!
-  lead: DashboardExceptionLeadType
-  leadId: ID
-  reason: String
-  status: String!
-  summary: String
-}
-
-type DashboardFirstEventType {
-  at: String!
-  leadId: ID!
-}
-
-type DashboardGovernanceDecisionType {
-  createdAt: String!
-  deciderKind: GovernanceDeciderKind!
-  leadId: ID
-  outcome: GovernanceDecisionOutcome!
-  workItemId: ID
-}
-
-type DashboardGovernanceInvoiceType {
-  amountVnd: Float
-  id: ID!
-  invoiceNo: String
-  leadId: ID
-  orderId: ID
-  status: String!
-}
-
-type DashboardGovernanceLeadType {
-  company: String
-  contactName: String
-  createdAt: String!
-  id: ID!
-  stage: String!
-}
-
-type DashboardGovernanceOrderType {
-  amountVnd: Float
-  id: ID!
-  items: String
-  leadId: ID
-  orderNo: String
-  status: String!
-}
-
-type DashboardGovernanceTransactionType {
-  amountVnd: Float
-  id: ID!
-  invoiceId: ID
-  payer: String
-  reference: String
-  status: String!
-}
-
-type DashboardGovernanceType {
-  authority: DashboardAuthorityType
-  decisions7: [DashboardGovernanceDecisionType!]!
-  invoices: [DashboardGovernanceInvoiceType!]!
-  leads: [DashboardGovernanceLeadType!]!
-  orders: [DashboardGovernanceOrderType!]!
-  pendingWithoutWork: Int!
-  recent: [DashboardDecisionType!]!
-  transactions: [DashboardGovernanceTransactionType!]!
-  work: [DashboardGovernanceWorkType!]!
-}
-
-type DashboardGovernanceWorkType {
-  completedAt: String
-  contact: String
-  createdAt: String!
-  customer: String
-  decidedPath: GovernanceDecidedPath
-  department: String!
-  id: ID!
-  leadId: ID
-  reason: GovernanceWorkReason
-  status: GovernanceWorkStatus!
-  summary: String
-  updatedAt: String!
-}
-
-type DashboardLeadType {
-  company: String
-  contactName: String
-  createdAt: String!
-  id: ID!
-  stage: String!
-}
-
-type DashboardPendingType {
-  createdAt: String!
-  id: ID!
-  leadId: ID
-  responsibilityId: ID!
-}
-
-type DashboardPromoChatbotType {
-  id: ID!
-  knowledge: String!
-}
-
-type DashboardPromoType {
-  approvedCount: Int!
-  chatbot: DashboardPromoChatbotType
-  firstEvents: [DashboardFirstEventType!]!
-  hasCustomerConversation: Boolean!
-  hasLeadConversation: Boolean!
-  hasWon: Boolean!
-  invoiceApproved: Boolean!
-  isFoundingMember: Boolean!
-  websiteLeads: [DashboardWebsiteLeadType!]!
-}
-
-type DashboardResponsibilityLeadType {
-  company: String!
-  contactName: String!
-  id: ID!
-  stage: String!
-}
-
-type DashboardResponsibilityType {
-  createdAt: String!
-  dueAt: String
-  id: ID!
-  lead: DashboardResponsibilityLeadType!
-  leadId: ID!
-  nextAction: String!
-  ownerAgentId: ID
-  ownerKind: String!
-  ownerName: String!
-  status: String!
-  title: String!
-}
-
-type DashboardType {
-  agents: [DashboardAgentType!]!
-  events: [DashboardEventType!]!
-  exceptions: [DashboardExceptionType!]!
-  governance: DashboardGovernanceType!
-  leads: [DashboardLeadType!]!
-  pending: [DashboardPendingType!]!
-  promo: DashboardPromoType!
-  responsibilities: [DashboardResponsibilityType!]!
-  since7: String!
-}
-
-type DashboardWebsiteLeadType {
-  createdAt: String!
-  id: ID!
-}
-
 scalar DataJson
 
 input DataSyncRunInput {
@@ -3280,12 +2516,6 @@ input DecideBrandProposalInput {
   proposalId: ID! @inputBounds(maxLength: 36)
 }
 
-input DecideExecutionInput {
-  decision: String!
-  editedDraft: String @inputBounds(maxLength: 10000)
-  executionId: ID! @inputBounds(maxLength: 36)
-}
-
 input DecideSalesDraftInput {
   decision: String!
   editedDraft: String @inputBounds(maxLength: 4000)
@@ -3308,35 +2538,6 @@ input DecideSetupCardInput {
 input DecideShiftsAvailabilityInput {
   approve: Boolean!
   id: ID! @inputBounds(maxLength: 36)
-}
-
-input DecideThreadApprovalInput {
-  messageId: ID! @inputBounds(maxLength: 36)
-  verdict: String!
-}
-
-input DecideWorkItemInput {
-  basis: String @inputBounds(maxLength: 1000)
-  decision: String!
-  edits: WorkEditsInput
-  note: String @inputBounds(maxLength: 1000)
-  workItemId: ID! @inputBounds(maxLength: 36)
-}
-
-type DecisionRecordType {
-  action: String!
-  created_at: String!
-  decidedByMemberId: ID
-  decided_by: String!
-  decider_kind: String!
-  department: String!
-  id: ID!
-  leadName: String
-  lead_id: ID
-  note: String!
-  outcome: String!
-  reason: String
-  work_item_id: ID
 }
 
 input DeclineAgentGraphProposalInput {
@@ -3606,12 +2807,6 @@ input DuplicateVideoProjectInput {
   projectId: ID! @inputBounds(maxLength: 36)
 }
 
-input EmitAutomationEventInput {
-  data: JsonObject!
-  dedupe: String! @inputBounds(maxLength: 300)
-  event: String! @inputBounds(maxLength: 80)
-}
-
 input EnqueueKnowledgeSourceInput {
   content: String @inputBounds(maxLength: 120000)
   installationId: ID @inputBounds(maxLength: 36)
@@ -3628,12 +2823,6 @@ input EnqueueKnowledgeSourceInput {
 
 type ExplainScheduleType {
   explanation: String!
-}
-
-input FieldValueInput {
-  name: String! @inputBounds(maxLength: 60)
-  number: Float @inputBounds(min: -1000000000000, max: 1000000000000)
-  text: String @inputBounds(maxLength: 2000)
 }
 
 input FinishWebhookConnectionInput {
@@ -3736,40 +2925,6 @@ type GoogleStateType {
   configured: Boolean!
   consentNeeded: Boolean!
   ledger: GoogleLedgerType!
-}
-
-enum GovernanceDecidedPath {
-  Auto
-  Human
-}
-
-enum GovernanceDeciderKind {
-  Owner
-  Policy
-  Staff
-}
-
-enum GovernanceDecisionOutcome {
-  Approved
-  AutoDone
-  Edited
-  Rejected
-}
-
-enum GovernanceWorkReason {
-  MissingData
-  NotAllowed
-  OverAuthority
-  Routine
-  UnclearOutcome
-}
-
-enum GovernanceWorkStatus {
-  Done
-  Failed
-  Queued
-  Rejected
-  WaitingDecision
 }
 
 input GrantAgentConnectionInput {
@@ -4065,11 +3220,6 @@ type HiringWindowType {
   endMin: Int!
   startMin: Int!
   weekday: Int!
-}
-
-input HoldWorkItemInput {
-  note: String! @inputBounds(maxLength: 1000)
-  workItemId: ID! @inputBounds(maxLength: 36)
 }
 
 type ImapConnectionType {
@@ -4876,18 +4026,6 @@ input ListAgentsInput {
   module: String @inputBounds(maxLength: 60)
 }
 
-input ListDecisionHistoryInput {
-  department: String = null @inputBounds(maxLength: 60)
-  kind: String = "all"
-  limit: Int = 50 @inputBounds(min: 1, max: 100)
-}
-
-input ListOfficeMessagesInput {
-  before: OfficeThreadCursorInput = null
-  limit: Int = 50 @inputBounds(min: 1, max: 100)
-  room: String = null @inputBounds(maxLength: 20)
-}
-
 input ListSalesOrdersInput {
   after: String = null @inputBounds(maxLength: 2048)
   first: Int = 50 @inputBounds(min: 1, max: 100)
@@ -4907,19 +4045,6 @@ input ListTelegramEventsInput {
 
 input ListVideoProjectsInput {
   includeArchived: Boolean
-}
-
-input ListWorkItemsInput {
-  action: String @inputBounds(maxLength: 80)
-  after: WorkItemCursorInput
-  limit: Int = 50 @inputBounds(min: 1, max: 100)
-  statuses: [String!] = [] @inputBounds(maxItems: 5)
-}
-
-input ListWorkThreadsInput {
-  after: String = null @inputBounds(maxLength: 2048)
-  first: Int = 50 @inputBounds(min: 1, max: 100)
-  leadId: ID = null @inputBounds(maxLength: 36)
 }
 
 input ListZaloEventsInput {
@@ -4986,11 +4111,6 @@ input LoadOpenApiSpecInput {
 
 input LoadTelegramUserSetupInput {
   connectionId: ID! @inputBounds(maxLength: 64)
-}
-
-type LocalizedTextType {
-  en: String!
-  vi: String!
 }
 
 input LoyaltyBirthdayInput {
@@ -5371,22 +4491,6 @@ type McpToolType {
   scope: String!
 }
 
-input MemberGrantChangeInput {
-  maxAmount: Float = null @inputBounds(min: 0, max: 1000000000000)
-  memberId: ID! @inputBounds(maxLength: 36)
-}
-
-type MemberGrantType {
-  action: String!
-  maxAmount: Float
-  memberId: ID!
-  unit: String!
-}
-
-input MemberGrantsInput {
-  action: String! @inputBounds(maxLength: 80)
-}
-
 type MemberListingType {
   avatarUrl: String
   displayName: String!
@@ -5416,19 +4520,6 @@ type MemberType {
 type MembershipType {
   member: MemberType!
   workspace: WorkspaceType!
-}
-
-type MentionDirectoryType {
-  agents: [MentionOptionType!]!
-  groups: [MentionOptionType!]!
-  members: [MentionOptionType!]!
-}
-
-type MentionOptionType {
-  id: String!
-  kind: String!
-  name: String!
-  role: String!
 }
 
 type MetaAppObjectType {
@@ -5488,12 +4579,6 @@ type MetaWizardConnectionType {
   pageName: String!
   pages: [MetaPageOptionType!]!
   status: String!
-}
-
-type MissingRequirementType {
-  key: String!
-  kind: String!
-  label: LocalizedTextType!
 }
 
 type ModuleAcceptedCommandType {
@@ -5695,11 +4780,9 @@ type Mutation {
   archivePublicDocument(input: PublicDocumentIdInput!): Boolean!
   archiveVideoProject(input: ArchiveVideoProjectInput!): VideoProjectType!
   askGuide(input: AskGuideInput!): GuideAskedType!
-  assignAgentWork(input: AssignAgentWorkInput!): AgentAssignmentType!
   assignBrainDossier(input: AssignBrainDossierInput!): BrainDossierOwnerType!
   assignDossierFinding(input: AssignDossierFindingInput!): DossierFindingType!
   assignResponsibility(input: AssignResponsibilityInput!): LeadResponsibilityType!
-  assignWorkItem(input: AssignWorkItemInput!): WorkItemType!
   authorizeDrive(input: AuthorizeDriveInput!): DriveAuthorizeUrlType!
   authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!
   authorizeMeta(input: AuthorizeMetaInput!): MetaAuthorizationType!
@@ -5707,7 +4790,6 @@ type Mutation {
   cancelBooking(input: CancelBookingInput!): CancelBookingType!
   cancelHiringOffer(input: HiringOfferRefInput!): Boolean!
   cancelInventoryPo(input: InventoryPoRefInput!): Boolean!
-  cancelOfficeCommand(input: OfficeCandidateIdInput!): OfficeAckType!
   cancelTelegramLogin(input: CancelTelegramLoginInput!): Boolean!
   changeMemberRole(input: ChangeMemberRoleInput!): Boolean!
   changePassword(input: ChangePasswordInput!): Boolean!
@@ -5723,10 +4805,8 @@ type Mutation {
   confirmAgentGraphProposal(input: ConfirmAgentGraphProposalInput!): AgentGraphVersionType!
   confirmBooking(input: ConfirmBookingInput!): ConfirmBookingType!
   confirmDossierFinding(input: DossierFindingNoteInput!): DossierFindingType!
-  confirmOfficeCommand(input: OfficeCandidateIdInput!): OfficeConfirmResultType!
   connectTelegram(input: ConnectTelegramInput!): TelegramConnectedType!
   copyInviteLink(input: InviteRefInput!): InviteResultType!
-  createAccountingAdjustment(input: CreateAccountingAdjustmentInput!): CreateAccountingAdjustmentType!
   createAgent(input: CreateAgentInput!): AgentSummaryType!
   createApiKey(input: CreateApiKeyInput!): CreatedApiKeyType!
   createContentItem(input: CreateContentItemInput!): ContentItemType!
@@ -5735,21 +4815,16 @@ type Mutation {
   createInvite(input: CreateInviteInput!): InviteResultType!
   createKnowledgeUpload(input: CreateKnowledgeUploadInput!): UploadAddressType!
   createLead(input: CreateLeadInput!): LeadActionQueuedType!
-  createResponsibility(input: CreateResponsibilityInput!): ResponsibilityType!
   createVideoMediaUpload(input: CreateVideoMediaUploadInput!): VideoMediaUploadType!
   createVideoProject(input: CreateVideoProjectInput!): VideoProjectType!
-  createWorkThread(input: CreateWorkThreadInput!): WorkThreadType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
   decideBrainFact(input: DecideBrainFactInput!): BrainFactType!
   decideBrainLesson(input: DecideBrainLessonInput!): BrainLessonType!
   decideBrandProposal(input: DecideBrandProposalInput!): BrandProposalType!
-  decideExecution(input: DecideExecutionInput!): ApprovalExecutionType!
   decideSalesDraft(input: DecideSalesDraftInput!): SalesActionType!
   decideSalesWorkItem(input: DecideSalesWorkItemInput!): SalesActionType!
   decideSetupCard(input: DecideSetupCardInput!): SetupCardType!
   decideShiftsAvailability(input: DecideShiftsAvailabilityInput!): Boolean!
-  decideThreadApproval(input: DecideThreadApprovalInput!): ThreadMessageType!
-  decideWorkItem(input: DecideWorkItemInput!): WorkItemType!
   declineAgentGraphProposal(input: DeclineAgentGraphProposalInput!): Boolean!
   deleteConnection(input: DeleteConnectionInput!): Boolean!
   deleteHiringCandidate(input: HiringCandidateRefInput!): DeleteCandidateType!
@@ -5765,7 +4840,6 @@ type Mutation {
   draftLoyaltyCampaign(input: DraftCampaignInput!): DraftCampaignType!
   draftPublicDocument(input: DraftPublicDocumentInput!): PublicDocumentType!
   duplicateVideoProject(input: DuplicateVideoProjectInput!): VideoProjectType!
-  emitAutomationEvent(input: EmitAutomationEventInput!): Boolean!
   enqueueKnowledgeSource(input: EnqueueKnowledgeSourceInput!): SourceRefType!
   explainShiftsSchedule(input: ShiftsScheduleRefInput!): ExplainScheduleType!
   finishWebhookConnection(input: FinishWebhookConnectionInput!): Boolean!
@@ -5773,7 +4847,6 @@ type Mutation {
   generateHiringAd(input: HiringJobRefInput!): GenerateAdType!
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
   handoffToAccounting(input: HandoffToAccountingInput!): SalesActionType!
-  holdWorkItem(input: HoldWorkItemInput!): WorkItemType!
   importAgentTemplate(input: ImportAgentTemplateInput!): InstalledTemplateType!
   importBrainDossiers(input: ImportBrainDossiersInput!): BrainDossierImportType!
   importContracts(input: ImportContractsInput!): ImportContractsType!
@@ -5789,8 +4862,6 @@ type Mutation {
   markChatDelivered(input: ChatReceiptInput!): ChatMarkerAckType!
   markChatRead(input: ChatReceiptInput!): ChatMarkerAckType!
   markContentPublished(input: MarkContentPublishedInput!): MarkContentPublishedType!
-  markOfficeConversationRead(input: OfficeConversationReadInput!): OfficeAckType!
-  markOfficeRoomRead(input: OfficeRoomKeyInput!): OfficeAckType!
   markOrderShipped(input: MarkOrderShippedInput!): MarkOrderShippedType!
   markVideoPublished(input: MarkVideoPublishedInput!): VideoProjectType!
   moveBooking(input: MoveBookingInput!): MoveBookingType!
@@ -5799,13 +4870,9 @@ type Mutation {
   orderTemplateListing(input: OrderTemplateListingInput!): TemplateOrderType!
   packageAgentTemplate(input: PackageAgentTemplateInput!): TemplateVersionType!
   postMarketingWeeklyReport: WeeklyReportType!
-  postOfficeMessage(input: PostOfficeMessageInput!): OfficeMessageType!
   postSetupMessage(input: PostSetupMessageInput!): SetupMessageType!
-  postThreadMessage(input: PostThreadMessageInput!): ThreadMessageType!
   previewLoyaltySegment(input: PreviewLoyaltySegmentInput!): PreviewLoyaltySegmentType!
-  proposeAutomationBody(input: TemplateKeyInput!): BodyProposalType!
   proposeBrandKit(input: ProposeBrandKitInput!): BrandProposalType!
-  proposeOfficeCommand(input: ProposeOfficeCommandInput!): OfficeProposeOutcomeType!
   proposeShiftsWeek(input: ProposeShiftsWeekInput!): ProposeWeekType!
   publishAgentGraph(input: PublishAgentGraphInput!): AgentGraphVersionType!
   reassignShiftsShift(input: ReassignShiftsShiftInput!): ReassignShiftsShiftType!
@@ -5856,7 +4923,6 @@ type Mutation {
   requestLessonMining(input: RequestLessonMiningInput!): BrainCommandRefType!
   requestLoyaltyCode(input: RequestLoyaltyCodeInput!): RequestLoyaltyCodeType!
   requestMyAvatarUpload(input: RequestMyAvatarUploadInput!): MyAvatarUploadType!
-  requestOfficeFileUpload(input: RequestOfficeFileUploadInput!): OfficeFileUploadType!
   requestPaymentOrder(input: RequestPaymentOrderInput!): RequestPaymentOrderType!
   requestPublicBooking(input: RequestPublicBookingInput!): RequestPublicBookingType!
   requestShiftsLeave(input: RequestShiftsLeaveInput!): RequestStatusType!
@@ -5882,14 +4948,12 @@ type Mutation {
   revokeInvite(input: InviteRefInput!): Boolean!
   revokeSession(input: RevokeSessionInput!): Boolean!
   rotateSepayKey(input: RotateSepayKeyInput!): SepayKeyType!
-  runAutomationNow(input: TemplateKeyInput!): Boolean!
   runCsvImport(input: RunCsvImportInput!): CsvImportResultType!
   runDocumentImport(input: RunDocumentImportInput!): CsvImportResultType!
   runFlow(input: RunFlowInput!): RunFlowType!
   saveAgentGoal(input: SaveAgentGoalInput!): AgentGoalType!
   saveAgentGraphDraft(input: SaveAgentGraphDraftInput!): Int!
   saveAgentTrigger(input: SaveAgentTriggerInput!): AgentTriggerType!
-  saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
   saveBookingException(input: SaveBookingExceptionInput!): SaveBookingExceptionType!
   saveBookingHours(input: SaveBookingHoursInput!): SaveBookingHoursType!
   saveBookingPolicy(input: SaveBookingPolicyInput!): SaveBookingPolicyType!
@@ -5917,7 +4981,6 @@ type Mutation {
   saveInventorySupplier(input: SaveInventorySupplierInput!): InventoryRefType!
   saveLoyaltyProgram(input: SaveLoyaltyProgramInput!): LoyaltyProgramType!
   saveLoyaltyReward(input: SaveLoyaltyRewardInput!): LoyaltyRewardType!
-  saveMemberGrants(input: SaveMemberGrantsInput!): [MemberGrantType!]!
   saveOpenApiConnection(input: SaveOpenApiConnectionInput!): ID!
   saveProviderKeys(input: SaveProviderKeysInput!): ProviderKeysResultType!
   saveReplyTimeout(input: SaveReplyTimeoutInput!): ModuleInstallationType!
@@ -5931,7 +4994,6 @@ type Mutation {
   saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
   saveZnsRenewal(input: SaveZnsRenewalInput!): ZnsRenewalType
   sendAgentChatMessage(input: SendAgentChatMessageInput!): QueuedAgentChatTurnType!
-  sendAgentCommand(input: SendAgentCommandInput!): AgentCommandResultType!
   sendSmtpTest(input: SendSmtpTestInput!): SmtpTestResultType!
   sendZaloTestMessage(input: SendZaloTestInput!): ZaloTestSendType!
   setAgentAvatar(input: SetAgentAvatarInput!): AgentAckType!
@@ -5964,7 +5026,6 @@ type Mutation {
   setSyncSchedule(input: SetSyncScheduleInput!): Boolean!
   setWorkspaceAgentWork(input: SetWorkspaceAgentWorkInput!): WorkspaceAgentWorkType!
   settleWonDeal(input: SettleWonDealInput!): LeadActionQueuedType!
-  setupOfficeRooms: [OfficeRoomType!]!
   shareVideoProject(input: ShareVideoProjectInput!): VideoShareType!
   startAgentChatConversation(input: StartAgentChatConversationInput!): CreatedAgentChatConversationType!
   startFirstWorkspace: StartFirstWorkspaceType!
@@ -5991,20 +5052,18 @@ type Mutation {
   transferInventoryStock(input: TransferInventoryStockInput!): TransferStockType!
   transitionContentItem(input: TransitionContentItemInput!): ContentItemIdType!
   undoBrainFactBatch(input: UndoBrainFactBatchInput!): BrainBulkUndoneType!
-  updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
-  updateAutomationPipeline(input: UpdateAutomationPipelineInput!): AutomationCardType!
   updateInventoryPoDraft(input: UpdateInventoryPoDraftInput!): Boolean!
   updateKnowledgeSource(input: UpdateKnowledgeSourceInput!): Boolean!
   updateLoyaltyMember(input: UpdateLoyaltyMemberInput!): UpdateLoyaltyMemberType!
   updateMoneyConnection(input: UpdateMoneyConnectionInput!): WizardConnectionType!
   updateProfile(input: UpdateProfileInput!): Boolean!
   updatePublicDocument(input: UpdatePublicDocumentInput!): PublicDocumentType!
-  updateResponsibilityStatus(input: UpdateResponsibilityStatusInput!): ResponsibilityType!
   updateVideoProject(input: UpdateVideoProjectInput!): VideoProjectType!
   updateWebhookEvents(input: UpdateWebhookEventsInput!): WebhookEventsType!
   verifyLoyaltyCode(input: VerifyLoyaltyCodeInput!): VerifyLoyaltyCodeType!
   verifyTemplateLikeness(input: LikenessGrantIdInput!): LikenessGrantType!
   wantConnector(input: WantConnectorInput!): Boolean!
+  workbenchAction(input: WorkbenchActionInput!): WorkbenchAnswerType!
   writePublicDocument(input: WritePublicDocumentInput!): PublicDocumentType!
 }
 
@@ -6024,14 +5083,6 @@ type MyAvatarUploadType {
   token: String!
 }
 
-input NewResponsibilityInput {
-  due_at: String = null @inputBounds(maxLength: 40)
-  lead_id: ID! @inputBounds(maxLength: 36)
-  next_action: String! @inputBounds(maxLength: 400)
-  owner: String! @inputBounds(maxLength: 36)
-  title: String! @inputBounds(maxLength: 200)
-}
-
 type NivoEntryType {
   body: String!
   id: ID!
@@ -6045,185 +5096,6 @@ type NivoEntryType {
 
 input NivoKnowledgeCountInput {
   module: String! @inputBounds(maxLength: 40)
-}
-
-type OfficeAckType {
-  ok: Boolean!
-}
-
-type OfficeAgentConversationType {
-  id: ID!
-  last: OfficeConversationLastType
-  unread: Int!
-}
-
-type OfficeApprovalType {
-  agentName: String
-  agent_id: ID
-  assignedStaffId: ID
-  channel: String!
-  created_at: String!
-  decided_at: String
-  decided_by: String
-  draft: String!
-  id: ID!
-  kind: String!
-  leadId: ID
-  leadName: String
-  nextAction: String!
-  responsibility_id: ID!
-  status: String!
-  work_item_id: ID
-}
-
-input OfficeCandidateIdInput {
-  candidateId: ID! @inputBounds(maxLength: 36)
-}
-
-type OfficeCandidateType {
-  command: String!
-  created_at: String!
-  id: ID!
-  message_id: ID!
-  module: String!
-  payload: JsonObject!
-  refusal_detail: String
-  shown: [OfficeShownRowType!]!
-  status: String!
-  summary: String!
-  work_item_id: ID
-}
-
-type OfficeConfirmResultType {
-  created: Boolean!
-  module: String!
-  workItemId: ID!
-}
-
-type OfficeConversationLastType {
-  at: String!
-  author: String
-  authorId: ID
-  body: String!
-}
-
-input OfficeConversationReadInput {
-  id: ID! @inputBounds(maxLength: 40)
-  kind: String!
-}
-
-type OfficeConversationUnreadEntryType {
-  id: ID!
-  unread: Int!
-}
-
-type OfficeConversationUnreadType {
-  agents: [OfficeAgentConversationType!]!
-  leads: [OfficeConversationUnreadEntryType!]!
-}
-
-type OfficeFileUploadType {
-  path: String!
-  signedUrl: String!
-}
-
-type OfficeMessageFileType {
-  contentType: String!
-  id: ID!
-  name: String!
-  url: String!
-}
-
-type OfficeMessagePageType {
-  messages: [OfficeMessageType!]!
-  next: OfficeThreadCursorType
-}
-
-type OfficeMessageType {
-  agent_id: ID
-  author_kind: String!
-  author_name: String!
-  author_user_id: ID
-  body: String!
-  card_json: String
-  card_state: String
-  created_at: String!
-  department: String
-  files: [OfficeMessageFileType!]!
-  id: ID!
-  lead_id: ID
-  lead_name: String
-  room: String
-  staff_id: ID
-  work_item_id: ID
-}
-
-type OfficeProposeOutcomeType {
-  body: String
-  candidate: OfficeCandidateType
-  kind: String!
-}
-
-input OfficeRoomKeyInput {
-  room: String = null @inputBounds(maxLength: 20)
-}
-
-enum OfficeRoomMemberKind {
-  agent
-  human
-}
-
-type OfficeRoomMemberPreviewType {
-  avatarUrl: String
-  id: String!
-  kind: OfficeRoomMemberKind!
-  module: String
-  name: String!
-}
-
-type OfficeRoomMembersType {
-  count: Int!
-  preview: [OfficeRoomMemberPreviewType!]!
-}
-
-type OfficeRoomPinType {
-  href: String
-  id: ID!
-  note: String!
-  title: String!
-}
-
-type OfficeRoomType {
-  agent_ids: [String!]!
-  home_agent_ids: [String!]!
-  key: String
-  last_at: String
-  last_author: String
-  last_author_user_id: ID
-  last_body: String
-  members: OfficeRoomMembersType!
-  name: String!
-  pins: [OfficeRoomPinType!]!
-  position: Int!
-  unread: Int!
-  unread_mention_bodies: [String!]!
-  user_ids: [String!]!
-}
-
-type OfficeShownRowType {
-  key: String!
-  label: String!
-  value: String!
-}
-
-input OfficeThreadCursorInput {
-  createdAt: String! @inputBounds(maxLength: 40)
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type OfficeThreadCursorType {
-  createdAt: String!
-  id: ID!
 }
 
 type OpenApiAuthHintType {
@@ -6365,27 +5237,9 @@ type PickedFolderType {
   truncated: Boolean!
 }
 
-input PostOfficeMessageInput {
-  body: String! @inputBounds(maxLength: 4000)
-  file: PostedOfficeFileInput = null
-  room: String = null @inputBounds(maxLength: 20)
-}
-
 input PostSetupMessageInput {
   setupSessionId: ID! @inputBounds(maxLength: 36)
   text: String! @inputBounds(maxLength: 4000)
-}
-
-input PostThreadMessageInput {
-  body: String! @inputBounds(maxLength: 4000)
-  mentions: [ThreadMentionRefInput!]! = [] @inputBounds(maxItems: 20)
-  quoted: [String!]! = [] @inputBounds(maxItems: 10, itemMaxLength: 2500)
-  threadId: ID! @inputBounds(maxLength: 36)
-}
-
-input PostedOfficeFileInput {
-  name: String! @inputBounds(maxLength: 255)
-  path: String! @inputBounds(maxLength: 255)
 }
 
 input PreviewContractImportInput {
@@ -6420,11 +5274,6 @@ type PreviewLoyaltySegmentType {
   reachable: Int!
   sample: [LoyaltySampleMemberType!]!
   total: Int!
-}
-
-type PreviewSampleType {
-  neutral: JsonObject!
-  variables: JsonObject!
 }
 
 type PreviewShiftsBlockType {
@@ -6478,30 +5327,10 @@ type PromoStateType {
   websiteLeadStats: WebsiteLeadStatsType!
 }
 
-type ProposalCandidateType {
-  amount_vnd: Float!
-  id: ID!
-  label: String!
-}
-
-type ProposalType {
-  amount_vnd: Float
-  candidates: [ProposalCandidateType!]
-  confidence: Float
-  draft: String
-  fields: JsonObject!
-  outcome: String
-  summary: String!
-}
-
 input ProposeBrandKitInput {
   file: AttachedFileInput!
   installationId: String! = "" @inputBounds(maxLength: 36)
   setupSessionId: String! = "" @inputBounds(maxLength: 36)
-}
-
-input ProposeOfficeCommandInput {
-  messageId: ID! @inputBounds(maxLength: 36)
 }
 
 input ProposeShiftsWeekInput {
@@ -6736,9 +5565,6 @@ input PublishAgentGraphInput {
 }
 
 type Query {
-  accountingBook: AccountingBookType!
-  accountingLedger: [AccountingLedgerEntryType!]!
-  accountingWorkbench: AccountingWorkbenchType!
   adminHealth: AdminHealthType!
   adminSession: AdminSessionType!
   adminWorkspace(input: AdminWorkspaceInput!): AdminWorkspaceDetailType!
@@ -6762,13 +5588,7 @@ type Query {
   agentWork(input: AgentWorkInstanceInput!): AgentWorkType!
   agents(input: ListAgentsInput!): [AgentSummaryType!]!
   apiKeys: [ApiKeyType!]!
-  approverDirectory: [ApproverMemberType!]!
   askKnowledge(input: AskKnowledgeInput!): [RetrievedPassageType!]!
-  authority: AuthoritySheetType!
-  automationGoogleAccounts: [AutomationGoogleAccountType!]!
-  automationRuns(input: AutomationRunsInput!): [AutomationRunType!]!
-  automationSuggestions(input: AutomationSuggestionsInput!): [AutomationSuggestionType!]!
-  automations: AutomationsOverviewType!
   billingBankAccount: BillingBankAccountType!
   billingPlan(input: BillingPlanInput!): BillingPlanType
   billingPlanQuote(input: BillingPlanQuoteInput!): BillingPlanQuoteType!
@@ -6810,9 +5630,7 @@ type Query {
   creditRecentCostUsd(input: CreditRecentCostInput!): Float!
   creditTopupLots: [CreditTopupLotType!]!
   creditUsageSummary: CreditUsageSummaryType!
-  dashboard: DashboardType!
   dataSyncRun(input: DataSyncRunInput!): DataSyncRunType!
-  decisionHistory(input: ListDecisionHistoryInput!): [DecisionRecordType!]!
   dossierFindings(input: DossierFindingsInput! = {}): DossierFindingConnectionType!
   dossierRemedyDraft(input: DossierRemedyDraftRefInput!): DossierRemedyDraftType
   dossierReviewSummary: DossierReviewSummaryType!
@@ -6860,8 +5678,6 @@ type Query {
   mcpCallLog(input: McpCallLogInput): [McpCallLogType!]!
   mcpConnectors: [McpConnectorType!]!
   mcpToolGrants: [McpToolGrantType!]!
-  memberGrants(input: MemberGrantsInput!): [MemberGrantType!]!
-  mentionDirectory: MentionDirectoryType!
   metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
   moduleInstallation(input: ModuleInstallationIdInput!): ModuleInstallationType!
@@ -6877,12 +5693,6 @@ type Query {
   myWorkspaces: [MembershipType!]!
   nivoKnowledge: [NivoEntryType!]!
   nivoKnowledgeCount(input: NivoKnowledgeCountInput!): Int!
-  officeCommandCandidates: [OfficeCandidateType!]!
-  officeConversationUnread: OfficeConversationUnreadType!
-  officeDecidedApprovals: [OfficeApprovalType!]!
-  officeMessages(input: ListOfficeMessagesInput!): OfficeMessagePageType!
-  officePendingApprovals: [OfficeApprovalType!]!
-  officeRooms: [OfficeRoomType!]!
   openPlanPaymentOrder: BillingPaymentOrderType
   paymentOrder(input: PaymentOrderInput!): BillingPaymentOrderType
   paymentOrderRequestStatus(input: PaymentOrderRequestStatusInput!): PaymentOrderRequestStatusType
@@ -6900,8 +5710,6 @@ type Query {
   publicHiringJob(input: PublicHiringJobInput!): PublicJobType!
   publicHiringOffer(input: HiringTokenInput!): PublicOfferType!
   publicLoyaltyPage(input: PublicLoyaltyPageInput!): PublicLoyaltyPageType!
-  reconcileDetails(workItemId: ID!): ReconcileDetailsType!
-  responsibilities: [ResponsibilityListingType!]!
   salesActionStatus(input: SalesActionStatusInput!): SalesActionType!
   salesOrder(input: SalesOrderInput!): SalesOrderType
   salesOrders(input: ListSalesOrdersInput! = {}): SalesOrderConnectionType!
@@ -6929,11 +5737,7 @@ type Query {
   videoScope: VideoScopeType!
   videoScriptStatus(input: VideoScriptStatusInput!): VideoScriptStatusType!
   videoSources: [VideoSourceType!]!
-  workChain(input: WorkThreadIdInput!): WorkChainType!
-  workItem(input: WorkItemIdInput!): WorkItemType!
-  workItems(input: ListWorkItemsInput!): WorkItemPageType!
-  workThread(input: WorkThreadIdInput!): WorkThreadViewType!
-  workThreads(input: ListWorkThreadsInput! = {}): WorkThreadConnectionType!
+  workbenchRead(input: WorkbenchReadInput!): WorkbenchAnswerType!
   workspaceAgentWork: WorkspaceAgentWorkType!
   workspaceInvites: [PendingInviteType!]!
   workspaceMembers: [MemberListingType!]!
@@ -6990,32 +5794,6 @@ type ReceivePoType {
 
 input RecheckZaloConnectionInput {
   connectionId: ID! @inputBounds(maxLength: 64)
-}
-
-type ReconcileCandidateType {
-  amount_vnd: Float!
-  company: String
-  customer: String
-  due_at: String
-  id: ID!
-  invoice_no: String!
-  issued_at: String
-  order_items: String
-  order_no: String
-  order_status: String
-  status: String!
-}
-
-type ReconcileDetailsType {
-  candidates: [ReconcileCandidateType!]!
-  payment: ReconcilePaymentType!
-}
-
-type ReconcilePaymentType {
-  amount_vnd: Float
-  occurred_at: String
-  payer: String
-  reference: String
 }
 
 input RecordManualEvidenceInput {
@@ -7288,11 +6066,6 @@ input RequestMyAvatarUploadInput {
   sizeBytes: Int! @inputBounds(min: 1, max: 2097152)
 }
 
-input RequestOfficeFileUploadInput {
-  contentType: String! @inputBounds(maxLength: 32)
-  sizeBytes: Int! @inputBounds(min: 1, max: 10485760)
-}
-
 input RequestPaymentOrderInput {
   cycle: String
   kind: String!
@@ -7398,37 +6171,6 @@ type RespondSlotType {
   slotStart: String
 }
 
-type ResponsibilityListingType {
-  company: String
-  contact_name: String!
-  created_at: String!
-  due_at: String
-  id: ID!
-  leadStage: String!
-  lead_id: ID!
-  next_action: String!
-  owner_agent_id: ID
-  owner_kind: String!
-  owner_name: String!
-  status: String!
-  title: String!
-  workspace_id: ID!
-}
-
-type ResponsibilityType {
-  created_at: String!
-  due_at: String
-  id: ID!
-  lead_id: ID!
-  next_action: String!
-  owner_agent_id: ID
-  owner_kind: String!
-  owner_name: String!
-  status: String!
-  title: String!
-  workspace_id: ID!
-}
-
 input RestoreAgentGraphVersionInput {
   agentId: String! @inputBounds(maxLength: 36)
   versionId: String! @inputBounds(maxLength: 36)
@@ -7523,12 +6265,6 @@ input RunFlowInput {
 
 type RunFlowType {
   data: JsonObject!
-}
-
-type RunStepType {
-  detail: String
-  label: String!
-  status: String!
 }
 
 input SalesActionStatusInput {
@@ -7785,10 +6521,6 @@ input SaveAgentTriggerInput {
   probeKey: String = null @inputBounds(maxLength: 80)
   timeZone: String = null @inputBounds(maxLength: 64)
   triggerId: ID = null @inputBounds(maxLength: 36)
-}
-
-input SaveAuthorityRuleInput {
-  change: AuthorityRuleChangeInput!
 }
 
 type SaveAvailabilityType {
@@ -8084,11 +6816,6 @@ input SaveLoyaltyRewardInput {
   valueVnd: Float! @inputBounds(min: 0, max: 1000000000000)
 }
 
-input SaveMemberGrantsInput {
-  action: String! @inputBounds(maxLength: 80)
-  grants: [MemberGrantChangeInput!]! @inputBounds(maxItems: 200)
-}
-
 input SaveOpenApiConnectionInput {
   auth: OpenApiAuthInput!
   config: DataJson!
@@ -8229,16 +6956,6 @@ input SendAgentChatMessageInput {
   body: String! @inputBounds(maxLength: 4000)
   conversationId: ID! @inputBounds(maxLength: 36)
   file: SentAgentChatFileInput = null
-}
-
-input SendAgentCommandInput {
-  command: String! @inputBounds(maxLength: 80)
-  fields: [FieldValueInput!] @inputBounds(maxItems: 30)
-  leadId: ID @inputBounds(maxLength: 36)
-  reason: String! @inputBounds(maxLength: 200)
-  subjectId: ID @inputBounds(maxLength: 36)
-  subjectType: String
-  to: String! @inputBounds(maxLength: 60)
 }
 
 input SendSmtpTestInput {
@@ -8823,12 +7540,6 @@ type ShiftsWorkItemType {
   summary: String!
 }
 
-type ShopContextType {
-  hours: String!
-  shop: String!
-  tone: String!
-}
-
 type SmtpConnectionType {
   fromEmail: String!
   host: String!
@@ -9057,43 +7768,6 @@ type TelegramUserReadyType {
   configured: Boolean!
 }
 
-type TemplateAuthorityType {
-  action: String
-  alwaysAsk: Boolean
-}
-
-type TemplateDefinitionType {
-  authority: TemplateAuthorityType!
-  contentMode: String!
-  defaultBody: LocalizedTextType
-  defaults: JsonObject!
-  description: LocalizedTextType!
-  executor: String!
-  guardrails: [LocalizedTextType!]!
-  icon: String!
-  key: String!
-  moduleKey: String
-  n8n: TemplateN8nType
-  name: LocalizedTextType!
-  pack: String!
-  position: Int!
-  requires: TemplateRequirementsType!
-  settings: [TemplateSettingType!]!
-  trigger: TemplateTriggerType!
-  variables: [String!]!
-  version: Int!
-}
-
-input TemplateKeyInput {
-  templateKey: String! @inputBounds(maxLength: 61)
-}
-
-type TemplateN8nType {
-  audience: String!
-  data: [String!]
-  webhook: String!
-}
-
 type TemplateOrderType {
   account: String!
   amountVnd: Int!
@@ -9139,25 +7813,6 @@ type TemplateParameterType {
   required: Boolean!
 }
 
-type TemplateRequirementsType {
-  capabilities: [String!]!
-  channels: [String!]!
-  connections: [String!]!
-  modules: [String!]!
-}
-
-type TemplateSettingType {
-  hint: LocalizedTextType
-  key: String!
-  kind: String!
-  label: LocalizedTextType!
-  max: Float
-  maxLength: Int
-  min: Float
-  required: Boolean
-  suffix: LocalizedTextType
-}
-
 input TemplateTextInput {
   en: String! @inputBounds(maxLength: 400)
   vi: String! @inputBounds(maxLength: 400)
@@ -9166,12 +7821,6 @@ input TemplateTextInput {
 type TemplateTextType {
   en: String!
   vi: String!
-}
-
-type TemplateTriggerType {
-  event: String!
-  kind: String!
-  line: LocalizedTextType!
 }
 
 type TemplateType {
@@ -9229,72 +7878,6 @@ input TestWebhookConnectionInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
-type ThreadApprovalCardType {
-  action: String!
-  amount: Float
-  approvers: [ThreadCardApproverType!]!
-  decidedAt: String
-  decidedBy: String
-  decidedByName: String
-  excluded: [ThreadCardExcludedType!]!
-  expiresAt: String!
-  outcome: String!
-  owner: ThreadMentionType
-  policy: String!
-  requestId: ID!
-  rule: String!
-  unit: String
-}
-
-type ThreadCardApproverType {
-  memberId: String!
-  name: String!
-  role: String!
-  roomId: String
-  status: String!
-}
-
-type ThreadCardExcludedType {
-  memberId: String!
-  name: String!
-  reason: String!
-}
-
-input ThreadMentionRefInput {
-  id: String! @inputBounds(maxLength: 80)
-  kind: String!
-}
-
-type ThreadMentionRefType {
-  id: String!
-  kind: String!
-}
-
-type ThreadMentionType {
-  id: String!
-  kind: String!
-  name: String!
-}
-
-type ThreadMessageType {
-  approval: ThreadApprovalCardType
-  authorId: String!
-  authorKind: String!
-  authorName: String!
-  authorRole: String!
-  body: String!
-  createdAt: String!
-  id: ID!
-  mentions: [ThreadMentionType!]!
-  quoted: [String!]!
-  threadId: ID!
-}
-
-type ThreadParticipantsType {
-  agents: Int!
-  people: Int!
-}
-
 input ToggleHiringOnboardingInput {
   done: Boolean!
   id: ID! @inputBounds(maxLength: 36)
@@ -9318,12 +7901,6 @@ input TransitionContentItemInput {
   kind: String! @inputBounds(maxLength: 16)
 }
 
-type TrustType {
-  autoSend: Boolean!
-  offered: Boolean!
-  streak: Int!
-}
-
 input UndoBrainFactBatchInput {
   batchId: String! @inputBounds(maxLength: 64)
 }
@@ -9332,20 +7909,6 @@ type UnmatchedContractType {
   contractId: ID!
   customerName: String!
   reason: String!
-}
-
-input UpdateAuthorityInput {
-  patch: AuthorityPatchInput!
-}
-
-input UpdateAutomationPipelineInput {
-  autoSend: Boolean
-  body: String @inputBounds(maxLength: 4000)
-  dismissed: Boolean
-  enabled: Boolean
-  googleConnectionId: ID @inputBounds(maxLength: 36)
-  templateKey: String! @inputBounds(maxLength: 61)
-  values: JsonObject
 }
 
 input UpdateInventoryPoDraftInput {
@@ -9409,11 +7972,6 @@ input UpdatePublicDocumentInput {
   body: String @inputBounds(maxLength: 40000)
   id: ID! @inputBounds(maxLength: 36)
   title: String @inputBounds(maxLength: 160)
-}
-
-input UpdateResponsibilityStatusInput {
-  responsibilityId: ID! @inputBounds(maxLength: 36)
-  status: String!
 }
 
 type UpdateUnitType {
@@ -9657,116 +8215,18 @@ type WizardConnectionType {
   webhookUrl: String!
 }
 
-type WorkChainType {
-  steps: [ChainStepType!]!
-  summary: ChainSummaryType!
+input WorkbenchActionInput {
+  input: String! @inputBounds(maxLength: 16384)
+  name: String! @inputBounds(maxLength: 120)
 }
 
-input WorkEditsInput {
-  amount_vnd: Int @inputBounds(min: 0, max: 1000000000000)
-  candidateId: ID @inputBounds(maxLength: 36)
-  draft: String @inputBounds(maxLength: 10000)
-  fields: [FieldValueInput!] @inputBounds(maxItems: 30)
+type WorkbenchAnswerType {
+  data: String!
 }
 
-input WorkItemCursorInput {
-  createdAt: String! @inputBounds(maxLength: 40)
-  id: ID! @inputBounds(maxLength: 36)
-}
-
-type WorkItemCursorType {
-  createdAt: String!
-  id: ID!
-}
-
-input WorkItemIdInput {
-  workItemId: ID! @inputBounds(maxLength: 36)
-}
-
-type WorkItemPageType {
-  items: [WorkItemType!]!
-  next: WorkItemCursorType
-}
-
-type WorkItemType {
-  action: String!
-  assigned_staff_id: ID
-  chain_id: ID
-  completed_at: String
-  created_at: String!
-  decidedBy: String
-  decided_path: String
-  deciderName: String
-  department: String!
-  depth: Int!
-  error: String
-  evidence_state: String!
-  execution_id: ID
-  id: ID!
-  inbound_event_id: ID
-  installation_id: ID
-  lead_id: ID
-  missing_fields: [String!]!
-  parent_id: ID
-  proposal: ProposalType!
-  reason: String
-  reasons: [String!]!
-  result: WorkResultType
-  status: String!
-  subject_id: ID
-  subject_type: String!
-  updated_at: String!
-  workspace_id: ID!
-}
-
-type WorkResultType {
-  href: String
-  summary: String!
-}
-
-type WorkThreadConnectionType {
-  nodes: [WorkThreadListingType!]!
-  pageInfo: WorkThreadPageInfo!
-}
-
-input WorkThreadIdInput {
-  threadId: ID! @inputBounds(maxLength: 36)
-}
-
-type WorkThreadListingType {
-  createdAt: String!
-  id: ID!
-  lastAt: String
-  lastBody: String
-  leadId: String
-  messageCount: Int!
-  orderId: String
-  status: String!
-  title: String!
-  updatedAt: String!
-  waitingApproval: Boolean!
-}
-
-type WorkThreadPageInfo {
-  endCursor: String
-  hasNextPage: Boolean!
-}
-
-type WorkThreadType {
-  createdAt: String!
-  createdBy: String!
-  id: ID!
-  leadId: String
-  orderId: String
-  status: String!
-  title: String!
-  updatedAt: String!
-}
-
-type WorkThreadViewType {
-  messages: [ThreadMessageType!]!
-  participants: ThreadParticipantsType!
-  thread: WorkThreadType!
+input WorkbenchReadInput {
+  name: String! @inputBounds(maxLength: 120)
+  vars: String! @inputBounds(maxLength: 16384)
 }
 
 type WorkspaceAgentWorkType {

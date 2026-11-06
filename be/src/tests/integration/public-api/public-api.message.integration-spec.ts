@@ -18,7 +18,7 @@ describe("Public API message (persisted local integration)", () => {
     const admittedMessage = async (approval: boolean) => {
         const identity = await fixture()
         const conversationId = world.id()
-        await persistPublicApiConversation(world.db.primary, identity, conversationId, world.id())
+        await persistPublicApiConversation(world.db.primary, identity, conversationId)
         await world.resolve(PublicMessagesService).acceptMessage({
             authorization: identity.authorization,
             conversationId,

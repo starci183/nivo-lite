@@ -1,17 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { MessagesReadService } from "@modules/domain/messages"
-import type { LineReader } from "@modules/domain/messages"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectRoomsAgents, InjectRoomsTestChats } from "./office-rooms.decorators"
 import type { RoomsAgentChats, RoomsAgents, RoomsChatLine, RoomsTestChats } from "./office-rooms.port"
-import type {
-    AgentConversationFacts,
-    ConversationUnreadFacts,
-    RoomFacts,
-    RoomSummaryFacts,
-} from "./office-rooms.contracts"
+import type { AgentConversationFacts, RoomFacts, RoomSummaryFacts } from "./office-rooms.contracts"
 import {
     OfficeRoomEntity,
     OfficeRoomMemberEntity,
@@ -24,10 +18,8 @@ const ROOM_LIMIT = 20
 /** How many agent conversations the unread read answers. */
 const AGENT_LIMIT = 100
 /** How many customer conversations the unread read answers. */
-const LEAD_LIMIT = 500
 /** The read marker key prefixes of the direct conversations. */
 const AGENT_KEY = "agent:"
-const LEAD_KEY = "lead:"
 /** The text shape a marker instant is read in: the database JSON rendering, microsecond exact. */
 const MARK_INSTANT = "to_json(rd.last_read_at) #>> '{}'"
 
@@ -146,23 +138,6 @@ export class OfficeRoomReadsService {
         )
         const names = new Map(authors.map((author) => [author.userId, author.displayName]))
         return chats.map((chat): AgentConversationFacts => conversationFactsOf(chat, names))
-    }
-
-    /** The caller's unread line counts of the customer conversations that have unread lines. */
-    async leadConversations(
-        workspaceId: string,
-        userId: string,
-        displayName: string,
-    ): Promise<Array<ConversationUnreadFacts>> {
-        const marks = await this.marksOf(workspaceId, userId, "rd.room LIKE 'lead:%'")
-        const reader: LineReader = { userId, displayName }
-        const unread = await this.messages.unreadOfLeads(
-            workspaceId,
-            reader,
-            marks.map((mark) => ({ key: mark.room.slice(LEAD_KEY.length), readAt: mark.read_at })),
-            LEAD_LIMIT,
-        )
-        return unread.map((entry) => ({ id: entry.lead_id, unread: entry.unread }))
     }
 
     /** The caller's read markers of the workspace whose key matches the condition, with the instant as exact text. */

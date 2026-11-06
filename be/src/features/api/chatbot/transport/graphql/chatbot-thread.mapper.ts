@@ -15,6 +15,5 @@ export const toChatbotThreadType = (result: ChatbotThread): ChatbotThreadType =>
     ...result,
     conversation: toChatbotConversationType(result.conversation),
     messages: result.messages.map((message) => ({ ...message, files: [...message.files] })),
-    lead: result.lead,
     escalation: result.escalation,
 })

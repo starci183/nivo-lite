@@ -67,10 +67,6 @@ export const instanceLabel = (typeName: string, instanceName: string | null): st
         ? `${typeName} – ${instanceName}`
         : typeName
 
-/** An order number reads as "#DH-1"; any other label is shown as it is. */
-export const shownSubject = (subjectType: string, label: string): string =>
-    subjectType === "order" && !label.startsWith("#") ? `#${label}` : label
-
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** Whether text is a UUID. */

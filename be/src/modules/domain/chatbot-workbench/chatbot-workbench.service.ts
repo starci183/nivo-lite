@@ -1,7 +1,6 @@
 import { ChatFilesService } from "@modules/domain/chat-files"
 import { Injectable } from "@nestjs/common"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { LeadAutomationReadService, LeadReadService } from "@modules/domain/leads"
 import { InstallationOperationsService } from "@modules/domain/module-installations"
 import { StaffDirectoryService } from "@modules/domain/staff"
 import { WorkItemsActivityService } from "@modules/domain/work-items"
@@ -35,8 +34,6 @@ export class ChatbotWorkbenchService {
         private readonly staff: StaffDirectoryService,
         private readonly work: WorkItemsActivityService,
         private readonly installs: InstallationOperationsService,
-        private readonly leads: LeadReadService,
-        private readonly leadFacts: LeadAutomationReadService,
         private readonly agentDirectory: AgentDirectoryService,
         private readonly conversationReads: AgentConversationsReadService,
         private readonly messageReads: AgentMessagesReadService,
@@ -52,11 +49,9 @@ export class ChatbotWorkbenchService {
         const conversations = await this.conversationReads.customerOfAgents(request.workspaceId, agents, 200)
         if (conversations.length === 0) return emptyChatbotOverview(request.workspaceId, now)
         const ids = conversations.map((row) => row.id)
-        const leadIds = conversations.flatMap((row) => (row.lead_id === null ? [] : [row.lead_id]))
-        const [messages, waiting, leads, agentNames] = await Promise.all([
+        const [messages, waiting, agentNames] = await Promise.all([
             this.messageReads.briefsIn(request.workspaceId, ids, new Date(now - 30 * DAY_MS), 6000),
             this.waiting(request.workspaceId),
-            this.leads.listByIds(request.workspaceId, leadIds),
             this.agentNamesOf(
                 request.workspaceId,
                 conversations.map((row) => row.agent_id),
@@ -69,22 +64,20 @@ export class ChatbotWorkbenchService {
             conversations,
             messages,
             waiting,
-            leads,
             agentIds: agents,
             agentNames,
             staffNames,
         })
     }
 
-    /** A customer conversation of the caller's workspace with its lead and assigned escalation. */
+    /** A customer conversation of the caller's workspace with its assigned escalation. */
     async thread(userId: string, workspaceId: string, conversationId: string): Promise<ChatbotThread> {
         await this.members.require(userId, workspaceId)
         const conversation = await this.conversationReads.customerById(workspaceId, conversationId)
         if (conversation === null) throw new AgentConversationsError({ code: AgentConversationsErrorCode.NotFound })
-        const [messages, waiting, lead] = await Promise.all([
+        const [messages, waiting] = await Promise.all([
             this.messageReads.threadOf(workspaceId, conversationId, 500),
             this.waiting(workspaceId),
-            conversation.lead_id === null ? undefined : this.leadFacts.lead(workspaceId, conversation.lead_id),
         ])
         const files = await this.files.viewsOf(
             workspaceId,
@@ -99,7 +92,6 @@ export class ChatbotWorkbenchService {
             messages,
             files,
             waiting,
-            lead: lead ?? null,
             staffName: staffId === null ? null : (staffNames.get(staffId) ?? null),
             agentNames,
         })

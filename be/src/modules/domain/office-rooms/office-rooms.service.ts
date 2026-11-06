@@ -11,13 +11,12 @@ import { OfficeRoomsError, OfficeRoomsErrorCode } from "./errors/office-rooms.er
 import type {
     AgentConversationFacts,
     AgentConversationView,
-    ConversationUnreadFacts,
     ConversationUnreadListView,
     RoomChoice,
     RoomView,
 } from "./office-rooms.contracts"
-import { InjectRoomsAgents, InjectRoomsLeads } from "./office-rooms.decorators"
-import type { RoomsAgents, RoomsLeads } from "./office-rooms.port"
+import { InjectRoomsAgents } from "./office-rooms.decorators"
+import type { RoomsAgents } from "./office-rooms.port"
 import { OfficeRoomMembersService } from "./office-room-members.service"
 import { OfficeRoomReadsService } from "./office-room-reads.service"
 
@@ -32,9 +31,6 @@ const CONVERSATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-
 /** The function that records a read marker, and the one that opens the rooms of a workspace. */
 const MARK_READ = "public.mark_office_room_read"
 const ENSURE_ROOMS = "public.ensure_office_rooms"
-
-/** Only the conversations with unseen lines, as the badge contract reads them. */
-const withUnread = (rows: ReadonlyArray<ConversationUnreadFacts>) => rows.filter((row) => row.unread > 0)
 
 /** One agent's direct conversation as the row draws it: the unread count and the newest line, even fully read. */
 const agentConversationOf = (row: AgentConversationFacts): AgentConversationView => ({
@@ -58,7 +54,6 @@ export class OfficeRoomsService {
         private readonly reads: OfficeRoomReadsService,
         private readonly seats: OfficeRoomMembersService,
         @InjectRoomsAgents() private readonly agents: RoomsAgents,
-        @InjectRoomsLeads() private readonly leads: RoomsLeads,
     ) {}
 
     /** The rooms the caller sees; a workspace without department rooms answers the Office room alone. */
@@ -87,14 +82,11 @@ export class OfficeRoomsService {
         return [office, ...rows.map((row): RoomView => ({ ...row, members: memberViews.get(row.key) ?? emptyMembers }))]
     }
 
-    /** The caller's direct conversations: every agent with its unread count and newest line, and the unread customer ones. */
+    /** The caller's direct conversations: every agent with its unread count and newest line. */
     async unread(principalId: string, workspaceId: string): Promise<ConversationUnreadListView> {
         const member = await this.members.require(principalId, workspaceId)
-        const [agents, leads] = await Promise.all([
-            this.reads.agentConversations(workspaceId, member.userId, member.displayName),
-            this.reads.leadConversations(workspaceId, member.userId, member.displayName),
-        ])
-        return { agents: agents.map(agentConversationOf), leads: withUnread(leads) }
+        const agents = await this.reads.agentConversations(workspaceId, member.userId, member.displayName)
+        return { agents: agents.map(agentConversationOf) }
     }
 
     /** Marks a direct conversation read by the caller up to now; a wrong kind or an id outside the workspace is refused. */
@@ -106,11 +98,10 @@ export class OfficeRoomsService {
         await this.activity.unread(workspaceId, `${kind}:${id}`, member.userId)
     }
 
-    /** Whether the agent or lead of the conversation is one of the workspace; the owner capability answers. */
+    /** Whether the agent of the conversation is one of the workspace; the owner capability answers. */
     private async belongs(workspaceId: string, kind: string, id: string): Promise<boolean> {
         if (!CONVERSATION_ID.test(id)) return false
         if (kind === "agent") return (await this.agents.find(workspaceId, id)) !== null
-        if (kind === "lead") return this.leads.exists(workspaceId, id)
         return false
     }
 

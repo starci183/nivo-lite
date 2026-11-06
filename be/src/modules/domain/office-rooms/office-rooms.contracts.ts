@@ -71,12 +71,12 @@ export interface RoomView {
 /** A room key as a caller names it; null is the general Office room. Checked against the Hub rooms before use. */
 export type RoomChoice = string | null
 
-/** Which direct conversation a caller names: one agent's lines, or one customer's (lead's) lines. */
-export type ConversationKind = "agent" | "lead"
+/** Which direct conversation a caller names: one agent's lines. */
+export type ConversationKind = "agent"
 
 /** The unread count of one direct conversation. */
 export interface ConversationUnreadView {
-    /** The agent or lead id. */
+    /** The agent id. */
     readonly id: string
     /** Lines the caller has not read, at most 99. */
     readonly unread: number
@@ -100,12 +100,10 @@ export interface AgentConversationView extends ConversationUnreadView {
     readonly last: ConversationLastView | null
 }
 
-/** The caller's unread counts of the direct conversations; only customer conversations above zero are listed. */
+/** The caller's direct conversations. */
 export interface ConversationUnreadListView {
     /** The agent conversations, read or not: the rows draw their newest line. */
     readonly agents: ReadonlyArray<AgentConversationView>
-    /** The unread customer conversations. */
-    readonly leads: ReadonlyArray<ConversationUnreadView>
 }
 
 /** The seat id and the instant a seat was taken, when a preview overrides the seat it draws. */
@@ -152,7 +150,7 @@ export interface RoomFacts extends RoomSummaryFacts {
 
 /** The unread count of one agent or customer conversation. */
 export interface ConversationUnreadFacts {
-    /** The agent or lead id. */
+    /** The agent id. */
     readonly id: string
     /** Lines the caller has not read, at most 99. */
     readonly unread: number

@@ -1,12 +1,9 @@
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { InvoicesLedgerService } from "@modules/domain/invoices"
-import { LeadReadService } from "@modules/domain/leads"
 import { OfficeLinesService } from "@modules/domain/messages"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
-import { OrdersLabelReadService } from "@modules/domain/orders"
 import { WorkItemsChainReadService } from "@modules/domain/work-items"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
@@ -36,7 +33,6 @@ import {
     FIND_GIVEN_INSTALLATION,
     FIND_PARENT_POSITION,
     FIND_SENDER_AGENT,
-    FIND_SUBJECT_LABEL,
     RESOLVE_INSTALLATION,
     UNREADABLE,
     answer,
@@ -48,11 +44,8 @@ const build = async (stage: Served = serve()) => {
     const agents = mock<AgentDirectoryService>()
     const installations = mock<InstallationRecordsService>()
     const chains = mock<WorkItemsChainReadService>()
-    const orders = mock<OrdersLabelReadService>()
-    const leads = mock<LeadReadService>()
-    const invoices = mock<InvoicesLedgerService>()
-    answer(stage.queries, { agents, installations, chains, orders, leads, invoices })
-    const served = { em: stage.em, agents, installations, chains, orders, leads, invoices }
+    answer(stage.queries, { agents, installations, chains })
+    const served = { em: stage.em, agents, installations, chains }
     const log = jest.fn().mockResolvedValue(undefined)
     const post = jest.fn<Promise<void>, Parameters<OfficeLinesService["post"]>>().mockResolvedValue(undefined)
     const error = jest.fn<void, Parameters<Logger["error"]>>()
@@ -72,9 +65,6 @@ const build = async (stage: Served = serve()) => {
             { provide: AgentDirectoryService, useValue: agents },
             { provide: InstallationRecordsService, useValue: installations },
             { provide: WorkItemsChainReadService, useValue: chains },
-            { provide: OrdersLabelReadService, useValue: orders },
-            { provide: LeadReadService, useValue: leads },
-            { provide: InvoicesLedgerService, useValue: invoices },
         ],
     }).compile()
     return { service: moduleRef.get(CommandPlannerService), served, em: served.em, log, post, error, modules }
@@ -143,7 +133,6 @@ describe("CommandPlannerService", () => {
                 [FIND_PARENT_POSITION, [{ id: "parent-1", chain_id: "chain-1", depth: 0 }]],
                 [CHAIN_REPEATS_COMMAND, [{ repeats: false }]],
                 [FIND_GIVEN_INSTALLATION, [{ id: "inst-1", name: "Main" }]],
-                [FIND_SUBJECT_LABEL, [{ label: "Lan" }]],
             ])
             const own = mockEntityManager()
             const built = await build({ ...manager, em: own })
@@ -346,29 +335,20 @@ describe("CommandPlannerService", () => {
 
 describe("CommandPlannerService", () => {
     describe("the Office mirror and the sent evidence", () => {
-        const label = (value: string | null): Queries => [[FIND_SUBJECT_LABEL, [{ label: value }]]]
         const agent = (name: string, module: string, installation_name: string | null): Queries => [
             [FIND_SENDER_AGENT, [{ name, module, installation_name }]],
-            [FIND_SUBJECT_LABEL, []],
         ]
-        const mirror = (
-            name: string,
-            body: string,
-            input: Partial<SendCommandInput> = {},
-            query: Queries = [[FIND_SUBJECT_LABEL, []]],
-            failed = false,
-        ) => [name, body, inputOf(input), query, failed] as const
-        const subject = (kind: string) => ({ lead_id: "lead-1", subject_type: kind, subject_id: `${kind}-1` })
+        const mirror = (name: string, body: string, input: Partial<SendCommandInput> = {}, query: Queries = []) =>
+            [name, body, inputOf(input), query] as const
         it("announces a command that became an item, once inserted", async () => {
-            const built = await inserted(serve([[FIND_SUBJECT_LABEL, [{ label: "Lan" }]]]), inputOf())
+            const built = await inserted(serve(), inputOf())
 
             expect(built.plan.inserted()).toBe(true)
             const ids = { lead_id: "lead-1", work_item_id: "item-1" }
-            const body = "@Sales <- Owner: classify for customer Lan"
+            const body = "@Sales <- Owner: classify"
             const sent = { kind: "command.sent", actor: "Owner", summary: "sales.classify_lead", evidence: "handoff" }
             expect(built.post).toHaveBeenCalledWith(ctx, { command: true, body, ...ids }, built.em)
             expect(built.log).toHaveBeenCalledWith(ctx, { ...ids, ...sent }, built.em)
-            expect(built.served.leads.cardsOf).toHaveBeenCalledWith("ws-1", ["lead-1"])
         })
 
         it.each([
@@ -393,21 +373,9 @@ describe("CommandPlannerService", () => {
                 { from: AGENT_ID },
                 agent("Free Agent", "custom", null),
             ),
-            mirror("an order number", "Owner: classify for order #DH-1", { payload: subject("order") }, label("DH-1")),
-            mirror("an untranslated kind", "Owner: classify for Rice", { payload: subject("invoice") }, label("Rice")),
-            mirror("an order without a number", "Owner: classify", { payload: subject("order") }, label(null)),
-            mirror("an invoice without a receipt", "Owner: classify", { payload: subject("invoice") }, label(null)),
-            mirror("no subject id", "Owner: classify", { payload: { lead_id: "lead-1" } }, []),
-            mirror("a blank label", "Owner: classify", {}, label(null)),
-            mirror("no label row", "Owner: classify"),
-            mirror("an unreadable label", "Owner: classify", {}, [[UNREADABLE, []]], true),
-        ])("mirrors %s", async (_name, body, input, query, failed) => {
+        ])("mirrors %s", async (_name, body, input, query) => {
             const built = await inserted(serve(query), input)
             expect(built.post.mock.calls[0]?.[1]?.body).toBe(`@Sales <- ${body}`)
-            if (failed)
-                expect(built.error).toHaveBeenCalledWith(WorkEngineLogEvent.SubjectLabelUnreadable, expect.any(Error), {
-                    subjectType: "lead",
-                })
         })
     })
 })
@@ -439,7 +407,7 @@ describe("CommandPlannerService", () => {
         })
 
         it("lets neither the Office nor the evidence log block the command", async () => {
-            const built = await build(serve([[FIND_SUBJECT_LABEL, []]]))
+            const built = await build(serve())
             built.post.mockRejectedValue(new RangeError("office"))
             built.log.mockRejectedValue(new RangeError("log"))
             const plan = planned(await built.service.plan(ctx, inputOf()))

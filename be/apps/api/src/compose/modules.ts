@@ -1,13 +1,10 @@
 import type { DynamicModule } from "@nestjs/common"
 import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import { BookingChatLookupService } from "@modules/domain/bookings"
-import { LeadFlowStoreService } from "@modules/domain/lead-flows"
-import { LeadRecordsService } from "@modules/domain/leads"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { ModulesGraphqlModule } from "@features/api/modules"
 import { WorkbenchGraphqlModule } from "@features/api/workbench"
 import { API_KEYS_ERROR_KINDS, API_KEYS_MESSAGES, ApiKeysModule } from "@modules/domain/api-keys"
-import { OverviewModule } from "@modules/domain/overview"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule } from "@modules/domain/modules"
 import { PUBLIC_API_ERROR_KINDS, PUBLIC_API_MESSAGES, PublicApiModule } from "@modules/domain/public-api"
 import {
@@ -27,18 +24,11 @@ export const modulesModules = (): Array<DynamicModule> => [
         catalog: MODULE_CATALOG,
         // The capabilities that keep records naming an installation; each is an existing provider of the app.
         ports: {
-            recordSources: [
-                WorkItemsService,
-                AgentConversationsService,
-                BookingChatLookupService,
-                LeadFlowStoreService,
-                LeadRecordsService,
-            ],
+            recordSources: [WorkItemsService, AgentConversationsService, BookingChatLookupService],
         },
     }),
     ModulesGraphqlModule.register({}),
     ApiKeysModule.register({ isGlobal: true }),
-    OverviewModule.register({ isGlobal: true }),
     PublicApiModule.register({ isGlobal: true }),
     WorkbenchGraphqlModule.register({}),
     WorkbenchDoorModule.register({

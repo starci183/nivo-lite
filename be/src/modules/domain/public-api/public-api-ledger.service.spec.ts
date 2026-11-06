@@ -11,11 +11,10 @@ const REQUEST = "request-1"
 const RECORD = {
     workspaceId: WORKSPACE,
     keyId: "key-1",
-    kind: "lead" as const,
-    prefix: "lead:key-1:",
+    kind: "message" as const,
+    prefix: "message:key-1:",
     suffix: "crm-9",
-    body: { name: "A" },
-    needSupplied: true,
+    body: { text: "A" },
 }
 
 const build = async () => {
@@ -26,14 +25,10 @@ const build = async () => {
 describe("PublicApiLedgerService / record", () => {
     it("records the request once per dedupe key and answers the row it wrote", async () => {
         const em = mockEntityManager()
-        const write = fakeQueryBuilder({ execute: { raw: [{ id: REQUEST, lead_id: null, inserted: true }] } })
+        const write = fakeQueryBuilder({ execute: { raw: [{ id: REQUEST, inserted: true }] } })
         answerQueryBuilders(em, write)
 
-        await expect((await build()).record(RECORD, em)).resolves.toEqual({
-            id: REQUEST,
-            lead_id: null,
-            inserted: true,
-        })
+        await expect((await build()).record(RECORD, em)).resolves.toEqual({ id: REQUEST, inserted: true })
 
         expect(em.createQueryBuilder).toHaveBeenCalledWith(PublicApiEntity, "public_api")
 
@@ -44,45 +39,35 @@ describe("PublicApiLedgerService / record", () => {
         })
     })
 
-    it("answers the row of an earlier identical request as not inserted", async () => {
+    it("answers nothing when the insert and the count return no row", async () => {
         const em = mockEntityManager()
-        const repeat = ledgerAnswers([{ id: REQUEST, lead_id: "lead-2", inserted: false }])
-        answerQueryBuilders(em, ...repeat.builders)
+        answerQueryBuilders(em, fakeQueryBuilder({ execute: { raw: [] } }), fakeQueryBuilder({ execute: { raw: [] } }))
 
-        await expect((await build()).record(RECORD, em)).resolves.toEqual({
-            id: REQUEST,
-            lead_id: "lead-2",
-            inserted: false,
-        })
+        await expect((await build()).record(RECORD, em)).resolves.toBeUndefined()
     })
 
-    it("stores an absent need presence as null and answers nothing when the insert returns no row", async () => {
+    it("answers the row of an earlier identical request as not inserted", async () => {
         const em = mockEntityManager()
-        const write = fakeQueryBuilder({ execute: { raw: [] } })
-        answerQueryBuilders(em, write, fakeQueryBuilder({ execute: { raw: [] } }))
+        const repeat = ledgerAnswers([{ id: REQUEST, inserted: false }])
+        answerQueryBuilders(em, ...repeat.builders)
 
-        const { workspaceId, keyId, kind, prefix, suffix, body } = RECORD
-        await expect(
-            (await build()).record({ workspaceId, keyId, kind, prefix, suffix, body }, em),
-        ).resolves.toBeUndefined()
-
-        expect(write.argsOf("values")[0]?.[0]).toMatchObject({ needSupplied: null })
+        await expect((await build()).record(RECORD, em)).resolves.toEqual({ id: REQUEST, inserted: false })
     })
 
     it("counts the repeat against the dedupe key of the prefix and the suffix", async () => {
         const em = mockEntityManager()
-        const repeat = ledgerAnswers([{ id: REQUEST, lead_id: null, inserted: false }])
+        const repeat = ledgerAnswers([{ id: REQUEST, inserted: false }])
         answerQueryBuilders(em, ...repeat.builders)
 
         await (await build()).record(RECORD, em)
 
         const [, count] = repeat.builders
-        expect(count?.argsOf("where")).toEqual([[{ workspaceId: WORKSPACE, dedupeKey: "lead:key-1:crm-9" }]])
+        expect(count?.argsOf("where")).toEqual([[{ workspaceId: WORKSPACE, dedupeKey: "message:key-1:crm-9" }]])
         expect(evaluatedValues(count?.argsOf("set")[0]?.[0])).toEqual({ duplicates: "duplicates + 1" })
     })
 })
 
-describe("PublicApiLedgerService / lock, complete and link", () => {
+describe("PublicApiLedgerService / lock and complete", () => {
     it("locks only the request of this workspace for update", async () => {
         const row = Object.assign(new PublicApiEntity(), { id: REQUEST })
         const em = mockEntityManager({ findOne: [PublicApiEntity, row] })
@@ -95,38 +80,22 @@ describe("PublicApiLedgerService / lock, complete and link", () => {
         })
     })
 
-    it("completes an unprocessed request and keeps the known customer when none is resolved", async () => {
+    it("completes an unprocessed request", async () => {
         const em = mockEntityManager()
         const update = fakeQueryBuilder({ execute: {} })
         answerQueryBuilders(em, update)
 
-        await (await build()).complete(WORKSPACE, REQUEST, null, em)
+        await (await build()).complete(WORKSPACE, REQUEST, em)
 
         expect(em.createQueryBuilder).toHaveBeenCalledWith(PublicApiEntity, "p")
 
         expect(update.callsOf("update")).toEqual([[]])
-        expect(evaluatedValues(update.argsOf("set")[0]?.[0])).toEqual({
-            processedAt: "now()",
-            leadId: "COALESCE(:leadId::uuid, lead_id)",
-        })
+        expect(evaluatedValues(update.argsOf("set")[0]?.[0])).toEqual({ processedAt: "now()" })
         expect(update.argsOf("where")).toEqual([
             [
                 "workspace_id = :workspaceId AND id = :requestId AND processed_at IS NULL",
                 { workspaceId: WORKSPACE, requestId: REQUEST },
             ],
         ])
-        expect(update.argsOf("setParameter")).toEqual([["leadId", null]])
-    })
-
-    it("links the customer to a lead request of the workspace", async () => {
-        const em = mockEntityManager({ update: [PublicApiEntity, { affected: 1 }] })
-
-        await (await build()).linkLead(WORKSPACE, REQUEST, "lead-1", em)
-
-        expect(em.update).toHaveBeenCalledWith(
-            PublicApiEntity,
-            { workspaceId: WORKSPACE, id: REQUEST, kind: "lead" },
-            { leadId: "lead-1" },
-        )
     })
 })

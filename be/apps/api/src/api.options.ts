@@ -10,12 +10,7 @@ import {
     LeadWriterService,
     OutboundAccessService,
 } from "@modules/domain/work-performers"
-import { LeadReadService } from "@modules/domain/leads"
-import { LeadFlowChainService } from "@modules/domain/lead-flows"
 import { ModulesService } from "@modules/domain/modules"
-import { ThreadWorkLinksReadService } from "@modules/domain/thread-work"
-import { WorkChainsHistoryReadService } from "@modules/domain/work-chains"
-import { WorkThreadsLeadsReadService } from "@modules/domain/work-threads"
 import { ToolTokenService } from "@modules/integrations/openclaw"
 import { ModuleTextGeneratorService } from "@modules/domain/ai-generations"
 import { ModuleOutboundMailService } from "@modules/domain/email-messages"
@@ -91,36 +86,18 @@ interface DecisionsPorts {
     readonly agentDirectory: typeof AgentsService
     /** The inboundEventStatus port. */
     readonly inboundEventStatus: typeof InboundStatusService
-    /** The leadDirectory port. */
-    readonly leadDirectory: typeof LeadReadService
-    /** The workItemLeads port. */
-    readonly workItemLeads: typeof LeadReadService
-    /** The leadGenFlow port. */
-    readonly leadGenFlow: typeof LeadFlowChainService
     /** The moduleCatalog port. */
     readonly moduleCatalog: typeof ModulesService
     /** The outboundAccessGate port. */
     readonly outboundAccessGate: typeof OutboundAccessService
-    /** The threadWorkHistory port. */
-    readonly threadWorkHistory: typeof ThreadWorkLinksReadService
-    /** The workChainsHistory port. */
-    readonly workChainsHistory: typeof WorkChainsHistoryReadService
-    /** The workThreadsHistory port. */
-    readonly workThreadsHistory: typeof WorkThreadsLeadsReadService
 }
 
 /** The ports the decisions capability reaches the rest of the app through. */
 export const DECISIONS_PORTS: DecisionsPorts = {
     agentDirectory: AgentsService,
     inboundEventStatus: InboundStatusService,
-    leadDirectory: LeadReadService,
-    workItemLeads: LeadReadService,
-    leadGenFlow: LeadFlowChainService,
     moduleCatalog: ModulesService,
     outboundAccessGate: OutboundAccessService,
-    threadWorkHistory: ThreadWorkLinksReadService,
-    workChainsHistory: WorkChainsHistoryReadService,
-    workThreadsHistory: WorkThreadsLeadsReadService,
 }
 
 export type { ApiOptions } from "./api.env"

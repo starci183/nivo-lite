@@ -58,13 +58,6 @@ export type BuildWiringProofResultOptionsTtsShape = {
 }
 /** The build wiring proof result options ffmpeg record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsFfmpegShape = { nice: boolean }
-/** The build wiring proof result options n8n record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsN8nShape = {
-    signingSecret: Secret
-    webhookBase: undefined
-    allowedHosts: Array<never>
-    timeoutMs: number
-}
 /** The build wiring proof result options webhook delivery record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsWebhookDeliveryShape = { timeoutMs: number }
 /** The build wiring proof result options channel setup record the builders hand out and the specs expect. */
@@ -169,8 +162,6 @@ export type BuildWiringProofResultOptionsZaloShape = {
 export type BuildWiringProofResultOptionsTelegramShape = { apiBase: string; timeoutMs: number }
 /** The build wiring proof result options channels record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsChannelsShape = { siteUrl: string }
-/** The build wiring proof result options loyalty otps record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsLoyaltyOtpsShape = { pepper: Secret }
 /** The build wiring proof result options connection secrets record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsConnectionSecretsShape = { tokenKey: Secret }
 /** The build wiring proof result options ai tasks endpoint record the builders hand out and the specs expect. */
@@ -311,7 +302,6 @@ export type BuildWiringProofResultOptionsShape = {
     agentTurns: BuildWiringProofResultOptionsAgentTurnsShape
     aiTasks: BuildWiringProofResultOptionsAiTasksShape
     connectionSecrets: BuildWiringProofResultOptionsConnectionSecretsShape
-    loyaltyOtps: BuildWiringProofResultOptionsLoyaltyOtpsShape
     channels: BuildWiringProofResultOptionsChannelsShape
     telegram: BuildWiringProofResultOptionsTelegramShape
     sepay: BuildWiringProofResultOptionsTelegramShape
@@ -332,7 +322,6 @@ export type BuildWiringProofResultOptionsShape = {
     meta: BuildWiringProofResultOptionsMetaShape
     channelSetup: BuildWiringProofResultOptionsChannelSetupShape
     webhookDelivery: BuildWiringProofResultOptionsWebhookDeliveryShape
-    n8n: BuildWiringProofResultOptionsN8nShape
     ffmpeg: BuildWiringProofResultOptionsFfmpegShape
     tts: BuildWiringProofResultOptionsTtsShape
     video: BuildWiringProofResultOptionsVideoShape

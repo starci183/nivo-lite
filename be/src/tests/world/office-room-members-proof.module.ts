@@ -5,11 +5,9 @@ import { AgentConversationsReadService } from "@modules/domain/agent-conversatio
 import { AgentMessagesReadService, AgentTestChatsService } from "@modules/domain/agent-messages"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { EventsService } from "@modules/domain/events"
-import { LeadReadService } from "@modules/domain/leads"
 import { MessagesReadService, OfficeCardsService } from "@modules/domain/messages"
 import {
     OFFICE_ROOMS_AGENTS,
-    OFFICE_ROOMS_LEADS,
     OFFICE_ROOMS_TEST_CHATS,
     OfficeRoomMembersService,
     OfficeRoomReadsService,
@@ -37,9 +35,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
         AgentConversationsReadService,
         AgentMessagesReadService,
         AgentTestChatsService,
-        LeadReadService,
         { provide: OFFICE_ROOMS_AGENTS, useExisting: AgentDirectoryService },
-        { provide: OFFICE_ROOMS_LEADS, useExisting: LeadReadService },
         { provide: OFFICE_ROOMS_TEST_CHATS, useExisting: AgentTestChatsService },
         EventsService,
         StaffService,

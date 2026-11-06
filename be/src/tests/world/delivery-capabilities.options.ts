@@ -45,16 +45,6 @@ import { AgentTagService } from "../../modules/domain/agent-work/agent-tag.servi
 import { DEFAULT_POLL_SCHEDULE } from "../../modules/domain/connection-poll/poll-schedule.policy"
 import { worldIds } from "./lite-world.service"
 import { QUEUE_MODULES } from "./test-capabilities.options"
-import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
-
-/** Receipt proofs stop before downstream Meta event jobs are consumed. */
-class DeferredMetaEvents {
-    take(): Promise<boolean> {
-        return Promise.resolve().then(() => {
-            throw new TestWorldError({ code: TestWorldErrorCode.TransactionRefused })
-        })
-    }
-}
 
 /** The members proof needs an account directory but reads no account. */
 class ProofAccounts {
@@ -73,7 +63,6 @@ class DeliveryPeersModule {
             providers: [
                 ConversationsService,
                 CustomerHearingService,
-                DeferredMetaEvents,
                 ProofAccounts,
                 QUIET_AGENT_TAGS,
                 QUIET_CUSTOMER_INTAKE,
@@ -82,7 +71,7 @@ class DeliveryPeersModule {
                 { provide: CHANNELS_OPTIONS, useFactory: () => ({ siteUrl: "http://localhost" }) },
                 ZaloCredentialsService,
             ],
-            exports: [ConversationsService, DeferredMetaEvents, ProofAccounts, AgentTagService, AGENTS_INSTALLATIONS],
+            exports: [ConversationsService, ProofAccounts, AgentTagService, AGENTS_INSTALLATIONS],
         }
     }
 }
@@ -156,7 +145,7 @@ const domainModules = (tokenKey: Secret): Array<DynamicModule> => [
     SepayTransactionsModule.register({ isGlobal: true }),
     DeliveryPeersModule.register(),
     TelegramInboxModule.register({ isGlobal: true }),
-    MetaInboxModule.register({ isGlobal: true, taker: DeferredMetaEvents }),
+    MetaInboxModule.register({ isGlobal: true }),
 ]
 
 type DeliveryCapabilitiesResultShape = {

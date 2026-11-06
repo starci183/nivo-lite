@@ -32,12 +32,6 @@ export interface RoomsAgents {
     find(workspaceId: string, agentId: string): Promise<RoomAgentRef | null>
 }
 
-/** The one door to the customers of a workspace the rooms read through; the leads capability binds it. */
-export interface RoomsLeads {
-    /** Whether the workspace has a lead with this id. */
-    exists(workspaceId: string, leadId: string): Promise<boolean>
-}
-
 /** The caller whose own lines never count as unread. */
 export interface RoomsReader {
     /** The caller's account id. */
