@@ -170,13 +170,6 @@ export interface ConnectionNotice {
     readonly action?: { readonly label: string; readonly run: () => void }
 }
 
-/** One agent of the workspace and whether it works through the connection. */
-export interface ConnectionAgentRowView {
-    readonly id: string
-    readonly name: string
-    readonly isOn: boolean
-}
-
 /** One step of the trail above a provider page. */
 interface ConnectionCrumb {
     readonly id: string

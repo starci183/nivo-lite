@@ -2,7 +2,6 @@ export { BRAIN_PANEL_PREFIX } from "@/modules/brain"
 export { useBrainFacts } from "./useBrainFacts"
 export { useBrainLessons } from "./useBrainLessons"
 export { useFactDrawer } from "./useFactDrawer"
-export { useBrainTodoCount } from "./useBrainTodoCount"
 export { useBrainQueue } from "./useBrainQueue"
 export { useBrainPageHeader } from "./useBrainPageHeader"
 export { useBrainDossierDesk } from "./useBrainDossierDesk"
@@ -26,8 +25,6 @@ export { NO_ASSIGNEE } from "@/modules/brain"
 export type {
     EvidenceItemView,
     FindingAction,
-    FindingCardActionView,
-    FindingCardView,
     FindingAssignFieldsView,
     FindingDialogValues,
     FindingDialogView,
