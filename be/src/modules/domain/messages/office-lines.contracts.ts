@@ -39,3 +39,29 @@ export interface MessagesScope {
     /** The workspace. */
     readonly workspaceId: string
 }
+
+/** What the Office needs of a stopped chain to say so: the agent that was not woken, where, and why (the chain capability hands it more). */
+export interface OfficeStop {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The agent that was not woken. */
+    readonly agentId: string
+    /** How many agent wakes led to the event. */
+    readonly depth: number
+    /** Why it stopped. */
+    readonly reason: string
+    /** The event type. */
+    readonly eventType: string
+}
+
+/** What the Office needs to say a background line: who speaks, the words, and the moment of the wake the line answers. */
+export interface OfficeBackgroundLine {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The agent that speaks. */
+    readonly agentId: string
+    /** When the wake was written: a line the same words already said since then is not said again. */
+    readonly wakeCreatedAt: Date
+    /** What it says. */
+    readonly text: string
+}

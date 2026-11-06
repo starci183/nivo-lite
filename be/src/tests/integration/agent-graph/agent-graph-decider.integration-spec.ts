@@ -3,16 +3,11 @@ import type { AuthorityRule, BranchRequest, WorkBranchDecider } from "@modules/d
 import type { GraphDocument } from "@modules/domain/agent-graphs"
 import type { WorkItem } from "@modules/domain/decisions"
 import { AMOUNT_FACT, OWNER_EXAMPLE, graphOf } from "../../fixtures/builders/agent-graph.builder"
-import {
-    persistGraph,
-    persistGraphTenant,
-    persistPaymentItem,
-    restartGraph,
-} from "../../fixtures/builders/agent-graph-world.builder"
+import { persistGraph, persistGraphTenant, persistPaymentItem } from "../../fixtures/builders/agent-graph-world.builder"
 import { ruleOf } from "../../fixtures/builders/authority-rules.builder"
 import { itemOf } from "../../fixtures/builders/reconcile-payment-performer.builder"
 import { AGENT_GRAPH_DECIDER_MODULES, BooksReader } from "../../world/agent-graph-decider-capabilities.options"
-import { decisionsOf } from "../../world/agent-graph-database.service"
+import { decisionsOf, restartGraph } from "../../world/agent-graphs-database.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { useTestWorld } from "../../world/use-test-world"
 
@@ -56,7 +51,7 @@ const itemAbout = (vnd: number | null): Promise<WorkItem> => {
 
 const decide = (item: WorkItem, modelVnd: number) =>
     world.resolve<WorkBranchDecider>(WORK_BRANCH_DECIDER).decide(requestFor(item, modelVnd))
-const decisionsFor = (item: WorkItem) => decisionsOf(world.db.primary, tenant.agentId, item.id)
+const decisionsFor = (item: WorkItem) => decisionsOf(world, tenant.workspaceId, tenant.agentId, item.id)
 
 beforeAll(async () => {
     world.cleanup(async () => {
@@ -68,7 +63,7 @@ beforeAll(async () => {
 })
 
 describe("agent-graph/decider: the branch of an enforced graph", () => {
-    beforeEach(() => restartGraph(world.db.primary, tenant.agentId, "enforced"))
+    beforeEach(() => restartGraph(world, world.db.primary, tenant.workspaceId, tenant.agentId, "enforced"))
 
     it("agent-graph/model-amount-ignored: the amount of the record decides, not the one the model wrote", async () => {
         const item = await itemAbout(25_000_000)
@@ -125,7 +120,7 @@ describe("agent-graph/decider: the branch of an enforced graph", () => {
 
 describe("agent-graph/decider: a graph that only records", () => {
     it("agent-graph/shadow-no-effect: the gate decides alone, and the difference the graph would have made is kept", async () => {
-        await restartGraph(world.db.primary, tenant.agentId, "shadow")
+        await restartGraph(world, world.db.primary, tenant.workspaceId, tenant.agentId, "shadow")
         const item = await itemAbout(25_000_000)
 
         const judgement = await decide(item, 1_000_000)

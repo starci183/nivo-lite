@@ -17,6 +17,18 @@ export class EntityEngineModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API composition root. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        if (options.storeOnly === true)
+            return {
+                ...base,
+                providers: [
+                    ...(base.providers ?? []),
+                    { provide: ENTITY_ENGINE_OPTIONS, useValue: options },
+                    EngineFailureService,
+                    EntityEngineService,
+                    EntityMutationService,
+                ],
+                exports: [EntityEngineService, EntityMutationService],
+            }
         return {
             ...base,
             imports: [...(base.imports ?? []), ModuleJobsQueueModule.register({})],

@@ -62,7 +62,7 @@ export class AgentGraphSetupService implements SetupGraphPort {
      * a person and with no unpublished edit follows the rule it came from; any other graph is left as it is.
      */
     async followRules(workspaceId: string, installationId: string): Promise<void> {
-        const state = await this.graphs.stateOfInstallation(installationId)
+        const state = await this.graphs.stateOfInstallation(workspaceId, installationId)
         if (state?.workspaceId !== workspaceId) return
         const installation = await this.installations.findById(installationId)
         if (installation === null) return
@@ -71,7 +71,7 @@ export class AgentGraphSetupService implements SetupGraphPort {
 
     /** The code of the first vague place of the draft, or an empty text when it has none or the installation has no graph yet. */
     async firstGap(workspaceId: string, installationId: string): Promise<string> {
-        const state = await this.graphs.stateOfInstallation(installationId)
+        const state = await this.graphs.stateOfInstallation(workspaceId, installationId)
         const installation = state === null ? null : await this.installations.findById(installationId)
         if (state === null || installation === null || state.workspaceId !== workspaceId) return ""
         const context = await this.context.contextOf({ ...state, moduleKey: installation.moduleKey }, state.draft)
@@ -91,7 +91,7 @@ export class AgentGraphSetupService implements SetupGraphPort {
      * by a manager), and answers the number of the newest graph version, 0 when the installation has no graph.
      */
     async checkPublish(applicant: SetupApplicant): Promise<number> {
-        const state = await this.graphs.stateOfInstallation(applicant.installationId)
+        const state = await this.graphs.stateOfInstallation(applicant.workspaceId, applicant.installationId)
         if (state === null) return 0
         const seat = await this.seats.activeSeatOfUser(applicant.workspaceId, applicant.principalId)
         if (seat !== null)
@@ -107,7 +107,7 @@ export class AgentGraphSetupService implements SetupGraphPort {
      * not change; an owner applying makes the graph decide, a manager leaves the mode as it was.
      */
     async publish(applier: SetupApplier): Promise<void> {
-        const state = await this.graphs.stateOfInstallation(applier.installationId)
+        const state = await this.graphs.stateOfInstallation(applier.workspaceId, applier.installationId)
         if (state === null) return
         const seat = await this.seats.activeSeatOfUser(applier.workspaceId, applier.principalId)
         if (seat === null) return
@@ -129,7 +129,7 @@ export class AgentGraphSetupService implements SetupGraphPort {
 
     private async stateOf(workspaceId: string, installationId: string): Promise<GraphState> {
         const state =
-            (await this.graphs.stateOfInstallation(installationId)) ??
+            (await this.graphs.stateOfInstallation(workspaceId, installationId)) ??
             (await this.seed.ensureFor(installationId, SEED_LOCALE))
         if (state?.workspaceId !== workspaceId) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
         return state

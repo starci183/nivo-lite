@@ -70,7 +70,7 @@ describe("AgentGraphApprovalsService.route", () => {
             requestedByAgentId: "agent-1",
             branch: { group: { roles: ["manager"], rooms: [], members: ["dinh"] }, policy: "any", timeoutMinutes: 240 },
         })
-        expect(decisions.attachRequest).toHaveBeenCalledWith("decision-1", "request-2")
+        expect(decisions.attachRequest).toHaveBeenCalledWith("ws-1", "decision-1", "request-2")
     })
 
     it("leaves the item with the people who govern when the decision is gone or the branch named nobody", async () => {

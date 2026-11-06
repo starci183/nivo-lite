@@ -1,4 +1,5 @@
 import { parseAiConfig } from "@modules/integrations/ai"
+import { parseEntityEngineConfig } from "@modules/domain/entity-engine"
 import { parseChannelProvisioningConfig } from "@modules/domain/channel-provisioning"
 import { parseWorkspaceSeedConfig } from "@modules/domain/workspace-seed"
 import { parseMcpGatewayConfig } from "@modules/domain/mcp-gateway"
@@ -42,6 +43,8 @@ export interface CliAppOptions {
      * writes it), so every key is optional here. Deleting a workspace does need the gateway: prune and cleanup refuse without its address and credential.
      */
     readonly openclaw: ReturnType<typeof parseOpenclawConfig>
+    /** The key that signs the cursors of the entity engine, which holds the graph of each agent. */
+    readonly entityEngine: ReturnType<typeof parseEntityEngineConfig>
 }
 
 /**
@@ -63,4 +66,5 @@ export const readCliEnv = (env: EnvSource): CliAppOptions => ({
         process.stdout.write(`${line}\n`)
     }),
     openclaw: parseOpenclawConfig(env),
+    entityEngine: parseEntityEngineConfig(env),
 })

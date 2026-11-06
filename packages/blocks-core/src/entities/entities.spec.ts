@@ -8,7 +8,7 @@ const catalog = new Map<string, AnyEntityDefinition>(FLOW_F_ENTITIES.map((entity
 const entityNamed = (name: string): AnyEntityDefinition | undefined => catalog.get(name)
 
 describe("flow F entity declarations", () => {
-    it("declares the thirteen entities once each", () => {
+    it("declares the eighteen entities once each", () => {
         expect(FLOW_F_ENTITIES.map((entity) => entity.name)).toEqual([
             "sales.lead",
             "sales.order",
@@ -23,6 +23,11 @@ describe("flow F entity declarations", () => {
             "agent.run",
             "agent.run-step",
             "agent.node-effect",
+            "agent.graph",
+            "agent.graph-version",
+            "agent.graph-source",
+            "agent.graph-proposal",
+            "agent.graph-decision",
         ])
         expect(catalog.size).toBe(FLOW_F_ENTITIES.length)
         expect(new Set(FLOW_F_ENTITIES.map((entity) => entity.dataKind)).size).toBe(FLOW_F_ENTITIES.length)
@@ -116,6 +121,32 @@ describe("flow F entity declarations", () => {
         const ledger = entityNamed("agent.node-effect")
         expect(ledger?.constraints).toContainEqual(expect.objectContaining({ on: ["effectKey"] }))
         expect(ledger?.deletable).toBeUndefined()
+    })
+
+    it("keeps one graph per agent, one version number per agent and one proposal per cause", () => {
+        expect(entityNamed("agent.graph")?.constraints).toContainEqual(
+            expect.objectContaining({ kind: "unique", on: ["agentId"], refusal: "graph-exists" }),
+        )
+        expect(entityNamed("agent.graph-version")?.constraints).toContainEqual(
+            expect.objectContaining({ kind: "unique", on: ["agentId", "number"], refusal: "version-taken" }),
+        )
+        expect(entityNamed("agent.graph-proposal")?.constraints).toContainEqual(
+            expect.objectContaining({ kind: "unique", on: ["agentId", "dedupeKey"], refusal: "proposal-raised" }),
+        )
+        expect(entityNamed("agent.graph-proposal")?.fields["evidence"]?.shape?.safeParse({ ids: [1] }).success).toBe(
+            false,
+        )
+    })
+
+    it("records a graph decision once per work item or per dedupe key, and never without either", () => {
+        const decision = entityNamed("agent.graph-decision")
+        expect(decision?.matchKeys).toEqual([
+            { name: "work_item", on: ["workItemId"] },
+            { name: "dedupe", on: ["dedupeKey"] },
+        ])
+        expect(decision?.constraints?.filter((constraint) => constraint.kind === "unique")).toHaveLength(2)
+        expect(decision?.constraints).toContainEqual(expect.objectContaining({ kind: "check", name: "once_check" }))
+        expect(decision?.fields["path"]?.shape?.parse({ keys: ["a"] })).toEqual({ keys: ["a"] })
     })
 
     it("parses the step effect and door call shapes", () => {

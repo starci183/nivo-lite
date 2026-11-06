@@ -135,7 +135,7 @@ export class AgentGraphDeciderService implements WorkBranchDecider {
     private async judge(request: BranchRequest): Promise<OptionalBranchJudgement> {
         const { item, proposal, gate, turnId, wakeId } = request
         if (item.installation_id === null) return null
-        const state = await this.graphs.stateOfInstallation(item.installation_id)
+        const state = await this.graphs.stateOfInstallation(item.workspace_id, item.installation_id)
         const versionId = state?.activeVersionId ?? null
         if (state === null || versionId === null) return null
         const enforced = state.mode === "enforced"

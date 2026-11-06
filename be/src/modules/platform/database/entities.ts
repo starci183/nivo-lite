@@ -107,7 +107,6 @@ import { shiftsEntities } from "@modules/domain/shifts"
 import { staffEntities } from "@modules/domain/staff"
 import { supplierPayablesEntities } from "@modules/domain/supplier-payables"
 import { telegramInboxEntities } from "@modules/domain/telegram-inbox"
-import { agentGraphsEntities } from "@modules/domain/agent-graphs"
 import { agentTemplatesEntities } from "@modules/domain/agent-templates"
 import { templateMarketplaceEntities } from "@modules/domain/template-marketplace"
 import { entityEngineEntities } from "@modules/domain/entity-engine"
@@ -245,7 +244,6 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...staffEntities,
     ...supplierPayablesEntities,
     ...telegramInboxEntities,
-    ...agentGraphsEntities,
     ...agentTemplatesEntities,
     ...templateMarketplaceEntities,
     ...entityEngineEntities,

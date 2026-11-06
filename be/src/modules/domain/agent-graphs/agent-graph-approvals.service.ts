@@ -25,7 +25,7 @@ export class AgentGraphApprovalsService {
 
     /** Opens the request of the branch that asked; a branch that named nobody, or a request that cannot open, leaves the item with the people who govern. */
     async route(route: BranchRoute): Promise<void> {
-        const decision = await this.decisions.byId(route.decisionId)
+        const decision = await this.decisions.byId(route.workspaceId, route.decisionId)
         const approver = decision === null ? null : await this.graphs.approverOf(decision)
         if (decision === null || approver === null) return
         try {
@@ -38,7 +38,7 @@ export class AgentGraphApprovalsService {
                 requestedByAgentId: decision.agentId,
                 branch: branchApprovalOf(approver),
             })
-            await this.decisions.attachRequest(decision.id, opened.requestId)
+            await this.decisions.attachRequest(decision.workspaceId, decision.id, opened.requestId)
         } catch (cause) {
             this.logger.error(AgentGraphsLogEvent.AskNotRouted, cause, { decisionId: decision.id })
         }
@@ -46,7 +46,7 @@ export class AgentGraphApprovalsService {
 
     /** False when a request the branch opened is open and the answerer is not among the people it asked and not the owner. */
     async mayDecide(answerer: BranchAnswerer): Promise<boolean> {
-        const decision = await this.decisions.byItem(answerer.workItemId)
+        const decision = await this.decisions.byItem(answerer.workspaceId, answerer.workItemId)
         if (answerer.isOwner || decision === null || decision.closed || decision.approvalRequestId === null) return true
         const asked = await this.asked.askedOf(answerer.workspaceId, decision.approvalRequestId)
         return asked.length === 0 || asked.includes(answerer.memberId)

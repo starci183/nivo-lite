@@ -1,15 +1,16 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { EntityEngineService } from "@modules/domain/entity-engine"
+import type { ScopedTx } from "@modules/domain/entity-engine"
 import type { IntentBusiness, IntentGap } from "@modules/domain/intent-contracts"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
+import { AgentGraphRecordsService } from "./agent-graph-records.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
-import type { GraphDocument, GraphProposalView, LearnedProposal } from "./agent-graphs.contracts"
+import type { GraphDocument, GraphProposalView, LearnedProposal, ProposalKind } from "./agent-graphs.contracts"
+import { jsonOf } from "./agent-graphs.mapper"
+import type { ProposalRecord } from "./agent-graphs-records.contracts"
 import { intentBusinessSchema } from "./agent-graphs.schema"
-import { AgentGraphProposalEntity } from "./persistence/entities"
 import { gapKeyOf } from "./policies/intent-gap.policy"
 import { learnSignals } from "./policies/learn-signals.policy"
 import type { ConflictPatch } from "./policies/conflict-patch.policy"
@@ -39,12 +40,12 @@ export interface ConflictRaised {
 const PROPOSAL_LIMIT = 100
 
 /** A text member of the patch of a proposal, or null when it holds none. */
-const patchTextOf = (row: AgentGraphProposalEntity, member: string): string | null => {
+const patchTextOf = (row: ProposalRecord, member: string): string | null => {
     const value = row.patch[member]
     return typeof value === "string" ? value : null
 }
 
-const viewOf = (row: AgentGraphProposalEntity): GraphProposalView => ({
+const viewOf = (row: ProposalRecord): GraphProposalView => ({
     id: row.id,
     kind: row.kind,
     status: row.status,
@@ -61,6 +62,12 @@ const viewOf = (row: AgentGraphProposalEntity): GraphProposalView => ({
 const nodeOfBranch = (graph: GraphDocument, branchKey: string): string | null =>
     graph.nodes.find((node) => node.decide?.branches.some((branch) => branch.key === branchKey))?.key ?? null
 
+/** Whether the proposal is an open one of this agent (and of this kind, when one is named). */
+const isOpenOf = (row: ProposalRecord | null, agentId: string, kind: ProposalKind | null): row is ProposalRecord =>
+    row?.agentId === agentId && row.status === "open" && (kind === null || row.kind === kind)
+
+const notFound = (): AgentGraphsError => new AgentGraphsError({ code: AgentGraphsErrorCode.ProposalNotFound })
+
 @Injectable()
 /**
  * What the graph proposes to its owner. Learning only proposes: it reads closed decisions in code, with no model, and raises a
@@ -69,7 +76,8 @@ const nodeOfBranch = (graph: GraphDocument, branchKey: string): string | null =>
  */
 export class AgentGraphProposalsService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        private readonly engine: EntityEngineService,
+        private readonly records: AgentGraphRecordsService,
         @InjectClock() private readonly clock: Clock,
         private readonly decisions: AgentGraphDecisionsService,
     ) {}
@@ -88,18 +96,9 @@ export class AgentGraphProposalsService {
     }
 
     /** Raises the proposal that a newer rule of the Brain replaced the one a node cites; the same replacement is raised once. */
-    async raiseConflict(
-        workspaceId: string,
-        agentId: string,
-        versionId: string,
-        conflict: ConflictRaised,
-    ): Promise<boolean> {
-        const inserted = await this.entityManager
-            .createQueryBuilder(AgentGraphProposalEntity, "proposal")
-            .insert()
-            .into(AgentGraphProposalEntity)
-            .values({
-                workspaceId,
+    raiseConflict(workspaceId: string, agentId: string, versionId: string, conflict: ConflictRaised): Promise<boolean> {
+        return this.engine.scoped(workspaceId, (tx) =>
+            this.records.raiseProposal(tx, {
                 agentId,
                 dedupeKey: conflict.dedupeKey,
                 kind: "conflict",
@@ -112,24 +111,18 @@ export class AgentGraphProposalsService {
                     newValueHash: conflict.newValueHash,
                 },
                 widens: false,
-                evidence: [conflict.oldFactId, conflict.newFactId],
-            })
-            .orIgnore()
-            .execute()
-        return inserted.identifiers.length > 0
+                evidence: { ids: [conflict.oldFactId, conflict.newFactId] },
+            }),
+        )
     }
 
     /**
      * Raises the gap a turn found: the work nothing in the published graph fits. It is informational, so it changes nothing; the owner
      * declines it or turns it into a contract. The same question, however it is worded, is raised once.
      */
-    async raiseGap(gap: IntentGap): Promise<boolean> {
-        const inserted = await this.entityManager
-            .createQueryBuilder(AgentGraphProposalEntity, "proposal")
-            .insert()
-            .into(AgentGraphProposalEntity)
-            .values({
-                workspaceId: gap.workspaceId,
+    raiseGap(gap: IntentGap): Promise<boolean> {
+        return this.engine.scoped(gap.workspaceId, (tx) =>
+            this.records.raiseProposal(tx, {
                 agentId: gap.agentId,
                 dedupeKey: gapKeyOf(gap.question),
                 kind: "gap",
@@ -138,43 +131,35 @@ export class AgentGraphProposalsService {
                 branchKey: null,
                 patch: { question: gap.question, topic: gap.topic, trigger: gap.trigger },
                 widens: false,
-                evidence: [],
-            })
-            .orIgnore()
-            .execute()
-        return inserted.identifiers.length > 0
+                evidence: { ids: [] },
+            }),
+        )
     }
 
     /**
      * Raises the business half of a contract for the owner to approve: a task and limits, each limit citing where it came from. The same
      * content is raised once. Nothing changes until a person confirms it, and the confirm publishes it under the checks of any change.
      */
-    async raiseContract(
+    raiseContract(
         workspaceId: string,
         agentId: string,
         versionId: string | null,
         business: IntentBusiness,
         evidence: ReadonlyArray<string> = [],
     ): Promise<boolean> {
-        const inserted = await this.entityManager
-            .createQueryBuilder(AgentGraphProposalEntity, "proposal")
-            .insert()
-            .into(AgentGraphProposalEntity)
-            .values({
-                workspaceId,
+        return this.engine.scoped(workspaceId, (tx) =>
+            this.records.raiseProposal(tx, {
                 agentId,
                 dedupeKey: `contract:${business.intent}:${valueHashOf(JSON.stringify(business))}`,
                 kind: "contract",
                 baseVersionId: versionId,
                 nodeKey: null,
                 branchKey: null,
-                patch: { intent: business.intent, task: business.task, contract: business },
+                patch: { intent: business.intent, task: business.task, contract: jsonOf(business) },
                 widens: false,
-                evidence: [...evidence],
-            })
-            .orIgnore()
-            .execute()
-        return inserted.identifiers.length > 0
+                evidence: { ids: [...evidence] },
+            }),
+        )
     }
 
     /** Turns an open gap into a contract proposal for the owner to approve; the gap is overtaken by it. */
@@ -184,10 +169,8 @@ export class AgentGraphProposalsService {
         gapId: string,
         business: IntentBusiness,
     ): Promise<boolean> {
-        const gap = await this.entityManager.findOne(AgentGraphProposalEntity, {
-            where: { id: gapId, workspaceId, agentId, status: "open", kind: "gap" },
-        })
-        if (gap === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.ProposalNotFound })
+        const gap = await this.openProposal(workspaceId, agentId, gapId, "gap")
+        if (gap === null) throw notFound()
         const raised = await this.raiseContract(workspaceId, agentId, gap.baseVersionId, business, [gapId])
         await this.supersede(workspaceId, agentId, gapId)
         return raised
@@ -195,38 +178,31 @@ export class AgentGraphProposalsService {
 
     /** An open contract proposal of the agent, as the business half it sets; null when it is not open or is not a contract. */
     async contractOf(workspaceId: string, agentId: string, proposalId: string): Promise<IntentBusiness | null> {
-        const row = await this.entityManager.findOne(AgentGraphProposalEntity, {
-            where: { id: proposalId, workspaceId, agentId, status: "open", kind: "contract" },
-        })
-        const parsed = intentBusinessSchema.safeParse(row?.patch.contract)
+        const row = await this.openProposal(workspaceId, agentId, proposalId, "contract")
+        const parsed = intentBusinessSchema.safeParse(row?.patch["contract"])
         return parsed.success ? parsed.data : null
     }
 
     /** The proposals still open for the agent, newest first. */
-    async openOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<GraphProposalView>> {
-        const rows = await this.entityManager.find(AgentGraphProposalEntity, {
-            where: { workspaceId, agentId, status: "open" },
-            order: { createdAt: "DESC" },
-            take: PROPOSAL_LIMIT,
-        })
-        return rows.map(viewOf)
+    openOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<GraphProposalView>> {
+        return this.engine.scoped(workspaceId, async (tx) =>
+            (await this.records.openProposalsOf(tx, agentId, PROPOSAL_LIMIT)).map(viewOf),
+        )
     }
 
     /** A person declines a proposal; it stays on record and is never raised again. */
     async decline(workspaceId: string, agentId: string, proposalId: string, memberId: string): Promise<void> {
-        const declined = await this.entityManager.update(
-            AgentGraphProposalEntity,
-            { id: proposalId, workspaceId, agentId, status: "open" },
-            { status: "declined", decidedBy: memberId, decidedAt: this.clock.now() },
-        )
-        if (declined.affected !== 1) throw new AgentGraphsError({ code: AgentGraphsErrorCode.ProposalNotFound })
+        const declined = await this.settle(workspaceId, agentId, proposalId, {
+            status: "declined",
+            decidedBy: memberId,
+            decidedAt: this.clock.now().toISOString(),
+        })
+        if (!declined) throw notFound()
     }
 
     /** An open proposal of the agent, as the patch it makes; null when it is not open or is not a learned one. */
     async learnedOf(workspaceId: string, agentId: string, proposalId: string): Promise<LearnedPatch | null> {
-        const row = await this.entityManager.findOne(AgentGraphProposalEntity, {
-            where: { id: proposalId, workspaceId, agentId, status: "open", kind: "learned" },
-        })
+        const row = await this.openProposal(workspaceId, agentId, proposalId, "learned")
         const { signal, amounts } = row?.patch ?? {}
         if (row?.branchKey == null || (signal !== "trust" && signal !== "reject" && signal !== "timeout")) return null
         return {
@@ -238,9 +214,7 @@ export class AgentGraphProposalsService {
 
     /** An open conflict of the agent, as the swap of rules it makes; null when it is not open or is not a conflict. */
     async conflictOf(workspaceId: string, agentId: string, proposalId: string): Promise<ConflictPatch | null> {
-        const row = await this.entityManager.findOne(AgentGraphProposalEntity, {
-            where: { id: proposalId, workspaceId, agentId, status: "open", kind: "conflict" },
-        })
+        const row = await this.openProposal(workspaceId, agentId, proposalId, "conflict")
         const { oldFactId, newFactId, newValueHash } = row?.patch ?? {}
         if (typeof oldFactId !== "string" || typeof newFactId !== "string" || typeof newValueHash !== "string")
             return null
@@ -255,50 +229,76 @@ export class AgentGraphProposalsService {
         memberId: string,
         versionId: string,
     ): Promise<void> {
-        await this.entityManager.update(
-            AgentGraphProposalEntity,
-            { id: proposalId, workspaceId, agentId, status: "open" },
-            { status: "confirmed", decidedBy: memberId, decidedAt: this.clock.now(), resultVersionId: versionId },
-        )
+        await this.settle(workspaceId, agentId, proposalId, {
+            status: "confirmed",
+            decidedBy: memberId,
+            decidedAt: this.clock.now().toISOString(),
+            resultVersionId: versionId,
+        })
     }
 
     /** A proposal whose branch is gone, or whose change already stands, is overtaken. */
     async supersede(workspaceId: string, agentId: string, proposalId: string): Promise<void> {
-        await this.entityManager.update(
-            AgentGraphProposalEntity,
-            { id: proposalId, workspaceId, agentId, status: "open" },
-            { status: "superseded" },
-        )
+        await this.settle(workspaceId, agentId, proposalId, { status: "superseded" })
+    }
+
+    /** The open proposal of that agent and kind, or null. */
+    private openProposal(
+        workspaceId: string,
+        agentId: string,
+        proposalId: string,
+        kind: ProposalKind,
+    ): Promise<ProposalRecord | null> {
+        return this.engine.scoped(workspaceId, (tx) => this.openIn(tx, agentId, proposalId, kind))
+    }
+
+    private async openIn(
+        tx: ScopedTx,
+        agentId: string,
+        proposalId: string,
+        kind: ProposalKind | null,
+    ): Promise<ProposalRecord | null> {
+        const row = await this.records.proposal(tx, proposalId)
+        return isOpenOf(row, agentId, kind) ? row : null
+    }
+
+    /** Writes the change to an open proposal of the agent; false when there is none open or it changed meanwhile. */
+    private settle(
+        workspaceId: string,
+        agentId: string,
+        proposalId: string,
+        values: Readonly<Record<string, string>>,
+    ): Promise<boolean> {
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const row = await this.openIn(tx, agentId, proposalId, null)
+            return row !== null && (await this.records.patchProposal(tx, row, values)) !== null
+        })
     }
 
     /**
      * The evidence that proposals already spent, by branch and signal: an open, confirmed or declined proposal is not raised again for
      * decisions it already named, however far the window of the latest decisions has slid since.
      */
-    private async spentEvidence(workspaceId: string, agentId: string): Promise<ReadonlySet<string>> {
-        const rows = await this.entityManager.find(AgentGraphProposalEntity, {
-            select: { branchKey: true, patch: true, evidence: true },
-            where: { workspaceId, agentId, kind: "learned", status: In(["open", "confirmed", "declined"]) },
-            take: SPENT_LIMIT,
+    private spentEvidence(workspaceId: string, agentId: string): Promise<ReadonlySet<string>> {
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const rows = await this.records.spentProposalsOf(tx, agentId, "learned", SPENT_LIMIT)
+            return new Set(
+                rows.flatMap((row) =>
+                    row.evidence.map((id) => `${row.branchKey ?? ""}:${String(row.patch["signal"])}:${id}`),
+                ),
+            )
         })
-        return new Set(
-            rows.flatMap((row) => row.evidence.map((id) => `${row.branchKey ?? ""}:${String(row.patch.signal)}:${id}`)),
-        )
     }
 
-    private async raise(
+    private raise(
         workspaceId: string,
         agentId: string,
         versionId: string | null,
         graph: GraphDocument,
         proposal: LearnedProposal,
     ): Promise<boolean> {
-        const inserted = await this.entityManager
-            .createQueryBuilder(AgentGraphProposalEntity, "proposal")
-            .insert()
-            .into(AgentGraphProposalEntity)
-            .values({
-                workspaceId,
+        return this.engine.scoped(workspaceId, (tx) =>
+            this.records.raiseProposal(tx, {
                 agentId,
                 dedupeKey: proposal.dedupeKey,
                 kind: "learned",
@@ -307,10 +307,8 @@ export class AgentGraphProposalsService {
                 branchKey: proposal.branchKey,
                 patch: { signal: proposal.signal, amounts: [...proposal.amounts] },
                 widens: proposal.widens,
-                evidence: [...proposal.evidence],
-            })
-            .orIgnore()
-            .execute()
-        return inserted.identifiers.length > 0
+                evidence: { ids: [...proposal.evidence] },
+            }),
+        )
     }
 }

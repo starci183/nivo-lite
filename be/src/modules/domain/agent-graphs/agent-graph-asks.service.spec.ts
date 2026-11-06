@@ -104,23 +104,33 @@ describe("AgentGraphAsksService.ended a verdict", () => {
     it("resumes the waiting item with the verdict of the seat and closes the decision as it ended", async () => {
         const { service, work, decisions } = await build()
 
-        await service.ended({ requestId: "request-1", outcome: "approved", decidedBy: "member-dinh" })
-        await service.ended({ requestId: "request-1", outcome: "rejected" })
+        await service.ended({
+            workspaceId: "ws-1",
+            requestId: "request-1",
+            outcome: "approved",
+            decidedBy: "member-dinh",
+        })
+        await service.ended({ workspaceId: "ws-1", requestId: "request-1", outcome: "rejected" })
 
         expect(work.resume.mock.calls).toEqual([
             [{ workspaceId: "ws-1", workItemId: "item-9", outcome: "approved", memberId: "member-dinh" }],
             [{ workspaceId: "ws-1", workItemId: "item-9", outcome: "rejected", memberId: null }],
         ])
         expect(decisions.close.mock.calls).toEqual([
-            ["item-9", "approved"],
-            ["item-9", "rejected"],
+            ["ws-1", "item-9", "approved"],
+            ["ws-1", "item-9", "rejected"],
         ])
     })
 
     it("closes the decision and goes on when a person had already settled the item", async () => {
         const { service, decisions, work, tx } = await build({ resume: false })
 
-        await service.ended({ requestId: "request-1", outcome: "approved", decidedBy: "member-dinh" })
+        await service.ended({
+            workspaceId: "ws-1",
+            requestId: "request-1",
+            outcome: "approved",
+            decidedBy: "member-dinh",
+        })
 
         expect(
             work.closedOutcome.mock.calls.map(([manager, workspace, item]) => [
@@ -130,7 +140,7 @@ describe("AgentGraphAsksService.ended a verdict", () => {
             ]),
         ).toEqual([[true, "ws-1", "item-9"]])
         expect(
-            decisions.close.mock.calls.map(([item, outcome, manager]) => [
+            decisions.close.mock.calls.map(([, item, outcome, manager]) => [
                 item,
                 outcome,
                 manager?.queryRunner?.isTransactionActive === false,
@@ -142,7 +152,9 @@ describe("AgentGraphAsksService.ended a verdict", () => {
     it("lets any other failure of the resume go back to the bus, to be delivered again", async () => {
         const { service, decisions } = await build({ resume: new Error("db down") })
 
-        await expect(service.ended({ requestId: "request-1", outcome: "approved" })).rejects.toThrow("db down")
+        await expect(
+            service.ended({ workspaceId: "ws-1", requestId: "request-1", outcome: "approved" }),
+        ).rejects.toThrow("db down")
         expect(decisions.close).not.toHaveBeenCalled()
     })
 
@@ -151,9 +163,9 @@ describe("AgentGraphAsksService.ended a verdict", () => {
         const closed = await build({ decision: { ...VIEW, closed: true } })
         const odd = await build()
 
-        await none.service.ended({ requestId: "request-1", outcome: "approved" })
-        await closed.service.ended({ requestId: "request-1", outcome: "approved" })
-        await odd.service.ended({ requestId: "request-1", outcome: "cancelled" })
+        await none.service.ended({ workspaceId: "ws-1", requestId: "request-1", outcome: "approved" })
+        await closed.service.ended({ workspaceId: "ws-1", requestId: "request-1", outcome: "approved" })
+        await odd.service.ended({ workspaceId: "ws-1", requestId: "request-1", outcome: "cancelled" })
 
         expect(none.work.resume).not.toHaveBeenCalled()
         expect(closed.work.resume).not.toHaveBeenCalled()
@@ -168,24 +180,24 @@ describe("AgentGraphAsksService.ended a deadline", () => {
             document: documentWith({ kind: "backup", group: BACKUP }),
         })
 
-        await service.ended({ requestId: "request-1", outcome: "expired" })
+        await service.ended({ workspaceId: "ws-1", requestId: "request-1", outcome: "expired" })
 
         expect(requests.open.mock.calls[0]?.[0]).toMatchObject({
             chainStepId: "00000000-0000-4000-8000-000000000001",
             branch: { group: BACKUP, policy: "any", timeoutMinutes: 240 },
         })
-        expect(decisions.attachRequest).toHaveBeenCalledWith("decision-1", "request-2", expect.anything())
+        expect(decisions.attachRequest).toHaveBeenCalledWith("ws-1", "decision-1", "request-2", expect.anything())
         expect(decisions.close).not.toHaveBeenCalled()
     })
 
     it("rejects the item when the branch says stop, and closes the decision as expired", async () => {
         const { service, work, decisions } = await build({ document: documentWith({ kind: "stop" }) })
 
-        await service.ended({ requestId: "request-1", outcome: "expired" })
+        await service.ended({ workspaceId: "ws-1", requestId: "request-1", outcome: "expired" })
 
         expect(work.resume).not.toHaveBeenCalled()
         expect(work.reject).toHaveBeenCalledWith(expect.anything(), "ws-1", "item-9")
-        expect(decisions.close.mock.calls.map(([id, outcome]) => [id, outcome])).toEqual([
+        expect(decisions.close.mock.calls.map(([, id, outcome]) => [id, outcome])).toEqual([
             ["item-9", "rejected"],
             ["item-9", "expired"],
         ])
@@ -196,14 +208,14 @@ describe("AgentGraphAsksService.ended a deadline", () => {
         const unset = await build({ document: documentWith({ kind: "unset" }) })
         const gone = await build({ decision: { ...VIEW, branchKey: "small" } })
 
-        await owner.service.ended({ requestId: "request-1", outcome: "expired" })
-        await unset.service.ended({ requestId: "request-1", outcome: "expired" })
-        await gone.service.ended({ requestId: "request-1", outcome: "expired" })
+        await owner.service.ended({ workspaceId: "ws-1", requestId: "request-1", outcome: "expired" })
+        await unset.service.ended({ workspaceId: "ws-1", requestId: "request-1", outcome: "expired" })
+        await gone.service.ended({ workspaceId: "ws-1", requestId: "request-1", outcome: "expired" })
 
         for (const built of [owner, unset, gone]) {
             expect(built.work.resume).not.toHaveBeenCalled()
             expect(built.requests.open).not.toHaveBeenCalled()
-            expect(built.decisions.close).toHaveBeenCalledWith("item-9", "expired", expect.anything())
+            expect(built.decisions.close).toHaveBeenCalledWith("ws-1", "item-9", "expired", expect.anything())
         }
     })
 })
@@ -214,9 +226,9 @@ describe("AgentGraphAsksService concurrent owner truth", () => {
         const { service, decisions, work, requests } = await build()
         work.claim.mockResolvedValue({ kind: "closed", outcome: "approved" })
 
-        await service.ended({ requestId: "request-1", outcome: "expired" }, manager)
+        await service.ended({ workspaceId: "ws-1", requestId: "request-1", outcome: "expired" }, manager)
 
-        expect(decisions.close).toHaveBeenCalledWith("item-9", "approved", manager)
+        expect(decisions.close).toHaveBeenCalledWith("ws-1", "item-9", "approved", manager)
         expect(work.claim).toHaveBeenCalledWith(manager, "ws-1", "item-9")
         expect(requests.open).not.toHaveBeenCalled()
         expect(work.reject).not.toHaveBeenCalled()
@@ -226,10 +238,10 @@ describe("AgentGraphAsksService concurrent owner truth", () => {
         const { service, decisions, work, requests, tx } = await build({ document: documentWith({ kind: "stop" }) })
         work.claim.mockResolvedValue({ kind: "closed", outcome: "rejected" })
 
-        await service.ended({ requestId: "request-1", outcome: "expired" })
+        await service.ended({ workspaceId: "ws-1", requestId: "request-1", outcome: "expired" })
 
         expect(
-            decisions.close.mock.calls.map(([item, outcome, manager]) => [
+            decisions.close.mock.calls.map(([, item, outcome, manager]) => [
                 item,
                 outcome,
                 manager?.queryRunner?.isTransactionActive === false,
@@ -244,7 +256,9 @@ describe("AgentGraphAsksService concurrent owner truth", () => {
         const { service, decisions, work, tx } = await build({ resume: false })
         const busy = new Error("work owner is deciding")
         work.closedOutcome.mockRejectedValue(busy)
-        await expect(service.ended({ requestId: "request-1", outcome: "approved" })).rejects.toBe(busy)
+        await expect(service.ended({ workspaceId: "ws-1", requestId: "request-1", outcome: "approved" })).rejects.toBe(
+            busy,
+        )
         expect(decisions.close).not.toHaveBeenCalled()
         expect(tx.outcomes).toEqual(["rollback"])
     })
@@ -252,9 +266,9 @@ describe("AgentGraphAsksService concurrent owner truth", () => {
     it("reconciles the actual closed rejection even when an older approval event arrives", async () => {
         const { service, decisions, work, tx } = await build({ resume: false })
         work.closedOutcome.mockResolvedValue("rejected")
-        await service.ended({ requestId: "request-1", outcome: "approved" })
+        await service.ended({ workspaceId: "ws-1", requestId: "request-1", outcome: "approved" })
         expect(
-            decisions.close.mock.calls.map(([item, outcome, manager]) => [
+            decisions.close.mock.calls.map(([, item, outcome, manager]) => [
                 item,
                 outcome,
                 manager?.queryRunner?.isTransactionActive === false,

@@ -1,8 +1,13 @@
 import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { EntityEngineService } from "@modules/domain/entity-engine"
+import type { ScopedTx } from "@modules/domain/entity-engine"
+import { InjectClock } from "@modules/platform/clock"
+import type { Clock } from "@modules/platform/clock"
+import { eachInOrder } from "@modules/platform/primitives"
+import { AgentGraphRecordsService } from "./agent-graph-records.service"
+import { chunksOf, jsonOf } from "./agent-graphs.mapper"
+import type { GraphRecord, VersionRecord } from "./agent-graphs-records.contracts"
 import { graphDocumentSchema } from "./agent-graphs.schema"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import type {
@@ -16,10 +21,15 @@ import type { DecisionView } from "./agent-graph-decisions.service"
 import { branchApproverOf } from "./policies/branch-approver.policy"
 import { withoutStrayStops } from "./policies/stray-stops.policy"
 import { sourcesIndexOf } from "./policies/sources-index.policy"
-import { AgentGraphEntity, AgentGraphSourceEntity, AgentGraphVersionEntity } from "./persistence/entities"
 
 /** The most versions one listing answers. */
 const VERSION_LIMIT = 100
+
+/** The most agents one lookup of "which hold a graph" asks the engine about. */
+const AGENT_CHUNK = 100
+
+/** The most graphs of one workspace the Brain comparison reads. */
+const GRAPH_LIMIT = 100
 
 /** One graph with the version that decides, read and validated. */
 export interface GraphState {
@@ -98,9 +108,9 @@ export type OptionalBranchApprover = BranchApprover | null
 /** The hash of a graph; the same graph always has the same hash. */
 const hashOf = (document: GraphDocument): string => createHash("sha256").update(JSON.stringify(document)).digest("hex")
 
-const viewOf = (row: AgentGraphVersionEntity): GraphVersionView => ({
+const viewOf = (row: VersionRecord): GraphVersionView => ({
     id: row.id,
-    version: row.version,
+    version: row.number,
     changeKind: row.changeKind,
     note: row.note,
     publishedAt: row.publishedAt.toISOString(),
@@ -110,34 +120,36 @@ const viewOf = (row: AgentGraphVersionEntity): GraphVersionView => ({
 /** The id of a published graph version, or null when there is none. */
 type OptionalVersionId = string | null
 
+const conflict = (): AgentGraphsError => new AgentGraphsError({ code: AgentGraphsErrorCode.DraftConflict })
+
 @Injectable()
 /**
- * The store of the action graph: the draft of each agent under a revision check, the immutable versions the owner publishes (the
- * application role may only read and insert them, so the database refuses a change), the index of their sources, and the mode that
- * says whether a graph decides or only records. Every graph read back is validated, and one that does not parse is no graph.
+ * The store of the action graph, on the entity engine: the draft of each agent under a revision check (and the record version as the
+ * fence of every write), the immutable versions the owner publishes (written once, never updated), the index of their sources, and the
+ * mode that says whether a graph decides or only records. Every graph read back is validated, and one that does not parse is no graph.
+ * Each method names the workspace: the engine scopes a transaction to one.
  */
 export class AgentGraphsService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        private readonly engine: EntityEngineService,
+        private readonly records: AgentGraphRecordsService,
+        @InjectClock() private readonly clock: Clock,
+    ) {}
 
     /** The graph of the installation, or null when it has none or it cannot be read. */
-    async stateOfInstallation(installationId: string): Promise<OptionalGraphState> {
-        const row = await this.entityManager.findOne(AgentGraphEntity, { where: { installationId } })
-        return row === null ? null : this.stateOf(row)
-    }
-
-    /** The graph of the agent by its id alone, for a job that walks agents of every workspace; null when it has none or it cannot be read. */
-    async statesOfAgent(agentId: string): Promise<OptionalGraphState> {
-        const row = await this.entityManager.findOne(AgentGraphEntity, { where: { agentId } })
-        return row === null ? null : this.stateOf(row)
+    stateOfInstallation(workspaceId: string, installationId: string): Promise<OptionalGraphState> {
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const graph = await this.records.graphOfInstallation(tx, installationId)
+            return graph === null ? null : this.stateOf(tx, graph)
+        })
     }
 
     /** The id of the version that decides for the agent, or null when it has none; a light lookup that reads no document. */
-    async activeVersionIdOf(workspaceId: string, agentId: string): Promise<OptionalVersionId> {
-        const row = await this.entityManager.findOne(AgentGraphEntity, {
-            select: { activeVersionId: true },
-            where: { workspaceId, agentId },
-        })
-        return row?.activeVersionId ?? null
+    activeVersionIdOf(workspaceId: string, agentId: string): Promise<OptionalVersionId> {
+        return this.engine.scoped(
+            workspaceId,
+            async (tx) => (await this.records.graphOf(tx, agentId))?.activeVersionId ?? null,
+        )
     }
 
     /** Whether the live version of the agent's graph has a flow of nodes, so a tag or a message can start it. */
@@ -147,9 +159,11 @@ export class AgentGraphsService {
     }
 
     /** The graph of the agent, or null when it has none or it cannot be read. */
-    async stateOfAgent(workspaceId: string, agentId: string): Promise<OptionalGraphState> {
-        const row = await this.entityManager.findOne(AgentGraphEntity, { where: { workspaceId, agentId } })
-        return row === null ? null : this.stateOf(row)
+    stateOfAgent(workspaceId: string, agentId: string): Promise<OptionalGraphState> {
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const graph = await this.records.graphOf(tx, agentId)
+            return graph === null ? null : this.stateOf(tx, graph)
+        })
     }
 
     /**
@@ -164,17 +178,16 @@ export class AgentGraphsService {
     ): Promise<GraphState> {
         const existing = await this.stateOfAgent(workspaceId, agentId)
         if (existing !== null) return existing
-        await this.entityManager.transaction(async (manager) => {
-            await manager
-                .createQueryBuilder(AgentGraphEntity, "graph")
-                .insert()
-                .into(AgentGraphEntity)
-                .values({ agentId, workspaceId, installationId, draft: seed, draftRev: 1, mode: "enforced" })
-                .orIgnore()
-                .execute()
-            const made = await manager.countBy(AgentGraphVersionEntity, { agentId })
-            if (made > 0) return
-            const first = await this.insertVersion(manager, {
+        await this.engine.scoped(workspaceId, async (tx) => {
+            const { graph } = await this.records.ensureGraph(tx, {
+                agentId,
+                installationId,
+                draft: jsonOf(seed),
+                draftRev: 1,
+                mode: "enforced",
+            })
+            if ((await this.records.latestVersion(tx, agentId)) !== null) return
+            const first = await this.insertVersion(tx, {
                 workspaceId,
                 agentId,
                 document: seed,
@@ -183,73 +196,60 @@ export class AgentGraphsService {
                 memberId: null,
                 contextVersionId: null,
             })
-            await manager.update(AgentGraphEntity, { agentId }, { activeVersionId: first.id })
+            await this.records.patchGraph(tx, graph, { activeVersionId: first.id })
         })
         return this.require(workspaceId, agentId)
     }
 
     /** Saves the draft when nobody saved after it was read; a stale revision is refused. */
-    async saveDraft(workspaceId: string, agentId: string, rev: number, draft: unknown): Promise<GraphState> {
+    saveDraft(workspaceId: string, agentId: string, rev: number, draft: unknown): Promise<GraphState> {
         const parsed = graphDocumentSchema.safeParse(draft)
-        if (!parsed.success) throw new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid })
-        const saved = await this.entityManager.update(
-            AgentGraphEntity,
-            { agentId, workspaceId, draftRev: rev },
-            { draft: parsed.data, draftRev: rev + 1 },
-        )
-        if (saved.affected !== 1) throw new AgentGraphsError({ code: AgentGraphsErrorCode.DraftConflict })
-        return this.require(workspaceId, agentId)
+        if (!parsed.success) return Promise.reject(new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid }))
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const graph = await this.records.graphOf(tx, agentId)
+            if (graph?.draftRev !== rev) throw conflict()
+            const saved = await this.records.patchGraph(tx, graph, { draft: jsonOf(parsed.data), draftRev: rev + 1 })
+            if (saved === null) throw conflict()
+            return this.stateRequired(tx, saved)
+        })
     }
 
     /** Freezes a graph as the next version, makes it the one that decides and keeps it as the draft. Checks are the caller's. */
     publish(input: PublishInput): Promise<GraphVersionView> {
         const parsed = graphDocumentSchema.safeParse(input.document)
         if (!parsed.success) return Promise.reject(new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid }))
-        return this.entityManager.transaction(async (manager) => {
-            const graph = await manager.findOne(AgentGraphEntity, {
-                where: { agentId: input.agentId, workspaceId: input.workspaceId },
-                lock: { mode: "pessimistic_write" },
-            })
+        return this.engine.scoped(input.workspaceId, async (tx) => {
+            const graph = await this.records.graphOf(tx, input.agentId)
             if (graph === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
-            const version = await this.insertVersion(manager, { ...input, document: parsed.data })
-            await manager.update(
-                AgentGraphEntity,
-                { agentId: input.agentId },
-                { activeVersionId: version.id, draft: parsed.data, draftRev: graph.draftRev + 1 },
-            )
+            const version = await this.insertVersion(tx, { ...input, document: parsed.data })
+            const moved = await this.records.patchGraph(tx, graph, {
+                activeVersionId: version.id,
+                draft: jsonOf(parsed.data),
+                draftRev: graph.draftRev + 1,
+            })
+            if (moved === null) throw conflict()
             return viewOf(version)
         })
     }
 
     /** The number of the newest version of the agent; 0 before the first. */
-    async latestVersionOf(workspaceId: string, agentId: string): Promise<number> {
-        const last = await this.entityManager.findOne(AgentGraphVersionEntity, {
-            select: { version: true },
-            where: { workspaceId, agentId },
-            order: { version: "DESC" },
-        })
-        return last?.version ?? 0
+    latestVersionOf(workspaceId: string, agentId: string): Promise<number> {
+        return this.engine.scoped(
+            workspaceId,
+            async (tx) => (await this.records.latestVersion(tx, agentId))?.number ?? 0,
+        )
     }
 
     /** The versions of the agent, newest first. */
-    async versionsOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<GraphVersionView>> {
-        const rows = await this.entityManager.find(AgentGraphVersionEntity, {
-            where: { workspaceId, agentId },
-            order: { version: "DESC" },
-            take: VERSION_LIMIT,
-        })
-        return rows.map(viewOf)
+    versionsOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<GraphVersionView>> {
+        return this.engine.scoped(workspaceId, async (tx) =>
+            (await this.records.versionsOf(tx, agentId, VERSION_LIMIT)).map(viewOf),
+        )
     }
 
     /** One version as a graph, for "back to this version"; refused when it is not the agent's or cannot be read. */
     async documentOf(workspaceId: string, agentId: string, versionId: string): Promise<GraphDocument> {
-        const row = await this.entityManager.findOne(AgentGraphVersionEntity, {
-            where: { id: versionId, workspaceId, agentId },
-        })
-        if (row === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.VersionNotFound })
-        const parsed = graphDocumentSchema.safeParse(row.document)
-        if (!parsed.success) throw new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid })
-        return parsed.data
+        return (await this.versionAt(workspaceId, agentId, versionId)).document
     }
 
     /** The approver the branch of a decision named in the version that decided, or null when that version no longer names one. */
@@ -258,57 +258,61 @@ export class AgentGraphsService {
         return branchApproverOf(document, decision.action, decision.branchKey, decision.path)
     }
 
-    /** Of these agents, the ones that have no graph yet. */
-    async missingGraph(agentIds: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
-        if (agentIds.length === 0) return []
-        const have = await this.entityManager.find(AgentGraphEntity, {
-            select: { agentId: true },
-            where: { agentId: In([...agentIds]) },
-            take: agentIds.length,
+    /** Of these agents of the workspace, the ones that have no graph yet. */
+    async missingGraph(workspaceId: string, agentIds: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
+        const held = new Set<string>()
+        await eachInOrder(chunksOf(agentIds, AGENT_CHUNK), async (chunk) => {
+            const found = await this.engine.scoped(workspaceId, (tx) => this.records.agentsWithGraph(tx, chunk))
+            found.forEach((agentId) => held.add(agentId))
         })
-        const held = new Set(have.map((row) => row.agentId))
         return agentIds.filter((id) => !held.has(id))
     }
 
-    /** The Brain rules behind the versions that decide, with the hash they held when the owner confirmed them; at most `limit`. */
-    async brainSourcesInForce(limit: number): Promise<ReadonlyArray<BrainSourceInForce>> {
-        const rows = await this.entityManager
-            .createQueryBuilder(AgentGraphSourceEntity, "source")
-            .innerJoin(AgentGraphEntity, "graph", "graph.active_version_id = source.version_id")
-            .where("source.kind = :kind", { kind: "brain" })
-            .take(limit)
-            .getMany()
-        return rows.map((row) => ({
-            workspaceId: row.workspaceId,
-            agentId: row.agentId,
-            versionId: row.versionId,
-            nodeKey: row.nodeKey,
-            branchKey: row.branchKey,
-            factId: row.ref,
-            valueHash: row.valueHash,
-        }))
+    /** The Brain rules behind the versions that decide in a workspace, with the hash they held when the owner confirmed them; at most `limit`. */
+    brainSourcesInForce(workspaceId: string, limit: number): Promise<ReadonlyArray<BrainSourceInForce>> {
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const graphs = await this.records.graphsOfWorkspace(tx, GRAPH_LIMIT)
+            const versionIds = graphs.flatMap((graph) =>
+                graph.activeVersionId === null ? [] : [graph.activeVersionId],
+            )
+            if (versionIds.length === 0) return []
+            const sources = await this.records.sourcesOf(tx, "brain", versionIds, limit)
+            return sources.map((row) => ({
+                workspaceId: row.workspaceId,
+                agentId: row.agentId,
+                versionId: row.versionId,
+                nodeKey: row.nodeKey,
+                branchKey: row.branchKey,
+                factId: row.ref,
+                valueHash: row.valueHash,
+            }))
+        })
     }
 
     /** One version with its number and its graph, for the trace of a run; refused when it is not the agent's or cannot be read. */
-    async versionAt(workspaceId: string, agentId: string, versionId: string): Promise<VersionAt> {
-        const row = await this.entityManager.findOne(AgentGraphVersionEntity, {
-            where: { id: versionId, workspaceId, agentId },
+    versionAt(workspaceId: string, agentId: string, versionId: string): Promise<VersionAt> {
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const row = await this.records.version(tx, versionId)
+            if (row?.agentId !== agentId) throw new AgentGraphsError({ code: AgentGraphsErrorCode.VersionNotFound })
+            const parsed = graphDocumentSchema.safeParse(row.document)
+            if (!parsed.success) throw new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid })
+            return { version: row.number, document: parsed.data }
         })
-        if (row === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.VersionNotFound })
-        const parsed = graphDocumentSchema.safeParse(row.document)
-        if (!parsed.success) throw new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid })
-        return { version: row.version, document: parsed.data }
     }
 
     /** Sets whether the graph decides (`enforced`) or only records (`shadow`), and keeps who set it; a publish never touches this. */
-    async setMode(workspaceId: string, agentId: string, mode: GraphMode, memberId: string): Promise<GraphState> {
-        const changed = await this.entityManager.update(
-            AgentGraphEntity,
-            { agentId, workspaceId },
-            { mode, modeSetBy: memberId, modeSetAt: () => "now()" },
-        )
-        if (changed.affected !== 1) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
-        return this.require(workspaceId, agentId)
+    setMode(workspaceId: string, agentId: string, mode: GraphMode, memberId: string): Promise<GraphState> {
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const graph = await this.records.graphOf(tx, agentId)
+            if (graph === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
+            const changed = await this.records.patchGraph(tx, graph, {
+                mode,
+                modeSetBy: memberId,
+                modeSetAt: this.clock.now().toISOString(),
+            })
+            if (changed === null) throw conflict()
+            return this.stateRequired(tx, changed)
+        })
     }
 
     private async require(workspaceId: string, agentId: string): Promise<GraphState> {
@@ -317,61 +321,57 @@ export class AgentGraphsService {
         return state
     }
 
-    private async stateOf(row: AgentGraphEntity): Promise<OptionalGraphState> {
-        const draft = graphDocumentSchema.safeParse(row.draft)
+    private async stateRequired(tx: ScopedTx, graph: GraphRecord): Promise<GraphState> {
+        const state = await this.stateOf(tx, graph)
+        if (state === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
+        return state
+    }
+
+    private async stateOf(tx: ScopedTx, graph: GraphRecord): Promise<OptionalGraphState> {
+        const draft = graphDocumentSchema.safeParse(graph.draft)
         if (!draft.success) return null
-        const version =
-            row.activeVersionId === null
-                ? null
-                : await this.entityManager.findOne(AgentGraphVersionEntity, { where: { id: row.activeVersionId } })
+        const version = graph.activeVersionId === null ? null : await this.records.version(tx, graph.activeVersionId)
         const active = version === null ? null : graphDocumentSchema.safeParse(version.document)
         return {
-            workspaceId: row.workspaceId,
-            agentId: row.agentId,
-            installationId: row.installationId,
-            mode: row.mode,
+            workspaceId: graph.workspaceId,
+            agentId: graph.agentId,
+            installationId: graph.installationId,
+            mode: graph.mode,
             draft: withoutStrayStops(draft.data),
-            draftRev: row.draftRev,
-            activeVersionId: row.activeVersionId,
+            draftRev: graph.draftRev,
+            activeVersionId: graph.activeVersionId,
             active: active?.success === true ? active.data : null,
             activeKind: version?.changeKind ?? null,
         }
     }
 
     /** Inserts the next version of the agent and indexes its sources. */
-    private async insertVersion(manager: EntityManager, input: PublishInput): Promise<AgentGraphVersionEntity> {
-        const last = await manager.findOne(AgentGraphVersionEntity, {
-            select: { version: true },
-            where: { agentId: input.agentId },
-            order: { version: "DESC" },
+    private async insertVersion(tx: ScopedTx, input: PublishInput): Promise<VersionRecord> {
+        const last = await this.records.latestVersion(tx, input.agentId)
+        const next = input.version ?? (last?.number ?? 0) + 1
+        if (next <= (last?.number ?? 0)) throw conflict()
+        const version = await this.records.insertVersion(tx, {
+            agentId: input.agentId,
+            number: next,
+            document: jsonOf(input.document),
+            documentHash: hashOf(input.document),
+            contextVersionId: input.contextVersionId,
+            changeKind: input.kind,
+            note: input.note,
+            publishedBy: input.memberId,
         })
-        const next = input.version ?? (last?.version ?? 0) + 1
-        if (next <= (last?.version ?? 0)) throw new AgentGraphsError({ code: AgentGraphsErrorCode.DraftConflict })
-        const version = await manager.save(
-            AgentGraphVersionEntity,
-            manager.create(AgentGraphVersionEntity, {
-                workspaceId: input.workspaceId,
+        if (version === null) throw conflict()
+        await eachInOrder(sourcesIndexOf(input.document), (row) =>
+            this.records.insertSource(tx, {
+                versionId: version.id,
                 agentId: input.agentId,
-                version: next,
-                document: input.document,
-                documentHash: hashOf(input.document),
-                contextVersionId: input.contextVersionId,
-                changeKind: input.kind,
-                note: input.note,
-                publishedBy: input.memberId,
+                nodeKey: row.nodeKey,
+                branchKey: row.branchKey,
+                kind: row.kind,
+                ref: row.ref,
+                valueHash: row.valueHash,
             }),
         )
-        const sources = sourcesIndexOf(input.document).map((row) => ({
-            versionId: version.id,
-            workspaceId: input.workspaceId,
-            agentId: input.agentId,
-            nodeKey: row.nodeKey,
-            branchKey: row.branchKey,
-            kind: row.kind,
-            ref: row.ref,
-            valueHash: row.valueHash,
-        }))
-        if (sources.length > 0) await manager.insert(AgentGraphSourceEntity, sources)
         return version
     }
 }

@@ -3,6 +3,7 @@ import { FakeClock, mock } from "@starci/jest-preset"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
+import { WorkspacesService } from "@modules/domain/workspaces"
 import { CLOCK } from "@modules/platform/clock"
 import { OWNER_EXAMPLE, graphOf, stateOf } from "@tests/fixtures/builders/agent-graph.builder"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
@@ -65,9 +66,6 @@ const build = async (
         stateOfAgent: jest
             .fn()
             .mockResolvedValue(options.state === undefined ? stateOf({ mode: "enforced" }) : options.state),
-        statesOfAgent: jest
-            .fn()
-            .mockResolvedValue(options.state === undefined ? stateOf({ mode: "enforced" }) : options.state),
         brainSourcesInForce: jest.fn().mockResolvedValue(options.sources ?? []),
     })
     const seed = mock<AgentGraphSeedService>({
@@ -95,9 +93,13 @@ const build = async (
                     : [options.successor ?? factOf("fact-2", "active", "Over 8tr ask Dinh")],
             ),
     })
+    const workspaces = mock<WorkspacesService>({
+        list: jest.fn().mockResolvedValue([{ id: "ws-1", name: "Shop" }]),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentGraphWatchService,
+            { provide: WorkspacesService, useValue: workspaces },
             { provide: CLOCK, useValue: new FakeClock("2026-11-01T02:00:00.000Z") },
             { provide: InstallationRecordsService, useValue: installations },
             { provide: AgentGraphsService, useValue: graphs },
@@ -107,7 +109,16 @@ const build = async (
             { provide: BrainFactsService, useValue: brain },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentGraphWatchService), installations, graphs, seed, decisions, proposals, brain }
+    return {
+        service: moduleRef.get(AgentGraphWatchService),
+        installations,
+        graphs,
+        seed,
+        decisions,
+        proposals,
+        brain,
+        workspaces,
+    }
 }
 
 describe("AgentGraphWatchService seeding", () => {
@@ -189,7 +200,7 @@ describe("AgentGraphWatchService learning", () => {
 
         await expect(service.tick()).resolves.toMatchObject({ learned: 2 })
 
-        expect(decisions.agentsClosedSince).toHaveBeenCalledWith(new Date("2026-10-30T02:00:00.000Z"), 500)
+        expect(decisions.agentsClosedSince).toHaveBeenCalledWith("ws-1", new Date("2026-10-30T02:00:00.000Z"), 500)
         expect(proposals.learn).toHaveBeenCalledWith("ws-1", "agent-1", "version-1", graphOf(OWNER_EXAMPLE))
     })
 
@@ -221,7 +232,7 @@ describe("AgentGraphWatchService the Brain rules", () => {
             newValueHash: valueHashOf("Over 8tr ask Dinh"),
             dedupeKey: "conflict:decide:fact-2",
         })
-        expect(graphs.brainSourcesInForce).toHaveBeenCalledWith(500)
+        expect(graphs.brainSourcesInForce).toHaveBeenCalledWith("ws-1", 500)
     })
 
     it("raises nothing while the cited rule is in force, is gone, has no successor, or the proposal already exists", async () => {
@@ -240,5 +251,40 @@ describe("AgentGraphWatchService the Brain rules", () => {
             expect(built.proposals.raiseConflict).not.toHaveBeenCalled()
         }
         await expect(known.service.tick()).resolves.toMatchObject({ conflicts: 0 })
+    })
+})
+
+describe("AgentGraphWatchService the workspaces of a tick", () => {
+    it("asks which agents lack a graph one workspace at a time", async () => {
+        const rows = [
+            { ...rowOf("inst-1", "agent-1"), workspaceId: "ws-1" },
+            { ...rowOf("inst-2", "agent-2"), workspaceId: "ws-2" },
+            { ...rowOf("inst-3", "agent-3"), workspaceId: "ws-1" },
+        ]
+        const { service, graphs } = await build({ pages: [rows], missing: [] })
+
+        await service.tick()
+
+        expect(graphs.missingGraph.mock.calls.slice(0, 2)).toEqual([
+            ["ws-1", ["agent-1", "agent-3"]],
+            ["ws-2", ["agent-2"]],
+        ])
+    })
+
+    it("visits a slice of workspaces per tick and starts over after the last one", async () => {
+        const full = Array.from({ length: 50 }, (_unused, index) => ({ id: `ws-${index}`, name: "Shop" }))
+        const { service, workspaces, decisions } = await build({ missing: [] })
+        workspaces.list.mockResolvedValueOnce(full).mockResolvedValueOnce([{ id: "ws-99", name: "Shop" }])
+
+        await service.tick()
+        await service.tick()
+        await service.tick()
+
+        expect(workspaces.list.mock.calls).toEqual([
+            [50, undefined],
+            [50, "ws-49"],
+            [50, undefined],
+        ])
+        expect(decisions.agentsClosedSince).toHaveBeenCalledTimes(50 + 1 + 1)
     })
 })

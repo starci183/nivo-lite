@@ -1,5 +1,4 @@
 import type { EntityManager } from "typeorm"
-import { agentGraphsEntities } from "@modules/domain/agent-graphs"
 import type { GraphDocument, GraphMode } from "@modules/domain/agent-graphs"
 import { agentsEntities } from "@modules/domain/agents"
 import { moduleInstallationsEntities } from "@modules/domain/module-installations"
@@ -7,9 +6,9 @@ import type { WorkItem } from "@modules/domain/decisions"
 import { workItemsEntities } from "@modules/domain/work-items"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { workspacesEntities } from "@modules/domain/workspaces"
+import { insertGraphRecords } from "./agent-graphs-persist.builder"
 import { itemOf } from "./reconcile-payment-performer.builder"
 
-const [AgentGraphEntity, AgentGraphVersionEntity, , , AgentGraphDecisionEntity] = agentGraphsEntities
 const [AgentEntity] = agentsEntities
 const [ModuleInstallationEntity] = moduleInstallationsEntities
 const [WorkItemEntity] = workItemsEntities
@@ -71,36 +70,17 @@ export const persistGraph = (
         const owner = await tx.findOneOrFail(WorkspaceMemberEntity, {
             where: { workspaceId: who.workspaceId, userId: who.userId },
         })
-        await tx.insert(AgentGraphEntity, {
-            agentId: who.agentId,
+        await insertGraphRecords(tx, {
             workspaceId: who.workspaceId,
+            agentId: who.agentId,
             installationId: installed,
-            draft: document,
-            draftRev: 1,
-            activeVersionId: null,
+            versionId: who.versionId,
+            publishedBy: owner.id,
+            document,
             mode,
         })
-        await tx.insert(AgentGraphVersionEntity, {
-            id: who.versionId,
-            workspaceId: who.workspaceId,
-            agentId: who.agentId,
-            version: 1,
-            document,
-            documentHash: "proof",
-            contextVersionId: null,
-            changeKind: "edit",
-            note: "",
-            publishedBy: owner.id,
-        })
-        await tx.update(AgentGraphEntity, { agentId: who.agentId }, { activeVersionId: who.versionId })
         return installed
     })
-
-/** Starts the graph of an agent over: its recorded decisions removed and its mode set. */
-export const restartGraph = async (manager: EntityManager, agentId: string, mode: GraphMode): Promise<void> => {
-    await manager.delete(AgentGraphDecisionEntity, { agentId })
-    await manager.update(AgentGraphEntity, { agentId }, { mode })
-}
 
 /** A supplier-payment work item about a record, as the work engine hands it to the branch decider. */
 export const persistPaymentItem = async (

@@ -56,7 +56,7 @@ export class AgentGraphContractSetupService {
     /** Proposes the contracts and the gaps of an installation whose setup was just applied; answers how many proposals were new. */
     async proposeFor(applier: SetupApplier): Promise<number> {
         try {
-            const state = await this.graphs.stateOfInstallation(applier.installationId)
+            const state = await this.graphs.stateOfInstallation(applier.workspaceId, applier.installationId)
             if (state?.workspaceId !== applier.workspaceId || state.active === null) return 0
             const [contracts, gaps] = await Promise.all([
                 this.raiseContracts(state, state.active),

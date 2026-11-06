@@ -38,6 +38,7 @@ import { AgentGraphToolGateService } from "./agent-graph-tool-gate.service"
 import { AgentGraphWatchService } from "./agent-graph-watch.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
 import { AgentGraphsService } from "./agent-graphs.service"
+import { AgentGraphRecordsService } from "./agent-graph-records.service"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
 import { AgentGraphNodeStepService } from "./agent-graph-node-step.service"
 import { GraphFactsService } from "./graph-facts.service"
@@ -73,6 +74,7 @@ const OUTGOING_FACTS: Type = OutgoingFactReaderService
 const RIGHTS_ONLY: Part = {
     services: [
         AgentGraphsService,
+        AgentGraphRecordsService,
         AgentDataRightsService,
         AgentGraphDecisionsService,
         GraphFactsService,
@@ -85,7 +87,10 @@ const RIGHTS_ONLY: Part = {
 }
 
 /** The store alone, with the publishing of a flow: what an app that only seeds graphs carries. */
-const STORE_ONLY: Part = { services: [AgentGraphsService, AgentGraphFlowService], ports: [] }
+const STORE_ONLY: Part = {
+    services: [AgentGraphsService, AgentGraphRecordsService, AgentGraphFlowService],
+    ports: [],
+}
 
 /** The reader of the amount of the work item itself, which every app that decides branches carries beside the readers of its modules. */
 const WORK_AMOUNT: Type = WorkAmountFactReaderService
@@ -97,6 +102,7 @@ const FACT_READERS_READY: unique symbol = Symbol("domain.agent-graphs.fact-reade
 const DECIDER_ONLY: Part = {
     services: [
         AgentGraphsService,
+        AgentGraphRecordsService,
         AgentGraphDecisionsService,
         GraphFactsService,
         AgentGraphChecksService,
@@ -112,6 +118,7 @@ const DECIDER_ONLY: Part = {
 const WHOLE: Part = {
     services: [
         AgentGraphsService,
+        AgentGraphRecordsService,
         AgentGraphDecisionsService,
         AgentGraphChecksService,
         AgentGraphToolGateService,

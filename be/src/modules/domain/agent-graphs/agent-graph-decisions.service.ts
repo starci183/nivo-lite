@@ -1,11 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull, MoreThan, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { EntityEngineService } from "@modules/domain/entity-engine"
+import type { ScopedWork } from "@modules/domain/entity-engine"
+import { AgentGraphRecordsService } from "./agent-graph-records.service"
+import type { GraphDecisionRecord } from "./agent-graphs-records.contracts"
 import { MODEL_AMOUNT_FACT } from "./agent-graphs.contracts"
 import type { GraphRoad } from "@modules/domain/authority-rules"
 import type { ClosedDecision, DecisionClosedAs, DecisionOutcome, FactValue, GraphMode } from "./agent-graphs.contracts"
-import { AgentGraphDecisionEntity } from "./persistence/entities"
 
 /** The most closed decisions the learning reads for one agent at a time. */
 const LEARN_WINDOW = 200
@@ -154,163 +155,195 @@ export interface NewDecision {
 
 @Injectable()
 /**
- * The decisions of the graphs: one row for each work item, written once however often the item is retried, closed when the item
- * ends, and read back as the evidence the learning counts.
+ * The decisions of the graphs: one record for each work item, written once however often the item is retried, closed when the item
+ * ends, and read back as the evidence the learning counts. Every method names the workspace; a method that takes the caller's own
+ * transaction enters the scope on it and leaves it again.
  */
 export class AgentGraphDecisionsService {
-    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
+    constructor(
+        private readonly engine: EntityEngineService,
+        private readonly records: AgentGraphRecordsService,
+    ) {}
 
-    /** Writes the run of an item or a proposal once; a retry gets the id of the row already there. */
-    async record(decision: NewDecision): Promise<string> {
-        await this.entityManager
-            .createQueryBuilder(AgentGraphDecisionEntity, "decision")
-            .insert()
-            .into(AgentGraphDecisionEntity)
-            .values({
-                ...decision,
-                path: [...decision.path],
-                facts: { ...decision.facts },
-                unread: [...decision.unread],
-            })
-            .orIgnore()
-            .execute()
-        const row = await this.entityManager.findOneByOrFail(
-            AgentGraphDecisionEntity,
-            decision.workItemId === null
-                ? { dedupeKey: decision.dedupeKey ?? "" }
-                : { workItemId: decision.workItemId },
-        )
-        return row.id
+    /** Writes the run of an item or a proposal once; a retry gets the id of the record already there. */
+    record(decision: NewDecision): Promise<string> {
+        return this.engine.scoped(decision.workspaceId, async (tx) => {
+            const stored = await this.records.recordDecision(
+                tx,
+                decision.workItemId === null ? "dedupe" : "work_item",
+                {
+                    agentId: decision.agentId,
+                    workItemId: decision.workItemId,
+                    dedupeKey: decision.dedupeKey,
+                    road: decision.road,
+                    mode: decision.mode,
+                    gateVerdict: decision.gateVerdict,
+                    unread: { keys: [...decision.unread] },
+                    unjudged: decision.unjudged,
+                    subjectType: decision.subjectType,
+                    subjectId: decision.subjectId,
+                    versionId: decision.versionId,
+                    turnId: decision.turnId,
+                    wakeId: decision.wakeId,
+                    action: decision.action,
+                    path: { keys: [...decision.path] },
+                    facts: { ...decision.facts },
+                    branchKey: decision.branchKey,
+                    outcome: decision.outcome,
+                    closedAs: decision.closedAs,
+                    shadowDiff: decision.shadowDiff,
+                },
+            )
+            return stored.id
+        })
     }
 
     /** The latest runs of an agent, newest first, as the owner lists them. */
-    async runsOf(workspaceId: string, agentId: string, limit: number): Promise<ReadonlyArray<RunEntry>> {
-        const rows = await this.entityManager.find(AgentGraphDecisionEntity, {
-            where: { workspaceId, agentId },
-            order: { createdAt: "DESC", id: "DESC" },
-            take: limit,
-        })
-        return rows.map((row) => ({
-            id: row.id,
-            road: row.road,
-            mode: row.mode,
-            action: row.action,
-            versionId: row.versionId,
-            branchKey: row.branchKey,
-            outcome: row.outcome,
-            gateVerdict: row.gateVerdict,
-            closedAs: row.closedAs,
-            differs: row.shadowDiff,
-            unread: row.unread,
-            unjudged: row.unjudged,
-            facts: row.facts,
-            path: row.path,
-            workItemId: row.workItemId,
-            subjectType: row.subjectType,
-            subjectId: row.subjectId,
-            createdAt: row.createdAt.toISOString(),
-        }))
+    runsOf(workspaceId: string, agentId: string, limit: number): Promise<ReadonlyArray<RunEntry>> {
+        return this.engine.scoped(workspaceId, async (tx) =>
+            (await this.records.decisionsOf(tx, agentId, limit)).map((row) => ({
+                id: row.id,
+                road: row.road,
+                mode: row.mode,
+                action: row.action,
+                versionId: row.versionId,
+                branchKey: row.branchKey,
+                outcome: row.outcome,
+                gateVerdict: row.gateVerdict,
+                closedAs: row.closedAs,
+                differs: row.shadowDiff,
+                unread: row.unread,
+                unjudged: row.unjudged,
+                facts: row.facts,
+                path: row.path,
+                workItemId: row.workItemId,
+                subjectType: row.subjectType,
+                subjectId: row.subjectId,
+                createdAt: row.createdAt.toISOString(),
+            })),
+        )
     }
 
     /** Closes the decision of an item with how the work ended; an item with no decision, or one already closed, is left alone. */
     async close(
+        workspaceId: string,
         workItemId: string,
         closedAs: DecisionClosedAs,
-        manager: EntityManager = this.entityManager,
+        manager?: EntityManager,
     ): Promise<void> {
-        await manager.update(AgentGraphDecisionEntity, { workItemId, closedAs: IsNull() }, { closedAs })
+        await this.within(workspaceId, manager, async (tx) => {
+            const decision = await this.records.decisionOfItem(tx, workItemId)
+            if (decision?.closedAs !== null) return
+            await this.records.patchDecision(tx, decision, { closedAs })
+        })
     }
 
     /** The decision with this id, or null. */
-    async byId(decisionId: string): Promise<DecisionView | null> {
-        return this.viewOf(await this.entityManager.findOneBy(AgentGraphDecisionEntity, { id: decisionId }))
+    byId(workspaceId: string, decisionId: string): Promise<DecisionView | null> {
+        return this.engine.scoped(workspaceId, async (tx) => viewOf(await this.records.decision(tx, decisionId)))
     }
 
     /** The decision whose open request is this one, or null. */
-    async byRequest(requestId: string, manager: EntityManager = this.entityManager): Promise<DecisionView | null> {
-        return this.viewOf(await manager.findOneBy(AgentGraphDecisionEntity, { approvalRequestId: requestId }))
+    byRequest(workspaceId: string, requestId: string, manager?: EntityManager): Promise<DecisionView | null> {
+        return this.within(workspaceId, manager, async (tx) =>
+            viewOf(await this.records.decisionOfRequest(tx, requestId)),
+        )
     }
 
     /** The decision of a work item, or null. */
-    async byItem(workItemId: string, manager: EntityManager = this.entityManager): Promise<DecisionView | null> {
-        return this.viewOf(await manager.findOneBy(AgentGraphDecisionEntity, { workItemId }))
+    byItem(workspaceId: string, workItemId: string, manager?: EntityManager): Promise<DecisionView | null> {
+        return this.within(workspaceId, manager, async (tx) =>
+            viewOf(await this.records.decisionOfItem(tx, workItemId)),
+        )
     }
 
-    /** The agents with a decision that ended since this moment, at most `limit` decisions read. */
-    async agentsClosedSince(since: Date, limit: number): Promise<ReadonlyArray<string>> {
-        const rows = await this.entityManager.find(AgentGraphDecisionEntity, {
-            select: { agentId: true },
-            where: { closedAs: Not(IsNull()), updatedAt: MoreThan(since) },
-            take: limit,
+    /** The agents of the workspace with a decision that ended since this moment, at most `limit` decisions read. */
+    agentsClosedSince(workspaceId: string, since: Date, limit: number): Promise<ReadonlyArray<string>> {
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const rows = await this.records.decisionsClosedSince(tx, since, limit)
+            return [...new Set(rows.map((row) => row.agentId))]
         })
-        return [...new Set(rows.map((row) => row.agentId))]
     }
 
     /** The run of a work item: what the graph decided for it, or null when it never reached a graph. */
-    async runOf(workspaceId: string, workItemId: string): Promise<DecisionRun | null> {
-        const row = await this.entityManager.findOneBy(AgentGraphDecisionEntity, { workspaceId, workItemId })
-        return row === null
-            ? null
-            : {
-                  id: row.id,
-                  workspaceId: row.workspaceId,
-                  agentId: row.agentId,
-                  versionId: row.versionId,
-                  wakeId: row.wakeId,
-                  action: row.action,
-                  branchKey: row.branchKey,
-                  outcome: row.outcome,
-                  closedAs: row.closedAs,
-                  shadowDiff: row.shadowDiff,
-                  facts: row.facts,
-                  approvalRequestId: row.approvalRequestId,
-                  path: row.path,
-              }
+    runOf(workspaceId: string, workItemId: string): Promise<DecisionRun | null> {
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const row = await this.records.decisionOfItem(tx, workItemId)
+            return row === null
+                ? null
+                : {
+                      id: row.id,
+                      workspaceId: row.workspaceId,
+                      agentId: row.agentId,
+                      versionId: row.versionId,
+                      wakeId: row.wakeId,
+                      action: row.action,
+                      branchKey: row.branchKey,
+                      outcome: row.outcome,
+                      closedAs: row.closedAs,
+                      shadowDiff: row.shadowDiff,
+                      facts: row.facts,
+                      approvalRequestId: row.approvalRequestId,
+                      path: row.path,
+                  }
+        })
     }
 
     /** Names the request that is open for the decision. */
     async attachRequest(
+        workspaceId: string,
         decisionId: string,
         requestId: string,
-        manager: EntityManager = this.entityManager,
+        manager?: EntityManager,
     ): Promise<void> {
-        await manager.update(AgentGraphDecisionEntity, { id: decisionId }, { approvalRequestId: requestId })
-    }
-
-    private viewOf(row: AgentGraphDecisionEntity | null): DecisionView | null {
-        const workItemId = row?.workItemId ?? null
-        return row === null || workItemId === null
-            ? null
-            : {
-                  id: row.id,
-                  workspaceId: row.workspaceId,
-                  agentId: row.agentId,
-                  workItemId,
-                  versionId: row.versionId,
-                  action: row.action,
-                  branchKey: row.branchKey,
-                  path: row.path,
-                  amount: amountOf(row.facts),
-                  approvalRequestId: row.approvalRequestId,
-                  closed: row.closedAs !== null,
-              }
+        await this.within(workspaceId, manager, async (tx) => {
+            const decision = await this.records.decision(tx, decisionId)
+            if (decision !== null) await this.records.patchDecision(tx, decision, { approvalRequestId: requestId })
+        })
     }
 
     /** The closed decisions of an agent on a branch, oldest first, as the learning reads them: a stop was the graph's own act, and a path no branch took has no boundary to move. */
-    async closedOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<ClosedDecision>> {
-        const rows = await this.entityManager.find(AgentGraphDecisionEntity, {
-            where: { workspaceId, agentId },
-            order: { createdAt: "DESC" },
-            take: LEARN_WINDOW,
-        })
-        return rows
-            .toReversed()
-            .flatMap((row) =>
+    closedOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<ClosedDecision>> {
+        return this.engine.scoped(workspaceId, async (tx) =>
+            (await this.records.decisionsOf(tx, agentId, LEARN_WINDOW)).toReversed().flatMap((row) =>
                 row.closedAs === null || row.closedAs === "stopped" || row.path[0] === row.branchKey
                     ? []
-                    : [{ id: row.id, branchKey: row.branchKey, closedAs: row.closedAs, amount: amountOf(row.facts) }],
-            )
+                    : [
+                          {
+                              id: row.id,
+                              branchKey: row.branchKey,
+                              closedAs: row.closedAs,
+                              amount: amountOf(row.facts),
+                          },
+                      ],
+            ),
+        )
     }
+
+    private within<T>(workspaceId: string, manager: EntityManager | undefined, work: ScopedWork<T>): Promise<T> {
+        return manager === undefined
+            ? this.engine.scoped(workspaceId, work)
+            : this.engine.within(manager, workspaceId, work)
+    }
+}
+
+const viewOf = (row: GraphDecisionRecord | null): DecisionView | null => {
+    const workItemId = row?.workItemId ?? null
+    return row === null || workItemId === null
+        ? null
+        : {
+              id: row.id,
+              workspaceId: row.workspaceId,
+              agentId: row.agentId,
+              workItemId,
+              versionId: row.versionId,
+              action: row.action,
+              branchKey: row.branchKey,
+              path: row.path,
+              amount: amountOf(row.facts),
+              approvalRequestId: row.approvalRequestId,
+              closed: row.closedAs !== null,
+          }
 }
 
 const amountOf = (facts: Readonly<Record<string, FactValue>>): number | null => {

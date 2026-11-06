@@ -3,6 +3,11 @@ import type { AnyEntityDefinition } from "@nivo-lite/agent-sdk/entity"
 import { adjustmentEntity } from "./accounting/adjustment.entity"
 import { bookEntryEntity } from "./accounting/book-entry.entity"
 import { invoiceEntity } from "./accounting/invoice.entity"
+import { agentGraphDecisionEntity } from "./agent/graph-decision.entity"
+import { agentGraphProposalEntity } from "./agent/graph-proposal.entity"
+import { agentGraphSourceEntity } from "./agent/graph-source.entity"
+import { agentGraphVersionEntity } from "./agent/graph-version.entity"
+import { agentGraphEntity } from "./agent/graph.entity"
 import { agentNodeEffectEntity } from "./agent/node-effect.entity"
 import { agentRunStepEntity } from "./agent/run-step.entity"
 import { agentRunEntity } from "./agent/run.entity"
@@ -29,4 +34,9 @@ export const FLOW_F_ENTITIES: ReadonlyArray<AnyEntityDefinition> = [
     agentRunEntity,
     agentRunStepEntity,
     agentNodeEffectEntity,
+    agentGraphEntity,
+    agentGraphVersionEntity,
+    agentGraphSourceEntity,
+    agentGraphProposalEntity,
+    agentGraphDecisionEntity,
 ]
