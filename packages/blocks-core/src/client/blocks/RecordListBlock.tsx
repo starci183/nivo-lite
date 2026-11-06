@@ -11,19 +11,12 @@ import { SelectableRows } from "../composites/SelectableRows"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
-/** What a selectable list is drawn in: its own rows, or one surface card holding them under its label. */
-const Listed = (props: {
+/** What a selectable list is drawn in: its own rows, or the one surface card that holds them. */
+const Framed = (props: {
     readonly isCard: boolean
     readonly label: string
     readonly children: ReactNode
-}): ReactNode =>
-    props.isCard ? (
-        <Section title={props.label} headingLevel={3}>
-            <SurfaceCard ariaLabel={props.label}>{props.children}</SurfaceCard>
-        </Section>
-    ) : (
-        props.children
-    )
+}): ReactNode => (props.isCard ? <SurfaceCard ariaLabel={props.label}>{props.children}</SurfaceCard> : props.children)
 
 /** Bound records as a card with an action on each row, or as a selectable list that writes the chosen row to a param. */
 export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactNode => {
@@ -55,12 +48,15 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
                       onAction: () => props.params.set(searchParam, null),
                   },
               }
-    return (
+    const isCard = props.props.surface === "card"
+    const label = words(props.props.label)
+    const list = (
         <SlotView
             slot={rows}
             labels={labels}
             placeholder={RECORD_ROWS_PLACEHOLDER}
             onRetry={read.retry}
+            {...(isCard ? { frame: (notice: ReactNode) => <SurfaceCard ariaLabel={label}>{notice}</SurfaceCard> } : {})}
             {...clearSearch}
             render={(items, isLoading) =>
                 selectParam === undefined ? (
@@ -70,11 +66,11 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
                         empty={labels.empty}
                         isLoading={isLoading}
                         hasAvatar={props.props.avatar === true}
-                        isCard={props.props.surface === "card"}
+                        isCard={isCard}
                         action={open.isAllowed ? { label: open.label, press: openRow } : null}
                     />
                 ) : (
-                    <Listed isCard={props.props.surface === "card"} label={words(props.props.label)}>
+                    <Framed isCard={isCard} label={label}>
                         <SelectableRows
                             rows={items}
                             selected={props.params.value(selectParam)}
@@ -89,9 +85,16 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
                                 retry: labels.retry,
                             }}
                         />
-                    </Listed>
+                    </Framed>
                 )
             }
         />
+    )
+    return isCard ? (
+        <Section title={label} headingLevel={3}>
+            {list}
+        </Section>
+    ) : (
+        list
     )
 }

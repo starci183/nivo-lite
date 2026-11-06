@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { SurfaceCard } from "@starci/grammar/common"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { figuresBlock } from "../../blocks/figures.block"
 import { cellContextOf } from "../../rows/cell-format"
@@ -17,12 +18,20 @@ export const FiguresBlock = (props: RenderOf<typeof figuresBlock>): ReactNode =>
     const read = props.slots.data
     const context = cellContextOf(host.locale(), props.props.currency)
     const kind = props.props.kind ?? "tiles"
+    const ribbon = kind === "tiles" && isRibbon(props.props.variant, props.props.items.length)
     return (
         <SlotView
             slot={read.slot}
             labels={labels}
             placeholder={{}}
             onRetry={read.retry}
+            {...(ribbon
+                ? {
+                      frame: (notice: ReactNode) => (
+                          <SurfaceCard ariaLabel={words(props.props.label)}>{notice}</SurfaceCard>
+                      ),
+                  }
+                : {})}
             render={(record, isLoading) => {
                 const label = words(props.props.label)
                 const caption = textOf(valueAt(record, props.props.captionPath))

@@ -100,18 +100,20 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
         props.slots.awaitingReply.retry()
         props.slots.parkedRuns.retry()
     }
+    const count = "items" in display ? display.items.length : null
     return (
-        <SlotView
-            slot={display}
-            labels={labels}
-            placeholder={PLACEHOLDER}
-            onRetry={retry}
-            render={(items, isLoading) => (
-                <Section
-                    title={words(props.props.label)}
-                    headingLevel={3}
-                    {...(isLoading ? {} : { fact: countedWords(word(ATTENTION_COUNT_KEY), items.length) })}
-                >
+        <Section
+            title={words(props.props.label)}
+            headingLevel={3}
+            {...(count === null ? {} : { fact: countedWords(word(ATTENTION_COUNT_KEY), count) })}
+        >
+            <SlotView
+                slot={display}
+                labels={labels}
+                placeholder={PLACEHOLDER}
+                onRetry={retry}
+                frame={(notice) => <SurfaceCard ariaLabel={words(props.props.label)}>{notice}</SurfaceCard>}
+                render={(items, isLoading) => (
                     <SurfaceCard
                         kind="list"
                         ariaLabel={words(props.props.label)}
@@ -119,8 +121,8 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
                         items={items.map(rowOf)}
                         empty={<EmptyNotice message={labels.empty} />}
                     />
-                </Section>
-            )}
-        />
+                )}
+            />
+        </Section>
     )
 }
