@@ -2,7 +2,7 @@ import type { ActionDefinition, ActionResult } from "@nivo-lite/agent-sdk/block"
 import type { PortProvider } from "@nivo-lite/agent-sdk/port"
 import { SALES_SETTINGS_DEFAULTS } from "../../../rules/sales/settings"
 import type { SalesSettings } from "../../../rules/sales/settings"
-import { LEAD_NEW, ORDER_WAITING, sampleState, SAMPLE_NOW } from "../fixtures/sales.data"
+import { LEAD_NEW, ORDER_CONFIRMED, ORDER_WAITING, sampleState, SAMPLE_NOW } from "../fixtures/sales.data"
 import { salesContextOf } from "../fixtures/sales.context"
 import { memoryProvider } from "../memory"
 import type { MemoryState } from "../memory"
@@ -310,11 +310,92 @@ describe("sales.cancel-order", () => {
         expect(statusOf(state, "order-2")).toBe("cancelled")
     })
 
-    it("refuses an order that is no draft and one that does not exist", async () => {
+    it("cancels a confirmed order nobody paid or invoiced, and withdraws the claims still open on it", async () => {
         const state = sampleState([])
-        expect(await run(cancelOrderAction, { id: "order-3" }, state)).toMatchObject({
+        const claim = (id: string, orderId: string, status: string): (typeof state.claims)[number] => ({
+            id,
+            orderId,
+            status,
+            version: "1",
+            createdAt: SAMPLE_NOW,
+            updatedAt: SAMPLE_NOW,
+        })
+        state.claims.push(
+            claim("c-open", "order-3", "open"),
+            claim("c-esc", "order-3", "escalated"),
+            claim("c-settled", "order-3", "settled"),
+            claim("c-other", "order-4", "open"),
+        )
+        expect(await run(cancelOrderAction, { id: "order-3" }, state)).toEqual({ ok: true })
+        expect(statusOf(state, "order-3")).toBe("cancelled")
+        expect(state.claims.map((c) => [c.id, c.status])).toEqual([
+            ["c-open", "withdrawn"],
+            ["c-esc", "withdrawn"],
+            ["c-settled", "settled"],
+            ["c-other", "open"],
+        ])
+    })
+
+    it("answers a claim that changed under it as a conflict", async () => {
+        const state = sampleState([])
+        state.claims.push({
+            id: "c-open",
+            orderId: "order-3",
+            status: "open",
+            version: "1",
+            createdAt: SAMPLE_NOW,
+            updatedAt: SAMPLE_NOW,
+        })
+        expect(
+            await execute(
+                cancelOrderAction,
+                failingUpdate(state, "engine.entity.payment.claim", "stale"),
+                { id: "order-3" },
+                STAFF,
+            ),
+        ).toMatchObject({ reason: "conflict" })
+    })
+
+    it("refuses a confirmed order that has a payment allocated or an invoice issued, and leaves it confirmed", async () => {
+        const link = {
+            id: "l-1",
+            orderId: "order-3",
+            status: "x",
+            version: "1",
+            createdAt: SAMPLE_NOW,
+            updatedAt: SAMPLE_NOW,
+        }
+        const paid = sampleState([])
+        paid.transactions.push(link)
+        expect(await run(cancelOrderAction, { id: "order-3" }, paid)).toMatchObject({
+            message: { key: "refusal_order_has_payment" },
+        })
+        const invoiced = sampleState([])
+        invoiced.invoices.push(link)
+        expect(await run(cancelOrderAction, { id: "order-3" }, invoiced)).toMatchObject({
+            message: { key: "refusal_order_has_invoice" },
+        })
+        expect(statusOf(paid, "order-3")).toBe("confirmed")
+        expect(statusOf(invoiced, "order-3")).toBe("confirmed")
+    })
+
+    it("refuses a paid order and a cancelled one", async () => {
+        const state = sampleState([])
+        expect(await run(cancelOrderAction, { id: "order-4" }, state)).toMatchObject({
+            message: { key: "refusal_order_paid" },
+        })
+        expect(await run(cancelOrderAction, { id: "order-5" }, state)).toMatchObject({
             message: { key: "refusal_order_not_cancellable" },
         })
+        const invoiced = sampleState([])
+        invoiced.orders.splice(2, 1, { ...ORDER_CONFIRMED, status: "invoiced" })
+        expect(await run(cancelOrderAction, { id: "order-3" }, invoiced)).toMatchObject({
+            message: { key: "refusal_order_invoiced" },
+        })
+    })
+
+    it("refuses an order that does not exist", async () => {
+        const state = sampleState([])
         expect(await run(cancelOrderAction, { id: "order-404" }, state)).toMatchObject({
             message: { key: "refusal_missing" },
         })

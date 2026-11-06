@@ -29,9 +29,19 @@ import { textOf, valueAt } from "../../slots/paths"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
+/** Whether a command is offered: always when the spec names no flag, otherwise only while the record's flag at that path is true. */
+const isOfferedBy = (record: unknown, path: string | undefined): boolean =>
+    path === undefined || valueAt(record, path) === true
+
+/** Whether any command is both offered by the record and allowed to the member. */
+const hasOfferedAction = (slots: DetailCommandsProps["slots"], showPrimary: boolean, showSecondary: boolean): boolean =>
+    (showPrimary && slots.primary.isAllowed) || (showSecondary && slots.secondary.isAllowed)
+
 /** What the command of a record is given: the action, its look, whether it waits for a record, and what runs it. */
 interface RowActionProps {
     readonly action: ActionHandle
+    /** Whether the record says this command may be offered now. */
+    readonly isOffered: boolean
     readonly intent: "commit" | "alternative"
     readonly isDisabled: boolean
     readonly onRun: () => void
@@ -39,7 +49,7 @@ interface RowActionProps {
 
 /** The one command of a record that a slot offers: a button that runs the action on the record's id. */
 const RowAction = (props: RowActionProps): ReactNode =>
-    props.action.isAllowed ? (
+    props.isOffered && props.action.isAllowed ? (
         <Button
             intent={props.intent}
             isPending={props.action.isRunning}
@@ -81,6 +91,10 @@ const DetailHead = (props: DetailHeadProps): ReactNode => (
 /** The command props of a record: its id, its two actions and what runs them. */
 interface DetailCommandsProps {
     readonly id: string
+    /** Whether the record says the primary command may be offered now. */
+    readonly showPrimary: boolean
+    /** Whether the record says the secondary command may be offered now. */
+    readonly showSecondary: boolean
     readonly slots: RenderOf<typeof detailBlock>["slots"]
     readonly onRun: (action: ActionHandle, id: string) => void
 }
@@ -90,12 +104,14 @@ const DetailCommands = (props: DetailCommandsProps): ReactNode => (
     <Cluster gap="inline" justify="start">
         <RowAction
             action={props.slots.primary}
+            isOffered={props.showPrimary}
             intent="commit"
             isDisabled={props.id === ""}
             onRun={() => props.onRun(props.slots.primary, props.id)}
         />
         <RowAction
             action={props.slots.secondary}
+            isOffered={props.showSecondary}
             intent="alternative"
             isDisabled={props.id === ""}
             onRun={() => props.onRun(props.slots.secondary, props.id)}
@@ -197,8 +213,18 @@ const DetailBody = (props: DetailBodyProps): ReactNode => {
     const { block, words, record, isLoading } = props
     const spec = block.props
     const id = recordIdOf(record, spec.idPath ?? "id")
-    const hasActions = block.slots.primary.isAllowed || block.slots.secondary.isAllowed
-    const commands = <DetailCommands id={id} slots={block.slots} onRun={props.onRun} />
+    const showPrimary = isOfferedBy(record, spec.primaryWhen)
+    const showSecondary = isOfferedBy(record, spec.secondaryWhen)
+    const hasActions = hasOfferedAction(block.slots, showPrimary, showSecondary)
+    const commands = (
+        <DetailCommands
+            id={id}
+            showPrimary={showPrimary}
+            showSecondary={showSecondary}
+            slots={block.slots}
+            onRun={props.onRun}
+        />
+    )
     const isPinned = spec.pinsPrimary === true && !isLoading && hasActions
     const closeParam = spec.closeParam
     const body = (

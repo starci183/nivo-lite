@@ -3,6 +3,9 @@ import { entityPort } from "@nivo-lite/agent-sdk/entity/port"
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import { definePort } from "@nivo-lite/agent-sdk/port"
 import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
+import { invoiceEntity } from "../../entities/accounting/invoice.entity"
+import { claimEntity } from "../../entities/payment/claim.entity"
+import { transactionEntity } from "../../entities/payment/transaction.entity"
 import { leadEntity } from "../../entities/sales/lead.entity"
 import { orderEntity } from "../../entities/sales/order.entity"
 import { salesSettingsEntity } from "../../entities/sales/settings.entity"
@@ -22,6 +25,15 @@ export const salesOrders: PortDefinition<EntityApi> = entityPort(orderEntity)
 
 /** The port of the rules the workspace chose for its sales (`sales.settings`, one record). */
 export const salesSettings: PortDefinition<EntityApi> = entityPort(salesSettingsEntity)
+
+/** The port of the payments (`payment.transaction`), counted to see whether money is allocated to an order. */
+export const salesTransactions: PortDefinition<EntityApi> = entityPort(transactionEntity)
+
+/** The port of the invoices (`accounting.invoice`), counted to see whether one was issued for an order. */
+export const salesInvoices: PortDefinition<EntityApi> = entityPort(invoiceEntity)
+
+/** The port of the customers' payment claims (`payment.claim`), withdrawn when their order is cancelled. */
+export const salesClaims: PortDefinition<EntityApi> = entityPort(claimEntity)
 
 /** The port the leads list runs on. */
 export const salesLeadsList: PortDefinition<ListSource<LeadRow>> = definePort<ListSource<LeadRow>>("sales.leads-list")

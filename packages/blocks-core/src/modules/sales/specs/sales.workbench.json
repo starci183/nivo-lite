@@ -573,6 +573,8 @@
                       },
                       "idPath": "id",
                       "titlePath": "orderNo",
+                      "primaryWhen": "canConfirm",
+                      "secondaryWhen": "canCancel",
                       "descriptionPath": "itemsText",
                       "badgePath": "status",
                       "selectParam": "order",

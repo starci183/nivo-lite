@@ -65,6 +65,8 @@ describe("detailFixtures", () => {
         const timeline = { title: { key: "word" }, listPath: "origin", textPath: "text", notePath: "by", atPath: "at" }
         expect(accepts({ ...base, titlePath: "title", kind: { key: "word" }, closeParam: "entry" })).toBe(true)
         expect(accepts({ ...base, timeline, pinsPrimary: true })).toBe(true)
+        expect(accepts({ ...base, primaryWhen: "canConfirm", secondaryWhen: "canCancel" })).toBe(true)
+        expect(accepts({ ...base, primaryWhen: 3 })).toBe(false)
         expect(accepts({ ...base, closeParam: "not a name" })).toBe(false)
         expect(accepts({ ...base, timeline: { ...timeline, textPath: undefined } })).toBe(false)
         expect(detailBlock.params).toEqual(["closeParam"])

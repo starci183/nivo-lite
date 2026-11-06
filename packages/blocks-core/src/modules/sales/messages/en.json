@@ -94,7 +94,7 @@
   "refusal_conflict": "Someone else just changed this record; reload and try again",
   "refusal_missing": "This record was not found",
   "refusal_not_awaiting": "This customer no longer waits for a reply",
-  "refusal_order_not_cancellable": "Only a draft order can be cancelled",
+  "refusal_order_not_cancellable": "This order cannot be cancelled",
   "refusal_order_not_confirmable": "This order cannot be confirmed",
   "refusal_order_waits_owner": "This order waits for the owner",
   "refusal_phone_required": "A phone number is needed",
@@ -151,5 +151,9 @@
   "failed_reason_delivery": "The message could not be sent",
   "failed_reason_invoice": "The invoice service could not be reached",
   "failed_reason_timeout": "The channel did not answer",
-  "action_resume_run": "Run again"
+  "action_resume_run": "Run again",
+  "refusal_order_paid": "The order is paid, so it cannot be cancelled",
+  "refusal_order_invoiced": "An invoice was issued for the order, so it cannot be cancelled",
+  "refusal_order_has_payment": "A payment is allocated to the order, so it cannot be cancelled",
+  "refusal_order_has_invoice": "The order has an invoice, so it cannot be cancelled"
 }

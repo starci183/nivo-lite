@@ -59,6 +59,8 @@ const props: z.ZodObject<{
     closeParam: z.ZodOptional<ParamNameSchema>
     timeline: z.ZodOptional<TimelineSchema>
     pinsPrimary: z.ZodOptional<z.ZodBoolean>
+    primaryWhen: z.ZodOptional<z.ZodString>
+    secondaryWhen: z.ZodOptional<z.ZodString>
 }> = z.object({
     label: specText,
     idle: specText.optional(),
@@ -72,6 +74,8 @@ const props: z.ZodObject<{
     closeParam: paramName.optional(),
     timeline: timeline.optional(),
     pinsPrimary: z.boolean().optional(),
+    primaryWhen: z.string().max(PATH_MAX).optional(),
+    secondaryWhen: z.string().max(PATH_MAX).optional(),
 })
 /** The slots of the detail block: the record it shows, and the two actions it may offer on that record. */
 type Slots = {
@@ -88,7 +92,8 @@ const slots: Slots = {
 /**
  * The facts of one bound record, in titled groups, with up to two actions on it. With `titlePath` the head names the record (its
  * title, its `kind`, and a close control that clears `closeParam`); with `timeline` a list of the record's steps is drawn as a
- * timeline; with `pinsPrimary` the primary action stands pinned at the bottom of the pane.
+ * timeline; with `pinsPrimary` the primary action stands pinned at the bottom of the pane. `primaryWhen` and `secondaryWhen` name a boolean
+ * field of the record: the action is offered only while the read says it is (the block holds no rule of its own).
  * With no record chosen it says so instead of failing.
  */
 export const detailBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
