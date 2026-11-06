@@ -12,10 +12,6 @@ export const GOOGLE_CONNECTIONS_MESSAGES: MessageBundle = {
         "errors.GOOGLE_CONNECTIONS_SHEETS_SCOPE_MISSING":
             "Bạn chưa tick quyền ghi Google Sheets trên màn hình đồng ý của Google.",
         "errors.GOOGLE_CONNECTIONS_SHEET_INVALID": "Đường dẫn hoặc mã Google Sheet không hợp lệ.",
-        "googleConnections.sheetTitle": "NIVO · Đơn hàng · {{name}}",
-        "googleConnections.sheetOrders.written": "Đã ghi vào Google Sheet",
-        "googleConnections.sheetOrders.skipped": "Bỏ qua",
-        "googleConnections.sheetOrders.skippedDetail": "Bạn đã tắt ghi loại sự kiện này.",
     },
     en: {
         "errors.GOOGLE_CONNECTIONS_NOT_CONFIGURED": "Google is not set up on this NIVO yet. Please try again later.",
@@ -27,9 +23,5 @@ export const GOOGLE_CONNECTIONS_MESSAGES: MessageBundle = {
         "errors.GOOGLE_CONNECTIONS_SHEETS_SCOPE_MISSING":
             "The Google Sheets write access was not ticked on the Google consent screen.",
         "errors.GOOGLE_CONNECTIONS_SHEET_INVALID": "That is not a Google Sheets link or spreadsheet id.",
-        "googleConnections.sheetTitle": "NIVO · Orders · {{name}}",
-        "googleConnections.sheetOrders.written": "Written to Google Sheets",
-        "googleConnections.sheetOrders.skipped": "Skipped",
-        "googleConnections.sheetOrders.skippedDetail": "You switched off recording this kind of event.",
     },
 }
