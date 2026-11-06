@@ -14,8 +14,8 @@ import type { MemoryWorld } from "../fixtures/accounting.memory"
 import { resolveUnmatchedPaymentAction } from "./resolve-unmatched-payment.action"
 
 const COMMAND = "accounting.resolve-unmatched-payment"
-const OTHER = { id: TRANSACTION.id, command: COMMAND, values: { kind: "other-income" } }
-const ASSIGN = { id: TRANSACTION.id, command: COMMAND, values: { order: ORDER.id } }
+const OTHER = { id: TRANSACTION.id, command: COMMAND, kind: "other-income" }
+const ASSIGN = { id: TRANSACTION.id, command: COMMAND, order: ORDER.id }
 
 const worldOf = (transaction: TransactionRecord | null = TRANSACTION): MemoryWorld => {
     const world = memoryWorld()
@@ -104,7 +104,14 @@ describe("accounting.resolve-unmatched-payment", () => {
 
     it("refuses an input that names neither an order nor other income, or both", async () => {
         const world = worldOf()
-        for (const values of [{}, { kind: "gift" }, { order: "x" }, { order: ORDER.id, kind: "other-income" }])
-            await expect(run(world, { ...OTHER, values })).resolves.toMatchObject({ ok: false, reason: "invalid" })
+        const base = { id: TRANSACTION.id, command: COMMAND }
+        for (const chosen of [{}, { kind: "gift" }, { order: "x" }, { order: ORDER.id, kind: "other-income" }])
+            await expect(run(world, { ...base, ...chosen })).resolves.toMatchObject({ ok: false, reason: "invalid" })
+    })
+
+    it("refuses the choice nested under `values`: the door receives the choice flat, beside the id", async () => {
+        await expect(
+            run(worldOf(), { id: TRANSACTION.id, command: COMMAND, values: { order: ORDER.id } }),
+        ).resolves.toMatchObject({ ok: false, reason: "invalid" })
     })
 })

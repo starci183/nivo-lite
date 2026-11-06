@@ -17,11 +17,11 @@ const SYSTEM = "system"
 const input: z.ZodObject<{
     id: z.ZodString
     command: z.ZodLiteral<typeof ANSWER_COMMAND>
-    values: z.ZodObject<{ answer: z.ZodString }>
+    answer: z.ZodString
 }> = z.object({
     id: z.string().min(1).max(MAX_ID),
     command: z.literal(ANSWER_COMMAND),
-    values: z.object({ answer: z.string().max(ANSWER_MAX) }),
+    answer: z.string().max(ANSWER_MAX),
 })
 
 /**
@@ -36,8 +36,8 @@ export const answerQuestionAction: ActionDefinition = defineAction({
     ports: { questions: QUESTIONS, members: membersPort },
     transactional: true,
     refreshes: ["accounting.questions", "accounting.question-count"],
-    run: async ({ questions, members }, { id, values }, context): Promise<ActionResult> => {
-        const answer = values.answer.trim()
+    run: async ({ questions, members }, { id, answer: given }, context): Promise<ActionResult> => {
+        const answer = given.trim()
         if (answer === "") {
             const message = textOf("answer_empty")
             return { ok: false, reason: "invalid", message, fields: { answer: message } }

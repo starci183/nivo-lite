@@ -119,13 +119,26 @@ export class WorkbenchDoorService {
         if (!(await this.holds(call, caller, action.permission)))
             return this.failure("forbidden", WorkbenchDoorErrorCode.PermissionDenied)
         const parsed = parsePayload(call.payload)
-        if (!parsed.ok) return this.failure("invalid", WorkbenchDoorErrorCode.PayloadInvalid)
+        if (!parsed.ok) {
+            this.logger.warn(WorkbenchDoorLogEvent.InputInvalid, { action: action.id, fields: [] })
+            return this.failure("invalid", WorkbenchDoorErrorCode.PayloadInvalid)
+        }
         const rule = await this.rules.ownerRuleFor({ workspaceId: call.workspaceId }, action.id)
         const decision = authorityDecisionOf(rule, action.id, parsed.value)
         if (decision === "deny") return this.failure("forbidden", WorkbenchDoorErrorCode.PermissionDenied)
         if (decision === "ask")
             return this.failure("refused", WorkbenchDoorErrorCode.ActionRefused, { approvalRequired: true })
-        return await this.run(call, caller, action, parsed.value)
+        return this.logged(action, await this.run(call, caller, action, parsed.value))
+    }
+
+    /** Logs the action and the field keys (never the values) of an input the action refused as invalid; answers the result as it is. */
+    private logged(action: DoorAction, result: ActionResult): ActionResult {
+        if (!result.ok && result.reason === "invalid")
+            this.logger.warn(WorkbenchDoorLogEvent.InputInvalid, {
+                action: action.id,
+                fields: Object.keys(result.fields ?? {}),
+            })
+        return result
     }
 
     /**

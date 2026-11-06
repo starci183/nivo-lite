@@ -1,5 +1,7 @@
+import type { ActionInput } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ENTRIES, MAX_ID, MAX_LINE } from "../../bounds"
+import { ANSWER_COMMAND } from "./questions"
 import { SHOP_OFFSET_MS } from "./shop-time"
 
 /** The questions queue as the questions read answers it: how many wait and the rows to answer. */
@@ -73,3 +75,10 @@ export const answerOf = (draft: string): string | null => {
     const trimmed = draft.trim()
     return trimmed === "" ? null : trimmed
 }
+
+/** What the answer form of a question runs the answer action with: the question, the answer command and the answer under `values`. */
+export const answerInputOf = (questionId: string, answer: string): ActionInput => ({
+    id: questionId,
+    command: ANSWER_COMMAND,
+    values: { answer },
+})
