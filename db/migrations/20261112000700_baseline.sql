@@ -29659,6 +29659,10 @@ REVOKE EXECUTE ON FUNCTION public.engine_workspace() FROM PUBLIC, anon, authenti
 GRANT EXECUTE ON FUNCTION public.engine_workspace() TO app_engine;
 REVOKE EXECUTE ON FUNCTION public.engine_scope_enter(uuid) FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.engine_scope_enter(uuid) TO app_be;
+-- A declared job is enqueued in the transaction of the write that asks for it, so the engine role (the transaction's role after the scope is entered)
+-- calls the outbox function; it is SECURITY DEFINER and writes the outbox and the queue as its owner.
+GRANT EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text) TO app_engine;
+GRANT EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text, integer) TO app_engine;
 
 -- The search predicate of the engine (knowledge_fold(expr) LIKE knowledge_fold(:q)) runs as app_engine.
 GRANT EXECUTE ON FUNCTION public.knowledge_fold(text) TO app_engine;
