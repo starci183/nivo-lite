@@ -7,5 +7,5 @@ import { coreBlocks as part0Blocks, coreNodes as part0Nodes } from "@nivo-lite/b
 /** Everything installed: the lists of the core package and of every plugin package, joined and checked once at load. */
 export const installed: Installation = defineInstallation(
     [{ modules: part0Modules, blocks: part0Blocks, nodes: part0Nodes }],
-    "bbb99b1efcfb8d955e656a4688e39538b19c9fe6e3ffc389fc9885dddc631b65",
+    "2846b49df4d67f3c1c4c8b765ccba3f4351ac9d57c0e8a5504d6795c87ef05d9",
 )

@@ -93,6 +93,7 @@
   "formTooBig": "This number is too large",
   "formDateInvalid": "Write a real day as year-month-day",
   "formChoiceInvalid": "Choose one of the options",
+  "blockListCard": "List card",
   "blockListPane": "List pane",
   "blockFilterTabs": "Filter tabs",
   "searchLabel": "Search",
