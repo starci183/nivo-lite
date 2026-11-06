@@ -1,4 +1,3 @@
-import { leadHref, workspaceHref } from "@/modules/routes"
 import type {
     OfficeConversationRowView,
     OfficeConversationState,
@@ -7,7 +6,6 @@ import type {
     OfficeRoomRowView,
     OfficeTaskView,
 } from "@/modules/types"
-import { RECENT_CUSTOMERS } from "./office.consts"
 import { NO_CONVERSATION_STATE, unreadBadgeOf } from "./office.conversation-state"
 import { zaloTimeOf } from "./office.list-time"
 import { officePreviewOf, previewKindOf } from "./office.preview"
@@ -101,7 +99,7 @@ export interface OfficeRoomListInput {
     readonly unread: OfficeConversationUnread
 }
 
-/** The left column: one conversation list — the rooms, the agents and the recent customers, newest first. */
+/** The left column: one conversation list — the rooms and the agents, newest first. */
 export const officeListViewOf = (
     messages: ReadonlyArray<OfficeMessage>,
     pendingCount: number,
@@ -141,18 +139,6 @@ export const officeListViewOf = (
             },
         })),
         ...context.agents.map((agent) => agentRowOf(agent, rooms.unread.agents.get(agent.id), words, context)),
-        ...context.leads.slice(0, RECENT_CUSTOMERS).map((lead) => ({
-            sortAt: lead.createdAt,
-            row: {
-                id: lead.id,
-                kind: "customer" as const,
-                label: lead.name,
-                description: lead.preview ?? words.t("customerPreviewNone"),
-                time: officeListTimeOf(lead.createdAt, words, context),
-                ...rowStateOf(rooms.unread.leads.get(lead.id) ?? 0, NO_CONVERSATION_STATE),
-                avatar: { kind: "person" as const, name: lead.name },
-            },
-        })),
     ]
     return {
         conversations: sortable
@@ -177,7 +163,6 @@ export const taskViewsOf = (tasks: ReadonlyArray<OfficeTask>, words: OfficeWords
             owner: task.ownerName,
             due: task.dueAt === null ? words.t("noDue") : words.t("due", { date: words.day(task.dueAt) }),
         }),
-        leadHref: workspaceHref(words.workspaceId, leadHref(task.leadId)),
     }))
 
 /** The @mention list of the composer: NIVO, the active agents and the staff. */

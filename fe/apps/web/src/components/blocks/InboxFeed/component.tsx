@@ -7,7 +7,6 @@ import {
     Page,
     Pane,
     PaneGrid,
-    Link,
     Quote,
     SurfaceCard,
 } from "@starci/grammar/common"
@@ -48,7 +47,6 @@ export interface InboxFeedBaseProps {
                 readonly channel: string
                 readonly kind: string
                 readonly received: string
-                readonly lead: string
                 readonly duplicates: string
             }
         }
@@ -88,7 +86,6 @@ const PLACEHOLDER: ReadonlyArray<InboxRowView> = ["a", "b", "c", "d", "e"].map((
     line: "",
     details: [],
     duplicates: 0,
-    lead: null,
     office: null,
 }))
 
@@ -110,16 +107,13 @@ const itemsOf = (rows: ReadonlyArray<InboxRowView>): ReadonlyArray<ListBoxItem> 
         trailing: <RowTrailing meta={row.agoShort} badge={row.status} />,
     }))
 
-/** The command the state of the input asks for: decide it in the Office, else open the customer. */
-const commandsOf = (row: InboxRowView): { primary: InboxRowView["office"]; more: ReadonlyArray<DropdownMenuEntry> } => {
-    if (row.office !== null) {
-        return {
-            primary: row.office,
-            more: row.lead === null ? [] : [{ id: "lead", label: row.lead.label, href: row.lead.href }],
-        }
-    }
-    return { primary: row.lead, more: [] }
-}
+/** The command the state of the input asks for: decide it in the Office. */
+const commandsOf = (
+    row: InboxRowView,
+): { primary: InboxRowView["office"]; more: ReadonlyArray<DropdownMenuEntry> } => ({
+    primary: row.office,
+    more: [],
+})
 
 /** What the opened input draws below its head: the words, then the facts about it. */
 interface InboxDetailProps {
@@ -143,15 +137,6 @@ const InboxDetail = (props: InboxDetailProps) => {
         ...(row.duplicates > 0
             ? [{ id: "duplicates", term: copy.terms.duplicates, description: String(row.duplicates) }]
             : []),
-        ...(row.lead === null
-            ? []
-            : [
-                  {
-                      id: "lead",
-                      term: copy.terms.lead,
-                      description: <Link href={row.lead.href}>{row.lead.label}</Link>,
-                  },
-              ]),
     ]
     return (
         <>

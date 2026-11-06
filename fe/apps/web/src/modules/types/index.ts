@@ -37,13 +37,7 @@ export type { ConnectionRefusalView, ConnectionNotice, ConnectionTilesView, Conn
 export type { ConnectorCategory, ConnectorGlyph, ConnectorStatus, FirstEvent, FirstEventState } from "./connections"
 export type { WebhookTestVerdict, MetaCheckSummary, SepayKeys, LibraryCard, LibraryCategory } from "./connections"
 export type { InboxRowView } from "./inbox"
-export type {
-    OverviewPaneCopy,
-    OverviewPaneReady,
-    PaneGridLayout,
-    WorkbenchAsideActions,
-    WorkbenchAsideView,
-} from "./panes"
+export type { PaneGridLayout, WorkbenchAsideActions, WorkbenchAsideView } from "./panes"
 export type {
     ConnectionAgentRow,
     ConnectionFilterChoice,
@@ -84,21 +78,8 @@ export type { AdjustInput, AdjustItem, CountInput, StockTakeItem } from "./inven
 export type { DraftLowItem, DraftPoInput, NewPoInput, ImportItem, StarterItem } from "./inventory-commands"
 export type { ItemInput, SavedItem, ReceiveInput, ReceiveItem, RecipeInput } from "./inventory-commands"
 export type { SendItem, TransferInput, SupplierInput } from "./inventory-commands"
-export type { DecisionKind, DecisionOutcome } from "./decisions"
 
-export type {
-    LeadGenComment,
-    LeadGenHandoff,
-    LeadGenLead,
-    LeadGenMetrics,
-    LeadGenSource,
-    LeadGenWorkbenchData,
-    LeadOrigin,
-    LeadPlatform,
-    LeadScore,
-    LeadSourceKind,
-} from "./leadgen"
-export type { FlowRuleMode, FlowWorkStatus, ReasonCode } from "./flow"
+export type { FlowRuleMode } from "./flow"
 export type {
     BrainEvidence,
     BrainExtraction,
@@ -287,7 +268,6 @@ export type { BrainChipView, BrainFilterView, BrainHeadView, FactDetailView, Fac
 export type { FactHistoryView, FactsView, LessonActionView, LessonDetailView, LessonDrawerView } from "./brain-lists"
 export type { LessonEntryView, LessonsView } from "./brain-lists"
 
-export type { LeadGenWorkbenchDataView, LeadGenWorkbenchActions } from "./leadgen-workbench"
 export type { BookingDetailFact, BookingDeskData, BookingDeskActions } from "./booking-workbench"
 export type { BookingServicesData, BookingServicesActions } from "./booking-workbench"
 export type { BookingResourcesData, BookingResourcesActions } from "./booking-workbench"
@@ -320,7 +300,6 @@ export type { ShiftsPersonalViews, ShiftsPersonalActions } from "./shifts-workbe
 export type { ShiftsWorkbenchData, ShiftsWorkbenchOn } from "./shifts-workbench"
 
 export { INVENTORY_TABS } from "./inventory-workbench"
-export { LEADGEN_TABS } from "./leadgen-workbench"
 export { BOOKING_TABS } from "./booking-workbench"
 export type { ContentViews, ContentActions, ContentAssembly } from "./content-model-views"
 export { CONTENT_TABS } from "./content-model-workbench"

@@ -6,7 +6,6 @@ import { ShiftsWorkbenchPage as WorkbenchShifts } from "@/features/pages/ShiftsW
 import { AgentWorkbenchPage } from "@/features/pages/AgentWorkbenchPage"
 import type { WorkbenchComponent } from "@/features/pages/AgentWorkbenchPage"
 import { ContentWorkbenchPage as WorkbenchContent } from "@/features/pages/ContentWorkbenchPage"
-import { LeadGenWorkbenchPage as WorkbenchLeadGen } from "@/features/pages/LeadGenWorkbenchPage"
 import { VideoWorkbenchPage as WorkbenchVideo } from "@/features/pages/VideoWorkbenchPage"
 
 /** The document title of the workbench tab. */
@@ -29,7 +28,6 @@ const WORKBENCHES: Readonly<Record<string, WorkbenchComponent>> = {
     video: WorkbenchVideo,
     hiring: WorkbenchHiring,
     shifts: WorkbenchShifts,
-    lead_gen: WorkbenchLeadGen,
 }
 
 const first = (value: string | string[] | undefined): string | null =>

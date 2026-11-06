@@ -1,9 +1,8 @@
 export { noData } from "./workspaceread.shared"
 
-export type { StatusPollOptions } from "./workspaceread.shared"
 export { answeredData, readError } from "./workspaceread.shared"
 
-export { argumentKey, workspaceArgumentKey, terminalJobOptions, terminalStatusOptions } from "./workspaceread.shared"
+export { argumentKey, workspaceArgumentKey, terminalJobOptions } from "./workspaceread.shared"
 
 export type { WorkspaceReadKey } from "./workspaceread.shared"
 

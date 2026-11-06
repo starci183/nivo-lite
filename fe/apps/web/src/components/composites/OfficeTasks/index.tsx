@@ -32,12 +32,7 @@ export const OfficeTasks = (props: OfficeTasksProps) => {
             }
             empty={
                 !props.props.hasTasks ? (
-                    <EmptyNotice
-                        message={copy.noTasks}
-                        description={copy.noTasksHint}
-                        actionLabel={copy.openLeads}
-                        onAction={props.on.openLeads}
-                    />
+                    <EmptyNotice message={copy.noTasks} description={copy.noTasksHint} />
                 ) : (
                     <EmptyNotice
                         message={copy.noTasksMatch}
@@ -53,7 +48,6 @@ export const OfficeTasks = (props: OfficeTasksProps) => {
                 description: task.nextAction,
                 leading: { icon: nivoIconSource("review", "leading") },
                 badges: [{ label: task.statusLabel, tone: STATUS_TONES[task.status], isDot: true }],
-                action: { label: copy.openArrow, href: task.leadHref },
                 detail: (
                     <Text size="sm" tone="muted">
                         {task.meta}

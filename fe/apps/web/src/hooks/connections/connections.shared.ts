@@ -40,7 +40,7 @@ export const attentionConnections = (items: ReadonlyArray<Connection>): Readonly
 
 /** The console destinations the Connections page links to. */
 export const CONNECTION_ROUTES = {
-    dashboard: "/dashboard",
+    workspaceHome: "/agents",
     chat: "/chat",
     connections: "/connections",
 } as const

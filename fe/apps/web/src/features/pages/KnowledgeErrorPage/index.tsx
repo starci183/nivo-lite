@@ -20,7 +20,11 @@ export const KnowledgeErrorPage = (props: KnowledgeErrorPageProps) => {
         <KnowledgeErrorPageBase
             props={{
                 crumbs: [
-                    { id: "home", label: t("crumbHome"), href: workspaceHref(workspaceId, CONSOLE_ROUTES.dashboard) },
+                    {
+                        id: "home",
+                        label: t("crumbHome"),
+                        href: workspaceHref(workspaceId, CONSOLE_ROUTES.workspaceHome),
+                    },
                     { id: "brain", label: t("crumbBrain"), href: workspaceHref(workspaceId, KNOWLEDGE_ROUTES.brain) },
                     isDeeper
                         ? { id: "docs", label: t("title"), href: workspaceHref(workspaceId, KNOWLEDGE_ROUTES.library) }

@@ -8,7 +8,7 @@ import type {
     useOfficeWords,
 } from "@/hooks/office"
 import type { navigation } from "@/modules/i18n"
-import { agentChatHref, leadHref, workspaceHref } from "@/modules/routes"
+import { agentChatHref, workspaceHref } from "@/modules/routes"
 import type { OfficeListView, DataSlot, OfficeText, OfficeThreadProps } from "@/modules/types"
 import {
     BASIS_MIN_CHARS,
@@ -122,9 +122,9 @@ export const officeMessengerCommands = (
                 basis: null,
             })
     },
-    openDirect: (kind: "agent" | "lead", id: string): void => {
-        void office.markConversationRead(kind, id)
-        router.push(workspaceHref(workspaceId, kind === "agent" ? agentChatHref(id) : leadHref(id)))
+    openDirect: (id: string): void => {
+        void office.markConversationRead("agent", id)
+        router.push(workspaceHref(workspaceId, agentChatHref(id)))
     },
 })
 

@@ -16,7 +16,6 @@ import {
 } from "@/hooks/officeMessenger"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { OfficeMessengerBase } from "./component"
 import type { OfficeMessengerBaseProps, OfficeMessengerComposer } from "./component"
 import { useWorkspaceId } from "@/hooks/workspaces"
@@ -140,8 +139,7 @@ const messengerActions = (context: MessengerActionsContext): OfficeMessengerBase
         infoOpenChange: frame.setInfoOpen,
         showChat: frame.showChat,
         openGroup: roomOpener(setRoom, frame),
-        openAgent: (id) => openDirect("agent", id),
-        openCustomer: (id) => openDirect("lead", id),
+        openAgent: (id) => openDirect(id),
         conversationQuery: conversationView.query,
         conversationFilter: conversationView.filter,
         formatMembersOverflow: (n) => text("membersOverflow", { n }),
@@ -151,7 +149,6 @@ const messengerActions = (context: MessengerActionsContext): OfficeMessengerBase
         mention: onMention,
         openTasks: frame.showTasks,
         closeInfo: () => frame.setInfoOpen(false),
-        openLeads: () => router.push(workspaceHref(workspaceId, CONSOLE_ROUTES.leads)),
         taskOwner: taskView.onOwner,
         taskStatus: taskView.onStatus,
         clearTasks: taskView.clear,

@@ -4,7 +4,6 @@ export type {
     AdminWorkspaceQuery,
     AdminWorkspacesQuery,
     LoadOpenApiConnectionQuery,
-    LeadGenWorkbenchQuery,
     LeadBoardQuery,
     DossierFindingsQuery,
     GoogleConnectionStateQuery,
@@ -91,7 +90,6 @@ export type {
     CreditQuotaStatusType,
     CreditTopupLotType,
     CreditUsageSummaryType,
-    DashboardType,
     DocumentPassageType,
     KnowledgeSourceTextType,
     KnowledgeSourceType,
@@ -155,7 +153,7 @@ export type { ApplyContentCadencePresetsMutation } from "./graphql/__generated__
 export type { ApplyContentPillarPresetsMutation, ApplyInventoryStarterMutation } from "./graphql/__generated__/graphql"
 export type { ApplySetupMutation, ApplyShiftsImportMutation } from "./graphql/__generated__/graphql"
 export type { ApplyToHiringJobMutation, ApproveDossierRemedyDraftMutation } from "./graphql/__generated__/graphql"
-export type { ApproveLeadGenCommentMutation, ApproveMcpConnectorMutation } from "./graphql/__generated__/graphql"
+export type { ApproveMcpConnectorMutation } from "./graphql/__generated__/graphql"
 export type { ApprovePublicDocumentMutation, ApproveVideoProjectMutation } from "./graphql/__generated__/graphql"
 export type { ApproverDirectoryQuery, ArchivePublicDocumentMutation } from "./graphql/__generated__/graphql"
 export type { ArchiveVideoProjectMutation, AskGuideMutation, AskKnowledgeQuery } from "./graphql/__generated__/graphql"
@@ -194,7 +192,7 @@ export type { CreateVideoMediaUploadMutation, CreateVideoProjectMutation } from 
 export type { CreateWorkspaceMutation } from "./graphql/__generated__/graphql"
 export type { CreditPacksBoughtQuery, CreditPacksQuery, CreditQuotaStatusQuery } from "./graphql/__generated__/graphql"
 export type { CreditRecentCostUsdQuery, CreditTopupLotsQuery } from "./graphql/__generated__/graphql"
-export type { CreditUsageSummaryQuery, DashboardQuery, DataSyncRunQuery } from "./graphql/__generated__/graphql"
+export type { CreditUsageSummaryQuery, DataSyncRunQuery } from "./graphql/__generated__/graphql"
 export type { DecideBrainFactMutation, DecideBrainLessonMutation } from "./graphql/__generated__/graphql"
 export type { DecideBrandProposalMutation, DecideExecutionMutation } from "./graphql/__generated__/graphql"
 export type { DecideSetupCardMutation, DecideShiftsAvailabilityMutation } from "./graphql/__generated__/graphql"
@@ -221,7 +219,6 @@ export type { InvitePreviewQuery, KeepCurrentBrainFactMutation } from "./graphql
 export type { KnowledgeCategoriesQuery, KnowledgeSourceQuery } from "./graphql/__generated__/graphql"
 export type { KnowledgeSourcesQuery, KnowledgeSuggestionsQuery } from "./graphql/__generated__/graphql"
 export type { KnowledgeUsageQuery } from "./graphql/__generated__/graphql"
-export type { LeadGenCommentStatusQuery } from "./graphql/__generated__/graphql"
 export type { LessonMiningStatusQuery, LinkHiringStaffMutation } from "./graphql/__generated__/graphql"
 export type { ListTelegramChatsQuery, LoadCsvImportQuery } from "./graphql/__generated__/graphql"
 export type { LoadDatabaseConnectionQuery, LoadImapConnectionQuery } from "./graphql/__generated__/graphql"

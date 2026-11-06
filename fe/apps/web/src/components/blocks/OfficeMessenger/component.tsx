@@ -88,7 +88,6 @@ export interface OfficeMessengerBaseProps {
             readonly showChat: () => void
             readonly openGroup: (id: string) => void
             readonly openAgent: (id: string) => void
-            readonly openCustomer: (id: string) => void
             readonly conversationQuery: (value: string) => void
             readonly conversationFilter: (value: string) => void
             readonly formatMembersOverflow: (count: number) => string
@@ -98,7 +97,6 @@ export interface OfficeMessengerBaseProps {
             readonly mention: (handle: string) => void
             readonly openTasks: () => void
             readonly closeInfo: () => void
-            readonly openLeads: () => void
             readonly taskOwner: (value: string) => void
             readonly taskStatus: (value: string) => void
             readonly clearTasks: () => void
@@ -232,7 +230,6 @@ const MessengerList = (props: OfficeMessengerBaseProps) => (
                 on={{
                     openGroup: props.on.openGroup,
                     openAgent: props.on.openAgent,
-                    openCustomer: props.on.openCustomer,
                     query: props.on.conversationQuery,
                     filter: props.on.conversationFilter,
                     formatMembersOverflow: props.on.formatMembersOverflow,
@@ -250,7 +247,6 @@ const MessengerCentre = (props: OfficeMessengerBaseProps) => {
             <OfficeTasks
                 props={view.tasks}
                 on={{
-                    openLeads: props.on.openLeads,
                     owner: props.on.taskOwner,
                     status: props.on.taskStatus,
                     clear: props.on.clearTasks,

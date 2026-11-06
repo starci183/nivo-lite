@@ -1,10 +1,10 @@
-import { leadHref, workItemHref, workspaceHref } from "@/modules/routes"
+import { workItemHref, workspaceHref } from "@/modules/routes"
 import type { OfficeApprovalView, OfficeCommandView, OfficeMessageView } from "@/modules/types"
 import { bodyPartsOf, isNivoLine, isOwnAuthor } from "./office.helpers"
 import { threadDayKey } from "./office.thread"
 import type { ThreadEntry } from "./office.thread"
 import type { OfficeApproval, OfficeCandidate, OfficeMessage } from "./office.types"
-import { NIVO_AVATAR, avatarOfAgentId, leadNameOf } from "./office.words"
+import { NIVO_AVATAR, avatarOfAgentId } from "./office.words"
 import type { OfficeContext, OfficeWords } from "./office.words"
 
 const DAY_MS = 86_400_000
@@ -44,7 +44,6 @@ export const messageView = (
     const agent = context.agents.find((candidate) => candidate.id === message.agentId)
     const isAgent = message.authorKind === "agent"
     const showAuthor = !entry.isContinuation && !isMine
-    const leadName = leadNameOf(context, message.leadId)
     return {
         kind: "message",
         key: entry.key,
@@ -59,10 +58,6 @@ export const messageView = (
         parts: bodyPartsOf(message.body),
         files: message.files,
         copyText: message.body,
-        leadHref: message.leadId === null ? null : workspaceHref(words.workspaceId, leadHref(message.leadId)),
-        leadLabel: isNotice
-            ? words.t("noticeLead", { name: leadName ?? words.t("leadFallback") })
-            : words.t("openLead"),
         workHref: workHrefOf(message, words, context),
         replyHandle: isAgent && agent !== undefined ? agent.handle : null,
         status: null,
@@ -109,7 +104,6 @@ export const approvalView = (
         statusLabel: isWaiting ? words.t("approvalWaiting") : statusWord,
         draft: approval.draft,
         settled: isWaiting ? words.t("approvalPolicy") : settled,
-        leadHref: approval.leadId === null ? null : workspaceHref(words.workspaceId, leadHref(approval.leadId)),
         canAct: context.canDecide(approval.assignedStaffId),
         isFocused: context.focusedId === approval.id,
     }

@@ -2,9 +2,9 @@
 /** How an authority rule lets an action run: on its own, after asking, or never. */
 export type FlowRuleMode = "auto" | "ask" | "never"
 /** Why a piece of work stopped for a person. */
-export type ReasonCode = "routine" | "missing_data" | "over_authority" | "unclear_outcome" | "not_allowed"
+type ReasonCode = "routine" | "missing_data" | "over_authority" | "unclear_outcome" | "not_allowed"
 /** Where a piece of work stands. */
-export type FlowWorkStatus = "queued" | "done" | "waiting_decision" | "rejected" | "failed"
+type FlowWorkStatus = "queued" | "done" | "waiting_decision" | "rejected" | "failed"
 /** How far the proof of a finished piece of work has come. */
 type FlowEvidenceState = "pending" | "captured" | "reviewed" | "verified" | "customer_confirmed"
 /** What an agent proposes for a piece of work. */

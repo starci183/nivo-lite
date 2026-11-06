@@ -222,7 +222,6 @@ export interface OfficeConversationsProps {
     readonly on: {
         readonly openGroup: (id: string) => void
         readonly openAgent: (id: string) => void
-        readonly openCustomer: (id: string) => void
         readonly query: (value: string) => void
         readonly filter: (value: string) => void
         readonly formatMembersOverflow: (count: number) => string
@@ -282,17 +281,14 @@ export interface OfficeTasksProps {
             readonly title: string
             readonly noTasks: string
             readonly noTasksHint: string
-            readonly openLeads: string
             readonly noTasksMatch: string
             readonly noTasksMatchHint: string
             readonly clearFilters: string
-            readonly openArrow: string
             readonly filterOwner: string
             readonly filterStatus: string
         }
     }
     readonly on: {
-        readonly openLeads: () => void
         readonly owner: (value: string) => void
         readonly status: (value: string) => void
         readonly clear: () => void

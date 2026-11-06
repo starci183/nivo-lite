@@ -130,10 +130,5 @@ const renderOfficeApprovalCardStatus = (
             </Badge>
             <Badge tone="neutral">{copy.aiBadge}</Badge>
         </Cluster>
-        {approval.leadHref === null ? null : (
-            <Button intent="neutral" size="sm" href={approval.leadHref}>
-                {copy.openLead}
-            </Button>
-        )}
     </Cluster>
 )

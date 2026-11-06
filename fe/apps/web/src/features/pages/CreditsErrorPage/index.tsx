@@ -18,7 +18,7 @@ export const CreditsErrorPage = (props: CreditsErrorPageProps) => {
         <CreditsErrorPageBase
             props={{
                 crumbs: [
-                    { id: "home", label: t("crumbHome"), href: workspaceHref(workspaceId, APP_ROUTES.dashboard) },
+                    { id: "home", label: t("crumbHome"), href: workspaceHref(workspaceId, APP_ROUTES.workspaceHome) },
                     { id: "credits", label: title },
                 ],
                 title,

@@ -115,8 +115,7 @@ export const OfficeConversations = (props: OfficeConversationsProps) => {
         const row = list.conversations.find((entry) => entry.id === id)
         if (row === undefined) return
         if (row.kind === "group") props.on.openGroup(id)
-        else if (row.kind === "agent") props.on.openAgent(id)
-        else props.on.openCustomer(id)
+        else props.on.openAgent(id)
     }
 
     return (

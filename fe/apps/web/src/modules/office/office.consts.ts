@@ -24,6 +24,3 @@ export const DECIDED_WORK_LIMIT = 40
 
 /** How many decided exception cards stay in the thread as a record. */
 export const DECIDED_CARDS_SHOWN = 12
-
-/** How many recent customers the list shows. */
-export const RECENT_CUSTOMERS = 5

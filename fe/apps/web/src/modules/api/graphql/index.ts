@@ -29,7 +29,6 @@ import type {
     CreditQuotaStatusQuery,
     CreditTopupLotsQuery,
     CreditUsageSummaryQuery,
-    DashboardQuery,
     HiringCandidateDetailQuery,
     HiringWorkbenchQuery,
     InventoryTemplatesQuery,
@@ -135,8 +134,6 @@ export type CreditQuotaStatusType = NonNullable<CreditQuotaStatusQuery["creditQu
 export type CreditTopupLotType = CreditTopupLotsQuery["creditTopupLots"][number]
 /** The `CreditUsageSummaryType` object of the back end contract, as the operations of this app select it. */
 export type CreditUsageSummaryType = CreditUsageSummaryQuery["creditUsageSummary"]
-/** The `DashboardType` object of the back end contract, as the operations of this app select it. */
-export type DashboardType = DashboardQuery["dashboard"]
 /** The `DataSyncRunType` object of the back end contract, as the operations of this app select it. */
 export type DataSyncRunType = RequestDataSyncMutation["requestDataSync"]
 /** The `DocumentPassageType` object of the back end contract, as the operations of this app select it. */

@@ -73,19 +73,6 @@ const MessageActions = ({ message, copy, isCopied, onCopy, onReply }: MessageAct
                 }
             />
         )}
-        {message.leadHref === null ? null : (
-            <Tooltip
-                content={message.leadLabel}
-                trigger={
-                    <IconButton
-                        intent="neutral"
-                        source={nivoIconSource("openLead", "leading")}
-                        label={message.leadLabel}
-                        href={message.leadHref}
-                    />
-                }
-            />
-        )}
     </>
 )
 
@@ -104,11 +91,6 @@ export const OfficeMessageRow = (props: OfficeMessageRowProps): ReactElement => 
                     {message.workHref === null ? null : (
                         <Button intent="neutral" size="sm" href={message.workHref}>
                             {props.copy.cmdOpenWork}
-                        </Button>
-                    )}
-                    {message.leadHref === null ? null : (
-                        <Button intent="neutral" size="sm" href={message.leadHref}>
-                            {message.leadLabel}
                         </Button>
                     )}
                 </Cluster>

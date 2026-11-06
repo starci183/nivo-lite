@@ -57,8 +57,6 @@ export interface OfficeMessageView {
     /** The files that came with the line. */
     readonly files: ReadonlyArray<OfficeMessageFile>
     readonly copyText: string
-    readonly leadHref: string | null
-    readonly leadLabel: string
     readonly workHref: string | null
     /** The agent handle the Reply action mentions, when an agent wrote the line. */
     readonly replyHandle: string | null
@@ -101,7 +99,6 @@ export interface OfficeApprovalView {
     readonly statusLabel: string
     readonly draft: string
     readonly settled: string
-    readonly leadHref: string | null
     readonly canAct: boolean
     readonly isFocused: boolean
 }
@@ -157,7 +154,6 @@ export interface OfficeExceptionView {
     readonly decidedBasis: string | null
     readonly heldLine: string | null
     readonly footer: string | null
-    readonly leadHref: string | null
     readonly canAct: boolean
     readonly isFocused: boolean
 }
@@ -405,7 +401,6 @@ export interface OfficeTaskView {
     readonly nextAction: string
     readonly owner: string
     readonly meta: string
-    readonly leadHref: string
 }
 
 /** One entry of the @mention list of the composer. */

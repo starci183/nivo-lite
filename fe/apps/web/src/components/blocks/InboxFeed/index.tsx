@@ -50,7 +50,6 @@ export const InboxFeed = () => {
                         channel: t("termChannel"),
                         kind: t("termKind"),
                         received: t("termReceived"),
-                        lead: t("termLead"),
                         duplicates: t("termDuplicates"),
                     },
                 },

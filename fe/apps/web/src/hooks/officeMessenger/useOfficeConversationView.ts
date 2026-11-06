@@ -1,11 +1,10 @@
 import { useState } from "react"
 import type { OfficeConversationRowView, OfficeListView, OfficeText } from "@/modules/types"
 
-type Filter = "all" | "groups" | "customers" | "unread"
+type Filter = "all" | "groups" | "unread"
 const inFilter = (row: OfficeConversationRowView, filter: Filter): boolean => {
     if (filter === "all") return true
     if (filter === "groups") return row.kind === "group"
-    if (filter === "customers") return row.kind === "customer"
     return row.unread > 0
 }
 type UseOfficeConversationViewResult = {
@@ -62,7 +61,6 @@ export const useOfficeConversationView = (
             filters: [
                 { id: "all", label: text("filterAll") },
                 { id: "groups", label: text("filterGroups") },
-                { id: "customers", label: text("filterCustomers") },
                 { id: "unread", label: text("filterUnread") },
             ],
             copy: {
@@ -76,7 +74,7 @@ export const useOfficeConversationView = (
         },
         query: (value: string): void => setState((current) => ({ ...current, query: value })),
         filter: (value: string): void => {
-            if (value === "all" || value === "groups" || value === "customers" || value === "unread")
+            if (value === "all" || value === "groups" || value === "unread")
                 setState((current) => ({ ...current, filter: value }))
         },
     }

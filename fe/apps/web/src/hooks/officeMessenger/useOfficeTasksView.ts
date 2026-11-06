@@ -15,7 +15,6 @@ type UseOfficeTasksViewResult = {
             nextAction: string
             owner: string
             meta: string
-            leadHref: string
         }[]
         hasTasks: boolean
         owner: string
@@ -33,11 +32,9 @@ type UseOfficeTasksViewResult = {
             title: string
             noTasks: string
             noTasksHint: string
-            openLeads: string
             noTasksMatch: string
             noTasksMatchHint: string
             clearFilters: string
-            openArrow: string
             filterOwner: string
             filterStatus: string
         }
@@ -79,11 +76,9 @@ export const useOfficeTasksView = (
                 title: text("tasksLabel"),
                 noTasks: text("noTasks"),
                 noTasksHint: text("noTasksHint"),
-                openLeads: text("openLeads"),
                 noTasksMatch: text("noTasksMatch"),
                 noTasksMatchHint: text("noTasksMatchHint"),
                 clearFilters: text("clearFilters"),
-                openArrow: text("openArrow"),
                 filterOwner: text("filterOwner"),
                 filterStatus: text("filterStatus"),
             },

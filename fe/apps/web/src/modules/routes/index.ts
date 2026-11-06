@@ -2,7 +2,7 @@
 export const APP_ROUTES = {
     home: "/",
     login: "/login",
-    dashboard: "/dashboard",
+    workspaceHome: "/agents",
     chat: "/chat",
     account: "/account",
     profile: "/profile",
@@ -40,15 +40,12 @@ export {
     agentChatHref,
     agentProfileHref,
     authoritySectionPath,
-    leadFlowHref,
-    leadHref,
-    responsibilitiesHref,
     teamInviteHref,
     workItemHref,
     zaloConnectionHref,
     zaloReturnPath,
 } from "./console-routes"
-export { AUTOMATION_ROUTES, newModulePath } from "./automations-routes"
+export { AUTOMATION_ROUTES } from "./automations-routes"
 export {
     BRAIN_PARTS,
     BRAIN_PART_TABS,

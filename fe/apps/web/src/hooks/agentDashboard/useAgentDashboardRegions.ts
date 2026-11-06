@@ -1,6 +1,5 @@
 "use client"
 
-import { decisionsHref } from "@/hooks/decisions"
 import type { ModuleKey } from "@/hooks/installations"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { DataSlot, SlotLabels } from "@/modules/types"
@@ -11,7 +10,7 @@ import { useAgentDashboardConnections } from "./useAgentDashboardConnections"
 import { useAgentDashboardKnowledge, type KnowledgeBody } from "./useAgentDashboardKnowledge"
 import { actionWordOf } from "@/hooks/actionWord"
 import type { BadgeTone } from "@starci/grammar/common"
-import { workspaceHref } from "@/modules/routes"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What the regions need from the frame: the module, and whether the module brings its own gaps card. */
@@ -150,7 +149,7 @@ export const useAgentDashboardRegions = (
     const doneOf = (dashboard: AgentDashboardView) => ({
         count: t("doneCount", { n: dashboard.done.count }),
         logLabel: t("doneLog"),
-        logHref: workspaceHref(workspaceId, decisionsHref("policy", input.module)),
+        logHref: workspaceHref(workspaceId, CONSOLE_ROUTES.chat),
         rows: dashboard.done.items.map(rowOf),
         emptyMessage: t("doneEmpty"),
         emptyDescription: t("doneEmptyBody"),

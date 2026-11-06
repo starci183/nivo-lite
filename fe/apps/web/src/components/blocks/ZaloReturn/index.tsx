@@ -27,7 +27,7 @@ export const ZaloReturn = (props: ZaloReturnProps) => {
                     {
                         id: "home",
                         label: shell("crumbHome"),
-                        href: workspaceHref(workspaceId, CONSOLE_ROUTES.dashboard),
+                        href: workspaceHref(workspaceId, CONSOLE_ROUTES.workspaceHome),
                     },
                     {
                         id: "connections",

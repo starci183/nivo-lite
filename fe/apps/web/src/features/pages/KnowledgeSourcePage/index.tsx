@@ -26,7 +26,7 @@ const headingOf = async (workspaceId?: string): Promise<BrainPageHeading> => {
     return brainHeadingOf({
         crumbLabel: t("crumbLabel"),
         crumbHome: t("crumbHome"),
-        homeHref: workspaceId === undefined ? undefined : workspaceHref(workspaceId, CONSOLE_ROUTES.dashboard),
+        homeHref: workspaceId === undefined ? undefined : workspaceHref(workspaceId, CONSOLE_ROUTES.workspaceHome),
         title: t("title"),
         description: brain("intro"),
     })

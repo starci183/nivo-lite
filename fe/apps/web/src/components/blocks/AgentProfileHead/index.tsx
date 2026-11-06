@@ -111,7 +111,7 @@ const loadingHeadOf = (copy: ProfileHeadCopy): ProfileHeadView => ({
     ...PLACEHOLDER,
     title: copy.t("title"),
     crumbs: [
-        { id: "home", label: copy.t("crumbHome"), href: workspaceHref(copy.workspaceId, CONSOLE_ROUTES.dashboard) },
+        { id: "home", label: copy.t("crumbHome"), href: workspaceHref(copy.workspaceId, CONSOLE_ROUTES.workspaceHome) },
         { id: "agents", label: copy.t("crumbAgents"), href: workspaceHref(copy.workspaceId, AGENTS_ROUTE) },
         { id: "agent", label: copy.t("title") },
     ],
@@ -123,7 +123,11 @@ const profileHeadOf = (profile: Parameters<typeof profileChipsOf>[0], copy: Prof
     const handle = profile.handle
     return {
         crumbs: [
-            { id: "home", label: copy.t("crumbHome"), href: workspaceHref(copy.workspaceId, CONSOLE_ROUTES.dashboard) },
+            {
+                id: "home",
+                label: copy.t("crumbHome"),
+                href: workspaceHref(copy.workspaceId, CONSOLE_ROUTES.workspaceHome),
+            },
             { id: "agents", label: copy.t("crumbAgents"), href: workspaceHref(copy.workspaceId, AGENTS_ROUTE) },
             { id: "agent", label: name === "" ? copy.t("title") : name },
         ],

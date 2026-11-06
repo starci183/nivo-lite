@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { Badge, Button, Cluster, Stack, Text } from "@starci/grammar/common"
+import { Badge, Cluster, Stack, Text } from "@starci/grammar/common"
 import type { OfficeExceptionView, OfficeThreadProps } from "@/modules/types"
 import { QUOTE_CLASS_NAME } from "./classNames"
 
@@ -68,13 +68,6 @@ export const OfficeExceptionCard = (props: OfficeExceptionCardProps) => {
                 <Text size="xs" tone="muted">
                     {item.footer}
                 </Text>
-            )}
-            {item.leadHref === null ? null : (
-                <div>
-                    <Button intent="neutral" href={item.leadHref}>
-                        {copy.exceptionOpenLead}
-                    </Button>
-                </div>
             )}
         </>
     )

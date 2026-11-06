@@ -16,7 +16,6 @@ export interface GuidePage {
 /** The pages of the map. */
 export const GUIDE_PAGES: ReadonlyArray<GuidePage> = [
     { id: "office", path: "/chat" },
-    { id: "overview", path: "/dashboard" },
     { id: "authority", path: "/authority" },
     { id: "inbox", path: "/inbox" },
     { id: "knowledge", path: "/knowledge", managerOnly: true },
