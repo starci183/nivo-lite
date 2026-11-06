@@ -76,6 +76,7 @@ const options = {
     ai: wiringSettings.ai,
     channelConnections: wiringSettings.channelConnections,
     channelSetup: wiringSettings.channelSetup,
+    entityEngine: { cursorKey: new Secret(Buffer.alloc(32, 9).toString("base64")), buildId: undefined },
     channelProvisioning: { telegramToken: undefined, print: refuseWiringOperation },
     workspaceSeed: { input: undefined, profileInput: undefined },
     mcpGateway: { remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 1000 },
@@ -191,6 +192,11 @@ type BuildWiringProofResultOptionsChannelProvisioningShape = {
     print: () => never
 }
 
+type BuildWiringProofResultOptionsEntityEngineShape = {
+    cursorKey: Secret
+    buildId: undefined
+}
+
 type BuildWiringProofResultOptionsChannelSetupShape = {
     zaloOauthBase: undefined
     siteUrl: string
@@ -273,6 +279,7 @@ type BuildWiringProofResultOptionsShape = {
     ai: BuildWiringProofResultOptionsAiShape
     channelConnections: BuildWiringProofResultOptionsChannelConnectionsShape
     channelSetup: BuildWiringProofResultOptionsChannelSetupShape
+    entityEngine: BuildWiringProofResultOptionsEntityEngineShape
     channelProvisioning: BuildWiringProofResultOptionsChannelProvisioningShape
     workspaceSeed: BuildWiringProofResultOptionsWorkspaceSeedShape
     mcpGateway: BuildWiringProofResultOptionsMcpGatewayShape

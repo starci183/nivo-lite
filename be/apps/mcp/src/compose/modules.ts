@@ -30,7 +30,8 @@ import { SEPAY_ERROR_KINDS, SEPAY_MESSAGES, SepayModule } from "@modules/integra
 import { ClockModule } from "@modules/platform/clock"
 import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
 import { CqrsModule } from "@modules/platform/cqrs"
-import { DatabaseModule } from "@modules/platform/database"
+import { DatabaseModule, PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { JobsModule } from "@modules/platform/jobs"
 import { PRIMARY_ENTITIES } from "@modules/platform/database/entities"
 import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
 import { HTTP_SECURITY_ERROR_KINDS, HTTP_SECURITY_MESSAGES, HttpSecurityModule } from "@modules/platform/http-security"
@@ -100,6 +101,14 @@ export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> 
     }),
     QueueModule.register({ isGlobal: true, schedulers: [], ...options.queue, enabled: false }),
     RetryModule.register({ isGlobal: true }),
+    // The gateway runs no worker and no scheduler; the engine's job runner reads the claims of the jobs table, so the capability is registered idle.
+    JobsModule.register({
+        isGlobal: true,
+        connection: PRIMARY_ENTITY_MANAGER,
+        workerId: "mcp",
+        leaseMs: 60_000,
+        scheduler: { enabled: false },
+    }),
     EventsModule.register({ isGlobal: true }),
     ApiKeysModule.register({ isGlobal: true }),
     IdentityModule.register({
