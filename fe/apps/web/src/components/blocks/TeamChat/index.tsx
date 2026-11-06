@@ -10,6 +10,7 @@ import { useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
 import { chatRoomHref, workspaceHref } from "@/modules/routes"
 import {
+    CHAT_FILE_ACCEPT,
     draftWithMention,
     isChatRefusal,
     mentionTriggerOf,
@@ -102,13 +103,8 @@ export const TeamChat = (props: TeamChatProps) => {
         void openRoom(() => chat.openGroup(form.groupName.trim(), members))
     }
 
-    const sendError =
-        chat.sendError === null
-            ? null
-            : {
-                  title: t("sendFailedTitle"),
-                  text: refusalWords(chat.sendError),
-              }
+    const problem = chat.sendError ?? chat.file.problem
+    const composerError = problem === null ? null : { title: t("sendFailedTitle"), text: refusalWords(problem) }
     const agentPanel = props.kind === "agent"
     return (
         <TeamChatBase
@@ -132,6 +128,8 @@ export const TeamChat = (props: TeamChatProps) => {
                     errorBody: t("errorBody"),
                     members: t("members"),
                     openFull: t("openFull"),
+                    mute: t("mute"),
+                    unmute: t("unmute"),
                     groupLine: t("groupLine"),
                 },
                 labels: { ...slotLabels(t("roomsEmpty")), error: t("errorTitle") },
@@ -143,6 +141,7 @@ export const TeamChat = (props: TeamChatProps) => {
                 selectedOther: chat.selectedOther,
                 memberCount: chat.memberCount,
                 tab: chat.tab,
+                isMuted: chat.selectedId === null ? null : chat.isMuted,
                 hasList: !agentPanel,
                 grid: chatGridOf({ hasList: !agentPanel, phone: phone.phone }),
                 fullHref: agentPanel
@@ -160,6 +159,7 @@ export const TeamChat = (props: TeamChatProps) => {
                     approve: t("approve"),
                     refuse: t("refuse"),
                     olderLabel: t("older"),
+                    openRun: t("openRun"),
                     decidedBy: t("decidedBy"),
                 },
                 hasOlder: chat.hasOlder,
@@ -172,10 +172,18 @@ export const TeamChat = (props: TeamChatProps) => {
                     placeholder: agentPanel ? t("agentPlaceholder") : t("placeholder"),
                     sendLabel: t("send"),
                     draft: chat.draft,
-                    isSending: chat.isSending,
+                    typing: chat.typing.length === 0 ? null : `${chat.typing.join(", ")} ${t("typingSuffix")}`,
+                    file: {
+                        label: t("attach"),
+                        removeLabel: t("removeFile"),
+                        accept: CHAT_FILE_ACCEPT,
+                        name: chat.file.file === null ? null : chat.file.file.name,
+                        canPick: chat.selectedId !== null,
+                    },
+                    isSending: chat.isSending || chat.file.isUploading,
                     isLoading: chat.isWaiting,
-                    canSend: !chat.isSending && (chat.selectedId !== null || agentPanel),
-                    error: sendError,
+                    canSend: !chat.isSending && !chat.file.isUploading && (chat.selectedId !== null || agentPanel),
+                    error: composerError,
                     suggestions,
                 },
                 newChat: agentPanel
@@ -223,6 +231,9 @@ export const TeamChat = (props: TeamChatProps) => {
                     if (trigger !== null) chat.setDraft(draftWithMention(chat.draft, trigger, party))
                 },
                 send: () => void chat.send(),
+                file: chat.file.choose,
+                fileClear: chat.file.clear,
+                toggleMute: () => void chat.toggleMute(),
                 openNewChat: () => patch({ isOpen: true }),
                 openFull: () =>
                     router.push(

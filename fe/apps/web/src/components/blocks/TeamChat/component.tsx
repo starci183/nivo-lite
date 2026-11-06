@@ -47,6 +47,8 @@ export interface TeamChatCopy {
     /** The head line of a group: its members, composed of the count and this word. */
     readonly members: string
     readonly openFull: string
+    readonly mute: string
+    readonly unmute: string
     readonly groupLine: string
 }
 
@@ -73,7 +75,12 @@ export interface TeamChatBaseProps {
         readonly isLoadingOlder: boolean
         readonly decidingId: string | null
         readonly decideError: string | null
-        readonly composer: Omit<TeamChatComposerProps, "onDraft" | "onMention" | "onSend">
+        readonly composer: Omit<
+            TeamChatComposerProps,
+            "onDraft" | "onMention" | "onSend" | "onFile" | "onFileClear"
+        >
+        /** The viewer muted the open room; null when no room is open. */
+        readonly isMuted: boolean | null
         readonly newChat: Omit<
             TeamChatNewChatProps,
             | "onOpenChange"
@@ -95,6 +102,9 @@ export interface TeamChatBaseProps {
         readonly draft: (value: string) => void
         readonly mention: (party: ChatParty) => void
         readonly send: () => void
+        readonly file: (file: File) => void
+        readonly fileClear: () => void
+        readonly toggleMute: () => void
         readonly openNewChat: () => void
         readonly openFull: () => void
         readonly newChatOpenChange: (isOpen: boolean) => void
@@ -240,6 +250,14 @@ const RoomHead = (props: Props) => {
             isLoading={view.isWaiting}
             actions={
                 <>
+                    {view.isMuted === null ? null : (
+                        <IconButton
+                            intent="neutral"
+                            source={nivoIconSource(view.isMuted ? "muted" : "unmuted", "leading")}
+                            label={view.isMuted ? view.copy.unmute : view.copy.mute}
+                            onPress={props.on.toggleMute}
+                        />
+                    )}
                     {view.fullHref === null ? null : (
                         <Button intent="neutral" size="sm" onPress={props.on.openFull}>
                             {view.copy.openFull}
@@ -285,6 +303,8 @@ const RoomBody = (props: Props) => {
                         onDraft={props.on.draft}
                         onMention={props.on.mention}
                         onSend={props.on.send}
+                        onFile={props.on.file}
+                        onFileClear={props.on.fileClear}
                     />
                 </PaneSection>
             </Pane>

@@ -173,8 +173,8 @@ export interface TeamChatMessageRow {
     readonly dayLabel: string | null
     readonly pinned: boolean
     readonly files: ReadonlyArray<TeamChatFileView>
-    /** The agent run a report belongs to, or null. */
-    readonly reportRunId: string | null
+    /** Where the run a report belongs to opens, or null when the message is no report or its agent is gone. */
+    readonly reportHref: string | null
     readonly approval: TeamChatApprovalView | null
 }
 
@@ -184,3 +184,27 @@ export const partyKeyOf = (party: ChatParty): string => `${party.kind}:${party.i
 /** The party a picked key names, among the parties offered; undefined when none matches. */
 export const partyOfKey = (key: string, parties: ReadonlyArray<ChatParty>): ChatParty | undefined =>
     parties.find((party) => partyKeyOf(party) === key)
+
+/** The largest file a message may carry (bytes). */
+const CHAT_FILE_MAX_BYTES = 25 * 1024 * 1024
+
+/** The kinds of file a message may carry beyond pictures: PDF, plain text and the office formats. */
+const CHAT_FILE_TYPES: ReadonlyArray<string> = [
+    "application/pdf",
+    "text/plain",
+    "application/msword",
+    "application/vnd.ms-excel",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+]
+
+/** The types the file picker offers: pictures and the kinds above (a hint; the door checks the bytes). */
+export const CHAT_FILE_ACCEPT: string = ["image/*", ...CHAT_FILE_TYPES].join(",")
+
+/** Why a chosen file is refused before it is sent, in the code of the door, or null when it may go. */
+export const chatFileRefusalOf = (file: Pick<File, "size" | "type">): "file_type_not_allowed" | "file_too_large" | null => {
+    if (!file.type.startsWith("image/") && !CHAT_FILE_TYPES.includes(file.type)) return "file_type_not_allowed"
+    return file.size > CHAT_FILE_MAX_BYTES ? "file_too_large" : null
+}

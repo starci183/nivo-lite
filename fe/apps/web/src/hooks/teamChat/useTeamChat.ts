@@ -9,6 +9,7 @@ import type { ChatRoomsFilter } from "@/hooks/swr"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { mutateCreateChatRoom } from "@/modules/api/graphql/mutations/mutation-create-chat-room"
 import { mutateDecideChatApproval } from "@/modules/api/graphql/mutations/mutation-decide-chat-approval"
+import { mutateSetChatRoomMuted } from "@/modules/api/graphql/mutations/mutation-set-chat-room-muted"
 import { mutateMarkChatRoomRead } from "@/modules/api/graphql/mutations/mutation-mark-chat-room-read"
 import { mutatePinChatMessage } from "@/modules/api/graphql/mutations/mutation-pin-chat-message"
 import { mutateSendChatMessage } from "@/modules/api/graphql/mutations/mutation-send-chat-message"
@@ -19,6 +20,11 @@ import { CHAT_PAGE_SIZE, mentionsOfDraft } from "@/modules/teamChat"
 import type { ChatParty, TeamChatMessageRow, TeamChatRoomRow, TeamChatVerdict } from "@/modules/teamChat"
 import { messageRowsOf, partiesOf, roomRowsOf } from "./teamChat.shared"
 import { useChatMutation } from "./useChatMutation"
+import { useTeamChatFile } from "./useTeamChatFile"
+import type { TeamChatFileView } from "./useTeamChatFile"
+import { useTeamChatReportHref } from "./useTeamChatReportHref"
+import { useTeamChatTyping } from "./useTeamChatTyping"
+import { useTeamChatTypingHint } from "./useTeamChatTypingHint"
 import type { ChatMessageNode, ChatRowWords } from "./teamChat.shared"
 
 /** What the chat is for: the whole page (every room of the viewer), or the panel of one agent (the direct room with it). */
@@ -46,6 +52,13 @@ export interface TeamChatView {
     readonly hasOlder: boolean
     readonly isLoadingOlder: boolean
     readonly draft: string
+    /** The file that goes with the next message. */
+    readonly file: TeamChatFileView
+    /** The names of the people typing in the open room now. */
+    readonly typing: ReadonlyArray<string>
+    /** The viewer muted the open room. */
+    readonly isMuted: boolean
+    readonly toggleMute: () => Promise<void>
     /** The refusal code of the last send, or "failed" for a transport failure; null when none. */
     readonly sendError: string | null
     readonly isSending: boolean
@@ -143,6 +156,11 @@ export const useTeamChat = (scope: TeamChatScope): TeamChatView => {
         mutateDecideChatApproval,
         (data) => data.decideChatApproval,
     )
+    const mute = useChatMutation("chatMute", scopeId, mutateSetChatRoomMuted, (data) => data.setChatRoomMuted)
+    const file = useTeamChatFile(scopeId)
+    const reportHref = useTeamChatReportHref()
+    const typingHint = useTeamChatTypingHint(scopeId, selectedId)
+    const typing = useTeamChatTyping(selectedId)
     const { mutate: refreshRooms } = rooms
     const { mutate: refreshNewest } = newest
     const { mutate: refreshUnread } = unread
@@ -178,7 +196,10 @@ export const useTeamChat = (scope: TeamChatScope): TeamChatView => {
         () => roomRowsOf(roomNodes, selectedId, viewerId, words),
         [roomNodes, selectedId, viewerId, words],
     )
-    const threadRows = useMemo(() => messageRowsOf(nodes, viewerId, words), [nodes, viewerId, words])
+    const threadRows = useMemo(
+        () => messageRowsOf(nodes, viewerId, words, reportHref),
+        [nodes, viewerId, words, reportHref],
+    )
     const roomsSlot = mapSlot(slotOfSwr(rooms), () => roomRows)
     const threadSlot =
         selectedId === null ? slotOfReads([rooms], () => threadRows) : mapSlot(slotOfSwr(newest), () => threadRows)
@@ -187,10 +208,14 @@ export const useTeamChat = (scope: TeamChatScope): TeamChatView => {
             ? selected.members.find((entry) => !(entry.memberKind === "user" && entry.memberId === viewerId))
             : undefined
 
-    const setDraft = useCallback((value: string): void => {
-        setDraftState(value)
-        setSendError(null)
-    }, [])
+    const setDraft = useCallback(
+        (value: string): void => {
+            setDraftState(value)
+            setSendError(null)
+            typingHint(value.trim() !== "")
+        },
+        [typingHint],
+    )
     const select = useCallback((roomId: string): void => {
         setChosen(roomId)
         setTabState("all")
@@ -204,7 +229,7 @@ export const useTeamChat = (scope: TeamChatScope): TeamChatView => {
 
     const sendDraft = async (): Promise<void> => {
         const body = draft.trim()
-        if (body === "" || send.isMutating) return
+        if ((body === "" && file.file === null) || send.isMutating || file.isUploading) return
         const mentions = mentionsOfDraft(draft, parties).map((party) => ({ memberKind: party.kind, memberId: party.id }))
         const clientId = crypto.randomUUID()
         const target =
@@ -215,12 +240,22 @@ export const useTeamChat = (scope: TeamChatScope): TeamChatView => {
                   : null
         if (target === null) return
         try {
-            const result = await send.trigger({ ...target, body, mentions, clientId })
+            const fileKey = selectedId === null ? null : await file.upload(selectedId)
+            if (fileKey === undefined) return
+            const result = await send.trigger({
+                ...target,
+                body,
+                mentions,
+                clientId,
+                ...(fileKey === null ? {} : { fileKeys: [fileKey] }),
+            })
             if (result.refusal !== null && result.refusal !== undefined) {
                 setSendError(result.refusal)
                 return
             }
             setDraftState("")
+            file.clear()
+            typingHint(false)
             setTabState("all")
             if (scope.kind === "page" && result.message !== null && result.message !== undefined)
                 setChosen(result.message.roomId)
@@ -295,6 +330,15 @@ export const useTeamChat = (scope: TeamChatScope): TeamChatView => {
         hasOlder,
         isLoadingOlder,
         draft,
+        file,
+        typing,
+        isMuted: selected?.muted === true,
+        toggleMute: async () => {
+            if (selectedId === null) return
+            await mute.trigger({ roomId: selectedId, muted: selected?.muted !== true })
+            void refreshRooms()
+            void refreshUnread()
+        },
         sendError,
         isSending: send.isMutating,
         select,

@@ -19,6 +19,7 @@ export interface TeamChatMessagesCopy {
     readonly approve: string
     readonly refuse: string
     readonly olderLabel: string
+    readonly openRun: string
     /** "by {name}" and "at {time}" are composed from these parts, because module words take no placeholders. */
     readonly decidedBy: string
 }
@@ -88,10 +89,17 @@ const ApprovalCard = (props: {
 /** What goes under a message body: its files, the approval card, nothing else. */
 const footerOf = (row: TeamChatMessageRow, props: TeamChatMessagesProps) => {
     const hasFiles = row.files.length > 0
-    if (!hasFiles && row.approval === null) return undefined
+    if (!hasFiles && row.approval === null && row.reportHref === null) return undefined
     return (
         <Stack gap="inline">
             {hasFiles ? <ChatMessageFiles files={row.files} /> : null}
+            {row.reportHref === null ? null : (
+                <Cluster gap="inline">
+                    <Button intent="neutral" size="sm" href={row.reportHref}>
+                        {props.copy.openRun}
+                    </Button>
+                </Cluster>
+            )}
             {row.approval === null ? null : (
                 <ApprovalCard
                     approval={row.approval}
