@@ -10,7 +10,7 @@ import { AuthorityActionsModule } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { ChatRecordsModule } from "@modules/domain/chat-records"
 import { DurableWorkService, EvidenceService, WorkEngineService } from "@modules/domain/decisions"
-import type { InboundEventStatus, OutboundAccessGate } from "@modules/domain/decisions"
+import type { InboundEventStatus, OutboundAccessGate, WorkAskCards } from "@modules/domain/decisions"
 import { EntityEngineModule, ReadOnlyEngineAlertsService } from "@modules/domain/entity-engine"
 import { EventsModule } from "@modules/domain/events"
 import { InboundEventsService } from "@modules/domain/inbound-events"
@@ -21,6 +21,7 @@ import type { AgentDirectory } from "@modules/domain/messages"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule, ModulesService } from "@modules/domain/modules"
 import { PublicApiModule } from "@modules/domain/public-api"
 import { StaffModule } from "@modules/domain/staff"
+import { WorkspacesModule } from "@modules/domain/workspaces"
 import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { refused } from "@modules/platform/primitives"
 import { Secret } from "@modules/platform/config"
@@ -45,11 +46,14 @@ import { KnowledgeQueueModule } from "@modules/queues/knowledge"
 import { CommandPlannerService } from "../../modules/domain/decisions/command-planner.service"
 import { ModuleCatalogService } from "../../modules/domain/decisions/module-catalog.service"
 import { WorkApprovalService } from "../../modules/domain/decisions/work-approval.service"
+import { WorkLinesService } from "../../modules/domain/decisions/work-lines.service"
 import { WorkChainService } from "../../modules/domain/decisions/work-chain.service"
 import {
     INBOUND_EVENT_STATUS,
     MODULE_CATALOG_SOURCE,
     OUTBOUND_ACCESS_GATE,
+    WORK_AGENT_DIRECTORY,
+    WORK_ASK_CARDS,
 } from "../../modules/domain/decisions/work-engine.decorators"
 import { WorkBranchService } from "../../modules/domain/decisions/work-branch.service"
 import { WorkIntakeService } from "../../modules/domain/decisions/work-intake.service"
@@ -58,6 +62,7 @@ import { WORK_PERFORMER_REGISTRY } from "../../modules/domain/decisions/work-per
 import { WorkPerformersService } from "../../modules/domain/decisions/work-performers.service"
 import { WorkRecorderService } from "../../modules/domain/decisions/work-recorder.service"
 import { PerformerKitService } from "../../modules/domain/work-performers/performer-kit.service"
+import { TeamChatProofModule } from "./team-chat-proof.module"
 import { queueOptions } from "./test-capabilities.options"
 import { QUIET_INSTALLATIONS } from "./quiet-peers.options"
 import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
@@ -85,6 +90,14 @@ export class PublicApiProofAccess implements OutboundAccessGate {
 
     accessOf(): ReturnType<OutboundAccessGate["accessOf"]> {
         return Promise.resolve(this.access)
+    }
+}
+
+@Injectable()
+/** The public api proofs open no team chat room, so no approval card stands for a decision and the ask is said as a line. */
+export class PublicApiProofAskCards implements WorkAskCards {
+    cardRooms(): ReturnType<WorkAskCards["cardRooms"]> {
+        return Promise.resolve(0)
     }
 }
 
@@ -149,6 +162,7 @@ class PublicApiProofPeersModule {
             OfficeLinesService,
             PublicApiProofDirectory,
             PublicApiProofAccess,
+            PublicApiProofAskCards,
             PerformerKitService,
             WorkApprovalService,
             WorkBranchService,
@@ -156,6 +170,7 @@ class PublicApiProofPeersModule {
             WorkEngineService,
             WorkIntakeService,
             WorkItemClosedService,
+            WorkLinesService,
             WorkItemsService,
             WorkItemsChainReadService,
             InstallationRecordsService,
@@ -168,7 +183,7 @@ class PublicApiProofPeersModule {
         return {
             module: PublicApiProofPeersModule,
             global: true,
-            imports: [KnowledgeQueueModule.register({})],
+            imports: [KnowledgeQueueModule.register({}), TeamChatProofModule.register()],
             providers: [
                 ...services,
                 // No proof installs a module, so no agent has an installation.
@@ -180,6 +195,8 @@ class PublicApiProofPeersModule {
                 { provide: INBOUND_EVENT_STATUS, useClass: PublicApiProofInbound },
                 { provide: MODULE_CATALOG_SOURCE, useExisting: ModulesService },
                 { provide: OUTBOUND_ACCESS_GATE, useExisting: PublicApiProofAccess },
+                { provide: WORK_AGENT_DIRECTORY, useExisting: PublicApiProofDirectory },
+                { provide: WORK_ASK_CARDS, useExisting: PublicApiProofAskCards },
                 { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },
                 {
                     provide: EVENT_BUS,
@@ -229,6 +246,7 @@ export const publicApiProofModules = (options: QueueOptions): Array<DynamicModul
     }),
     StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true, accounts: PublicApiProofDirectory }),
+    WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: false }),
     ModulesModule.register({
         isGlobal: true,
         catalogOnly: true,
