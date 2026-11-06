@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { EventsService } from "@modules/domain/events"
 import { StaffService } from "@modules/domain/staff"
-import { TeamChatRoomsService } from "@modules/domain/team-chat"
+import { lineClientIdOf, TeamChatRoomsService } from "@modules/domain/team-chat"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
@@ -69,7 +69,7 @@ export class StaffEscalationService {
                 agent: CHATBOT_DEPARTMENT,
                 toUserId: null,
                 body,
-                key: `escalation:${escalation.workItemId}`,
+                key: lineClientIdOf(`escalation:${escalation.workItemId}`),
             })
             return true
         } catch (cause) {

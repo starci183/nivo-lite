@@ -1,6 +1,20 @@
+import { createHash } from "node:crypto"
 import { BODY_MAX, FILES_MAX, MENTIONS_MAX, PAGE_DEFAULT, PAGE_MAX } from "./team-chat.contracts"
 import type { ChatDone, ChatMemberRef, ChatRefused, StoredMention } from "./team-chat.contracts"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
+
+/** The longest client id of a message: the column's CHECK (chat_room_messages_client_id_check) holds 1 to 64 characters. */
+export const CLIENT_ID_MAX = 64
+
+/**
+ * The client id a poster gives a line it says once, derived from its source event: the source as it is when it fits
+ * the column, else its head and a digest of the whole, so the same source is always the same id and a re-post dedupes.
+ */
+export const lineClientIdOf = (source: string): string => {
+    if (source.length <= CLIENT_ID_MAX) return source
+    const digest = createHash("sha256").update(source).digest("hex").slice(0, 32)
+    return `${source.slice(0, CLIENT_ID_MAX - digest.length - 1)}~${digest}`
+}
 
 /** The longest name of a group. */
 export const GROUP_NAME_MAX = 80

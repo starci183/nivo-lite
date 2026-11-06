@@ -109,15 +109,17 @@ describe("MarketingCardsService emit and line", () => {
         })
     })
 
-    it("keeps a card of no work item without a key, and cuts a long key", async () => {
+    it("keeps a card of no work item without a key, and fits a long key to the column (same words, same key)", async () => {
         const { service, chat } = await build()
 
         await service.emit(SCOPE, REPORT_CARD)
         await service.line(SCOPE, "x".repeat(400), "w-9")
+        await service.line(SCOPE, "x".repeat(400), "w-9")
 
-        const [first, second] = chat.postAsAgent.mock.calls
+        const [first, second, third] = chat.postAsAgent.mock.calls
         expect(first?.[1].key).toBeNull()
-        expect(second?.[1].key).toHaveLength(160)
+        expect(second?.[1].key).toHaveLength(64)
+        expect(third?.[1].key).toBe(second?.[1].key)
     })
 
     it("says a plain line to the owner and does nothing when the workspace has no content agent", async () => {

@@ -12,6 +12,8 @@ import {
     groupNameOf,
     isUniqueViolation,
     isUuid,
+    lineClientIdOf,
+    CLIENT_ID_MAX,
     pageSizeOf,
     positionOf,
     sendProblem,
@@ -166,5 +168,20 @@ describe("pages and cursors", () => {
         expect(subject.positionOf(cursor("2026-11-06T10:00:00Z|x"))).toBeNull()
         expect(subject.positionOf(cursor(`${position.at}|${position.id}|extra`))).toBeNull()
         expect(subject.positionOf(cursor(""))).toBeNull()
+    })
+})
+
+describe("the client id of a line", () => {
+    it("keeps a source that fits the column as it is", () => {
+        expect(lineClientIdOf("escalation:w1")).toBe("escalation:w1")
+        expect(lineClientIdOf("k".repeat(CLIENT_ID_MAX))).toHaveLength(CLIENT_ID_MAX)
+    })
+
+    it("shortens a longer source to the column, deterministically, and keeps different sources apart", () => {
+        const long = "hub.note:" + "x".repeat(200)
+        const id = lineClientIdOf(long)
+        expect(id).toHaveLength(CLIENT_ID_MAX)
+        expect(lineClientIdOf(long)).toBe(id)
+        expect(lineClientIdOf(`${long}y`)).not.toBe(id)
     })
 })

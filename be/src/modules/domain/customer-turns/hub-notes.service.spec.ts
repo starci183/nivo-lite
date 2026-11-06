@@ -64,6 +64,22 @@ describe("HubNotesService.postOnce", () => {
     })
 })
 
+describe("the client id", () => {
+    it("fits the 64 characters of the column, the same for the same operation and another for another", async () => {
+        const { service, chat } = await build()
+        const long = "o".repeat(120)
+
+        await service.postOnce(NOTE, "agent-1", REFS, long)
+        await service.postOnce(NOTE, "agent-1", REFS, long)
+        await service.postOnce(NOTE, "agent-1", REFS, `${long}2`)
+
+        const keys = chat.postAsAgent.mock.calls.map(([, post]) => post.key)
+        expect(keys[0]).toHaveLength(64)
+        expect(keys[1]).toBe(keys[0])
+        expect(keys[2]).not.toBe(keys[0])
+    })
+})
+
 describe("note helpers", () => {
     it("reads a bare note as its title, and lists each tool the turn called once, in order", () => {
         expect(noteBodyOf({ ...NOTE, fields: [] })).toBe("Held")

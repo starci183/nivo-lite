@@ -24,6 +24,7 @@ export type {
     TeamChatResult,
     UnreadView,
 } from "./team-chat.contracts"
+export { lineClientIdOf } from "./team-chat.policy"
 export { TeamChatDecisionService } from "./team-chat-decision.service"
 export type { DecideOutcome } from "./team-chat-decision.policy"
 export {

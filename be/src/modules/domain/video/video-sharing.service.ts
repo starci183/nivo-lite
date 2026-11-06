@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
-import { TeamChatRoomsService } from "@modules/domain/team-chat"
+import { lineClientIdOf, TeamChatRoomsService } from "@modules/domain/team-chat"
 import { EventsService } from "@modules/domain/events"
 import { InjectTelegram } from "@modules/integrations/telegram"
 import type { TelegramClient } from "@modules/integrations/telegram"
@@ -35,7 +35,12 @@ export class VideoSharingService {
         const url = await this.media.shareLink(workspaceId, path)
         const text = `${project.title}\n${url}`
         const office = await this.teamChat
-            .postAsAgent(workspaceId, { agent: "video", toUserId: null, body: text, key: `video-share:${projectId}` })
+            .postAsAgent(workspaceId, {
+                agent: "video",
+                toUserId: null,
+                body: text,
+                key: lineClientIdOf(`video-share:${projectId}`),
+            })
             .then(
                 (posted) => posted !== null,
                 () => false,
