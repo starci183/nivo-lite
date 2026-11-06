@@ -126,5 +126,8 @@
   "runCallFailed": "Thất bại",
   "runStepApproval": "Xem yêu cầu duyệt",
   "runTimelineIdle": "Chọn một lần chạy để xem các bước",
-  "detailClose": "Đóng"
+  "detailClose": "Đóng",
+  "effectChatMessagePropose": "Soạn sẵn câu trả lời chờ duyệt",
+  "nodeChatbotDraftReplyTitle": "Soạn câu trả lời chờ duyệt",
+  "nodeChatbotSendApprovedTitle": "Gửi câu trả lời đã duyệt"
 }

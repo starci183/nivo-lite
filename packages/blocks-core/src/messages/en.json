@@ -126,5 +126,8 @@
   "runCallFailed": "Failed",
   "runStepApproval": "Open the approval",
   "runTimelineIdle": "Choose a run to see its steps",
-  "detailClose": "Close"
+  "detailClose": "Close",
+  "effectChatMessagePropose": "Draft a reply for approval",
+  "nodeChatbotDraftReplyTitle": "Draft a reply for approval",
+  "nodeChatbotSendApprovedTitle": "Send the approved reply"
 }
