@@ -55,7 +55,7 @@ export class AgentStepLedgerService {
 
     /** Claims a step of the run under a new fence: the named one, or the first still open. */
     claim(run: RunRef, stepKey: string | null): Promise<ClaimResult> {
-        return this.claimIn(this.entityManager, run, stepKey)
+        return this.entityManager.transaction((tx) => this.claimIn(tx, run, stepKey))
     }
 
     /** Claims a step inside the transaction that registers its wait with the work item it holds. */
