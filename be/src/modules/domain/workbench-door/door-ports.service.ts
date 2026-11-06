@@ -97,10 +97,14 @@ export class DoorPortsService {
         }
     }
 
+    /** A list source over one entity: a row carries every declared field of the record, so a block draws a column the shape's row does not name. */
     private listSource(run: DoorRun, entity: string): ListSource<unknown> {
+        const select = Object.keys(this.engine.catalog.get(entity)?.fields ?? {})
         return {
             page: async (shape, query): Promise<ListPage<unknown>> => {
-                const found = await run.runIn((tx) => this.lists.page(tx, { read: run.name, entity, shape, query }))
+                const found = await run.runIn((tx) =>
+                    this.lists.page(tx, { read: run.name, entity, shape, query, select }),
+                )
                 return { rows: found.rows.map(rowOf), cursor: found.next }
             },
             counts: (shape, by, query) => run.runIn((tx) => this.lists.counts(tx, { entity, shape, by, query })),

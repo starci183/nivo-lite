@@ -1,3 +1,4 @@
+import assert from "node:assert/strict"
 import type { EntitiesApi } from "@nivo-lite/agent-sdk/entity/port"
 import { EntityEngineService, EntityPortsService, ModuleJobRunnerService } from "@modules/domain/entity-engine"
 import { CLOCK } from "@modules/platform/clock"
@@ -157,21 +158,22 @@ describe("the books through the door", () => {
 
     it("records a correction through the door, and refuses a short note naming the field", async () => {
         const scene = await openScene()
+        await settle(scene, scene.transactionId)
+        await runBookProjections(scene)
+        const listed = rowsOf(await proof.read(scene, "accounting.entries", {}))
+        const invoiceEntry = listed.find((row) => row["kind"] === "income")
+        assert(invoiceEntry !== undefined, "the payment entry was not projected")
+        const entry = { row: { id: String(invoiceEntry["id"]) } }
         await expect(
             proof.act(scene, "accounting.adjust", {
-                targetType: "invoice",
-                targetId: scene.invoiceId,
+                id: entry.row.id,
                 note: "Discount agreed by phone",
                 correctedAmount: 1_800_000,
             }),
         ).resolves.toMatchObject({ ok: true })
-        const short = await proof.act(scene, "accounting.adjust", {
-            targetType: "invoice",
-            targetId: scene.invoiceId,
-            note: "ok",
-        })
+        const short = await proof.act(scene, "accounting.adjust", { id: entry.row.id, note: "ok" })
         expect(short).toMatchObject({ ok: false, reason: "invalid" })
         expect(refusedFieldsOf(short)).toEqual(["note"])
-        expect(await jobNamesOf(scene)).toEqual([BOOK_PROJECT])
+        expect((await jobNamesOf(scene)).filter((name) => name === BOOK_PROJECT)).toHaveLength(2)
     })
 })

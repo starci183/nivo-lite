@@ -35,7 +35,11 @@ const RECORD: RecordRow = {
 }
 
 const build = async () => {
-    const lead = mock<EntityDefinition>({ name: "sales.lead", dataKind: "lead" })
+    const lead = mock<EntityDefinition>({
+        name: "sales.lead",
+        dataKind: "lead",
+        fields: { name: { kind: "text", nullable: false }, stage: { kind: "text", nullable: false } },
+    })
     const engine = mock<EntityEngineService>({ catalog: new Map([["sales.lead", lead]]) })
     const ports = mock<EntityPortsService>()
     const lists = mock<ListSourceService>()
@@ -97,6 +101,7 @@ describe("DoorPortsService", () => {
             entity: "sales.lead",
             shape: SHAPE,
             query: QUERY,
+            select: ["name", "stage"],
         })
         expect(page).toEqual({
             rows: [
