@@ -6,76 +6,101 @@ import {
     invoiceOf,
     transactionOf,
 } from "../../../rules/accounting/accounting.fixtures"
-import type { BookEntryValues } from "../../../rules/accounting/accounting.types"
-import { adjustmentStore, bookEntryStore, invoiceStore, transactionStore } from "../accounting.doubles"
+import {
+    entityApi,
+    memoryWorld,
+    putAdjustment,
+    putInvoice,
+    putRecord,
+    putTransaction,
+    rowsOf,
+} from "../fixtures/accounting.memory"
+import type { MemoryWorld } from "../fixtures/accounting.memory"
 import { bookProjectJob } from "./book-project.job"
-import type { JobContext } from "./job"
 
-const CONTEXT: JobContext = { workspaceId: "w1", attempt: 1, effectKey: (step) => step }
-const matched = transactionOf({ status: "matched", orderId: ORDER.id })
+const CONTEXT = { workspaceId: "w1", attempt: 1, effectKey: (step: string): string => step }
+const SETTLED = "00000000-0000-4000-8000-0000000000f2"
+const GONE = "7f0f0f0f-0000-4000-8000-000000000001"
 
-const harness = () => {
-    const written: Array<BookEntryValues> = []
-    const ports = {
-        transactions: transactionStore({
-            get: (id) => Promise.resolve(id === matched.id ? matched : null),
-            settlesInvoice: (id) => Promise.resolve(id === "settled-invoice"),
-        }),
-        invoices: invoiceStore({
-            get: (id) =>
-                Promise.resolve(
-                    id === "settled-invoice" ? invoiceOf({ id, status: "paid" }) : id === INVOICE.id ? INVOICE : null,
-                ),
-        }),
-        adjustments: adjustmentStore({ get: (id) => Promise.resolve(id === ADJUSTMENT.id ? ADJUSTMENT : null) }),
-        book: bookEntryStore({
-            upsert: (values) => {
-                written.push(values)
-                return Promise.resolve({ ok: true, row: { ...values, id: "e1", version: "1" } })
-            },
-        }),
-    }
-    const run = (
-        sourceEntity: "payment.transaction" | "accounting.invoice" | "accounting.adjustment",
-        sourceId: string,
-    ) => bookProjectJob.run(ports, { sourceEntity, sourceId }, CONTEXT)
-    return { written, run }
+type Source = "payment.transaction" | "accounting.invoice" | "accounting.adjustment"
+
+const worldOf = (): MemoryWorld => {
+    const world = memoryWorld()
+    putTransaction(world, transactionOf({ status: "matched", orderId: ORDER.id }))
+    putInvoice(world, INVOICE)
+    putInvoice(world, invoiceOf({ id: SETTLED, status: "paid", paidAt: "2026-11-02T03:00:00.000Z" }))
+    putRecord(world, "payment.transaction", "00000000-0000-4000-8000-0000000000a9", {
+        direction: "credit",
+        amountVnd: 2_000_000,
+        occurredAt: "2026-11-02T03:00:00.000Z",
+        status: "matched",
+        invoiceId: SETTLED,
+    })
+    putAdjustment(world, ADJUSTMENT)
+    return world
 }
 
+const run = (world: MemoryWorld, sourceEntity: Source, sourceId: string): Promise<void> =>
+    bookProjectJob.run(
+        {
+            transactions: entityApi(world, "payment.transaction"),
+            invoices: entityApi(world, "accounting.invoice"),
+            adjustments: entityApi(world, "accounting.adjustment"),
+            book: entityApi(world, "accounting.book-entry"),
+        },
+        { sourceEntity, sourceId },
+        CONTEXT,
+    )
+
+const entriesOf = (world: MemoryWorld): ReadonlyArray<ReadonlyArray<unknown>> =>
+    rowsOf(world, "accounting.book-entry").map((row) => [row.data["kind"], row.data["sourceId"], row.data["amountVnd"]])
+
 describe("accounting.book-project", () => {
-    it("declares itself with the source's entity and id only in its payload", () => {
+    it("declares itself with the source entity and id only in its payload", () => {
         expect(bookProjectJob.name).toBe("accounting.book-project")
         expect(Object.keys(bookProjectJob.input.shape)).toEqual(["sourceEntity", "sourceId"])
     })
 
     it("posts a matched payment as income", async () => {
-        const { written, run } = harness()
-        await run("payment.transaction", TRANSACTION.id)
-        expect(written.map((entry) => [entry.kind, entry.sourceId, entry.amountVnd])).toEqual([
-            ["income", TRANSACTION.id, 5_000_000],
-        ])
+        const world = worldOf()
+        await run(world, "payment.transaction", TRANSACTION.id)
+        expect(entriesOf(world)).toEqual([["income", TRANSACTION.id, 5_000_000]])
     })
 
     it("posts an open invoice as what is owed, and a paid invoice a credit settled the same", async () => {
-        const open = harness()
-        await open.run("accounting.invoice", INVOICE.id)
-        expect(open.written.map((entry) => entry.kind)).toEqual(["invoice"])
-        const paid = harness()
-        await paid.run("accounting.invoice", "settled-invoice")
-        expect(paid.written.map((entry) => entry.kind)).toEqual(["invoice"])
+        const open = worldOf()
+        await run(open, "accounting.invoice", INVOICE.id)
+        expect(entriesOf(open).map((entry) => entry[0])).toEqual(["invoice"])
+        const paid = worldOf()
+        await run(paid, "accounting.invoice", SETTLED)
+        expect(entriesOf(paid).map((entry) => entry[0])).toEqual(["invoice"])
+    })
+
+    it("posts a paid invoice no credit settled as owed and as money in", async () => {
+        const world = worldOf()
+        rowsOf(world, "payment.transaction").splice(1)
+        await run(world, "accounting.invoice", SETTLED)
+        expect(entriesOf(world).map((entry) => entry[0])).toEqual(["invoice", "income"])
     })
 
     it("posts a correction", async () => {
-        const { written, run } = harness()
-        await run("accounting.adjustment", ADJUSTMENT.id)
-        expect(written.map((entry) => [entry.kind, entry.amountVnd])).toEqual([["adjustment", 1_800_000]])
+        const world = worldOf()
+        await run(world, "accounting.adjustment", ADJUSTMENT.id)
+        expect(entriesOf(world)).toEqual([["adjustment", ADJUSTMENT.id, 1_800_000]])
+    })
+
+    it("posts the same source once however often it runs", async () => {
+        const world = worldOf()
+        await run(world, "payment.transaction", TRANSACTION.id)
+        await run(world, "payment.transaction", TRANSACTION.id)
+        expect(rowsOf(world, "accounting.book-entry")).toHaveLength(1)
     })
 
     it("posts nothing for a source that is gone", async () => {
-        const { written, run } = harness()
-        await run("payment.transaction", "7f0f0f0f-0000-4000-8000-000000000001")
-        await run("accounting.invoice", "7f0f0f0f-0000-4000-8000-000000000002")
-        await run("accounting.adjustment", "7f0f0f0f-0000-4000-8000-000000000003")
-        expect(written).toEqual([])
+        const world = worldOf()
+        await run(world, "payment.transaction", GONE)
+        await run(world, "accounting.invoice", GONE)
+        await run(world, "accounting.adjustment", GONE)
+        expect(entriesOf(world)).toEqual([])
     })
 })

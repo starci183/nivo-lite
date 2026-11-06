@@ -31,8 +31,8 @@ const run = (
     memberId: string | null = STAFF,
 ): Promise<ActionResult> => execute(action, memoryProvider(state), raw, memberId)
 
-/** A provider whose store under `portId` answers every update with the given failure. */
-const failingUpdate = (state: MemoryState, portId: string, reason: "conflict" | "missing"): PortProvider => {
+/** A provider whose entity port under `portId` answers every update with the given failure. */
+const failingUpdate = (state: MemoryState, portId: string, reason: "stale" | "missing"): PortProvider => {
     const provider = memoryProvider(state)
     return {
         implementationOf: (port) => {
@@ -100,10 +100,10 @@ describe("sales.move-stage", () => {
         const state = sampleState([])
         const input = { id: "lead-1", to: "qualified" }
         expect(
-            await execute(moveStageAction, failingUpdate(state, "sales.lead-store", "conflict"), input, STAFF),
+            await execute(moveStageAction, failingUpdate(state, "engine.entity.sales.lead", "stale"), input, STAFF),
         ).toMatchObject({ ok: false, reason: "conflict" })
         expect(
-            await execute(moveStageAction, failingUpdate(state, "sales.lead-store", "missing"), input, STAFF),
+            await execute(moveStageAction, failingUpdate(state, "engine.entity.sales.lead", "missing"), input, STAFF),
         ).toMatchObject({ ok: false, reason: "refused", message: { key: "refusal_missing" } })
     })
 
@@ -214,10 +214,15 @@ describe("sales.confirm-order", () => {
         const state = sampleState([])
         const input = { id: "order-2" }
         expect(
-            await execute(confirmOrderAction, failingUpdate(state, "sales.order-store", "conflict"), input, STAFF),
+            await execute(confirmOrderAction, failingUpdate(state, "engine.entity.sales.order", "stale"), input, STAFF),
         ).toMatchObject({ reason: "conflict" })
         expect(
-            await execute(confirmOrderAction, failingUpdate(state, "sales.order-store", "missing"), input, STAFF),
+            await execute(
+                confirmOrderAction,
+                failingUpdate(state, "engine.entity.sales.order", "missing"),
+                input,
+                STAFF,
+            ),
         ).toMatchObject({ message: { key: "refusal_missing" } })
     })
 
@@ -226,7 +231,7 @@ describe("sales.confirm-order", () => {
         expect(
             await execute(
                 confirmOrderAction,
-                failingUpdate(state, "sales.lead-store", "conflict"),
+                failingUpdate(state, "engine.entity.sales.lead", "stale"),
                 { id: "order-2" },
                 STAFF,
             ),
@@ -260,10 +265,15 @@ describe("sales.cancel-order", () => {
         const state = sampleState([])
         const input = { id: "order-2" }
         expect(
-            await execute(cancelOrderAction, failingUpdate(state, "sales.order-store", "conflict"), input, STAFF),
+            await execute(cancelOrderAction, failingUpdate(state, "engine.entity.sales.order", "stale"), input, STAFF),
         ).toMatchObject({ reason: "conflict" })
         expect(
-            await execute(cancelOrderAction, failingUpdate(state, "sales.order-store", "missing"), input, STAFF),
+            await execute(
+                cancelOrderAction,
+                failingUpdate(state, "engine.entity.sales.order", "missing"),
+                input,
+                STAFF,
+            ),
         ).toMatchObject({ message: { key: "refusal_missing" } })
     })
 })

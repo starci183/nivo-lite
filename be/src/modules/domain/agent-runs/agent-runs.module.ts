@@ -10,6 +10,9 @@ import { AGENT_WAKE_INTERRUPTIONS } from "@modules/domain/agent-work"
 import { AgentRunInflightService } from "./agent-run-inflight.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
 import { AgentRunOwnerResumeService } from "./agent-run-owner-resume.service"
+import { AgentRunRecordsService } from "./agent-run-records.service"
+import { AgentRunDueService } from "./agent-run-due.service"
+import { AgentRunWorkspacesService } from "./agent-run-workspaces.service"
 import { AgentRunParkStoreService } from "./agent-run-park-store.service"
 import { AgentRunResumeService } from "./agent-run-resume.service"
 import { AgentRunStepsService } from "./agent-run-steps.service"
@@ -24,8 +27,8 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-runs.module-defin
 
 @Module({})
 /**
- * The durable run of a wake: the tables of the runs and their steps, the engine that drives them, the registry of step handlers and the
- * sweep that repairs what a crash left. It owns the tables and imports platform and the agent-step queue; the capabilities that own a kind
+ * The durable run of a wake: the run and step records of the entity engine, the engine that drives them, the registry of step handlers and the
+ * sweep that repairs what a crash left. It owns the run entities and imports platform and the agent-step queue; the capabilities that own a kind
  * of step register their handler when they start, and the graph binds the timeout of a wait through the wait timeout port.
  */
 export class AgentRunsModule extends ConfigurableModuleClass {
@@ -45,6 +48,9 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                         parkMaxResumes: options.parkMaxResumes,
                     },
                 },
+                AgentRunRecordsService,
+                AgentRunWorkspacesService,
+                AgentRunDueService,
                 AgentRunStoreService,
                 AgentRunParkStoreService,
                 AgentRunResumeService,

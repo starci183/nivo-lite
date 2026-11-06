@@ -1,4 +1,4 @@
-import type { DeskConnections, EinvoiceDraft, GatewayPayable, OptionalConnectorName } from "./accounting-desk.contracts"
+import type { DeskConnections, EinvoiceDraft, GatewayPayable } from "./accounting-desk.contracts"
 
 /** What one capability role answered, and the tool that answered it (null when the workspace has no tool that answered the role). */
 export interface RoleAnswer<T> {
@@ -73,10 +73,6 @@ export interface AccountingGateway {
     findReceivable(workspaceId: string, reference: string): Promise<RoleAnswer<OptionalReceivable>>
     /** `receivable.recordPayment`: answers true when the connector recorded it (a duplicate counts as recorded). */
     recordPayment(workspaceId: string, payment: ReceivablePayment): Promise<boolean>
-    /** The display name of the connector whose tool plays `payment.credits.list`, or null when the workspace has none. */
-    creditsSource(workspaceId: string): Promise<OptionalConnectorName>
-    /** The display name of the connector whose tool plays `invoice.list`, or null when the workspace has none. */
-    payablesSource(workspaceId: string): Promise<OptionalConnectorName>
     /** Which optional features of the desk the workspace has tools for (e-invoices, the reconcile). */
     connections(workspaceId: string): Promise<DeskConnections>
 }

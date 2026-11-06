@@ -1,25 +1,33 @@
+import { JobRetry } from "@nivo-lite/agent-sdk/mutation"
 import { ORDER, orderOf } from "../../../rules/accounting/accounting.fixtures"
 import type { OrderRecord } from "../../../rules/accounting/accounting.types"
 import { confirmationText } from "../../../rules/accounting/settle"
+import { doorApi, entityApi, memoryWorld, putConversation, putOrder } from "../fixtures/accounting.memory"
+import type { MemoryWorld } from "../fixtures/accounting.memory"
 import { copyOf } from "../messages/copy"
-import { conversationFinder, orderStore, scriptedDoor } from "../accounting.doubles"
-import type { DoorCallResult } from "../accounting.types"
 import { CHAT_SEND_TOOL, confirmNoticeJob } from "./confirm-notice.job"
-import type { JobContext } from "./job"
 
-const CONTEXT: JobContext = { workspaceId: "w1", attempt: 2, effectKey: (step) => `effect:${step}` }
+const CONTEXT = { workspaceId: "w1", attempt: 2, effectKey: (step: string): string => `effect:${step}` }
+const LEAD = "00000000-0000-4000-8000-0000000000c1"
 
-const harness = (order: OrderRecord | null, conversation: string | null, answer: DoorCallResult) => {
-    const { door, calls } = scriptedDoor({ [CHAT_SEND_TOOL]: answer })
-    const ports = {
-        orders: orderStore({ get: () => Promise.resolve(order) }),
-        conversations: conversationFinder({ latestOfLead: () => Promise.resolve(conversation) }),
-        door,
-    }
-    return { calls, run: () => confirmNoticeJob.run(ports, { orderId: ORDER.id }, CONTEXT) }
+const worldOf = (order: OrderRecord | null, conversation: boolean): MemoryWorld => {
+    const world = memoryWorld()
+    if (order !== null) putOrder(world, order)
+    if (conversation) putConversation(world, "conv-1", LEAD, "2026-11-04T10:00:00.000Z")
+    world.answers.set(CHAT_SEND_TOOL, { ok: true, output: { sent: true } })
+    return world
 }
 
-const sent: DoorCallResult = { ok: true, output: { sent: true } }
+const run = (world: MemoryWorld): Promise<void> =>
+    confirmNoticeJob.run(
+        {
+            orders: entityApi(world, "sales.order"),
+            conversations: entityApi(world, "chat.conversation"),
+            door: doorApi(world),
+        },
+        { orderId: ORDER.id },
+        CONTEXT,
+    )
 
 describe("payment.confirm-notice", () => {
     it("declares itself with the order id only in its payload", () => {
@@ -28,39 +36,39 @@ describe("payment.confirm-notice", () => {
     })
 
     it("tells the customer on the conversation they wrote in last, keyed by the order", async () => {
-        const { calls, run } = harness(ORDER, "conv-1", sent)
-        await run()
-        expect(calls).toEqual([
+        const world = worldOf(ORDER, true)
+        await run(world)
+        expect(world.calls).toEqual([
             {
                 tool: CHAT_SEND_TOOL,
                 input: {
                     conversationId: "conv-1",
                     text: confirmationText(copyOf("settle_confirmation", "vi"), ORDER.orderNo, 5_000_000),
-                    effectKey: "effect:notice",
+                    key: "effect:notice",
                 },
             },
         ])
     })
 
     it("tells an order with no price a zero amount rather than nothing", async () => {
-        const { calls, run } = harness(orderOf({ amountVnd: null }), "conv-1", sent)
-        await run()
-        expect(JSON.stringify(calls[0]?.input)).toContain(" 0 ")
+        const world = worldOf(orderOf({ amountVnd: null }), true)
+        await run(world)
+        expect(JSON.stringify(world.calls[0]?.input)).toContain(" 0 ")
     })
 
     it("tells nobody when the order is gone, has no customer, or the customer never wrote", async () => {
-        for (const { calls, run } of [
-            harness(null, "conv-1", sent),
-            harness(orderOf({ leadId: null }), "conv-1", sent),
-            harness(ORDER, null, sent),
-        ]) {
-            await run()
-            expect(calls).toEqual([])
+        for (const world of [worldOf(null, true), worldOf(orderOf({ leadId: null }), true), worldOf(ORDER, false)]) {
+            await run(world)
+            expect(world.calls).toEqual([])
         }
     })
 
-    it("answers the door's verdict when the message cannot be sent", async () => {
-        const { run } = harness(ORDER, "conv-1", { ok: false, reason: "transient", message: "503" })
-        await expect(run()).resolves.toMatchObject({ ok: false, tool: CHAT_SEND_TOOL, transient: true })
+    it("has the queue deliver again when the channel is away, and parks the job when the door refuses", async () => {
+        const away = worldOf(ORDER, true)
+        away.answers.set(CHAT_SEND_TOOL, { ok: false, reason: "transient", message: "503" })
+        await expect(run(away)).rejects.toBeInstanceOf(JobRetry)
+        const refused = worldOf(ORDER, true)
+        refused.answers.set(CHAT_SEND_TOOL, { ok: false, reason: "forbidden", message: "403" })
+        await expect(run(refused)).rejects.toThrow("JOB_REFUSED: chat.send forbidden")
     })
 })

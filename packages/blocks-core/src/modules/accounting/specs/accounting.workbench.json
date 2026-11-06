@@ -62,7 +62,7 @@
                   "empty": { "key": "entries_empty" },
                   "emptySearch": { "key": "entries_empty_search" },
                   "idPath": "id",
-                  "titlePath": "title",
+                  "titlePath": "note",
                   "descriptionPath": "entryDate",
                   "badgePath": "kind",
                   "selectParam": "selected",

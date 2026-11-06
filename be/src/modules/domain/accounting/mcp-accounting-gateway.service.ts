@@ -3,7 +3,7 @@ import { McpGatewayService } from "@modules/domain/mcp-gateway"
 import type { CapabilityRole, GatewayCaller, GatewayJson } from "@modules/domain/mcp-gateway"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import type { DeskConnections, GatewayPayable, OptionalConnectorName } from "./accounting-desk.contracts"
+import type { DeskConnections, GatewayPayable } from "./accounting-desk.contracts"
 import type {
     AccountingGateway,
     GatewayEinvoice,
@@ -83,18 +83,6 @@ export class McpAccountingGatewayService implements AccountingGateway {
         const opKey = `accounting-morning:${workspaceId}:${payment.creditRef}`
         const answer = await this.ask(workspaceId, "receivable.recordPayment", args, opKey)
         return recordedOf(answer.value)
-    }
-
-    /** The display name of the connector the workspace's `payment.credits.list` resolves to; null when none does. */
-    async creditsSource(workspaceId: string): Promise<OptionalConnectorName> {
-        const resolution = await this.gateway.toolForRole(workspaceId, "payment.credits.list")
-        return resolution.ok ? resolution.tool.connectorName : null
-    }
-
-    /** The display name of the connector the workspace's `invoice.list` resolves to; null when none does. */
-    async payablesSource(workspaceId: string): Promise<OptionalConnectorName> {
-        const resolution = await this.gateway.toolForRole(workspaceId, "invoice.list")
-        return resolution.ok ? resolution.tool.connectorName : null
     }
 
     /** Whether the workspace can play `invoice.list` and both `receivable.*` roles now (a usable tool for each). */

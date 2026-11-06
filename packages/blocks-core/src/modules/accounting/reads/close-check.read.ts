@@ -2,7 +2,8 @@ import { defineRead } from "@nivo-lite/agent-sdk/block"
 import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { closeVerdict, periodOf } from "../../../rules/accounting/period"
 import type { CloseVerdict, PeriodKey } from "../../../rules/accounting/period"
-import { questionsPort, transactionsPort } from "../ports"
+import { escalatedClaims, unmatchedIn } from "../accounting-data"
+import { CLAIMS, TRANSACTIONS } from "../ports"
 import { periodVariables as variables } from "./period-variables"
 
 /** Whether a period may close and what stops it. */
@@ -15,7 +16,10 @@ export interface CloseView extends CloseVerdict {
     readonly toDay: string
 }
 
-/** `accounting.close-check`: whether a period may close, and what stops it (open period, unmatched payments, questions waiting). */
+/**
+ * `accounting.close-check`: whether a period may close, and what stops it (open period, unmatched payments, questions waiting). The
+ * questions that wait for the owner are the payment claims the graph escalated: no other record of the books asks the owner anything.
+ */
 export const closeCheckRead: ReadDefinition = defineRead({
     id: "accounting.close-check",
     dataKind: "period-close",
@@ -24,10 +28,13 @@ export const closeCheckRead: ReadDefinition = defineRead({
     paths: {},
     variables,
     permission: "accounting.view",
-    ports: { transactions: transactionsPort, questions: questionsPort },
-    run: async ({ transactions, questions }, given, context): Promise<CloseView> => {
+    ports: { transactions: TRANSACTIONS, claims: CLAIMS },
+    run: async ({ transactions, claims }, given, context): Promise<CloseView> => {
         const period = periodOf(context.now, given.period ?? "last")
-        const [unmatched, waitingQuestions] = await Promise.all([transactions.unmatchedIn(period), questions.waiting()])
+        const [unmatched, waitingQuestions] = await Promise.all([
+            unmatchedIn(transactions, period),
+            escalatedClaims(claims),
+        ])
         const verdict = closeVerdict({ period, now: context.now, unmatchedPayments: unmatched.count, waitingQuestions })
         return { periodKey: period.key, fromDay: period.fromDay, toDay: period.toDay, ...verdict }
     },

@@ -6,9 +6,9 @@ import type { LeadDetail, LeadRow, OrderApproval, OrderDetail, OrderRow } from "
 export const leadDetailOf = (lead: LeadRow, orders: OrderSummary): LeadDetail => ({
     id: lead.id,
     contactName: lead.contactName,
-    company: lead.company,
+    company: lead.company ?? "",
     channel: lead.channel,
-    need: lead.need,
+    need: lead.need ?? "",
     stage: lead.stage,
     phone: lead.phone,
     email: lead.email,

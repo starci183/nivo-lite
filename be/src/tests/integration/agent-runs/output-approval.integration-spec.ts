@@ -7,7 +7,7 @@ import {
 import { outputProofLine, outputProofLines, setOutputProofChannel } from "../../world/output-approval-proof.service"
 import assert from "node:assert/strict"
 import { ChatMessagesService } from "@modules/domain/chat-records"
-import { AgentRunsService, AgentRunSweepService, agentRunsEntities } from "@modules/domain/agent-runs"
+import { AgentRunsService, AgentRunSweepService } from "@modules/domain/agent-runs"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import {
     DecisionLogReadService,
@@ -34,13 +34,16 @@ import { outputProofSandbox } from "../../world/output-proof-sandbox.service"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { useTestWorld } from "../../world/use-test-world"
 import { sceneOf } from "@tests/world/agent-runs-scene.service"
-
-const PROOF_ROWS_MAX = 3
+import {
+    soleStepOfKind,
+    stepRecordsIn,
+    stepRecordsOf,
+    stepRecordsOfKind,
+} from "../../world/agent-runs-database.service"
 
 const world = useTestWorld({ modules: API_APP_MODULES, sandbox: outputProofSandbox() })
 const scene = sceneOf(world)
 const [MemberEntity] = workspaceMembersEntities
-const [, StepEntity] = agentRunsEntities
 const [, , , , GraphDecisionEntity] = agentGraphsEntities
 const [WorkItemEntity] = workItemsEntities
 const conversationId = world.id()
@@ -105,13 +108,17 @@ describe("output approval: real database registration", () => {
         jest.spyOn(runs, "waitOn").mockImplementationOnce(async (tx, input) => {
             await waitOn(tx, input)
             expect(await tx.count(WorkItemEntity, { where: { id: input.workItemId } })).toBe(1)
-            expect(await tx.count(StepEntity, { where: { runId, waitItemId: input.workItemId } })).toBe(1)
+            expect(
+                (await stepRecordsIn(world, tx, scene.workspaceId, runId)).filter(
+                    (step) => step.waitItemId === input.workItemId,
+                ),
+            ).toHaveLength(1)
             throw aborted
         })
         const expose = jest.spyOn(world.resolve(WorkEngineService), "runQueuedItem")
         await expect(world.resolve(OutputApprovalService).ask(ctx, request)).rejects.toBe(aborted)
         expect(await world.resolve(WorkItemsService).findByDedupe(ctx.workspaceId, request.spec.dedupeKey)).toBeNull()
-        expect(await em().count(StepEntity, { where: { runId } })).toBe(0)
+        expect(await stepRecordsOf(world, scene.workspaceId, runId)).toHaveLength(0)
         expect(expose).not.toHaveBeenCalled()
     })
 
@@ -139,10 +146,10 @@ describe("output approval: real database registration", () => {
         expect(await em().findOneByOrFail(WorkItemEntity, { id: first.id })).toMatchObject({
             status: "waiting_decision",
         })
-        expect(await em().find(StepEntity, { where: { runId, kind: "approval" }, take: PROOF_ROWS_MAX })).toMatchObject(
-            [{ status: "running", waitItemId: first.id }],
-        )
-        expect(await em().count(StepEntity, { where: { runId, kind: "output" } })).toBe(0)
+        expect(await stepRecordsOfKind(world, scene.workspaceId, runId, "approval")).toMatchObject([
+            { status: "running", waitItemId: first.id },
+        ])
+        expect((await stepRecordsOfKind(world, scene.workspaceId, runId, "output")).length).toBe(0)
         expect((await world.resolve(DecisionLogReadService).decidersOf([first.id])).has(first.id)).toBe(false)
     })
 })
@@ -161,20 +168,20 @@ describe("output approval: real database registration", () => {
         const item = await world.resolve(WorkItemsService).findByDedupe(ctx.workspaceId, request.spec.dedupeKey)
         assert(item !== null)
         expect(item.status).toBe("queued")
-        expect(await em().findOneByOrFail(StepEntity, { runId, kind: "approval" })).toMatchObject({
+        expect(await soleStepOfKind(world, scene.workspaceId, runId, "approval")).toMatchObject({
             status: "running",
             waitItemId: item.id,
         })
-        expect(await em().count(StepEntity, { where: { runId, kind: "output" } })).toBe(0)
+        expect((await stepRecordsOfKind(world, scene.workspaceId, runId, "output")).length).toBe(0)
         stopped.mockRestore()
         expect(await engine.runQueued(ctx, 1)).toBe(1)
         expect((await world.resolve(WorkItemsService).findMany([item.id], 1))[0]?.status).toBe("waiting_decision")
         expect(await world.resolve(AgentRunsService).waitsOn(ctx.workspaceId, item.id)).toBe(true)
-        expect(await em().count(StepEntity, { where: { runId, kind: "output" } })).toBe(0)
+        expect((await stepRecordsOfKind(world, scene.workspaceId, runId, "output")).length).toBe(0)
         const by = await owner()
         await engine.resumeWork(ctx, item.id, "approved", {}, by)
-        expect(await em().count(StepEntity, { where: { runId, kind: "approval" } })).toBe(1)
-        expect(await em().find(StepEntity, { where: { runId, kind: "output" }, take: PROOF_ROWS_MAX })).toMatchObject([
+        expect((await stepRecordsOfKind(world, scene.workspaceId, runId, "approval")).length).toBe(1)
+        expect(await stepRecordsOfKind(world, scene.workspaceId, runId, "output")).toMatchObject([
             { status: "pending", input: { scope: { approvedBy: by.memberId, workItemId: item.id } } },
         ])
     })
@@ -200,9 +207,9 @@ describe("output approval: real database close and recovery", () => {
         expect(await world.resolve(AgentRunsService).waitsOn(scene.workspaceId, item.id)).toBe(true)
         await world.resolve(AgentRunSweepService).sweep()
         await world.resolve(AgentRunSweepService).sweep()
-        const steps = await world.resolve(AgentRunTraceService).stepsOf(runId)
+        const steps = await world.resolve(AgentRunTraceService).stepsOf(scene.workspaceId, runId)
         expect(steps.filter((step) => step.kind === "approval")).toHaveLength(1)
-        const outputs = await em().find(StepEntity, { where: { runId, kind: "output" }, take: 3 })
+        const outputs = await stepRecordsOfKind(world, scene.workspaceId, runId, "output")
         expect(outputs).toHaveLength(1)
         expect(outputs[0]?.input).toMatchObject({
             argsJson: '{"qty":1}',
@@ -218,14 +225,16 @@ describe("output approval: real database close and recovery", () => {
     it("refuses late execution after its persisted wait ended even when the marker is edited away", async () => {
         const { item, runId } = await held("output-late-approval")
         await em().transaction((tx) =>
-            world.resolve(AgentRunsService).resumeWaiting(tx, item.id, { approved: false, by: "timeout" }),
+            world
+                .resolve(AgentRunsService)
+                .resumeWaiting(scene.workspaceId, tx, item.id, { approved: false, by: "timeout" }),
         )
         await expect(
             world
                 .resolve(WorkEngineService)
                 .resumeWork(ctx, item.id, "approved", { fields: { in_run: "false" } }, await owner()),
         ).rejects.toMatchObject({ code: "WORK_PERFORMERS_APPROVAL_INVALID" })
-        const steps = await world.resolve(AgentRunTraceService).stepsOf(runId)
+        const steps = await world.resolve(AgentRunTraceService).stepsOf(scene.workspaceId, runId)
         expect(steps.filter((step) => step.kind === "output")).toHaveLength(0)
         expect((await world.resolve(DecisionLogReadService).decidersOf([item.id])).has(item.id)).toBe(false)
     })
@@ -248,16 +257,16 @@ describe("output approval: real database close and recovery", () => {
         await entered.promise
         try {
             await world.resolve(AgentRunSweepService).sweep()
-            const before = await em().findOneByOrFail(StepEntity, { runId, kind: "approval" })
+            const before = await soleStepOfKind(world, scene.workspaceId, runId, "approval")
             expect(before).toMatchObject({ status: "running", waitItemId: item.id })
             expect((await world.resolve(WorkItemsService).findMany([item.id], 1))[0]?.status).toBe("queued")
         } finally {
             proceed.release()
         }
         await ownerTask
-        const approval = await em().findOneByOrFail(StepEntity, { runId, kind: "approval" })
+        const approval = await soleStepOfKind(world, scene.workspaceId, runId, "approval")
         expect(approval.result).toMatchObject({ approved: true })
-        expect(await em().count(StepEntity, { where: { runId, kind: "output" } })).toBe(1)
+        expect((await stepRecordsOfKind(world, scene.workspaceId, runId, "output")).length).toBe(1)
         expect((await world.resolve(WorkItemsService).findMany([item.id], 1))[0]?.status).toBe("done")
     })
 })
@@ -296,10 +305,10 @@ describe("output approval: real database close and recovery", () => {
         proceed.release()
         await sweepTask
         expect(await ownerTask).toMatchObject({ code: "WORK_PERFORMERS_APPROVAL_INVALID" })
-        const approval = await em().findOneByOrFail(StepEntity, { runId, kind: "approval" })
+        const approval = await soleStepOfKind(world, scene.workspaceId, runId, "approval")
         expect(approval.result).toMatchObject({ approved: false })
         expect((await world.resolve(DecisionLogReadService).decidersOf([item.id])).has(item.id)).toBe(false)
-        expect(await em().count(StepEntity, { where: { runId, kind: "output" } })).toBe(0)
+        expect((await stepRecordsOfKind(world, scene.workspaceId, runId, "output")).length).toBe(0)
     })
 
     it("rolls item close and decision actor back together when the decision transaction aborts", async () => {
@@ -317,7 +326,9 @@ describe("output approval: real database close and recovery", () => {
         expect((await world.resolve(DecisionLogReadService).decidersOf([item.id])).has(item.id)).toBe(false)
         expect((await world.resolve(WorkItemsService).findMany([item.id], 1))[0]?.status).not.toBe("done")
         expect(
-            (await world.resolve(AgentRunTraceService).stepsOf(runId)).filter((step) => step.kind === "output"),
+            (await world.resolve(AgentRunTraceService).stepsOf(scene.workspaceId, runId)).filter(
+                (step) => step.kind === "output",
+            ),
         ).toHaveLength(0)
     })
 })
@@ -412,11 +423,11 @@ describe("output approval: published graph stop interleaving", () => {
         await sweepTask
         expect(await ownerTask).toMatchObject({ code: "DECISIONS_NOT_WAITING" })
         expect((await world.resolve(WorkItemsService).findMany([item.id], 1))[0]?.status).toBe("rejected")
-        expect((await em().findOneByOrFail(StepEntity, { runId, kind: "approval" })).result).toMatchObject({
+        expect((await soleStepOfKind(world, scene.workspaceId, runId, "approval")).result).toMatchObject({
             approved: false,
         })
         expect((await em().findOneByOrFail(GraphDecisionEntity, { workItemId: item.id })).closedAs).toBe("rejected")
-        expect(await em().count(StepEntity, { where: { runId, kind: "output" } })).toBe(0)
+        expect((await stepRecordsOfKind(world, scene.workspaceId, runId, "output")).length).toBe(0)
         expect((await world.resolve(DecisionLogReadService).decidersOf([item.id])).has(item.id)).toBe(true)
     })
 })

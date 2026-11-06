@@ -19,9 +19,9 @@ export class HiringLinksService {
         return this.siteOrigin()
     }
 
-    /** The page of a job. */
+    /** The page of a job: `/workspaces/<public slug>/jobs/<job slug>`, the fe route of the workspace's job page. */
     job(publicSlug: string, jobSlug: string): string {
-        return `${this.origin()}/j/${publicSlug}/${jobSlug}`
+        return `${this.origin()}/workspaces/${publicSlug}/jobs/${jobSlug}`
     }
 
     /** The page where a candidate picks an interview time. */

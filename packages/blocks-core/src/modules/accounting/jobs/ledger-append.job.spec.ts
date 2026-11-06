@@ -1,36 +1,46 @@
-import type { TransactionRecord } from "../../../rules/accounting/accounting.types"
+import { JobRetry } from "@nivo-lite/agent-sdk/mutation"
+import type { DoorCallResult } from "@nivo-lite/agent-sdk/mutation"
 import { ORDER, TRANSACTION, orderOf, transactionOf } from "../../../rules/accounting/accounting.fixtures"
-import type { OrderRecord } from "../../../rules/accounting/accounting.types"
-import { leadNames, orderStore, scriptedDoor, transactionStore } from "../accounting.doubles"
-import type { DoorCallResult } from "../accounting.types"
-import type { JobContext } from "./job"
+import type { OrderRecord, TransactionRecord } from "../../../rules/accounting/accounting.types"
+import { doorApi, entityApi, memoryWorld, putLead, putOrder, putTransaction } from "../fixtures/accounting.memory"
+import type { MemoryWorld } from "../fixtures/accounting.memory"
 import { LEDGER_APPEND_TOOL, LEDGER_STATUS_TOOL, ledgerAppendJob } from "./ledger-append.job"
 
-const CONTEXT: JobContext = { workspaceId: "w1", attempt: 1, effectKey: (step) => `key:${step}` }
+const CONTEXT = { workspaceId: "w1", attempt: 1, effectKey: (step: string): string => `key:${step}` }
 const matched = transactionOf({ status: "matched", orderId: ORDER.id })
+const LEAD = "00000000-0000-4000-8000-0000000000c1"
 
 interface Options {
     readonly transaction?: TransactionRecord | null
     readonly order?: OrderRecord | null
-    readonly lead?: string | null
-}
-
-const harness = (answers: Readonly<Record<string, DoorCallResult>>, options: Options = {}) => {
-    const { door, calls } = scriptedDoor(answers)
-    const transaction = options.transaction === undefined ? matched : options.transaction
-    const order = options.order === undefined ? ORDER : options.order
-    const lead = options.lead === undefined ? "Bui Nguyen Dinh" : options.lead
-    const ports = {
-        transactions: transactionStore({ get: () => Promise.resolve(transaction) }),
-        orders: orderStore({ get: () => Promise.resolve(order) }),
-        leads: leadNames({ nameOf: () => Promise.resolve(lead) }),
-        door,
-    }
-    return { calls, run: () => ledgerAppendJob.run(ports, { transactionId: matched.id, orderId: ORDER.id }, CONTEXT) }
+    readonly lead?: boolean
 }
 
 const connected: DoorCallResult = { ok: true, output: { connected: true } }
 const written: DoorCallResult = { ok: true, output: { ref: "Ledger!A2:G2" } }
+
+const harness = (answers: Readonly<Record<string, DoorCallResult>>, options: Options = {}) => {
+    const world: MemoryWorld = memoryWorld()
+    const transaction = options.transaction === undefined ? matched : options.transaction
+    const order = options.order === undefined ? ORDER : options.order
+    if (transaction !== null) putTransaction(world, transaction)
+    if (order !== null) putOrder(world, order)
+    if (options.lead ?? true) putLead(world, LEAD, "Bui Nguyen Dinh")
+    for (const [tool, answer] of Object.entries(answers)) world.answers.set(tool, answer)
+    const run = (): Promise<void> =>
+        ledgerAppendJob.run(
+            {
+                transactions: entityApi(world, "payment.transaction"),
+                orders: entityApi(world, "sales.order"),
+                leads: entityApi(world, "sales.lead"),
+                door: doorApi(world),
+            },
+            { transactionId: TRANSACTION.id, orderId: ORDER.id },
+            CONTEXT,
+        )
+    return { calls: world.calls, run }
+}
+
 const both = { [LEDGER_STATUS_TOOL]: connected, [LEDGER_APPEND_TOOL]: written }
 
 describe("accounting.ledger-append", () => {
@@ -60,7 +70,7 @@ describe("accounting.ledger-append", () => {
         const noLead = harness(both, { order: orderOf({ leadId: null }) })
         await noLead.run()
         expect(noLead.calls[1]?.input).toMatchObject({ entry: { customer: "NGUYEN VAN DINH" } })
-        const noName = harness(both, { lead: null })
+        const noName = harness(both, { lead: false })
         await noName.run()
         expect(noName.calls[1]?.input).toMatchObject({ entry: { customer: "NGUYEN VAN DINH" } })
     })
@@ -86,19 +96,19 @@ describe("accounting.ledger-append", () => {
 
     it("is delivered again when the probe fails for now", async () => {
         const { run } = harness({ [LEDGER_STATUS_TOOL]: { ok: false, reason: "transient", message: "down" } })
-        await expect(run()).resolves.toMatchObject({ ok: false, tool: LEDGER_STATUS_TOOL, transient: true })
+        await expect(run()).rejects.toBeInstanceOf(JobRetry)
     })
 
-    it("answers the door's verdict when the write fails: parked for a refused connection, tried again for a transient one", async () => {
+    it("parks the job when the write is refused, and has it delivered again when the provider was away", async () => {
         const refused = harness({
             [LEDGER_STATUS_TOOL]: connected,
             [LEDGER_APPEND_TOOL]: { ok: false, reason: "forbidden", message: "403" },
         })
-        await expect(refused.run()).resolves.toMatchObject({ ok: false, tool: LEDGER_APPEND_TOOL, transient: false })
+        await expect(refused.run()).rejects.toThrow("JOB_REFUSED: ledger.append forbidden")
         const transient = harness({
             [LEDGER_STATUS_TOOL]: connected,
             [LEDGER_APPEND_TOOL]: { ok: false, reason: "transient", message: "503" },
         })
-        await expect(transient.run()).resolves.toMatchObject({ ok: false, tool: LEDGER_APPEND_TOOL, transient: true })
+        await expect(transient.run()).rejects.toBeInstanceOf(JobRetry)
     })
 })

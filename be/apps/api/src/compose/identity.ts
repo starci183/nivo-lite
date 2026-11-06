@@ -22,7 +22,6 @@ import {
     WorkspaceMembersModule,
 } from "@modules/domain/workspace-members"
 import { WORKSPACES_ERROR_KINDS, WORKSPACES_MESSAGES, WorkspacesModule } from "@modules/domain/workspaces"
-import { ChatConversationsService } from "@modules/domain/chat-records"
 import { DecisionsService } from "@modules/domain/decisions"
 import { LEADS_ERROR_KINDS, LEADS_MESSAGES, LeadsModule } from "@modules/domain/leads"
 import { LeadFlowsModule } from "@modules/domain/lead-flows"
@@ -33,7 +32,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const identityModules = (options: ApiOptions): Array<DynamicModule> => [
     LeadsModule.register({
         isGlobal: true,
-        ports: { decisions: DecisionsService, conversations: ChatConversationsService },
+        ports: { decisions: DecisionsService },
     }),
     LeadFlowsModule.register({ isGlobal: true }),
     MessagesModule.register({ isGlobal: true, agentDirectory: AgentsService }),

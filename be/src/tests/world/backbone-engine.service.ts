@@ -17,11 +17,12 @@ const [WorkspaceMemberEntity] = workspaceMembersEntities
 
 /** Calls the real durable engine as the persisted owner of the proof workspace, including its shutdown lifecycle. */
 export const backboneEngineOf = (world: ReturnType<typeof useTestWorld>, workspaceId: string): EnginePort => ({
-    interrupted: (wakeId, code, signal) => world.resolve(AgentRunsService).interrupted(wakeId, code, signal),
+    interrupted: (wakeId, code, signal) =>
+        world.resolve(AgentRunsService).interrupted(workspaceId, wakeId, code, signal),
     decide: async (workItemId, approved) => {
         const owner = await world.db.primary.findOneByOrFail(WorkspaceMemberEntity, { workspaceId, role: "owner" })
         return world.db.primary.transaction((tx) =>
-            world.resolve(AgentRunsService).resumeWaiting(tx, workItemId, { approved, by: owner.id }),
+            world.resolve(AgentRunsService).resumeWaiting(workspaceId, tx, workItemId, { approved, by: owner.id }),
         )
     },
     shutdown: () => world.resolve(AgentRunInflightService).beforeApplicationShutdown(),

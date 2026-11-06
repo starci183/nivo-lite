@@ -23,7 +23,7 @@ export class AgentStepJobService {
         if (!isAgentStepPayload(job)) {
             throw new AgentRunsError({ code: AgentRunsErrorCode.JobPayloadInvalid, params: { unrecoverable: 1 } })
         }
-        const { retryAfterMs } = await this.runs.advance(job.runId, new AbortController().signal)
+        const { retryAfterMs } = await this.runs.advance(job.workspaceId, job.runId, new AbortController().signal)
         if (retryAfterMs === null) return
         const seconds = Math.min(RETRY_MAX_SECONDS, Math.max(RETRY_MIN_SECONDS, Math.ceil(retryAfterMs / 1000)))
         throw new AgentRunsError({ code: AgentRunsErrorCode.StepDeferred, params: { deferSeconds: seconds } })

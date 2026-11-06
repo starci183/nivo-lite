@@ -49,9 +49,9 @@ interface Options {
 const build = async (handlers: ReadonlyArray<AgentStepHandler>, record: Tally, over: Options = {}) => {
     const logger = mock<Logger>()
     const store = mock<AgentRunStoreService>({
-        runById: jest.fn().mockResolvedValue(over.run === undefined ? runViewOf({ status: "dead" }) : over.run),
+        runById: jest.fn().mockResolvedValue(over.run === undefined ? runViewOf({ status: "parked" }) : over.run),
         viewsOf: jest.fn().mockResolvedValue(over.steps ?? FAILED_RUN),
-        spoken: jest.fn((runId: string) => {
+        spoken: jest.fn((_workspaceId: string, runId: string) => {
             record.marked.push(runId)
             return Promise.resolve(over.first ?? true)
         }),
@@ -77,7 +77,7 @@ describe("AgentRunDeadLetterService.tell", () => {
         const record = tally()
         const { service } = await build([speaking("door", record), speaking("turn", record)], record)
 
-        await service.tell("run-1", "door", "connector_timeout")
+        await service.tell("ws-1", "run-1", "door", "connector_timeout")
 
         expect(record.told).toEqual(["door:door:connector_timeout"])
         expect(record.marked).toEqual(["run-1"])
@@ -87,7 +87,7 @@ describe("AgentRunDeadLetterService.tell", () => {
         const record = tally()
         const { service } = await build([speaking("door", record)], record)
 
-        await service.tell("run-1", null, "x")
+        await service.tell("ws-1", "run-1", null, "x")
 
         expect(record.told).toEqual(["door:door:x"])
     })
@@ -96,7 +96,7 @@ describe("AgentRunDeadLetterService.tell", () => {
         const record = tally()
         const { service } = await build([mute("door"), speaking("turn", record)], record)
 
-        await service.tell("run-1", "door", "x")
+        await service.tell("ws-1", "run-1", "door", "x")
 
         expect(record.told).toEqual(["turn:door:x"])
     })
@@ -108,7 +108,7 @@ describe("AgentRunDeadLetterService.tell", () => {
             steps: [stepViewOf({ stepKey: "turn", kind: "turn", status: "done" })],
         })
 
-        await service.tell("run-1", null, "compensated")
+        await service.tell("ws-1", "run-1", null, "compensated")
 
         expect(record.told).toEqual(["turn:turn:compensated"])
     })
@@ -118,12 +118,12 @@ describe("AgentRunDeadLetterService.tell when there is nothing to do or nothing 
     it("does nothing for a run that was told already, or is gone", async () => {
         const record = tally()
         const told = await build([speaking("door", record)], record, {
-            run: runViewOf({ status: "dead", spoken: true }),
+            run: runViewOf({ status: "parked", spoken: true }),
         })
         const gone = await build([speaking("door", record)], record, { run: null })
 
-        await told.service.tell("run-1", "door", "x")
-        await gone.service.tell("run-1", "door", "x")
+        await told.service.tell("ws-1", "run-1", "door", "x")
+        await gone.service.tell("ws-1", "run-1", "door", "x")
 
         expect(record.told).toEqual([])
         expect(record.marked).toEqual([])
@@ -138,7 +138,7 @@ describe("AgentRunDeadLetterService.tell when there is nothing to do or nothing 
         }
         const { service, logger } = await build([failing], record)
 
-        await service.tell("run-1", "door", "x")
+        await service.tell("ws-1", "run-1", "door", "x")
 
         expect(record.marked).toEqual([])
         expect(logger.error).toHaveBeenCalledWith(
@@ -152,7 +152,7 @@ describe("AgentRunDeadLetterService.tell when there is nothing to do or nothing 
         const record = tally()
         const { service, logger } = await build([mute("door")], record)
 
-        await service.tell("run-1", "door", "x")
+        await service.tell("ws-1", "run-1", "door", "x")
 
         expect(record.marked).toEqual(["run-1"])
         expect(logger.warn).toHaveBeenCalledWith(AgentRunsLogEvent.DeadWithoutVoice, expect.anything())
@@ -162,7 +162,7 @@ describe("AgentRunDeadLetterService.tell when there is nothing to do or nothing 
         const record = tally()
         const { service, logger } = await build([speaking("door", record)], record, { first: false })
 
-        await service.tell("run-1", "door", "x")
+        await service.tell("ws-1", "run-1", "door", "x")
 
         expect(record.told).toEqual(["door:door:x"])
         expect(logger.info).not.toHaveBeenCalled()
@@ -185,9 +185,9 @@ const buildAlerting = async (over: AlertScene) => {
     const raised: Raised = { alerts: [], marked: [] }
     const logger = mock<Logger>()
     const store = mock<AgentRunStoreService>({
-        runById: jest.fn().mockResolvedValue(over.run ?? runViewOf({ status: "dead" })),
+        runById: jest.fn().mockResolvedValue(over.run ?? runViewOf({ status: "parked" })),
         viewsOf: jest.fn().mockResolvedValue(FAILED_RUN),
-        spoken: jest.fn((runId: string) => {
+        spoken: jest.fn((_workspaceId: string, runId: string) => {
             raised.marked.push(runId)
             return Promise.resolve(true)
         }),
@@ -218,7 +218,7 @@ const buildUnnamed = async () => {
     const raised: Raised = { alerts: [], marked: [] }
     const logger = mock<Logger>()
     const store = mock<AgentRunStoreService>({
-        runById: jest.fn().mockResolvedValue(runViewOf({ status: "dead" })),
+        runById: jest.fn().mockResolvedValue(runViewOf({ status: "parked" })),
         viewsOf: jest.fn().mockResolvedValue(FAILED_RUN),
         spoken: jest.fn().mockResolvedValue(true),
     })
@@ -247,16 +247,17 @@ describe("AgentRunDeadLetterService owner alert", () => {
     it("raises the one alert of a parked run, with the build and the resume action, then marks the run told", async () => {
         const { service, raised } = await buildAlerting({})
 
-        await service.tell("run-1", "door", "invalid_step_input")
+        await service.tell("ws-1", "run-1", "door", "invalid_step_input")
 
         expect(raised.alerts).toEqual([
             {
                 kind: "flow-parked",
                 jobId: "run-1",
+                workspaceId: "ws-1",
                 flowKind: "agent-run",
                 failureClass: "code",
                 reason: "invalid_step_input",
-                correlationId: runViewOf({ status: "dead" }).wakeId,
+                correlationId: runViewOf({ status: "parked" }).wakeId,
                 build: "b2",
                 action: "resume",
             },
@@ -267,7 +268,7 @@ describe("AgentRunDeadLetterService owner alert", () => {
     it("names no build when the app names none", async () => {
         const { service, raised } = await buildUnnamed()
 
-        await service.tell("run-1", "door", "x")
+        await service.tell("ws-1", "run-1", "door", "x")
 
         expect(raised.alerts.map((alert) => alert.build)).toEqual([""])
     })
@@ -275,7 +276,7 @@ describe("AgentRunDeadLetterService owner alert", () => {
     it("leaves the run untold when the alert cannot be raised, so the sweep raises it again", async () => {
         const { service, raised, logger } = await buildAlerting({ fails: true })
 
-        await service.tell("run-1", "door", "x")
+        await service.tell("ws-1", "run-1", "door", "x")
 
         expect(raised.marked).toEqual([])
         expect(logger.error).toHaveBeenCalledWith(AgentRunsLogEvent.DeadLetterFailed, expect.any(Error), {
@@ -287,7 +288,7 @@ describe("AgentRunDeadLetterService owner alert", () => {
     it("raises nothing for a run that did not park", async () => {
         const { service, raised } = await buildAlerting({ run: runViewOf({ status: "compensated" }) })
 
-        await service.tell("run-1", "door", "x")
+        await service.tell("ws-1", "run-1", "door", "x")
 
         expect(raised.alerts).toEqual([])
         expect(raised.marked).toEqual(["run-1"])

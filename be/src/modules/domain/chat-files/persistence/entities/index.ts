@@ -1,6 +1,6 @@
-import { AgentMessageAttachmentEntity } from "./agent-message-attachment.entity"
+import { OfficeFileAttachmentEntity } from "./office-file-attachment.entity"
 
-export { AgentMessageAttachmentEntity }
+export { OfficeFileAttachmentEntity }
 
 /** Every entity the chat-files capability owns, collected by the database connection. */
-export const chatFilesEntities: readonly [typeof AgentMessageAttachmentEntity] = [AgentMessageAttachmentEntity] as const
+export const chatFilesEntities: readonly [typeof OfficeFileAttachmentEntity] = [OfficeFileAttachmentEntity] as const

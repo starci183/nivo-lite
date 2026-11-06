@@ -1,4 +1,4 @@
-import { CONFLICT, refusedWith, waitsForOwnerResult } from "./refusals"
+import { CONFLICT, refusedWith, waitsForOwnerResult, writeRefusal } from "./refusals"
 
 describe("the refusals of the Sales module", () => {
     it("carries a domain refusal as data with a message key of the module", () => {
@@ -20,5 +20,10 @@ describe("the refusals of the Sales module", () => {
             message: { key: "refusal_order_waits_owner" },
             data: { waiting: true, thresholdVnd: 5_000_000 },
         })
+    })
+
+    it("answers a write the engine did not make as missing when the record is gone and as a conflict otherwise", () => {
+        expect(writeRefusal({ ok: false, reason: "missing" })).toEqual(refusedWith("missing"))
+        expect(writeRefusal({ ok: false, reason: "stale" })).toEqual(CONFLICT)
     })
 })

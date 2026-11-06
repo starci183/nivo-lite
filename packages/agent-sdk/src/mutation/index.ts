@@ -23,6 +23,7 @@ export type { JobConfig, JobContext, JobDefinition, JobProblem, JobRef } from ".
 export { JOB_ATTEMPTS_MAX, defineJob, jobProblems } from "./job"
 export { JobDefinitionError } from "./job-definition-error"
 export { JobRetry, retryJob } from "./job-retry"
+export { JobRefused, endAfterDoor } from "./job-door"
 export type { JobProblemCode } from "./job-definition-error"
 export type { EnqueueOptions, OutboxApi } from "./outbox-port"
 export { ENQUEUE_DELAY_MAX_MS, OUTBOX_PORT_ID, enqueueOptionsSchema, outboxPort } from "./outbox-port"

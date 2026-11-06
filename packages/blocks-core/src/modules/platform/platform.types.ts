@@ -55,3 +55,9 @@ export interface MemberDirectory {
     /** The active member by seat id; null when the workspace has none. */
     readonly get: (memberId: string) => Promise<MemberFacts | null>
 }
+
+/** What a module asks of the rights of the member who acts. */
+export interface RightsDirectory {
+    /** Whether the member holds the permission of the workspace; an actor that is no member (the agent) holds none. */
+    readonly holds: (memberId: string | null, permission: string) => Promise<boolean>
+}

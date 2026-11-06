@@ -2,9 +2,10 @@ import { Injectable } from "@nestjs/common"
 import { unprovided } from "@nivo-lite/agent-sdk/port"
 import type { PortDefinition, PortProvider } from "@nivo-lite/agent-sdk/port"
 import type { ListPage, ListSource } from "@nivo-lite/agent-sdk/block"
-import type { InstallationSource, MemberDirectory } from "@nivo-lite/blocks-core/modules"
+import type { InstallationSource, MemberDirectory, RightsDirectory } from "@nivo-lite/blocks-core/modules"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { EntityEngineService, EntityPortsService, ListSourceService } from "@modules/domain/entity-engine"
+import { MemberGrantsService } from "@modules/domain/member-grants"
 import { MemberLookupService } from "@modules/domain/workspace-members"
 import type { RunIn } from "@modules/domain/entity-engine"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
@@ -36,7 +37,7 @@ const rowOf = (record: RecordRow): Readonly<Record<string, unknown>> => ({
 
 @Injectable()
 /**
- * The ports a screen's read or action receives: the engine's data and outbox ports, the installation (the registry and the workspace's enabled modules), the workspace's active seats, and a module's list source as the generic one over
+ * The ports a screen's read or action receives: the engine's data and outbox ports, the installation (the registry and the workspace's enabled modules), the workspace's active seats and the permissions they hold, and a module's list source as the generic one over
  * the entity of the read's data kind. Every other port is `unprovided`, which the run reports as a failure.
  */
 export class DoorPortsService {
@@ -47,6 +48,7 @@ export class DoorPortsService {
         private readonly ports: EntityPortsService,
         private readonly lists: ListSourceService,
         private readonly seats: MemberLookupService,
+        private readonly grants: MemberGrantsService,
     ) {}
 
     /** The provider of the ports of one run. */
@@ -58,6 +60,7 @@ export class DoorPortsService {
         const kind = portKindOf(port.id)
         if (kind === "installation") return this.installationSource(run.workspaceId)
         if (kind === "members") return this.memberDirectory(run.workspaceId)
+        if (kind === "rights") return this.rightsDirectory(run.workspaceId)
         if (kind === "engine") return this.ports.portsFor(run.runIn, "action", { port })["port"]
         const entity = [...this.engine.catalog.values()].find((declared) => declared.dataKind === run.dataKind)
         return kind === "list" && entity !== undefined ? this.listSource(run, entity.name) : unprovided(port)
@@ -65,6 +68,20 @@ export class DoorPortsService {
 
     private memberDirectory(workspaceId: string): MemberDirectory {
         return { get: (memberId) => this.seats.activeSeatById(workspaceId, memberId) }
+    }
+
+    /** Owners and managers hold every permission of every module; a staff member holds the ones the workspace granted to the seat. */
+    private rightsDirectory(workspaceId: string): RightsDirectory {
+        return {
+            holds: async (memberId, permission) => {
+                if (memberId === null) return false
+                const seat = await this.seats.activeSeatById(workspaceId, memberId)
+                if (seat === null) return false
+                if (seat.isManager) return true
+                const grants = await this.grants.forAction(workspaceId, permission)
+                return grants.some((grant) => grant.member_id === memberId)
+            },
+        }
     }
 
     private installationSource(workspaceId: string): InstallationSource {

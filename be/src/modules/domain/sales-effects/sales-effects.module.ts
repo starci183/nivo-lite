@@ -1,0 +1,19 @@
+import { Module } from "@nestjs/common"
+import type { DynamicModule } from "@nestjs/common"
+import { LeadEffectsService } from "./lead-effects.service"
+import { OrderEffectsService } from "./order-effects.service"
+import { ConfigurableModuleClass, OPTIONS_TYPE } from "./sales-effects.module-definition"
+
+@Module({})
+/**
+ * What Sales does for the graph nodes on the entity engine: the executors of `lead.ensure`, `order.record`, `order.confirm` and
+ * `order.void`, and the resolver that tells a turn which customer its conversation belongs to. Each runs in one workspace-scoped
+ * transaction over the `sales.lead`, `sales.order` and `chat.conversation` records; the data ports of the two kinds are the engine's.
+ */
+export class SalesEffectsModule extends ConfigurableModuleClass {
+    /** Registers the capability in the app that runs graph nodes. */
+    static register(options: typeof OPTIONS_TYPE): DynamicModule {
+        const base = super.register(options)
+        return { ...base, providers: [...(base.providers ?? []), LeadEffectsService, OrderEffectsService] }
+    }
+}

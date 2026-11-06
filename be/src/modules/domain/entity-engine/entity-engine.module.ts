@@ -9,6 +9,7 @@ import { EntityMutationService } from "./entity-mutation.service"
 import { EntityPortsService } from "./entity-ports.service"
 import { ListSourceService } from "./list-source.service"
 import { ModuleJobRunnerService } from "./module-job-runner.service"
+import { EntityNodePortsService } from "./entity-node-ports.service"
 
 @Module({})
 /** The generic entity engine over the records tables: the scoped transactions, the ports of blocks-core code, the generic list source and the runner of declared jobs. */
@@ -29,6 +30,7 @@ export class EntityEngineModule extends ConfigurableModuleClass {
                 EntityPortsService,
                 ListSourceService,
                 ModuleJobRunnerService,
+                EntityNodePortsService,
             ],
             exports: [
                 EntityEngineService,
@@ -36,6 +38,7 @@ export class EntityEngineModule extends ConfigurableModuleClass {
                 EntityPortsService,
                 ListSourceService,
                 ModuleJobRunnerService,
+                EntityNodePortsService,
             ],
         }
     }

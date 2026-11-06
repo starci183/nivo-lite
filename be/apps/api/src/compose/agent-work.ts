@@ -25,6 +25,7 @@ import {
     CHAT_NODE_PORTS_MESSAGES,
     ChatNodePortsModule,
 } from "@modules/domain/chat-node-ports"
+import { SALES_EFFECTS_ERROR_KINDS, SALES_EFFECTS_MESSAGES, SalesEffectsModule } from "@modules/domain/sales-effects"
 import { AGENT_GRAPHS_ERROR_KINDS, AGENT_GRAPHS_MESSAGES } from "@modules/domain/agent-graphs"
 import { AGENT_PLUGINS_ERROR_KINDS, AGENT_PLUGINS_MESSAGES, AgentPluginsModule } from "@modules/domain/agent-plugins"
 import { CUSTOMER_INTENTS_MESSAGES } from "@modules/domain/customer-turns"
@@ -63,6 +64,7 @@ export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
         tools: NodeToolDoorService,
     }),
     ChatNodePortsModule.register({ isGlobal: true }),
+    SalesEffectsModule.register({ isGlobal: true }),
     IntentContractsModule.register({ isGlobal: true }),
     AgentPluginsModule.register({ isGlobal: true }),
     AgentInboundModule.register({ isGlobal: true }),
@@ -76,6 +78,7 @@ export const agentWorkErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
     ENTITY_ENGINE_ERROR_KINDS,
     GRAPH_NODES_ERROR_KINDS,
     CHAT_NODE_PORTS_ERROR_KINDS,
+    SALES_EFFECTS_ERROR_KINDS,
     INTENT_CONTRACTS_ERROR_KINDS,
     AGENT_PLUGINS_ERROR_KINDS,
     AGENT_INBOUND_ERROR_KINDS,
@@ -90,6 +93,7 @@ export const agentWorkMessages: ReadonlyArray<MessageBundle> = [
     ENTITY_ENGINE_MESSAGES,
     GRAPH_NODES_MESSAGES,
     CHAT_NODE_PORTS_MESSAGES,
+    SALES_EFFECTS_MESSAGES,
     AGENT_INBOUND_MESSAGES,
     AGENT_SCHEDULES_MESSAGES,
     AGENT_GRAPHS_MESSAGES,

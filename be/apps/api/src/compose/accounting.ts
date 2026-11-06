@@ -1,7 +1,5 @@
 import type { DynamicModule } from "@nestjs/common"
 import { OrdersGraphqlModule } from "@features/api/orders"
-import { AccountingGraphqlModule } from "@features/api/accounting"
-import { AdjustmentsGraphqlModule } from "@features/api/adjustments"
 import {
     ACCOUNTING_ERROR_KINDS,
     ACCOUNTING_MESSAGES,
@@ -10,11 +8,6 @@ import {
 } from "@modules/domain/accounting"
 import { SupplierPayablesModule } from "@modules/domain/supplier-payables"
 import { STAFF_ERROR_KINDS, STAFF_MESSAGES, StaffModule } from "@modules/domain/staff"
-import {
-    ACCOUNTING_ADJUSTMENTS_ERROR_KINDS,
-    ACCOUNTING_ADJUSTMENTS_MESSAGES,
-    AccountingAdjustmentsModule,
-} from "@modules/domain/accounting-adjustments"
 import {
     EMAIL_MESSAGES_ERROR_KINDS,
     EMAIL_MESSAGES_MESSAGES,
@@ -42,11 +35,8 @@ export const accountingModules = (): Array<DynamicModule> => [
     OrdersModule.register({ isGlobal: true }),
     OrdersGraphqlModule.register({}),
     StaffModule.register({ isGlobal: true }),
-    AccountingAdjustmentsModule.register({ isGlobal: true }),
     SupplierPayablesModule.register({ isGlobal: true }),
     AccountingModule.register({ isGlobal: true, gateway: McpAccountingGatewayService }),
-    AccountingGraphqlModule.register({}),
-    AdjustmentsGraphqlModule.register({}),
     InvoicesModule.register({ isGlobal: true }),
     TransactionsModule.register({ isGlobal: true }),
     EmailMessagesModule.register({ isGlobal: true }),
@@ -66,7 +56,6 @@ export const accountingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKi
     OFFICE_COMMAND_CANDIDATES_ERROR_KINDS,
     STAFF_ERROR_KINDS,
     ACCOUNTING_ERROR_KINDS,
-    ACCOUNTING_ADJUSTMENTS_ERROR_KINDS,
     OFFICE_ROOMS_ERROR_KINDS,
 ]
 
@@ -81,6 +70,5 @@ export const accountingMessages: ReadonlyArray<MessageBundle> = [
     OFFICE_COMMAND_CANDIDATES_MESSAGES,
     STAFF_MESSAGES,
     ACCOUNTING_MESSAGES,
-    ACCOUNTING_ADJUSTMENTS_MESSAGES,
     OFFICE_ROOMS_MESSAGES,
 ]

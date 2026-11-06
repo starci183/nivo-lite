@@ -49,7 +49,10 @@ export const claimEntity: EntityDefinition<ClaimFields> = defineEntity({
         order: { kind: "toOne", target: "sales.order" },
         conversation: { kind: "toOne", target: "chat.conversation" },
     },
-    indexes: [{ name: "status_claimed", on: ["status", { desc: "claimedAt" }, { desc: "id" }] }],
+    indexes: [
+        { name: "key", on: ["id"] },
+        { name: "status_claimed", on: ["status", { desc: "claimedAt" }, { desc: "id" }] },
+    ],
     constraints: [
         { kind: "unique", name: "dedupe_key", on: ["dedupeKey"], refusal: "claim-already-recorded" },
         {

@@ -1,16 +1,23 @@
+import { defineJob, doorPort, endAfterDoor } from "@nivo-lite/agent-sdk/mutation"
+import type { DoorApi, JobDefinition } from "@nivo-lite/agent-sdk/mutation"
+import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
 import { z } from "zod"
 import { ledgerLineOf } from "../../../rules/accounting/posting"
-import type { Door, LeadNames, OrderStore, TransactionStore } from "../accounting.types"
-import { doorPort, leadsPort, ordersPort, transactionsPort } from "../ports"
-import { DONE, defineJob, resultOf } from "./job"
-import type { JobDefinition } from "./job"
+import { leadNameById, orderById, transactionById } from "../accounting-data"
+import { LEADS, ORDERS, TRANSACTIONS } from "../ports"
 
 /** The door tool that tells whether the workspace has a ledger connected and told where to write. */
 export const LEDGER_STATUS_TOOL = "ledger.status"
 
 /** The door tool that writes one line of the business ledger. */
 export const LEDGER_APPEND_TOOL = "ledger.append"
+
+/** The name of the job: the outbox enqueues it by this name. */
+const JOB_NAME = "accounting.ledger-append"
+
+/** How many times the queue delivers the job before it is parked. */
+const ATTEMPTS = 8
 
 const input: z.ZodObject<{ transactionId: z.ZodUUID; orderId: z.ZodUUID }> = z.object({
     transactionId: z.uuid(),
@@ -19,47 +26,47 @@ const input: z.ZodObject<{ transactionId: z.ZodUUID; orderId: z.ZodUUID }> = z.o
 
 const status: z.ZodObject<{ connected: z.ZodBoolean }> = z.object({ connected: z.boolean() })
 
+/** The port definitions of the job, by the name `run` reaches them by. */
 type LedgerAppendPorts = {
-    readonly transactions: PortDefinition<TransactionStore>
-    readonly orders: PortDefinition<OrderStore>
-    readonly leads: PortDefinition<LeadNames>
-    readonly door: PortDefinition<Door>
+    /** The payments. */
+    readonly transactions: PortDefinition<EntityApi>
+    /** The orders. */
+    readonly orders: PortDefinition<EntityApi>
+    /** The customers. */
+    readonly leads: PortDefinition<EntityApi>
+    /** The door out of the system. */
+    readonly door: PortDefinition<DoorApi>
 }
 
-const ports: LedgerAppendPorts = {
-    transactions: transactionsPort,
-    orders: ordersPort,
-    leads: leadsPort,
-    door: doorPort,
-}
+const ports: LedgerAppendPorts = { transactions: TRANSACTIONS, orders: ORDERS, leads: LEADS, door: doorPort }
 
 /**
- * `accounting.ledger-append`: after a payment settled an order, writes it as one line of the business ledger (the Google Sheet behind
- * the door), in the domain's words (date, order, customer, amount, transaction), never as cells. It is the outbox job `payment.settle`
+ * `accounting.ledger-append`: after a payment settled an order, writes it as one line of the business ledger (the sheet behind the
+ * door), in the domain's words (date, order, customer, amount, transaction), never as cells. It is the outbox job `payment.settle`
  * enqueues in its transaction, so the call to the door happens outside it. A workspace with no ledger connected skips the step; a
  * transaction is recorded once, however often the job is delivered (the provider keys the line by the transaction id). A status probe
- * that fails for good (no such tool, forbidden) counts as no ledger; one that fails for now is a transient failure the runner
- * delivers again. A failed write is a failure result: transient is delivered again, anything else is parked with one alert.
+ * that fails for good (no such tool, forbidden) counts as no ledger; one that fails for now is delivered again. A failed write ends
+ * through `endAfterDoor`: delivered again when the provider was away, parked with one alert otherwise.
  */
 export const ledgerAppendJob: JobDefinition<typeof input, LedgerAppendPorts> = defineJob({
-    name: "accounting.ledger-append",
+    name: JOB_NAME,
     input,
     ports,
-    attempts: 8,
+    attempts: ATTEMPTS,
     run: async ({ transactions, orders, leads, door }, given) => {
         const [transaction, order] = await Promise.all([
-            transactions.get(given.transactionId),
-            orders.get(given.orderId),
+            transactionById(transactions, given.transactionId),
+            orderById(orders, given.orderId),
         ])
-        if (transaction === null || order === null) return DONE
+        if (transaction === null || order === null) return
         const probe = await door.call(LEDGER_STATUS_TOOL, {})
-        if (!probe.ok && probe.reason === "transient") return resultOf(LEDGER_STATUS_TOOL, probe)
+        if (!probe.ok && probe.reason === "transient") endAfterDoor(JOB_NAME, LEDGER_STATUS_TOOL, probe)
         const ledger = probe.ok ? status.safeParse(probe.output) : null
-        if (ledger === null || !ledger.success || !ledger.data.connected) return DONE
-        const leadName = order.leadId === null ? null : await leads.nameOf(order.leadId)
+        if (ledger === null || !ledger.success || !ledger.data.connected) return
+        const leadName = order.leadId === null ? null : await leadNameById(leads, order.leadId)
         const written = await door.call(LEDGER_APPEND_TOOL, {
             entry: { ...ledgerLineOf(transaction, order, leadName) },
         })
-        return resultOf(LEDGER_APPEND_TOOL, written)
+        endAfterDoor(JOB_NAME, LEDGER_APPEND_TOOL, written)
     },
 })

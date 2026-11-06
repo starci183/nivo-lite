@@ -8,13 +8,12 @@ import { ScriptedWorld, specOf } from "./agent-runs-script.service"
 import type { useTestWorld } from "./use-test-world"
 import { sceneOf } from "./agent-runs-scene.service"
 import type { Scene } from "./agent-runs-scene.service"
+import type { RunData } from "./agent-runs-database.service"
 import type { Boundary, Chain, FailureCase, Fault, FaultKind } from "../fixtures/builders/backbone.builder"
 import type { EnginePort } from "./backbone-engine.service"
-import { agentRunsEntities } from "@modules/domain/agent-runs"
 import type { StepSpec, RunStepView } from "@modules/domain/agent-runs"
 
 type JobOutboxEntity = InstanceType<(typeof jobsEntities)[1]>
-type AgentRunEntity = InstanceType<(typeof agentRunsEntities)[0]>
 
 const SIGNAL = new AbortController().signal
 
@@ -46,7 +45,7 @@ const TURN: Boundary = { handler: "turn", phase: "before" }
 
 const killedAt = async (hurt: Hurt, { handler, phase }: Boundary): Promise<void> => {
     const hang = hurt.script.hangOnce(handler, phase)
-    const dying = hurt.runs.advance(hurt.scene.runId, SIGNAL)
+    const dying = hurt.runs.advance(hurt.helpers.workspaceId, hurt.scene.runId, SIGNAL)
     await hang.entered
     await hurt.sweep()
     hang.release()
@@ -54,7 +53,7 @@ const killedAt = async (hurt: Hurt, { handler, phase }: Boundary): Promise<void>
 }
 
 const approve = async (hurt: Hurt): Promise<void> => {
-    await hurt.runs.advance(hurt.scene.runId, SIGNAL)
+    await hurt.runs.advance(hurt.helpers.workspaceId, hurt.scene.runId, SIGNAL)
     expect(await hurt.engine.decide(hurt.itemId, true)).toBe(true)
 }
 
@@ -63,7 +62,7 @@ const INJECTORS: Injectors = {
     "abort-after": async (hurt, fault) => {
         const dying = new AbortController()
         hurt.script.afterAnswer.set((fault.at ?? TURN).handler, () => dying.abort())
-        await hurt.runs.advance(hurt.scene.runId, dying.signal)
+        await hurt.runs.advance(hurt.helpers.workspaceId, hurt.scene.runId, dying.signal)
     },
     "kill-after-approval": async (hurt) => {
         await approve(hurt)
@@ -71,7 +70,7 @@ const INJECTORS: Injectors = {
     },
     "runtime-down": async (hurt) => {
         const hang = hurt.script.hangOnce("turn", "before")
-        const dying = hurt.runs.advance(hurt.scene.runId, SIGNAL)
+        const dying = hurt.runs.advance(hurt.helpers.workspaceId, hurt.scene.runId, SIGNAL)
         await hang.entered
         await hurt.engine.interrupted(hurt.scene.wakeId, "runtime_down", SIGNAL)
         hang.release()
@@ -79,12 +78,15 @@ const INJECTORS: Injectors = {
     },
     "tool-unknown": async (hurt) => {
         hurt.script.started.add(`tool:${hurt.scene.wakeId}`)
-        await hurt.runs.advance(hurt.scene.runId, SIGNAL)
+        await hurt.runs.advance(hurt.helpers.workspaceId, hurt.scene.runId, SIGNAL)
     },
     "duplicate-message": async (hurt) => {
         const again = await hurt.repeat()
         expect(again).toEqual(hurt.scene)
-        await Promise.all([hurt.runs.advance(hurt.scene.runId, SIGNAL), hurt.runs.advance(hurt.scene.runId, SIGNAL)])
+        await Promise.all([
+            hurt.runs.advance(hurt.helpers.workspaceId, hurt.scene.runId, SIGNAL),
+            hurt.runs.advance(hurt.helpers.workspaceId, hurt.scene.runId, SIGNAL),
+        ])
     },
     "double-approval": async (hurt) => {
         await approve(hurt)
@@ -92,7 +94,7 @@ const INJECTORS: Injectors = {
     },
     "connector-timeout": async (hurt) => {
         hurt.script.toolTries = [{ kind: "retry", code: "connector_timeout" }]
-        await hurt.runs.advance(hurt.scene.runId, SIGNAL)
+        await hurt.runs.advance(hurt.helpers.workspaceId, hurt.scene.runId, SIGNAL)
         expect(
             (await hurt.helpers.stepsOf(hurt.scene.runId)).map((step) => `${step.stepKey}:${step.status}`),
         ).toContain("tool:pending")
@@ -100,7 +102,7 @@ const INJECTORS: Injectors = {
     reload: async (hurt) => {
         const dying = new AbortController()
         hurt.script.afterAnswer.set("door", () => dying.abort())
-        await hurt.runs.advance(hurt.scene.runId, dying.signal)
+        await hurt.runs.advance(hurt.helpers.workspaceId, hurt.scene.runId, dying.signal)
         const before = await hurt.helpers.stepsOf(hurt.scene.runId)
         const reloaded = await hurt.repeat()
         expect(reloaded).toEqual(hurt.scene)
@@ -108,7 +110,7 @@ const INJECTORS: Injectors = {
     },
     "graceful-shutdown": async (hurt) => {
         const hang = hurt.script.hangOnce("turn", "before")
-        const draining = hurt.runs.advance(hurt.scene.runId, SIGNAL)
+        const draining = hurt.runs.advance(hurt.helpers.workspaceId, hurt.scene.runId, SIGNAL)
         await hang.entered
         const closing = hurt.engine.shutdown()
         hang.release()
@@ -136,7 +138,7 @@ type BackboneOfResultHelpersShape = {
     expireClaims: (runId: string) => Promise<void>
     endBackoff: (runId: string) => Promise<void>
     stepsOf: (runId: string) => Promise<ReadonlyArray<RunStepView>>
-    runRow: (runId: string) => Promise<AgentRunEntity>
+    runRow: (runId: string) => Promise<RunData>
     jobs: () => Promise<Array<JobOutboxEntity>>
 }
 

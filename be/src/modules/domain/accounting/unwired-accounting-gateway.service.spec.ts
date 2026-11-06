@@ -12,8 +12,6 @@ describe("UnwiredAccountingGatewayService", () => {
         await expect(gateway.listOpenPayables()).resolves.toEqual([])
         await expect(gateway.findReceivable()).resolves.toEqual({ tool: null, value: null })
         await expect(gateway.recordPayment()).resolves.toBe(false)
-        await expect(gateway.creditsSource()).resolves.toBeNull()
-        await expect(gateway.payablesSource()).resolves.toBeNull()
         await expect(gateway.connections()).resolves.toEqual({ invoices: false, receivables: false })
     })
 })

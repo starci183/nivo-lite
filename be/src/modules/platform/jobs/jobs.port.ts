@@ -75,6 +75,8 @@ export interface ParkedFlowAlert {
     readonly kind: "flow-parked"
     /** The job (or the run of a saga) that parked; the alert is raised once per id. */
     readonly jobId: string
+    /** The workspace of the flow, which a saga needs to find its run again; absent for a flow that names none. */
+    readonly workspaceId?: string | undefined
     /** The kind of flow: the job name, or `agent-run` for the graph saga. */
     readonly flowKind: string
     /** Why it will not run on its own. */

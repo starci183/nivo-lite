@@ -33,6 +33,8 @@ export const bookEntryEntity: EntityDefinition<BookEntryFields> = defineEntity({
     indexes: [
         { name: "date", on: [{ desc: "entryDate" }, { desc: "id" }] },
         { name: "kind_date", on: ["kind", { desc: "entryDate" }, { desc: "id" }] },
+        { name: "amount", on: [{ desc: "amountVnd" }, { desc: "id" }] },
+        { name: "kind_amount", on: ["kind", { desc: "amountVnd" }, { desc: "id" }] },
     ],
     constraints: [
         { kind: "unique", name: "source_key", on: ["sourceEntity", "sourceId", "kind"], refusal: "book-entry-exists" },

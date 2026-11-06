@@ -1,4 +1,3 @@
-import { accountingAdjustmentsEntities } from "@modules/domain/accounting-adjustments"
 import { appErrorsEntities } from "@modules/domain/app-errors"
 import { agentAccessLogEntities } from "@modules/domain/agent-access-log"
 import { agentConnectionsEntities } from "@modules/domain/agent-connections"
@@ -117,9 +116,7 @@ import { threadWorkEntities } from "@modules/domain/thread-work"
 import { agentGraphsEntities } from "@modules/domain/agent-graphs"
 import { agentTemplatesEntities } from "@modules/domain/agent-templates"
 import { templateMarketplaceEntities } from "@modules/domain/template-marketplace"
-import { agentRunsEntities } from "@modules/domain/agent-runs"
 import { entityEngineEntities } from "@modules/domain/entity-engine"
-import { graphNodesEntities } from "@modules/domain/graph-nodes"
 import { agentWorkEntities } from "@modules/domain/agent-work"
 import { transactionsEntities } from "@modules/domain/transactions"
 import { videoBrandKitsEntities } from "@modules/domain/video-brand-kits"
@@ -147,7 +144,6 @@ import { realtimeEntities } from "@modules/platform/realtime"
  * `<c>Entities` array through its barrel. No globs.
  */
 export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
-    ...accountingAdjustmentsEntities,
     ...appErrorsEntities,
     ...agentAccessLogEntities,
     ...agentConnectionsEntities,
@@ -266,9 +262,7 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...agentGraphsEntities,
     ...agentTemplatesEntities,
     ...templateMarketplaceEntities,
-    ...agentRunsEntities,
     ...entityEngineEntities,
-    ...graphNodesEntities,
     ...agentWorkEntities,
     ...transactionsEntities,
     ...videoBrandKitsEntities,

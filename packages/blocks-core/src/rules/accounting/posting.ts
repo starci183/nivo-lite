@@ -15,10 +15,10 @@ export const SOURCE_INVOICE = "accounting.invoice"
 /** The entity name of a correction source. */
 export const SOURCE_ADJUSTMENT = "accounting.adjustment"
 
-/** The words joined into a note, empty parts left out; null when nothing is left. */
-const noteOf = (...parts: ReadonlyArray<string | null>): string | null => {
+/** The words joined into a note, empty parts left out; the entity of the source row when nothing is left, so a list always has a title to draw. */
+const noteOf = (source: string, ...parts: ReadonlyArray<string | null>): string => {
     const joined = parts.filter((part): part is string => part !== null && part !== "").join(" / ")
-    return joined === "" ? null : joined
+    return joined === "" ? source : joined
 }
 
 /**
@@ -34,7 +34,7 @@ export const postTransaction = (transaction: TransactionRecord): ReadonlyArray<B
                   sourceId: transaction.id,
                   entryDate: shopDayOf(transaction.occurredAt),
                   amountVnd: transaction.amountVnd,
-                  note: noteOf(transaction.payer, transaction.reference),
+                  note: noteOf(SOURCE_TRANSACTION, transaction.payer, transaction.reference),
               },
           ]
         : []
@@ -52,7 +52,7 @@ export const postInvoice = (invoice: InvoiceRecord, settledByTransaction: boolea
         sourceId: invoice.id,
         entryDate: shopDayOf(invoice.issuedAt ?? invoice.createdAt),
         amountVnd: invoice.amountVnd,
-        note: noteOf(invoice.invoiceNo, invoice.customer),
+        note: noteOf(SOURCE_INVOICE, invoice.invoiceNo, invoice.customer),
     }
     if (invoice.status !== "paid" || settledByTransaction) return [owed]
     return [
@@ -68,7 +68,7 @@ export const postAdjustment = (adjustment: AdjustmentRecord): BookEntryValues =>
     sourceId: adjustment.id,
     entryDate: shopDayOf(adjustment.createdAt),
     amountVnd: adjustment.correctedAmountVnd ?? 0,
-    note: noteOf(adjustment.createdBy, adjustment.note),
+    note: noteOf(SOURCE_ADJUSTMENT, adjustment.createdBy, adjustment.note),
 })
 
 /** The line of the business ledger (the sheet behind the door) of a transaction that paid an order. */

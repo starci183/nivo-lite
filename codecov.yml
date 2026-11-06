@@ -44,7 +44,6 @@ component_management:
     - component_id: api
       name: api
       paths:
-        - "be/src/modules/domain/accounting-adjustments/**"
         - "be/src/modules/domain/accounting/**"
         - "be/src/modules/domain/agent-connections/**"
         - "be/src/modules/domain/agent-inbound/**"
@@ -159,6 +158,7 @@ component_management:
         - "be/src/modules/domain/public-api/**"
         - "be/src/modules/domain/public-documents/**"
         - "be/src/modules/domain/responsibilities/**"
+        - "be/src/modules/domain/sales-effects/**"
         - "be/src/modules/domain/sales-workbench/**"
         - "be/src/modules/domain/sales/**"
         - "be/src/modules/domain/sepay-transactions/**"
@@ -241,7 +241,6 @@ component_management:
         - "be/src/modules/domain/knowledge-chunks/**"
         - "be/src/modules/domain/knowledge-sources/**"
         - "be/src/modules/domain/knowledge/**"
-        - "be/src/modules/domain/ledger/**"
         - "be/src/modules/domain/liveness/**"
         - "be/src/modules/domain/mcp-call-log/**"
         - "be/src/modules/domain/mcp-connectors/**"

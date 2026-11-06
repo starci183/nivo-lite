@@ -53,7 +53,7 @@
   "refusal_same_stage": "The customer is already in this stage",
   "refusal_stage_not_allowed": "The deal cannot move to this stage",
   "search_leads": "Search by name, phone or email",
-  "search_orders": "Search by number, items or note",
+  "search_orders": "Search by items or note",
   "section_contact": "Contact",
   "section_history": "History",
   "section_orders": "Orders",

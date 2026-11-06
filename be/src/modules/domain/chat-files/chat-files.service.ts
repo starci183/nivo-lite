@@ -26,7 +26,7 @@ import type {
 } from "./chat-files.contracts"
 import { InjectChatFilesStorage } from "./chat-files.decorators"
 import { ChatFilesError, ChatFilesErrorCode } from "./errors/chat-files.error"
-import { AgentMessageAttachmentEntity } from "./persistence/entities"
+import { OfficeFileAttachmentEntity } from "./persistence/entities"
 
 /** Private read addresses expire after one hour. */
 const SIGN_SECONDS = 3600
@@ -90,7 +90,7 @@ export class ChatFilesService {
         messageId: string,
         manager: EntityManager,
     ): Promise<void> {
-        await manager.insert(AgentMessageAttachmentEntity, {
+        await manager.insert(OfficeFileAttachmentEntity, {
             workspaceId: scope.workspaceId,
             messageId,
             path: file.path,
@@ -103,7 +103,7 @@ export class ChatFilesService {
     /** The files of the messages with short-lived addresses; a file the store no longer holds is left out. */
     async viewsOf(workspaceId: string, messageIds: ReadonlyArray<string>): Promise<ReadonlyArray<ChatFileView>> {
         if (messageIds.length === 0) return []
-        const rows = await this.entityManager.find(AgentMessageAttachmentEntity, {
+        const rows = await this.entityManager.find(OfficeFileAttachmentEntity, {
             where: { workspaceId, messageId: In([...messageIds]) },
             order: { createdAt: "ASC", id: "ASC" },
             take: VIEWS_MAX,
@@ -126,7 +126,7 @@ export class ChatFilesService {
 
     /** The first file of a message with its bytes and what was read from it; null when there is none to read. */
     async storedOf(workspaceId: string, messageId: string): Promise<OptionalStoredChatFile> {
-        const row = await this.entityManager.findOne(AgentMessageAttachmentEntity, {
+        const row = await this.entityManager.findOne(OfficeFileAttachmentEntity, {
             where: { workspaceId, messageId },
             order: { createdAt: "ASC", id: "ASC" },
         })
@@ -144,7 +144,7 @@ export class ChatFilesService {
 
     /** Keeps what a turn read from a file, so it is read once. */
     async keepRead(workspaceId: string, id: string, read: ChatFileRead): Promise<void> {
-        await this.entityManager.update(AgentMessageAttachmentEntity, { id, workspaceId }, { read: { ...read } })
+        await this.entityManager.update(OfficeFileAttachmentEntity, { id, workspaceId }, { read: { ...read } })
     }
 
     private unreadable(code: string): ChatFilesError {

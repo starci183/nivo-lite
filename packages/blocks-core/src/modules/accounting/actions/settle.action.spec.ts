@@ -1,5 +1,5 @@
 import type { ActionResult } from "@nivo-lite/agent-sdk/block"
-import type { RunContext } from "@nivo-lite/agent-sdk/port"
+import type { EngineResult, EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import {
     CLAIM,
     ORDER,
@@ -8,71 +8,55 @@ import {
     orderOf,
     transactionOf,
 } from "../../../rules/accounting/accounting.fixtures"
-import type { ClaimRecord, OrderRecord, TransactionRecord } from "../../../rules/accounting/accounting.types"
-import { claimStore, orderStore, providerOf, recordingOutbox, transactionStore } from "../accounting.doubles"
-import type { WriteResult } from "../accounting.types"
-import { claimsPort, ordersPort, outboxPort, transactionsPort } from "../ports"
+import type { OrderRecord, TransactionRecord } from "../../../rules/accounting/accounting.types"
+import {
+    SYSTEM_CONTEXT,
+    memoryProvider,
+    memoryWorld,
+    putClaim,
+    putOrder,
+    putTransaction,
+    rowsOf,
+    withEntity,
+} from "../fixtures/accounting.memory"
+import type { MemoryWorld } from "../fixtures/accounting.memory"
 import { settleAction } from "./settle.action"
 
-const CONTEXT: RunContext = { workspaceId: "w1", memberId: null, now: new Date("2026-11-04T12:00:00.000Z") }
-
-const NOT_RUNNABLE: ActionResult = { ok: false, reason: "failed", message: { key: "not_runnable" } }
+const payload = { transactionId: TRANSACTION.id, orderId: ORDER.id }
 
 interface Setup {
     readonly transaction?: TransactionRecord | null
     readonly order?: OrderRecord | null
-    readonly claim?: ClaimRecord | null
-    readonly settleTransaction?: WriteResult<TransactionRecord>
-    readonly setStatus?: WriteResult<OrderRecord>
-    readonly settleClaim?: WriteResult<ClaimRecord>
 }
 
-const harness = (setup: Setup = {}) => {
-    const writes: Array<string> = []
-    const { outbox, jobs } = recordingOutbox()
+/** A world with Dinh's payment, order and claim, as the fixtures have them; a setup replaces or drops the payment or the order. */
+const worldOf = (setup: Setup = {}): MemoryWorld => {
+    const world = memoryWorld()
     const transaction = setup.transaction === undefined ? TRANSACTION : setup.transaction
     const order = setup.order === undefined ? ORDER : setup.order
-    const claim = setup.claim === undefined ? CLAIM : setup.claim
-    const provider = providerOf([
-        [
-            transactionsPort,
-            transactionStore({
-                get: () => Promise.resolve(transaction),
-                settle: (id, expected, orderId) => {
-                    writes.push(`transaction:${id}:${expected}:${orderId}`)
-                    return Promise.resolve(setup.settleTransaction ?? { ok: true, row: TRANSACTION })
-                },
-            }),
-        ],
-        [
-            ordersPort,
-            orderStore({
-                get: () => Promise.resolve(order),
-                setStatus: (id, expected, status) => {
-                    writes.push(`order:${id}:${expected}:${status}`)
-                    return Promise.resolve(setup.setStatus ?? { ok: true, row: ORDER })
-                },
-            }),
-        ],
-        [
-            claimsPort,
-            claimStore({
-                get: () => Promise.resolve(claim),
-                settle: (id, expected, transactionId) => {
-                    writes.push(`claim:${id}:${expected}:${transactionId}`)
-                    return Promise.resolve(setup.settleClaim ?? { ok: true, row: CLAIM })
-                },
-            }),
-        ],
-        [outboxPort, outbox],
-    ])
-    const run = (raw: unknown): Promise<ActionResult> => {
-        return settleAction.execute?.(provider, raw, CONTEXT) ?? Promise.resolve(NOT_RUNNABLE)
-    }
-    return { writes, jobs, run }
+    if (transaction !== null) putTransaction(world, transaction)
+    if (order !== null) putOrder(world, order)
+    putClaim(world, CLAIM)
+    return world
 }
 
-const payload = { transactionId: TRANSACTION.id, orderId: ORDER.id }
+const run = (world: MemoryWorld, raw: unknown): Promise<ActionResult> =>
+    settleAction.execute?.(memoryProvider(world), raw, SYSTEM_CONTEXT) ?? Promise.reject(new Error("not runnable"))
+
+const runWith = (world: MemoryWorld, entity: string, patch: Partial<EntityApi>, raw: unknown): Promise<ActionResult> =>
+    settleAction.execute?.(withEntity(world, entity, patch), raw, SYSTEM_CONTEXT) ??
+    Promise.reject(new Error("not runnable"))
+
+const dataOf = (world: MemoryWorld, entity: string, id: string): Readonly<Record<string, unknown>> | undefined =>
+    rowsOf(world, entity).find((row) => row.id === id)?.data
+
+/** Every record of the world, as text: what a refusal must leave as it was. */
+const snapshotOf = (world: MemoryWorld): string => JSON.stringify([...world.tables.values()].flat())
+
+const answering =
+    (result: EngineResult): (() => Promise<EngineResult>) =>
+    () =>
+        Promise.resolve(result)
 
 describe("payment.settle", () => {
     it("is a transactional action of the payment permission that the graph runs", () => {
@@ -83,104 +67,152 @@ describe("payment.settle", () => {
     })
 
     it("ties the transaction to the order, pays it and enqueues the ledger line, the book entry and the notice", async () => {
-        const { writes, jobs, run } = harness()
-        await expect(run(payload)).resolves.toEqual({ ok: true, data: { result: "paid", orderId: ORDER.id } })
-        expect(writes).toEqual([`transaction:${TRANSACTION.id}:3:${ORDER.id}`, `order:${ORDER.id}:2:paid`])
-        expect(jobs).toEqual([
+        const world = worldOf()
+        await expect(run(world, payload)).resolves.toEqual({ ok: true, data: { result: "paid", orderId: ORDER.id } })
+        expect(dataOf(world, "payment.transaction", TRANSACTION.id)).toMatchObject({
+            status: "matched",
+            orderId: ORDER.id,
+        })
+        expect(rowsOf(world, "payment.transaction")[0]?.version).toBe("4")
+        expect(dataOf(world, "sales.order", ORDER.id)).toMatchObject({ status: "paid" })
+        expect(rowsOf(world, "sales.order")[0]?.version).toBe("3")
+        expect(world.links).toContainEqual({
+            entity: "payment.transaction",
+            id: TRANSACTION.id,
+            relation: "order",
+            to: ORDER.id,
+        })
+        expect(world.jobs).toEqual([
             {
-                name: "accounting.ledger-append",
+                job: "accounting.ledger-append",
                 input: { transactionId: TRANSACTION.id, orderId: ORDER.id },
-                options: { dedupeKey: `ledger:${TRANSACTION.id}` },
+                dedupeKey: `ledger:${TRANSACTION.id}`,
             },
             {
-                name: "accounting.book-project",
+                job: "accounting.book-project",
                 input: { sourceEntity: "payment.transaction", sourceId: TRANSACTION.id },
-                options: { dedupeKey: `book:payment.transaction:${TRANSACTION.id}` },
+                dedupeKey: `book:payment.transaction:${TRANSACTION.id}`,
             },
-            {
-                name: "payment.confirm-notice",
-                input: { orderId: ORDER.id },
-                options: { dedupeKey: `notice:${ORDER.id}` },
-            },
+            { job: "payment.confirm-notice", input: { orderId: ORDER.id }, dedupeKey: `notice:${ORDER.id}` },
         ])
+        expect(world.calls).toEqual([])
     })
 
     it("settles the claim that started it", async () => {
-        const { writes, run } = harness()
-        await expect(run({ ...payload, claimId: CLAIM.id })).resolves.toMatchObject({ ok: true })
-        expect(writes).toContain(`claim:${CLAIM.id}:1:${TRANSACTION.id}`)
+        const world = worldOf()
+        await expect(run(world, { ...payload, claimId: CLAIM.id })).resolves.toMatchObject({ ok: true })
+        expect(dataOf(world, "payment.claim", CLAIM.id)).toMatchObject({
+            status: "settled",
+            settledTransactionId: TRANSACTION.id,
+        })
     })
 
     it("leaves a claim this very transaction already settled as it is", async () => {
-        const settled = claimOf({ status: "settled", settledTransactionId: TRANSACTION.id })
-        const { writes, run } = harness({ claim: settled })
-        await expect(run({ ...payload, claimId: CLAIM.id })).resolves.toMatchObject({ ok: true })
-        expect(writes.some((write) => write.startsWith("claim:"))).toBe(false)
+        const world = memoryWorld()
+        putTransaction(world, TRANSACTION)
+        putOrder(world, ORDER)
+        putClaim(world, claimOf({ status: "settled", settledTransactionId: TRANSACTION.id }))
+        await expect(run(world, { ...payload, claimId: CLAIM.id })).resolves.toMatchObject({ ok: true })
+        expect(rowsOf(world, "payment.claim")[0]?.version).toBe("1")
     })
 
     it("changes nothing when the transaction already paid the order", async () => {
-        const paid = transactionOf({ status: "matched", orderId: ORDER.id })
-        const { writes, jobs, run } = harness({ transaction: paid })
-        await expect(run({ ...payload, claimId: null })).resolves.toEqual({
+        const world = worldOf({ transaction: transactionOf({ status: "matched", orderId: ORDER.id }) })
+        await expect(run(world, { ...payload, claimId: null })).resolves.toEqual({
             ok: true,
             data: { result: "already-paid", orderId: ORDER.id },
         })
-        expect(writes).toEqual([])
-        expect(jobs).toEqual([])
+        expect(rowsOf(world, "payment.transaction")[0]?.version).toBe("3")
+        expect(rowsOf(world, "sales.order")[0]?.version).toBe("2")
+        expect(world.jobs).toEqual([])
     })
 
     it("refuses what is not clean as data, naming the reason, and writes nothing", async () => {
-        const cases: ReadonlyArray<readonly [Setup, string, string]> = [
-            [{ transaction: null }, "transaction_missing", "settle_transaction_missing"],
-            [{ order: null }, "order_missing", "settle_order_missing"],
-            [{ order: orderOf({ status: "paid" }) }, "order_not_open", "settle_order_not_open"],
-            [{ order: orderOf({ amountVnd: 4_000_000 }) }, "amount_differs", "settle_amount_differs"],
-            [{ transaction: transactionOf({ orderId: "other" }) }, "transaction_used", "settle_transaction_used"],
+        const cases: ReadonlyArray<readonly [Setup, string]> = [
+            [{ transaction: null }, "transaction_missing"],
+            [{ order: null }, "order_missing"],
+            [{ order: orderOf({ status: "paid" }) }, "order_not_open"],
+            [{ order: orderOf({ amountVnd: 4_000_000 }) }, "amount_differs"],
+            [{ transaction: transactionOf({ orderId: "00000000-0000-4000-8000-0000000000b9" }) }, "transaction_used"],
         ]
-        for (const [setup, reason, key] of cases) {
-            const { writes, jobs, run } = harness(setup)
-            await expect(run(payload)).resolves.toEqual({
+        for (const [setup, reason] of cases) {
+            const world = worldOf(setup)
+            const before = snapshotOf(world)
+            await expect(run(world, payload)).resolves.toEqual({
                 ok: false,
                 reason: "refused",
-                message: { key },
+                message: { key: `settle_${reason}` },
                 data: { reason },
             })
-            expect(writes).toEqual([])
-            expect(jobs).toEqual([])
+            expect(snapshotOf(world)).toBe(before)
+            expect(world.jobs).toEqual([])
         }
     })
 
     it("refuses a claim that is named but gone", async () => {
-        const { run } = harness({ claim: null })
-        await expect(run({ ...payload, claimId: CLAIM.id })).resolves.toMatchObject({
+        const world = worldOf()
+        rowsOf(world, "payment.claim").splice(0)
+        await expect(run(world, { ...payload, claimId: CLAIM.id })).resolves.toMatchObject({
             ok: false,
             data: { reason: "claim_missing" },
         })
     })
 
     it("answers a conflict when another writer got there first, at any of the three writes", async () => {
-        const stale: WriteResult<never> = { ok: false, reason: "stale" }
+        const stale: EngineResult = { ok: false, reason: "stale" }
         const expected = { ok: false, reason: "conflict", message: { key: "settle_stale" } }
-        await expect(harness({ settleTransaction: stale }).run(payload)).resolves.toEqual(expected)
-        await expect(harness({ setStatus: stale }).run(payload)).resolves.toEqual(expected)
-        await expect(harness({ settleClaim: stale }).run({ ...payload, claimId: CLAIM.id })).resolves.toEqual(expected)
+        await expect(runWith(worldOf(), "payment.transaction", { update: answering(stale) }, payload)).resolves.toEqual(
+            expected,
+        )
+        await expect(runWith(worldOf(), "sales.order", { update: answering(stale) }, payload)).resolves.toEqual(
+            expected,
+        )
+        await expect(
+            runWith(worldOf(), "payment.claim", { update: answering(stale) }, { ...payload, claimId: CLAIM.id }),
+        ).resolves.toEqual(expected)
     })
 
-    it("refuses when the database refuses a second link of the transaction", async () => {
-        const taken: WriteResult<never> = { ok: false, reason: "taken" }
-        await expect(harness({ settleTransaction: taken }).run(payload)).resolves.toMatchObject({
+    it("refuses with the reason of the row when a write finds it gone", async () => {
+        const missing: EngineResult = { ok: false, reason: "missing" }
+        await expect(
+            runWith(worldOf(), "payment.transaction", { update: answering(missing) }, payload),
+        ).resolves.toMatchObject({ ok: false, reason: "refused", data: { reason: "transaction_missing" } })
+        await expect(runWith(worldOf(), "sales.order", { update: answering(missing) }, payload)).resolves.toMatchObject(
+            { ok: false, data: { reason: "order_missing" } },
+        )
+        await expect(
+            runWith(worldOf(), "payment.claim", { update: answering(missing) }, { ...payload, claimId: CLAIM.id }),
+        ).resolves.toMatchObject({ ok: false, data: { reason: "claim_missing" } })
+    })
+
+    it("refuses when the database refuses a second link: of the order, of the transaction, of the claim", async () => {
+        const taken: EngineResult = {
             ok: false,
-            reason: "refused",
-            data: { reason: "transaction_used" },
+            reason: "taken",
+            constraint: "order_key",
+            refusal: "order-already-paid",
+        }
+        await expect(
+            runWith(worldOf(), "payment.transaction", { update: answering(taken) }, payload),
+        ).resolves.toMatchObject({ ok: false, reason: "refused", data: { reason: "order_not_open" } })
+        await expect(
+            runWith(worldOf(), "payment.transaction", { link: answering(taken) }, payload),
+        ).resolves.toMatchObject({ ok: false, reason: "refused", data: { reason: "order_not_open" } })
+        await expect(runWith(worldOf(), "sales.order", { update: answering(taken) }, payload)).resolves.toMatchObject({
+            ok: false,
+            data: { reason: "order_not_open" },
         })
+        await expect(
+            runWith(worldOf(), "payment.claim", { update: answering(taken) }, { ...payload, claimId: CLAIM.id }),
+        ).resolves.toMatchObject({ ok: false, data: { reason: "transaction_used" } })
     })
 
     it("answers invalid for a payload the door should never have passed", async () => {
-        const { run } = harness()
-        await expect(run({ ...payload, transactionId: "not-a-uuid" })).resolves.toMatchObject({
+        const world = worldOf()
+        await expect(run(world, { ...payload, transactionId: "not-a-uuid" })).resolves.toMatchObject({
             ok: false,
             reason: "invalid",
         })
-        await expect(run({ ...payload, extra: 1 })).resolves.toMatchObject({ ok: false, reason: "invalid" })
+        await expect(run(world, { ...payload, extra: 1 })).resolves.toMatchObject({ ok: false, reason: "invalid" })
     })
 })

@@ -28,7 +28,9 @@
         "records_accounting_book_entry_source_id_chk"
       ],
       "indexes": [
+        "records_accounting_book_entry_amount",
         "records_accounting_book_entry_date",
+        "records_accounting_book_entry_kind_amount",
         "records_accounting_book_entry_kind_date",
         "records_accounting_book_entry_note_trgm_idx",
         "records_accounting_book_entry_source_key"
@@ -54,9 +56,96 @@
       "indexes": [
         "records_accounting_invoice_contract_period_key",
         "records_accounting_invoice_invoice_no_key",
+        "records_accounting_invoice_key",
         "records_accounting_invoice_order_key",
         "records_accounting_invoice_recent",
         "records_accounting_invoice_status_recent"
+      ]
+    },
+    {
+      "entity": "agent.node-effect",
+      "partition": "records_agent_node_effect",
+      "checks": [
+        "records_agent_node_effect_effect_id_chk",
+        "records_agent_node_effect_effect_key_chk",
+        "records_agent_node_effect_subject_entity_chk",
+        "records_agent_node_effect_subject_id_chk",
+        "records_agent_node_effect_undone_at_chk"
+      ],
+      "indexes": ["records_agent_node_effect_effect_key_key"]
+    },
+    {
+      "entity": "agent.run",
+      "partition": "records_agent_run",
+      "view": "v_records_agent_run",
+      "checks": [
+        "records_agent_run_agent_id_chk",
+        "records_agent_run_context_chk",
+        "records_agent_run_dead_lettered_at_chk",
+        "records_agent_run_ended_at_chk",
+        "records_agent_run_error_chk",
+        "records_agent_run_graph_version_id_chk",
+        "records_agent_run_park_reason_chk",
+        "records_agent_run_parked_build_chk",
+        "records_agent_run_planning_chk",
+        "records_agent_run_resume_attempts_chk",
+        "records_agent_run_resume_not_before_chk",
+        "records_agent_run_resume_reason_chk",
+        "records_agent_run_resumed_at_chk",
+        "records_agent_run_resumed_by_chk",
+        "records_agent_run_started_at_chk",
+        "records_agent_run_status_chk",
+        "records_agent_run_step_seq_chk",
+        "records_agent_run_trigger_chk",
+        "records_agent_run_wait_deadline_at_chk",
+        "records_agent_run_wait_work_item_id_chk",
+        "records_agent_run_wake_id_chk"
+      ],
+      "indexes": [
+        "records_agent_run_agent_started",
+        "records_agent_run_status_dead_lettered",
+        "records_agent_run_status_resume",
+        "records_agent_run_wake",
+        "records_agent_run_wake_planning_key"
+      ]
+    },
+    {
+      "entity": "agent.run-step",
+      "partition": "records_agent_run_step",
+      "view": "v_records_agent_run_step",
+      "checks": [
+        "records_agent_run_step_attempt_chk",
+        "records_agent_run_step_claimed_until_chk",
+        "records_agent_run_step_comp_attempts_chk",
+        "records_agent_run_step_deadline_ms_chk",
+        "records_agent_run_step_door_calls_chk",
+        "records_agent_run_step_duration_ms_chk",
+        "records_agent_run_step_effect_chk",
+        "records_agent_run_step_effect_key_chk",
+        "records_agent_run_step_ended_at_chk",
+        "records_agent_run_step_error_chk",
+        "records_agent_run_step_error_code_chk",
+        "records_agent_run_step_input_chk",
+        "records_agent_run_step_kind_chk",
+        "records_agent_run_step_max_attempts_chk",
+        "records_agent_run_step_node_key_chk",
+        "records_agent_run_step_not_before_chk",
+        "records_agent_run_step_ordinal_chk",
+        "records_agent_run_step_result_chk",
+        "records_agent_run_step_run_id_chk",
+        "records_agent_run_step_started_at_chk",
+        "records_agent_run_step_status_chk",
+        "records_agent_run_step_step_key_chk",
+        "records_agent_run_step_wait_item_id_chk",
+        "records_agent_run_step_work_item_id_chk"
+      ],
+      "indexes": [
+        "records_agent_run_step_kind_work_item",
+        "records_agent_run_step_run_ordinal",
+        "records_agent_run_step_run_step_key",
+        "records_agent_run_step_status_claimed",
+        "records_agent_run_step_status_not_before",
+        "records_agent_run_step_wait_item"
       ]
     },
     {
@@ -149,6 +238,7 @@
       ],
       "indexes": [
         "records_payment_claim_dedupe_key",
+        "records_payment_claim_key",
         "records_payment_claim_settled_transaction_key",
         "records_payment_claim_status_claimed"
       ]
@@ -162,6 +252,7 @@
         "records_payment_transaction_channel_chk",
         "records_payment_transaction_direction_chk",
         "records_payment_transaction_external_ref_chk",
+        "records_payment_transaction_invoice_id_chk",
         "records_payment_transaction_occurred_at_chk",
         "records_payment_transaction_order_id_chk",
         "records_payment_transaction_payer_chk",
@@ -170,6 +261,7 @@
       ],
       "indexes": [
         "records_payment_transaction_external_ref_key",
+        "records_payment_transaction_invoice",
         "records_payment_transaction_occurred",
         "records_payment_transaction_order_key",
         "records_payment_transaction_status_occurred"
@@ -180,6 +272,7 @@
       "partition": "records_sales_lead",
       "checks": [
         "records_sales_lead_channel_chk",
+        "records_sales_lead_closed_reason_chk",
         "records_sales_lead_company_chk",
         "records_sales_lead_contact_name_chk",
         "records_sales_lead_context_summary_chk",
@@ -193,9 +286,12 @@
         "records_sales_lead_contact_name_trgm_idx",
         "records_sales_lead_email_key",
         "records_sales_lead_email_trgm_idx",
+        "records_sales_lead_name",
+        "records_sales_lead_need_trgm_idx",
         "records_sales_lead_phone_key",
         "records_sales_lead_phone_trgm_idx",
         "records_sales_lead_recent",
+        "records_sales_lead_stage_name",
         "records_sales_lead_stage_recent"
       ]
     },
@@ -205,14 +301,28 @@
       "checks": [
         "records_sales_order_amount_chk",
         "records_sales_order_amount_vnd_chk",
+        "records_sales_order_carrier_chk",
         "records_sales_order_confirmed_at_chk",
         "records_sales_order_confirmed_by_chk",
         "records_sales_order_items_chk",
+        "records_sales_order_lead_id_chk",
         "records_sales_order_note_chk",
         "records_sales_order_order_no_chk",
-        "records_sales_order_status_chk"
+        "records_sales_order_shipped_at_chk",
+        "records_sales_order_status_chk",
+        "records_sales_order_tracking_code_chk"
       ],
-      "indexes": ["records_sales_order_order_no_key", "records_sales_order_recent", "records_sales_order_status_recent"]
+      "indexes": [
+        "records_sales_order_amount",
+        "records_sales_order_items_trgm_idx",
+        "records_sales_order_key",
+        "records_sales_order_lead_recent",
+        "records_sales_order_note_trgm_idx",
+        "records_sales_order_order_no_key",
+        "records_sales_order_recent",
+        "records_sales_order_status_amount",
+        "records_sales_order_status_recent"
+      ]
     }
   ]
 }

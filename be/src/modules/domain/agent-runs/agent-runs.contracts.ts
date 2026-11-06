@@ -8,7 +8,8 @@ export type OptionalStepJson = StepJson | undefined
 export type OptionalRunWait = StepView | null
 
 /** Where a run stands. `waiting` holds a durable wait; `dead` was given to a person with the trigger intact. */
-export type AgentRunStatus = "running" | "waiting" | "done" | "failed" | "dead" | "compensating" | "compensated"
+export type AgentRunStatus =
+    "running" | "waiting" | "parked" | "done" | "failed" | "dead" | "compensating" | "compensated"
 
 /** Where a step stands. */
 export type AgentStepStatus = "pending" | "running" | "done" | "failed" | "compensating" | "compensated"

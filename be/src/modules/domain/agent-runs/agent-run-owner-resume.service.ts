@@ -31,8 +31,10 @@ export class AgentRunOwnerResumeService {
     async resume(request: OwnerResumeRequest): Promise<OwnerResumeAnswer> {
         await this.members.require(request.principalId, request.workspaceId, GOVERNORS)
         const actor = await this.members.idOf(request.principalId, request.workspaceId)
-        const run = await this.runs.runById(request.runId)
+        const run = await this.runs.runById(request.workspaceId, request.runId)
         if (run?.workspaceId !== request.workspaceId) return NOT_FOUND
-        return answerOf(await this.resumes.resume({ runId: run.id, actor, reason: request.reason }))
+        return answerOf(
+            await this.resumes.resume({ workspaceId: run.workspaceId, runId: run.id, actor, reason: request.reason }),
+        )
     }
 }

@@ -24,37 +24,43 @@ describe("agent-runs/park-resume: a run that stopped for a fix runs again from i
         const { runId, wakeId } = await scene.newRun("park-then-resume")
         script().toolTries = [{ kind: "failed", code: "invalid_step_input" }]
         await em().transaction((tx) =>
-            runs().append(tx, runId, [
+            runs().append(scene.workspaceId, tx, runId, [
                 chainFrom("door", wakeId),
                 chainFrom("reply", wakeId),
                 chainFrom("tool", wakeId),
             ]),
         )
 
-        await runs().advance(runId, SIGNAL)
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
 
         expect(await statuses(runId)).toEqual(["turn:done", "door:done", "reply:done", "tool:failed"])
-        expect((await scene.runRow(runId)).status).toBe("dead")
+        expect(await scene.runRow(runId)).toMatchObject({ status: "parked" })
         expect(script().performed).toEqual([`door:${wakeId}`, `reply:${wakeId}`])
 
-        await expect(resumer().resume({ runId, actor: "member-1", reason: "scope fixed" })).resolves.toMatchObject({
+        await expect(
+            resumer().resume({ workspaceId: scene.workspaceId, runId, actor: "member-1", reason: "scope fixed" }),
+        ).resolves.toMatchObject({
             kind: "resumed",
             stepKey: "tool",
         })
-        await runs().advance(runId, SIGNAL)
+        await runs().advance(scene.workspaceId, runId, SIGNAL)
 
         expect(await statuses(runId)).toEqual(["turn:done", "door:done", "reply:done", "tool:done"])
         expect(script().performed).toEqual([`door:${wakeId}`, `reply:${wakeId}`, `tool:${wakeId}`])
-        const row = await scene.runRow(runId)
-        expect(row.status).toBe("done")
-        expect({ by: row.resumedBy, reason: row.resumeReason }).toEqual({ by: "member-1", reason: "scope fixed" })
+        expect(await scene.runRow(runId)).toMatchObject({
+            status: "done",
+            resumedBy: "member-1",
+            resumeReason: "scope fixed",
+        })
     })
 
     it("agent-runs/park-resume: a run that is not parked is refused", async () => {
         const { runId, wakeId } = await scene.newRun("not-parked")
-        await em().transaction((tx) => runs().append(tx, runId, [chainFrom("door", wakeId)]))
+        await em().transaction((tx) => runs().append(scene.workspaceId, tx, runId, [chainFrom("door", wakeId)]))
 
-        await expect(resumer().resume({ runId, actor: "member-1", reason: "x" })).resolves.toEqual({
+        await expect(
+            resumer().resume({ workspaceId: scene.workspaceId, runId, actor: "member-1", reason: "x" }),
+        ).resolves.toEqual({
             kind: "not_parked",
         })
     })

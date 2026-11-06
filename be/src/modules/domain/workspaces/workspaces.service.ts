@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
+import { In, MoreThan } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager, advisoryXactLock } from "@modules/platform/database"
@@ -68,10 +68,11 @@ export class WorkspacesService {
         })
     }
 
-    /** Every workspace by id, bounded: its id and name. */
-    async list(limit: number): Promise<ReadonlyArray<WorkspaceName>> {
+    /** Every workspace by id, bounded: its id and name; with `after`, only those whose id sorts after it. */
+    async list(limit: number, after?: string): Promise<ReadonlyArray<WorkspaceName>> {
         const rows = await this.entityManager.find(WorkspaceEntity, {
             select: { id: true, name: true },
+            ...(after === undefined ? {} : { where: { id: MoreThan(after) } }),
             order: { id: "ASC" },
             take: limit,
         })
