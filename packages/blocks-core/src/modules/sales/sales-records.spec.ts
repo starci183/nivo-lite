@@ -1,5 +1,5 @@
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import { leadNameOf, leadRowOf, orderBriefOf, orderRowOf } from "./sales-records"
+import { leadNameOf, leadRowOf, leadRowsOf, orderBriefOf, orderRowOf } from "./sales-records"
 
 const record = (data: Readonly<Record<string, unknown>>): RecordRow => ({
     id: "r1",
@@ -14,7 +14,7 @@ const LEAD = { contactName: "Lan", channel: "zalo", stage: "new" }
 
 const ORDER = {
     orderNo: "DH-20261104-0001",
-    items: { lines: [{ name: "tea", qty: 2, unitVnd: 10_000, amountVnd: 20_000 }] },
+    items: { lines: [{ name: "tr\u00e0", qty: 2, unitVnd: 10_000, amountVnd: 20_000 }] },
     itemsText: "2 x tea",
     note: "",
     status: "draft",
@@ -36,7 +36,41 @@ describe("leadRowOf", () => {
             email: null,
             contextSummary: null,
             closedReason: null,
+            awaitingSince: null,
+            owner: null,
+            nextStep: null,
+            nextDueAt: null,
+            quoteVnd: null,
+            orderVnd: null,
+            note: null,
+            needs: null,
         })
+    })
+
+    it("reads the fields of the pipeline a lead holds", () => {
+        expect(
+            leadRowOf(
+                record({
+                    ...LEAD,
+                    owner: "Minh",
+                    nextStep: "Send quote",
+                    nextDueAt: "2026-11-06T09:00:00.000Z",
+                    quoteVnd: 12_500_000,
+                    awaitingSince: "2026-11-05T07:00:00.000Z",
+                }),
+            ),
+        ).toMatchObject({
+            owner: "Minh",
+            nextStep: "Send quote",
+            nextDueAt: "2026-11-06T09:00:00.000Z",
+            quoteVnd: 12_500_000,
+            awaitingSince: "2026-11-05T07:00:00.000Z",
+        })
+    })
+
+    it("leaves out of a page the rows that are no lead's", () => {
+        const rows = leadRowsOf([{ row: record({ ...LEAD }) }, { row: record({}) }])
+        expect(rows.map((lead) => lead.contactName)).toEqual(["Lan"])
     })
 
     it("is null for fields that are no lead's", () => {

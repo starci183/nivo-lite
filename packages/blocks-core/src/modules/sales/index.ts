@@ -4,7 +4,7 @@ export { SAMPLE_LEADS, SAMPLE_NOW, SAMPLE_ORDERS, sampleState } from "./fixtures
 export { SALES_FIXTURES } from "./fixtures/sales.fixtures"
 export type { MemoryState } from "./memory"
 export { memoryProvider } from "./memory"
-export { salesLeads, salesLeadsList, salesOrders, salesOrdersList } from "./ports"
+export { salesLeads, salesLeadsList, salesOrders, salesOrdersList, salesSettings } from "./ports"
 export { LEAD_FIELDS, ORDER_FIELDS, leadRowOf, orderRowOf } from "./sales-records"
 export type { LeadDetail, LeadRow, OrderApproval, OrderDetail, OrderRow } from "./sales.types"
 export { SALES_MESSAGES } from "./sales-messages"

@@ -23,6 +23,22 @@ export interface LeadRow {
     readonly contextSummary: string | null
     /** Why the deal was closed (won or lost); null while it is open. */
     readonly closedReason: string | null
+    /** Since when the customer waits for an answer, ISO text; null when nobody waits. */
+    readonly awaitingSince: string | null
+    /** Who looks after the deal, or null. */
+    readonly owner: string | null
+    /** The next step of the deal, or null. */
+    readonly nextStep: string | null
+    /** When the next step is due, ISO text, or null. */
+    readonly nextDueAt: string | null
+    /** The amount of the quote, VND, or null. */
+    readonly quoteVnd: number | null
+    /** The amount of the order, VND, or null. */
+    readonly orderVnd: number | null
+    /** A line about where the deal stands, or null. */
+    readonly note: string | null
+    /** What the assistant still needs from the owner, or null. */
+    readonly needs: string | null
     /** The version token an update must present. */
     readonly version: string
     /** When the lead was created, ISO text. */
@@ -142,4 +158,10 @@ export interface OrderDetail {
     readonly carrier: string | null
     /** The tracking reference, or null. */
     readonly trackingCode: string | null
+}
+
+/** The input of an action on one order. */
+export interface OrderIdInput {
+    /** The order id. */
+    readonly id: string
 }

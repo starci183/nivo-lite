@@ -2,11 +2,11 @@ import { defineRead } from "@nivo-lite/agent-sdk/block"
 import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
-import { DEFAULT_THRESHOLD_VND } from "../../../nodes/order/needs-approval.node"
 import { SALES_VIEW } from "../constants"
 import { orderDetailOf } from "../details"
-import { salesLeads, salesOrders } from "../ports"
+import { salesLeads, salesOrders, salesSettings } from "../ports"
 import { leadNameOf, orderRowOf } from "../sales-records"
+import { settingsOf } from "../settings-store"
 import type { OrderDetail } from "../sales.types"
 
 const variables: z.ZodObject<{ id: z.ZodString }> = z.object({ id: z.string().min(1).max(MAX_ID) })
@@ -40,13 +40,13 @@ export const orderRead: ReadDefinition = defineRead({
     paths: {},
     variables,
     permission: SALES_VIEW,
-    ports: { leads: salesLeads, orders: salesOrders },
-    run: async ({ leads, orders }, { id }): Promise<OrderDetail | null> => {
+    ports: { leads: salesLeads, orders: salesOrders, settings: salesSettings },
+    run: async ({ leads, orders, settings }, { id }): Promise<OrderDetail | null> => {
         const record = await orders.get(id)
         const order = record === null ? null : orderRowOf(record)
         if (order === null) return null
         const buyer = order.leadId === null ? null : await leads.get(order.leadId)
         const customer = buyer === null ? null : leadNameOf(buyer.data)
-        return orderDetailOf(order, customer, DEFAULT_THRESHOLD_VND)
+        return orderDetailOf(order, customer, await settingsOf(settings))
     },
 })

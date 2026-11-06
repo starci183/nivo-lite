@@ -71,6 +71,19 @@ describe("the in-memory provider", () => {
         expect(await source.counts(SHAPE, "nope", QUERY)).toEqual({})
     })
 
+    it("counts an open filter by the values the rows hold, leaving out a row with none, and a closed one by its listed values", async () => {
+        const source = provided(sampleState(), loyaltyMembersList)
+        expect(isListSource(source)).toBe(true)
+        if (!isListSource(source)) return
+        const open: ListShape = {
+            ...SHAPE,
+            filters: { tier: { field: "tierKey", op: "eq", of: ["vang"], open: true } },
+        }
+        expect(await source.counts(open, "tier", QUERY)).toEqual({ vang: 1, bac: 1, dong: 2 })
+        const closed: ListShape = { ...SHAPE, filters: { tier: { field: "tierKey", op: "eq", of: ["vang", "none"] } } }
+        expect(await source.counts(closed, "tier", QUERY)).toEqual({ vang: 1, none: 0 })
+    })
+
     it("refuses an update of a member that is gone and one made at a stale version", async () => {
         const store = provided(sampleState(), loyaltyMembers)
         expect(isMemberStore(store)).toBe(true)

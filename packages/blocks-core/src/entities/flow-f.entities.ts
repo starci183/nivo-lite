@@ -13,11 +13,13 @@ import { claimEntity } from "./payment/claim.entity"
 import { transactionEntity } from "./payment/transaction.entity"
 import { leadEntity } from "./sales/lead.entity"
 import { orderEntity } from "./sales/order.entity"
+import { settingsEntity } from "./sales/settings.entity"
 
 /** Every flow F entity declaration. */
 export const FLOW_F_ENTITIES: ReadonlyArray<AnyEntityDefinition> = [
     leadEntity,
     orderEntity,
+    settingsEntity,
     conversationEntity,
     messageEntity,
     transactionEntity,

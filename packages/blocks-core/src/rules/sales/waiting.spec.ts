@@ -14,9 +14,9 @@ describe("waitingViewOf", () => {
         expect(waitingViewOf(orders, 3, 5, hrefOf)).toEqual({
             count: "3",
             rows: [
-                { id: "o1", title: "DH-1 · Lan", description: "10 x tea · 6,000,000 VND", href: "?order=o1" },
+                { id: "o1", title: "DH-1 · Lan", description: "10 x tea · 6.000.000\u00a0₫", href: "?order=o1" },
                 { id: "o2", title: "DH-2", description: "", href: "?order=o2" },
-                { id: "o3", title: "DH-3 · Binh", description: "1 x set · 5,000,000 VND", href: "?order=o3" },
+                { id: "o3", title: "DH-3 · Binh", description: "1 x set · 5.000.000 ₫", href: "?order=o3" },
             ],
             linkLabel: "",
             linkHref: "",

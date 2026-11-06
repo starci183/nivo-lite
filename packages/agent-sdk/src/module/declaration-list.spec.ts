@@ -52,6 +52,24 @@ describe("listRead", () => {
         expect(LEADS.variables.safeParse({ q: "x".repeat(201) }).success).toBe(false)
     })
 
+    it("takes any value for an open filter and still tells the enum filters apart", () => {
+        const open: ListShape = {
+            sort: { recent: [["a", "asc"]] },
+            page: { size: 5 },
+            row: { id: "id", title: "t" },
+            filters: {
+                tier: { field: "tierKey", op: "eq", of: ["gold"], open: true },
+                stage: { field: "stage", op: "eq", of: ["won"] },
+            },
+        }
+        const read = listRead({ ...BASE, list: open })
+        expect(read.variables.safeParse({ tier: "renamed-tier" }).success).toBe(true)
+        expect(read.variables.safeParse({ tier: "all" }).success).toBe(true)
+        expect(read.variables.safeParse({ tier: "" }).success).toBe(false)
+        expect(read.variables.safeParse({ tier: "x".repeat(300) }).success).toBe(false)
+        expect(read.variables.safeParse({ stage: "other" }).success).toBe(false)
+    })
+
     it("keeps extra variables next to the derived ones", () => {
         const read = listRead({ ...BASE, list: LEADS_SHAPE, variables: z.object({ ownerId: z.string().max(40) }) })
         expect(Object.keys(read.variables.shape)).toEqual(["ownerId", "q", "sort", "cursor", "stage", "stock"])

@@ -12,13 +12,15 @@ import type {
 import { unprovided } from "@nivo-lite/agent-sdk/port"
 import type { PortDefinition, PortProvider } from "@nivo-lite/agent-sdk/port"
 import { queryProblems } from "@nivo-lite/agent-sdk/query"
-import type { EntityCatalog, FilterExpr, OrderBy } from "@nivo-lite/agent-sdk/query"
+import type { CompareExpr, EntityCatalog, FilterExpr, OrderBy } from "@nivo-lite/agent-sdk/query"
 import { FLOW_F_ENTITIES } from "../../entities/flow-f.entities"
+import type { SalesSettings } from "../../rules/sales/settings"
 import { matchesQuery } from "../../rules/sales/search"
 import type { RightsDirectory } from "../platform/platform.types"
 import { rightsPort } from "../platform/ports"
-import { salesLeads, salesLeadsList, salesOrders, salesOrdersList } from "./ports"
-import { leadRowOf, orderRowOf } from "./sales-records"
+import { SALES_SETTINGS_KEY } from "../../entities/sales/settings.entity"
+import { salesLeads, salesLeadsList, salesOrders, salesOrdersList, salesSettings } from "./ports"
+import { leadRowOf, orderRowOf, settingsRowOf } from "./sales-records"
 import type { LeadRow, OrderRow } from "./sales.types"
 
 /** What the in-memory provider holds: the rows, the members who hold the owner's right and the clock. */
@@ -27,6 +29,8 @@ export interface MemoryState {
     readonly leads: Array<LeadRow>
     /** The orders; updates replace the entries. */
     readonly orders: Array<OrderRow>
+    /** The rules the workspace saved, or null before the first save; an upsert replaces them. */
+    settings: SalesSettings | null
     /** The ids of the members who hold every permission; any other member holds none. */
     readonly holders: ReadonlyArray<string>
     /** The instant an update stamps on a row, ISO text. */
@@ -111,6 +115,9 @@ const COLUMNS: ReadonlySet<string> = new Set(["id", "version", "createdAt", "upd
 /** What the fake engine does not do. */
 const unsupported = (): Promise<never> => Promise.reject(new Error("The fake engine does not run this call."))
 
+/** The answer to a write the fake engine does not take. */
+const unsupportedResult: EngineResult = { ok: false, reason: "invalid" }
+
 /** The refusal of a condition the fake engine does not run. */
 const unrun = (where: FilterExpr | undefined): Promise<never> =>
     Promise.reject(new Error(`The fake engine does not run the condition ${JSON.stringify(where)}.`))
@@ -133,7 +140,46 @@ const fieldOf = (record: RecordRow, field: string): unknown => {
     return record.data[field]
 }
 
-/** Whether a record matches a condition; null when the condition is one the fake does not run (it knows `eq`, `gte`, `isNull`, `and` and `or`). */
+/** The comparison of two scalars of a record: numbers by size, texts (ISO times among them) by order; null when they are not alike. */
+const order = (left: unknown, right: unknown): number | null => {
+    if (typeof left === "number" && typeof right === "number") return left - right
+    if (typeof left !== "string" || typeof right !== "string") return null
+    if (left === right) return 0
+    return left < right ? -1 : 1
+}
+
+/** Whether a record's scalar stands in the relation a comparison asks for; false when the two are not alike. */
+const compared = (record: RecordRow, where: CompareExpr): boolean => {
+    const sign = order(fieldOf(record, where.field), where.value)
+    if (sign === null) return false
+    const verdicts: Readonly<Record<string, boolean>> = {
+        lt: sign < 0,
+        lte: sign <= 0,
+        gt: sign > 0,
+        gte: sign >= 0,
+    }
+    return verdicts[where.op] === true
+}
+
+/** Whether a record matches a condition that looks at one field; null when the condition is one the fake does not run. */
+const matchesField = (record: RecordRow, where: FilterExpr): boolean | null => {
+    if (where.op === "isNull" || where.op === "notNull") {
+        const value = fieldOf(record, where.field)
+        const absent = value === null || value === undefined
+        return where.op === "isNull" ? absent : !absent
+    }
+    if (where.op === "in") {
+        const current = fieldOf(record, where.field)
+        return new Set<unknown>(where.values).has(current)
+    }
+    if (where.op === "eq") return fieldOf(record, where.field) === where.value
+    if (where.op === "ne") return fieldOf(record, where.field) !== where.value
+    if (where.op === "lt" || where.op === "lte" || where.op === "gt" || where.op === "gte")
+        return compared(record, where)
+    return null
+}
+
+/** Whether a record matches a condition; null when the condition is one the fake does not run (it knows `eq`, `ne`, `lt`, `lte`, `gt`, `gte`, `in`, `isNull`, `notNull`, `not`, `and` and `or`). */
 const matches = (record: RecordRow, where: FilterExpr | undefined): boolean | null => {
     if (where === undefined) return true
     if (where.op === "and" || where.op === "or") {
@@ -141,16 +187,11 @@ const matches = (record: RecordRow, where: FilterExpr | undefined): boolean | nu
         if (parts.includes(null)) return null
         return where.op === "and" ? parts.every(Boolean) : parts.some(Boolean)
     }
-    if (where.op === "eq") return fieldOf(record, where.field) === where.value
-    if (where.op === "gte") {
-        const value = fieldOf(record, where.field)
-        return typeof value === "number" && typeof where.value === "number" && value >= where.value
+    if (where.op === "not") {
+        const inner = matches(record, where.of)
+        return inner === null ? null : !inner
     }
-    if (where.op === "isNull") {
-        const value = fieldOf(record, where.field)
-        return value === null || value === undefined
-    }
-    return null
+    return matchesField(record, where)
 }
 
 /** The records of a table that match a condition; null when the condition is one the fake does not run. */
@@ -184,6 +225,8 @@ interface Table {
     readonly replace: (index: number, record: RecordRow) => boolean
     /** The instant a write stamps, ISO text. */
     readonly now: string
+    /** Writes the record the table holds at most one of; absent on a table that does not take an upsert. */
+    readonly save?: (values: Readonly<Record<string, unknown>>) => EngineResult
     /** The records a toOne relation joins, by relation name; the id is the field named `<relation>Id`. */
     readonly joins: Readonly<Record<string, () => ReadonlyArray<RecordRow>>>
 }
@@ -250,13 +293,35 @@ const entityApi = (table: Table): EntityApi => ({
     },
     aggregate: (aggregate): Promise<ReadonlyArray<AggregateRow>> => {
         const found = matching(table, aggregate.where)
-        return found === null
-            ? unrun(aggregate.where)
-            : Promise.resolve([{ groups: {}, measures: { count: found.length } }])
+        if (found === null) return unrun(aggregate.where)
+        const measuresOf = (records: ReadonlyArray<RecordRow>): Record<string, number> =>
+            Object.fromEntries(
+                Object.entries(aggregate.measures).map(([name, spec]) => {
+                    const counted = records.filter((record) => matches(record, spec.where) === true)
+                    return [
+                        name,
+                        spec.kind === "sum"
+                            ? counted.reduce((total, record) => {
+                                  const value = fieldOf(record, String(spec.field))
+                                  return total + (typeof value === "number" ? value : 0)
+                              }, 0)
+                            : counted.length,
+                    ]
+                }),
+            )
+        const by = aggregate.groupBy?.[0]
+        if (by === undefined) return Promise.resolve([{ groups: {}, measures: measuresOf(found) }])
+        const keys = [...new Set(found.map((record) => String(fieldOf(record, by))))]
+        return Promise.resolve(
+            keys.map((key) => ({
+                groups: { [by]: key },
+                measures: measuresOf(found.filter((record) => String(fieldOf(record, by)) === key)),
+            })),
+        )
     },
     update: (key, expected, values) => Promise.resolve(updated(table, key, expected, values)),
     insert: unsupported,
-    upsert: unsupported,
+    upsert: (_on, values) => Promise.resolve(table.save === undefined ? unsupportedResult : table.save(values)),
     ensure: unsupported,
     delete: unsupported,
     link: unsupported,
@@ -295,8 +360,30 @@ export const memoryProvider = (state: MemoryState): PortProvider => {
         now: state.now,
         joins: { lead: leads.records },
     }
+    const stamped = (data: Readonly<Record<string, unknown>>): RecordRow => ({
+        ...recordOf({ id: "settings-1", version: "1", createdAt: state.now, updatedAt: state.now }),
+        data,
+    })
+    const settings: Table = {
+        entity: "sales.settings",
+        records: () => (state.settings === null ? [] : [stamped({ key: SALES_SETTINGS_KEY, ...state.settings })]),
+        replace: (_index, record) => {
+            const saved = settingsRowOf(record)
+            if (saved !== null) state.settings = saved
+            return saved !== null
+        },
+        save: (values) => {
+            const saved = settingsRowOf(stamped(values))
+            if (saved === null) return unsupportedResult
+            state.settings = saved
+            return { ok: true, row: stamped(values), version: "1" }
+        },
+        now: state.now,
+        joins: {},
+    }
     return {
         implementationOf: (port: PortDefinition<unknown>): unknown => {
+            if (port.id === salesSettings.id) return entityApi(settings)
             if (port.id === salesLeadsList.id) return memoryList(() => state.leads)
             if (port.id === salesOrdersList.id) return memoryList(() => state.orders)
             if (port.id === salesLeads.id) return entityApi(leads)

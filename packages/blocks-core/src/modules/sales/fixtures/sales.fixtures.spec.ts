@@ -3,7 +3,7 @@ import { SALES_FIXTURES, customerOf } from "./sales.fixtures"
 
 describe("the sample data of the Sales fixtures", () => {
     it("names the customer of an order, none for an order with no customer or whose customer is gone", () => {
-        expect(customerOf(ORDER_WAITING)).toBe("Pham Quoc Dung")
+        expect(customerOf(ORDER_WAITING)).toBe("Ph\u1ea1m Qu\u1ed1c D\u0169ng")
         expect(customerOf({ ...ORDER_WAITING, leadId: "lead-9" })).toBeNull()
         expect(customerOf({ ...ORDER_WAITING, leadId: null })).toBeNull()
     })
@@ -14,8 +14,8 @@ describe("the sample data of the Sales fixtures", () => {
             total: 5,
         })
         expect(SALES_FIXTURES.reads["sales.order-counts"]?.ready).toMatchObject({
-            counts: { draft: 2, confirmed: 1, invoiced: 0, paid: 2, cancelled: 1, failed_system: 0 },
-            total: 6,
+            counts: { draft: 2, confirmed: 1, invoiced: 0, paid: 2, cancelled: 1, failed_system: 1 },
+            total: 7,
         })
         expect(SALES_FIXTURES.reads["sales.order-counts"]?.empty).toMatchObject({ total: 0 })
     })
@@ -26,8 +26,8 @@ describe("the sample data of the Sales fixtures", () => {
             rows: [
                 {
                     id: "order-1",
-                    title: "DH-20261104-0001 · Pham Quoc Dung",
-                    description: "10 x gift set · 6,000,000 VND",
+                    title: "DH-20261104-0001 · Ph\u1ea1m Qu\u1ed1c D\u0169ng",
+                    description: "10 x h\u1ed9p qu\u00e0 · 6.000.000\u00a0₫",
                     href: "?tab=orders&order=order-1",
                 },
             ],

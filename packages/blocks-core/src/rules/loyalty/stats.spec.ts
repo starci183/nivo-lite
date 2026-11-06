@@ -61,9 +61,9 @@ describe("computeStats", () => {
     it("counts the birthdays of the month and the members of each tier", () => {
         expect(stats.birthdaysThisMonth).toBe(1)
         expect(stats.tierCounts).toEqual([
-            { key: "dong", name: "Bronze", count: 2 },
-            { key: "bac", name: "Silver", count: 1 },
-            { key: "vang", name: "Gold", count: 0 },
+            { key: "dong", name: "\u0110\u1ed3ng", count: 2 },
+            { key: "bac", name: "B\u1ea1c", count: 1 },
+            { key: "vang", name: "V\u00e0ng", count: 0 },
         ])
     })
 })

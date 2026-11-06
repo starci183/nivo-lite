@@ -1,11 +1,13 @@
 import type { ListFilter, ListQuery, ListShape, ListSource } from "@nivo-lite/agent-sdk/block"
 import type { EntityApi, EntityQuery } from "@nivo-lite/agent-sdk/entity/port"
+import type { FilterExpr } from "@nivo-lite/agent-sdk/query"
 import { definePort, portsOf } from "@nivo-lite/agent-sdk/port"
 import { q } from "@nivo-lite/agent-sdk/query"
+import { SALES_SETTINGS_DEFAULTS } from "../../rules/sales/settings"
 import { rightsPort } from "../platform/ports"
 import { ORDER_WAITING, sampleState, SAMPLE_NOW } from "./fixtures/sales.data"
 import { memoryProvider } from "./memory"
-import { salesLeads, salesLeadsList, salesOrders, salesOrdersList } from "./ports"
+import { salesLeads, salesLeadsList, salesOrders, salesOrdersList, salesSettings } from "./ports"
 import { LEADS_LIST } from "./reads/leads.read"
 import { ORDERS_LIST } from "./reads/orders.read"
 import type { LeadRow, OrderRow } from "./sales.types"
@@ -32,11 +34,11 @@ describe("the in-memory list source", () => {
         const { leads } = sources()
         const page = await leads.page(LEADS_LIST, query({ sort: "name" }))
         expect(page.rows.map((lead) => lead.contactName)).toEqual([
-            "Hoang Thu Ha",
-            "Le Minh Chau",
-            "Nguyen Van An",
-            "Pham Quoc Dung",
-            "Tran Thi Binh",
+            "Ho\u00e0ng Thu H\u00e0",
+            "L\u00ea Minh Ch\u00e2u",
+            "Nguy\u1ec5n V\u0103n An",
+            "Ph\u1ea1m Qu\u1ed1c D\u0169ng",
+            "Tr\u1ea7n Th\u1ecb B\u00ecnh",
         ])
         expect(page.cursor).toBeNull()
     })
@@ -52,7 +54,7 @@ describe("the in-memory list source", () => {
         const { leads } = sources()
         const page = await leads.page(LEADS_LIST, query({ q: "NGUYEN van" }))
         expect(page.rows.map((lead) => lead.id)).toEqual(["lead-1"])
-        const byNeed = await leads.page(LEADS_LIST, query({ q: "wedding" }))
+        const byNeed = await leads.page(LEADS_LIST, query({ q: "c\u01b0\u1edbi" }))
         expect(byNeed.rows.map((lead) => lead.id)).toEqual(["lead-3"])
     })
 
@@ -135,7 +137,7 @@ describe("the in-memory lead port", () => {
             id: "lead-1",
             version: "1",
             updatedAt: "2026-11-04T08:00:00.000Z",
-            data: { contactName: "Nguyen Van An", stage: "new", closedReason: null },
+            data: { contactName: "Nguy\u1ec5n V\u0103n An", stage: "new", closedReason: null },
         })
         expect(await leads.get("lead-404")).toBeNull()
     })
@@ -200,7 +202,7 @@ describe("the in-memory order port", () => {
             where: q.and(q.eq("status", "draft"), q.or(q.isNull("amountVnd"), q.gte("amountVnd", 5_000_000))),
         })
         expect(page.rows.map((listed) => [listed.row.id, listed.joined["lead"]?.data["contactName"]])).toEqual([
-            ["order-1", "Pham Quoc Dung"],
+            ["order-1", "Ph\u1ea1m Qu\u1ed1c D\u0169ng"],
         ])
     })
 
@@ -224,7 +226,7 @@ describe("the in-memory order port", () => {
         expect(first.rows).toHaveLength(2)
         expect(first.next).toBe("2")
         const rest = await orders.list({ ...ORDER_ROWS, page: { size: 10, after: first.next ?? "" } })
-        expect(rest.rows).toHaveLength(4)
+        expect(rest.rows).toHaveLength(5)
         expect(rest.next).toBeNull()
     })
 
@@ -249,18 +251,18 @@ describe("the in-memory order port", () => {
     })
 
     it("refuses a condition it does not run", async () => {
-        await expect(ordersOf().list({ ...ORDER_ROWS, where: q.notNull("amountVnd") })).rejects.toThrow(
+        await expect(ordersOf().list({ ...ORDER_ROWS, where: q.search(["note"], "x") })).rejects.toThrow(
             "does not run the condition",
         )
         await expect(
             ordersOf().aggregate({
-                where: q.in("status", ["draft"]),
+                where: q.search(["note"], "x"),
                 measures: { count: { kind: "count" } },
                 limit: 1,
             }),
         ).rejects.toThrow("does not run the condition")
         await expect(
-            ordersOf().list({ ...ORDER_ROWS, where: q.and(q.eq("status", "draft"), q.notNull("amountVnd")) }),
+            ordersOf().list({ ...ORDER_ROWS, where: q.and(q.eq("status", "draft"), q.search(["note"], "x")) }),
         ).rejects.toThrow("does not run the condition")
     })
 
@@ -283,5 +285,66 @@ describe("the in-memory rights", () => {
     it("refuse a port it does not serve", () => {
         const other = definePort<string>("sales.other")
         expect(() => portsOf(memoryProvider(sampleState([])), { other })).toThrow("PORT_UNPROVIDED")
+    })
+})
+
+const SETTINGS_VALUES = { ...SALES_SETTINGS_DEFAULTS, key: "sales", approvalThresholdVnd: 1_000_000 }
+
+describe("the in-memory engine conditions, aggregates and settings", () => {
+    const orders = (): EntityApi => ordersOf()
+    const idsWhere = async (where: FilterExpr): Promise<ReadonlyArray<string>> =>
+        (await orders().list({ ...ORDER_ROWS, where })).rows.map((listed) => listed.row.id).sort()
+
+    it("compares numbers and texts, and nothing else, with lt, lte, gt and gte", async () => {
+        expect(await idsWhere(q.lt("amountVnd", 240_000))).toEqual(["order-6"])
+        expect(await idsWhere(q.lte("amountVnd", 240_000))).toEqual(["order-5", "order-6"])
+        expect(await idsWhere(q.gt("amountVnd", 4_800_000))).toEqual(["order-1"])
+        expect(await idsWhere(q.gte("createdAt", "2026-11-04T08:30:00.000Z"))).toHaveLength(7)
+        expect(await idsWhere(q.lt("createdAt", "2026-11-04T08:30:00.000Z"))).toEqual([])
+        expect(await idsWhere(q.gt("confirmedAt", "2026-01-01T00:00:00.000Z"))).toEqual([
+            "order-3",
+            "order-4",
+            "order-6",
+            "order-7",
+        ])
+    })
+
+    it("runs ne, in, not, notNull and isNull", async () => {
+        expect(await idsWhere(q.ne("status", "paid"))).toHaveLength(5)
+        expect(await idsWhere(q.in("status", ["cancelled", "confirmed"]))).toEqual(["order-3", "order-5"])
+        expect(await idsWhere(q.not(q.notNull("leadId")))).toEqual(["order-6"])
+        expect(await idsWhere(q.isNull("leadId"))).toEqual(["order-6"])
+    })
+
+    it("sums and counts under the condition of a measure, and groups by a field", async () => {
+        const totals = await orders().aggregate({
+            groupBy: ["status"],
+            measures: {
+                all: { kind: "count" },
+                amount: { kind: "sum", field: "amountVnd" },
+                big: { kind: "count", where: q.gte("amountVnd", 1_000_000) },
+            },
+            limit: 10,
+        })
+        const paid = totals.find((row) => row.groups["status"] === "paid")
+        expect(paid?.measures).toEqual({ all: 2, amount: 1_300_000, big: 1 })
+        const whole = await orders().aggregate({ measures: { amount: { kind: "sum", field: "amountVnd" } }, limit: 1 })
+        expect(whole).toEqual([{ groups: {}, measures: { amount: 13_660_000 } }])
+    })
+
+    it("keeps the settings as one record: a save makes it, an update changes it, a bad one is refused", async () => {
+        const state = sampleState([])
+        const provided = portsOf(memoryProvider(state), { settings: salesSettings }).settings
+        expect(await provided.get("settings-1")).toBeNull()
+        expect((await provided.upsert("key_key", SETTINGS_VALUES)).ok).toBe(true)
+        expect(state.settings?.approvalThresholdVnd).toBe(1_000_000)
+        expect((await provided.update("settings-1", "1", { closedDealsCanFlip: false })).ok).toBe(true)
+        expect(state.settings?.closedDealsCanFlip).toBe(false)
+        expect((await provided.update("settings-1", "1", { approvalThresholdVnd: "many" })).ok).toBe(false)
+        expect((await provided.upsert("key_key", { ...SETTINGS_VALUES, approvalThresholdVnd: -5 })).ok).toBe(false)
+    })
+
+    it("takes no upsert on the other tables", async () => {
+        expect((await orders().upsert("order_no_key", {})).ok).toBe(false)
     })
 })

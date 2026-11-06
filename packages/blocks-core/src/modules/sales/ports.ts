@@ -5,6 +5,7 @@ import { definePort } from "@nivo-lite/agent-sdk/port"
 import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
 import { leadEntity } from "../../entities/sales/lead.entity"
 import { orderEntity } from "../../entities/sales/order.entity"
+import { settingsEntity } from "../../entities/sales/settings.entity"
 import type { LeadRow, OrderRow } from "./sales.types"
 
 /*
@@ -18,6 +19,9 @@ export const salesLeads: PortDefinition<EntityApi> = entityPort(leadEntity)
 
 /** The port of the orders (`sales.order`). */
 export const salesOrders: PortDefinition<EntityApi> = entityPort(orderEntity)
+
+/** The port of the rules the workspace chose for its sales (`sales.settings`, one record). */
+export const salesSettings: PortDefinition<EntityApi> = entityPort(settingsEntity)
 
 /** The port the leads list runs on. */
 export const salesLeadsList: PortDefinition<ListSource<LeadRow>> = definePort<ListSource<LeadRow>>("sales.leads-list")

@@ -3,6 +3,7 @@ import { z } from "zod"
 import { MAX_BODY, MAX_ID, MAX_LINE } from "../../bounds"
 import { ORDER_ITEMS_SHAPE } from "../../entities/sales/order.entity"
 import { ORDER_STATUSES } from "../../rules/sales/order-status"
+import type { SalesSettings } from "../../rules/sales/settings"
 import type { OrderBrief } from "../../rules/sales/lead-orders"
 import { LEAD_STAGES, MAX_REASON_CHARS } from "../../rules/sales/stage"
 import type { LeadRow, OrderRow } from "./sales.types"
@@ -33,6 +34,14 @@ const leadData = z.object({
     email: nullableText(MAX_LINE),
     contextSummary: nullableText(MAX_BODY),
     closedReason: nullableText(MAX_REASON_CHARS),
+    awaitingSince: nullableText(MAX_TIME),
+    owner: nullableText(MAX_LINE),
+    nextStep: nullableText(MAX_LINE),
+    nextDueAt: nullableText(MAX_TIME),
+    quoteVnd: orNull(z.number().int().min(0).max(MAX_VND)),
+    orderVnd: orNull(z.number().int().min(0).max(MAX_VND)),
+    note: nullableText(MAX_BODY),
+    needs: nullableText(MAX_LINE),
 })
 
 /** The declared fields of a `sales.order` record. */
@@ -49,6 +58,14 @@ const orderData = z.object({
     shippedAt: nullableText(MAX_TIME),
     carrier: nullableText(MAX_LINE),
     trackingCode: nullableText(MAX_LINE),
+})
+
+/** The declared fields of the `sales.settings` record. */
+const settingsData = z.object({
+    approvalThresholdVnd: z.number().int().min(0).max(MAX_VND),
+    draftWithoutTotalNeedsApproval: z.boolean(),
+    closedDealsCanFlip: z.boolean(),
+    reopenNeedsApproval: z.boolean(),
 })
 
 /** The fields of an order a customer's detail adds up. */
@@ -72,6 +89,14 @@ export const LEAD_FIELDS: ReadonlyArray<string> = [
     "email",
     "contextSummary",
     "closedReason",
+    "awaitingSince",
+    "owner",
+    "nextStep",
+    "nextDueAt",
+    "quoteVnd",
+    "orderVnd",
+    "note",
+    "needs",
 ]
 
 /** The fields a query for order rows selects. */
@@ -110,6 +135,10 @@ export const leadRowOf = (record: RecordRow): LeadRow | null => {
         : null
 }
 
+/** The leads a page of rows holds; a row whose fields are not those of a lead is left out. */
+export const leadRowsOf = (rows: ReadonlyArray<{ readonly row: RecordRow }>): ReadonlyArray<LeadRow> =>
+    rows.flatMap((listed) => leadRowOf(listed.row) ?? [])
+
 /** The order a record holds; null when its fields are not those of an order. */
 export const orderRowOf = (record: RecordRow): OrderRow | null => {
     const parsed = orderData.safeParse(record.data)
@@ -128,6 +157,20 @@ export const orderRowOf = (record: RecordRow): OrderRow | null => {
 export const orderBriefOf = (record: RecordRow): OrderBrief | null => {
     const parsed = orderBriefData.safeParse(record.data)
     return parsed.success ? { ...parsed.data, createdAt: record.createdAt } : null
+}
+
+/** The fields a query for the settings record selects. */
+export const SETTINGS_FIELDS: ReadonlyArray<string> = [
+    "approvalThresholdVnd",
+    "draftWithoutTotalNeedsApproval",
+    "closedDealsCanFlip",
+    "reopenNeedsApproval",
+]
+
+/** The settings a record holds; null when its fields are not those of the settings. */
+export const settingsRowOf = (record: RecordRow): SalesSettings | null => {
+    const parsed = settingsData.safeParse(record.data)
+    return parsed.success ? parsed.data : null
 }
 
 /** The name a lead record is shown under; null when its fields are not those of a lead. */

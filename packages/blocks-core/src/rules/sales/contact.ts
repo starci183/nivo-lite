@@ -26,3 +26,12 @@ export const contactParts = (raw: RawContact): ContactParts => {
     const isEmail = contact?.includes("@") === true
     return { phone: isEmail ? null : contact, email: isEmail ? contact : null }
 }
+
+/** A Vietnamese phone number as customers type it: a leading 0 or 84, then nine or ten digits that may be split by spaces, dots or dashes. */
+const PHONE_IN_TEXT = /(?:\+?84|0)(?:[\s.-]?\d){9,10}/u
+
+/** The first phone number a customer wrote in a message, with its separators removed; null when the message holds none. */
+export const phoneInText = (text: string): string | null => {
+    const found = PHONE_IN_TEXT.exec(text)?.[0]
+    return found === undefined ? null : found.replace(/[\s.-]/gu, "")
+}

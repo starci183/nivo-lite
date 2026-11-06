@@ -1,6 +1,10 @@
 import { seedSpecProblems } from "@nivo-lite/agent-sdk/module"
 import type { SpecNode } from "@nivo-lite/agent-sdk/spec"
 import { coreBlocks } from "../../blocks/core-blocks"
+import { salesBlocks } from "../../blocks/sales/sales-blocks"
+import { ATTENTION_COUNT_KEY, ATTENTION_KINDS, ATTENTION_KIND_VIEWS } from "../../rules/sales/attention-list"
+import { PIPELINE_WORD_KEYS, stageKeyOf } from "../../rules/sales/pipeline"
+import { LEAD_STAGES } from "../../rules/sales/stage"
 import { salesModule } from "./declaration"
 import { SALES_FIXTURES } from "./fixtures/sales.fixtures"
 import { SALES_MESSAGES } from "./sales-messages"
@@ -36,23 +40,41 @@ describe("the Sales module declaration", () => {
             "sales.order-counts",
             "sales.order",
             "sales.orders-waiting",
+            "sales.settings",
+            "sales.figures",
+            "sales.attention",
+            "sales.decisions",
+            "sales.awaiting-reply",
         ])
         expect(salesModule.actions.map((action) => action.id)).toEqual([
             "sales.move-stage",
             "sales.confirm-order",
             "sales.cancel-order",
+            "sales.save-settings",
+            "sales.decide",
+            "sales.respond",
+            "sales.follow",
+            "sales.reply",
         ])
     })
 
     it("declares the three permissions and nothing outside them is asked", () => {
         expect(salesModule.permissions).toEqual(["sales.view", "sales.manage", "sales.approve"])
         expect(salesModule.reads.every((read) => read.permission === "sales.view")).toBe(true)
-        expect(salesModule.actions.every((action) => action.permission === "sales.manage")).toBe(true)
+        expect(salesModule.actions.filter((action) => action.permission !== "sales.manage").map((a) => a.id)).toEqual([
+            "sales.decide",
+        ])
+        expect(salesModule.actions.find((action) => action.id === "sales.decide")?.permission).toBe("sales.approve")
     })
 
-    it("seeds one spec with the customers and the orders views", () => {
+    it("seeds one spec with the attention, customers, orders and settings views", () => {
         expect(salesModule.specs).toEqual([SALES_WORKBENCH_SPEC])
-        expect(SALES_WORKBENCH_SPEC.views.map((view) => view.id)).toEqual(["pipeline", "orders"])
+        expect(SALES_WORKBENCH_SPEC.views.map((view) => view.id)).toEqual([
+            "attention",
+            "pipeline",
+            "orders",
+            "settings",
+        ])
     })
 
     it("has no tool, so nothing leaves the system from a transactional action", () => {
@@ -68,7 +90,7 @@ describe("the fixtures of the Sales module", () => {
     ]
 
     it("hold every read the seed spec binds, and every read of the module", () => {
-        expect(bound.sort()).toEqual(Object.keys(SALES_FIXTURES.reads).sort())
+        expect(bound.filter((id) => !(id in SALES_FIXTURES.reads))).toEqual([])
         expect(salesModule.reads.map((read) => read.id).sort()).toEqual(Object.keys(SALES_FIXTURES.reads).sort())
     })
 
@@ -94,15 +116,28 @@ describe("the messages of the Sales module", () => {
         "missing",
         "same_stage",
         "stage_not_allowed",
+        "reopen_needs_owner",
         "reason_required",
         "order_not_confirmable",
         "order_not_cancellable",
+        "settings_not_saved",
+        "not_awaiting",
+        "phone_required",
+        "phone_taken",
     ]
     const used = [
         ...new Set([
             ...keysIn(SALES_WORKBENCH_SPEC),
             ...salesModule.actions.flatMap((action) => keysIn(action.label)),
             ...refusals.flatMap((reason) => keysIn(refusedWith(reason))),
+            ...salesBlocks.flatMap((block) => keysIn(block.title)),
+            ATTENTION_COUNT_KEY,
+            ...ATTENTION_KINDS.flatMap((kind) => [
+                ATTENTION_KIND_VIEWS[kind].chipKey,
+                ATTENTION_KIND_VIEWS[kind].commandKey,
+            ]),
+            ...Object.values(PIPELINE_WORD_KEYS),
+            ...LEAD_STAGES.map(stageKeyOf),
             "refusal_conflict",
             "refusal_order_waits_owner",
         ]),

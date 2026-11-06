@@ -143,7 +143,7 @@ describe("loyalty.draft-campaign and loyalty.preview-segment", () => {
     it("counts the customers a segment holds, how many can be reached and the first names", async () => {
         expect(await run(previewSegmentAction, { tiers: ["dong"] })).toEqual({
             ok: true,
-            data: { total: 2, reachable: 1, sample: ["Le Minh Chau", "Vo Hoang Nam"] },
+            data: { total: 2, reachable: 1, sample: ["L\u00ea Minh Ch\u00e2u", "V\u00f5 Ho\u00e0ng Nam"] },
         })
         expect(await run(previewSegmentAction, {})).toMatchObject({ data: { total: 5, reachable: 3 } })
     })

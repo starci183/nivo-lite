@@ -83,12 +83,14 @@ interface EnumeratedFilter {
     readonly field: string
     /** The values the filter takes. */
     readonly of: ReadonlyArray<string>
+    /** Whether the filter takes any value, so its counts name the values the rows hold. */
+    readonly open: boolean
 }
 
 /** The field and the values of a filter that names them; an empty one for any other filter. */
 const enumeratedOf = (filter: ListFilter | undefined): EnumeratedFilter => {
-    if (filter === undefined || !("field" in filter)) return { field: "", of: [] }
-    return { field: filter.field, of: filter.of }
+    if (filter === undefined || !("field" in filter)) return { field: "", of: [], open: false }
+    return { field: filter.field, of: filter.of, open: filter.open === true }
 }
 
 const rowsFor = <T extends object>(
@@ -124,9 +126,12 @@ const memoryList = <T extends object>(rows: () => ReadonlyArray<T>): ListSource<
     counts: (shape, by, query) => {
         const filter = enumeratedOf(shape.filters?.[by])
         const found = rowsFor(rows(), shape, query, by)
+        const names = filter.open
+            ? [...new Set(found.map((row) => textOf(row, filter.field)).filter((name) => name !== ""))]
+            : filter.of
         return Promise.resolve(
             Object.fromEntries(
-                filter.of.map((name) => [name, found.filter((row) => valueOf(row, filter.field) === name).length]),
+                names.map((name) => [name, found.filter((row) => valueOf(row, filter.field) === name).length]),
             ),
         )
     },
