@@ -9,7 +9,8 @@ import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ChannelSendExecutorService } from "./channel-send-executor.service"
-import { ChatNodePortsErrorCode } from "./errors/chat-node-ports.error"
+import { classifyFailure } from "@modules/platform/queue"
+import { ChatNodePortsError, ChatNodePortsErrorCode } from "./errors/chat-node-ports.error"
 
 const NOW = new Date("2026-11-04T10:00:00.000Z")
 
@@ -235,7 +236,7 @@ describe("ChannelSendExecutorService unreachable recipients", () => {
 
     it("stores the line under the key of the effect call: a retry stores under the same key and only pushes again", async () => {
         const { executor, messages, delivery } = await build()
-        delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: "zalo_quota", outcome: "rejected" })
+        delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: "zalo_token", outcome: "rejected" })
 
         await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
             code: ChatNodePortsErrorCode.DeliveryRejected,
@@ -265,7 +266,7 @@ describe("ChannelSendExecutorService unreachable recipients", () => {
 
     it("still throws for the refusals that are no fault of the recipient, and for an unconfirmed push", async () => {
         const { executor, delivery } = await build()
-        for (const failure of ["zalo_window_expired", "zalo_quota", "zalo_token", "zalo_error", null] as const) {
+        for (const failure of ["zalo_window_expired", "zalo_token", "zalo_error", null] as const) {
             delivery.deliver.mockResolvedValueOnce({ delivered: false, failure, outcome: "rejected" })
             await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
                 code: ChatNodePortsErrorCode.DeliveryRejected,
@@ -308,5 +309,39 @@ describe("ChannelSendExecutorService placeholders and plans", () => {
             conversationId: "c1",
             channel: "telegram",
         })
+    })
+})
+
+describe("ChannelSendExecutorService retry and settle", () => {
+    it("fails a step the channel refused for now (quota, night hours) with a code the run engine retries, then sends once the channel takes it", async () => {
+        const { executor, messages, delivery } = await build()
+        delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: "zalo_quota", outcome: "rejected" })
+        delivery.deliver.mockResolvedValueOnce({ delivered: false, failure: "zalo_night_hours", outcome: "rejected" })
+
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.DeliveryRateLimited,
+        })
+        await expect(executor.execute(TURN, SEND, CALL)).rejects.toMatchObject({
+            code: ChatNodePortsErrorCode.DeliveryRateLimited,
+        })
+        await expect(executor.execute(TURN, SEND, CALL)).resolves.toEqual({ kind: "message", id: "m1" })
+
+        expect(messages.storeAgentLine.mock.calls.map(([line]) => line.key)).toEqual(["run:1", "run:1", "run:1"])
+    })
+
+    it("gives each way a send can end the class the run engine routes it by: only a refusal for now is tried again, every other one goes to a person", () => {
+        const classOf = (code: ChatNodePortsErrorCode): string => classifyFailure(new ChatNodePortsError({ code }))
+        expect(classOf(ChatNodePortsErrorCode.DeliveryRateLimited)).toBe("transient")
+        for (const code of [
+            ChatNodePortsErrorCode.ZaloWindowExpired,
+            ChatNodePortsErrorCode.DeliveryRejected,
+            ChatNodePortsErrorCode.DeliveryUnconfirmed,
+            ChatNodePortsErrorCode.RecipientUnreachable,
+            ChatNodePortsErrorCode.ChannelPlanBlocked,
+            ChatNodePortsErrorCode.HeldByPerson,
+            ChatNodePortsErrorCode.NotSpeaking,
+        ]) {
+            expect(classOf(code)).not.toBe("transient")
+        }
     })
 })
