@@ -2594,7 +2594,7 @@ CREATE TABLE public.ai_usage_events (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT ai_usage_events_completion_tokens_check CHECK ((completion_tokens >= 0)),
     CONSTRAINT ai_usage_events_cost_usd_check CHECK ((cost_usd >= (0)::numeric)),
-    CONSTRAINT ai_usage_events_kind_check CHECK ((kind = ANY (ARRAY['chat_reply'::text, 'setup'::text, 'owner_chat'::text, 'relay'::text, 'embedding'::text, 'engine'::text, 'guide'::text, 'brain'::text, 'office_command'::text]))),
+    CONSTRAINT ai_usage_events_kind_check CHECK ((kind = ANY (ARRAY['chat_reply'::text, 'setup'::text, 'owner_chat'::text, 'relay'::text, 'embedding'::text, 'engine'::text, 'guide'::text, 'brain'::text, 'office_command'::text, 'agent_work'::text]))),
     CONSTRAINT ai_usage_events_prompt_tokens_check CHECK ((prompt_tokens >= 0))
 );
 
@@ -2841,16 +2841,6 @@ CREATE TABLE public.booking_hours (
 );
 
 --
--- Name: booking_rate; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.booking_rate (
-    key text NOT NULL,
-    window_start timestamp with time zone NOT NULL,
-    hits integer DEFAULT 0 NOT NULL
-);
-
---
 -- Name: booking_reminders; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -3006,14 +2996,12 @@ CREATE TABLE public.bookings (
     work_item_id uuid,
     order_id uuid,
     idempotency_key text,
-    origin text DEFAULT 'live'::text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     installation_id uuid,
     effects jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT bookings_check CHECK (((end_at > start_at) AND (block_end_at >= end_at))),
     CONSTRAINT bookings_deposit_status_check CHECK ((deposit_status = ANY (ARRAY['none'::text, 'due'::text, 'paid'::text, 'waived'::text]))),
-    CONSTRAINT bookings_origin_check CHECK ((origin = ANY (ARRAY['live'::text, 'simulated'::text]))),
     CONSTRAINT bookings_party_size_check CHECK (((party_size >= 1) AND (party_size <= 200))),
     CONSTRAINT bookings_status_check CHECK ((status = ANY (ARRAY['requested'::text, 'confirmed'::text, 'rescheduled'::text, 'cancelled'::text, 'no_show'::text, 'done'::text])))
 );
@@ -3755,7 +3743,6 @@ CREATE TABLE public.inbound_events (
     workspace_id uuid NOT NULL,
     channel text NOT NULL,
     kind text NOT NULL,
-    origin text NOT NULL,
     sender_name text,
     sender_contact text,
     body text DEFAULT ''::text NOT NULL,
@@ -3770,7 +3757,6 @@ CREATE TABLE public.inbound_events (
     event_id text,
     CONSTRAINT inbound_events_channel_check CHECK ((channel = ANY (ARRAY['website'::text, 'telegram'::text, 'facebook'::text, 'zalo'::text, 'email'::text, 'phone'::text, 'bank'::text, 'manual'::text, 'instagram'::text]))),
     CONSTRAINT inbound_events_kind_check CHECK ((kind = ANY (ARRAY['message'::text, 'lead'::text, 'order'::text, 'invoice'::text, 'payment'::text]))),
-    CONSTRAINT inbound_events_origin_check CHECK ((origin = ANY (ARRAY['live'::text, 'simulated'::text]))),
     CONSTRAINT inbound_events_status_check CHECK ((status = ANY (ARRAY['received'::text, 'processed'::text, 'needs_decision'::text, 'failed'::text])))
 );
 
@@ -3965,13 +3951,11 @@ CREATE TABLE public.invoices (
     amount_vnd bigint NOT NULL,
     due_at timestamp with time zone,
     status text DEFAULT 'draft'::text NOT NULL,
-    origin text DEFAULT 'live'::text NOT NULL,
     issued_by text,
     issued_at timestamp with time zone,
     paid_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT invoices_amount_vnd_check CHECK ((amount_vnd >= 0)),
-    CONSTRAINT invoices_origin_check CHECK ((origin = ANY (ARRAY['live'::text, 'simulated'::text]))),
     CONSTRAINT invoices_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'issued'::text, 'paid'::text, 'void'::text])))
 );
 
@@ -4006,9 +3990,9 @@ CREATE TABLE public.job_outbox (
 
 CREATE TABLE public.job_slots (
     queue text NOT NULL,
-    msg_id bigint NOT NULL,
     workspace_id uuid NOT NULL,
-    lease_until timestamp with time zone NOT NULL
+    lease_until timestamp with time zone NOT NULL,
+    job_id uuid NOT NULL
 );
 
 --
@@ -4029,7 +4013,7 @@ CREATE TABLE public.jobs (
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     CONSTRAINT jobs_fencing_token_check CHECK ((fencing_token >= 1)),
-    CONSTRAINT jobs_status_check CHECK (((status)::text = ANY ((ARRAY['running'::character varying, 'failed'::character varying, 'done'::character varying])::text[])))
+    CONSTRAINT jobs_status_check CHECK (status::text = ANY (ARRAY['running', 'failed', 'done', 'failed_awaiting_fix']::text[]))
 );
 
 --
@@ -4240,7 +4224,7 @@ CREATE TABLE public.module_installations (
     is_multi boolean DEFAULT false NOT NULL,
     CONSTRAINT module_installations_name_length CHECK (((char_length(name) >= 1) AND (char_length(name) <= 80))),
     CONSTRAINT module_installations_operating_mode_check CHECK ((operating_mode = ANY (ARRAY['assist'::text, 'autopilot'::text]))),
-    CONSTRAINT module_installations_status_check CHECK ((status = ANY (ARRAY['installing'::text, 'setup'::text, 'ready'::text, 'live'::text, 'paused'::text])))
+    CONSTRAINT module_installations_status_check CHECK ((status = ANY (ARRAY['installing'::text, 'setup'::text, 'ready'::text, 'live'::text, 'paused'::text, 'needs_connection'::text, 'removed'::text])))
 );
 
 --
@@ -4292,7 +4276,7 @@ CREATE TABLE public.module_setup_writes (
     decided_by text,
     decided_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT module_setup_writes_kind_check CHECK ((kind = ANY (ARRAY['fact'::text, 'rule'::text]))),
+    CONSTRAINT module_setup_writes_kind_check CHECK ((kind = ANY (ARRAY['fact'::text, 'rule'::text, 'branch'::text]))),
     CONSTRAINT module_setup_writes_status_check CHECK ((status = ANY (ARRAY['proposed'::text, 'applied'::text, 'rejected'::text, 'superseded'::text])))
 );
 
@@ -4425,7 +4409,7 @@ CREATE TABLE public.payment_orders (
     pack_code text,
     detail jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT payment_orders_amount_vnd_check CHECK ((amount_vnd >= 0)),
-    CONSTRAINT payment_orders_kind_check CHECK ((kind = ANY (ARRAY['plan'::text, 'upgrade'::text, 'topup'::text, 'credit_pack'::text]))),
+    CONSTRAINT payment_orders_kind_check CHECK (kind IN ('plan', 'upgrade', 'topup', 'credit_pack', 'agent_template')),
     CONSTRAINT payment_orders_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'paid'::text, 'expired'::text, 'cancelled'::text])))
 );
 
@@ -4505,15 +4489,6 @@ CREATE TABLE public.platform_audit (
     workspace_id uuid,
     data jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
---
--- Name: platform_flags; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.platform_flags (
-    key text NOT NULL,
-    enabled boolean DEFAULT false NOT NULL
 );
 
 --
@@ -4952,7 +4927,6 @@ CREATE TABLE public.work_items (
     evidence_state text DEFAULT 'pending'::text NOT NULL,
     assigned_staff_id uuid,
     execution_id uuid,
-    origin text DEFAULT 'live'::text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     completed_at timestamp with time zone,
@@ -4962,8 +4936,7 @@ CREATE TABLE public.work_items (
     CONSTRAINT work_items_decided_path_check CHECK ((decided_path = ANY (ARRAY['auto'::text, 'human'::text]))),
     CONSTRAINT work_items_depth_check CHECK ((depth >= 0)),
     CONSTRAINT work_items_evidence_state_check CHECK ((evidence_state = ANY (ARRAY['pending'::text, 'captured'::text, 'reviewed'::text, 'verified'::text, 'customer_confirmed'::text]))),
-    CONSTRAINT work_items_origin_check CHECK ((origin = ANY (ARRAY['live'::text, 'simulated'::text]))),
-    CONSTRAINT work_items_reason_check CHECK ((reason = ANY (ARRAY['routine'::text, 'missing_data'::text, 'over_authority'::text, 'unclear_outcome'::text, 'not_allowed'::text]))),
+    CONSTRAINT work_items_reason_check CHECK ((reason = ANY (ARRAY['routine'::text, 'missing_data'::text, 'over_authority'::text, 'unclear_outcome'::text, 'not_allowed'::text, 'branch_ask'::text]))),
     CONSTRAINT work_items_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'done'::text, 'waiting_decision'::text, 'rejected'::text, 'failed'::text])))
 );
 
@@ -5228,13 +5201,6 @@ ALTER TABLE ONLY public.booking_exceptions
 
 ALTER TABLE ONLY public.booking_hours
     ADD CONSTRAINT booking_hours_pkey PRIMARY KEY (id);
-
---
--- Name: booking_rate booking_rate_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.booking_rate
-    ADD CONSTRAINT booking_rate_pkey PRIMARY KEY (key, window_start);
 
 --
 -- Name: booking_reminders booking_reminders_booking_id_kind_key; Type: CONSTRAINT; Schema: public; Owner: -
@@ -5751,8 +5717,7 @@ ALTER TABLE ONLY public.job_outbox
 -- Name: job_slots job_slots_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.job_slots
-    ADD CONSTRAINT job_slots_pkey PRIMARY KEY (queue, msg_id);
+ALTER TABLE public.job_slots ADD CONSTRAINT job_slots_pkey PRIMARY KEY (queue, job_id);
 
 --
 -- Name: jobs jobs_job_key_key; Type: CONSTRAINT; Schema: public; Owner: -
@@ -5977,13 +5942,6 @@ ALTER TABLE ONLY public.platform_admins
 
 ALTER TABLE ONLY public.platform_audit
     ADD CONSTRAINT platform_audit_pkey PRIMARY KEY (id);
-
---
--- Name: platform_flags platform_flags_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.platform_flags
-    ADD CONSTRAINT platform_flags_pkey PRIMARY KEY (key);
 
 --
 -- Name: public_api public_api_dedupe_key; Type: CONSTRAINT; Schema: public; Owner: -
@@ -6879,13 +6837,15 @@ CREATE UNIQUE INDEX module_installations_agent_unique ON public.module_installat
 -- Name: module_installations_name_unique; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX module_installations_name_unique ON public.module_installations USING btree (workspace_id, module_key, lower(name));
+CREATE UNIQUE INDEX module_installations_name_unique
+    ON public.module_installations USING btree (workspace_id, module_key, lower(name)) WHERE (status <> 'removed'::text);
 
 --
 -- Name: module_installations_single; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX module_installations_single ON public.module_installations USING btree (workspace_id, module_key) WHERE (NOT is_multi);
+CREATE UNIQUE INDEX module_installations_single
+    ON public.module_installations USING btree (workspace_id, module_key) WHERE ((NOT is_multi) AND (status <> 'removed'::text));
 
 --
 -- Name: module_installations_ws_module; Type: INDEX; Schema: public; Owner: -
@@ -9424,36 +9384,6 @@ CREATE POLICY booking_hours_app_be_select ON public.booking_hours FOR SELECT TO 
 CREATE POLICY booking_hours_app_be_update ON public.booking_hours FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 
 --
--- Name: booking_rate; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.booking_rate ENABLE ROW LEVEL SECURITY;
-
---
--- Name: booking_rate booking_rate_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_rate_app_be_delete ON public.booking_rate FOR DELETE TO app_be USING ((key IS NOT NULL));
-
---
--- Name: booking_rate booking_rate_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_rate_app_be_insert ON public.booking_rate FOR INSERT TO app_be WITH CHECK ((key IS NOT NULL));
-
---
--- Name: booking_rate booking_rate_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_rate_app_be_select ON public.booking_rate FOR SELECT TO app_be USING ((key IS NOT NULL));
-
---
--- Name: booking_rate booking_rate_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY booking_rate_app_be_update ON public.booking_rate FOR UPDATE TO app_be USING ((key IS NOT NULL)) WITH CHECK ((key IS NOT NULL));
-
---
 -- Name: booking_reminders; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -11608,12 +11538,6 @@ CREATE POLICY platform_audit_app_be_insert ON public.platform_audit FOR INSERT T
 CREATE POLICY platform_audit_app_be_select ON public.platform_audit FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
 
 --
--- Name: platform_flags; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.platform_flags ENABLE ROW LEVEL SECURITY;
-
---
 -- Name: public_api; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -12432,7 +12356,6 @@ REVOKE ALL ON TABLE public.billing_config FROM anon, authenticated;
 REVOKE ALL ON TABLE public.billing_events FROM anon, authenticated;
 REVOKE ALL ON TABLE public.booking_exceptions FROM anon, authenticated;
 REVOKE ALL ON TABLE public.booking_hours FROM anon, authenticated;
-REVOKE ALL ON TABLE public.booking_rate FROM anon, authenticated;
 REVOKE ALL ON TABLE public.booking_reminders FROM anon, authenticated;
 REVOKE ALL ON TABLE public.booking_resources FROM anon, authenticated;
 REVOKE ALL ON TABLE public.booking_services FROM anon, authenticated;
@@ -12517,7 +12440,6 @@ REVOKE ALL ON TABLE public.plan_usage_tiers FROM anon, authenticated;
 REVOKE ALL ON TABLE public.plans FROM anon, authenticated;
 REVOKE ALL ON TABLE public.platform_admins FROM anon, authenticated;
 REVOKE ALL ON TABLE public.platform_audit FROM anon, authenticated;
-REVOKE ALL ON TABLE public.platform_flags FROM anon, authenticated;
 REVOKE ALL ON TABLE public.public_api FROM anon, authenticated;
 REVOKE ALL ON TABLE public.queue FROM anon, authenticated;
 REVOKE ALL ON TABLE public.sepay_transactions FROM anon, authenticated;
@@ -13570,12 +13492,6 @@ GRANT ALL ON TABLE public.booking_hours TO authenticated;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.booking_hours TO app_be;
 
 --
--- Name: TABLE booking_rate; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.booking_rate TO app_be;
-
---
 -- Name: TABLE booking_reminders; Type: ACL; Schema: public; Owner: -
 --
 
@@ -14154,10 +14070,6 @@ GRANT SELECT,INSERT ON TABLE public.platform_audit TO app_be;
 GRANT SELECT ON TABLE public.platform_audit TO authenticated;
 
 --
--- Name: TABLE platform_flags; Type: ACL; Schema: public; Owner: -
---
-
---
 -- Name: TABLE public_api; Type: ACL; Schema: public; Owner: -
 --
 
@@ -14613,10 +14525,6 @@ INSERT INTO public.billing_config (key, value, note) VALUES
 --
 
 --
--- Data for Name: booking_rate; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
 -- Data for Name: booking_services; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -14769,13 +14677,6 @@ INSERT INTO public.plan_usage_tiers (plan_code, credits_per_month, price_vnd, pe
 --
 -- Data for Name: platform_audit; Type: TABLE DATA; Schema: public; Owner: postgres
 --
-
---
--- Data for Name: platform_flags; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-INSERT INTO public.platform_flags (key, enabled) VALUES
-	('workspace_signup_enabled', false);
 
 --
 -- Data for Name: public_api; Type: TABLE DATA; Schema: public; Owner: postgres
@@ -15110,11 +15011,6 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authen
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon, authenticated;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
 
--- 3. The engine tables and the cron target list (the HTTP endpoints and secret the old pg_net ticks used).
-DROP TABLE IF EXISTS public.engine_jobs;
-DROP TABLE IF EXISTS public.engine_workers;
-DROP TABLE IF EXISTS public.cron_targets;
-
 -- ---- from 20261026000500_webhook-receipt-queues.sql ----
 -- Deferred webhook receipt queues. pgmq and job_enqueue share the receipt transaction.
 -- Workers use the existing backend-only public.job_* functions; schema/function access stays closed.
@@ -15154,48 +15050,6 @@ REVOKE ALL ON TABLE pgmq."q_bank-feed-delivery", pgmq."a_bank-feed-delivery" FRO
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."q_bank-feed-delivery" TO app_be;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE pgmq."a_bank-feed-delivery" TO app_be;
 REVOKE ALL ON SEQUENCE pgmq."q_bank-feed-delivery_msg_id_seq" FROM PUBLIC, anon, authenticated, app_be;
-
--- The provider receipts have the telegram_inbox shape, unique key and backend-only RLS.
-
-CREATE TABLE IF NOT EXISTS public.vietcombank_inbox (
-    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
-    provider text NOT NULL,
-    delivery_id text NOT NULL,
-    received_at timestamp with time zone DEFAULT now() NOT NULL,
-    payload jsonb NOT NULL,
-    processed_at timestamp with time zone,
-    CONSTRAINT vietcombank_inbox_provider_check CHECK (provider = 'vietcombank'),
-    CONSTRAINT vietcombank_inbox_provider_delivery_id_key UNIQUE (provider, delivery_id)
-);
-ALTER TABLE public.vietcombank_inbox ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.vietcombank_inbox FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON TABLE public.vietcombank_inbox TO app_be;
-DO $policies$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_policies WHERE schemaname = 'public'
-            AND tablename = 'vietcombank_inbox' AND policyname = 'vietcombank_inbox_app_be_insert'
-    ) THEN
-        CREATE POLICY vietcombank_inbox_app_be_insert ON public.vietcombank_inbox
-            FOR INSERT TO app_be WITH CHECK (provider = 'vietcombank');
-    END IF;
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_policies WHERE schemaname = 'public'
-            AND tablename = 'vietcombank_inbox' AND policyname = 'vietcombank_inbox_app_be_select'
-    ) THEN
-        CREATE POLICY vietcombank_inbox_app_be_select ON public.vietcombank_inbox
-            FOR SELECT TO app_be USING (provider = 'vietcombank');
-    END IF;
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_policies WHERE schemaname = 'public'
-            AND tablename = 'vietcombank_inbox' AND policyname = 'vietcombank_inbox_app_be_update'
-    ) THEN
-        CREATE POLICY vietcombank_inbox_app_be_update ON public.vietcombank_inbox
-            FOR UPDATE TO app_be USING (provider = 'vietcombank') WITH CHECK (provider = 'vietcombank');
-    END IF;
-END;
-$policies$;
-
 CREATE TABLE IF NOT EXISTS public.bank_feed_inbox (
     id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
     provider text NOT NULL,
@@ -15308,14 +15162,6 @@ WHERE processed_at IS NULL
 ORDER BY received_at, id;
 
 SELECT public.job_enqueue(
-    NULL::uuid, 'vietcombank-delivery', 'vietcombank-delivery',
-    jsonb_build_object('deliveryId', delivery_id), 'vietcombank-delivery:' || delivery_id
-)
-FROM public.vietcombank_inbox
-WHERE processed_at IS NULL
-ORDER BY received_at, id;
-
-SELECT public.job_enqueue(
     NULL::uuid, 'bank-feed-delivery', 'bank-feed-delivery',
     jsonb_build_object('provider', provider, 'deliveryId', delivery_id),
     'bank-feed-delivery:' || provider || ':' || delivery_id
@@ -15346,7 +15192,8 @@ ALTER TABLE public.messages ADD CONSTRAINT messages_card_check
         jsonb_typeof(card) = 'object'
         AND card->>'v' = '1'
         AND card->>'type' = ANY (ARRAY['draft_post', 'video_ready', 'approval_request', 'schedule_confirmed',
-                                        'weekly_report', 'booking_held', 'daily_summary', 'handoff_note', 'exception'])
+                                        'weekly_report', 'booking_held', 'daily_summary', 'handoff_note', 'exception',
+                                        'action_done'])
         AND octet_length(card::text) <= 65536));
 CREATE INDEX messages_workspace_room_created_idx ON public.messages USING btree (workspace_id, room, created_at DESC);
 
@@ -15612,7 +15459,6 @@ CREATE TABLE public.mcp_connectors (
     name text NOT NULL,
     kind text NOT NULL,
     url text,
-    credential_ref text,
     status text DEFAULT 'active'::text NOT NULL,
     contract_version text DEFAULT ''::text NOT NULL,
     timeout_ms integer DEFAULT 4000 NOT NULL,
@@ -15624,7 +15470,6 @@ CREATE TABLE public.mcp_connectors (
     CONSTRAINT mcp_connectors_kind_check CHECK ((kind = ANY (ARRAY['native'::text, 'remote'::text]))),
     CONSTRAINT mcp_connectors_status_check CHECK ((status = ANY (ARRAY['active'::text, 'disabled'::text, 'degraded'::text]))),
     CONSTRAINT mcp_connectors_remote_url_check CHECK (((kind = 'native'::text) OR (url ~ '^https?://'::text))),
-    CONSTRAINT mcp_connectors_credential_ref_check CHECK (((credential_ref IS NULL) OR (credential_ref ~ '^[A-Z][A-Z0-9_]{2,80}$'::text))),
     CONSTRAINT mcp_connectors_timeout_check CHECK (((timeout_ms >= 500) AND (timeout_ms <= 15000))),
     CONSTRAINT mcp_connectors_workspace_key_unique UNIQUE (workspace_id, key)
 );
@@ -15756,15 +15601,6 @@ ALTER TABLE public.mcp_connectors
     ADD COLUMN checked_at timestamp with time zone,
     ADD CONSTRAINT mcp_connectors_approved_catalog_check CHECK ((jsonb_typeof(approved_catalog) = 'array'::text));
 
--- ---- from 20261101000901_module-installation-status_contract_widen.sql ----
--- Module installations: an applied agent whose module requires a connector capability role that no usable connector plays waits in
--- `needs_connection` (it does not run) and is live again once one is connected. Kept apart from `paused`, the owner's own stop.
-
-ALTER TABLE public.module_installations DROP CONSTRAINT module_installations_status_check;
-ALTER TABLE public.module_installations
-    ADD CONSTRAINT module_installations_status_check
-    CHECK ((status = ANY (ARRAY['installing'::text, 'setup'::text, 'ready'::text, 'live'::text, 'paused'::text, 'needs_connection'::text])));
-
 -- ---- from 20261101000903_api-key-agent-binding.sql ----
 -- A per-agent credential for the MCP endpoint: an API key may be bound to one agent of its workspace. Such a key carries only
 -- the `tools:call` scope and names the agent the gateway serves; deleting the agent deletes its keys, so a removed agent's key
@@ -15805,20 +15641,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.content_weekly_reports TO a
 -- The AI Marketing tick (be/src/features/jobs/run-marketing-tick): every quarter hour it publishes the Zalo OA articles whose
 -- moment has come and posts the weekly report cards that are due.
 SELECT pgmq.create('marketing_tick');
-DELETE FROM public.bookings WHERE origin <> 'live';
-DELETE FROM public.invoices WHERE origin <> 'live';
-DELETE FROM public.work_items WHERE origin <> 'live';
-DELETE FROM public.inbound_events WHERE origin <> 'live';
-ALTER TABLE public.bookings DROP CONSTRAINT IF EXISTS bookings_origin_check, DROP COLUMN origin;
-ALTER TABLE public.invoices DROP CONSTRAINT IF EXISTS invoices_origin_check, DROP COLUMN origin;
-ALTER TABLE public.work_items DROP CONSTRAINT IF EXISTS work_items_origin_check, DROP COLUMN origin;
-ALTER TABLE public.inbound_events DROP CONSTRAINT IF EXISTS inbound_events_origin_check, DROP COLUMN origin;
 
 DELETE FROM public.job_outbox WHERE queue = 'vietcombank-delivery';
 DELETE FROM public.job_slots WHERE queue = 'vietcombank-delivery';
 DELETE FROM public.jobs WHERE kind = 'vietcombank-delivery';
-
-DROP TABLE IF EXISTS public.vietcombank_inbox;
 
 SELECT pgmq.drop_queue('vietcombank-delivery');
 
@@ -16288,15 +16114,10 @@ ALTER TABLE public.mcp_connectors
     ADD COLUMN credential_set_by uuid,
     ADD COLUMN credential_set_at timestamp with time zone;
 
-UPDATE public.mcp_connectors SET credential_state = 'needed' WHERE credential_ref IS NOT NULL;
-
 ALTER TABLE public.mcp_connectors
     ADD CONSTRAINT mcp_connectors_credential_state_check CHECK ((credential_state = ANY (ARRAY['none'::text, 'needed'::text, 'set'::text]))),
     ADD CONSTRAINT mcp_connectors_credential_sealed_check CHECK (((credential_state = 'set'::text) = (credential_sealed IS NOT NULL))),
     ADD CONSTRAINT mcp_connectors_credential_remote_check CHECK (((kind = 'remote'::text) OR (credential_state = 'none'::text)));
-
-ALTER TABLE public.mcp_connectors DROP CONSTRAINT mcp_connectors_credential_ref_check;
-ALTER TABLE public.mcp_connectors DROP COLUMN credential_ref;
 
 -- ---- from 20261103000200_mcp-gateway-receipts.sql ----
 -- A write's inbox claim and sealed pending outcome commit before its connector
@@ -16388,22 +16209,6 @@ CREATE FUNCTION public.http_rate_limit_consume(p_bucket_key text, p_window_ms do
 REVOKE EXECUTE ON FUNCTION public.http_rate_limit_consume(text, double precision, bigint) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.http_rate_limit_consume(text, double precision, bigint) TO app_be;
 
--- ---- from 20261104000300_messages-card-action-done_contract_widen.sql ----
--- Customer turns emit the v1 action_done card already supported by the Hub card contract.
--- Preserve every existing card type, shape, version and byte-size requirement.
--- The check is added NOT VALID so the ACCESS EXCLUSIVE lock of the swap does not scan public.messages; VALIDATE then
--- checks the existing rows under SHARE UPDATE EXCLUSIVE, which lets chat writes continue.
-ALTER TABLE public.messages DROP CONSTRAINT messages_card_check;
-ALTER TABLE public.messages ADD CONSTRAINT messages_card_check
-    CHECK (card IS NULL OR (
-        jsonb_typeof(card) = 'object'
-        AND card->>'v' = '1'
-        AND card->>'type' = ANY (ARRAY['draft_post', 'video_ready', 'approval_request', 'schedule_confirmed',
-                                        'weekly_report', 'booking_held', 'daily_summary', 'handoff_note', 'exception',
-                                        'action_done'])
-        AND octet_length(card::text) <= 65536)) NOT VALID;
-ALTER TABLE public.messages VALIDATE CONSTRAINT messages_card_check;
-
 -- ---- from 20261104000500_office-room-member-avatars.sql ----
 -- Read only the existing provider photos of active members of the selected workspace.
 -- Like be_access.user_emails, this keeps Auth tables private to their owner.
@@ -16487,21 +16292,6 @@ ALTER TABLE public.job_outbox ADD COLUMN retry_requested_at timestamptz;
 ALTER TABLE public.job_outbox ADD COLUMN reconcile_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.job_outbox ADD COLUMN reconcile_checks integer NOT NULL DEFAULT 0;
 
--- Preserve old workspace slots and in-flight leases while changing their identity to the canonical outbox id.
-ALTER TABLE public.job_slots ADD COLUMN job_id uuid;
-UPDATE public.job_slots s SET job_id = o.id FROM public.job_outbox o WHERE o.queue = s.queue AND o.msg_id = s.msg_id;
-UPDATE public.job_outbox o SET run_lease_until = greatest(o.run_lease_until, s.lease_until)
-FROM public.job_slots s WHERE o.id = s.job_id;
-DELETE FROM public.job_slots WHERE job_id IS NULL AND lease_until <= now();
-DO $$ BEGIN
-  IF EXISTS (SELECT 1 FROM public.job_slots WHERE job_id IS NULL) THEN
-    RAISE EXCEPTION 'Queue cutover has an unmapped live workspace slot';
-  END IF;
-END $$;
-ALTER TABLE public.job_slots DROP CONSTRAINT job_slots_pkey;
-ALTER TABLE public.job_slots DROP COLUMN msg_id;
-ALTER TABLE public.job_slots ALTER COLUMN job_id SET NOT NULL;
-ALTER TABLE public.job_slots ADD CONSTRAINT job_slots_pkey PRIMARY KEY (queue, job_id);
 -- No legacy pgmq sent marker proves that Redis received the corresponding job.
 UPDATE public.job_outbox SET sent_at = NULL, msg_id = NULL WHERE state IN ('queued', 'running');
 
@@ -16946,35 +16736,11 @@ using (topic is not null);
 revoke all on table public.realtime_events from public, anon, authenticated;
 grant select, insert, delete on table public.realtime_events to app_be;
 
--- The retention sweep that keeps realtime_events bounded: a BullMQ queue (realtime_retention) fed by the job outbox, ticked every
--- minute by pg_cron. The tick only enqueues one outbox row; the delete belongs to the sweep-realtime-events job the runner claims.
--- `cli jobs tick realtime-retention-tick` sends the same tick by hand.
-
--- ---- from 20261107000100_installation-removed_contract_widen.sql ----
--- Soft uninstall ("Gỡ agent"): an installed agent can end in the terminal status `removed`. The row stays, so its conversations,
--- messages, context versions and knowledge keep their history; nothing runs, and it leaves every list. Re-installing the same role
--- makes a new installation, so the two unique indexes that guard a type (one instance of a single type, one label per type) must not
--- count removed rows. Additive: the status check is widened, two nullable columns are added, the indexes are rebuilt as partial ones.
--- `status` is a text column with a CHECK, not a Postgres enum, so no ADD VALUE is involved and the new value is usable at once.
-
-ALTER TABLE public.module_installations DROP CONSTRAINT module_installations_status_check;
-ALTER TABLE public.module_installations
-    ADD CONSTRAINT module_installations_status_check
-    CHECK ((status = ANY (ARRAY['installing'::text, 'setup'::text, 'ready'::text, 'live'::text, 'paused'::text, 'needs_connection'::text, 'removed'::text])));
-
 ALTER TABLE public.module_installations ADD COLUMN removed_at timestamp with time zone;
 ALTER TABLE public.module_installations ADD COLUMN removed_by text;
 ALTER TABLE public.module_installations
     ADD CONSTRAINT module_installations_removed_check
     CHECK (((status = 'removed'::text) = (removed_at IS NOT NULL)));
-
-DROP INDEX public.module_installations_name_unique;
-CREATE UNIQUE INDEX module_installations_name_unique
-    ON public.module_installations USING btree (workspace_id, module_key, lower(name)) WHERE (status <> 'removed'::text);
-
-DROP INDEX public.module_installations_single;
-CREATE UNIQUE INDEX module_installations_single
-    ON public.module_installations USING btree (workspace_id, module_key) WHERE ((NOT is_multi) AND (status <> 'removed'::text));
 
 -- ---- from 20261107000200_running-gate-ready-to-live.sql ----
 -- Only a running agent answers customers (owner ruling, v0.3.6): the customer-turn gate now needs status `live`, live_enabled, an
@@ -17382,7 +17148,7 @@ revoke execute on function public.bookings_notify() from public, anon;
 
 CREATE TABLE public.identity_refresh_tokens (
     id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
-    session_id uuid NOT NULL REFERENCES auth.sessions(id) ON DELETE CASCADE,
+    session_id uuid NOT NULL,
     user_id uuid NOT NULL,
     token_hash text NOT NULL,
     created_at timestamp with time zone NOT NULL,
@@ -18210,13 +17976,10 @@ ALTER TABLE public.inventory_receipts ADD COLUMN IF NOT EXISTS created_at timest
 ALTER TABLE public.inventory_receipts ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.platform_admins ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.platform_admins ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
-ALTER TABLE public.platform_flags ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
-ALTER TABLE public.platform_flags ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER ai_usage_notices_set_updated_at BEFORE UPDATE ON public.ai_usage_notices FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 CREATE TRIGGER http_security_set_updated_at BEFORE UPDATE ON public.http_security FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 CREATE TRIGGER inventory_receipts_set_updated_at BEFORE UPDATE ON public.inventory_receipts FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 CREATE TRIGGER platform_admins_set_updated_at BEFORE UPDATE ON public.platform_admins FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-CREATE TRIGGER platform_flags_set_updated_at BEFORE UPDATE ON public.platform_flags FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ---- from 20261109100222_infra-tables-entity-base.sql ----
 -- infra-tables-entity-base: forward-only; immutable once on origin/main.
@@ -18246,14 +18009,11 @@ CREATE TRIGGER job_ticks_set_updated_at BEFORE UPDATE ON public.job_ticks FOR EA
 
 ALTER TABLE public.billing_config ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.billing_config ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
-ALTER TABLE public.booking_rate ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
-ALTER TABLE public.booking_rate ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.brain_source_profiles ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.brain_source_profiles ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.credit_topup_draws ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.credit_topup_draws ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER billing_config_set_updated_at BEFORE UPDATE ON public.billing_config FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-CREATE TRIGGER booking_rate_set_updated_at BEFORE UPDATE ON public.booking_rate FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 CREATE TRIGGER brain_source_profiles_set_updated_at BEFORE UPDATE ON public.brain_source_profiles FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 CREATE TRIGGER credit_topup_draws_set_updated_at BEFORE UPDATE ON public.credit_topup_draws FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
@@ -18570,10 +18330,6 @@ AS $function$
   )
 $function$;
 
--- Tables (their policies, triggers and indexes go with them).
-DROP TABLE IF EXISTS public.booking_rate;
-DROP TABLE IF EXISTS public.platform_flags;
-
 -- ---- from 20261109100300_knowledge-source-stage.sql ----
 -- knowledge-source-stage: forward-only; immutable once on origin/main. Expand step: columns only, nothing is dropped or tightened.
 -- A source records the stage its worker is on (read, chunk, embed, store, facts) and, for the embed stage, how many passages have their vector of how many, so the Knowledge page shows the work live and a reload converges on the same state.
@@ -18588,7 +18344,7 @@ BEGIN
         WHERE conname = 'knowledge_sources_stage_check' AND conrelid = 'public.knowledge_sources'::regclass
     ) THEN
         ALTER TABLE public.knowledge_sources ADD CONSTRAINT knowledge_sources_stage_check
-            CHECK (stage IS NULL OR stage IN ('read', 'chunk', 'embed', 'store', 'facts'));
+            CHECK (stage IS NULL OR stage IN ('read', 'chunk', 'embed', 'store', 'facts', 'critic'));
     END IF;
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
@@ -18691,7 +18447,7 @@ CREATE TABLE public.agent_wakes (
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT agent_wakes_fact_key UNIQUE (agent_id, source, event_key),
-    CONSTRAINT agent_wakes_source_check CHECK (source IN ('customer', 'tag', 'internal', 'schedule')),
+    CONSTRAINT agent_wakes_source_check CHECK (source ~ '^[a-z][a-z0-9_]{0,39}$'),
     CONSTRAINT agent_wakes_status_check CHECK (status IN ('pending', 'running', 'done', 'skipped', 'held', 'failed', 'dead')),
     CONSTRAINT agent_wakes_scope_check CHECK (scope_key = 'agent' OR scope_key LIKE 'conversation:%'),
     CONSTRAINT agent_wakes_context_check CHECK (jsonb_typeof(context) = 'object')
@@ -19179,16 +18935,6 @@ GRANT EXECUTE ON FUNCTION public.agent_work_due(integer) TO app_be;
 ALTER TABLE public.agent_triggers ADD COLUMN seed_key text;
 CREATE UNIQUE INDEX agent_triggers_seed_key_idx ON public.agent_triggers USING btree (agent_id, seed_key) WHERE seed_key IS NOT NULL;
 
--- ---- from 20261110000200_usage-kind-agent-work_contract_widen.sql ----
--- agent-work: a tag or background turn of an agent is metered under the new usage kind `agent_work` (a customer turn on the core road
--- keeps `chat_reply`). Additive: the kind check is widened by one value; no row changes. `kind` is a text column with a CHECK, not a
--- Postgres enum, so the new value is usable at once, and the quota function already sums every kind but `guide` into tokens and credits.
-
-ALTER TABLE public.ai_usage_events DROP CONSTRAINT ai_usage_events_kind_check;
-ALTER TABLE public.ai_usage_events
-    ADD CONSTRAINT ai_usage_events_kind_check
-    CHECK ((kind = ANY (ARRAY['chat_reply'::text, 'setup'::text, 'owner_chat'::text, 'relay'::text, 'embedding'::text, 'engine'::text, 'guide'::text, 'brain'::text, 'office_command'::text, 'agent_work'::text])));
-
 -- ---- from 20261110000300_agent-wake-event-queues.sql ----
 -- The consumer queues of the agent_wakes reactor (be/src/features/reactors/agent-wakes): three internal events that wake the agents which
 -- asked for them, and installation_changed, which seeds the triggers a module declares. Each queue, its dead-letter queue and its topic
@@ -19210,16 +18956,6 @@ select pgmq.create('installation_changed__agent_wakes');
 select pgmq.create('installation_changed__agent_wakes__dead');
 select pgmq.bind_topic('installation_changed', 'installation_changed__agent_wakes');
 
--- ---- from 20261110000500_work-item-reason-branch_contract_widen.sql ----
--- work-items: an ask that a branch of the action graph raised is recorded under the new reason `branch_ask`, so "send by itself" in
--- the automation gate (which waves through only `over_authority`) cannot wave a named approver through. Additive: the check is
--- widened by one value; no row changes.
-
-ALTER TABLE public.work_items DROP CONSTRAINT work_items_reason_check;
-ALTER TABLE public.work_items
-    ADD CONSTRAINT work_items_reason_check
-    CHECK ((reason = ANY (ARRAY['routine'::text, 'missing_data'::text, 'over_authority'::text, 'unclear_outcome'::text, 'not_allowed'::text, 'branch_ask'::text])));
-
 -- ---- from 20261110000600_agent-graph-approvals.sql ----
 -- agent-graph-approvals: a branch ask names its own approver, so the request keeps the group it asked: eligibleFor prefers it to the
 -- rule's live group. Expand only: one nullable column and the queue the agent-graphs consumer of approval_resolved reads.
@@ -19231,14 +18967,6 @@ ALTER TABLE public.approval_requests
 select pgmq.create('approval_resolved__agent_graphs');
 select pgmq.create('approval_resolved__agent_graphs__dead');
 select pgmq.bind_topic('approval_resolved', 'approval_resolved__agent_graphs');
-
--- ---- from 20261110000700_setup-write-branch_contract_widen.sql ----
--- module-setup-writes: the setup chat proposes a third kind of confirm card, `branch`: where the amount bands of an action meet, and who
--- is asked above the line. Additive: the check is widened by one value; no row changes.
-
-ALTER TABLE public.module_setup_writes DROP CONSTRAINT module_setup_writes_kind_check;
-ALTER TABLE public.module_setup_writes
-    ADD CONSTRAINT module_setup_writes_kind_check CHECK ((kind = ANY (ARRAY['fact'::text, 'rule'::text, 'branch'::text])));
 
 -- ---- from 20261110000800_supplier-payables.sql ----
 -- supplier-payables: the shop's supplier invoices as a record. Expand only: one new table, nothing existing altered.
@@ -19346,14 +19074,6 @@ BEGIN
 END
 $$;
 
--- ---- from 20261110100610_knowledge-source-stage-critic_contract_widen.sql ----
--- knowledge-sources: a document whose facts are read stays `ready` while the critic checks its dossier, and wears the stage `critic` meanwhile so the fourth step of taking a document in lights up. Additive: the check is widened by one value; no row changes.
-
-ALTER TABLE public.knowledge_sources DROP CONSTRAINT knowledge_sources_stage_check;
-ALTER TABLE public.knowledge_sources
-    ADD CONSTRAINT knowledge_sources_stage_check
-    CHECK (stage IS NULL OR stage IN ('read', 'chunk', 'embed', 'store', 'facts', 'critic'));
-
 -- ---- from 20261110100700_chat-files.sql ----
 -- chat-files: a file sent with a message by a member in the Office (a transfer screenshot, a PDF).
 -- Expand only: one new table, nothing existing altered. message_id names a row of messages, so it carries no foreign key; a workspace takes
@@ -19386,17 +19106,6 @@ CREATE POLICY office_file_attachments_app_be_insert ON public.office_file_attach
 CREATE POLICY office_file_attachments_app_be_update ON public.office_file_attachments FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
 REVOKE ALL ON TABLE public.office_file_attachments FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.office_file_attachments TO app_be;
-
--- ---- from 20261110101000_agent-inbound-sources_contract_widen.sql ----
--- agent-inbound: a wake's source is the key of the adapter that normalized the fact, so the closed list of four sources becomes a key
--- shape. What a source means to the work core (priority, attempts, background) is declared by the adapter and stored on the wake: a wake
--- carries `background` so the day's cap no longer reads a source name. An event trigger may name the sources it answers to; none answers
--- to every source. Widening only: the four old sources stay valid, no wake changes its source, and the two old background sources keep
--- spending the cap whether or not a writer set the new column.
-
-ALTER TABLE public.agent_wakes DROP CONSTRAINT agent_wakes_source_check;
-ALTER TABLE public.agent_wakes
-    ADD CONSTRAINT agent_wakes_source_check CHECK (source ~ '^[a-z][a-z0-9_]{0,39}$');
 
 ALTER TABLE public.agent_wakes ADD COLUMN background boolean NOT NULL DEFAULT false;
 UPDATE public.agent_wakes SET background = true WHERE source IN ('internal', 'schedule');
@@ -19647,9 +19356,6 @@ SELECT s.id,
   FROM auth.sessions s
  WHERE s.id IN (SELECT t.session_id FROM public.identity_refresh_tokens t);
 
--- The refresh tokens now hang on the package's sessions (a closed session still takes its tokens with it).
-ALTER TABLE public.identity_refresh_tokens DROP CONSTRAINT IF EXISTS identity_refresh_tokens_session_id_fkey;
-
 ALTER TABLE public.identity_refresh_tokens
     ADD CONSTRAINT identity_refresh_tokens_session_id_fkey
     FOREIGN KEY (session_id) REFERENCES public.identity_sessions (id) ON DELETE CASCADE;
@@ -19872,15 +19578,6 @@ CREATE POLICY creator_ledger_entries_app_be_select ON public.creator_ledger_entr
 CREATE POLICY creator_ledger_entries_app_be_insert ON public.creator_ledger_entries FOR INSERT TO app_be WITH CHECK (id IS NOT NULL);
 REVOKE ALL ON TABLE public.creator_ledger_entries FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT ON TABLE public.creator_ledger_entries TO app_be;
-
--- ---- from 20261111100200_payment-orders-agent-template_contract_widen.sql ----
--- payment-orders: an order can now buy an agent template (kind 'agent_template'). Widening only: the old kinds stay allowed and no row changes.
--- The settlement function marks such an order paid like the others; the license and the ledger entries of the creator are written by the
--- back end in the same transaction, from the paid order.
-
-ALTER TABLE public.payment_orders DROP CONSTRAINT payment_orders_kind_check;
-ALTER TABLE public.payment_orders
-    ADD CONSTRAINT payment_orders_kind_check CHECK (kind IN ('plan', 'upgrade', 'topup', 'credit_pack', 'agent_template'));
 
 -- ---- from 20261111100201_account-doors.sql ----
 -- The account doors of a lite app: the only way app_be reaches auth.users and auth.identities (it holds no grant on schema auth). Eight
@@ -21236,9 +20933,6 @@ CREATE UNIQUE INDEX "records_agent_turn_session_turn_key" ON public."records_age
 -- A job a retry cannot fix is parked (status failed_awaiting_fix) with the class and reason of its failure, the build that ran it and the
 -- queue to resume it on, raises one alert (alerted_at) and is handed back to its queue by ParkedJobResumerService (resume_count).
 ALTER TABLE public.jobs ALTER COLUMN status TYPE character varying(32);
-ALTER TABLE public.jobs DROP CONSTRAINT jobs_status_check;
-ALTER TABLE public.jobs ADD CONSTRAINT jobs_status_check
-    CHECK (status::text = ANY (ARRAY['running', 'failed', 'done', 'failed_awaiting_fix']::text[]));
 ALTER TABLE public.jobs
     ADD COLUMN failure_class character varying(16),
     ADD COLUMN queue character varying(200),
