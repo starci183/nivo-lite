@@ -2,7 +2,7 @@ import { doorPort, outboxPort } from "@nivo-lite/agent-sdk/mutation"
 import { definePort, portsOf } from "@nivo-lite/agent-sdk/port"
 import { membersPort } from "../../platform/ports"
 import { DELIVER_REPLY } from "../jobs/deliver-reply.job"
-import { CONVERSATIONS, MESSAGES, THREADS_LIST } from "../ports"
+import { CONVERSATIONS, MESSAGES, SETTINGS, THREADS_LIST } from "../ports"
 import { THREADS_SHAPE } from "../reads/threads.read"
 import { HANDLED_ROW } from "./chatbot.fixtures"
 import {
@@ -13,6 +13,7 @@ import {
     messageApi,
     putConversation,
     recordOfThread,
+    settingsApi,
     threadsList,
 } from "./chatbot.memory"
 
@@ -129,11 +130,39 @@ describe("the fake engine", () => {
     it("does not run the calls the module never makes", async () => {
         const api = conversationApi(memoryWorld())
         await expect(api.aggregate({ measures: {}, limit: 1 })).rejects.toThrow("does not run")
-        await expect(api.upsert("key", {})).rejects.toThrow("does not run")
         await expect(api.ensure("key", {})).rejects.toThrow("does not run")
         await expect(api.delete("c1")).rejects.toThrow("does not run")
         await expect(api.link("c1", "lead", "l1")).rejects.toThrow("does not run")
         await expect(api.unlink("c1", "lead", "l1")).rejects.toThrow("does not run")
+    })
+
+    it("upsert a settings record by its unique key: add the first, set the fields of the one that holds the key", async () => {
+        const world = memoryWorld()
+        const api = settingsApi(world)
+        const first = await api.upsert("scope_key", { scope: "chatbot", openclawTimeoutSec: 25, holdingMessage: "a" })
+        const second = await api.upsert("scope_key", { scope: "chatbot", openclawTimeoutSec: 40, holdingMessage: "b" })
+        expect(first).toMatchObject({ ok: true, created: true })
+        expect(second).toMatchObject({ ok: true, version: "2" })
+        expect(world.settings).toHaveLength(1)
+        expect(world.settings[0]?.data).toMatchObject({ openclawTimeoutSec: 40, holdingMessage: "b" })
+    })
+
+    it("count and page the conversations inside the windows of a query only", async () => {
+        const source = threadsList(memoryWorld())
+        const query = {
+            q: null,
+            filters: {},
+            windows: { moved: { from: "2026-11-04T00:00:00.000Z", to: "2026-11-05T00:00:00.000Z" } },
+            sort: "recent",
+            cursor: null,
+            size: 10,
+        }
+        expect(await source.counts(THREADS_SHAPE, "status", query)).toEqual({
+            needs: 1,
+            handled: 1,
+        })
+        const page = await source.page(THREADS_SHAPE, query)
+        expect(page.rows.map((row) => row.id)).toEqual(["c1", "c2"])
     })
 
     it("hold a conversation row of the world and replace or add one", () => {
@@ -184,7 +213,7 @@ describe("the fake engine", () => {
         const { members } = portsOf(provider, { members: membersPort })
         expect(await members.get("nobody")).toBeNull()
         expect(await members.get("member-manager")).toEqual({ displayName: "Lan Pham", isManager: true })
-        for (const port of [THREADS_LIST, CONVERSATIONS, MESSAGES])
+        for (const port of [THREADS_LIST, CONVERSATIONS, MESSAGES, SETTINGS])
             expect(provider.implementationOf(port)).toBeDefined()
     })
 

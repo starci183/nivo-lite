@@ -1,4 +1,6 @@
 import type { CountsResult, ListPage } from "@nivo-lite/agent-sdk/block"
+import { chatDecisionQueueOf } from "../../../rules/chatbot/decisions"
+import { chatFiguresOf } from "../../../rules/chatbot/figures"
 import type { ModuleFixtures } from "../../module-fixtures"
 import type { ThreadLine } from "../../../rules/chatbot"
 import type { ThreadRow, ThreadView } from "../chatbot.types"
@@ -87,7 +89,7 @@ const EMPTY_COUNTS: CountsResult = { counts: {}, total: 0 }
 const page = (rows: ReadonlyArray<ThreadRow>): ListPage<ThreadRow> => ({ rows, cursor: null })
 
 /** The conversations per status under no search. */
-export const STATUS_COUNTS: CountsResult = { counts: { needs: 1, handled: 1, ai: 2 }, total: 4 }
+export const STATUS_COUNTS: CountsResult = { counts: { needs: 1, handled: 1, ai: 2, today: 2 }, total: 4 }
 
 /** The conversations per channel under no search. */
 export const CHANNEL_COUNTS_DATA: CountsResult = { counts: { zalo: 1, telegram: 1, website: 1, facebook: 1 }, total: 4 }
@@ -97,6 +99,7 @@ export const WAITING_VIEW: ThreadView = {
     id: "c1",
     name: "Minh Anh Nguyen",
     channelName: "Zalo",
+    leadId: "l1",
     status: "needs",
     handledBy: "",
     stage: "qualified",
@@ -111,6 +114,7 @@ export const HANDLED_VIEW: ThreadView = {
     id: "c2",
     name: "Bao Tran Le",
     channelName: "Telegram",
+    leadId: "l2",
     status: "handled",
     handledBy: "Thu Ha Le",
     stage: "proposal",
@@ -179,6 +183,17 @@ export const CHATBOT_FIXTURES: ModuleFixtures = {
             empty: EMPTY_COUNTS,
             waiting: { counts: { zalo: 1 }, total: 1 },
         },
+        "chatbot.figures": {
+            ready: chatFiguresOf(STATUS_COUNTS.counts),
+            empty: chatFiguresOf({}),
+        },
+        "chatbot.decisions": {
+            ready: chatDecisionQueueOf(WAITING_THREAD_ROWS, WAITING_THREAD_ROWS.length),
+            empty: chatDecisionQueueOf([], 0),
+        },
+        "chatbot.settings": {
+            ready: { openclawTimeoutSec: 25, holdingMessage: "Please wait a moment.", updatedBy: "Thu Ha" },
+        },
         "chatbot.thread": { ready: HANDLED_VIEW, waiting: WAITING_VIEW },
         "chatbot.messages": {
             ready: { rows: READY_LINES, cursor: null },
@@ -201,5 +216,7 @@ export const CHATBOT_FIXTURES: ModuleFixtures = {
         "chatbot.release": { ok: true, data: { handledBy: null } },
         "chatbot.approve-and-send": { ok: true, data: { messageId: "m8" } },
         "chatbot.reject-proposal": { ok: true },
+        "chatbot.save-settings": { ok: true },
+        "chatbot.decide": { ok: true, data: { handledBy: "Thu Ha Le" } },
     },
 }

@@ -8,12 +8,13 @@ const catalog = new Map<string, AnyEntityDefinition>(FLOW_F_ENTITIES.map((entity
 const entityNamed = (name: string): AnyEntityDefinition | undefined => catalog.get(name)
 
 describe("flow F entity declarations", () => {
-    it("declares the thirteen entities once each", () => {
+    it("declares the fourteen entities once each", () => {
         expect(FLOW_F_ENTITIES.map((entity) => entity.name)).toEqual([
             "sales.lead",
             "sales.order",
             "chat.conversation",
             "chat.message",
+            "chat.settings",
             "payment.transaction",
             "payment.claim",
             "accounting.invoice",
@@ -38,6 +39,7 @@ describe("flow F entity declarations", () => {
             "sales.order": "order",
             "chat.conversation": "conversation",
             "chat.message": "message",
+            "chat.settings": "chatbot-settings",
             "payment.transaction": "bank-transaction",
             "payment.claim": "payment-claim",
         })

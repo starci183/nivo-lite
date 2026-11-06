@@ -3,7 +3,7 @@ import { STAFF_CONTEXT, memoryProvider, memoryWorld, recordOfThread } from "../f
 import { THREAD } from "./thread.read"
 
 describe("the chatbot.thread read", () => {
-    it("shows the conversation with the facts of the customer it is linked to", async () => {
+    it("shows the conversation with the facts of the customer it is linked to and the customer record behind it", async () => {
         const result = await THREAD.execute?.(memoryProvider(memoryWorld()), { id: "c1" }, STAFF_CONTEXT)
         expect(result).toEqual({
             ok: true,
@@ -11,6 +11,7 @@ describe("the chatbot.thread read", () => {
                 id: "c1",
                 name: "Minh Anh Nguyen",
                 channelName: "Zalo",
+                leadId: "l1",
                 status: "needs",
                 handledBy: "",
                 stage: "qualified",

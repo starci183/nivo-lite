@@ -85,6 +85,8 @@ export interface ThreadView {
     readonly name: string
     /** The proper name of the channel. */
     readonly channelName: string
+    /** The customer record behind the conversation; empty while the customer was not captured. */
+    readonly leadId: string
     /** Where the conversation stands in the inbox. */
     readonly status: InboxStatus
     /** The person who holds the conversation; empty while the AI answers. */
