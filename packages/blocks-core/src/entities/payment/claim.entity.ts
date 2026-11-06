@@ -20,6 +20,8 @@ export const CLAIM_STATUSES: readonly [string, ...Array<string>] = ["open", "set
 
 type ClaimFields = {
     readonly code: FieldDef<"text", true>
+    readonly leadId: FieldDef<"uuid", true>
+    readonly conversationId: FieldDef<"uuid", true>
     readonly amountVnd: FieldDef<"money_vnd", true>
     readonly names: FieldDef<"jsonb", false> & { readonly shape: ZodType<ClaimNames> }
     readonly body: FieldDef<"text", false>
@@ -31,6 +33,8 @@ type ClaimFields = {
 
 const claimFields: ClaimFields = {
     code: field.text({ maxLength: MAX_ID, nullable: true }),
+    leadId: field.uuid({ nullable: true }),
+    conversationId: field.uuid({ nullable: true }),
     amountVnd: field.moneyVnd({ nullable: true }),
     names: field.jsonb({ shape: claimNamesShape }),
     body: field.text({ maxLength: MAX_BODY }),
@@ -52,6 +56,8 @@ export const claimEntity: EntityDefinition<ClaimFields> = defineEntity({
     indexes: [
         { name: "key", on: ["id"] },
         { name: "status_claimed", on: ["status", { desc: "claimedAt" }, { desc: "id" }] },
+        { name: "lead_claimed", on: ["leadId", { desc: "claimedAt" }, { desc: "id" }] },
+        { name: "conversation_claimed", on: ["conversationId", { desc: "claimedAt" }, { desc: "id" }] },
     ],
     constraints: [
         { kind: "unique", name: "dedupe_key", on: ["dedupeKey"], refusal: "claim-already-recorded" },

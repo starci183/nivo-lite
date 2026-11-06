@@ -35,7 +35,7 @@ export const orderDetailOf = (order: OrderRow, customer: string | null, threshol
     orderNo: order.orderNo,
     leadId: order.leadId,
     customer,
-    items: order.items,
+    items: order.itemsText,
     note: order.note,
     amountVnd: order.amountVnd,
     status: order.status,

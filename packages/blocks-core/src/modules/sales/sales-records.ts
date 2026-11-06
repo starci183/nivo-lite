@@ -1,6 +1,7 @@
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { z } from "zod"
 import { MAX_BODY, MAX_ID, MAX_LINE } from "../../bounds"
+import { ORDER_ITEMS_SHAPE } from "../../entities/sales/order.entity"
 import { ORDER_STATUSES } from "../../rules/sales/order-status"
 import type { OrderBrief } from "../../rules/sales/lead-orders"
 import { LEAD_STAGES, MAX_REASON_CHARS } from "../../rules/sales/stage"
@@ -38,7 +39,8 @@ const leadData = z.object({
 const orderData = z.object({
     orderNo: z.string().max(MAX_ID),
     leadId: nullableText(MAX_ID),
-    items: z.string().max(MAX_BODY),
+    items: ORDER_ITEMS_SHAPE,
+    itemsText: z.string().max(MAX_BODY),
     note: z.string().max(MAX_BODY),
     amountVnd: orNull(z.number().int().min(0).max(MAX_VND)),
     status: z.enum(ORDER_STATUSES),
@@ -77,6 +79,7 @@ export const ORDER_FIELDS: ReadonlyArray<string> = [
     "orderNo",
     "leadId",
     "items",
+    "itemsText",
     "note",
     "amountVnd",
     "status",

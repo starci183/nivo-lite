@@ -24,3 +24,20 @@ export const itemLinesOf = (text: string): ReadonlyArray<OrderLineView> =>
                 ? { name: part.replace(LINE, "$2"), qty: Number(part.replace(LINE, "$1")) }
                 : { name: part, qty: 1 },
         )
+
+/** One line of an order as a record keeps it: the price and what the line comes to. */
+export interface PricedLine extends OrderLineView {
+    /** The price of one, VND. */
+    readonly unitVnd: number
+    /** What the line comes to, VND. */
+    readonly amountVnd: number
+}
+
+/** The lines a record keeps for the items a customer named; a line named without a price is kept at no price. */
+export const pricedLinesOf = (
+    lines: ReadonlyArray<OrderLineView & { readonly unitVnd?: number | undefined }>,
+): ReadonlyArray<PricedLine> =>
+    lines.map((line) => {
+        const unitVnd = line.unitVnd ?? 0
+        return { name: line.name, qty: line.qty, unitVnd, amountVnd: Math.round(line.qty * unitVnd) }
+    })

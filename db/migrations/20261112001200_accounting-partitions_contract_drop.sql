@@ -19,3 +19,13 @@ CREATE INDEX "records_accounting_adjustment_target" ON public."records_accountin
 CREATE INDEX "records_accounting_book_entry_amount" ON public."records_accounting_book_entry" USING btree (workspace_id, ((data->>'amountVnd')::bigint) DESC, id DESC);
 -- create_index public.records_accounting_book_entry:index:records_accounting_book_entry_kind_amount: on workspace_id, data->>'kind', data->>'amountvnd'desc, iddesc using btree
 CREATE INDEX "records_accounting_book_entry_kind_amount" ON public."records_accounting_book_entry" USING btree (workspace_id, (data->>'kind'), ((data->>'amountVnd')::bigint) DESC, id DESC);
+-- add_check public.records_payment_claim:constraint:records_payment_claim_lead_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_claim" ADD CONSTRAINT "records_payment_claim_lead_id_chk" CHECK ((data->>'leadId') IS NULL OR ((data->>'leadId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_payment_claim" VALIDATE CONSTRAINT "records_payment_claim_lead_id_chk";
+-- add_check public.records_payment_claim:constraint:records_payment_claim_conversation_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_payment_claim" ADD CONSTRAINT "records_payment_claim_conversation_id_chk" CHECK ((data->>'conversationId') IS NULL OR ((data->>'conversationId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_payment_claim" VALIDATE CONSTRAINT "records_payment_claim_conversation_id_chk";
+-- create_index public.records_payment_claim:index:records_payment_claim_lead_claimed: on workspace_id, data->>'leadid', data->>'claimedat'desc, iddesc using btree
+CREATE INDEX "records_payment_claim_lead_claimed" ON public."records_payment_claim" USING btree (workspace_id, ((data->>'leadId')::uuid), (data->>'claimedAt') DESC, id DESC);
+-- create_index public.records_payment_claim:index:records_payment_claim_conversation_claimed: on workspace_id, data->>'conversationid', data->>'claimedat'desc, iddesc using btree
+CREATE INDEX "records_payment_claim_conversation_claimed" ON public."records_payment_claim" USING btree (workspace_id, ((data->>'conversationId')::uuid), (data->>'claimedAt') DESC, id DESC);

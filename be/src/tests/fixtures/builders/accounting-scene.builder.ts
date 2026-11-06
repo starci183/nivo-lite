@@ -63,7 +63,8 @@ export const writeScene = async (entities: EntitiesApi, now: Date): Promise<Scen
         await entities.insert(
             "sales.order",
             {
-                items: "1 x Ao dai",
+                items: { lines: [{ name: "Ao dai", qty: 1, unitVnd: ORDER_AMOUNT, amountVnd: ORDER_AMOUNT }] },
+                itemsText: "1 x Ao dai",
                 leadId,
                 amountVnd: ORDER_AMOUNT,
                 status: "confirmed",

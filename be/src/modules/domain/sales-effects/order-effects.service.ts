@@ -1,7 +1,7 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import { AGENT_NAME, leadRowOf, orderRowOf } from "@nivo-lite/blocks-core/modules/sales"
-import { itemsTextOf, stageAfterConfirm } from "@nivo-lite/blocks-core/rules/sales"
+import { itemsTextOf, pricedLinesOf, stageAfterConfirm } from "@nivo-lite/blocks-core/rules/sales"
 import type { EntitiesApi } from "@nivo-lite/agent-sdk/entity/port"
 import type { EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
@@ -50,7 +50,8 @@ export class OrderEffectsService implements OnModuleInit {
                 ORDER,
                 {
                     leadId: lead.id,
-                    items: itemsTextOf(given.items),
+                    items: { lines: pricedLinesOf(given.items) },
+                    itemsText: itemsTextOf(given.items),
                     amountVnd: given.amountVnd,
                     ...(given.note === undefined ? {} : { note: given.note }),
                 },

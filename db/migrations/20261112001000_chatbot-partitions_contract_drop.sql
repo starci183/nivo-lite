@@ -47,3 +47,8 @@ CREATE INDEX "records_chat_conversation_last_text_trgm_idx" ON public."records_c
 ALTER TABLE public."records_chat_conversation" DROP CONSTRAINT "records_chat_conversation_visitor_name_chk";
 -- drop_index public.records_chat_conversation:index:records_chat_conversation_visitor_name_trgm_idx: the declaration does not name it
 DROP INDEX public."records_chat_conversation_visitor_name_trgm_idx";
+-- add_check public.records_chat_conversation:constraint:records_chat_conversation_lead_id_chk: added NOT VALID, then validated
+ALTER TABLE public."records_chat_conversation" ADD CONSTRAINT "records_chat_conversation_lead_id_chk" CHECK ((data->>'leadId') IS NULL OR ((data->>'leadId') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')) NOT VALID;
+ALTER TABLE public."records_chat_conversation" VALIDATE CONSTRAINT "records_chat_conversation_lead_id_chk";
+-- create_index public.records_chat_conversation:index:records_chat_conversation_lead_recent: on workspace_id, data->>'leadid', data->>'lastat'desc, iddesc using btree
+CREATE INDEX "records_chat_conversation_lead_recent" ON public."records_chat_conversation" USING btree (workspace_id, ((data->>'leadId')::uuid), (data->>'lastAt') DESC, id DESC);

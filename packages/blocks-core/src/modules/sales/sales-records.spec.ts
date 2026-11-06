@@ -12,7 +12,13 @@ const record = (data: Readonly<Record<string, unknown>>): RecordRow => ({
 
 const LEAD = { contactName: "Lan", channel: "zalo", stage: "new" }
 
-const ORDER = { orderNo: "DH-20261104-0001", items: "2 x tea", note: "", status: "draft" }
+const ORDER = {
+    orderNo: "DH-20261104-0001",
+    items: { lines: [{ name: "tea", qty: 2, unitVnd: 10_000, amountVnd: 20_000 }] },
+    itemsText: "2 x tea",
+    note: "",
+    status: "draft",
+}
 
 describe("leadRowOf", () => {
     it("reads a lead with its system fields and reads a key the engine left out as null", () => {
