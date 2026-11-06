@@ -26,7 +26,7 @@ describe("numberOf", () => {
 
 describe("formatValue", () => {
     it("lists the six formats", () => {
-        expect(CELL_FORMATS).toEqual(["text", "number", "money", "date", "dateTime", "badge"])
+        expect(CELL_FORMATS).toEqual(["text", "number", "money", "date", "day", "dateTime", "badge"])
     })
 
     it("draws text and a badge as the text of the value", () => {
@@ -59,6 +59,12 @@ describe("formatValue", () => {
         expect(plain(formatValue(Date.UTC(2026, 10, 5, 14, 30), "dateTime", EN))).toBe("Nov 5, 2026, 2:30 PM")
         expect(formatValue("2026-11-05T14:30:00Z", "date", EN)).toBe("Nov 5, 2026")
         expect(formatValue("2026-11-05T14:30:00Z", "dateTime", { locale: "en", currency: "USD" })).not.toBe("")
+    })
+
+    it("draws the day and month only, in the order of the language", () => {
+        expect(formatValue("2026-11-03", "day", { locale: "vi", currency: "VND" })).toBe("03/11")
+        expect(formatValue("2026-11-03", "day", { locale: "en", currency: "USD" })).toBe("11/03")
+        expect(formatValue("nope", "day", EN)).toBe("")
     })
 
     it("draws nothing for a value that is no date", () => {

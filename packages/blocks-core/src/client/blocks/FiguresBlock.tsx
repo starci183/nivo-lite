@@ -24,15 +24,31 @@ export const FiguresBlock = (props: RenderOf<typeof figuresBlock>): ReactNode =>
             onRetry={read.retry}
             render={(record, isLoading) => {
                 const label = words(props.props.label)
+                const caption = textOf(valueAt(record, props.props.captionPath))
                 const points = props.props.items.map((item) => {
                     const raw = valueAt(record, item.path)
                     return chartPointOf(item.path, words(item.term), raw, figureTextOf(raw, item.format, context))
                 })
                 if (kind === "bars") {
-                    return <FiguresBars label={label} points={points} empty={labels.empty} isLoading={isLoading} />
+                    return (
+                        <FiguresBars
+                            label={label}
+                            points={points}
+                            empty={labels.empty}
+                            isLoading={isLoading}
+                            caption={caption}
+                        />
+                    )
                 }
                 if (kind === "proportion") {
-                    return <FiguresProportion points={points} empty={labels.empty} isLoading={isLoading} />
+                    return (
+                        <FiguresProportion
+                            points={points}
+                            empty={labels.empty}
+                            isLoading={isLoading}
+                            caption={caption}
+                        />
+                    )
                 }
                 return (
                     <FiguresStrip

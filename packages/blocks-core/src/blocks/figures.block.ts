@@ -26,11 +26,13 @@ const props: z.ZodObject<{
     label: TextSchema
     currency: z.ZodOptional<z.ZodString>
     kind: z.ZodOptional<EnumSchema<FigureKind>>
+    captionPath: z.ZodOptional<z.ZodString>
     items: z.ZodArray<ItemSchema>
 }> = z.object({
     label: specText,
     currency: currencyCode.optional(),
     kind: z.enum(FIGURE_KINDS).optional(),
+    captionPath: z.string().max(PATH_MAX).optional(),
     items: z.array(item).max(ITEMS_MAX),
 })
 /** The slots of the figures block. */
@@ -41,7 +43,7 @@ const slots: Slots = { data: { kind: "read", shape: "record", required: true } }
 
 /**
  * A ribbon of figures in one card (kind `tiles`, the default), bars on one scale (`bars`) or one gauge per item sharing the total
- * (`proportion`): each item names its term, the path of its value in the bound record and how the value is drawn and, with a `hintPath`, the path of the line of text under it (tiles only).
+ * (`proportion`), with the text at `captionPath` under a chart: each item names its term, the path of its value in the bound record and how the value is drawn and, with a `hintPath`, the path of the line of text under it (tiles only).
  */
 export const figuresBlock: BlockDefinition<typeof props, typeof slots> = defineBlock({
     id: "core.figures",
