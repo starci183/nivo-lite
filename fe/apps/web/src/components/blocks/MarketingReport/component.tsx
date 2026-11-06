@@ -98,7 +98,7 @@ const Report = (props: ReportProps) => {
                           ),
                       }
                     : {})}
-                footer={view.period === "" ? words.description : `${words.description} · ${view.period}`}
+                note={view.period === "" ? words.description : `${words.description} · ${view.period}`}
                 isLoading={isLoading}
                 items={view.kpis.map((item) => ({
                     id: item.id,
@@ -108,7 +108,7 @@ const Report = (props: ReportProps) => {
                 }))}
             />
             <Grid kind="cards" columns={2}>
-                <SurfaceCard label={words.chartTitle} footer={words.chartNote}>
+                <SurfaceCard label={words.chartTitle} note={words.chartNote}>
                     <BarChart
                         label={words.chartTitle}
                         isLoading={isLoading}

@@ -1,5 +1,5 @@
 import { Alert, AlertDialog, Button, Cluster, Heading, Page, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import type { Band } from "@starci/grammar/common"
+import type { HeaderZone } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { HiringReplyOutcome } from "@/components/composites/HiringReplyOutcome"
 import { PublicShell } from "@/components/frames/PublicShell"
@@ -111,11 +111,11 @@ const OfferAnswer = (props: OfferCardProps) => {
 }
 
 /** The letter: the business and the heading, then the words, then how long it holds (only while it still holds). */
-const offerBands = (props: OfferCardProps): [Band, Band, Band] => {
+const offerHeaders = (props: OfferCardProps): [HeaderZone, HeaderZone] => {
     const { view, isSkeleton } = props
     return [
         {
-            kind: "body",
+            kind: "custom",
             children: (
                 <Stack gap="row">
                     <Text size="sm" tone="muted" isLoading={isSkeleton}>
@@ -128,7 +128,7 @@ const offerBands = (props: OfferCardProps): [Band, Band, Band] => {
             ),
         },
         {
-            kind: "body",
+            kind: "custom",
             children: (
                 <Stack gap="row">
                     <div className={PRE_WRAP_CLASS_NAME}>
@@ -142,7 +142,6 @@ const offerBands = (props: OfferCardProps): [Band, Band, Band] => {
                 </Stack>
             ),
         },
-        { kind: "body", children: <OfferAnswer {...props} /> },
     ]
 }
 
@@ -179,11 +178,12 @@ export const HiringOfferReplyBase = (props: HiringOfferReplyBaseProps) => {
                     render={(view, isSkeleton) => (
                         <Stack gap="region" measure="form">
                             <SurfaceCard
-                                kind="bands"
                                 ariaLabel={props.props.say("replyOfferTitle")}
                                 isLoading={isSkeleton}
-                                bands={offerBands({ ...props, view, isSkeleton })}
-                            />
+                                headers={offerHeaders({ ...props, view, isSkeleton })}
+                            >
+                                <OfferAnswer {...props} view={view} isSkeleton={isSkeleton} />
+                            </SurfaceCard>
                         </Stack>
                     )}
                 />

@@ -22,39 +22,29 @@ export interface WorkspaceJoinBaseProps {
 
 /** Draws the "I have an invitation link" form: paste the link, open its invitation page. */
 export const WorkspaceJoinBase = (props: WorkspaceJoinBaseProps) => (
-    <SurfaceCard
-        label={props.props.title}
-        headingLevel={2}
-        kind="bands"
-        bands={[
-            {
-                kind: "body",
-                children: (
-                    <Form label={props.props.linkLabel} onSubmit={props.on.submit}>
-                        <Stack gap="row">
-                            <Text size="sm" tone="muted">
-                                {props.props.description}
-                            </Text>
-                            <Cluster gap="row" align="end">
-                                <div className={LINK_FIELD_CLASS_NAME}>
-                                    <Input
-                                        id="ws-link"
-                                        name="link"
-                                        label={props.props.linkLabel}
-                                        placeholder={props.props.placeholder}
-                                        value={props.props.value}
-                                        onValueChange={props.on.setValue}
-                                    />
-                                </div>
-                                <Button type="submit" intent="neutral">
-                                    {props.props.openLabel}
-                                </Button>
-                            </Cluster>
-                            <FormNotice failTitle={props.props.failTitle} error={props.props.error} />
-                        </Stack>
-                    </Form>
-                ),
-            },
-        ]}
-    />
+    <SurfaceCard label={props.props.title} headingLevel={2}>
+        <Form label={props.props.linkLabel} onSubmit={props.on.submit}>
+            <Stack gap="row">
+                <Text size="sm" tone="muted">
+                    {props.props.description}
+                </Text>
+                <Cluster gap="row" align="end">
+                    <div className={LINK_FIELD_CLASS_NAME}>
+                        <Input
+                            id="ws-link"
+                            name="link"
+                            label={props.props.linkLabel}
+                            placeholder={props.props.placeholder}
+                            value={props.props.value}
+                            onValueChange={props.on.setValue}
+                        />
+                    </div>
+                    <Button type="submit" intent="neutral">
+                        {props.props.openLabel}
+                    </Button>
+                </Cluster>
+                <FormNotice failTitle={props.props.failTitle} error={props.props.error} />
+            </Stack>
+        </Form>
+    </SurfaceCard>
 )

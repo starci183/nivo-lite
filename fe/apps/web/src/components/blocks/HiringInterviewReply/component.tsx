@@ -11,7 +11,7 @@ import {
     Text,
     TextAction,
 } from "@starci/grammar/common"
-import type { Band } from "@starci/grammar/common"
+import type { HeaderZone } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { HiringReplyOutcome } from "@/components/composites/HiringReplyOutcome"
 import { PublicShell } from "@/components/frames/PublicShell"
@@ -78,8 +78,8 @@ interface InviteCardProps extends HiringInterviewReplyBaseProps {
 }
 
 /** The invitation itself: the business, the greeting as the page's heading, and where and when. */
-const inviteBand = (props: InviteCardProps): Band => ({
-    kind: "body",
+const inviteBand = (props: InviteCardProps): HeaderZone => ({
+    kind: "custom",
     children: (
         <Stack gap="row">
             <Text size="sm" tone="muted" isLoading={props.isLoading}>
@@ -169,18 +169,12 @@ export const HiringInterviewReplyBase = (props: HiringInterviewReplyBaseProps) =
                 render={(view, isLoading) => (
                     <Stack gap="region" measure="form">
                         <SurfaceCard
-                            kind="bands"
                             ariaLabel={props.props.say("replyInterviewTitle")}
                             isLoading={isLoading}
-                            bands={[
-                                inviteBand({ ...props, view, isLoading }),
-                                {
-                                    kind: "body",
-                                    label: props.props.say("replyPick"),
-                                    children: <InviteAnswer {...props} view={view} isLoading={isLoading} />,
-                                },
-                            ]}
-                        />
+                            headers={[inviteBand({ ...props, view, isLoading })]}
+                        >
+                            <InviteAnswer {...props} view={view} isLoading={isLoading} />
+                        </SurfaceCard>
                     </Stack>
                 )}
             />
