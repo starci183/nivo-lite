@@ -330,9 +330,9 @@ describe("flow F graphs: Accounting", () => {
                 {
                     id: "t-1",
                     amountVnd: 99_000,
-                    content: "CHUYEN TIEN",
-                    counterpartName: "NGUYEN VAN A",
-                    receivedAt: "2026-11-04T01:00:00.000Z",
+                    reference: "CHUYEN TIEN",
+                    payer: "NGUYEN VAN A",
+                    occurredAt: "2026-11-04T01:00:00.000Z",
                     orderId: null,
                     status: "new",
                 },
