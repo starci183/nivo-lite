@@ -11,7 +11,6 @@ export const APP_ROUTES = {
 } as const
 
 export { safeNext } from "./safe-next-path"
-export { LEADS_ROUTES, leadPath, newLeadPath } from "./leads-routes"
 export {
     AUTH_ROUTES,
     invitePath,

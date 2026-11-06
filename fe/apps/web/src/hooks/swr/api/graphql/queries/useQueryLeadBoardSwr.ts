@@ -14,7 +14,7 @@ import { queryLeadBoard } from "@/modules/api/graphql/queries/query-lead-board"
 import { GraphQLHeadersKey, type LeadBoardQuery } from "@/modules/api"
 
 /** Workspace-scoped cache identity for the leadBoard query. */
-export const QUERY_LEAD_BOARD_SWR_KEY = "QUERY_LEAD_BOARD_SWR"
+const QUERY_LEAD_BOARD_SWR_KEY = "QUERY_LEAD_BOARD_SWR"
 
 type LeadBoardNode = LeadBoardQuery["leadBoard"]["nodes"][number]
 

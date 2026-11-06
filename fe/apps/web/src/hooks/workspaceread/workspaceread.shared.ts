@@ -119,13 +119,6 @@ export const readField = async <Request, Data, Field extends keyof Data>(
     operation: string,
 ): Promise<Data[Field]> => answeredData(await run({ request }), operation)[field]
 
-/** Reads a required field; missing data or a missing field has the same named failure. */
-export const readRequiredField = async <Request, Data, Field extends keyof Data & string>(
-    run: ReadOperation<Request, Data>,
-    request: Request,
-    field: Field,
-): Promise<NonNullable<Data[Field]>> => (await run({ request })).data?.[field] ?? noData(field)
-
 /** The success/error callbacks accepted while a queued job is observed. */
 export type JobStatusCallbacks<Status> = Pick<SWRConfiguration<Status, Error>, "onSuccess" | "onError">
 

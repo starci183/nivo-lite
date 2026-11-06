@@ -1,9 +1,8 @@
 import type { DropdownMenuEntry, DropdownMenuItem } from "@starci/grammar/common"
-import { AvatarButton, Cluster, DropdownMenu, IconButton, TopBar, Icon, Popover, Switch } from "@starci/grammar/common"
+import { AvatarButton, Cluster, DropdownMenu, IconButton, TopBar, Popover, Switch } from "@starci/grammar/common"
 import type { ConsolePending } from "@/modules/types"
 import { ACCOUNT_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
 import { ConsoleNotificationsPanel } from "../../composites/ConsoleNotificationsPanel"
-import { ConsoleSearch } from "../../composites/ConsoleSearch"
 import { ConsoleWorkspaceMenu } from "../../composites/ConsoleWorkspaceMenu"
 import { FoundingBadge } from "../../composites/FoundingBadge"
 import { languageMenuEntries } from "../../composites/LanguageMenu"
@@ -25,12 +24,6 @@ export interface ConsoleHeaderBaseProps {
         readonly foundingLabel: string
         readonly workspaceEntries: ReadonlyArray<DropdownMenuEntry>
         readonly accountEntries: ReadonlyArray<DropdownMenuEntry>
-        readonly searchLabel: string
-        readonly searchPlaceholder: string
-        readonly searchShortcut: string
-        readonly closeLabel: string
-        readonly query: string
-        readonly isSearchOpen: boolean
         readonly languageLabel: string
         readonly locale: string
         readonly isLocalePending: boolean
@@ -48,9 +41,6 @@ export interface ConsoleHeaderBaseProps {
         }
     }
     readonly on: {
-        readonly setQuery: (query: string) => void
-        readonly setSearchOpen: (isOpen: boolean) => void
-        readonly search: (query: string) => void
         readonly chooseLocale: (locale: string) => void
         readonly chooseDark: (isDark: boolean) => void
         readonly setNotificationsOpen: (isOpen: boolean) => void
@@ -73,19 +63,6 @@ const Brand = ({ props }: BrandProps) => (
         </div>
     </Cluster>
 )
-
-/** The props both parts of the search share. */
-const searchProps = (props: ConsoleHeaderBaseProps["props"], on: ConsoleHeaderBaseProps["on"]) => ({
-    label: props.searchLabel,
-    placeholder: props.searchPlaceholder,
-    shortcut: props.searchShortcut,
-    closeLabel: props.closeLabel,
-    query: props.query,
-    isOpen: props.isSearchOpen,
-    onOpenChange: on.setSearchOpen,
-    onQueryChange: on.setQuery,
-    onSubmit: on.search,
-})
 
 /** The glyph and tone of the account menu's two commands, keyed by the ids `modules/types` shares with the entries builder. */
 const COMMAND_LOOKS: Record<
@@ -181,19 +158,7 @@ const Actions = ({ props, on }: ConsoleHeaderBaseProps) => (
     </Cluster>
 )
 
-/** Draws the console top bar: the workspace lockup on the left; the search field in the middle (an icon on a phone); language, appearance, bell and account on the right; the compact tab row under it. */
+/** Draws the console top bar: the workspace lockup on the left; language, appearance, bell and account on the right; the compact tab row under it. */
 export const ConsoleHeaderBase = (props: ConsoleHeaderBaseProps) => (
-    <TopBar
-        position="sticky"
-        brand={<Brand {...props} />}
-        navigation={<ConsoleSearch part="field" {...searchProps(props.props, props.on)} />}
-        menu={{
-            icon: <Icon source={nivoIconSource("search", "leading")} />,
-            openLabel: props.props.searchLabel,
-            closeLabel: props.props.closeLabel,
-            isOpen: props.props.isSearchOpen,
-            onOpenChange: props.on.setSearchOpen,
-        }}
-        actions={<Actions {...props} />}
-    />
+    <TopBar position="sticky" brand={<Brand {...props} />} actions={<Actions {...props} />} />
 )

@@ -14,23 +14,8 @@ export type { AgentGraphAnswerView, AgentGraphDecideEditorView, AgentGraphOption
 export type { AgentGraphDetailView, AgentGraphHeadView, AgentGraphProblemsView } from "./agentGraphView"
 export type { AgentGraphProposalView, AgentGraphProposalsView } from "./agentGraphView"
 export type { AgentGraphRowView, AgentGraphTermView, AgentGraphRunView, AgentGraphVersionsView } from "./agentGraphView"
-export type { AgentRecord, EventRecord, ExecutionRecord, ResponsibilityRecord } from "./leads"
-export type { LeadRecord, LeadListItem, LeadIcon, LeadJourney, LeadStageId, LeadPrimaryAction } from "./leads"
-export type { LeadStepMode, LeadStepValues, StepFormView, StepStatus, FlowEntryView, FlowView } from "./leads"
-export type { LeadApprovalPane } from "./lead-panes"
-export type { LeadApprovalView, LeadContextPane, LeadContextView, LeadCreateDialogProps } from "./lead-panes"
-export type { LeadDetailPaneOn, LeadDetailPaneView, LeadDraftItem } from "./lead-panes"
-export type { LeadFlowPane, LeadHeadLabels, LeadHeadPane, LeadHeadView } from "./lead-panes"
-export type { LeadListPaneView, LeadListView, LeadOutcomePane, LeadOutcomeView, LeadPanesCopy } from "./lead-panes"
-export type {
-    LeadPanesOn,
-    LeadRowView,
-    LeadStepFormLabels,
-    LeadStepPane,
-    LeadStepSectionView,
-    LeadStepView,
-} from "./lead-panes"
-export type { LeadTimelineEntryView, LeadTimelinePane, LeadTimelineView } from "./lead-panes"
+export type { LeadRecord, LeadListItem, LeadStageId } from "./leads"
+export type { StepStatus } from "./leads"
 
 export type {
     BookingAction,

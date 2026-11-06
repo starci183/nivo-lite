@@ -6,9 +6,6 @@ import type { ConsoleIconName, ConsoleSessionView, ConsoleWorkspace } from "@/mo
 /** The console route of the Office, the page people come to first. */
 export const OFFICE_ROUTE = "/chat"
 
-/** The leads list, where search and the New menu land. */
-export const LEADS_ROUTE = "/leads"
-
 /** The catalog key that names each role. */
 export const ROLE_LABELS = { owner: "roleOwner", manager: "roleManager", staff: "roleStaff" } as const
 
@@ -21,7 +18,6 @@ export type ConsoleDestination = {
         | "navThreads"
         | "navAuthority"
         | "navInbox"
-        | "navLeads"
         | "navResponsibilities"
         | "navDecisions"
         | "navAutomations"
@@ -46,7 +42,6 @@ export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
     { key: "chat", label: "navOffice", route: OFFICE_ROUTE, icon: "community", group: "work" },
     { key: "overview", label: "navOverview", route: "/dashboard", icon: "overview", group: "work" },
     { key: "threads", label: "navThreads", route: "/threads", icon: "review", group: "work" },
-    { key: "leads", label: "navLeads", route: LEADS_ROUTE, icon: "account", group: "work" },
     {
         key: "responsibilities",
         label: "navResponsibilities",

@@ -27,13 +27,11 @@ import type {
     ContentMediaQuery,
     ContentWorkbenchQuery,
     CreateContentItemMutation,
-    CreateLeadMutation,
     CreditPacksQuery,
     CreditQuotaStatusQuery,
     CreditTopupLotsQuery,
     CreditUsageSummaryQuery,
     DashboardQuery,
-    DecideSalesDraftMutation,
     HiringCandidateDetailQuery,
     HiringWorkbenchQuery,
     InventoryTemplatesQuery,
@@ -41,8 +39,6 @@ import type {
     KnowledgeSourceQuery,
     KnowledgeSourcesQuery,
     KnowledgeSuggestionsQuery,
-    LeadActionStatusQuery,
-    LeadFlowQuery,
     LeadJourneyQuery,
     LessonMiningStatusQuery,
     ModuleInstallationsQuery,
@@ -70,7 +66,6 @@ import type {
     HiringJobQuestionInput,
     SaveHiringJobInput,
     SaveHiringSettingsInput,
-    DecideSalesDraftInput,
     MentionDirectoryQuery,
     WorkChainQuery,
     WorkThreadQuery,
@@ -223,24 +218,6 @@ export type KnowledgeSourceTextType = KnowledgeSourceQuery["knowledgeSource"]["s
 export type KnowledgeSourceType = KnowledgeSourcesQuery["knowledgeSources"][number]
 /** The `KnowledgeSuggestionContextType` object of the back end contract, as the operations of this app select it. */
 export type KnowledgeSuggestionContextType = KnowledgeSuggestionsQuery["knowledgeSuggestions"]
-/** The `LeadActionQueuedType` object of the back end contract, as the operations of this app select it. */
-export type LeadActionQueuedType = CreateLeadMutation["createLead"]
-/** The `LeadActionStatusType` object of the back end contract, as the operations of this app select it. */
-export type LeadActionStatusType = LeadActionStatusQuery["leadActionStatus"]
-/** The `LeadFlowDecisionType` object of the back end contract, as the operations of this app select it. */
-export type LeadFlowDecisionType = LeadFlowQuery["leadFlow"]["decisions"][number]
-/** The `LeadFlowInvoiceType` object of the back end contract, as the operations of this app select it. */
-export type LeadFlowInvoiceType = LeadFlowQuery["leadFlow"]["invoices"][number]
-/** The `LeadFlowOrderType` object of the back end contract, as the operations of this app select it. */
-export type LeadFlowOrderType = LeadFlowQuery["leadFlow"]["orders"][number]
-/** The `LeadFlowTransactionType` object of the back end contract, as the operations of this app select it. */
-export type LeadFlowTransactionType = LeadFlowQuery["leadFlow"]["transactions"][number]
-/** The `LeadFlowType` object of the back end contract, as the operations of this app select it. */
-export type LeadFlowType = LeadFlowQuery["leadFlow"]
-/** The `LeadFlowWorkItemType` object of the back end contract, as the operations of this app select it. */
-export type LeadFlowWorkItemType = LeadFlowQuery["leadFlow"]["workItems"][number]
-/** The `LeadJourneyType` object of the back end contract, as the operations of this app select it. */
-export type LeadJourneyType = LeadJourneyQuery["leadJourney"]
 /** The `LeadRecordType` object of the back end contract, as the operations of this app select it. */
 export type LeadRecordType = LeadJourneyQuery["leadJourney"]["lead"]
 /** The `LessonMiningStatusType` object of the back end contract, as the operations of this app select it. */
@@ -281,8 +258,6 @@ export type PublicSlotType = PublicHiringInterviewQuery["publicHiringInterview"]
 export type RetrievedPassageType = AskKnowledgeQuery["askKnowledge"][number]
 /** The `RunStepType` object of the back end contract, as the operations of this app select it. */
 export type RunStepType = AutomationsQuery["automations"]["runs"][number]["steps"][number]
-/** The `SalesActionType` object of the back end contract, as the operations of this app select it. */
-export type SalesActionType = DecideSalesDraftMutation["decideSalesDraft"]
 /** The `ShiftPositionType` object of the back end contract, as the operations of this app select it. */
 export type ShiftPositionType = ShiftsWorkbenchQuery["shiftsWorkbench"]["setup"]["positions"][number]
 /** The `ShiftStaffType` object of the back end contract, as the operations of this app select it. */
@@ -348,8 +323,6 @@ export type HiringJobQuestionRequest = WireInput<HiringJobQuestionInput>
 export type SaveHiringJobRequest = WireInput<SaveHiringJobInput>
 /** The `SaveHiringSettingsInput` of the back end contract as callers build it, optional keys optional. */
 export type SaveHiringSettingsRequest = WireInput<SaveHiringSettingsInput>
-/** The `DecideSalesDraftInput` of the back end contract as callers build it, optional keys optional. */
-export type DecideSalesDraftRequest = WireInput<DecideSalesDraftInput>
 /** The `MentionDirectoryType` object of the back end contract, as the operations of this app select it. */
 export type MentionDirectoryType = MentionDirectoryQuery["mentionDirectory"]
 /** The `WorkChainType` object of the back end contract, as the operations of this app select it. */

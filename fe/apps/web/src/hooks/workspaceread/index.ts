@@ -7,7 +7,7 @@ export { argumentKey, workspaceArgumentKey, terminalJobOptions, terminalStatusOp
 
 export type { WorkspaceReadKey } from "./workspaceread.shared"
 
-export { readField, readRequiredField } from "./workspaceread.shared"
+export { readField } from "./workspaceread.shared"
 
 export type { JobStatusCallbacks } from "./workspaceread.shared"
 
