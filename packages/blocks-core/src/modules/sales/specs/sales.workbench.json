@@ -136,6 +136,16 @@
               },
               "reply": {
                 "action": "sales.reply"
+              },
+              "parkedRuns": {
+                "read": "platform.parked-runs",
+                "path": "rows",
+                "variables": {
+                  "module": "sales"
+                }
+              },
+              "resume": {
+                "action": "platform.resume-run"
               }
             },
             "children": []

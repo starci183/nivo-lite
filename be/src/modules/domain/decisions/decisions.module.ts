@@ -13,6 +13,7 @@ import { WorkItemsModule } from "@modules/domain/work-items"
 import { DecisionsQueueModule } from "@modules/queues/decisions"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ApprovalRequesterService } from "./approval-requester.service"
+import { AuthorityGrantsService } from "./authority-grants.service"
 import { CommandBusService } from "./command-bus.service"
 import { CommandPlannerService } from "./command-planner.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./decisions.module-definition"
@@ -70,6 +71,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 { provide: MODULE_CATALOG_SOURCE, useExisting: options.ports.moduleCatalog },
                 { provide: OUTBOUND_ACCESS_GATE, useClass: options.ports.outboundAccessGate },
                 ApprovalRequesterService,
+                AuthorityGrantsService,
                 CommandBusService,
                 CommandPlannerService,
                 AgentRunItemVerdictsService,
@@ -102,6 +104,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 DecisionsQueueModule,
                 WORK_PERFORMER_REGISTRY,
                 ApprovalRequesterService,
+                AuthorityGrantsService,
                 CommandBusService,
                 DecisionsService,
                 EvidenceService,

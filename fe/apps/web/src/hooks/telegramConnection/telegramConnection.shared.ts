@@ -1,7 +1,6 @@
 import type { ConnectionTone } from "@/modules/types"
 
 /** How often the live panel asks for newer events. */
-export const TELEGRAM_EVENTS_POLL_MS = 5000
 
 /** How often the page asks again while the connection needs attention. */
 export const TELEGRAM_PAGE_POLL_MS = 8000

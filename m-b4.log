@@ -1,0 +1,10 @@
+starci app check --staged: 72 staged file(s) checked, 0 finding(s), 0 ledger finding(s)
+starci app sync: 97 of 97 in sync
+Checking formatting...
+[[33mwarn[39m] packages/agent-sdk/src/block/block.spec.ts
+[[33mwarn[39m] packages/agent-sdk/src/invoke/invoke.fixture.ts
+[[33mwarn[39m] Code style issues found in 2 files. Run Prettier with --write to fix.
+Checking formatting...
+All matched files use Prettier code style!
+husky - pre-commit script failed (code 123)
+rc=1

@@ -854,6 +854,14 @@ input ApproveVideoProjectInput {
   projectId: ID! @inputBounds(maxLength: 36)
 }
 
+type ApproverMemberType {
+  memberId: ID!
+  name: String!
+  role: String!
+  rooms: [String!]!
+  status: String!
+}
+
 input ArchiveVideoProjectInput {
   archived: Boolean!
   projectId: ID! @inputBounds(maxLength: 36)
@@ -887,6 +895,74 @@ input AssignDossierFindingInput {
 input AttachedFileInput {
   contentBase64: String! @inputBounds(maxLength: 28000000)
   name: String! @inputBounds(maxLength: 255)
+}
+
+input AuthorityPatchInput {
+  brand_voice: String @inputBounds(maxLength: 4000)
+  goal_first_reply_minutes: Int @inputBounds(min: 0, max: 100000)
+  goal_new_customers: Int @inputBounds(min: 0, max: 1000000)
+  goal_note: String @inputBounds(maxLength: 2000)
+  goal_revenue_vnd: Int @inputBounds(min: 0, max: 1000000000000000)
+  limits_note: String @inputBounds(maxLength: 4000)
+  policies: String @inputBounds(maxLength: 8000)
+  reply_style: String @inputBounds(maxLength: 4000)
+}
+
+type AuthorityProfileType {
+  brand_voice: String!
+  goal_first_reply_minutes: Int
+  goal_new_customers: Int
+  goal_note: String!
+  goal_revenue_vnd: Float
+  limits_note: String!
+  policies: String!
+  reply_style: String!
+  updated_at: String!
+  updated_by: String
+}
+
+input AuthorityRuleChangeInput {
+  action: String! @inputBounds(maxLength: 80)
+  agents: [ID!] @inputBounds(maxItems: 50)
+  approval_policy: String
+  approver_members: [ID!] @inputBounds(maxItems: 50)
+  approver_roles: [String!] @inputBounds(maxItems: 3)
+  approver_rooms: [String!] @inputBounds(maxItems: 20)
+  ask_max: Float @inputBounds(min: 0, max: 1000000000000)
+  auto_max: Float @inputBounds(min: 0, max: 1000000000000)
+  department: String! @inputBounds(maxLength: 40)
+  limit_vnd: Int = null @inputBounds(min: 0, max: 1000000000000)
+  mode: String!
+  note: String = null @inputBounds(maxLength: 500)
+  required_fields: [String!] = [] @inputBounds(maxItems: 30, itemMaxLength: 60)
+  timeout_minutes: Int @inputBounds(min: 1, max: 10080)
+  unit: String
+}
+
+type AuthorityRuleType {
+  action: String!
+  agents: [ID!]!
+  approval_policy: String!
+  approver_members: [ID!]!
+  approver_roles: [String!]!
+  approver_rooms: [String!]!
+  ask_max: Float
+  auto_max: Float
+  department: String!
+  id: ID!
+  limit_vnd: Float
+  mode: String!
+  note: String!
+  required_fields: [String!]!
+  timeout_minutes: Int!
+  unit: String!
+  updated_at: String!
+  workspace_id: ID!
+}
+
+type AuthoritySheetType {
+  profile: AuthorityProfileType
+  rules: [AuthorityRuleType!]!
 }
 
 input AuthorizeDriveInput {
@@ -3434,6 +3510,22 @@ type McpToolType {
   scope: String!
 }
 
+input MemberGrantChangeInput {
+  maxAmount: Float = null @inputBounds(min: 0, max: 1000000000000)
+  memberId: ID! @inputBounds(maxLength: 36)
+}
+
+type MemberGrantType {
+  action: String!
+  maxAmount: Float
+  memberId: ID!
+  unit: String!
+}
+
+input MemberGrantsInput {
+  action: String! @inputBounds(maxLength: 80)
+}
+
 type MemberListingType {
   avatarUrl: String
   displayName: String!
@@ -3873,6 +3965,7 @@ type Mutation {
   saveAgentGoal(input: SaveAgentGoalInput!): AgentGoalType!
   saveAgentGraphDraft(input: SaveAgentGraphDraftInput!): Int!
   saveAgentTrigger(input: SaveAgentTriggerInput!): AgentTriggerType!
+  saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
   saveBookingException(input: SaveBookingExceptionInput!): SaveBookingExceptionType!
   saveBookingHours(input: SaveBookingHoursInput!): SaveBookingHoursType!
   saveBookingPolicy(input: SaveBookingPolicyInput!): SaveBookingPolicyType!
@@ -3897,6 +3990,7 @@ type Mutation {
   saveInventoryLocation(input: SaveInventoryLocationInput!): Boolean!
   saveInventoryRecipe(input: SaveInventoryRecipeInput!): InventoryRefType!
   saveInventorySupplier(input: SaveInventorySupplierInput!): InventoryRefType!
+  saveMemberGrants(input: SaveMemberGrantsInput!): [MemberGrantType!]!
   saveOpenApiConnection(input: SaveOpenApiConnectionInput!): ID!
   saveProviderKeys(input: SaveProviderKeysInput!): ProviderKeysResultType!
   saveReplyTimeout(input: SaveReplyTimeoutInput!): ModuleInstallationType!
@@ -3959,6 +4053,7 @@ type Mutation {
   transferInventoryStock(input: TransferInventoryStockInput!): TransferStockType!
   transitionContentItem(input: TransitionContentItemInput!): ContentItemIdType!
   undoBrainFactBatch(input: UndoBrainFactBatchInput!): BrainBulkUndoneType!
+  updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
   updateInventoryPoDraft(input: UpdateInventoryPoDraftInput!): Boolean!
   updateKnowledgeSource(input: UpdateKnowledgeSourceInput!): Boolean!
   updateMoneyConnection(input: UpdateMoneyConnectionInput!): WizardConnectionType!
@@ -4405,7 +4500,9 @@ type Query {
   agentWork(input: AgentWorkInstanceInput!): AgentWorkType!
   agents(input: ListAgentsInput!): [AgentSummaryType!]!
   apiKeys: [ApiKeyType!]!
+  approverDirectory: [ApproverMemberType!]!
   askKnowledge(input: AskKnowledgeInput!): [RetrievedPassageType!]!
+  authority: AuthoritySheetType!
   billingBankAccount: BillingBankAccountType!
   billingPlan(input: BillingPlanInput!): BillingPlanType
   billingPlanQuote(input: BillingPlanQuoteInput!): BillingPlanQuoteType!
@@ -4478,6 +4575,7 @@ type Query {
   mcpCallLog(input: McpCallLogInput): [McpCallLogType!]!
   mcpConnectors: [McpConnectorType!]!
   mcpToolGrants: [McpToolGrantType!]!
+  memberGrants(input: MemberGrantsInput!): [MemberGrantType!]!
   metaConnection(input: GetMetaConnectionInput!): MetaWizardConnectionType!
   moduleDefinition(input: ModuleKeyInput!): ModuleDefinitionType!
   moduleInstallation(input: ModuleInstallationIdInput!): ModuleInstallationType!
@@ -4999,6 +5097,10 @@ input SaveAgentTriggerInput {
   triggerId: ID = null @inputBounds(maxLength: 36)
 }
 
+input SaveAuthorityRuleInput {
+  change: AuthorityRuleChangeInput!
+}
+
 type SaveAvailabilityType {
   saved: Int!
 }
@@ -5245,6 +5347,11 @@ input SaveInventorySupplierInput {
 type SaveJobType {
   id: ID!
   slug: String!
+}
+
+input SaveMemberGrantsInput {
+  action: String! @inputBounds(maxLength: 80)
+  grants: [MemberGrantChangeInput!]! @inputBounds(maxItems: 200)
 }
 
 input SaveOpenApiConnectionInput {
@@ -6251,6 +6358,10 @@ input TransitionContentItemInput {
 
 input UndoBrainFactBatchInput {
   batchId: String! @inputBounds(maxLength: 64)
+}
+
+input UpdateAuthorityInput {
+  patch: AuthorityPatchInput!
 }
 
 input UpdateInventoryPoDraftInput {

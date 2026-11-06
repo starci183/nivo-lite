@@ -219,6 +219,12 @@ environments:
         where: "secrets/platform"
         recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
         keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "entity-engine-cursor-key"
+        member: "platform"
+        key: "ENTITY_ENGINE_CURSOR_KEY"
+        where: "secrets/platform"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
       - name: "otp-pepper"
         member: "platform"
         key: "OTP_PEPPER"
@@ -503,6 +509,7 @@ environments:
         - {member: storage, key: STORAGE_ACCESS_KEY, kind: hex, bytes: 12}
         - {member: storage, key: STORAGE_SECRET_KEY, kind: hex, bytes: 24}
         - {member: platform, key: CHANNEL_TOKEN_KEY, kind: base64, bytes: 32}
+        - {member: platform, key: ENTITY_ENGINE_CURSOR_KEY, kind: base64, bytes: 32}
         - {member: platform, key: OTP_PEPPER, kind: hex, bytes: 32}
         - {member: platform, key: N8N_SIGNING_SECRET, kind: hex, bytes: 32}
         - {member: openclaw, key: OPENCLAW_GATEWAY_TOKEN, kind: hex, bytes: 32}
@@ -533,7 +540,7 @@ environments:
           argv: [node, dist/apps/cli/src/main.js, seed-modules, ensure]
           cwd: be
           after: migrate
-          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM]
+          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, ENTITY_ENGINE_CURSOR_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM]
           env:
             PRIMARY_DB_SCHEMA: public
             SITE_URL: "https://nivo-local-app.starci.org"
@@ -553,7 +560,7 @@ environments:
           argv: [node, dist/apps/cli/src/main.js, storage, bootstrap]
           cwd: be
           after: migrate
-          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM]
+          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, ENTITY_ENGINE_CURSOR_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM]
           env:
             PRIMARY_DB_SCHEMA: public
             SITE_URL: "https://nivo-local-app.starci.org"
@@ -572,7 +579,7 @@ environments:
           argv: [node, dist/apps/api/src/main.js]
           cwd: be
           port: api
-          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, OPENROUTER_API_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM, TELEGRAM_API_ID, TELEGRAM_API_HASH, GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET]
+          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, ENTITY_ENGINE_CURSOR_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, OPENROUTER_API_KEY, STARCI_AI_KEY, OPENCLAW_GATEWAY_TOKEN, OPENCLAW_BRIDGE_SECRET, OPENCLAW_TOOL_SECRET, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM, TELEGRAM_API_ID, TELEGRAM_API_HASH, GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET]
           env:
             PORT: "${port.api}"
             PRIMARY_DB_SCHEMA: public
@@ -620,7 +627,7 @@ environments:
           argv: [node, dist/apps/mcp/src/main.js]
           cwd: be
           port: mcp
-          files: [CHANNEL_TOKEN_KEY, STARCI_AI_KEY]
+          files: [CHANNEL_TOKEN_KEY, ENTITY_ENGINE_CURSOR_KEY, STARCI_AI_KEY]
           env:
             PORT: "${port.mcp}"
             PRIMARY_DB_SCHEMA: public
@@ -772,7 +779,7 @@ environments:
         runtimeName: nivo-custody-nivo-v1
         version: 1
         where: secrets/nivo
-        recipientPolicy: SOPS/age, one member per provider (nivo.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys CHANNEL_TOKEN_KEY, OTP_PEPPER, WEBHOOK_SIGNING_SECRET, NIVO_PLATFORM_ADMINS.
+        recipientPolicy: SOPS/age, one member per provider (nivo.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys CHANNEL_TOKEN_KEY, ENTITY_ENGINE_CURSOR_KEY, OTP_PEPPER, WEBHOOK_SIGNING_SECRET, NIVO_PLATFORM_ADMINS.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: mail
         runtimeName: nivo-custody-mail-v1
@@ -870,6 +877,14 @@ environments:
         runtimeName: nivo-custody-channel-token-key-v1
         version: 1
         recipientPolicy: SOPS/age, key CHANNEL_TOKEN_KEY of the sealed member nivo (nivo.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
+        keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
+      - name: entity-engine-cursor-key
+        member: nivo
+        key: ENTITY_ENGINE_CURSOR_KEY
+        where: secrets/nivo
+        runtimeName: nivo-custody-entity-engine-cursor-key-v1
+        version: 1
+        recipientPolicy: SOPS/age, key ENTITY_ENGINE_CURSOR_KEY of the sealed member nivo (nivo.enc.yaml), sealed to the production server key and the owner key per .sops.yaml.
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: otp-pepper
         member: nivo
@@ -1031,12 +1046,12 @@ environments:
           - service: nivo-redis
             from:
               - {member: redis, keys: [QUEUE_REDIS_PASSWORD], required: true}
-          # The gateway gets exactly the keys it needs (be/apps/mcp/src/mcp.env.ts): the database connection and CHANNEL_TOKEN_KEY.
+          # The gateway gets exactly the keys it needs (be/apps/mcp/src/mcp.env.ts): the database connection, CHANNEL_TOKEN_KEY and ENTITY_ENGINE_CURSOR_KEY.
           - service: nivo-mcp
             filePointers: true
             from:
               - {member: postgres, keys: [PRIMARY_DB_URL], required: true}
-              - {member: nivo, keys: [CHANNEL_TOKEN_KEY], required: true}
+              - {member: nivo, keys: [CHANNEL_TOKEN_KEY, ENTITY_ENGINE_CURSOR_KEY], required: true}
           # APP_BE_DB_PASSWORD reaches db too: its init script gives the app_be login role that password when the cluster is first created.
           - service: db
             filePointers: true

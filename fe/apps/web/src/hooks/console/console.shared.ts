@@ -54,9 +54,8 @@ export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
     { key: "credits", label: "navCredits", route: "/billing", icon: "wallet", group: "setup", managerOnly: true },
 ]
 
-/** The destination a path inside the workspace belongs to; an agent chat belongs to Agents, a path outside the rail to none. */
+/** The destination a path inside the workspace belongs to; a path outside the rail to none. */
 export const activeDestinationKey = (path: string): string | null => {
-    if (path.startsWith("/modules/") && path.includes("/chat")) return "modules"
     const found = DESTINATIONS.find((d) => [d.route, ...(d.also ?? [])].some((route) => path.startsWith(route)))
     return found?.key ?? null
 }

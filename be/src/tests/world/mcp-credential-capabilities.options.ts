@@ -13,6 +13,11 @@ import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from 
 import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
 import { DataRecordsModule } from "@modules/domain/data-records"
 import { InboundEventsModule } from "@modules/domain/inbound-events"
+import { EntityEngineModule, ReadOnlyEngineAlertsService } from "@modules/domain/entity-engine"
+import { PaymentTransactionsModule } from "@modules/domain/payment-transactions"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { JobsModule } from "@modules/platform/jobs"
+import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { MCP_ERROR_KINDS, MCP_MESSAGES } from "@modules/integrations/mcp"
@@ -62,6 +67,21 @@ export const MCP_CREDENTIAL_MODULES: Array<DynamicModule> = [
     StaffModule.register({ isGlobal: true }),
     WorkspaceMembersModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),
+    JobsModule.register({
+        isGlobal: true,
+        connection: PRIMARY_ENTITY_MANAGER,
+        workerId: "proof",
+        leaseMs: 1000,
+        scheduler: { enabled: false },
+    }),
+    EntityEngineModule.register({
+        isGlobal: true,
+        alerts: ReadOnlyEngineAlertsService,
+        entities: FLOW_F_ENTITIES,
+        jobs: [],
+        cursorKey: MCP_PROOF_TOKEN_KEY,
+    }),
+    PaymentTransactionsModule.register({ isGlobal: true }),
     AgentsModule.register({ isGlobal: true, directoryOnly: true }),
     ConnectionSecretsModule.register({ isGlobal: true, tokenKey: MCP_PROOF_TOKEN_KEY }),
     McpCallLogModule.register({ isGlobal: true }),

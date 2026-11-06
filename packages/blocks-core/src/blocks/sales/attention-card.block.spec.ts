@@ -28,12 +28,12 @@ describe("sales.attention-card", () => {
         expect(Object.keys(salesAttentionCardBlock.slots)).toEqual([
             "attention",
             "awaitingReply",
-            "failedSteps",
+            "parkedRuns",
             "respond",
             "follow",
             "reply",
             "review",
-            "retry",
+            "resume",
         ])
         expect(salesBlocks).toContain(salesAttentionCardBlock)
     })

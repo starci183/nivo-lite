@@ -14,10 +14,12 @@ export type {
     WorkSpec,
     WorkPerformer,
 } from "./decisions.contracts"
+export type { AuthoritySheet } from "./decisions-views.contracts"
 export type { DecisionVerdict, FieldValue, WireEdits } from "./work-decision.contracts"
 export { DecisionLogReadService } from "./decision-log-read.service"
 export { DecisionsModule } from "./decisions.module"
 export { ApprovalRequesterService } from "./approval-requester.service"
+export { AuthorityGrantsService } from "./authority-grants.service"
 export { CommandBusService } from "./command-bus.service"
 export { DecisionsService } from "./decisions.service"
 export { DecisionCorrectionsService } from "./decision-corrections.service"

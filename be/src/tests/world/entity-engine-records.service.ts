@@ -32,9 +32,17 @@ export const changeRecord = async (
     entity: string,
     id: string,
     version: string,
-    data: RecordData,
+    data: Record<string, unknown>,
 ): Promise<number> =>
-    (await manager.update(RecordEntity, { entity, id, version }, { data, version: () => "version + 1" })).affected ?? 0
+    (
+        await manager
+            .createQueryBuilder()
+            .update(RecordEntity)
+            .set({ data: () => "CAST(:data AS jsonb)", version: () => "version + 1" })
+            .where({ entity, id, version })
+            .setParameter("data", JSON.stringify(data))
+            .execute()
+    ).affected ?? 0
 
 /** Deletes a record; answers how many rows were deleted. */
 export const removeRecord = async (manager: EntityManager, entity: string, id: string): Promise<number> =>

@@ -380,6 +380,7 @@ secrets:
   vps: { external: true, name: nivo-custody-vps-v1 }
   test-accounts: { external: true, name: nivo-custody-test-accounts-v1 }
   channel-token-key: { external: true, name: nivo-custody-channel-token-key-v1 }
+  entity-engine-cursor-key: { external: true, name: nivo-custody-entity-engine-cursor-key-v1 }
   otp-pepper: { external: true, name: nivo-custody-otp-pepper-v1 }
   webhook-signing-secret: { external: true, name: nivo-custody-webhook-signing-secret-v1 }
   nivo-platform-admins: { external: true, name: nivo-custody-nivo-platform-admins-v1 }

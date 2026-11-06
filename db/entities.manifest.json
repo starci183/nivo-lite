@@ -442,6 +442,7 @@
         "records_loyalty_member_contact_chk",
         "records_loyalty_member_email_chk",
         "records_loyalty_member_joined_at_chk",
+        "records_loyalty_member_last_activity_at_chk",
         "records_loyalty_member_last_visit_at_chk",
         "records_loyalty_member_lead_id_chk",
         "records_loyalty_member_lifetime_spend_vnd_chk",
@@ -643,6 +644,12 @@
         "records_sales_settings_reopen_needs_approval_chk"
       ],
       "indexes": ["records_sales_settings_key", "records_sales_settings_key_key"]
+    },
+    {
+      "entity": "workspace.settings",
+      "partition": "records_workspace_settings",
+      "checks": ["records_workspace_settings_key_chk", "records_workspace_settings_time_zone_chk"],
+      "indexes": ["records_workspace_settings_key_id", "records_workspace_settings_workspace_key"]
     }
   ]
 }

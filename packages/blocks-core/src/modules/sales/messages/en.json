@@ -14,7 +14,7 @@
   "attention_command_follow": "Follow up",
   "attention_command_reply": "Reply",
   "attention_command_respond": "Respond",
-  "attention_command_retry": "Retry",
+  "attention_command_resume": "Run again",
   "attention_command_review": "Review",
   "attention_count": "{count} items",
   "attention_empty": "Nothing needs your attention",
