@@ -5,7 +5,7 @@ export const READ_TRANSACTIONS: DataRight = {
     kind: "bank-transaction",
     access: "read",
     scope: "workspace",
-    fields: ["id", "amountVnd", "content", "counterpartName", "receivedAt", "orderId", "status"],
+    fields: ["id", "amountVnd", "reference", "payer", "occurredAt", "orderId", "status"],
 }
 
 /** The orders of the workspace: the candidates a payment may settle. */

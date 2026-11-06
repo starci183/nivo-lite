@@ -14,9 +14,9 @@ const OPTIONS = { windowMs: WINDOW_HOURS * HOUR_MS }
 export const TRANSACTION_DINH: TransactionRow = {
     id: "tx-95958515",
     amountVnd: 5000,
-    content: "BUI NGUYEN DINH Test sepay Chuyen tien dat chau hoa- Ma GD ACSP/ 7o940",
-    counterpartName: null,
-    receivedAt: "2026-11-04T01:06:00.000Z",
+    reference: "BUI NGUYEN DINH Test sepay Chuyen tien dat chau hoa- Ma GD ACSP/ 7o940",
+    payer: null,
+    occurredAt: "2026-11-04T01:06:00.000Z",
     orderId: null,
     status: "unmatched",
 }
@@ -25,9 +25,9 @@ export const TRANSACTION_DINH: TransactionRow = {
 export const TRANSACTION_MOMO: TransactionRow = {
     id: "tx-95937289",
     amountVnd: 2000,
-    content: "Test Sepay",
-    counterpartName: null,
-    receivedAt: "2026-11-03T22:51:00.000Z",
+    reference: "Test Sepay",
+    payer: null,
+    occurredAt: "2026-11-03T22:51:00.000Z",
     orderId: null,
     status: "unmatched",
 }
@@ -73,9 +73,9 @@ export const ORDER_SECOND: OrderRow = {
 export const TRANSACTION_NAMED: TransactionRow = {
     id: "tx-named",
     amountVnd: 7000,
-    content: "thanh toan",
-    counterpartName: "Nguyen Van A",
-    receivedAt: "2026-11-04T01:30:00.000Z",
+    reference: "thanh toan",
+    payer: "Nguyen Van A",
+    occurredAt: "2026-11-04T01:30:00.000Z",
     orderId: null,
     status: "unmatched",
 }
@@ -135,7 +135,7 @@ export const STORE_EXTENDED: NodeStore = {
 export const ARRIVAL_DINH: Arrival = {
     id: TRANSACTION_DINH.id,
     amount: 5000,
-    text: TRANSACTION_DINH.content,
+    text: TRANSACTION_DINH.reference,
     names: [],
     at: Date.parse("2026-11-04T01:06:00.000Z"),
 }
@@ -144,7 +144,7 @@ export const ARRIVAL_DINH: Arrival = {
 export const ARRIVAL_NAMED: Arrival = {
     id: TRANSACTION_NAMED.id,
     amount: 7000,
-    text: TRANSACTION_NAMED.content,
+    text: TRANSACTION_NAMED.reference,
     names: ["Nguyen Van A"],
     at: Date.parse("2026-11-04T01:30:00.000Z"),
 }
@@ -153,7 +153,7 @@ export const ARRIVAL_NAMED: Arrival = {
 export const ARRIVAL_MOMO: Arrival = {
     id: TRANSACTION_MOMO.id,
     amount: 2000,
-    text: TRANSACTION_MOMO.content,
+    text: TRANSACTION_MOMO.reference,
     names: [],
     at: Date.parse("2026-11-03T22:51:00.000Z"),
 }

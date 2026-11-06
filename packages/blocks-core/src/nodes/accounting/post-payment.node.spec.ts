@@ -2,7 +2,7 @@ import { runNode } from "@nivo-lite/agent-sdk/node"
 import { EXAMPLE_TURN, fakeNodePorts } from "@nivo-lite/agent-sdk/testing"
 import { coreEffects } from "../../vocabulary/effects"
 import { coreTools } from "../../vocabulary/tools"
-import { accountingLedgerAppendNode } from "./ledger-append.node"
+import { accountingPostPaymentNode } from "./post-payment.node"
 import { LEAD_DINH, ORDER_DINH, TRANSACTION_DINH } from "../payment/payment.fixtures"
 import { READ_LEADS, READ_ORDERS, READ_TRANSACTIONS } from "../payment/payment.rights"
 
@@ -15,7 +15,7 @@ const run = async (failure: Error) => {
     })
     const outcome = await runNode(
         {
-            node: accountingLedgerAppendNode,
+            node: accountingPostPaymentNode,
             params: { reconnectTitle: "reconnect" },
             input: { transactionId: TRANSACTION_DINH.id, orderId: ORDER_DINH.id, result: "paid" },
             turn: EXAMPLE_TURN,
@@ -32,7 +32,7 @@ const run = async (failure: Error) => {
     return { outcome, raised: fake.executed }
 }
 
-describe("accounting.ledger-append", () => {
+describe("accounting.post-payment", () => {
     it("asks the owner once to reconnect when the provider refuses the connection, and lets the failure go on", async () => {
         const refusal = Object.assign(new Error("refused"), { code: "GRAPH_NODES_TOOL_CONNECTION_REFUSED" })
 

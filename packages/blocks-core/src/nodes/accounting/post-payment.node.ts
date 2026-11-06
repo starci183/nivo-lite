@@ -51,21 +51,21 @@ const SETTINGS: LedgerAppendParams = { reconnectTitle: messageOf("vi", "accounti
 const GRANT: RightsGrant = { rights: [READ_TRANSACTIONS, READ_ORDERS, READ_LEADS], tools: [APPEND_TOOL, VOID_TOOL] }
 
 /**
- * `accounting.ledger-append`: writes a settled payment into the business ledger as one entry, in the domain's words (date, order, customer,
+ * `accounting.post-payment`: writes a settled payment into the business ledger as one entry, in the domain's words (date, order, customer,
  * amount, transaction, status), never as cells: where the ledger lives and how an entry is laid out belongs to the provider behind the
  * `ledger.append` tool. The ledger is a copy: NIVO's data stays the truth, nothing is read back, and an entry is never changed or removed;
  * taking one back (`voided`) adds a void entry through `ledger.void`. A transaction is recorded once, however often it is asked (the
  * provider keys it `ledger:<transactionId>`). A failure the provider can cure by itself is left to the run to try again; a refused
  * connection (a missing scope, a 403) is something only the owner can cure, so the owner gets ONE item and the failure goes on.
  */
-export const accountingLedgerAppendNode: NodeDefinition<
+export const accountingPostPaymentNode: NodeDefinition<
     NodeSchema<LedgerAppendInput>,
     NodeSchema<LedgerAppendOutput>,
     NodeSchema<LedgerAppendParams>
 > = defineNode({
-    id: "accounting.ledger-append",
+    id: "accounting.post-payment",
     role: "output",
-    title: bilingualOf("nodeAccountingLedgerAppendTitle"),
+    title: bilingualOf("nodeAccountingPostPaymentTitle"),
     params,
     input,
     output,
@@ -141,8 +141,8 @@ export const accountingLedgerAppendNode: NodeDefinition<
                         ...TRANSACTION_DINH,
                         id: "tx-named",
                         amountVnd: 7000,
-                        counterpartName: "Nguyen Van A",
-                        receivedAt: "2026-11-04T18:30:00.000Z",
+                        payer: "Nguyen Van A",
+                        occurredAt: "2026-11-04T18:30:00.000Z",
                     },
                 ],
                 order: [{ ...ORDER_DINH, id: "order-2", orderNo: "SO-0002", leadId: "lead-gone", amountVnd: 7000 }],

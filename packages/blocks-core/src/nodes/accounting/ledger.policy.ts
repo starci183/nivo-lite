@@ -23,9 +23,9 @@ export const isConnectionRefused = (error: unknown): boolean =>
 
 /** The ledger entry of a transaction that paid an order: the customer is the lead's name, else the payer on the transfer. */
 export const entryOf = (transaction: TransactionRow, order: OrderRow, leadName: string | null): LedgerEntry => ({
-    date: dayOf(transaction.receivedAt),
+    date: dayOf(transaction.occurredAt),
     orderNo: order.orderNo,
-    customer: leadName ?? transaction.counterpartName ?? "",
+    customer: leadName ?? transaction.payer ?? "",
     amountVnd: transaction.amountVnd,
     transactionId: transaction.id,
     status: "paid",
