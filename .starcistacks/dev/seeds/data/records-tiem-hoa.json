@@ -1,0 +1,20 @@
+{
+  "schema": "nivo/records-seed@1",
+  "records": [
+    {
+      "entity": "sales.settings",
+      "on": "key_key",
+      "values": {
+        "key": "sales",
+        "approvalThresholdVnd": 5000000,
+        "draftWithoutTotalNeedsApproval": true,
+        "closedDealsCanFlip": true,
+        "reopenNeedsApproval": true,
+        "maxDiscountPct": 10,
+        "remindAfterDays": 3,
+        "autoWon": true,
+        "notifyAccounting": true
+      }
+    }
+  ]
+}
