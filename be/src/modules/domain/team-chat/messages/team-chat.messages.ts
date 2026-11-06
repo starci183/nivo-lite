@@ -1,0 +1,39 @@
+import type { MessageBundle } from "@modules/platform/i18n"
+
+/** Localized team chat refusals. */
+export const TEAM_CHAT_MESSAGES: MessageBundle = {
+    vi: {
+        "errors.TEAM_CHAT_NOT_FOUND": "Không tìm thấy phòng, tin nhắn hoặc thành viên này.",
+        "errors.TEAM_CHAT_NOT_MEMBER": "Bạn không ở trong phòng này.",
+        "errors.TEAM_CHAT_FORBIDDEN": "Bạn không được làm việc này trong phòng này.",
+        "errors.TEAM_CHAT_DIRECT_NEEDS_TWO": "Phòng chat riêng có đúng một người còn lại.",
+        "errors.TEAM_CHAT_GROUP_NEEDS_NAME": "Nhóm cần một tên từ 1 đến 80 ký tự.",
+        "errors.TEAM_CHAT_MEMBER_UNKNOWN": "Thành viên này không thuộc không gian làm việc.",
+        "errors.TEAM_CHAT_ALREADY_MEMBER": "Thành viên này đã ở trong phòng.",
+        "errors.TEAM_CHAT_NOT_A_MEMBER_TO_REMOVE": "Thành viên này không ở trong phòng.",
+        "errors.TEAM_CHAT_LAST_OWNER": "Chủ phòng cuối cùng không thể rời nhóm.",
+        "errors.TEAM_CHAT_BODY_EMPTY": "Tin nhắn cần có nội dung hoặc tệp.",
+        "errors.TEAM_CHAT_BODY_TOO_LONG": "Tin nhắn dài tối đa 8000 ký tự.",
+        "errors.TEAM_CHAT_TOO_MANY_MENTIONS": "Một tin nhắn nhắc tối đa 20 người.",
+        "errors.TEAM_CHAT_TOO_MANY_FILES": "Một tin nhắn gửi tối đa 10 tệp.",
+        "errors.TEAM_CHAT_FILE_TOO_LARGE": "Tệp lớn hơn 25 MB.",
+        "errors.TEAM_CHAT_FILE_TYPE_NOT_ALLOWED": "Loại tệp này không được gửi.",
+    },
+    en: {
+        "errors.TEAM_CHAT_NOT_FOUND": "The room, message or member was not found.",
+        "errors.TEAM_CHAT_NOT_MEMBER": "You are not in this room.",
+        "errors.TEAM_CHAT_FORBIDDEN": "You may not do this in this room.",
+        "errors.TEAM_CHAT_DIRECT_NEEDS_TWO": "A direct room has exactly one other member.",
+        "errors.TEAM_CHAT_GROUP_NEEDS_NAME": "A group needs a name of 1 to 80 characters.",
+        "errors.TEAM_CHAT_MEMBER_UNKNOWN": "This member does not belong to the workspace.",
+        "errors.TEAM_CHAT_ALREADY_MEMBER": "This member is already in the room.",
+        "errors.TEAM_CHAT_NOT_A_MEMBER_TO_REMOVE": "This member is not in the room.",
+        "errors.TEAM_CHAT_LAST_OWNER": "The last owner of a group cannot leave it.",
+        "errors.TEAM_CHAT_BODY_EMPTY": "A message needs a body or files.",
+        "errors.TEAM_CHAT_BODY_TOO_LONG": "A message is at most 8000 characters.",
+        "errors.TEAM_CHAT_TOO_MANY_MENTIONS": "A message mentions at most 20 members.",
+        "errors.TEAM_CHAT_TOO_MANY_FILES": "A message carries at most 10 files.",
+        "errors.TEAM_CHAT_FILE_TOO_LARGE": "The file is larger than 25 MB.",
+        "errors.TEAM_CHAT_FILE_TYPE_NOT_ALLOWED": "This file type cannot be sent.",
+    },
+}

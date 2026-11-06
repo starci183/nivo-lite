@@ -28925,3 +28925,126 @@ end;
 $$;
 
 CREATE TRIGGER workspaces_nivo_agent AFTER INSERT ON public.workspaces FOR EACH ROW EXECUTE FUNCTION public.workspaces_nivo_agent();
+
+-- ---- team chat: the internal chat of a workspace (person to person, person to agent, groups) ----
+-- Platform infrastructure, not business: its own tables, not `records`. A room is `direct` (exactly two members: person to person or
+-- person to agent) or `group` (any number of people and agents). A member is a user or an agent. A message is text, a report an agent
+-- wrote for a finished run, an approval card for one decision of the decisions core, or a system line. `ref` points to the one engine
+-- object a report or an approval is about, so a job that retries writes the card once. Unread comes from `last_read_at` (no counter).
+-- Membership is the application's rule (every read and write checks it); the policies below are the workspace scope every table has.
+
+CREATE TABLE public.chat_rooms (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    kind text NOT NULL,
+    name text,
+    position integer DEFAULT 0 NOT NULL,
+    -- a direct room names its pair (the two members as `kind:id`, sorted), so the same pair never gets two rooms
+    direct_key text,
+    created_by uuid NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT chat_rooms_kind_check CHECK (kind IN ('direct', 'group')),
+    CONSTRAINT chat_rooms_shape_check CHECK (
+        (kind = 'group' AND name IS NOT NULL AND char_length(name) BETWEEN 1 AND 80 AND direct_key IS NULL)
+        OR (kind = 'direct' AND name IS NULL AND direct_key IS NOT NULL AND char_length(direct_key) <= 100)),
+    CONSTRAINT chat_rooms_position_check CHECK (position >= 0)
+);
+CREATE UNIQUE INDEX chat_rooms_direct_key ON public.chat_rooms USING btree (workspace_id, direct_key) WHERE direct_key IS NOT NULL;
+CREATE INDEX chat_rooms_workspace_idx ON public.chat_rooms USING btree (workspace_id, position, id);
+
+CREATE TABLE public.chat_room_members (
+    room_id uuid NOT NULL REFERENCES public.chat_rooms(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    member_kind text NOT NULL,
+    member_id uuid NOT NULL,
+    role text DEFAULT 'member' NOT NULL,
+    last_read_at timestamptz DEFAULT now() NOT NULL,
+    muted boolean DEFAULT false NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
+    PRIMARY KEY (room_id, member_kind, member_id),
+    CONSTRAINT chat_room_members_kind_check CHECK (member_kind IN ('user', 'agent')),
+    CONSTRAINT chat_room_members_role_check CHECK (role IN ('owner', 'member'))
+);
+-- the rooms of one member
+CREATE INDEX chat_room_members_member_idx ON public.chat_room_members USING btree (workspace_id, member_kind, member_id, room_id);
+
+CREATE TABLE public.chat_room_messages (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    room_id uuid NOT NULL REFERENCES public.chat_rooms(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    author_kind text NOT NULL,
+    author_id uuid,
+    body text DEFAULT '' NOT NULL,
+    kind text DEFAULT 'text' NOT NULL,
+    -- the one engine object a report ({"run_id"}) or an approval ({"decision_id"}) is about
+    ref jsonb,
+    mentions jsonb DEFAULT '[]'::jsonb NOT NULL,
+    attachments jsonb DEFAULT '[]'::jsonb NOT NULL,
+    -- the author's retry key: the same client id in the same room is the same message
+    client_id text,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    edited_at timestamptz,
+    updated_at timestamptz DEFAULT now() NOT NULL,
+    CONSTRAINT chat_room_messages_author_kind_check CHECK (author_kind IN ('user', 'agent', 'system')),
+    CONSTRAINT chat_room_messages_author_check CHECK ((author_kind = 'system') = (author_id IS NULL)),
+    CONSTRAINT chat_room_messages_kind_check CHECK (kind IN ('text', 'report', 'approval', 'system')),
+    CONSTRAINT chat_room_messages_body_check CHECK (char_length(body) <= 20000),
+    CONSTRAINT chat_room_messages_ref_check CHECK (
+        (kind = 'report' AND jsonb_typeof(ref) = 'object' AND ref ? 'run_id' AND (ref->>'run_id') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+        OR (kind = 'approval' AND jsonb_typeof(ref) = 'object' AND ref ? 'decision_id' AND (ref->>'decision_id') ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+        OR (kind IN ('text', 'system') AND ref IS NULL)),
+    CONSTRAINT chat_room_messages_mentions_check CHECK (jsonb_typeof(mentions) = 'array' AND jsonb_array_length(mentions) <= 20),
+    CONSTRAINT chat_room_messages_attachments_check CHECK (jsonb_typeof(attachments) = 'array' AND jsonb_array_length(attachments) <= 10),
+    CONSTRAINT chat_room_messages_client_id_check CHECK (client_id IS NULL OR char_length(client_id) BETWEEN 1 AND 64),
+    CONSTRAINT chat_room_messages_text_check CHECK (kind <> 'text' OR char_length(body) > 0 OR jsonb_array_length(attachments) > 0)
+);
+-- the thread of a room, newest first (the cursor is created_at, id)
+CREATE INDEX chat_room_messages_room_idx ON public.chat_room_messages USING btree (room_id, created_at DESC, id DESC);
+-- a retry of the same send is the same message
+CREATE UNIQUE INDEX chat_room_messages_client_key ON public.chat_room_messages USING btree (room_id, author_id, client_id) WHERE client_id IS NOT NULL;
+-- one report per run and one approval card per decision in a room, so a job that retries writes it once
+CREATE UNIQUE INDEX chat_room_messages_report_key ON public.chat_room_messages USING btree (room_id, ((ref->>'run_id'))) WHERE kind = 'report';
+CREATE UNIQUE INDEX chat_room_messages_approval_key ON public.chat_room_messages USING btree (room_id, ((ref->>'decision_id'))) WHERE kind = 'approval';
+-- every card of one decision, to show its outcome
+CREATE INDEX chat_room_messages_decision_idx ON public.chat_room_messages USING btree (workspace_id, ((ref->>'decision_id'))) WHERE kind = 'approval';
+
+CREATE TABLE public.chat_room_pins (
+    room_id uuid NOT NULL REFERENCES public.chat_rooms(id) ON DELETE CASCADE,
+    message_id uuid NOT NULL REFERENCES public.chat_room_messages(id) ON DELETE CASCADE,
+    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+    pinned_by uuid NOT NULL,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
+    PRIMARY KEY (room_id, message_id)
+);
+CREATE INDEX chat_room_pins_room_idx ON public.chat_room_pins USING btree (room_id, created_at DESC);
+
+CREATE TRIGGER chat_rooms_set_updated_at BEFORE UPDATE ON public.chat_rooms FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER chat_room_members_set_updated_at BEFORE UPDATE ON public.chat_room_members FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER chat_room_messages_set_updated_at BEFORE UPDATE ON public.chat_room_messages FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER chat_room_pins_set_updated_at BEFORE UPDATE ON public.chat_room_pins FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.chat_rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_room_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_room_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_room_pins ENABLE ROW LEVEL SECURITY;
+CREATE POLICY chat_rooms_app_be_select ON public.chat_rooms FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY chat_rooms_app_be_insert ON public.chat_rooms FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY chat_rooms_app_be_update ON public.chat_rooms FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY chat_rooms_app_be_delete ON public.chat_rooms FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY chat_room_members_app_be_select ON public.chat_room_members FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY chat_room_members_app_be_insert ON public.chat_room_members FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY chat_room_members_app_be_update ON public.chat_room_members FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY chat_room_members_app_be_delete ON public.chat_room_members FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY chat_room_messages_app_be_select ON public.chat_room_messages FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY chat_room_messages_app_be_insert ON public.chat_room_messages FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY chat_room_pins_app_be_select ON public.chat_room_pins FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY chat_room_pins_app_be_insert ON public.chat_room_pins FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY chat_room_pins_app_be_delete ON public.chat_room_pins FOR DELETE TO app_be USING (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.chat_rooms, public.chat_room_members, public.chat_room_messages, public.chat_room_pins FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.chat_rooms TO app_be;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.chat_room_members TO app_be;
+GRANT SELECT, INSERT ON TABLE public.chat_room_messages TO app_be;
+GRANT SELECT, INSERT, DELETE ON TABLE public.chat_room_pins TO app_be;
