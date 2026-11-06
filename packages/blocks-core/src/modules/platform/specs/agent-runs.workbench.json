@@ -1,0 +1,153 @@
+{
+  "schema": "nivo/workbench-spec@1",
+  "module": "platform",
+  "params": {
+    "status": {
+      "type": "enum",
+      "of": ["all", "running", "parked", "done", "failed"],
+      "url": "status",
+      "default": "all"
+    },
+    "run": {
+      "type": "string",
+      "url": "run"
+    }
+  },
+  "views": [
+    {
+      "id": "runs",
+      "label": {
+        "key": "tab_runs"
+      },
+      "root": {
+        "id": "runs-master",
+        "block": "core.master-detail",
+        "props": {
+          "emptyTitle": {
+            "key": "run_idle_title"
+          },
+          "emptyBody": {
+            "key": "run_idle_body"
+          }
+        },
+        "children": [
+          {
+            "id": "runs-pane",
+            "block": "core.list-card",
+            "props": {
+              "label": {
+                "key": "runs_title"
+              },
+              "empty": {
+                "key": "runs_empty"
+              },
+              "idPath": "id",
+              "titlePath": "trigger",
+              "descriptionPath": "when",
+              "metaPath": "duration",
+              "badgePath": "status",
+              "selectParam": "run",
+              "badgeTones": {
+                "running": "info",
+                "parked": "warning",
+                "done": "success",
+                "failed": "danger"
+              },
+              "labels": {
+                "status": {
+                  "running": {
+                    "key": "status_running"
+                  },
+                  "parked": {
+                    "key": "status_parked"
+                  },
+                  "done": {
+                    "key": "status_done"
+                  },
+                  "failed": {
+                    "key": "status_failed"
+                  }
+                }
+              },
+              "search": false,
+              "filterParam": "status",
+              "filterLabel": {
+                "key": "status_label"
+              },
+              "filterAll": {
+                "key": "filter_all"
+              },
+              "filters": [
+                {
+                  "value": "running",
+                  "label": {
+                    "key": "status_running"
+                  }
+                },
+                {
+                  "value": "parked",
+                  "label": {
+                    "key": "status_parked"
+                  },
+                  "attention": true
+                },
+                {
+                  "value": "done",
+                  "label": {
+                    "key": "status_done"
+                  }
+                },
+                {
+                  "value": "failed",
+                  "label": {
+                    "key": "status_failed"
+                  },
+                  "attention": true
+                }
+              ]
+            },
+            "bind": {
+              "rows": {
+                "read": "platform.agent-runs",
+                "variables": {
+                  "installation": "$installationId",
+                  "status": "$status"
+                }
+              },
+              "counts": {
+                "read": "platform.agent-run-counts",
+                "variables": {
+                  "installation": "$installationId"
+                }
+              }
+            }
+          },
+          {
+            "id": "runs-timeline",
+            "block": "core.run-timeline",
+            "props": {
+              "label": {
+                "key": "timeline_label"
+              },
+              "idle": {
+                "key": "run_idle_body"
+              }
+            },
+            "bind": {
+              "run": {
+                "read": "platform.agent-run",
+                "variables": {
+                  "installation": "$installationId",
+                  "id": "$run"
+                }
+              },
+              "resume": {
+                "action": "platform.resume-run"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

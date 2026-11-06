@@ -1,4 +1,6 @@
-import type { FilterFields, HeaderZone, SearchFields } from "@starci/grammar/common"
+import type { FilterFields, HeaderZone, SearchFields } from "@starci/grammar/common" with {
+    "resolution-mode": "import",
+}
 
 /**
  * The header zones of a list card: the filter tabs and the search in one toolbar row when it has both, else the one it has.

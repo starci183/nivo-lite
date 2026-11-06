@@ -88,8 +88,59 @@
           },
           {
             "id": "pane",
-            "block": "core.list-pane",
+            "block": "core.list-card",
             "props": {
+              "label": {
+                "key": "list_label"
+              },
+              "empty": {
+                "key": "list_empty"
+              },
+              "emptySearch": {
+                "key": "list_empty_search"
+              },
+              "idPath": "id",
+              "titlePath": "name",
+              "descriptionPath": "lastText",
+              "selectParam": "selected",
+              "badgePath": "status",
+              "labels": {
+                "status": {
+                  "needs": {
+                    "key": "row_needs"
+                  },
+                  "handled": {
+                    "key": "row_handled"
+                  },
+                  "ai": {
+                    "key": "row_ai"
+                  }
+                },
+                "channel": {
+                  "zalo": {
+                    "key": "channel_zalo"
+                  },
+                  "telegram": {
+                    "key": "channel_telegram"
+                  },
+                  "facebook": {
+                    "key": "channel_facebook"
+                  },
+                  "instagram": {
+                    "key": "channel_instagram"
+                  },
+                  "website": {
+                    "key": "channel_website"
+                  }
+                }
+              },
+              "avatar": true,
+              "chipPaths": ["channel"],
+              "badgeTones": {
+                "needs": "warning",
+                "handled": "info",
+                "ai": "neutral"
+              },
               "search": true,
               "searchParam": "q",
               "searchLabel": {
@@ -97,121 +148,51 @@
               },
               "title": {
                 "key": "customers_section"
-              }
-            },
-            "children": [
-              {
-                "id": "statuses",
-                "block": "core.filter-tabs",
-                "props": {
-                  "param": "status",
+              },
+              "filterParam": "status",
+              "filterLabel": {
+                "key": "status_filter_label"
+              },
+              "filterAll": {
+                "key": "filter_all"
+              },
+              "filters": [
+                {
+                  "value": "needs",
                   "label": {
-                    "key": "status_filter_label"
+                    "key": "status_needs"
                   },
-                  "all": {
-                    "key": "filter_all"
-                  },
-                  "items": [
-                    {
-                      "value": "needs",
-                      "label": {
-                        "key": "status_needs"
-                      },
-                      "attention": true
-                    },
-                    {
-                      "value": "handled",
-                      "label": {
-                        "key": "status_handled"
-                      }
-                    },
-                    {
-                      "value": "today",
-                      "label": {
-                        "key": "inbox_tab_today"
-                      }
-                    }
-                  ]
+                  "attention": true
                 },
-                "bind": {
-                  "counts": {
-                    "read": "chatbot.thread-counts",
-                    "variables": {
-                      "q": "$q"
-                    }
+                {
+                  "value": "handled",
+                  "label": {
+                    "key": "status_handled"
                   }
+                },
+                {
+                  "value": "today",
+                  "label": {
+                    "key": "inbox_tab_today"
+                  }
+                }
+              ]
+            },
+            "bind": {
+              "rows": {
+                "read": "chatbot.threads",
+                "variables": {
+                  "q": "$q",
+                  "status": "$status"
                 }
               },
-              {
-                "id": "threads",
-                "block": "core.record-list",
-                "props": {
-                  "label": {
-                    "key": "list_label"
-                  },
-                  "empty": {
-                    "key": "list_empty"
-                  },
-                  "emptySearch": {
-                    "key": "list_empty_search"
-                  },
-                  "idPath": "id",
-                  "titlePath": "name",
-                  "descriptionPath": "lastText",
-                  "selectParam": "selected",
-                  "searchParam": "q",
-                  "badgePath": "status",
-                  "labels": {
-                    "status": {
-                      "needs": {
-                        "key": "row_needs"
-                      },
-                      "handled": {
-                        "key": "row_handled"
-                      },
-                      "ai": {
-                        "key": "row_ai"
-                      }
-                    },
-                    "channel": {
-                      "zalo": {
-                        "key": "channel_zalo"
-                      },
-                      "telegram": {
-                        "key": "channel_telegram"
-                      },
-                      "facebook": {
-                        "key": "channel_facebook"
-                      },
-                      "instagram": {
-                        "key": "channel_instagram"
-                      },
-                      "website": {
-                        "key": "channel_website"
-                      }
-                    }
-                  },
-                  "avatar": true,
-                  "chipPaths": ["channel"],
-                  "badgeTones": {
-                    "needs": "warning",
-                    "handled": "info",
-                    "ai": "neutral"
-                  },
-                  "surface": "card"
-                },
-                "bind": {
-                  "rows": {
-                    "read": "chatbot.threads",
-                    "variables": {
-                      "q": "$q",
-                      "status": "$status"
-                    }
-                  }
+              "counts": {
+                "read": "chatbot.thread-counts",
+                "variables": {
+                  "q": "$q"
                 }
               }
-            ],
-            "bind": {}
+            }
           }
         ]
       }

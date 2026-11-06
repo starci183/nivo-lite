@@ -1,4 +1,4 @@
-import type { FilterFields, SearchFields } from "@starci/grammar/common"
+import type { FilterFields, SearchFields } from "@starci/grammar/common" with { "resolution-mode": "import" }
 import { paneHeadersOf } from "./pane-headers"
 
 const FILTER: FilterFields = {

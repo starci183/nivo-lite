@@ -9,3 +9,5 @@ export {
     presetNeedsTime,
 } from "./agentWork.wire"
 export { agentWorkGridOf } from "./agentWork.layout"
+export { agentWorkViewOf, agentWorkViewQuery } from "./agentWork.view"
+export type { AgentWorkViewKey } from "./agentWork.view"
