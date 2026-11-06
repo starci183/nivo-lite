@@ -64,7 +64,7 @@ export const DecisionList = (props: DecisionListProps): ReactNode => {
             <SurfaceCard
                 kind="list"
                 label={props.queue.count === null ? props.words.label : `${props.words.label} · ${props.queue.count}`}
-                footer={more ?? undefined}
+                note={more ?? undefined}
                 isLoading={props.isLoading}
                 items={rows}
                 empty={empty}

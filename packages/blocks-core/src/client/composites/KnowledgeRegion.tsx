@@ -21,7 +21,7 @@ export const KnowledgeRegion = (props: KnowledgeRegionProps): ReactNode => (
             { id: "internal", title: props.view.internalTitle, description: props.view.internalDescription },
         ]}
         empty={<EmptyNotice message={props.view.footer} />}
-        footer={
+        note={
             <Text size="sm" tone="muted" isLoading={props.isLoading}>
                 {props.view.footer}
             </Text>
