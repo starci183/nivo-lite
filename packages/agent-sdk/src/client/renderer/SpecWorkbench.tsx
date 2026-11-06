@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import type { ReactNode } from "react"
-import { Alert, EmptyNotice, Stack } from "@starci/grammar/common"
+import { Alert, EmptyNotice } from "@starci/grammar/common"
 import type { ActionDefinition, ReadDefinition } from "../../block/block.types"
 import type { PlanNode, RenderPlan } from "../../spec/render-plan"
 import { renderPlan, viewOf } from "../../spec/render-plan"
@@ -133,16 +133,22 @@ const DrawnWorkbench = (props: SpecWorkbenchProps): ReactNode => {
                 />
             }
         >
-            <Stack gap="region">
-                {problems.length > 0 && props.canManage ? (
-                    <Alert
-                        tone="cautionary"
-                        title={text({ key: "renderer.problems" })}
-                        description={codesOf(problems)}
-                    />
-                ) : null}
-                <Nodes nodes={plan.head} context={context} />
+            {(tabs) => (
                 <ViewBody
+                    tabs={tabs}
+                    before={
+                        <>
+                            {problems.length > 0 && props.canManage ? (
+                                <Alert
+                                    tone="cautionary"
+                                    title={text({ key: "renderer.problems" })}
+                                    description={codesOf(problems)}
+                                />
+                            ) : null}
+                            <Nodes nodes={plan.head} context={context} />
+                        </>
+                    }
+                    after={<Nodes nodes={plan.foot} context={context} />}
                     view={view}
                     aside={plan.aside}
                     asideSummary={plan.asideSummary}
@@ -150,8 +156,7 @@ const DrawnWorkbench = (props: SpecWorkbenchProps): ReactNode => {
                     reads={reads}
                     panelId={panelId}
                 />
-                <Nodes nodes={plan.foot} context={context} />
-            </Stack>
+            )}
         </PageFrame>
     )
 }
