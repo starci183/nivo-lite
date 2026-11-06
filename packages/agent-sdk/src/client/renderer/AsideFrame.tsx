@@ -1,8 +1,7 @@
 import type { ReactNode } from "react"
-import { Alert, Badge, Pane, PaneGrid, PaneHeader, PaneSection } from "@starci/grammar/common"
+import { Badge, Pane, PaneGrid, PaneHeader, PaneSection } from "@starci/grammar/common"
 import type { ParamHandle, ReadDefinition } from "../../block/block.types"
 import { wordsOf } from "../../schema/namespaced"
-import { PANE_PARAM } from "../../spec/spec"
 import type { SpecAsideSummary } from "../../spec/spec.types"
 import { resolveVariables, textOf, valueAt } from "../../spec/spec-value"
 import { useWorkbenchHost } from "../host/WorkbenchHostProvider"
@@ -42,17 +41,63 @@ const SummaryRead = (props: SummaryReadProps): ReactNode => {
     })
 }
 
-/** What the two panes take. */
+/** What the panes take. */
+interface AsidePanesProps {
+    readonly namespace: string
+    /** The tabs band of the page, drawn on top of the main pane on the white ground of the chrome. */
+    readonly tabs: ReactNode
+    /** The main pane: the well, where the blocks of the view float. */
+    readonly main: ReactNode
+    /** The aside pane. */
+    readonly aside: ReactNode
+    /** The label of the aside pane and its title. */
+    readonly label: string
+    /** How much waits in the aside; empty while unknown. */
+    readonly count: string
+}
+
+/**
+ * The view body of a spec that has an aside, in the depth of the app: the tabs band and the aside are chrome on the white surface (the
+ * aside runs the whole height at the end, with a divider on its start edge), and only the main pane is the well, where the blocks float.
+ * Below the wide breakpoint there is no aside column: its content is the first block of the well, under the tabs.
+ */
+const AsidePanes = (props: AsidePanesProps): ReactNode => (
+    <PaneGrid
+        label={props.label}
+        areas={{
+            base: ["tabs", "aside", "main"],
+            wide: ["tabs aside", "main aside"],
+        }}
+        columns={{ base: ["fill"], wide: ["fill", "wide"] }}
+        rows={{ base: ["auto", "auto", "fill"], wide: ["auto", "fill"] }}
+    >
+        <Pane area="tabs" surface>
+            <PaneSection align="center">{props.tabs}</PaneSection>
+        </Pane>
+        <Pane area="main" label={props.namespace}>
+            <PaneSection>{props.main}</PaneSection>
+        </Pane>
+        <Pane area="aside" surface label={props.label}>
+            <PaneSection align="center">
+                <PaneHeader
+                    title={props.label}
+                    {...(props.count === "" ? {} : { status: <Badge tone="accent">{props.count}</Badge> })}
+                />
+            </PaneSection>
+            <PaneSection grow>{props.aside}</PaneSection>
+        </Pane>
+    </PaneGrid>
+)
+
+/** What the frame takes: the three regions, and what the aside count reads. */
 export interface AsideFrameProps {
-    /** What the phone shows of the aside on the main pane; null shows nothing. */
+    /** What the aside count reads; null reads nothing. */
     readonly summary: SpecAsideSummary | null
     readonly reads: ReadonlyArray<ReadDefinition>
     readonly namespace: string
     readonly installationId: string
     readonly params: ParamHandle
-    /** Whether a phone shows the aside pane (else the main one). */
-    readonly isAsideShown: boolean
-    /** The tabs band of the page, drawn on top of the main pane. */
+    /** The tabs band of the page. */
     readonly tabs: ReactNode
     /** The main pane. */
     readonly main: ReactNode
@@ -60,17 +105,7 @@ export interface AsideFrameProps {
     readonly aside: ReactNode
 }
 
-/** The arrangement of a phone, which shows one pane at a time: the tabs, the summary line of the aside, then the main pane. */
-const phoneAreas = (isAsideShown: boolean, hasSummary: boolean): ReadonlyArray<string> => {
-    if (isAsideShown) return ["aside"]
-    return hasSummary ? ["tabs", "summary", "main"] : ["tabs", "main"]
-}
-
-/**
- * The view body of a spec that has an aside: the main pane and the aside pane side by side, and on a phone one at a time as the
- * `pane` param says. The tabs band tops the main pane, and the aside runs the whole height beside it; on a phone the tabs are followed
- * by the summary line of the aside, and the aside pane shows alone with its head and a way back to the main pane.
- */
+/** The panes of the aside view, with the label and the count the summary names. */
 export const AsideFrame = (props: AsideFrameProps): ReactNode => {
     const host = useWorkbenchHost()
     const text = host.block.text("blocks")
@@ -79,61 +114,17 @@ export const AsideFrame = (props: AsideFrameProps): ReactNode => {
     const summary = props.summary
     const label =
         summary === null ? text({ key: "renderer.aside" }) : wordsOf(summary.label, (key) => owner({ key }), locale)
-    const phone = phoneAreas(props.isAsideShown, summary !== null)
     return (
         <SummaryRead summary={summary} reads={props.reads} installationId={props.installationId} params={props.params}>
             {(figures) => (
-                <PaneGrid
+                <AsidePanes
+                    namespace={text({ key: "renderer.main" })}
                     label={label}
-                    areas={{
-                        base: phoneAreas(props.isAsideShown, summary !== null),
-                        medium: ["tabs aside", "main aside"],
-                    }}
-                    columns={{ base: ["fill"], medium: ["fill", "wide"] }}
-                    rows={{
-                        base: phone.map((area) => (area === "main" || area === "aside" ? "fill" : "auto")),
-                        medium: ["auto", "fill"],
-                    }}
-                >
-                    {summary === null ? null : (
-                        <Pane area="summary">
-                            <PaneSection>
-                                <Alert
-                                    tone="accent"
-                                    title={figures.count === "" ? label : `${label} · ${figures.count}`}
-                                    {...(figures.preview === "" ? {} : { description: figures.preview })}
-                                    action={{
-                                        kind: "row",
-                                        label,
-                                        onAction: () => props.params.set(PANE_PARAM, summary.opens),
-                                    }}
-                                />
-                            </PaneSection>
-                        </Pane>
-                    )}
-                    <Pane area="tabs">
-                        <PaneSection align="center">{props.tabs}</PaneSection>
-                    </Pane>
-                    <Pane area="main" label={text({ key: "renderer.main" })}>
-                        <PaneSection>{props.main}</PaneSection>
-                    </Pane>
-                    <Pane area="aside" label={label}>
-                        <PaneSection align="center">
-                            <PaneHeader
-                                title={label}
-                                {...(figures.count === ""
-                                    ? {}
-                                    : { status: <Badge tone="accent">{figures.count}</Badge> })}
-                                back={{
-                                    label: text({ key: "renderer.back" }),
-                                    onPress: () => props.params.set(PANE_PARAM, "list"),
-                                    placement: "narrow",
-                                }}
-                            />
-                        </PaneSection>
-                        <PaneSection grow>{props.aside}</PaneSection>
-                    </Pane>
-                </PaneGrid>
+                    count={figures.count}
+                    tabs={props.tabs}
+                    main={props.main}
+                    aside={props.aside}
+                />
             )}
         </SummaryRead>
     )
