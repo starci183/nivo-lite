@@ -21,7 +21,6 @@ describe("OfficeBackgroundVoiceService.say", () => {
             service.say({
                 workspaceId: "ws-1",
                 agentId: "agent-1",
-                wakeId: "wake-1",
                 wakeCreatedAt: WAKE_AT,
                 text: "Two invoices are due.",
             }),
