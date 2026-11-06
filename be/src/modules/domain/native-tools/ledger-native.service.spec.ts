@@ -8,9 +8,9 @@ import {
     ProviderRegistryErrorCode,
 } from "@modules/domain/provider-registry"
 import type { BusinessLedgerEntry, LedgerPort } from "@modules/domain/provider-registry"
-import { domainNameIn } from "@modules/domain/mcp-gateway/connector-call.policy"
+import { DOOR_GRANTS } from "@modules/domain/entity-engine-door"
+import { domainNameIn } from "@modules/domain/mcp-gateway"
 import type { WorkspaceConnector } from "@modules/domain/mcp-gateway"
-import { DOOR_GRANTS } from "@modules/domain/entity-engine-door/door-grants.policy"
 import { LEDGER_MANIFEST, LedgerNativeService } from "./ledger-native.service"
 import { NativeViewService } from "./native-view.service"
 import type { NativeView } from "./native-view.policy"

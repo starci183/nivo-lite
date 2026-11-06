@@ -26,8 +26,11 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 
 /** Every `core.decision-queue` of a module's spec documents that declares choices, with the action it is bound to. */
+const isChoice = (value: unknown): value is Choice =>
+    isRecord(value) && typeof value["command"] === "string" && typeof value["sends"] === "string"
+
 const queuesOf = (module: ModuleDeclaration): ReadonlyArray<BoundQueue> => {
-    const found: BoundQueue[] = []
+    const found: Array<BoundQueue> = []
     const walk = (node: unknown): void => {
         if (Array.isArray(node)) return node.forEach(walk)
         if (!isRecord(node)) return
@@ -38,7 +41,7 @@ const queuesOf = (module: ModuleDeclaration): ReadonlyArray<BoundQueue> => {
             const action = isRecord(command) ? command["action"] : undefined
             const choices = isRecord(props) ? props["choices"] : undefined
             if (typeof action === "string" && Array.isArray(choices))
-                found.push({ module: module.key, action, choices: choices as ReadonlyArray<Choice> })
+                found.push({ module: module.key, action, choices: choices.filter(isChoice) })
         }
         Object.values(node).forEach(walk)
     }
@@ -46,17 +49,14 @@ const queuesOf = (module: ModuleDeclaration): ReadonlyArray<BoundQueue> => {
     return found
 }
 
-const actionOf = (module: ModuleDeclaration, id: string): ActionDefinition => {
-    const action = module.actions.find((each) => each.id === id)
-    if (action === undefined) throw new Error(`no action ${id}`)
-    return action
-}
+const actionOf = (module: ModuleDeclaration, id: string): ActionDefinition | undefined =>
+    module.actions.find((each) => each.id === id)
 
 /** The payload the door receives for an input, as the live host builds it. */
 const doorPayload = (input: ActionInput): unknown => actionPayloadOf(input)
 
-const accepted = (action: ActionDefinition, input: ActionInput): boolean =>
-    action.input !== undefined && parseStrict(action.input, doorPayload(input)).ok
+const accepted = (action: ActionDefinition | undefined, input: ActionInput): boolean =>
+    action?.input !== undefined && parseStrict(action.input, doorPayload(input)).ok
 
 describe("the payloads the renderers send", () => {
     const queues = MODULE_DECLARATIONS.flatMap((module) => queuesOf(module).map((queue) => ({ module, queue })))
@@ -94,8 +94,8 @@ describe("the payloads the renderers send", () => {
 
     it("accepts the answer of a question and an edit of a queue row", () => {
         const answer = actionOf(accountingModule, "accounting.answer-question")
-        expect(accepted(answer, answerInputOf("q1", "Đã nhận đủ tiền"))).toBe(true)
-        expect(accepted(answer, editInputOf("q1", { answer: "Đã nhận đủ tiền" }))).toBe(true)
+        expect(accepted(answer, answerInputOf("q1", "Received in full"))).toBe(true)
+        expect(accepted(answer, editInputOf("q1", { answer: "Received in full" }))).toBe(true)
     })
 
     it("refuses the nested shape, naming the keys the door cannot read", () => {
@@ -105,9 +105,10 @@ describe("the payloads the renderers send", () => {
             command: "accounting.resolve-unmatched-payment",
             values: { order: ORDER.id },
         }
-        expect(resolve.input === undefined ? null : parseStrict(resolve.input, nested)).toMatchObject({
-            ok: false,
-            problems: expect.arrayContaining([{ code: "INPUT_UNKNOWN_KEY", at: "values" }]),
+        const parsed = resolve?.input === undefined ? null : parseStrict(resolve.input, nested)
+        expect(parsed !== null && !parsed.ok ? parsed.problems : []).toContainEqual({
+            code: "INPUT_UNKNOWN_KEY",
+            at: "values",
         })
     })
 })

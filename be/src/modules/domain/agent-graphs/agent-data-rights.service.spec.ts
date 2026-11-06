@@ -1,10 +1,10 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { graphOf, OWNER_EXAMPLE, stateOf } from "@tests/fixtures/builders/agent-graph.builder"
+import { seededGraphOf } from "@tests/fixtures/builders/flow-f-world.builder"
 import { AgentDataRightsService } from "./agent-data-rights.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import type { GraphState } from "./agent-graphs.service"
-import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 
 const build = async (state: GraphState | null) => {
     const graphs = mock<AgentGraphsService>({ stateOfAgent: jest.fn().mockResolvedValue(state) })
@@ -66,47 +66,30 @@ describe("AgentDataRightsService.rightsOf", () => {
         await expect(noVersion.rightsOf("ws-1", "agent-1")).resolves.toBeNull()
         await expect(none.rightsOf("ws-1", "agent-1")).resolves.toBeNull()
     })
+})
+
+describe("AgentDataRightsService.rightsOf of a flow agent", () => {
+    const sales = seededGraphOf("sales")
+    const PAYMENTS = { kind: "payments", scope: "conversation", hide: [], mask: [] } as const
 
     it("gives the payments read to an agent whose flow grants the payment-account read, so its payment.instruction is not refused", async () => {
-        const flow = {
-            grant: {
-                rights: [
-                    { kind: "order", access: "read", scope: "turn", fields: ["id"] },
-                    { kind: "payment-account", access: "read", scope: "workspace", fields: ["accountNumber"] },
-                ],
-                tools: ["payment.instruction"],
-                effects: [],
-            },
-        } as unknown as GraphSpec
         const service = await build(
-            stateOf({ mode: "enforced", active: { ...graphOf(OWNER_EXAMPLE), rights: [], flow } }),
+            stateOf({ mode: "enforced", active: { ...graphOf(OWNER_EXAMPLE), rights: [], flow: sales } }),
         )
 
-        await expect(service.rightsOf("ws-1", "agent-1")).resolves.toEqual([
-            { kind: "payments", scope: "conversation", hide: [], mask: [] },
-        ])
+        await expect(service.rightsOf("ws-1", "agent-1")).resolves.toEqual([PAYMENTS])
     })
 
     it("does not repeat a kind the graph holds, and gives nothing for a flow with no such right", async () => {
-        const payments = { kind: "payments", scope: "conversation", hide: [], mask: [] } as const
-        const granted = {
-            grant: {
-                rights: [{ kind: "payment-account", access: "read", scope: "workspace", fields: [] }],
-                tools: [],
-                effects: [],
-            },
-        } as unknown as GraphSpec
-        const bare = {
-            grant: { rights: [{ kind: "order", access: "read", scope: "turn", fields: [] }], tools: [], effects: [] },
-        } as unknown as GraphSpec
+        const bare = { ...sales, grant: { rights: [], tools: [], effects: [] } }
         const held = await build(
-            stateOf({ mode: "enforced", active: { ...graphOf(OWNER_EXAMPLE), rights: [payments], flow: granted } }),
+            stateOf({ mode: "enforced", active: { ...graphOf(OWNER_EXAMPLE), rights: [PAYMENTS], flow: sales } }),
         )
         const none = await build(
             stateOf({ mode: "enforced", active: { ...graphOf(OWNER_EXAMPLE), rights: [], flow: bare } }),
         )
 
-        await expect(held.rightsOf("ws-1", "agent-1")).resolves.toEqual([payments])
+        await expect(held.rightsOf("ws-1", "agent-1")).resolves.toEqual([PAYMENTS])
         await expect(none.rightsOf("ws-1", "agent-1")).resolves.toEqual([])
     })
 })

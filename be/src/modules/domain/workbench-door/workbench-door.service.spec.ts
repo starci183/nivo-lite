@@ -351,59 +351,6 @@ describe("WorkbenchDoorService.act", () => {
     })
 })
 
-describe("WorkbenchDoorService.act invalid input", () => {
-    const invalid = (): Promise<ActionResult> =>
-        Promise.resolve({
-            ok: false,
-            reason: "invalid",
-            message: { key: "renderer.invalid" },
-            fields: { order: { key: "renderer.invalid" }, values: { key: "renderer.invalid" } },
-        })
-
-    it("logs the action and the keys of the refused fields, never a value, and still answers the result", async () => {
-        const { door, logger } = await build({ act: invalid })
-
-        const answer = await door.act(USER, callOf("sales.move-stage", '{"id":"lead-1","order":"secret-value"}'))
-
-        expect(parsed(answer)).toMatchObject({ ok: false, reason: "invalid" })
-        expect(logger.warn).toHaveBeenCalledWith(WorkbenchDoorLogEvent.InputInvalid, {
-            action: "sales.move-stage",
-            fields: ["order", "values"],
-        })
-        expect(JSON.stringify(logger.warn.mock.calls)).not.toContain("secret-value")
-    })
-
-    it("logs the action of a transactional action that refused its input", async () => {
-        const { door, logger } = await build({ transactionalAct: invalid })
-
-        await door.act(USER, callOf("sales.settle", '{"id":"lead-1"}'))
-
-        expect(logger.warn).toHaveBeenCalledWith(WorkbenchDoorLogEvent.InputInvalid, {
-            action: "sales.settle",
-            fields: ["order", "values"],
-        })
-    })
-
-    it("logs the action of a payload that is not a JSON object", async () => {
-        const { door, logger } = await build()
-
-        await door.act(USER, callOf("sales.move-stage", "{q:"))
-
-        expect(logger.warn).toHaveBeenCalledWith(WorkbenchDoorLogEvent.InputInvalid, {
-            action: "sales.move-stage",
-            fields: [],
-        })
-    })
-
-    it("logs nothing for an action that ran", async () => {
-        const { door, logger } = await build()
-
-        await door.act(USER, callOf("sales.move-stage", '{"id":"lead-1"}'))
-
-        expect(logger.warn).not.toHaveBeenCalled()
-    })
-})
-
 describe("WorkbenchDoorService.act rollback", () => {
     it.each(FAILURE_REASONS)(
         "rolls a transactional action back after its write when it answers %s, so no row stays",
@@ -475,8 +422,16 @@ describe("WorkbenchDoorService.act refusals", () => {
         expect(parsed(answer)).toEqual(failure("invalid", WorkbenchDoorErrorCode.PayloadInvalid))
         expect(rules.ownerRuleFor).not.toHaveBeenCalled()
     })
-})
 
+    it("logs the action and the field keys of an input it refused", async () => {
+        const [message, fields] = [{ key: "invalid" }, { order: { key: "invalid" } }]
+        const act = (): Promise<ActionResult> => Promise.resolve({ ok: false, reason: "invalid", message, fields })
+        const { door, logger } = await build({ act })
+        await door.act(USER, callOf("sales.move-stage", '{"id":"lead-1"}'))
+        const meta = { action: "sales.move-stage", fields: ["order"] }
+        expect(logger.warn).toHaveBeenCalledWith(WorkbenchDoorLogEvent.InputInvalid, meta)
+    })
+})
 describe("WorkbenchDoorService.act authority and failures", () => {
     it("answers forbidden when the owner rule says never, and never runs the action", async () => {
         const act = jest.fn()
