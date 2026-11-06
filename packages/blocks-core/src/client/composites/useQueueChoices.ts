@@ -1,6 +1,7 @@
 import { useState } from "react"
 import type { ActionHandle } from "@nivo-lite/agent-sdk/block"
 import { choiceOf } from "../../rows/decision-choices"
+import { queueInputOf } from "../../rows/decision-commands"
 import type { Choice } from "../../rows/decision-choices"
 
 /** The row command whose overlay is open, with the row it is about. */
@@ -32,7 +33,7 @@ export const useQueueCommands = (
     const [pending, setPending] = useState<PendingChoice | null>(null)
     const runWith = (rowId: string, commandId: string, values?: Readonly<Record<string, string>>): Promise<void> =>
         command
-            .run(values === undefined ? { id: rowId, command: commandId } : { id: rowId, command: commandId, values })
+            .run(queueInputOf(rowId, commandId, values))
             .then((outcome) => {
                 if (!outcome.ok) onFailure()
             })

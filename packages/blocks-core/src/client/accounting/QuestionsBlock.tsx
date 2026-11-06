@@ -4,7 +4,7 @@ import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ActionHandle } from "@nivo-lite/agent-sdk/block"
 import { Badge, Button, Cluster, Divider, Heading, Stack, Text, Textarea } from "@starci/grammar/common"
 import type { accountingQuestionsBlock } from "../../blocks/accounting/questions.block"
-import { answerOf, questionRowsOf, questionsRecord } from "../../rules/accounting/question-rows"
+import { answerInputOf, answerOf, questionRowsOf, questionsRecord } from "../../rules/accounting/question-rows"
 import type { QuestionRow, QuestionsRecord } from "../../rules/accounting/question-rows"
 import { parsedSlot, rowsSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
@@ -36,7 +36,7 @@ const AnswerForm = (props: AnswerFormProps): ReactNode => {
             return
         }
         props.answer
-            .run({ id: props.row.id, command: "edit", values: { answer: text } })
+            .run(answerInputOf(props.row.id, text))
             .then((outcome) => {
                 if (outcome.ok) props.onDone()
                 else if (outcome.reason === "invalid") setError(words(outcome.fields.answer ?? { key: "answer_empty" }))

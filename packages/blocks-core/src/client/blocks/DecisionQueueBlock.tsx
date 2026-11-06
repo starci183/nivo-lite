@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { decisionQueueBlock } from "../../blocks/decision-queue.block"
 import { cellContextOf } from "../../rows/cell-format"
-import { declaredQueue, EDIT_COMMAND, editAnswerOf, editFailure } from "../../rows/decision-commands"
+import { declaredQueue, editAnswerOf, editFailure, editInputOf } from "../../rows/decision-commands"
 import type { EditAnswer } from "../../rows/decision-commands"
 import type { FormValues } from "../../rows/form-values"
 import { parsedSlot, derivedSlot } from "../../slots/slots"
@@ -30,7 +30,7 @@ export const DecisionQueueBlock = (props: RenderOf<typeof decisionQueueBlock>): 
     const queueRows = parsedSlot(read.slot, decisionQueueView)
     const sendEdit = (rowId: string, values: FormValues): Promise<EditAnswer> =>
         command
-            .run({ id: rowId, command: EDIT_COMMAND, values })
+            .run(editInputOf(rowId, values))
             .then(editAnswerOf)
             .catch(() => editFailure)
     const edit =

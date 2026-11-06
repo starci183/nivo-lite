@@ -3,19 +3,12 @@
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import type { ActionInput, ActionOutcome } from "@nivo-lite/agent-sdk/block"
-import { outcomeOf } from "@nivo-lite/agent-sdk/block"
+import { actionPayloadOf, outcomeOf } from "@nivo-lite/agent-sdk/block"
 import type { HostAction, HostActionOptions } from "@nivo-lite/agent-sdk/client"
 import { useMutateWorkbenchActionSwr } from "@/hooks/swr"
 import { isForbiddenFailure } from "@/modules/failure"
 import { viewerCache } from "@/modules/viewer-cache"
 import { actionResultOf, isRefreshedKey } from "@/modules/workbench-host"
-
-/** The flat payload the door receives: the values of the form with the record id (and the row command) merged in. */
-const payloadOf = (input: ActionInput): Readonly<Record<string, string | number | boolean | null>> => ({
-    ...input.values,
-    id: input.id,
-    ...(input.command === undefined ? {} : { command: input.command }),
-})
 
 /**
  * One action of the live data port: the generic action operation, its answer turned into the block outcome. On an ok outcome every
@@ -36,7 +29,7 @@ export const useWorkbenchGraphqlAction = (operation: string, options?: HostActio
                 return { ok: false, reason, message: { vi: words, en: words } }
             }
             try {
-                const result = actionResultOf(await trigger({ name: operation, input: payloadOf(input) }))
+                const result = actionResultOf(await trigger({ name: operation, input: actionPayloadOf(input) }))
                 if (result === null) return refused("failed", "unreadable")
                 if (result.ok && refreshes !== undefined && refreshes.length > 0)
                     await viewerCache.mutate((key) => isRefreshedKey(key, refreshes))
