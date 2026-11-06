@@ -1,7 +1,7 @@
 import { Alert, Button, Input, Textarea, Stack } from "@starci/grammar/common"
 
 /** One question and its answer. */
-export interface PairView {
+interface PairView {
     readonly id: string
     readonly q: string
     readonly a: string
