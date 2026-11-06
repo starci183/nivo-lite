@@ -5,6 +5,7 @@ import { AgentDirectoryService } from "@modules/domain/agents"
 import { WorkspaceMemberSeatsService, WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
+import { TeamChatFilesService } from "./team-chat-files.service"
 import { InjectTeamChatTags } from "./team-chat.decorators"
 import type { TeamChatTags } from "./team-chat.port"
 import { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity, ChatRoomPinEntity } from "./persistence/entities"
@@ -22,6 +23,8 @@ import type {
     MemberRef,
     MessagePage,
     ApprovalState,
+    Attachment,
+    ChatUpload,
     MessageView,
     RoomMemberView,
     RoomUnread,
@@ -29,6 +32,7 @@ import type {
     SendInput,
     TeamChatResult,
     UnreadView,
+    UploadAsk,
 } from "./team-chat.contracts"
 
 /** The postgres error code of a unique violation: a retry or a race reached a row that already exists. */
@@ -77,6 +81,7 @@ export class TeamChatService {
         private readonly seats: WorkspaceMemberSeatsService,
         private readonly people: WorkspaceMembersReadService,
         private readonly agents: AgentDirectoryService,
+        private readonly files: TeamChatFilesService,
         @Optional() @InjectTeamChatTags() private readonly tags: TeamChatTags | null = null,
     ) {}
 
@@ -266,7 +271,18 @@ export class TeamChatService {
         if (problem !== null) return refused(problem)
         if (!(await this.allKnown(workspaceId, mentions))) return refused(TeamChatErrorCode.MemberUnknown)
         const retried = await this.sent(workspaceId, found.id, viewerId, input.clientId)
-        const message = retried ?? (await this.insertMessage(workspaceId, found.id, viewerId, input, mentions))
+        const attached = retried === null ? await this.files.verify(workspaceId, found.id, input.fileKeys) : null
+        if (attached !== null && !attached.ok) return refused(attached.refusal)
+        const message =
+            retried ??
+            (await this.insertMessage(
+                workspaceId,
+                found.id,
+                viewerId,
+                input,
+                mentions,
+                attached?.ok === true ? attached.value : [],
+            ))
         if (retried === null) await this.tagAgents(workspaceId, viewerId, message, mentions)
         const [view] = await this.messageViews(workspaceId, found.id, [message], viewerId)
         await this.entityManager.query(
@@ -299,6 +315,35 @@ export class TeamChatService {
                     }),
                 ),
         )
+    }
+
+    /** Issues the address a browser uploads one file of a room to; only a person who sees the room gets one. */
+    async requestUpload(
+        workspaceId: string,
+        viewerId: string,
+        roomId: string,
+        ask: UploadAsk,
+    ): Promise<TeamChatResult<ChatUpload>> {
+        if ((await this.visibleRoom(workspaceId, viewerId, roomId)) === null) return refused(TeamChatErrorCode.NotFound)
+        return this.files.requestUpload(workspaceId, roomId, ask)
+    }
+
+    /** Mutes or unmutes a room for the viewer; only a member has a setting to change. */
+    async setMuted(
+        workspaceId: string,
+        viewerId: string,
+        roomId: string,
+        muted: boolean,
+    ): Promise<TeamChatResult<RoomView>> {
+        const found = await this.visibleRoom(workspaceId, viewerId, roomId)
+        if (found === null) return refused(TeamChatErrorCode.NotFound)
+        const changed = await this.entityManager.update(
+            ChatRoomMemberEntity,
+            { roomId, memberKind: "user", memberId: viewerId },
+            { muted },
+        )
+        if (changed.affected === 0) return refused(TeamChatErrorCode.NotMember)
+        return done(await this.roomOrThrow(workspaceId, roomId, viewerId))
     }
 
     /** Moves the viewer's read position to a message (the newest when none is named). */
@@ -465,6 +510,7 @@ export class TeamChatService {
         viewerId: string,
         input: SendInput,
         mentions: ReadonlyArray<MemberRef>,
+        attachments: ReadonlyArray<Attachment>,
     ): Promise<ChatRoomMessageEntity> {
         try {
             const inserted = await this.entityManager.insert(ChatRoomMessageEntity, {
@@ -476,7 +522,7 @@ export class TeamChatService {
                 kind: "text",
                 ref: null,
                 mentions: mentions.map((member) => ({ kind: member.memberKind, id: member.memberId })),
-                attachments: [],
+                attachments: attachments.map((file) => ({ ...file })),
                 clientId: input.clientId,
             })
             const id = (inserted.identifiers[0] as { id: string }).id
@@ -628,6 +674,9 @@ export class TeamChatService {
             where: { roomId, messageId: In(messages.map((message) => message.id)) },
         })
         const pinned = new Set(pins.map((pin) => pin.messageId))
+        const urls = await this.files.urlsOf(
+            messages.flatMap((message) => message.attachments.map((file) => String(file["fileKey"]))),
+        )
         const approvals = await this.approvalStates(
             workspaceId,
             viewerId,
@@ -651,7 +700,13 @@ export class TeamChatService {
                 memberId: mention["id"] as string,
                 name: names.get(`${mention["kind"]}:${mention["id"]}`) ?? "",
             })),
-            attachments: [],
+            attachments: message.attachments.map((file) => ({
+                fileKey: String(file["fileKey"]),
+                name: String(file["name"]),
+                mimeType: String(file["mimeType"]),
+                sizeBytes: Number(file["sizeBytes"]),
+                url: urls.get(String(file["fileKey"])) ?? "",
+            })),
             runId: message.kind === "report" ? (message.ref?.["run_id"] ?? null) : null,
             decisionId: message.kind === "approval" ? (message.ref?.["decision_id"] ?? null) : null,
             approval: approvals.get(message.ref?.["decision_id"] ?? "") ?? null,

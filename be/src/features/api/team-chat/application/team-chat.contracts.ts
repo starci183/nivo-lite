@@ -1,4 +1,4 @@
-import type { MemberRef } from "@modules/domain/team-chat"
+import type { MemberRef, UploadAsk } from "@modules/domain/team-chat"
 
 /** The workspace selected by X-Workspace-Id; the service proves the caller's seat. */
 export interface TeamChatScope {
@@ -66,6 +66,15 @@ export interface SendMessageRequest extends TeamChatScope {
 export interface MarkReadRequest extends RoomRequest {
     /** The message read up to; null is the newest. */
     readonly messageId: string | null
+}
+
+/** A file to upload to a room. */
+export interface RequestUploadRequest extends RoomRequest, UploadAsk {}
+
+/** The mute of a room for the caller. */
+export interface SetMutedRequest extends RoomRequest {
+    /** True to mute. */
+    readonly muted: boolean
 }
 
 /** A pin of one message. */

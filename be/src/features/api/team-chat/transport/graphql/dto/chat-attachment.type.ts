@@ -1,6 +1,5 @@
 import { Field, Int, ObjectType } from "@nestjs/graphql"
 
-
 @ObjectType()
 /** A file sent with a message. */
 export class ChatAttachmentType {

@@ -8,7 +8,10 @@ import { RemoveChatRoomMemberCommand } from "./remove-chat-room-member.command"
 
 @CommandHandler(RemoveChatRoomMemberCommand)
 /** Removes a member from a group. The service proves the caller's seat and the room. */
-export class RemoveChatRoomMemberHandler extends ICQRSHandler<RemoveChatRoomMemberCommand, TeamChatResult<RoomView | null>> {
+export class RemoveChatRoomMemberHandler extends ICQRSHandler<
+    RemoveChatRoomMemberCommand,
+    TeamChatResult<RoomView | null>
+> {
     constructor(
         @InjectLogger() logger: Logger,
         private readonly chat: TeamChatService,

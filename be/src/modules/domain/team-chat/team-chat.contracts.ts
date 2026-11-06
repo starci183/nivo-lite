@@ -69,12 +69,7 @@ export interface MessageView {
     readonly editedAt: Date | null
     readonly pinned: boolean
     readonly mentions: ReadonlyArray<MemberRef & { readonly name: string }>
-    readonly attachments: ReadonlyArray<{
-        readonly fileKey: string
-        readonly name: string
-        readonly mimeType: string
-        readonly sizeBytes: number
-    }>
+    readonly attachments: ReadonlyArray<Attachment & { readonly url: string }>
     /** The run a report is about; null for any other kind. */
     readonly runId: string | null
     /** The decision an approval card is about; null for any other kind. */
@@ -122,6 +117,42 @@ export interface UnreadView {
 /** An operation that answers its value or a refusal code, never throws for a domain case. */
 export type TeamChatResult<V> =
     { readonly ok: true; readonly value: V } | { readonly ok: false; readonly refusal: TeamChatErrorCode }
+
+/** A file a message carries, checked at send. */
+export interface Attachment {
+    /** The key of the stored object. */
+    readonly fileKey: string
+    /** The name it was sent under. */
+    readonly name: string
+    /** Its type. */
+    readonly mimeType: string
+    /** Its size, bytes. */
+    readonly sizeBytes: number
+}
+
+/** A file about to be uploaded. */
+export interface UploadAsk {
+    /** The name on the sender's side. */
+    readonly fileName: string
+    /** The declared type. */
+    readonly mimeType: string
+    /** The declared size, bytes. */
+    readonly sizeBytes: number
+}
+
+/** The address a browser uploads a file to, and the key the message names it by. */
+export interface ChatUpload {
+    /** The key to name in `sendChatMessage`. */
+    readonly fileKey: string
+    /** Where to send the bytes. */
+    readonly uploadUrl: string
+    /** The HTTP method. */
+    readonly method: "PUT"
+    /** The headers the upload must carry. */
+    readonly headers: ReadonlyArray<{ readonly name: string; readonly value: string }>
+    /** When the address stops working. */
+    readonly expiresAt: Date
+}
 
 /** The input of a send. */
 export interface SendInput {

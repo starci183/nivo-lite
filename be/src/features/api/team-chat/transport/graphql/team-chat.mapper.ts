@@ -3,11 +3,13 @@ import type {
     MemberRef,
     MessagePage,
     MessageView,
+    ChatUpload,
     RoomUnread,
     RoomView,
     TeamChatResult,
     UnreadView,
 } from "@modules/domain/team-chat"
+import type { ChatFileUploadPayloadType } from "./dto/chat-file-upload-payload.type"
 import type { ChatMemberRefInput } from "./dto/chat-member-ref.input"
 import type { ChatMessagePageType } from "./dto/chat-message-page.type"
 import type { ChatMessagePayloadType } from "./dto/chat-message-payload.type"
@@ -35,6 +37,7 @@ const REFUSALS: Record<TeamChatErrorCode, string> = {
     [TeamChatErrorCode.TooManyFiles]: "too_many_files",
     [TeamChatErrorCode.FileTooLarge]: "file_too_large",
     [TeamChatErrorCode.FileTypeNotAllowed]: "file_type_not_allowed",
+    [TeamChatErrorCode.StorageUnavailable]: "storage_unavailable",
 }
 
 /** A member reference of an input as the domain names it. */
@@ -56,7 +59,7 @@ export const toChatMessageType = (view: MessageView): ChatMessageType => ({
     editedAt: view.editedAt,
     pinned: view.pinned,
     mentions: view.mentions,
-    attachments: view.attachments.map((file) => ({ ...file, url: "" })),
+    attachments: view.attachments,
     report: view.runId === null || view.authorId === null ? null : { runId: view.runId, agentId: view.authorId },
     approval: view.approval,
 })
@@ -91,6 +94,10 @@ export const toMessagePayload = (result: TeamChatResult<MessageView>): ChatMessa
     result.ok
         ? { message: toChatMessageType(result.value), refusal: null }
         : { message: null, refusal: REFUSALS[result.refusal] }
+
+/** The payload of an upload request. */
+export const toUploadPayload = (result: TeamChatResult<ChatUpload>): ChatFileUploadPayloadType =>
+    result.ok ? { upload: { ...result.value }, refusal: null } : { upload: null, refusal: REFUSALS[result.refusal] }
 
 /** The payload of a read mutation. */
 export const toReadPayload = (result: TeamChatResult<RoomUnread>): ChatReadPayloadType =>

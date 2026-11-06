@@ -13,8 +13,11 @@ import { CreateChatRoomCommand } from "../../application/create-chat-room.comman
 import { MarkChatRoomReadCommand } from "../../application/mark-chat-room-read.command"
 import { PinChatMessageCommand } from "../../application/pin-chat-message.command"
 import { RemoveChatRoomMemberCommand } from "../../application/remove-chat-room-member.command"
+import { RequestChatFileUploadCommand } from "../../application/request-chat-file-upload.command"
+import { SetChatRoomMutedCommand } from "../../application/set-chat-room-muted.command"
 import { SendChatMessageCommand } from "../../application/send-chat-message.command"
 import { UnpinChatMessageCommand } from "../../application/unpin-chat-message.command"
+import { ChatFileUploadPayloadType } from "./dto/chat-file-upload-payload.type"
 import { ChatMessagePageType } from "./dto/chat-message-page.type"
 import { ChatMessagePayloadType } from "./dto/chat-message-payload.type"
 import { ChatMessagesInput } from "./dto/chat-messages.input"
@@ -27,7 +30,9 @@ import { ChatRoomsInput } from "./dto/chat-rooms.input"
 import { ChatUnreadType } from "./dto/chat-unread.type"
 import { CreateChatRoomInput } from "./dto/create-chat-room.input"
 import { MarkChatRoomReadInput } from "./dto/mark-chat-room-read.input"
+import { RequestChatFileUploadInput } from "./dto/request-chat-file-upload.input"
 import { SendChatMessageInput } from "./dto/send-chat-message.input"
+import { SetChatRoomMutedInput } from "./dto/set-chat-room-muted.input"
 import {
     toChatMessagePageType,
     toChatRoomType,
@@ -36,6 +41,7 @@ import {
     toMessagePayload,
     toReadPayload,
     toRoomPayload,
+    toUploadPayload,
 } from "./team-chat.mapper"
 
 @Resolver()
@@ -54,7 +60,9 @@ export class TeamChatResolver {
         @Args("input", { nullable: true }) input?: ChatRoomsInput,
     ): Promise<Array<ChatRoomType>> {
         const kind = input?.kind === "direct" || input?.kind === "group" ? input.kind : null
-        const rooms = await this.queryBus.execute(new ChatRoomsQuery({ request: { workspaceId, kind, member: input?.member ?? null }, principal }))
+        const rooms = await this.queryBus.execute(
+            new ChatRoomsQuery({ request: { workspaceId, kind, member: input?.member ?? null }, principal }),
+        )
         return rooms.map(toChatRoomType)
     }
 
@@ -163,6 +171,34 @@ export class TeamChatResolver {
     ): Promise<ChatReadPayloadType> {
         const request = { workspaceId, roomId: input.roomId, messageId: input.messageId }
         return toReadPayload(await this.commandBus.execute(new MarkChatRoomReadCommand({ request, principal })))
+    }
+
+    /** Issues the address a browser uploads one file of a room to. */
+    @Mutation(() => ChatFileUploadPayloadType, { name: "requestChatFileUpload" })
+    async requestChatFileUpload(
+        @CurrentPrincipal() principal: Principal,
+        @WorkspaceId() workspaceId: string,
+        @Args("input") input: RequestChatFileUploadInput,
+    ): Promise<ChatFileUploadPayloadType> {
+        const request = {
+            workspaceId,
+            roomId: input.roomId,
+            fileName: input.fileName,
+            mimeType: input.mimeType,
+            sizeBytes: input.sizeBytes,
+        }
+        return toUploadPayload(await this.commandBus.execute(new RequestChatFileUploadCommand({ request, principal })))
+    }
+
+    /** Mutes or unmutes a room for the caller. */
+    @Mutation(() => ChatRoomPayloadType, { name: "setChatRoomMuted" })
+    async setChatRoomMuted(
+        @CurrentPrincipal() principal: Principal,
+        @WorkspaceId() workspaceId: string,
+        @Args("input") input: SetChatRoomMutedInput,
+    ): Promise<ChatRoomPayloadType> {
+        const request = { workspaceId, roomId: input.roomId, muted: input.muted }
+        return toRoomPayload(await this.commandBus.execute(new SetChatRoomMutedCommand({ request, principal })))
     }
 
     /** Pins a message. */

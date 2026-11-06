@@ -1,6 +1,5 @@
 import { Field, ObjectType } from "@nestjs/graphql"
 
-
 @ObjectType()
 /** Whether another page exists and where it begins. */
 export class ChatPageInfoType {

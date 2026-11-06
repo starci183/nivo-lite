@@ -1,10 +1,10 @@
 import assert from "node:assert/strict"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatErrorCode, TeamChatService } from "@modules/domain/team-chat"
 import type { MemberRef, TeamChatResult } from "@modules/domain/team-chat"
 import { persistTeamChat, teamChatIdentity } from "../../fixtures/builders/team-chat.builder"
 import type { TeamChatIdentity } from "../../fixtures/builders/team-chat.builder"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
-import { TeamChatProofModule, TeamChatTagRecorder } from "../../world/team-chat-proof.module"
+import { TeamChatProofModule, TeamChatProofStorage, TeamChatTagRecorder } from "../../world/team-chat-proof.module"
 import { useTestWorld } from "../../world/use-test-world"
 
 const world = useTestWorld({ modules: [TeamChatProofModule.register()] })
@@ -27,6 +27,8 @@ const valueOf = <V>(result: TeamChatResult<V>): V => {
     assert(result.ok, "expected a value, got a refusal")
     return result.value
 }
+
+const refusalOf = <V>(result: TeamChatResult<V>): TeamChatErrorCode | null => (result.ok ? null : result.refusal)
 
 interface SeatRow {
     readonly id: string
@@ -378,5 +380,119 @@ describe("the tag trigger", () => {
             }),
         )
         expect(recorder.handed).toEqual([])
+    })
+})
+
+describe("files of a room", () => {
+    const facts = (extra: object = {}) => ({
+        fileName: "Bao gia.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 1000,
+        ...extra,
+    })
+
+    it("issues an upload address to a person of the room, refuses a bad type or size as data, and refuses a stranger", async () => {
+        const identity = await seed()
+        const { workspaceId, ownerId } = identity
+        const [first, , third] = identity.staffIds
+        const room = valueOf(
+            await chat().createRoom(workspaceId, ownerId, { kind: "group", name: "Files", members: [user(first)] }),
+        )
+        const upload = valueOf(await chat().requestUpload(workspaceId, first, room.id, facts()))
+        expect(upload).toMatchObject({ method: "PUT", headers: [{ name: "Content-Type", value: "application/pdf" }] })
+        expect(upload.fileKey).toMatch(new RegExp(`^${workspaceId}/team-chat/${room.id}/[0-9a-f-]{36}/Bao gia\.pdf$`))
+        expect(upload.uploadUrl).toContain(upload.fileKey)
+        expect(
+            refusalOf(
+                await chat().requestUpload(
+                    workspaceId,
+                    first,
+                    room.id,
+                    facts({ mimeType: "application/x-msdownload" }),
+                ),
+            ),
+        ).toBe(TeamChatErrorCode.FileTypeNotAllowed)
+        expect(
+            refusalOf(await chat().requestUpload(workspaceId, first, room.id, facts({ sizeBytes: 26 * 1024 * 1024 }))),
+        ).toBe(TeamChatErrorCode.FileTooLarge)
+        expect(refusalOf(await chat().requestUpload(workspaceId, first, room.id, facts({ sizeBytes: 0 })))).toBe(
+            TeamChatErrorCode.FileTooLarge,
+        )
+        expect(refusalOf(await chat().requestUpload(workspaceId, third, room.id, facts()))).toBe(
+            TeamChatErrorCode.NotFound,
+        )
+        const store = world.resolve(TeamChatProofStorage)
+        store.reachable = false
+        expect(refusalOf(await chat().requestUpload(workspaceId, first, room.id, facts()))).toBe(
+            TeamChatErrorCode.StorageUnavailable,
+        )
+        store.reachable = true
+    })
+
+    it("stores the checked files with the message and signs their read addresses, and removes a file over the limit", async () => {
+        const identity = await seed()
+        const { workspaceId, ownerId } = identity
+        const [first] = identity.staffIds
+        const store = world.resolve(TeamChatProofStorage)
+        const room = valueOf(
+            await chat().createRoom(workspaceId, ownerId, { kind: "group", name: "Files", members: [user(first)] }),
+        )
+        const upload = valueOf(await chat().requestUpload(workspaceId, first, room.id, facts()))
+        const send = (keys: Array<string>, body = "") =>
+            chat().send(workspaceId, first, {
+                roomId: room.id,
+                to: null,
+                body,
+                mentions: [],
+                fileKeys: keys,
+                clientId: null,
+            })
+        expect(refusalOf(await send([upload.fileKey]))).toBe(TeamChatErrorCode.StorageUnavailable)
+        store.sizes.set(upload.fileKey, 1234)
+        const sent = valueOf(await send([upload.fileKey]))
+        expect(sent.attachments).toEqual([
+            {
+                fileKey: upload.fileKey,
+                name: "Bao gia.pdf",
+                mimeType: "application/pdf",
+                sizeBytes: 1234,
+                url: `https://store.test/get/${upload.fileKey}`,
+            },
+        ])
+        const thread = await chat().messages(workspaceId, first, room.id, 5, null, false)
+        expect(thread.nodes[0]?.attachments[0]?.url).toBe(`https://store.test/get/${upload.fileKey}`)
+        const big = valueOf(await chat().requestUpload(workspaceId, first, room.id, facts()))
+        store.sizes.set(big.fileKey, 30 * 1024 * 1024)
+        expect(refusalOf(await send([big.fileKey]))).toBe(TeamChatErrorCode.FileTooLarge)
+        expect(store.removed).toEqual([big.fileKey])
+        expect(refusalOf(await send(["somewhere/else.pdf"]))).toBe(TeamChatErrorCode.FileTypeNotAllowed)
+        expect(refusalOf(await send([`${workspaceId}/team-chat/${room.id}/${world.id()}/run.exe`]))).toBe(
+            TeamChatErrorCode.FileTypeNotAllowed,
+        )
+    })
+})
+
+describe("mute", () => {
+    it("mutes a room for one member only, and an owner who sits in no room has nothing to mute", async () => {
+        const identity = await seed()
+        const { workspaceId, ownerId } = identity
+        const [first, second] = identity.staffIds
+        const room = valueOf(
+            await chat().createRoom(workspaceId, ownerId, {
+                kind: "group",
+                name: "Quiet",
+                members: [user(first), user(second)],
+            }),
+        )
+        expect(valueOf(await chat().setMuted(workspaceId, first, room.id, true)).muted).toBe(true)
+        expect((await chat().room(workspaceId, second, room.id))?.muted).toBe(false)
+        expect(valueOf(await chat().setMuted(workspaceId, first, room.id, false)).muted).toBe(false)
+        const other = valueOf(
+            await chat().createRoom(workspaceId, first, { kind: "group", name: "Other", members: [user(second)] }),
+        )
+        expect(refusalOf(await chat().setMuted(workspaceId, ownerId, other.id, true))).toBe(TeamChatErrorCode.NotMember)
+        expect(refusalOf(await chat().setMuted(workspaceId, identity.staffIds[2], room.id, true))).toBe(
+            TeamChatErrorCode.NotFound,
+        )
     })
 })
