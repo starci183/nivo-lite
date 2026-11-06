@@ -27,8 +27,8 @@ export class ChatRoomType {
     createdBy!: string
 
     /** When it was created. */
-    @Field(() => Date)
-    createdAt!: Date
+    @Field(() => String)
+    createdAt!: string
 
     /** Its members, at most 200, owners first. */
     @Field(() => [ChatMemberType])

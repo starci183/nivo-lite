@@ -17,8 +17,8 @@ export class ChatApprovalType {
     decidedByName!: string | null
 
     /** When it was decided. */
-    @Field(() => Date, { nullable: true })
-    decidedAt!: Date | null
+    @Field(() => String, { nullable: true })
+    decidedAt!: string | null
 
     /** Whether the viewer holds the right the decide door checks. */
     @Field(() => Boolean)

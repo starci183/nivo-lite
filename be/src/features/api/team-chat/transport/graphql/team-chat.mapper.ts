@@ -1,5 +1,6 @@
 import { TeamChatErrorCode } from "@modules/domain/team-chat"
 import type {
+    ApprovalState,
     MemberRef,
     MessagePage,
     MessageView,
@@ -9,6 +10,7 @@ import type {
     TeamChatResult,
     UnreadView,
 } from "@modules/domain/team-chat"
+import type { ChatApprovalType } from "./dto/chat-approval.type"
 import type { ChatDecisionPayloadType } from "./dto/chat-decision-payload.type"
 import type { ChatFileUploadPayloadType } from "./dto/chat-file-upload-payload.type"
 import type { DecideOutcome } from "../../application/team-chat.contracts"
@@ -42,6 +44,18 @@ const REFUSALS: Record<TeamChatErrorCode, string> = {
     [TeamChatErrorCode.StorageUnavailable]: "storage_unavailable",
 }
 
+/** An instant as ISO text, the way this schema carries every instant. */
+const isoOf = (at: Date): string => at.toISOString()
+
+/** An instant that may be absent, as ISO text or null. */
+const isoOrNull = (at: Date | null): string | null => (at === null ? null : isoOf(at))
+
+/** The state of a decision as the contract shows it. */
+const toChatApprovalType = (approval: ApprovalState): ChatApprovalType => ({
+    ...approval,
+    decidedAt: isoOrNull(approval.decidedAt),
+})
+
 /** A member reference of an input as the domain names it. */
 export const toMemberRef = (input: ChatMemberRefInput): MemberRef => ({
     memberKind: input.memberKind === "agent" ? "agent" : "user",
@@ -57,18 +71,20 @@ export const toChatMessageType = (view: MessageView): ChatMessageType => ({
     authorId: view.authorId,
     authorName: view.authorName,
     body: view.body,
-    createdAt: view.createdAt,
-    editedAt: view.editedAt,
+    createdAt: isoOf(view.createdAt),
+    editedAt: isoOrNull(view.editedAt),
     pinned: view.pinned,
     mentions: view.mentions,
     attachments: view.attachments,
     report: view.runId === null || view.authorId === null ? null : { runId: view.runId, agentId: view.authorId },
-    approval: view.approval,
+    approval: view.approval === null ? null : toChatApprovalType(view.approval),
 })
 
 /** A room of the domain as the contract shows it. */
 export const toChatRoomType = (view: RoomView): ChatRoomType => ({
     ...view,
+    createdAt: isoOf(view.createdAt),
+    members: view.members.map((member) => ({ ...member, lastReadAt: isoOf(member.lastReadAt) })),
     lastMessage: view.lastMessage === null ? null : toChatMessageType(view.lastMessage),
 })
 
@@ -99,11 +115,15 @@ export const toMessagePayload = (result: TeamChatResult<MessageView>): ChatMessa
 
 /** The payload of a verdict on a decision. */
 export const toDecisionPayload = (outcome: DecideOutcome): ChatDecisionPayloadType =>
-    outcome.ok ? { approval: outcome.approval, refusal: null } : { approval: null, refusal: outcome.refusal }
+    outcome.ok
+        ? { approval: toChatApprovalType(outcome.approval), refusal: null }
+        : { approval: null, refusal: outcome.refusal }
 
 /** The payload of an upload request. */
 export const toUploadPayload = (result: TeamChatResult<ChatUpload>): ChatFileUploadPayloadType =>
-    result.ok ? { upload: { ...result.value }, refusal: null } : { upload: null, refusal: REFUSALS[result.refusal] }
+    result.ok
+        ? { upload: { ...result.value, expiresAt: isoOf(result.value.expiresAt) }, refusal: null }
+        : { upload: null, refusal: REFUSALS[result.refusal] }
 
 /** The payload of a read mutation. */
 export const toReadPayload = (result: TeamChatResult<RoomUnread>): ChatReadPayloadType =>

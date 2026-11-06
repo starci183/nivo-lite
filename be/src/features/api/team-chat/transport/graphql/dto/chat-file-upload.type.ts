@@ -21,6 +21,6 @@ export class ChatFileUploadType {
     headers!: ReadonlyArray<ChatUploadHeaderType>
 
     /** When the address stops working. */
-    @Field(() => Date)
-    expiresAt!: Date
+    @Field(() => String)
+    expiresAt!: string
 }

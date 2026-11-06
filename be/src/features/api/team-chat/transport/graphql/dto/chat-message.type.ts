@@ -38,12 +38,12 @@ export class ChatMessageType {
     body!: string
 
     /** When it was written. */
-    @Field(() => Date)
-    createdAt!: Date
+    @Field(() => String)
+    createdAt!: string
 
     /** When it was edited. */
-    @Field(() => Date, { nullable: true })
-    editedAt!: Date | null
+    @Field(() => String, { nullable: true })
+    editedAt!: string | null
 
     /** Whether it is pinned in its room. */
     @Field(() => Boolean)
