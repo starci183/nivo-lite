@@ -1,7 +1,5 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock, mockEntityManager } from "@starci/jest-preset"
-import { LeadReadService } from "@modules/domain/leads"
-import { StaffDirectoryService } from "@modules/domain/staff"
 import { WorkItemsViewsReadService } from "@modules/domain/work-items"
 import type { WorkItemWithCursor } from "@modules/domain/work-items"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -22,18 +20,14 @@ const build = async (answers: ReadonlyArray<QueryBuilderAnswers> = []) => {
     const em = mockEntityManager()
     const fakes = queueQueryBuilders(em, answers)
     const items = mock<WorkItemsViewsReadService>()
-    const leads = mock<LeadReadService>()
-    const staff = mock<StaffDirectoryService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkItemViewsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: WorkItemsViewsReadService, useValue: items },
-            { provide: LeadReadService, useValue: leads },
-            { provide: StaffDirectoryService, useValue: staff },
         ],
     }).compile()
-    return { service: moduleRef.get(WorkItemViewsService), fakes, items, leads, staff }
+    return { service: moduleRef.get(WorkItemViewsService), fakes, items }
 }
 
 describe("WorkItemViewsService reads", () => {
@@ -81,33 +75,6 @@ describe("WorkItemViewsService reads", () => {
             expect(rows.map((row) => row.deciderName)).toEqual(["Mai", null])
             expect(items.listPage).toHaveBeenCalledWith("workspace-1", filter)
             expect(fakes).toHaveLength(1)
-        })
-    })
-})
-
-describe("WorkItemViewsService accounting", () => {
-    describe("accountingWaiting", () => {
-        it("folds the customer card and the staff name into each waiting item", async () => {
-            const { service, items, leads, staff } = await build()
-            items.waitingAccounting.mockResolvedValue([
-                contractOf(rowOf({ id: "w-1", lead_id: "l-1", assigned_staff_id: "s-1" })),
-                contractOf(rowOf({ id: "w-2", lead_id: "l-gone", assigned_staff_id: null })),
-                contractOf(rowOf({ id: "w-3", lead_id: null, assigned_staff_id: "s-gone" })),
-            ])
-            leads.cardsOf.mockResolvedValue([
-                { id: "l-1", contactName: "Lan", company: "Tea Co", channel: "zalo", stage: "new", email: null },
-            ])
-            staff.namesOf.mockResolvedValue([{ id: "s-1", name: "Hoa" }])
-
-            const rows = await service.accountingWaiting("workspace-1", 10)
-
-            expect(rows.map((row) => [row.id, row.lead, row.assigned_staff_name])).toEqual([
-                ["w-1", { id: "l-1", contact_name: "Lan", company: "Tea Co", channel: "zalo" }, "Hoa"],
-                ["w-2", null, null],
-                ["w-3", null, null],
-            ])
-            expect(leads.cardsOf).toHaveBeenCalledWith("workspace-1", ["l-1", "l-gone"])
-            expect(staff.namesOf).toHaveBeenCalledWith("workspace-1", ["s-1", "s-gone"])
         })
     })
 })

@@ -26,20 +26,11 @@ export class PublicMessagesService {
      */
     async acceptMessage(params: AcceptMessageParams): Promise<AcceptedMessage> {
         const who = await this.keys.authenticate("messages:write", params.authorization)
-        const conversationId = params.conversationId ?? ""
-        const leadId = params.leadId ?? ""
-        if (conversationId === "" && leadId === "") {
-            throw new PublicApiError({ code: PublicApiErrorCode.TargetMissing })
-        }
         return this.entityManager.transaction(async (tx) => {
-            const conversation =
-                conversationId === ""
-                    ? await this.conversations.ofLead(who.workspaceId, leadId)
-                    : await this.conversations.find(who.workspaceId, conversationId)
+            const conversation = await this.conversations.find(who.workspaceId, params.conversationId)
             if (conversation === undefined) throw new PublicApiError({ code: PublicApiErrorCode.ConversationNotFound })
             const body: MessageRequestBody = {
                 conversationId: conversation.id,
-                leadId: conversation.lead_id,
                 text: params.text,
                 requireApproval: params.requireApproval === true,
                 source: `api:${who.name}`,

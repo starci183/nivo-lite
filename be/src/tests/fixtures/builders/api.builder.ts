@@ -116,7 +116,6 @@ const options = {
         endpoint: { gatewayUrl: null, virtualKey: null, chatModel: "work", embeddingModel: "embed" },
     },
     connectionSecrets: { tokenKey: wiringSettings.channelConnections.channelTokenKey },
-    loyaltyOtps: { pepper: new Secret("wiring-fixture") },
     channels: { siteUrl: "https://site.invalid" },
     telegram: { apiBase: "https://telegram.invalid", timeoutMs: 1000 },
     sepay: { apiBase: "https://sepay.invalid", timeoutMs: 1000 },

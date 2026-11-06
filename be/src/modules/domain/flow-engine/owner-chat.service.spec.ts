@@ -8,7 +8,6 @@ import {
     WorkDecisionService,
 } from "@modules/domain/decisions"
 import type { WorkItem } from "@modules/domain/decisions"
-import { LeadRecordsService } from "@modules/domain/leads"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -92,7 +91,7 @@ const registerMessageGuards = () => {
     })
 
     it("answers an addressed decision with no waiting work and leaves unaddressed decisions alone", async () => {
-        const { service, catalog, decisions, leads, apply } = await build([])
+        const { service, catalog, decisions, apply } = await build([])
 
         await expect(service.reply(memberOf(), "@nivo approve", "en")).resolves.toEqual({
             handled: true,
@@ -106,7 +105,6 @@ const registerMessageGuards = () => {
             action: null,
             limit: 100,
         })
-        expect(leads.namesOf).toHaveBeenCalledWith("ws-1", [])
         expect(apply).not.toHaveBeenCalled()
     })
 
@@ -137,7 +135,7 @@ const registerMessageGuards = () => {
         })
         expect(catalog.get).toHaveBeenCalledWith(
             "flowEngine.decided",
-            { decision: "flowEngine.approvedWord", summary: "Confirm order FB-1234 · Anh Minh · \u20ab3,000,000" },
+            { decision: "flowEngine.approvedWord", summary: "Confirm order FB-1234 · \u20ab3,000,000" },
             "en",
         )
     })
@@ -167,7 +165,7 @@ const registerRejections = () => {
         })
         expect(catalog.get).toHaveBeenCalledWith(
             "flowEngine.decided",
-            { decision: "flowEngine.rejectedWord", summary: "reconcile_payment · Anh Minh" },
+            { decision: "flowEngine.rejectedWord", summary: "reconcile_payment" },
             "en",
         )
     })
@@ -195,12 +193,12 @@ const registerWorkSelection = () => {
         const items = Array.from({ length: 7 }, (_, index) =>
             itemOf({
                 id: `item-${index + 1}`,
-                lead_id: index === 0 ? "unknown" : null,
+                lead_id: null,
                 created_at: `2026-10-${17 - index}T10:00:00.000Z`,
                 proposal: { summary: "", fields: { order_no: `FB-${1000 + index}` } },
             }),
         )
-        const { service, decide, catalog, leads } = await build(items)
+        const { service, decide, catalog } = await build(items)
 
         await expect(service.reply(memberOf(), "@nivo reject FB-9999", "en")).resolves.toEqual({
             handled: true,
@@ -221,18 +219,16 @@ const registerWorkSelection = () => {
             "en",
         )
         expect(catalog.get).toHaveBeenCalledWith("flowEngine.moreWaiting", { n: 1 }, "en")
-        expect(leads.namesOf).toHaveBeenCalledWith("ws-1", ["unknown"])
         expect(decide).not.toHaveBeenCalled()
     })
 
     it("lists only matching candidates and uses the customer as the decision example", async () => {
         const proposal = { summary: "", fields: { customer: "Lan" } }
-        const { service, catalog, leads, decide } = await build([
+        const { service, catalog, decide } = await build([
             itemOf({ id: "a", proposal }),
             itemOf({ id: "b", proposal }),
             itemOf({ id: "c", lead_id: null, proposal: { summary: "", fields: { customer: "Hung" } } }),
         ])
-        leads.namesOf.mockResolvedValue([])
 
         await expect(service.reply(memberOf(), "@nivo approve lan", "en")).resolves.toEqual({
             handled: true,
@@ -249,7 +245,6 @@ const registerWorkSelection = () => {
             },
             "en",
         )
-        expect(leads.namesOf).toHaveBeenCalledWith("ws-1", ["lead-1"])
         expect(decide).not.toHaveBeenCalled()
     })
 }
@@ -357,9 +352,6 @@ const build = async (items: ReadonlyArray<WorkItem>) => {
     })
     const work = mock<WorkDecisionService>({ decide })
     const modules = mock<ModuleCatalogService>({ actionOf: jest.fn().mockResolvedValue(null) })
-    const leads = mock<LeadRecordsService>({
-        namesOf: jest.fn().mockResolvedValue([{ id: "lead-1", contact_name: "Anh Minh" }]),
-    })
     const authority = mock<AuthorityChatService>({ apply })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -368,11 +360,10 @@ const build = async (items: ReadonlyArray<WorkItem>) => {
             { provide: DecisionsService, useValue: decisions },
             { provide: WorkDecisionService, useValue: work },
             { provide: ModuleCatalogService, useValue: modules },
-            { provide: LeadRecordsService, useValue: leads },
             { provide: AuthorityChatService, useValue: authority },
         ],
     }).compile()
-    return { service: moduleRef.get(OwnerChatService), decide, apply, catalog, decisions, modules, leads }
+    return { service: moduleRef.get(OwnerChatService), decide, apply, catalog, decisions, modules }
 }
 
 describe("OwnerChatService", () => {

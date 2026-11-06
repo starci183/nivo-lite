@@ -6,8 +6,6 @@ import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
-import { WORK_RAISED } from "@modules/domain/work-items"
-import type { WorkRaisedHook } from "@modules/domain/work-items"
 import { WorkEngineService } from "./work-engine.service"
 import { WorkItemRaiseExecutorService } from "./work-item-raise-executor.service"
 
@@ -27,7 +25,7 @@ const registeredBy = (registry: GraphNodeRegistryService): NodeEffectExecutor =>
     return executor
 }
 
-const build = async (options: { hook?: boolean; installed?: boolean } = {}) => {
+const build = async (options: { installed?: boolean } = {}) => {
     const engine = mock<WorkEngineService>()
     engine.runWork.mockResolvedValue(itemOf({ id: "item-1" }))
     const installations = mock<InstallationRecordsService>()
@@ -35,8 +33,7 @@ const build = async (options: { hook?: boolean; installed?: boolean } = {}) => {
         options.installed === false ? null : mock<InstallationRecord>({ moduleKey: "sales" }),
     )
     const registry = mock<GraphNodeRegistryService>()
-    const hook = mock<WorkRaisedHook>()
-    const withoutHook = await Test.createTestingModule({
+    const moduleRef = await Test.createTestingModule({
         providers: [
             WorkItemRaiseExecutorService,
             { provide: WorkEngineService, useValue: engine },
@@ -44,18 +41,8 @@ const build = async (options: { hook?: boolean; installed?: boolean } = {}) => {
             { provide: GraphNodeRegistryService, useValue: registry },
         ],
     }).compile()
-    const withHook = await Test.createTestingModule({
-        providers: [
-            WorkItemRaiseExecutorService,
-            { provide: WorkEngineService, useValue: engine },
-            { provide: InstallationRecordsService, useValue: installations },
-            { provide: GraphNodeRegistryService, useValue: registry },
-            { provide: WORK_RAISED, useValue: hook },
-        ],
-    }).compile()
-    const moduleRef = options.hook === false ? withoutHook : withHook
     moduleRef.get(WorkItemRaiseExecutorService).onModuleInit()
-    return { engine, registry, hook, executor: registeredBy(registry) }
+    return { engine, registry, executor: registeredBy(registry) }
 }
 
 const buildWithoutRegistry = async (): Promise<WorkItemRaiseExecutorService> => {
@@ -79,7 +66,7 @@ describe("WorkItemRaiseExecutorService", () => {
     })
 
     it("opens an item that waits for the owner, about the order, once per business key", async () => {
-        const { engine, hook, executor } = await build()
+        const { engine, executor } = await build()
 
         const subject = await executor.execute(
             TURN,
@@ -111,7 +98,6 @@ describe("WorkItemRaiseExecutorService", () => {
             },
         )
         expect(subject).toEqual({ kind: "work-item", id: "item-1" })
-        expect(hook.raised).not.toHaveBeenCalled()
     })
 
     it("keys the item by the call when the node gave no business key, and by the customer or the conversation when no order is named", async () => {
@@ -136,33 +122,6 @@ describe("WorkItemRaiseExecutorService", () => {
         })
         expect(first?.seed?.amount_vnd).toBeNull()
         expect(second).toMatchObject({ subject_type: "conversation", subject_id: "conv-1", lead_id: null })
-    })
-})
-
-describe("WorkItemRaiseExecutorService claims", () => {
-    it("tells the claim hook which item answers the claim", async () => {
-        const { hook, executor } = await build()
-
-        await executor.execute(
-            TURN,
-            { action: "review_claim", title: "Claim", payload: {}, claimId: "claim-1" },
-            { key: "run:4", dedupeKey: null },
-        )
-
-        expect(hook.raised).toHaveBeenCalledWith("ws-1", "claim-1", "item-1")
-    })
-
-    it("opens the item and skips the claim when no capability bound the hook", async () => {
-        const { engine, executor } = await build({ hook: false })
-
-        await expect(
-            executor.execute(
-                TURN,
-                { action: "x_action", title: "T", payload: {}, claimId: "claim-1" },
-                { key: "k", dedupeKey: null },
-            ),
-        ).resolves.toEqual({ kind: "work-item", id: "item-1" })
-        expect(engine.runWork).toHaveBeenCalledTimes(1)
     })
 })
 

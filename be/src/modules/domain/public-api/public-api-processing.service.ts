@@ -12,7 +12,6 @@ import { PublicApiError, PublicApiErrorCode } from "./errors/public-api.error"
 import { parsePublicApiBody, parsePublicApiJob } from "./public-api-job.policy"
 import type { PublicApiJob } from "./public-api-job.contracts"
 import { PublicApiLedgerService } from "./public-api-ledger.service"
-import { PublicLeadFulfillmentService } from "./public-lead-fulfillment.service"
 import { PublicMessageFulfillmentService } from "./public-message-fulfillment.service"
 
 @Injectable()
@@ -22,7 +21,6 @@ export class PublicApiProcessingService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectInbox() private readonly inbox: Inbox,
         private readonly knowledge: ApiKnowledgeSourcesService,
-        private readonly leads: PublicLeadFulfillmentService,
         private readonly messages: PublicMessageFulfillmentService,
         private readonly events: EventsService,
         private readonly ledger: PublicApiLedgerService,
@@ -89,11 +87,10 @@ export class PublicApiProcessingService {
         const row = await this.ledger.lock(workspaceId, requestId, tx)
         if (row === null) throw new PublicApiError({ code: PublicApiErrorCode.RequestNotFound })
         if (row.processedAt !== null) return
-        const request = parsePublicApiBody(row.kind, row.payload, row.needSupplied)
+        const request = parsePublicApiBody(row.kind, row.payload)
         if (!(await this.inbox.claim(PUBLIC_API_QUEUE, `${workspaceId}:${requestId}`, tx))) {
             throw new PublicApiError({ code: PublicApiErrorCode.InboxInconsistent })
         }
-        let leadId = row.leadId
         switch (request.kind) {
             case "knowledge":
                 await this.knowledge.addText(
@@ -116,23 +113,17 @@ export class PublicApiProcessingService {
                     tx,
                 )
                 break
-            case "lead":
-                leadId = await this.leads.fulfill(workspaceId, requestId, request.body, tx)
-                break
             case "message":
-                leadId = await this.messages.fulfill(workspaceId, requestId, request.body, row.createdAt, tx)
+                await this.messages.fulfill(workspaceId, requestId, request.body, row.createdAt, tx)
                 break
         }
-        await this.ledger.complete(workspaceId, requestId, leadId, tx)
+        await this.ledger.complete(workspaceId, requestId, tx)
     }
 
     private async processLegacy(job: Exclude<PublicApiJob, { format: "ledger" }>, tx: EntityManager): Promise<void> {
         switch (job.format) {
             case "knowledge":
                 await this.knowledge.indexExisting(job.workspaceId, job.sourceId, tx)
-                return
-            case "lead":
-                await this.leads.fulfillExistingInbound(job.workspaceId, job.identity, job.body, tx)
                 return
             case "message":
                 await this.messages.fulfill(job.workspaceId, job.identity, job.body, null, tx, job.dedupeKey, false)

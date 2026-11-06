@@ -33,14 +33,6 @@ export interface LineActivity {
     readonly last_at: string | null
 }
 
-/** The unread count of one customer conversation. */
-export interface LeadUnread {
-    /** The lead id. */
-    readonly lead_id: string
-    /** Lines the caller has not read, at most 99. */
-    readonly unread: number
-}
-
 /** The keyset position the thread pages from: the oldest line already seen. */
 export interface LineCursor {
     /** When the line was written, ISO text. */

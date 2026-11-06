@@ -29,14 +29,12 @@ const BUSY: LineActivity = {
 interface Answers {
     readonly workspace?: LineActivity
     readonly rooms?: ReadonlyMap<string, LineActivity>
-    readonly leads?: Array<{ lead_id: string; unread: number }>
 }
 
 const build = async (entityManager: MockEntityManager, answers: Answers = {}) => {
     const messages = mock<MessagesReadService>({
         activityOfWorkspace: jest.fn(() => Promise.resolve(answers.workspace ?? BUSY)),
         activityOfRooms: jest.fn(() => Promise.resolve(answers.rooms ?? new Map<string, LineActivity>())),
-        unreadOfLeads: jest.fn(() => Promise.resolve(answers.leads ?? [])),
     })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -120,24 +118,5 @@ describe("OfficeRoomReadsService.summary", () => {
         await service.summary("ws-1", "u-1", "Mai Linh")
 
         expect(messages.activityOfWorkspace).toHaveBeenCalledWith("ws-1", READER, null)
-    })
-})
-
-describe("OfficeRoomReadsService.leadConversations", () => {
-    it("answers the customer conversations with unread lines, read from the caller's lead markers", async () => {
-        const em = mockEntityManager()
-        const [marks] = queueSubQueryBuilders(em, [
-            { getRawMany: [{ room: "lead:l-1", read_at: "2026-10-29T09:00:00.123456+00:00" }] },
-        ])
-        const { service, messages } = await build(em, { leads: [{ lead_id: "l-1", unread: 2 }] })
-
-        await expect(service.leadConversations("ws-1", "u-1", "Mai Linh")).resolves.toEqual([{ id: "l-1", unread: 2 }])
-        expect(marks?.argsOf("andWhere")).toContainEqual(["rd.room LIKE 'lead:%'"])
-        expect(messages.unreadOfLeads).toHaveBeenCalledWith(
-            "ws-1",
-            READER,
-            [{ key: "l-1", readAt: "2026-10-29T09:00:00.123456+00:00" }],
-            500,
-        )
     })
 })
