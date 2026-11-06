@@ -31,6 +31,7 @@ import { ClockModule } from "@modules/platform/clock"
 import { CONFIG_ERROR_KINDS } from "@modules/platform/config"
 import { CqrsModule } from "@modules/platform/cqrs"
 import { DatabaseModule, PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { IdsModule } from "@modules/platform/ids"
 import { JobsModule } from "@modules/platform/jobs"
 import { PRIMARY_ENTITIES } from "@modules/platform/database/entities"
 import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
@@ -82,6 +83,7 @@ const MCP_ERROR_KIND_TABLES = [
  */
 export const mcpModules = (options: McpAppOptions): Array<DynamicModule | Type> => [
     ClockModule.register({ isGlobal: true }),
+    IdsModule.register({ isGlobal: true }),
     LoggingModule.register({ isGlobal: true }),
     I18nModule.register({
         isGlobal: true,

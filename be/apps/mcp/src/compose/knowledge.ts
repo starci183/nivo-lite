@@ -1,5 +1,4 @@
 import type { DynamicModule } from "@nestjs/common"
-import { CHAT_RECORDS_ERROR_KINDS, CHAT_RECORDS_MESSAGES, ChatRecordsModule } from "@modules/domain/chat-records"
 import {
     ENTITY_ENGINE_ERROR_KINDS,
     ENTITY_ENGINE_MESSAGES,
@@ -62,13 +61,11 @@ export const mcpKnowledgeModules = (options: McpAppOptions): Array<DynamicModule
         cursorKey: options.entityEngine.cursorKey,
         buildId: options.entityEngine.buildId,
     }),
-    ChatRecordsModule.register({ isGlobal: true }),
     NativeToolsModule.register({ isGlobal: true }),
 ]
 
 /** The error kinds of the capabilities this group registers. */
 export const mcpKnowledgeErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
-    CHAT_RECORDS_ERROR_KINDS,
     ENTITY_ENGINE_ERROR_KINDS,
     BRAIN_DOSSIERS_ERROR_KINDS,
     BRAIN_FACTS_ERROR_KINDS,
@@ -82,7 +79,6 @@ export const mcpKnowledgeErrorKinds: ReadonlyArray<Readonly<Record<string, Error
 
 /** The message bundles of the capabilities this group registers. */
 export const mcpKnowledgeMessages: ReadonlyArray<MessageBundle> = [
-    CHAT_RECORDS_MESSAGES,
     ENTITY_ENGINE_MESSAGES,
     BRAIN_DOSSIERS_MESSAGES,
     BRAIN_FACTS_MESSAGES,
