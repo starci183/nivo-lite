@@ -1,4 +1,13 @@
-import { INSTALLATION_VARIABLE, paramNameOf, resolveVariables, textOf, valueAt, variablesOf } from "./spec-value"
+import { z } from "zod"
+import {
+    INSTALLATION_VARIABLE,
+    optionalVariable,
+    paramNameOf,
+    resolveVariables,
+    textOf,
+    valueAt,
+    variablesOf,
+} from "./spec-value"
 
 describe("valueAt", () => {
     it("is the value itself for an absent or empty path", () => {
@@ -68,7 +77,23 @@ describe("resolveVariables", () => {
         })
     })
 
+    it("leaves out a variable the read takes as optional when its param has no value", () => {
+        expect(resolveVariables({ q: "$sort", id: "$selected" }, "inst-1", paramValue, (name) => name === "q")).toEqual(
+            { variables: { id: null }, pending: ["id"] },
+        )
+    })
+
     it("is empty for a binding without variables", () => {
         expect(resolveVariables(undefined, "inst-1", paramValue)).toEqual({ variables: {}, pending: [] })
+    })
+})
+
+describe("optionalVariable", () => {
+    const read = { variables: z.object({ q: z.string().optional(), id: z.string() }) }
+
+    it("is true for an optional variable and false for a required or unknown one", () => {
+        expect(optionalVariable(read, "q")).toBe(true)
+        expect(optionalVariable(read, "id")).toBe(false)
+        expect(optionalVariable(read, "nope")).toBe(false)
     })
 })

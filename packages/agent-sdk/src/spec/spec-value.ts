@@ -1,5 +1,7 @@
 import type { ReadVariables } from "../block/block.types"
+import type { PropsSchema } from "../schema/schema.types"
 import { isRecord } from "../schema/is-record"
+import { z } from "../schema/zod-entry"
 
 /** The variable a read writes for the installation of the route. */
 export const INSTALLATION_VARIABLE = "$installationId"
@@ -36,12 +38,14 @@ export interface ResolvedVariables {
 
 /**
  * The variables of a read with the route installation put in and each `"$<param>"` replaced by the param's value (the URL value,
- * else its default). A param with no value leaves its variable null and lists it as pending, so the read waits.
+ * else its default). A param with no value leaves out a variable the read takes as optional (a search, a filter, a sort: the read
+ * runs unfiltered), and leaves any other variable null and lists it as pending, so the read waits (an id to open).
  */
 export const resolveVariables = (
     variables: ReadVariables | undefined,
     installationId: string,
     paramValue: (name: string) => string | null,
+    isOptional: (variable: string) => boolean = () => false,
 ): ResolvedVariables => {
     const resolved: Record<string, string | number | boolean | null> = {}
     const pending: Array<string> = []
@@ -52,6 +56,7 @@ export const resolveVariables = (
             continue
         }
         const text = paramValue(param)
+        if (text === null && isOptional(name)) continue
         if (text === null) pending.push(name)
         resolved[name] = text
     }
@@ -66,3 +71,9 @@ export const variablesOf = (variables: ReadVariables | undefined, installationId
             value === INSTALLATION_VARIABLE ? installationId : value,
         ]),
     )
+
+/** Whether a read accepts a variable left out: true for an optional variable of its schema, false for a required or unknown one. */
+export const optionalVariable = (read: { readonly variables: PropsSchema }, name: string): boolean => {
+    const schema = read.variables.shape[name]
+    return schema !== undefined && z.safeParse(schema, undefined).success
+}
