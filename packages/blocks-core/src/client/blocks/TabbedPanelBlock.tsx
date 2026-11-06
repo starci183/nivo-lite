@@ -26,7 +26,7 @@ export const TabbedPanelBlock = (props: RenderOf<typeof tabbedPanelBlock>): Reac
                 },
             ]}
         >
-            <CardScopeProvider value={{ filters: null }}>{panels[index] ?? null}</CardScopeProvider>
+            <CardScopeProvider>{panels[index] ?? null}</CardScopeProvider>
         </SurfaceCard>
     )
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { EmptyNotice, SurfaceCard, Text } from "@starci/grammar/common"
+import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import type { ItemsRegionView } from "../../views/views.types"
 
 /** Copy and view of the waiting region; `isLoading` draws the same card with blank geometry while the data is read. */
@@ -16,13 +16,7 @@ export const WaitingRegion = (props: WaitingRegionProps): ReactNode => (
         kind="list"
         isLoading={props.isLoading}
         label={props.view.count === null ? props.label : `${props.label} · ${props.view.count}`}
-        footer={
-            props.view.more === null ? undefined : (
-                <Text size="sm" tone="muted" isLoading={props.isLoading}>
-                    {props.view.more}
-                </Text>
-            )
-        }
+        note={props.view.more ?? undefined}
         items={props.view.rows.map((row) => ({
             id: row.id,
             title: row.title,

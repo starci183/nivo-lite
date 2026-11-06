@@ -1,29 +1,19 @@
-import type { ReactElement, ReactNode } from "react"
+import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
-import {
-    Avatar,
-    Badge,
-    Button,
-    Cluster,
-    Divider,
-    ListBox,
-    RelativeTime,
-    Stack,
-    SurfaceCard,
-    Tabs,
-    Text,
-} from "@starci/grammar/common"
-import type { BadgeTone, ListBoxItem } from "@starci/grammar/common"
+import { Avatar, Badge, ListBox, RelativeTime, Stack, SurfaceCard } from "@starci/grammar/common"
+import type { BadgeTone, FilterFields, ListBoxItem } from "@starci/grammar/common"
 import type { inboxBlock } from "../../blocks/chatbot/inbox.block"
-import { countsView, EMPTY_TAB_COUNTS, tabEntriesOf, TAB_COUNTS_PLACEHOLDER } from "../../rows/filter-tabs"
-import type { TabCounts, TabSpec } from "../../rows/filter-tabs"
+import { countsView, tabEntriesOf } from "../../rows/filter-tabs"
+import type { TabSpec } from "../../rows/filter-tabs"
+import { footersOf, tabCountsOf } from "../../rows/list-card"
+import { paneHeadersOf } from "../../rows/pane-headers"
 import { tabOf, paramsOfTab } from "../../rows/chatbot/inbox-tabs"
 import { INBOX_TABS, threadRowsOf } from "../../rows/chatbot/thread-rows"
 import type { ThreadListRow, ThreadStatus } from "../../rows/chatbot/thread-rows"
 import { chosenRow, moreStateOf, recordsView, selectionOf } from "../../rows/rows"
 import { queryOf } from "../../rows/search"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
-import { PaneSearch } from "../composites/PaneSearch"
+import { usePaneSearch } from "../composites/usePaneSearch"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
@@ -67,60 +57,45 @@ const itemOf = (row: ThreadListRow, words: RowWords): ListBoxItem => ({
     trailing: trailingOf(row, words),
 })
 
-/** The tabs of the inbox with their counts; a counts read that failed or is empty leaves the tabs without them. */
-const InboxTabs = (props: InboxListProps): ReactElement => {
-    const words = useBlockWords()
-    const labels = useSlotLabels()
+/** The tabs of the inbox as the filter zone of its card, with their counts; a counts read that failed or is loading leaves the tabs without them. */
+const filterOf = (props: InboxListProps, words: ReturnType<typeof useBlockWords>): FilterFields => {
     const specs: ReadonlyArray<TabSpec> = INBOX_TABS.map((value) => ({
         value,
         label: words({ key: `inbox_tab_${value}` }),
         attention: value === "needs",
     }))
-    const counts = parsedSlot(props.slots.counts.slot, countsView)
-    const tabs = (view: TabCounts | null): ReactElement => (
-        <Tabs
-            kind="filter"
-            label={words({ key: "status_filter_label" })}
-            moreLabel={() => words({ key: "filtersOverflow" })}
-            overflowLabel={words({ key: "filtersOverflow" })}
-            inset="none"
-            selectedKey={tabOf(
-                props.params.value(props.props.statusParam),
-                props.params.value(props.props.periodParam),
-            )}
-            items={tabEntriesOf(words({ key: "filter_all" }), specs, view).map((entry) =>
-                view !== null && entry.id === "today" && !("today" in view.counts)
-                    ? { id: entry.id, label: entry.label }
-                    : entry,
-            )}
-            onSelect={(key) => {
-                const chosen = paramsOfTab(key)
-                props.params.setMany({
-                    [props.props.statusParam]: chosen.status,
-                    [props.props.periodParam]: chosen.period,
-                })
-            }}
-        />
-    )
-    if ("isError" in counts) return tabs(null)
-    if ("isEmpty" in counts) return tabs(EMPTY_TAB_COUNTS)
-    return (
-        <SlotView
-            slot={counts}
-            labels={labels}
-            placeholder={TAB_COUNTS_PLACEHOLDER}
-            forbidden="hide"
-            render={(view, isLoading) => tabs(isLoading ? null : view)}
-        />
-    )
+    const view = tabCountsOf(parsedSlot(props.slots.counts.slot, countsView))
+    return {
+        label: words({ key: "status_filter_label" }),
+        moreLabel: () => words({ key: "filtersOverflow" }),
+        overflowLabel: words({ key: "filtersOverflow" }),
+        selectedKey: tabOf(props.params.value(props.props.statusParam), props.params.value(props.props.periodParam)),
+        items: tabEntriesOf(words({ key: "filter_all" }), specs, view).map((entry) =>
+            view !== null && entry.id === "today" && !("today" in view.counts)
+                ? { id: entry.id, label: entry.label }
+                : entry,
+        ),
+        onSelect: (key) => {
+            const chosen = paramsOfTab(key)
+            props.params.setMany({
+                [props.props.statusParam]: chosen.status,
+                [props.props.periodParam]: chosen.period,
+            })
+        },
+    }
 }
 
-/** The conversations: a selectable list that writes the chosen one to the select param and loads further pages on request. */
-const InboxRows = (props: InboxListProps): ReactNode => {
+/** The list pane of the inbox: one surface card whose header holds the tabs with their counts and the search on one line, and whose body is a row per conversation. */
+export const InboxList = (props: InboxListProps): ReactNode => {
     const host = useBlockHost()
     const words = useBlockWords()
     const searched = queryOf(props.params.value(props.props.searchParam))
     const labels = useSlotLabels({ key: searched === null ? "list_empty" : "list_empty_search" })
+    const search = usePaneSearch(props.params, props.props.searchParam, {
+        label: words({ key: "search_label" }),
+        clearLabel: words({ key: "searchClear" }),
+    })
+    const headers = paneHeadersOf(filterOf(props, words), search)
     const read = props.slots.threads
     const rowWords = {
         untitled: words({ key: "inbox_untitled" }),
@@ -136,13 +111,18 @@ const InboxRows = (props: InboxListProps): ReactNode => {
                 : words({ key: `row_${row.status ?? "ai"}` }),
         channel: (key) => words({ key: `channel_${key}` }),
     }
-    const more = moreStateOf(read.page)
+    const label = words({ key: "list_label" })
     return (
         <SlotView
             slot={rows}
             labels={labels}
             placeholder={[]}
             onRetry={read.retry}
+            frame={(notice: ReactNode) => (
+                <SurfaceCard ariaLabel={label} headers={headers}>
+                    {notice}
+                </SurfaceCard>
+            )}
             {...(searched === null
                 ? {}
                 : {
@@ -152,9 +132,22 @@ const InboxRows = (props: InboxListProps): ReactNode => {
                       },
                   })}
             render={(items, isLoading) => (
-                <Stack gap="row">
+                <SurfaceCard
+                    ariaLabel={label}
+                    headers={headers}
+                    footers={
+                        read.page === null
+                            ? []
+                            : footersOf(
+                                  moreStateOf(read.page),
+                                  { loadMore: words({ key: "listLoadMore" }), retry: labels.retry },
+                                  read.page.loadMore,
+                              )
+                    }
+                    isLoading={isLoading}
+                >
                     <ListBox
-                        label={words({ key: "list_label" })}
+                        label={label}
                         items={items.map((row) => itemOf(row, chipWords))}
                         selectionMode="single"
                         selectionIndicator="none"
@@ -165,45 +158,8 @@ const InboxRows = (props: InboxListProps): ReactNode => {
                         }}
                         isLoading={isLoading}
                     />
-                    {read.page === null || more === "none" ? null : (
-                        <Cluster gap="inline" align="center">
-                            {more === "failed" ? (
-                                <Text size="sm" tone="muted">
-                                    {words({ key: "listLoadFailed" })}
-                                </Text>
-                            ) : null}
-                            <Button
-                                intent="neutral"
-                                size="sm"
-                                isPending={more === "loading"}
-                                onPress={read.page.loadMore}
-                            >
-                                {words({ key: more === "failed" ? "slotRetry" : "listLoadMore" })}
-                            </Button>
-                        </Cluster>
-                    )}
-                </Stack>
+                </SurfaceCard>
             )}
         />
-    )
-}
-
-/** The list pane of the inbox: one surface card with the tabs and their counts, the search, a divider and a row per conversation. */
-export const InboxList = (props: InboxListProps): ReactNode => {
-    const words = useBlockWords()
-    return (
-        <SurfaceCard ariaLabel={words({ key: "list_label" })}>
-            <Stack gap="row">
-                <InboxTabs {...props} />
-                <PaneSearch
-                    param={props.props.searchParam}
-                    params={props.params}
-                    label={words({ key: "search_label" })}
-                    clearLabel={words({ key: "searchClear" })}
-                />
-                <Divider />
-                <InboxRows {...props} />
-            </Stack>
-        </SurfaceCard>
     )
 }

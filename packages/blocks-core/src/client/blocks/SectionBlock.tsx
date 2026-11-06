@@ -17,7 +17,7 @@ export const SectionBlock = (props: RenderOf<typeof sectionBlock>): ReactNode =>
                         {words(hint)}
                     </Text>
                 )}
-                <CardScopeProvider value={{ filters: null }}>
+                <CardScopeProvider>
                     <Stack gap="row">{props.children}</Stack>
                 </CardScopeProvider>
             </Stack>

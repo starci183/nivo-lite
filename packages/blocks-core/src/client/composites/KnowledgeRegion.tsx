@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { EmptyNotice, Link, SurfaceCard, Text } from "@starci/grammar/common"
+import { EmptyNotice, Link, SurfaceCard } from "@starci/grammar/common"
 import type { KnowledgeRegionView } from "../../views/views.types"
 
 /** Copy and view of the knowledge region; `isLoading` draws the same card with blank geometry while the data is read. */
@@ -21,10 +21,6 @@ export const KnowledgeRegion = (props: KnowledgeRegionProps): ReactNode => (
             { id: "internal", title: props.view.internalTitle, description: props.view.internalDescription },
         ]}
         empty={<EmptyNotice message={props.view.footer} />}
-        footer={
-            <Text size="sm" tone="muted" isLoading={props.isLoading}>
-                {props.view.footer}
-            </Text>
-        }
+        note={props.view.footer}
     />
 )

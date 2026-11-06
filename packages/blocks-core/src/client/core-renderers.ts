@@ -3,10 +3,8 @@ import type { BlockRenderer } from "@nivo-lite/agent-sdk/client"
 import {
     asideDetailBlock,
     cardGridBlock,
-    filterTabsBlock,
     formBlock,
     listEditorBlock,
-    listPaneBlock,
     tabbedPanelBlock,
     tableBlock,
     dashboardCardsBlock,
@@ -33,12 +31,10 @@ import { accountingRenderers } from "./accounting/accounting-renderers"
 import { AsideDetailBlock } from "./blocks/AsideDetailBlock"
 import { BoardBlock } from "./blocks/BoardBlock"
 import { CardGridBlock } from "./blocks/CardGridBlock"
-import { FilterTabsBlock } from "./blocks/FilterTabsBlock"
 import { FormBlock } from "./blocks/FormBlock"
 import { ListEditorBlock } from "./blocks/ListEditorBlock"
 import { listCardBlock } from "../blocks/list-card.block"
 import { ListCardBlock } from "./blocks/ListCardBlock"
-import { ListPaneBlock } from "./blocks/ListPaneBlock"
 import { TabbedPanelBlock } from "./blocks/TabbedPanelBlock"
 import { TableBlock } from "./blocks/TableBlock"
 import { GraphBlock } from "./blocks/GraphBlock"
@@ -65,8 +61,6 @@ export const coreBlocks: ReadonlyArray<BlockRenderer> = [
     defineRenderer(detailBlock, DetailBlock),
     defineRenderer(recordListBlock, RecordListBlock),
     defineRenderer(listCardBlock, ListCardBlock),
-    defineRenderer(listPaneBlock, ListPaneBlock),
-    defineRenderer(filterTabsBlock, FilterTabsBlock),
     defineRenderer(tableBlock, TableBlock),
     defineRenderer(boardBlock, BoardBlock),
     defineRenderer(formBlock, FormBlock),

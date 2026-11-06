@@ -94,8 +94,6 @@
   "formDateInvalid": "Nhập ngày hợp lệ theo dạng năm-tháng-ngày",
   "formChoiceInvalid": "Hãy chọn một trong các lựa chọn",
   "blockListCard": "Thẻ danh sách",
-  "blockListPane": "Ngăn danh sách",
-  "blockFilterTabs": "Thẻ lọc",
   "searchLabel": "Tìm kiếm",
   "rowUntitled": "Chưa có tên",
   "searchClear": "Xoá tìm kiếm",

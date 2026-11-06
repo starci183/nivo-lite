@@ -1,4 +1,4 @@
-import type { HeaderZone } from "@starci/grammar/common"
+import type { HeaderZone } from "@starci/grammar/common" with { "resolution-mode": "import" }
 import type { BookPeriod } from "../rules/accounting/book-view"
 
 /** The fields of a switch zone. */
