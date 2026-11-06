@@ -4,11 +4,13 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const ENTITY_ENGINE_DOOR_MESSAGES: MessageBundle = {
     vi: {
         "errors.ENTITY_ENGINE_DOOR_IN_SCOPE": "Không thể gọi dịch vụ bên ngoài khi đang giữ một giao dịch dữ liệu.",
+        "errors.ENTITY_ENGINE_DOOR_NO_AGENT": "Không gian làm việc chưa có tác tử nội bộ để gọi dịch vụ bên ngoài.",
         "errors.ENTITY_ENGINE_DOOR_SYNC_FAILED":
             "Không thể sao chép các lượt trò chuyện của tác tử. Hệ thống sẽ thử lại.",
     },
     en: {
         "errors.ENTITY_ENGINE_DOOR_IN_SCOPE": "An outside service cannot be called while a data transaction is open.",
+        "errors.ENTITY_ENGINE_DOOR_NO_AGENT": "The workspace has no internal agent to call outside services as.",
         "errors.ENTITY_ENGINE_DOOR_SYNC_FAILED": "The agent turns could not be copied. The system will try again.",
     },
 }

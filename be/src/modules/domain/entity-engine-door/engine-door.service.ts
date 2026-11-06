@@ -1,15 +1,13 @@
 import { Injectable } from "@nestjs/common"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { McpGatewayService, argsHashOf, domainNameIn, gatewayArgumentsSchema } from "@modules/domain/mcp-gateway"
 import type { GatewayCaller } from "@modules/domain/mcp-gateway"
 import type { EngineDoorProvider } from "@modules/domain/entity-engine"
-import { agentIdFor } from "@modules/integrations/openclaw"
 import { isDomainTool } from "@nivo-lite/agent-sdk/mutation"
 import type { DoorApi, DoorCallResult } from "@nivo-lite/agent-sdk/mutation"
 import { doorResultOf, gatewayNameOf, opKeyOf } from "./door-call.policy"
-import { NOT_GRANTED, isDoorGranted } from "./door-grants.policy"
+import { NIVO_AGENT_MODULE, NOT_GRANTED, isDoorGranted } from "./door-grants.policy"
 import type { DoorBinding } from "./entity-engine-door.contracts"
-import { InjectEntityEngineDoorOptions } from "./entity-engine-door.decorators"
-import type { EntityEngineDoorOptions } from "./entity-engine-door.options"
 import { EntityEngineDoorError, EntityEngineDoorErrorCode } from "./errors/entity-engine-door.error"
 
 /** The answer for a call the door cannot even send. */
@@ -22,7 +20,7 @@ const NO_PROVIDER: DoorCallResult = { ok: false, reason: "unknown_tool", message
 /**
  * The provider of the `engine.door` port: a declared job calls a door tool (`<group>.<provider>.<action>`) and the call goes through
  * the NIVO MCP gateway, so the agent grant, the data rights, the approval rule and the credentials of the workspace connection decide
- * it, exactly as for an agent; the internal agent holds only the tools of `DOOR_GRANTS` (default deny, answered `forbidden` before the
+ * it, exactly as for an agent; the internal agent (the seeded `nivo` row of the workspace) holds only the tools of `DOOR_GRANTS` (default deny, answered `forbidden` before the
  * gateway is reached). The call is never made while an engine scope is open (no transaction spans an external call,
  * BE-PERSISTENCE-6), and its replay key is the job's effect key joined to the hash of the arguments, so a retried job never repeats
  * an effect. A domain tool (`<group>.<action>`, `chat.send`) names no provider: the door resolves it to the tool of the workspace's own
@@ -31,8 +29,16 @@ const NO_PROVIDER: DoorCallResult = { ok: false, reason: "unknown_tool", message
 export class EngineDoorService implements EngineDoorProvider {
     constructor(
         private readonly gateway: McpGatewayService,
-        @InjectEntityEngineDoorOptions() private readonly options: EntityEngineDoorOptions,
+        private readonly agents: AgentDirectoryService,
     ) {}
+
+    /** The seeded `nivo` agent of the workspace; the workspace row laid it down, so a missing one is a defect and nothing is created here. */
+    private async nivoAgentOf(workspaceId: string): Promise<string> {
+        const [agentId] = await this.agents.idsOfModule(workspaceId, NIVO_AGENT_MODULE, 1)
+        if (agentId === undefined)
+            throw new EntityEngineDoorError({ code: EntityEngineDoorErrorCode.NoAgent, params: { workspaceId } })
+        return agentId
+    }
 
     /** The `engine.door` handle of one job run. */
     doorApi(binding: DoorBinding): DoorApi {
@@ -45,7 +51,7 @@ export class EngineDoorService implements EngineDoorProvider {
                 if (!args.success) return invalid("invalid_arguments")
                 const caller: GatewayCaller = {
                     workspaceId: binding.workspaceId,
-                    agentId: agentIdFor(binding.workspaceId, this.options.agentModule),
+                    agentId: await this.nivoAgentOf(binding.workspaceId),
                     conversationId: null,
                     workItemId: null,
                     audience: "internal",

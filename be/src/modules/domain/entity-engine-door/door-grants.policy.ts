@@ -12,6 +12,9 @@ export const DOOR_GRANTS: ReadonlyArray<string> = [
     "ai.agent.history",
 ]
 
+/** The module key of the internal agent: the workspace row seeds one `agents` row of this module (its grants are the gateway names of `DOOR_GRANTS`). */
+export const NIVO_AGENT_MODULE = "nivo"
+
 /** Whether the internal agent holds this door tool. */
 export const isDoorGranted = (tool: string): boolean => DOOR_GRANTS.includes(tool)
 

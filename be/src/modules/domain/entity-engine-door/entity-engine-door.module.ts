@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { syncAgentTurnsJob } from "./agent-turn-sync.policy"
-import { ENTITY_ENGINE_DOOR_JOBS, ENTITY_ENGINE_DOOR_OPTIONS } from "./entity-engine-door.decorators"
+import { ENTITY_ENGINE_DOOR_JOBS } from "./entity-engine-door.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./entity-engine-door.module-definition"
 import { AgentNativeService } from "./agent-native.service"
 import { EngineDoorBindingService } from "./engine-door-binding.service"
@@ -17,7 +17,6 @@ export class EntityEngineDoorModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
-                { provide: ENTITY_ENGINE_DOOR_OPTIONS, useValue: options },
                 { provide: ENTITY_ENGINE_DOOR_JOBS, useValue: [syncAgentTurnsJob] },
                 EngineDoorService,
                 EngineDoorBindingService,

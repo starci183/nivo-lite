@@ -1,3 +1,4 @@
+import { Not } from "typeorm"
 import { Test } from "@nestjs/testing"
 import {
     AGENT_BOUND_CONNECTION,
@@ -217,14 +218,14 @@ describe("AgentsService", () => {
             })
         })
 
-        it("lists every module when none is named", async () => {
+        it("lists every module but the internal nivo agent when none is named", async () => {
             const em = mockEntityManager({ find: [AgentEntity, []] })
             const { service } = await build(em)
 
             await service.list("u1", "w1")
 
             expect(em.find).toHaveBeenCalledWith(AgentEntity, {
-                where: { workspaceId: "w1" },
+                where: { workspaceId: "w1", module: Not("nivo") },
                 order: { createdAt: "ASC", id: "ASC" },
                 take: 200,
             })

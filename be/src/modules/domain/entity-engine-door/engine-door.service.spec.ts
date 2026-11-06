@@ -1,14 +1,15 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
+import { AgentDirectoryService } from "@modules/domain/agents"
 import { McpGatewayService, argsHashOf } from "@modules/domain/mcp-gateway"
 import type { GatewayCallResult, WorkspaceConnector } from "@modules/domain/mcp-gateway"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import type { DoorTool } from "@nivo-lite/agent-sdk/mutation"
-import { agentIdFor } from "@modules/integrations/openclaw"
-import { ENTITY_ENGINE_DOOR_OPTIONS } from "./entity-engine-door.decorators"
 import type { DoorBinding } from "./entity-engine-door.contracts"
 import { EngineDoorService } from "./engine-door.service"
 import { EntityEngineDoorErrorCode } from "./errors/entity-engine-door.error"
+
+const NIVO_ID = "0b6e1c52-0000-4000-8000-000000000001"
 
 const binding = (scopeOpen = false): DoorBinding => ({
     workspaceId: "ws-1",
@@ -19,18 +20,18 @@ const binding = (scopeOpen = false): DoorBinding => ({
 const build = async (
     result: GatewayCallResult = { ok: true, value: { sent: true } },
     connectors: ReadonlyArray<WorkspaceConnector> = [],
+    nivoIds: Array<string> = [NIVO_ID],
 ) => {
     const gateway = mock<McpGatewayService>()
     gateway.call.mockResolvedValue(result)
     gateway.connectorsOf.mockResolvedValue(connectors)
+    const agents = mock<AgentDirectoryService>()
+    agents.idsOfModule.mockResolvedValue(nivoIds)
     const moduleRef = await Test.createTestingModule({
         providers: [
             EngineDoorService,
             { provide: McpGatewayService, useValue: gateway },
-            {
-                provide: ENTITY_ENGINE_DOOR_OPTIONS,
-                useValue: { agentModule: "nivo" },
-            },
+            { provide: AgentDirectoryService, useValue: agents },
         ],
     }).compile()
     return { door: moduleRef.get(EngineDoorService), gateway }
@@ -51,7 +52,7 @@ describe("EngineDoorService", () => {
         expect(gateway.call).toHaveBeenCalledWith(
             {
                 workspaceId: "ws-1",
-                agentId: agentIdFor("ws-1", "nivo"),
+                agentId: NIVO_ID,
                 conversationId: null,
                 workItemId: null,
                 audience: "internal",
@@ -60,6 +61,14 @@ describe("EngineDoorService", () => {
             "agent.turn",
             { to: "a" },
         )
+    })
+
+    it("calls the gateway as the seeded nivo agent of the workspace, and refuses when the workspace has none", async () => {
+        const { door, gateway } = await build(undefined, [], [])
+        await expect(door.doorApi(binding()).call("ai.agent.turn", {})).rejects.toMatchObject({
+            code: EntityEngineDoorErrorCode.NoAgent,
+        })
+        expect(gateway.call).not.toHaveBeenCalled()
     })
 
     it("maps a gateway refusal to a door failure", async () => {

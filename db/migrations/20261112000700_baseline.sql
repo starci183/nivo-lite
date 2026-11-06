@@ -29089,3 +29089,31 @@ ALTER TABLE public.jobs ADD CONSTRAINT jobs_failure_class_check
 ALTER TABLE public.jobs ADD CONSTRAINT jobs_parked_check
     CHECK ((status = 'failed_awaiting_fix') = (parked_at IS NOT NULL));
 CREATE INDEX jobs_parked_idx ON public.jobs (parked_at) WHERE status = 'failed_awaiting_fix';
+
+-- ---- the internal nivo agent: every workspace holds one agents row the declared jobs call the NIVO MCP door as ----
+-- A job's door call is judged by the gateway against the grants of an agents row (mcp_tool_grants, mcp_call_log). The row is laid down
+-- when the workspace row is, never on first use, and holds exactly the door tools of the declared jobs (chat.send; ai.agent.turn and
+-- ai.agent.history as the agent connector's turn and history). It is paused: it speaks to nobody and is no persona in any list.
+INSERT INTO public.modules (key, sort_order, status, category, audience, knowledge_folder, workbench, default_operating_mode, definition, multi_instance)
+VALUES ('nivo', 0, 'stable', 'platform', 'internal', 'nivo', NULL, 'autopilot', '{}', false)
+ON CONFLICT (key) DO NOTHING;
+
+CREATE FUNCTION public.workspaces_nivo_agent() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'public'
+    AS $$
+declare
+  v_agent uuid;
+begin
+  insert into public.agents (workspace_id, module, name, handle, role, instructions, status)
+  values (new.id, 'nivo', 'Nivo', 'nivo', 'Runs the declared jobs of the modules',
+          'Internal. Calls only the door tools the declared jobs of the modules name.', 'paused')
+  returning id into v_agent;
+  insert into public.mcp_tool_grants (workspace_id, agent_id, tool, mode)
+  select new.id, v_agent, tool, 'auto'
+  from unnest(array['chat.send', 'agent.turn', 'agent.history']) as tool;
+  return null;
+end;
+$$;
+
+CREATE TRIGGER workspaces_nivo_agent AFTER INSERT ON public.workspaces FOR EACH ROW EXECUTE FUNCTION public.workspaces_nivo_agent();

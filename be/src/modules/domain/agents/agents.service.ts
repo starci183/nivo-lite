@@ -1,4 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common"
+import { Not } from "typeorm"
 import type { EntityManager, UpdateResult } from "typeorm"
 import { WorkspaceMembersService, isManagerRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -61,6 +62,9 @@ const AGENT_LIMIT = 200
 /** The agents newest columns the lists and finders order by: oldest first, the id as tie-break. */
 const OLDEST_FIRST = { createdAt: "ASC", id: "ASC" } as const
 
+/** The module of the internal agent every workspace is seeded with: it runs jobs and is no persona, so no list shows it. */
+const INTERNAL_MODULE = "nivo"
+
 /** An agent id: anything else that names an agent is a department (module key). */
 const AGENT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
 
@@ -84,7 +88,7 @@ export class AgentsService {
     async list(userId: string, workspaceId: string, module: OptionalId = null): Promise<ReadonlyArray<AgentSummary>> {
         await this.members.require(userId, workspaceId)
         const rows = await this.entityManager.find(AgentEntity, {
-            where: module === null ? { workspaceId } : { workspaceId, module },
+            where: module === null ? { workspaceId, module: Not(INTERNAL_MODULE) } : { workspaceId, module },
             order: OLDEST_FIRST,
             take: AGENT_LIMIT,
         })
