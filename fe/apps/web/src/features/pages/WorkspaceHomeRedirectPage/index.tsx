@@ -15,9 +15,9 @@ interface WorkspaceHomeRedirectPageProps {
     readonly workspaceId: string
 }
 
-/** The front address of a workspace forwards to its dashboard. */
+/** The front address of a workspace forwards to the agents page. */
 export const WorkspaceHomeRedirectPage = async (props: WorkspaceHomeRedirectPageProps): Promise<ReactElement> =>
     navigation.redirect({
-        href: workspaceHref(props.workspaceId, CONSOLE_ROUTES.dashboard),
+        href: workspaceHref(props.workspaceId, CONSOLE_ROUTES.workspaceHome),
         locale: (await getLocale()) === "en" ? "en" : "vi",
     })

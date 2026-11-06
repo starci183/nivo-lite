@@ -6,7 +6,7 @@ import { useAgentChat, useAgentChatCopy, useAgentChatIsPhone } from "@/hooks/age
 import { useSlotLabels } from "@/hooks/slot"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
-import { AGENTS_ROUTE, agentChatHref, leadHref, workspaceHref } from "@/modules/routes"
+import { AGENTS_ROUTE, agentChatHref, workspaceHref } from "@/modules/routes"
 import { AgentChatBase } from "./component"
 import type { AgentChatTab } from "./component"
 
@@ -86,7 +86,6 @@ export const AgentChat = (props: AgentChatProps) => {
                 send: (prompt) => void chat.send(prompt),
                 start: () => void chat.start(),
                 select: chat.select,
-                openLead: () => router.push(workspaceHref(workspaceId, leadHref(chat.leadId ?? ""))),
                 closeWelcome,
             }}
         />

@@ -91,7 +91,7 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                 ariaLabel: header.name === "" ? header.typeName : header.name,
                 crumbLabel: ts("crumbLabel"),
                 crumbs: [
-                    { id: "home", label: ts("crumbHome"), href: workspaceHref(workspaceId, APP_ROUTES.dashboard) },
+                    { id: "home", label: ts("crumbHome"), href: workspaceHref(workspaceId, APP_ROUTES.workspaceHome) },
                     { id: "modules", label: t("catalogTitle"), href: workspaceHref(workspaceId, AGENTS_ROUTE) },
                     isLoading
                         ? { id: "agent", label: "", isLoading: true }

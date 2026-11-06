@@ -70,7 +70,7 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
                 },
                 crumbLabel: t("crumbLabel"),
                 crumbHome: t("crumbHome"),
-                homeHref: workspaceHref(workspaceId, APP_ROUTES.dashboard),
+                homeHref: workspaceHref(workspaceId, APP_ROUTES.workspaceHome),
                 title: t("title"),
                 description: t("description"),
                 eventsTitle: t("eventsTitle"),

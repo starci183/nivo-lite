@@ -55,7 +55,7 @@ export const ConnectionsFrame = (props: ConnectionsFrameProps) => {
                     {
                         id: "home",
                         label: shell("crumbHome"),
-                        href: workspaceHref(workspaceId, CONSOLE_ROUTES.dashboard),
+                        href: workspaceHref(workspaceId, CONSOLE_ROUTES.workspaceHome),
                     },
                     list.openName === null
                         ? { id: "connections", label: t("title") }

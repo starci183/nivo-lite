@@ -25,7 +25,7 @@ export const useOpenWorkspace = (): OpenWorkspace => {
             setOpeningId(card.id)
             startTransition(() => {
                 if (card.state !== "active") return router.push(workspacePaymentPath(card.id))
-                router.push(workspaceHref(card.id, APP_ROUTES.chat))
+                router.push(workspaceHref(card.id, APP_ROUTES.workspaceHome))
             })
         },
         openingId,

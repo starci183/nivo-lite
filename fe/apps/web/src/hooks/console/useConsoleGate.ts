@@ -4,10 +4,10 @@ import { useEffect } from "react"
 import { useMutateStartFirstWorkspaceSwr, useQueryMyWorkspacesSwr } from "@/hooks/swr"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
-import { workspaceHref, workspacePaymentPath, workspacesPath } from "@/modules/routes"
+import { APP_ROUTES, workspaceHref, workspacePaymentPath, workspacesPath } from "@/modules/routes"
 import { rememberWorkspaceCookie } from "@/modules/storage"
 import type { ConsoleSessionView } from "@/modules/types"
-import { OFFICE_ROUTE, UNPAID_WORKSPACE_STATES } from "./console.shared"
+import { UNPAID_WORKSPACE_STATES } from "./console.shared"
 import { useConsoleSessionRead } from "./useConsoleSessionRead"
 
 /** What the console gate reads to decide whether the workspace of the address may be worked in. */
@@ -33,7 +33,7 @@ const consoleExitOf = (input: ConsoleExitInput): string | undefined => {
     if (memberships === undefined) return undefined
     if (memberships.length === 0) {
         if (first === undefined) return undefined
-        return first === null ? workspacesPath("none") : workspaceHref(first, OFFICE_ROUTE)
+        return first === null ? workspacesPath("none") : workspaceHref(first, APP_ROUTES.workspaceHome)
     }
     const current = memberships.find((entry) => entry.workspace.id === workspaceId)
     if (current === undefined) return undefined

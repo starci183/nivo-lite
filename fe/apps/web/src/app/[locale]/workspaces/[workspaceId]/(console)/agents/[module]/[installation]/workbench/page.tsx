@@ -1,12 +1,8 @@
 import type { ReactElement } from "react"
-import { InventoryWorkbenchPage as WorkbenchInventory } from "@/features/pages/InventoryWorkbenchPage"
 import { HiringWorkbenchPage as WorkbenchHiring } from "@/features/pages/HiringWorkbenchPage"
 import { BookingWorkbenchPage } from "@/features/pages/BookingWorkbenchPage"
-import { ShiftsWorkbenchPage as WorkbenchShifts } from "@/features/pages/ShiftsWorkbenchPage"
 import { AgentWorkbenchPage } from "@/features/pages/AgentWorkbenchPage"
 import type { WorkbenchComponent } from "@/features/pages/AgentWorkbenchPage"
-import { ContentWorkbenchPage as WorkbenchContent } from "@/features/pages/ContentWorkbenchPage"
-import { LeadGenWorkbenchPage as WorkbenchLeadGen } from "@/features/pages/LeadGenWorkbenchPage"
 import { VideoWorkbenchPage as WorkbenchVideo } from "@/features/pages/VideoWorkbenchPage"
 
 /** The document title of the workbench tab. */
@@ -23,13 +19,9 @@ type PageProps = {
 
 /** The workbench of each module, by the workbench key of its catalogue entry. A module without a line shows the pending state. */
 const WORKBENCHES: Readonly<Record<string, WorkbenchComponent>> = {
-    content: WorkbenchContent,
-    inventory: WorkbenchInventory,
     booking: BookingWorkbenchPage,
     video: WorkbenchVideo,
     hiring: WorkbenchHiring,
-    shifts: WorkbenchShifts,
-    lead_gen: WorkbenchLeadGen,
 }
 
 const first = (value: string | string[] | undefined): string | null =>

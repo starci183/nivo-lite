@@ -24,7 +24,7 @@ export const OnboardingReady = () => {
             }}
             on={{
                 enter: () => {
-                    router.push(workspaceHref(workspaceId, APP_ROUTES.chat))
+                    router.push(workspaceHref(workspaceId, APP_ROUTES.workspaceHome))
                 },
             }}
         />

@@ -32,7 +32,7 @@ export const AgentsCatalogPage = async (props: AgentsCatalogPageProps): Promise<
                     {
                         id: "home",
                         label: ts("crumbHome"),
-                        href: workspaceHref(props.workspaceId, APP_ROUTES.dashboard),
+                        href: workspaceHref(props.workspaceId, APP_ROUTES.workspaceHome),
                     },
                     { id: "modules", label: t("catalogTitle") },
                 ],

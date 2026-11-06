@@ -19,8 +19,6 @@ export interface AgentChatHeaderProps {
     readonly badge: string | null
     /** The takeover control, or null when the conversation cannot be taken over. */
     readonly takeover: { readonly label: string; readonly isPending: boolean } | null
-    /** The label of the open-the-lead control, or null when there is no lead. */
-    readonly openLeadLabel: string | null
     readonly setup: { readonly label: string; readonly href: string } | null
     /** The names of the button that opens the conversation history (a drawer on a phone) and of the menu. */
     readonly historyLabel: string
@@ -30,16 +28,12 @@ export interface AgentChatHeaderProps {
     readonly onBack: () => void
     readonly onHistory: () => void
     readonly onTakeover: () => void
-    readonly onOpenLead: () => void
 }
 
 /** The commands behind the menu: all of them on a phone, setup alone from the medium width. */
 const entriesOf = (props: AgentChatHeaderProps, isPhone: boolean): ReadonlyArray<DropdownMenuEntry> => [
     ...(isPhone && props.takeover !== null
         ? [{ id: "takeover", label: props.takeover.label, onAction: props.onTakeover }]
-        : []),
-    ...(isPhone && props.openLeadLabel !== null
-        ? [{ id: "lead", label: props.openLeadLabel, onAction: props.onOpenLead }]
         : []),
     ...(props.setup === null ? [] : [{ id: "setup", label: props.setup.label, href: props.setup.href }]),
 ]
@@ -73,11 +67,6 @@ const WideCommands = (props: AgentChatHeaderProps) => (
                     onPress={props.onTakeover}
                 >
                     {props.takeover.label}
-                </Button>
-            )}
-            {props.openLeadLabel === null ? null : (
-                <Button intent="neutral" size="sm" onPress={props.onOpenLead}>
-                    {props.openLeadLabel}
                 </Button>
             )}
             {props.isTest && props.setup !== null ? (

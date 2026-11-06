@@ -1,17 +1,15 @@
 import {
     Badge,
     DescriptionList,
-    DropdownMenu,
     IconButton,
     IconTile,
     Page,
     Pane,
     PaneGrid,
-    Link,
     Quote,
     SurfaceCard,
 } from "@starci/grammar/common"
-import type { DropdownMenuEntry, ListBoxItem } from "@starci/grammar/common"
+import type { ListBoxItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { RowTrailing } from "@/components/composites/RowTrailing"
 import { PaneBlank } from "@/components/composites/PaneBlank"
@@ -37,7 +35,6 @@ export interface InboxFeedBaseProps {
             readonly errorBody: string
             readonly refresh: string
             readonly back: string
-            readonly moreActions: string
             readonly contentTitle: string
             readonly quoteSource: string
             readonly detailsTitle: string
@@ -48,7 +45,6 @@ export interface InboxFeedBaseProps {
                 readonly channel: string
                 readonly kind: string
                 readonly received: string
-                readonly lead: string
                 readonly duplicates: string
             }
         }
@@ -67,7 +63,6 @@ export interface InboxFeedBaseProps {
         readonly refresh: () => void
         readonly select: (id: string) => void
         readonly back: () => void
-        readonly go: (href: string) => void
         readonly openConnections: () => void
     }
 }
@@ -88,8 +83,6 @@ const PLACEHOLDER: ReadonlyArray<InboxRowView> = ["a", "b", "c", "d", "e"].map((
     line: "",
     details: [],
     duplicates: 0,
-    lead: null,
-    office: null,
 }))
 
 /** The glyph of the row: the money kinds and the order kind have their own, a website its globe, the rest a conversation. */
@@ -109,17 +102,6 @@ const itemsOf = (rows: ReadonlyArray<InboxRowView>): ReadonlyArray<ListBoxItem> 
         leading: <IconTile source={nivoIconSource(glyphOf(row), "leading")} tone="neutral" />,
         trailing: <RowTrailing meta={row.agoShort} badge={row.status} />,
     }))
-
-/** The command the state of the input asks for: decide it in the Office, else open the customer. */
-const commandsOf = (row: InboxRowView): { primary: InboxRowView["office"]; more: ReadonlyArray<DropdownMenuEntry> } => {
-    if (row.office !== null) {
-        return {
-            primary: row.office,
-            more: row.lead === null ? [] : [{ id: "lead", label: row.lead.label, href: row.lead.href }],
-        }
-    }
-    return { primary: row.lead, more: [] }
-}
 
 /** What the opened input draws below its head: the words, then the facts about it. */
 interface InboxDetailProps {
@@ -143,15 +125,6 @@ const InboxDetail = (props: InboxDetailProps) => {
         ...(row.duplicates > 0
             ? [{ id: "duplicates", term: copy.terms.duplicates, description: String(row.duplicates) }]
             : []),
-        ...(row.lead === null
-            ? []
-            : [
-                  {
-                      id: "lead",
-                      term: copy.terms.lead,
-                      description: <Link href={row.lead.href}>{row.lead.label}</Link>,
-                  },
-              ]),
     ]
     return (
         <>
@@ -197,29 +170,14 @@ const ListBody = (props: Props) => {
     )
 }
 
-/** The commands menu of the opened input, when it has commands beyond the primary one. */
-const menuOf = (entries: ReadonlyArray<DropdownMenuEntry>, label: string) =>
-    entries.length === 0
-        ? {}
-        : {
-              actions: (
-                  <DropdownMenu
-                      placement="bottom end"
-                      entries={entries}
-                      trigger={<IconButton intent="neutral" source={nivoIconSource("more", "leading")} label={label} />}
-                  />
-              ),
-          }
-
 /** The opened input: its skeleton while the read waits, the input once it is in, or nothing when none is open. */
 const openedOf = (view: Props["props"]): InboxRowView | null => {
     if (view.isWaiting) return PLACEHOLDER[0] ?? null
     return ("items" in view.slot ? view.slot.items : []).find((entry) => entry.id === view.selectedId) ?? null
 }
 
-/** The head band of the opened input: what it is, where from, its state, and its commands. */
+/** The head band of the opened input: what it is, where from, and its state. */
 const mainHeadOf = (view: Props["props"], row: InboxRowView) => {
-    const { copy } = view
     return {
         title: row.title,
         headingLevel: 1 as const,
@@ -227,7 +185,6 @@ const mainHeadOf = (view: Props["props"], row: InboxRowView) => {
         mark: <IconTile source={nivoIconSource(glyphOf(row), "leading")} tone="neutral" />,
         status: <Badge tone={row.status.tone}>{row.status.label}</Badge>,
         isLoading: view.isWaiting,
-        ...menuOf(commandsOf(row).more, copy.moreActions),
     }
 }
 
@@ -236,8 +193,6 @@ export const InboxFeedBase = (props: InboxFeedBaseProps) => {
     const view = props.props
     const { copy } = view
     const row = openedOf(view)
-    const primary = row === null || view.isWaiting ? null : commandsOf(row).primary
-    const command = primary === null ? undefined : { label: primary.label, onPress: () => props.on.go(primary.href) }
     return (
         <Page chrome="panes">
             <PaneGrid label={copy.grid} areas={view.grid.areas} columns={view.grid.columns} rows={view.grid.rows}>
@@ -268,11 +223,7 @@ export const InboxFeedBase = (props: InboxFeedBaseProps) => {
                             back={{ label: copy.back, onPress: props.on.back }}
                         />
                     ) : (
-                        <PaneHead
-                            {...mainHeadOf(view, row)}
-                            back={{ label: copy.back, onPress: props.on.back }}
-                            {...(command === undefined ? {} : { primary: command })}
-                        />
+                        <PaneHead {...mainHeadOf(view, row)} back={{ label: copy.back, onPress: props.on.back }} />
                     )}
                 </Pane>
                 {row === null ? (
@@ -285,7 +236,7 @@ export const InboxFeedBase = (props: InboxFeedBaseProps) => {
                     </Pane>
                 ) : (
                     <Pane area="main" scroll label={copy.detailLabel}>
-                        <PaneBody {...(command === undefined ? {} : { phonePrimary: command })}>
+                        <PaneBody>
                             <InboxDetail row={row} copy={copy} isWaiting={view.isWaiting} />
                         </PaneBody>
                     </Pane>

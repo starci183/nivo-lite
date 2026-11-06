@@ -18,7 +18,11 @@ export const BrainErrorPage = (props: BrainErrorPageProps) => {
         <BrainErrorPageBase
             props={{
                 crumbs: [
-                    { id: "home", label: t("crumbHome"), href: workspaceHref(workspaceId, CONSOLE_ROUTES.dashboard) },
+                    {
+                        id: "home",
+                        label: t("crumbHome"),
+                        href: workspaceHref(workspaceId, CONSOLE_ROUTES.workspaceHome),
+                    },
                     { id: "brain", label: title },
                 ],
                 title,

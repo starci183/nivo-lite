@@ -2,8 +2,7 @@
 export const APP_ROUTES = {
     home: "/",
     login: "/login",
-    dashboard: "/dashboard",
-    chat: "/chat",
+    workspaceHome: "/agents",
     account: "/account",
     profile: "/profile",
     workspaceNew: "/workspaces/new",
@@ -21,7 +20,7 @@ export {
     workspacesPath,
 } from "./auth-routes"
 export { ADMIN_ROUTES, adminListPath, adminWorkspacePath } from "./admin-routes"
-export { pathInWorkspace, workspaceHref, workspaceLinkOf } from "./workspace-href"
+export { pathInWorkspace, workspaceHref } from "./workspace-href"
 export { openWorkspaceId, workspaceIdOfAddress } from "./workspace-address"
 export {
     creditsPath,
@@ -40,15 +39,12 @@ export {
     agentChatHref,
     agentProfileHref,
     authoritySectionPath,
-    leadFlowHref,
-    leadHref,
-    responsibilitiesHref,
     teamInviteHref,
     workItemHref,
     zaloConnectionHref,
     zaloReturnPath,
 } from "./console-routes"
-export { AUTOMATION_ROUTES, newModulePath } from "./automations-routes"
+export { AUTOMATION_ROUTES } from "./automations-routes"
 export {
     BRAIN_PARTS,
     BRAIN_PART_TABS,

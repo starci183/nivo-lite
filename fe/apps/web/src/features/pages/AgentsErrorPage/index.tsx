@@ -24,7 +24,7 @@ export const AgentsErrorPage = (props: AgentsErrorPageProps) => {
     const known = isModuleKey(module) ? module : null
     const moduleName = useModuleName(known)
     const typeName = moduleName || t("catalogTitle")
-    const home = { id: "home", label: ts("crumbHome"), href: workspaceHref(workspaceId, APP_ROUTES.dashboard) }
+    const home = { id: "home", label: ts("crumbHome"), href: workspaceHref(workspaceId, APP_ROUTES.workspaceHome) }
     const agents = { id: "modules", label: t("catalogTitle"), href: workspaceHref(workspaceId, AGENTS_ROUTE) }
     const titles = {
         catalog: t("catalogTitle"),
