@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import { InjectJobClaims } from "@modules/platform/jobs"
 import type { ClaimedJob, JobClaims, ParkWrite } from "@modules/platform/jobs"
 import { classifyFailure } from "@modules/platform/queue"
@@ -6,8 +6,8 @@ import { isModuleJobPayload, MODULE_JOBS_QUEUE } from "@modules/queues/module-jo
 import { DOOR_PORT_ID } from "@nivo-lite/agent-sdk/mutation"
 import type { JobContext, JobDefinition } from "@nivo-lite/agent-sdk/mutation"
 import { runDeclaredJob } from "./declared-job.policy"
-import { InjectEngineFailureAlerts, InjectEntityEngineOptions } from "./entity-engine.decorators"
-import type { EngineFailureAlerts } from "./entity-engine.contracts"
+import { InjectEngineDoor, InjectEngineFailureAlerts, InjectEntityEngineOptions } from "./entity-engine.decorators"
+import type { EngineDoorProvider, EngineFailureAlerts, JobPorts, RunIn } from "./entity-engine.contracts"
 import type { EntityEngineOptions } from "./entity-engine.options"
 import { EntityEngineService } from "./entity-engine.service"
 import { EntityPortsService } from "./entity-ports.service"
@@ -31,6 +31,7 @@ export class ModuleJobRunnerService {
         @InjectEngineFailureAlerts() private readonly alerts: EngineFailureAlerts,
         @InjectEntityEngineOptions() private readonly options: EntityEngineOptions,
         @InjectJobClaims() private readonly claims: JobClaims,
+        @Optional() @InjectEngineDoor() private readonly door: EngineDoorProvider | null = null,
     ) {
         this.jobs = new Map(this.options.jobs.map((job) => [job.name, job]))
     }
@@ -89,8 +90,7 @@ export class ModuleJobRunnerService {
             effectKey: (step) => `${claimed.jobId}:${step}`,
         }
         if (Object.values(job.ports).some((port) => port.id === DOOR_PORT_ID)) {
-            const ports = this.ports.portsFor((use) => this.engine.scoped(payload.workspaceId, use), "job", job.ports)
-            await runDeclaredJob(job, ports, parsed.data, context)
+            await runDeclaredJob(job, this.doorPortsOf(job, payload.workspaceId, context), parsed.data, context)
             return
         }
         await this.engine.scoped(payload.workspaceId, (tx) =>
@@ -101,5 +101,31 @@ export class ModuleJobRunnerService {
                 context,
             ),
         )
+    }
+
+    /**
+     * The handles of a job that calls the door: every entity and outbox call opens a scope of its own, and the door handle refuses a call
+     * made while one is open. An app that registered no door provider refuses the job: it can call nothing out.
+     */
+    private doorPortsOf(job: JobDefinition, workspaceId: string, context: JobContext): JobPorts {
+        if (this.door === null)
+            throw new EntityEngineError({ code: EntityEngineErrorCode.PortUnprovided, params: { id: DOOR_PORT_ID } })
+        let open = 0
+        const runIn: RunIn = (use) =>
+            this.engine.scoped(workspaceId, async (tx) => {
+                open += 1
+                try {
+                    return await use(tx)
+                } finally {
+                    open -= 1
+                }
+            })
+        const doorNames = Object.entries(job.ports).filter(([, port]) => port.id === DOOR_PORT_ID)
+        const rest = Object.fromEntries(Object.entries(job.ports).filter(([, port]) => port.id !== DOOR_PORT_ID))
+        const handle = this.door.doorApi({ workspaceId, effectKey: context.effectKey, scopeOpen: () => open > 0 })
+        return {
+            ...this.ports.portsFor(runIn, "job", rest),
+            ...Object.fromEntries(doorNames.map(([name]) => [name, handle])),
+        }
     }
 }

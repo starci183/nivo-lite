@@ -3,9 +3,9 @@ import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { JOB_CLAIMS } from "@modules/platform/jobs"
 import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
 import { Secret } from "@modules/platform/config"
-import type { JobDefinition } from "@nivo-lite/agent-sdk/mutation"
-import type { EngineFailureAlerts } from "./entity-engine.contracts"
-import { ENGINE_FAILURE_ALERTS, ENTITY_ENGINE_OPTIONS } from "./entity-engine.decorators"
+import type { DoorApi, JobDefinition } from "@nivo-lite/agent-sdk/mutation"
+import type { EngineDoorProvider, EngineFailureAlerts } from "./entity-engine.contracts"
+import { ENGINE_DOOR, ENGINE_FAILURE_ALERTS, ENTITY_ENGINE_OPTIONS } from "./entity-engine.decorators"
 import type { EntityEngineOptions } from "./entity-engine.options"
 import { EntityEngineService } from "./entity-engine.service"
 import { EntityPortsService } from "./entity-ports.service"
@@ -27,7 +27,7 @@ const claimed = (payload: object): ClaimedJob => ({
 
 const payloadOf = (job: string) => ({ workspaceId: WS, job, input: { orderId: "o-1" } })
 
-const build = async (buildId?: string) => {
+const build = async (buildId?: string, withDoor = true) => {
     const engine = mock<EntityEngineService>()
     const ports = mock<EntityPortsService>()
     const plainInput = mock<JobDefinition["input"]>()
@@ -50,6 +50,9 @@ const build = async (buildId?: string) => {
     ports.portsFor.mockReturnValue({ handle: "ports" })
     const claims = mock<JobClaims>()
     const alerts = mock<EngineFailureAlerts>()
+    const handle = mock<DoorApi>()
+    const door = mock<EngineDoorProvider>()
+    door.doorApi.mockReturnValue(handle)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ModuleJobRunnerService,
@@ -65,9 +68,21 @@ const build = async (buildId?: string) => {
             },
             { provide: JOB_CLAIMS, useValue: claims },
             { provide: ENGINE_FAILURE_ALERTS, useValue: alerts },
+            ...(withDoor ? [{ provide: ENGINE_DOOR, useValue: door }] : []),
         ],
     }).compile()
-    return { runner: moduleRef.get(ModuleJobRunnerService), engine, ports, plain, plainInput, calling, claims, alerts }
+    return {
+        runner: moduleRef.get(ModuleJobRunnerService),
+        engine,
+        ports,
+        plain,
+        plainInput,
+        calling,
+        claims,
+        alerts,
+        door,
+        handle,
+    }
 }
 
 describe("ModuleJobRunnerService", () => {
@@ -87,7 +102,7 @@ describe("ModuleJobRunnerService", () => {
     })
 
     it("gives every call of a job that calls the door a scoped transaction of its own", async () => {
-        const { runner, engine, ports, calling } = await build()
+        const { runner, engine, ports, calling, handle } = await build()
 
         await runner.run(claimed(payloadOf("sales.sendNotice")))
 
@@ -95,7 +110,42 @@ describe("ModuleJobRunnerService", () => {
         const runIn = ports.portsFor.mock.calls[0]?.[0]
         await expect(runIn?.((tx) => Promise.resolve(tx.workspaceId))).resolves.toBe(WS)
         expect(engine.scoped.mock.calls[0]?.[0]).toBe(WS)
-        expect(calling.run.mock.calls[0]?.slice(0, 2)).toEqual([{ handle: "ports" }, { orderId: "o-1" }])
+        expect(calling.run.mock.calls[0]?.slice(0, 2)).toEqual([{ handle: "ports", door: handle }, { orderId: "o-1" }])
+    })
+
+    it("hands a door job the door of the provider, bound to the workspace and the effect key, and no door port to the engine", async () => {
+        const { runner, ports, door, calling } = await build()
+
+        await runner.run(claimed(payloadOf("sales.sendNotice")))
+
+        expect(ports.portsFor.mock.calls[0]?.[2]).toEqual({})
+        const binding = door.doorApi.mock.calls[0]?.[0]
+        expect([binding?.workspaceId, binding?.effectKey("send")]).toEqual([WS, "j-1:send"])
+        expect(calling.run).toHaveBeenCalledTimes(1)
+    })
+
+    it("tells the door an engine scope is open only while a port call runs in one", async () => {
+        const { runner, ports, door } = await build()
+
+        await runner.run(claimed(payloadOf("sales.sendNotice")))
+
+        const binding = door.doorApi.mock.calls[0]?.[0]
+        const runIn = ports.portsFor.mock.calls[0]?.[0]
+        expect(binding?.scopeOpen()).toBe(false)
+        expect(await runIn?.(() => Promise.resolve(binding?.scopeOpen()))).toBe(true)
+        expect(binding?.scopeOpen()).toBe(false)
+        await expect(runIn?.(() => Promise.reject(new Error("boom")))).rejects.toThrow("boom")
+        expect(binding?.scopeOpen()).toBe(false)
+    })
+
+    it("parks a door job in an app that registered no door provider", async () => {
+        const { runner, calling, claims } = await build("build-1", false)
+        claims.park.mockResolvedValue(false)
+
+        await runner.run(claimed(payloadOf("sales.sendNotice")))
+
+        expect(calling.run).not.toHaveBeenCalled()
+        expect(claims.park).toHaveBeenCalledWith(expect.objectContaining({ reason: "ENTITY_ENGINE_PORT_UNPROVIDED" }))
     })
 })
 
