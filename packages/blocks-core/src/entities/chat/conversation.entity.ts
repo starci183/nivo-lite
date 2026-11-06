@@ -15,6 +15,7 @@ const MAX_LAST_TEXT = 142
 
 type ConversationFields = {
     readonly channel: FieldDef<"enum", false>
+    readonly leadId: FieldDef<"uuid", true>
     readonly connectionId: FieldDef<"uuid", true>
     readonly externalId: FieldDef<"text", true>
     readonly name: FieldDef<"text", false>
@@ -35,6 +36,7 @@ type ConversationFields = {
 
 const conversationFields: ConversationFields = {
     channel: field.enum({ of: LEAD_CHANNELS, default: { literal: "website" } }),
+    leadId: field.uuid({ nullable: true }),
     connectionId: field.uuid({ nullable: true }),
     externalId: field.text({ maxLength: MAX_ID, nullable: true }),
     name: field.text({ maxLength: MAX_LINE, searchable: true, default: "empty" }),
@@ -69,6 +71,7 @@ export const conversationEntity: EntityDefinition<ConversationFields> = defineEn
     indexes: [
         { name: "key", on: ["id"] },
         { name: "recent", on: [{ desc: "lastAt" }, { desc: "id" }] },
+        { name: "lead_recent", on: ["leadId", { desc: "lastAt" }, { desc: "id" }] },
         { name: "channel_recent", on: ["channel", { desc: "lastAt" }, { desc: "id" }] },
         { name: "status_recent", on: ["status", { desc: "lastAt" }, { desc: "id" }] },
         { name: "status_channel_recent", on: ["status", "channel", { desc: "lastAt" }, { desc: "id" }] },

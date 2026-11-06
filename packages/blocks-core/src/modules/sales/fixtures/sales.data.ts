@@ -1,3 +1,4 @@
+import { itemLinesOf, pricedLinesOf } from "../../../rules/sales/order-items"
 import type { MemoryState } from "../memory"
 import type { LeadRow, OrderRow } from "../sales.types"
 
@@ -48,14 +49,15 @@ const order = (
     id: string,
     orderNo: string,
     leadId: string | null,
-    items: string,
+    itemsText: string,
     amountVnd: number | null,
     status: OrderRow["status"],
 ): OrderRow => ({
     id,
     orderNo,
     leadId,
-    items,
+    items: { lines: pricedLinesOf(itemLinesOf(itemsText)) },
+    itemsText,
     note: "",
     amountVnd,
     status,

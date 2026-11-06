@@ -39,7 +39,8 @@ const orderRecord = (data: Readonly<Record<string, unknown>> = {}): RecordRow =>
     recordOf(ORDER, "4", {
         orderNo: "DH-20261105-0001",
         leadId: LEAD,
-        items: "2 x tea",
+        items: { lines: [{ name: "tea", qty: 2, unitVnd: 0, amountVnd: 0 }] },
+        itemsText: "2 x tea",
         note: "",
         amountVnd: 120_000,
         status: "draft",
@@ -103,6 +104,13 @@ describe("OrderEffectsService registration", () => {
     })
 })
 
+const TEA_AND_CAKE = {
+    lines: [
+        { name: "tea", qty: 2, unitVnd: 0, amountVnd: 0 },
+        { name: "cake", qty: 1, unitVnd: 0, amountVnd: 0 },
+    ],
+}
+
 const RECORD_PAYLOAD = {
     leadId: LEAD,
     items: [
@@ -114,7 +122,7 @@ const RECORD_PAYLOAD = {
 }
 
 describe("OrderEffectsService order.record", () => {
-    it("makes a draft for the customer, linked to it, in the text the order keeps its items in", async () => {
+    it("makes a draft for the customer, linked to it, with its lines and the text of them", async () => {
         const { executorOf, api, engine } = await build()
         api.get.mockResolvedValue(leadRecord("new"))
         api.insert.mockResolvedValue(ok(orderRecord()))
@@ -124,7 +132,13 @@ describe("OrderEffectsService order.record", () => {
         expect(engine.scoped).toHaveBeenCalledWith(WORKSPACE, expect.any(Function))
         expect(api.insert).toHaveBeenCalledWith(
             "sales.order",
-            { leadId: LEAD, items: "2 x tea, 1 x cake", amountVnd: 120_000, note: "Leave at the door" },
+            {
+                leadId: LEAD,
+                items: TEA_AND_CAKE,
+                itemsText: "2 x tea, 1 x cake",
+                amountVnd: 120_000,
+                note: "Leave at the door",
+            },
             { lead: LEAD },
         )
     })
@@ -138,7 +152,7 @@ describe("OrderEffectsService order.record", () => {
 
         expect(api.insert).toHaveBeenCalledWith(
             "sales.order",
-            { leadId: LEAD, items: "2 x tea, 1 x cake", amountVnd: null },
+            { leadId: LEAD, items: TEA_AND_CAKE, itemsText: "2 x tea, 1 x cake", amountVnd: null },
             { lead: LEAD },
         )
     })

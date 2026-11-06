@@ -40,7 +40,7 @@ const WAITING_VIEW: WaitingView = waitingViewOf(
     waitingOrders.map((order) => ({
         id: order.id,
         orderNo: order.orderNo,
-        items: order.items,
+        items: order.itemsText,
         amountVnd: order.amountVnd,
         customer: customerOf(order),
     })),

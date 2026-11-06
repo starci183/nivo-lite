@@ -12,8 +12,8 @@ const amount = z.number().nullable()
 const orderLine = z.object({
     name: text,
     qty: z.number(),
-    unitPriceVnd: z.number().optional(),
-    catalogueItemId: id.optional(),
+    unitVnd: z.number(),
+    amountVnd: z.number(),
 })
 
 /** A sales order. */
@@ -24,7 +24,8 @@ export const orderKind: DataKindDefinition = defineDataKind({
         id,
         orderNo: text,
         leadId: id,
-        items: z.array(orderLine).max(MAX_ENTRIES),
+        items: z.object({ lines: z.array(orderLine).max(MAX_ENTRIES) }),
+        itemsText: longText,
         amountVnd: amount,
         status: text,
         note: nullableText,

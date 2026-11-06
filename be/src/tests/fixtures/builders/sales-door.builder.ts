@@ -1,5 +1,6 @@
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
+import { itemLinesOf, pricedLinesOf } from "@nivo-lite/blocks-core/rules/sales"
 import { entityEngineEntities } from "@modules/domain/entity-engine"
 import { eachInOrder } from "@modules/platform/primitives"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
@@ -74,7 +75,15 @@ const order = (
     items: string,
     amountVnd: number | null,
     status: string,
-): RecordData => ({ orderNo, leadId, items, note: "", amountVnd, status })
+): RecordData => ({
+    orderNo,
+    leadId,
+    items: { lines: pricedLinesOf(itemLinesOf(items)) },
+    itemsText: items,
+    note: "",
+    amountVnd,
+    status,
+})
 
 /** Writes one record of a workspace, as the superuser the manager is. */
 export const saveRecord = async (

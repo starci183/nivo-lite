@@ -53,7 +53,7 @@ export const ordersWaitingRead: ReadDefinition = defineRead({
                       {
                           id: order.id,
                           orderNo: order.orderNo,
-                          items: order.items,
+                          items: order.itemsText,
                           amountVnd: order.amountVnd,
                           customer: buyer === undefined || buyer === null ? null : leadNameOf(buyer.data),
                       },

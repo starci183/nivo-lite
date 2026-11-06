@@ -204,7 +204,7 @@
                       "emptySearch": { "key": "orders_empty_search" },
                       "idPath": "id",
                       "titlePath": "orderNo",
-                      "descriptionPath": "items",
+                      "descriptionPath": "itemsText",
                       "badgePath": "status",
                       "selectParam": "order",
                       "searchParam": "orderQ"

@@ -32,11 +32,10 @@ CREATE INDEX "records_sales_order_lead_recent" ON public."records_sales_order" U
 CREATE INDEX "records_sales_order_amount" ON public."records_sales_order" USING btree (workspace_id, ((data->>'amountVnd')::bigint) DESC, id DESC);
 -- create_index public.records_sales_order:index:records_sales_order_status_amount: on workspace_id, data->>'status', data->>'amountvnd'desc, iddesc using btree
 CREATE INDEX "records_sales_order_status_amount" ON public."records_sales_order" USING btree (workspace_id, (data->>'status'), ((data->>'amountVnd')::bigint) DESC, id DESC);
--- create_index public.records_sales_order:index:records_sales_order_items_trgm_idx: on knowledge_folddata->>'items' using gin
-CREATE INDEX "records_sales_order_items_trgm_idx" ON public."records_sales_order" USING gin (public.knowledge_fold((data->>'items')) extensions.gin_trgm_ops);
 -- create_index public.records_sales_order:index:records_sales_order_note_trgm_idx: on knowledge_folddata->>'note' using gin
 CREATE INDEX "records_sales_order_note_trgm_idx" ON public."records_sales_order" USING gin (public.knowledge_fold((data->>'note')) extensions.gin_trgm_ops);
--- replace_check public.records_sales_order:constraint:records_sales_order_items_chk: items is the text of the lines now, not an object (hand-written: the planner compares a check by its name)
-ALTER TABLE public."records_sales_order" DROP CONSTRAINT "records_sales_order_items_chk";
-ALTER TABLE public."records_sales_order" ADD CONSTRAINT "records_sales_order_items_chk" CHECK ((data->>'items') IS NOT NULL AND (jsonb_typeof(data->'items') = 'string' AND char_length((data->>'items')) <= 20000)) NOT VALID;
-ALTER TABLE public."records_sales_order" VALIDATE CONSTRAINT "records_sales_order_items_chk";
+-- add_check public.records_sales_order:constraint:records_sales_order_items_text_chk: added NOT VALID, then validated
+ALTER TABLE public."records_sales_order" ADD CONSTRAINT "records_sales_order_items_text_chk" CHECK ((data->>'itemsText') IS NOT NULL AND (jsonb_typeof(data->'itemsText') = 'string' AND char_length((data->>'itemsText')) <= 20000)) NOT VALID;
+ALTER TABLE public."records_sales_order" VALIDATE CONSTRAINT "records_sales_order_items_text_chk";
+-- create_index public.records_sales_order:index:records_sales_order_items_text_trgm_idx: on knowledge_folddata->>'itemstext' using gin
+CREATE INDEX "records_sales_order_items_text_trgm_idx" ON public."records_sales_order" USING gin (public.knowledge_fold((data->>'itemsText')) extensions.gin_trgm_ops);

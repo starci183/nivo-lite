@@ -10,7 +10,7 @@ const LINE_MAX = 500
 const NOTE_MAX = 20_000
 
 /** The most item lines one recorded order holds. */
-const ITEMS_MAX = 200
+const ITEMS_MAX = 100
 
 /** The most a total may be, VND. */
 const AMOUNT_MAX = 1_000_000_000_000
@@ -29,13 +29,19 @@ export const ensureSchema: z.ZodObject<{
 /** What `order.record` carries: the customer, the item lines, the total and an optional note. */
 export const recordSchema: z.ZodObject<{
     leadId: z.ZodString
-    items: z.ZodArray<z.ZodObject<{ name: z.ZodString; qty: z.ZodNumber }>>
+    items: z.ZodArray<z.ZodObject<{ name: z.ZodString; qty: z.ZodNumber; unitVnd: z.ZodOptional<z.ZodNumber> }>>
     amountVnd: z.ZodNullable<z.ZodNumber>
     note: z.ZodOptional<z.ZodString>
 }> = z.object({
     leadId: z.string().min(1).max(ID_MAX),
     items: z
-        .array(z.object({ name: z.string().min(1).max(LINE_MAX), qty: z.number().positive() }))
+        .array(
+            z.object({
+                name: z.string().min(1).max(LINE_MAX),
+                qty: z.number().positive(),
+                unitVnd: z.number().int().min(0).max(AMOUNT_MAX).optional(),
+            }),
+        )
         .min(1)
         .max(ITEMS_MAX),
     amountVnd: z.number().int().min(0).max(AMOUNT_MAX).nullable(),

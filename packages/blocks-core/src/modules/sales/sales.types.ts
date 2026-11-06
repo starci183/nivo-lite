@@ -1,3 +1,4 @@
+import type { OrderItems } from "../../entities/sales/order.entity"
 import type { LeadStage, OrderStatus } from "../../rules/sales"
 
 /** A customer deal as the lead entity holds it. */
@@ -38,8 +39,10 @@ export interface OrderRow {
     readonly orderNo: string
     /** The customer, or null. */
     readonly leadId: string | null
-    /** What was ordered, as `2 x tea, 1 x cake`. */
-    readonly items: string
+    /** The lines of the order. */
+    readonly items: OrderItems
+    /** What was ordered, as `2 x tea, 1 x cake`: the text the lists show and search, a projection of the lines. */
+    readonly itemsText: string
     /** The delivery address and notes; empty when there are none. */
     readonly note: string
     /** The amount, VND, or null while a line has no price. */
