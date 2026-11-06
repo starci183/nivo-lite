@@ -62,7 +62,7 @@ const trailingOf = (row: ThreadListRow, words: RowWords): ReactNode => (
 const itemOf = (row: ThreadListRow, words: RowWords): ListBoxItem => ({
     id: row.id,
     label: row.name,
-    leading: <Avatar name={row.name} isDecorative />,
+    leading: <Avatar name={row.name} {...(row.avatar === "" ? {} : { src: row.avatar })} isDecorative />,
     ...(row.preview === "" ? {} : { description: row.preview }),
     trailing: trailingOf(row, words),
 })

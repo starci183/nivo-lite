@@ -9,6 +9,8 @@ export interface ThreadListRow {
     readonly id: string
     /** The name of the customer; the words for an unnamed visitor when the record has none. */
     readonly name: string
+    /** The link of the customer's picture the channel gave; empty when it gave none. */
+    readonly avatar: string
     /** The last words of the conversation, led by who said them; empty when there are none. */
     readonly preview: string
     /** When the conversation last moved, as the ISO 8601 text of the record; empty when it has none. */
@@ -52,6 +54,7 @@ const rowOf = (record: unknown, words: ThreadRowWords): ReadonlyArray<ThreadList
         {
             id,
             name: textOf(valueAt(record, "name")) || words.untitled,
+            avatar: textOf(valueAt(record, "avatarUrl")),
             preview: previewOf(record, handledBy, words),
             at: textOf(valueAt(record, "lastAt")),
             status: threadStatusOf(textOf(valueAt(record, "status"))),

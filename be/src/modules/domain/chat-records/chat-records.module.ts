@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { ChatConversationsService } from "./chat-conversations.service"
 import { ChatEntitiesService } from "./chat-entities.service"
 import { ChatMessagesService } from "./chat-messages.service"
+import { ChatProfilesService } from "./chat-profiles.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./chat-records.module-definition"
 
 @Module({})
@@ -13,8 +14,14 @@ export class ChatRecordsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), ChatEntitiesService, ChatConversationsService, ChatMessagesService],
-            exports: [ChatConversationsService, ChatMessagesService],
+            providers: [
+                ...(base.providers ?? []),
+                ChatEntitiesService,
+                ChatConversationsService,
+                ChatMessagesService,
+                ChatProfilesService,
+            ],
+            exports: [ChatConversationsService, ChatMessagesService, ChatProfilesService],
         }
     }
 }

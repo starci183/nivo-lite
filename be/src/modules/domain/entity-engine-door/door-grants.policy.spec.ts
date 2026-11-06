@@ -20,6 +20,7 @@ describe("door grants", () => {
         expect([...subject.DOOR_GRANTS].sort()).toEqual([
             "ai.agent.history",
             "ai.agent.turn",
+            "chat.profile",
             "chat.send",
             "ledger.append",
             "ledger.status",

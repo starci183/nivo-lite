@@ -32,6 +32,9 @@ type ConversationFields = {
     readonly frontAgentId: FieldDef<"uuid", true>
     readonly connectorPartyId: FieldDef<"text", true>
     readonly connectorPartyName: FieldDef<"text", true>
+    readonly avatarUrl: FieldDef<"text", true>
+    readonly profileAt: FieldDef<"timestamptz", true>
+    readonly profileTriedAt: FieldDef<"timestamptz", true>
 }
 
 const conversationFields: ConversationFields = {
@@ -53,6 +56,9 @@ const conversationFields: ConversationFields = {
     frontAgentId: field.uuid({ nullable: true }),
     connectorPartyId: field.text({ maxLength: MAX_ID, nullable: true }),
     connectorPartyName: field.text({ maxLength: MAX_LINE, nullable: true }),
+    avatarUrl: field.text({ maxLength: MAX_LINE, nullable: true }),
+    profileAt: field.timestamptz({ nullable: true }),
+    profileTriedAt: field.timestamptz({ nullable: true }),
 }
 
 /**

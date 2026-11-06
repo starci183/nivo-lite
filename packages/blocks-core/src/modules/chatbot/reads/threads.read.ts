@@ -26,6 +26,7 @@ export const THREADS: ListReadDefinition = listRead<ThreadRow>({
     fields: [
         "id",
         "name",
+        "avatarUrl",
         "channel",
         "status",
         "handledBy",

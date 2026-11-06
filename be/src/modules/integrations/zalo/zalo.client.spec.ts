@@ -206,6 +206,30 @@ describe("ZaloClient / userDisplayName", () => {
     })
 })
 
+describe("ZaloClient / userProfile", () => {
+    it("asks for the user detail and answers the trimmed name and picture link", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({
+            status: 200,
+            body: { data: { display_name: " Minh ", avatar: " https://zalo.test/a.png " } },
+        })
+
+        await expect(client.userProfile("access", "user-1")).resolves.toEqual({
+            name: "Minh",
+            avatarUrl: "https://zalo.test/a.png",
+        })
+    })
+
+    it("answers empty texts for what Zalo does not give", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValueOnce({ status: 200, body: { data: { user_alias: "Lan", avatar: 5 } } })
+        http.request.mockResolvedValueOnce({ status: 200, body: {} })
+
+        await expect(client.userProfile("access", "user-1")).resolves.toEqual({ name: "Lan", avatarUrl: "" })
+        await expect(client.userProfile("access", "user-1")).resolves.toEqual({ name: "", avatarUrl: "" })
+    })
+})
+
 describe("ZaloClient / sendCsImage", () => {
     it("sends the image as a media template with one image element", async () => {
         const { client, http } = await build()
