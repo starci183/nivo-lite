@@ -1,8 +1,6 @@
 import type { DynamicModule } from "@nestjs/common"
 import { ChatConversationsService } from "@modules/domain/chat-records"
 import { BookingChatLookupService } from "@modules/domain/bookings"
-import { LeadFlowStoreService } from "@modules/domain/lead-flows"
-import { LeadRecordsService } from "@modules/domain/leads"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { ModulesGraphqlModule } from "@features/api/modules"
 import { WorkbenchGraphqlModule } from "@features/api/workbench"
@@ -27,13 +25,7 @@ export const modulesModules = (): Array<DynamicModule> => [
         catalog: MODULE_CATALOG,
         // The capabilities that keep records naming an installation; each is an existing provider of the app.
         ports: {
-            recordSources: [
-                WorkItemsService,
-                ChatConversationsService,
-                BookingChatLookupService,
-                LeadFlowStoreService,
-                LeadRecordsService,
-            ],
+            recordSources: [WorkItemsService, ChatConversationsService, BookingChatLookupService],
         },
     }),
     ModulesGraphqlModule.register({}),

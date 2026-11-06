@@ -1,25 +1,18 @@
 import { createHash } from "node:crypto"
 import type { EntityManager } from "typeorm"
-import { publicApiEntities } from "@modules/domain/public-api"
 import { agentsEntities } from "@modules/domain/agents"
 import { apiKeysEntities } from "@modules/domain/api-keys"
 import { authorityRulesEntities } from "@modules/domain/authority-rules"
 import type { ChatConversationsService } from "@modules/domain/chat-records"
-import { inboundEventsEntities } from "@modules/domain/inbound-events"
 import { knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
-import { leadsEntities } from "@modules/domain/leads"
 import { workspacesEntities } from "@modules/domain/workspaces"
 
 const [AgentEntity] = agentsEntities
 const [AuthorityRuleEntity] = authorityRulesEntities
 
-const [PublicApiEntity] = publicApiEntities
-
 const [WorkspaceEntity] = workspacesEntities
 const [ApiKeyEntity] = apiKeysEntities
 
-const [InboundEventEntity] = inboundEventsEntities
-const [LeadEntity] = leadsEntities
 const [KnowledgeSourceEntity] = knowledgeSourcesEntities
 
 /** A new workspace already holds the default rules of the stable modules, so a proof sets its own rule over the default. */
@@ -83,19 +76,6 @@ export const persistPublicApiWorkspace = async (manager: EntityManager, identity
     })
 }
 
-/** An existing customer's need is intentionally more meaningful than the admission default. */
-export const persistPublicApiLead = async (manager: EntityManager, workspaceId: string, id: string): Promise<void> => {
-    await manager.insert(LeadEntity, {
-        id,
-        workspaceId: workspaceId,
-        contactName: "Existing API customer",
-        company: "Existing API company",
-        channel: "API",
-        need: "Retain the annual service contract",
-        email: `${id}@example.test`,
-    })
-}
-
 /** Every message scenario gets its own conversation, opened as the chat records open it; the answer is its id. */
 export const persistPublicApiConversation = async (
     chats: ChatConversationsService,
@@ -122,43 +102,7 @@ export interface PublicApiSourceFixture {
     readonly content: string
 }
 
-/** Retains the inbound identity and optional linked customer of an historical admission. */
-export interface PublicApiInboundFixture {
-    readonly id: string
-    readonly workspaceId: string
-    readonly channel: "manual"
-    readonly kind: "lead"
-    readonly senderName: string
-    readonly body: string
-    readonly externalRef: string
-    readonly eventId: string
-    readonly dedupeKey: string
-    readonly leadId?: string
-}
-
 /** Creates a historical text source under the scenario's existing workspace. */
 export const persistPublicApiSource = async (manager: EntityManager, source: PublicApiSourceFixture): Promise<void> => {
     await manager.insert(KnowledgeSourceEntity, source)
-}
-
-/** Creates an historical inbound row without inventing another domain identity during delivery. */
-export const persistPublicApiInbound = async (
-    manager: EntityManager,
-    inbound: PublicApiInboundFixture,
-): Promise<void> => {
-    await manager.insert(InboundEventEntity, inbound)
-}
-
-/** Reproduces an old admitted lead whose producer had no need-presence column. */
-export const markPublicApiBacklog = async (
-    manager: EntityManager,
-    workspaceId: string,
-    requestId: string,
-): Promise<void> => {
-    await manager
-        .createQueryBuilder(PublicApiEntity, "t")
-        .update()
-        .set({ needSupplied: null, payload: () => "payload - 'needSupplied'" })
-        .where("workspace_id = :workspaceId AND id = :requestId", { workspaceId, requestId })
-        .execute()
 }

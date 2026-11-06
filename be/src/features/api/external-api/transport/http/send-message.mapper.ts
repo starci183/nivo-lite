@@ -11,7 +11,6 @@ export const toSendMessageRequest = (
     authorization,
     text: input.text,
     conversationId: input.conversation_id,
-    leadId: input.lead_id,
     requireApproval: input.require_approval,
     idempotencyKey,
 })

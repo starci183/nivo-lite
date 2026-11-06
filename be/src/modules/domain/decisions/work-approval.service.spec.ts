@@ -1,12 +1,8 @@
 import { builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { ExecutionsService } from "@modules/domain/executions"
-import { AGENT_DIRECTORY, OfficeLinesService } from "@modules/domain/messages"
-import type { AgentDirectory, OptionalAgentIdentity } from "@modules/domain/messages"
-import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
-import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
 import { WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
 import type { WorkBranchDecider } from "@modules/domain/authority-rules"
+import { OfficeLinesService } from "@modules/domain/messages"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -78,34 +74,24 @@ const catalogDouble = mock<MessageCatalog>({
     }),
 })
 
-const build = async (waiting: WorkItem = waitingOf(), agent: OptionalAgentIdentity = null) => {
+const build = async (waiting: WorkItem = waitingOf()) => {
     const evidence = jest.fn().mockResolvedValue(undefined)
     const office = jest.fn().mockResolvedValue(undefined)
     const inbound = jest.fn().mockResolvedValue(undefined)
-    const agents = jest.fn().mockResolvedValue(agent)
     const markWaiting = jest.fn().mockResolvedValue(waiting)
-    const open = jest.fn().mockResolvedValue("exec-1")
-    const ensureFor = jest.fn().mockResolvedValue({ id: "resp-ensured" } satisfies Partial<ResponsibilityRecord>)
-    const markWaitingApproval = jest.fn().mockResolvedValue(undefined)
     const route = jest.fn().mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkApprovalService,
             { provide: MESSAGE_CATALOG, useValue: catalogDouble },
-            { provide: AGENT_DIRECTORY, useValue: mock<AgentDirectory>({ agentOfDepartment: agents }) },
             { provide: INBOUND_EVENT_STATUS, useValue: mock<InboundEventStatus>({ mark: inbound }) },
             { provide: WorkItemsService, useValue: mock<WorkItemsService>({ markWaiting }) },
-            { provide: ExecutionsService, useValue: mock<ExecutionsService>({ open }) },
             {
                 provide: ModuleCatalogService,
                 useValue: mock<ModuleCatalogService>({ nameOf: jest.fn().mockResolvedValue("Sales AI") }),
             },
             { provide: EvidenceService, useValue: mock<EvidenceService>({ log: evidence }) },
             { provide: OfficeLinesService, useValue: mock<OfficeLinesService>({ post: office }) },
-            {
-                provide: ResponsibilityJournalService,
-                useValue: mock<ResponsibilityJournalService>({ ensureFor, markWaitingApproval }),
-            },
             { provide: WORK_BRANCH_DECIDER, useValue: mock<WorkBranchDecider>({ route }) },
         ],
     }).compile()
@@ -114,11 +100,7 @@ const build = async (waiting: WorkItem = waitingOf(), agent: OptionalAgentIdenti
         evidence,
         office,
         inbound,
-        agents,
         markWaiting,
-        open,
-        ensureFor,
-        markWaitingApproval,
         route,
     }
 }
@@ -276,72 +258,16 @@ describe("WorkApprovalService", () => {
 })
 
 describe("WorkApprovalService", () => {
-    describe("ask", () => {
-        describe("the approval card of a follow-up", () => {
-            const followUp = (overrides: Partial<WorkItem> = {}): WorkItem =>
-                itemOf({ action: "send_follow_up", ...overrides })
+    describe("ask and the execution id", () => {
+        it.each([
+            ["an item with no card", null],
+            ["an item that already points at one", "exec-0"],
+        ])("keeps the execution id of %s", async (_name, executionId) => {
+            const { service, markWaiting } = await build()
 
-            it("creates the card for the responsibility of the customer, with the sales agent", async () => {
-                const built = await build(waitingOf(), { id: "agent-1", name: "Sales" })
+            await service.ask(ctx, itemOf({ execution_id: executionId }), proposalOf(), askOf())
 
-                await built.service.ask(ctx, followUp(), proposalOf({ draft: "Hi there" }), askOf())
-
-                expect(built.ensureFor).toHaveBeenCalledWith(ctx, "lead-1")
-                expect(built.agents).toHaveBeenCalledWith("ws-1", "sales", null)
-                expect(built.open).toHaveBeenCalledWith({
-                    workspaceId: "ws-1",
-                    responsibilityId: "resp-ensured",
-                    agentId: "agent-1",
-                    draft: "Hi there",
-                    workItemId: "item-1",
-                })
-                expect(built.markWaitingApproval).toHaveBeenCalledWith(ctx, "resp-ensured")
-                expect(built.markWaiting).toHaveBeenCalledWith(
-                    "item-1",
-                    expect.objectContaining({ executionId: "exec-1" }),
-                )
-            })
-
-            it("uses the responsibility the proposal names and an empty draft", async () => {
-                const built = await build()
-
-                await built.service.ask(
-                    ctx,
-                    followUp(),
-                    proposalOf({ fields: { responsibility_id: "resp-9" } }),
-                    askOf(),
-                )
-
-                expect(built.ensureFor).not.toHaveBeenCalled()
-                expect(built.open).toHaveBeenCalledWith({
-                    workspaceId: "ws-1",
-                    responsibilityId: "resp-9",
-                    agentId: null,
-                    draft: "",
-                    workItemId: "item-1",
-                })
-            })
-
-            it("asks for the customer's responsibility when the named one is blank", async () => {
-                const built = await build()
-
-                await built.service.ask(ctx, followUp(), proposalOf({ fields: { responsibility_id: "" } }), askOf())
-
-                expect(built.ensureFor).toHaveBeenCalledTimes(1)
-            })
-
-            it.each([
-                ["data is missing", followUp(), askOf({ missing: ["need"] }), null],
-                ["it already has a card", followUp({ execution_id: "exec-0" }), askOf(), "exec-0"],
-                ["the customer is unknown", followUp({ lead_id: null }), askOf(), null],
-            ])("creates no card when %s", async (_name, item, judgement, kept) => {
-                const built = await build()
-
-                await built.service.ask(ctx, item, proposalOf(), judgement)
-
-                expect(built.open).not.toHaveBeenCalled()
-                expect(built.markWaiting).toHaveBeenCalledWith("item-1", expect.objectContaining({ executionId: kept }))
-            })
+            expect(markWaiting).toHaveBeenCalledWith("item-1", expect.objectContaining({ executionId }))
         })
     })
 })
