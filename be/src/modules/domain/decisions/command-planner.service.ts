@@ -26,9 +26,9 @@ import type {
     WorkItem,
     WorkSpec,
 } from "./decisions.contracts"
+import { WorkLinesService } from "./work-lines.service"
 import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
-import { OfficeLinesService } from "@modules/domain/messages"
 import type {
     ChainPosition,
     ChainSubject,
@@ -62,14 +62,14 @@ export class CommandPlannerService {
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly modules: ModuleCatalogService,
         private readonly evidence: EvidenceService,
-        private readonly office: OfficeLinesService,
+        private readonly lines: WorkLinesService,
         private readonly agents: AgentDirectoryService,
         private readonly installations: InstallationRecordsService,
         private readonly chains: WorkItemsChainReadService,
     ) {}
 
     /**
-     * Validates the command and answers the work to run, or the refusal. The plan's `onInserted` hook writes the Office mirror
+     * Validates the command and answers the work to run, or the refusal. The plan's `onInserted` hook writes the team-chat line
      * line and the `command.sent` evidence once, and only when the engine really inserted the item.
      */
     async plan(
@@ -182,15 +182,21 @@ export class CommandPlannerService {
         return { ok: true, spec, depth: position.depth, inserted: () => inserted }
     }
 
-    /** The Office mirror line and the `command.sent` evidence of a command that became a work item. */
+    /** The team-chat line and the `command.sent` evidence of a command that became a work item. */
     private async announce(parts: AcceptedCommandParts, row: WorkItem, manager: EntityManager): Promise<void> {
         const { ctx, input, accepted, instance } = parts
         const toName = instanceLabel(await this.modules.nameOf(input.to, ctx.locale), instance?.name ?? null)
         const params = { to: toName, from: parts.sender, what: accepted.description[ctx.locale] }
         const body = this.catalog.get("command.mirror", params, ctx.locale)
         await this.safely(
-            () => this.office.post(ctx, { command: true, body, lead_id: row.lead_id, work_item_id: row.id }, manager),
-            WorkEngineLogEvent.OfficeFailed,
+            () =>
+                this.lines.say(ctx, {
+                    body,
+                    department: input.to,
+                    installationId: instance?.id ?? null,
+                    key: `command:${row.id}`,
+                }),
+            WorkEngineLogEvent.LineFailed,
         )
         const target = instance === null ? input.to : `${input.to}[${instance.name ?? instance.id}]`
         await this.safely(

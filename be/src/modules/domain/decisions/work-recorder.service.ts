@@ -18,16 +18,16 @@ import type {
     WorkContext,
     WorkItem,
 } from "./decisions.contracts"
+import { WorkLinesService } from "./work-lines.service"
 import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
-import { OfficeLinesService } from "@modules/domain/messages"
 import type { FinishPlan } from "./work-engine.contracts"
 import { InjectInboundEventStatus } from "./work-engine.decorators"
 import { WorkEngineLogEvent } from "./work-engine.log-events"
 import type { InboundEventStatus } from "./work-engine.port"
 
 @Injectable()
-/** What the engine tells people and other systems once an item changed: the decision log, the evidence log, the Office, the inbound event and the outbound event stream. */
+/** What the engine tells people and other systems once an item changed: the decision log, the evidence log, the team chat, the inbound event and the outbound event stream. */
 export class WorkRecorderService {
     constructor(
         @InjectLogger() private readonly logger: Logger,
@@ -37,7 +37,7 @@ export class WorkRecorderService {
         @InjectEventBus() private readonly eventBus: EventBus,
         private readonly modules: ModuleCatalogService,
         private readonly evidence: EvidenceService,
-        private readonly office: OfficeLinesService,
+        private readonly lines: WorkLinesService,
     ) {}
 
     /**
@@ -60,12 +60,7 @@ export class WorkRecorderService {
             department: done.department,
             action: done.action,
         }
-        const line = {
-            dept: done.department,
-            lead_id: done.lead_id,
-            work_item_id: done.id,
-            installation_id: done.installation_id,
-        }
+        const line = { department: done.department, installationId: done.installation_id }
         if (plan.path === "auto") {
             await this.evidence.decide(ctx, {
                 ...decision,
@@ -83,9 +78,10 @@ export class WorkRecorderService {
                 summary: res.summary,
                 evidence: res.detail ?? null,
             })
-            await this.office.post(ctx, {
+            await this.lines.say(ctx, {
                 ...line,
                 body: this.catalog.get("engine.auto", { dept, summary: res.summary }, ctx.locale),
+                key: `auto:${done.id}`,
             })
         } else {
             if (!decisionRecorded) {
@@ -101,9 +97,10 @@ export class WorkRecorderService {
                 summary: res.summary,
                 evidence: res.detail ?? null,
             })
-            await this.office.post(ctx, {
+            await this.lines.say(ctx, {
                 ...line,
                 body: this.catalog.get("engine.resumed", { user: plan.by.name, summary: res.summary }, ctx.locale),
+                key: `resumed:${done.id}`,
             })
         }
         await this.markInbound(ctx, done, "processed", done.lead_id)
@@ -129,12 +126,11 @@ export class WorkRecorderService {
             summary: body,
             evidence: note,
         })
-        await this.office.post(ctx, {
-            dept: item.department,
+        await this.lines.say(ctx, {
+            department: item.department,
+            installationId: item.installation_id,
             body,
-            lead_id: item.lead_id,
-            work_item_id: item.id,
-            installation_id: item.installation_id,
+            key: `rejected:${item.id}`,
         })
         await this.markInbound(ctx, item, "processed", null)
     }
@@ -203,7 +199,7 @@ export class WorkRecorderService {
     }
 
     /**
-     * An item failed: the log, the Office and the inbound event hear of it, and none of them can fail the failure. Only the work
+     * An item failed: the log, the team chat and the inbound event hear of it, and none of them can fail the failure. Only the work
      * the input started marks the input failed: a later step of its chain (the care message after a reconciled credit, say)
      * fails on its own work item and leaves the input where its own work put it.
      */
@@ -224,14 +220,13 @@ export class WorkRecorderService {
         )
         await this.safely(
             () =>
-                this.office.post(ctx, {
-                    dept: item.department,
+                this.lines.say(ctx, {
+                    department: item.department,
+                    installationId: item.installation_id,
                     body,
-                    lead_id: item.lead_id,
-                    work_item_id: item.id,
-                    installation_id: item.installation_id,
+                    key: `failed:${item.id}`,
                 }),
-            WorkEngineLogEvent.OfficeFailed,
+            WorkEngineLogEvent.LineFailed,
         )
         if (item.parent_id !== null) return
         await this.safely(() => this.markInbound(ctx, item, "failed", null), WorkEngineLogEvent.InboundStatusFailed)

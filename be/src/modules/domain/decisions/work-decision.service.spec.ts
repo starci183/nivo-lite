@@ -3,7 +3,6 @@ import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-
 import { Test } from "@nestjs/testing"
 import { ExecutionsService } from "@modules/domain/executions"
 import type { ExecutionRecordRow, ExecutionRow } from "@modules/domain/executions"
-import { MessagesService } from "@modules/domain/messages"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
 import { CLAIM_LEASE_SECONDS } from "@modules/domain/work-items"
@@ -108,8 +107,6 @@ const build = async (setup: Setup = {}) => {
     responsibilities.setStatus.mockResolvedValue(undefined)
     const leads = mock<LeadDirectory>()
     leads.require.mockResolvedValue({ id: "lead-1", contact_name: "Minh", channel: "zalo" })
-    const office = mock<MessagesService>()
-    office.postSystem.mockResolvedValue(undefined)
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `${key}()`) })
     const members = mock<WorkspaceMembersService>({ require, idOf: jest.fn().mockResolvedValue("member-1") })
     const bus = mock<CommandBusService>({ sendCommand })
@@ -133,7 +130,6 @@ const build = async (setup: Setup = {}) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: ResponsibilityJournalService, useValue: responsibilities },
             { provide: LEAD_DIRECTORY, useValue: leads },
-            { provide: MessagesService, useValue: office },
             { provide: WORK_BRANCH_DECIDER, useValue: branches },
         ],
     }).compile()
@@ -148,7 +144,6 @@ const build = async (setup: Setup = {}) => {
         require,
         tx,
         responsibilities,
-        office,
         members,
         decisions,
         engine,
@@ -341,9 +336,9 @@ describe("WorkDecisionService", () => {
             expect(tx.commits).toBe(1)
         })
 
-        it("settles the card, closes the responsibility, logs and posts the decision in one transaction", async () => {
+        it("settles the card, closes the responsibility, and logs the decision in one transaction", async () => {
             const settled = cardOf({ status: "approved", work_item_id: null, draft: "Hi Minh" })
-            const { service, tx, responsibilities, log, office, resumeWork } = await build({
+            const { service, tx, responsibilities, log, resumeWork } = await build({
                 card: legacyCard,
                 settled,
             })
@@ -362,12 +357,6 @@ describe("WorkDecisionService", () => {
                 },
                 anything(),
             )
-            expect(office.postSystem).toHaveBeenCalledWith({
-                workspaceId: "ws-1",
-                leadId: "lead-1",
-                manager: anything(),
-                body: "legacy.approvedMessage()",
-            })
         })
 
         it("reopens the responsibility of a rejected card and logs no draft", async () => {

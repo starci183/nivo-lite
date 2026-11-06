@@ -1,7 +1,6 @@
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { OfficeLinesService } from "@modules/domain/messages"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
 import { WorkItemsChainReadService } from "@modules/domain/work-items"
@@ -10,6 +9,7 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { WorkLinesService } from "./work-lines.service"
 import { CommandPlannerService } from "./command-planner.service"
 import type { CommandRefusal, SendCommandInput, WorkItem } from "./decisions.contracts"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
@@ -47,7 +47,7 @@ const build = async (stage: Served = serve()) => {
     answer(stage.queries, { agents, installations, chains })
     const served = { em: stage.em, agents, installations, chains }
     const log = jest.fn().mockResolvedValue(undefined)
-    const post = jest.fn<Promise<void>, Parameters<OfficeLinesService["post"]>>().mockResolvedValue(undefined)
+    const post = jest.fn<Promise<void>, Parameters<WorkLinesService["say"]>>().mockResolvedValue(undefined)
     const error = jest.fn<void, Parameters<Logger["error"]>>()
     const modules = mock<ModuleCatalogService>({
         entryOf: jest.fn((key: string) => Promise.resolve(MODULES[key] ?? null)),
@@ -61,7 +61,7 @@ const build = async (stage: Served = serve()) => {
             { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>({ get: jest.fn(plannerText) }) },
             { provide: ModuleCatalogService, useValue: modules },
             { provide: EvidenceService, useValue: mock<EvidenceService>({ log }) },
-            { provide: OfficeLinesService, useValue: mock<OfficeLinesService>({ post }) },
+            { provide: WorkLinesService, useValue: mock<WorkLinesService>({ say: post }) },
             { provide: AgentDirectoryService, useValue: agents },
             { provide: InstallationRecordsService, useValue: installations },
             { provide: WorkItemsChainReadService, useValue: chains },
@@ -148,7 +148,7 @@ describe("CommandPlannerService", () => {
                 manager.em,
             )
             expect(built.modules.entryOf).toHaveBeenCalledWith("chatbot")
-            expect(built.post).toHaveBeenCalledWith(ctx, expect.objectContaining({ command: true }), manager.em)
+            expect(built.post).toHaveBeenCalledWith(ctx, expect.objectContaining({ department: "chatbot" }))
             expect(built.log).toHaveBeenCalledWith(ctx, expect.objectContaining({ kind: "command.sent" }), manager.em)
         })
 
@@ -347,7 +347,12 @@ describe("CommandPlannerService", () => {
             const ids = { lead_id: "lead-1", work_item_id: "item-1" }
             const body = "@Sales <- Owner: classify"
             const sent = { kind: "command.sent", actor: "Owner", summary: "sales.classify_lead", evidence: "handoff" }
-            expect(built.post).toHaveBeenCalledWith(ctx, { command: true, body, ...ids }, built.em)
+            expect(built.post).toHaveBeenCalledWith(ctx, {
+                body,
+                department: "sales",
+                installationId: null,
+                key: "command:item-1",
+            })
             expect(built.log).toHaveBeenCalledWith(ctx, { ...ids, ...sent }, built.em)
         })
 
@@ -415,7 +420,7 @@ describe("CommandPlannerService", () => {
             await plan.spec.onInserted?.(rowOf())
 
             expect(built.error.mock.calls.map(([event]) => event)).toEqual([
-                WorkEngineLogEvent.OfficeFailed,
+                WorkEngineLogEvent.LineFailed,
                 WorkEngineLogEvent.EvidenceFailed,
             ])
         })

@@ -1,8 +1,6 @@
 import { builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ExecutionsService } from "@modules/domain/executions"
-import { AGENT_DIRECTORY, OfficeLinesService } from "@modules/domain/messages"
-import type { AgentDirectory, OptionalAgentIdentity } from "@modules/domain/messages"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
 import { WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
@@ -15,8 +13,10 @@ import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
 import { WorkApprovalService } from "./work-approval.service"
 import type { Judgement } from "./work-engine.contracts"
-import { INBOUND_EVENT_STATUS } from "./work-engine.decorators"
+import { INBOUND_EVENT_STATUS, WORK_AGENT_DIRECTORY } from "./work-engine.decorators"
 import type { InboundEventStatus } from "./work-engine.port"
+import type { OptionalAgentIdentity, WorkAgentDirectory } from "./work-lines.contracts"
+import { WorkLinesService } from "./work-lines.service"
 
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "An", locale: "en" }
 
@@ -92,7 +92,7 @@ const build = async (waiting: WorkItem = waitingOf(), agent: OptionalAgentIdenti
         providers: [
             WorkApprovalService,
             { provide: MESSAGE_CATALOG, useValue: catalogDouble },
-            { provide: AGENT_DIRECTORY, useValue: mock<AgentDirectory>({ agentOfDepartment: agents }) },
+            { provide: WORK_AGENT_DIRECTORY, useValue: mock<WorkAgentDirectory>({ agentOfDepartment: agents }) },
             { provide: INBOUND_EVENT_STATUS, useValue: mock<InboundEventStatus>({ mark: inbound }) },
             { provide: WorkItemsService, useValue: mock<WorkItemsService>({ markWaiting }) },
             { provide: ExecutionsService, useValue: mock<ExecutionsService>({ open }) },
@@ -101,7 +101,7 @@ const build = async (waiting: WorkItem = waitingOf(), agent: OptionalAgentIdenti
                 useValue: mock<ModuleCatalogService>({ nameOf: jest.fn().mockResolvedValue("Sales AI") }),
             },
             { provide: EvidenceService, useValue: mock<EvidenceService>({ log: evidence }) },
-            { provide: OfficeLinesService, useValue: mock<OfficeLinesService>({ post: office }) },
+            { provide: WorkLinesService, useValue: mock<WorkLinesService>({ say: office }) },
             {
                 provide: ResponsibilityJournalService,
                 useValue: mock<ResponsibilityJournalService>({ ensureFor, markWaitingApproval }),
@@ -157,11 +157,10 @@ describe("WorkApprovalService", () => {
                 evidence: "engine.limitReached(limit=₫1,000,amount=₫5,000)",
             })
             expect(office).toHaveBeenCalledWith(ctx, {
-                dept: "sales",
+                department: "sales",
+                installationId: "inst-1",
                 body: "engine.ask(dept=Sales AI,reason=engine.reason.over_authority(),summary=Quote)",
-                lead_id: "lead-1",
-                work_item_id: "item-1",
-                installation_id: "inst-1",
+                key: "ask:item-1",
             })
             expect(inbound).toHaveBeenCalledWith(ctx, "in-1", "needs_decision", "lead-1")
         })

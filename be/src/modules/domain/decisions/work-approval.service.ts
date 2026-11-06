@@ -2,17 +2,17 @@ import { Injectable, Optional } from "@nestjs/common"
 import { InjectWorkBranchDecider, isOverLimit } from "@modules/domain/authority-rules"
 import type { WorkBranchDecider } from "@modules/domain/authority-rules"
 import { ExecutionsService } from "@modules/domain/executions"
-import { InjectAgentDirectory, OfficeLinesService } from "@modules/domain/messages"
-import type { AgentDirectory } from "@modules/domain/messages"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
+import type { WorkAgentDirectory } from "./work-lines.contracts"
+import { WorkLinesService } from "./work-lines.service"
 import type { GateVerdict, OptionalAuthorityRule, Proposal, WorkContext, WorkItem } from "./decisions.contracts"
 import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
 import type { Judgement } from "./work-engine.contracts"
-import { InjectInboundEventStatus } from "./work-engine.decorators"
+import { InjectInboundEventStatus, InjectWorkAgentDirectory } from "./work-engine.decorators"
 import { formatVnd } from "./work-engine.policy"
 import type { InboundEventStatus } from "./work-engine.port"
 
@@ -23,17 +23,17 @@ const withEvidence = (summary: string, note: string): string =>
     note === "" ? summary : `${summary}${SEPARATOR}${note}`
 
 @Injectable()
-/** Puts an item in front of a person: the waiting state, the approval card of a follow-up, and the evidence, Office and inbound lines. */
+/** Puts an item in front of a person: the waiting state, the approval card of a follow-up, and the evidence, team-chat and inbound lines. */
 export class WorkApprovalService {
     constructor(
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        @InjectAgentDirectory() private readonly agents: AgentDirectory,
+        @InjectWorkAgentDirectory() private readonly agents: WorkAgentDirectory,
         @InjectInboundEventStatus() private readonly inbound: InboundEventStatus,
         private readonly items: WorkItemsService,
         private readonly executions: ExecutionsService,
         private readonly modules: ModuleCatalogService,
         private readonly evidence: EvidenceService,
-        private readonly office: OfficeLinesService,
+        private readonly lines: WorkLinesService,
         private readonly responsibilities: ResponsibilityJournalService,
         @Optional() @InjectWorkBranchDecider() private readonly branches?: WorkBranchDecider,
     ) {}
@@ -49,7 +49,7 @@ export class WorkApprovalService {
             .join(", ")
     }
 
-    /** The item waits for a decision; the person is told in the evidence log, the Office and the inbound status. */
+    /** The item waits for a decision; the person is told in the evidence log, the team chat and the inbound status. */
     async ask(ctx: WorkContext, item: WorkItem, proposal: Proposal, judgement: Judgement): Promise<WorkItem> {
         const { verdict, rule } = judgement
         const waiting = await this.items.markWaiting(item.id, {
@@ -74,16 +74,15 @@ export class WorkApprovalService {
             summary: `${reason}: ${proposal.summary}`,
             evidence: notes.length === 0 ? null : notes.join(SEPARATOR),
         })
-        await this.office.post(ctx, {
-            dept: waiting.department,
+        await this.lines.say(ctx, {
+            department: waiting.department,
+            installationId: waiting.installation_id,
             body: this.catalog.get(
                 "engine.ask",
                 { dept, reason, summary: withEvidence(proposal.summary, this.evidenceNote(ctx, proposal)) },
                 ctx.locale,
             ),
-            lead_id: waiting.lead_id,
-            work_item_id: waiting.id,
-            installation_id: waiting.installation_id,
+            key: `ask:${waiting.id}`,
         })
         if (judgement.branchDecisionId !== undefined) {
             await this.branches?.route({
@@ -99,7 +98,7 @@ export class WorkApprovalService {
     }
 
     /**
-     * Follow-up drafts keep using the existing approval card (the Office bubble, the lead page) when nothing is missing: the
+     * Follow-up drafts keep using the existing approval card (the lead page) when nothing is missing: the
      * card is created and the customer's responsibility moves to waiting for approval. Any other item keeps the card it has.
      */
     private async approvalCardFor(

@@ -9,11 +9,11 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import type { ActionEntry, Performed, Proposal, WorkContext, WorkItem } from "./decisions.contracts"
 import { EvidenceService } from "./evidence.service"
 import { ModuleCatalogService } from "./module-catalog.service"
-import { OfficeLinesService } from "@modules/domain/messages"
 import type { FinishPlan } from "./work-engine.contracts"
 import { WorkEngineLogEvent } from "./work-engine.log-events"
 import { INBOUND_EVENT_STATUS } from "./work-engine.decorators"
 import type { InboundEventStatus } from "./work-engine.port"
+import { WorkLinesService } from "./work-lines.service"
 import { WorkRecorderService } from "./work-recorder.service"
 
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "An", locale: "en" }
@@ -98,7 +98,7 @@ const build = async (found: ActionEntry | null = action): Promise<Built> => {
                 }),
             },
             { provide: EvidenceService, useValue: mock<EvidenceService>({ decide, log }) },
-            { provide: OfficeLinesService, useValue: mock<OfficeLinesService>({ post }) },
+            { provide: WorkLinesService, useValue: mock<WorkLinesService>({ say: post }) },
         ],
     }).compile()
     return { service: moduleRef.get(WorkRecorderService), decide, log, post, mark, bus, error }
@@ -140,11 +140,10 @@ describe("WorkRecorderService", () => {
                 evidence: "msg-1",
             })
             expect(built.post).toHaveBeenCalledWith(ctx, {
-                dept: "sales",
-                lead_id: "lead-1",
-                work_item_id: "item-1",
-                installation_id: "inst-1",
+                department: "sales",
+                installationId: "inst-1",
                 body: "engine.auto(Sales AI,Sent)",
+                key: "auto:item-1",
             })
             expect(built.bus.writes).toEqual([])
             expect(built.mark).toHaveBeenCalledWith(ctx, "in-1", "processed", "lead-1")
@@ -311,11 +310,10 @@ describe("WorkRecorderService", () => {
                 evidence: "too much",
             })
             expect(built.post).toHaveBeenCalledWith(ctx, {
-                dept: "sales",
+                department: "sales",
+                installationId: "inst-1",
                 body: "engine.rejected(Lan,Quote)",
-                lead_id: "lead-1",
-                work_item_id: "item-1",
-                installation_id: "inst-1",
+                key: "rejected:item-1",
             })
             expect(built.mark).toHaveBeenCalledWith(ctx, "in-1", "processed", null)
             expect(built.bus.writes[0]).toMatchObject({
@@ -345,11 +343,10 @@ describe("WorkRecorderService", () => {
                 summary: body,
             })
             expect(built.post).toHaveBeenCalledWith(ctx, {
-                dept: "sales",
+                department: "sales",
+                installationId: "inst-1",
                 body,
-                lead_id: "lead-1",
-                work_item_id: "item-1",
-                installation_id: "inst-1",
+                key: "failed:item-1",
             })
             expect(built.mark).toHaveBeenCalledWith(ctx, "in-1", "failed", null)
         })
@@ -372,7 +369,7 @@ describe("WorkRecorderService", () => {
             await built.service.failed(ctx, itemOf({ parent_id: "root-1", chain_id: "root-1", depth: 1 }), "boom")
 
             expect(built.log).toHaveBeenCalledWith(ctx, expect.objectContaining({ kind: "work.failed" }))
-            expect(built.post).toHaveBeenCalledWith(ctx, expect.objectContaining({ work_item_id: "item-1" }))
+            expect(built.post).toHaveBeenCalledWith(ctx, expect.objectContaining({ key: "failed:item-1" }))
             expect(built.mark).not.toHaveBeenCalled()
         })
 
@@ -386,7 +383,7 @@ describe("WorkRecorderService", () => {
 
             expect(built.error.mock.calls.map(([event]) => event)).toEqual([
                 WorkEngineLogEvent.EvidenceFailed,
-                WorkEngineLogEvent.OfficeFailed,
+                WorkEngineLogEvent.LineFailed,
                 WorkEngineLogEvent.InboundStatusFailed,
             ])
         })

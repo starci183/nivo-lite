@@ -6,6 +6,7 @@ import { appliesToAgent, judgeChange } from "./rule-settings.policy"
 
 const SUBJECT = Symbol("rule-settings.policy")
 
+const ROOM = "7f1c2d3e-4a5b-4c6d-8e9f-a0b1c2d3e4f5"
 const MEMBER = "11111111-1111-4111-8111-111111111111"
 const AGENT = "22222222-2222-4222-8222-222222222222"
 
@@ -67,7 +68,7 @@ describe("rule settings policy > the mode and the old limit", () => {
         const { judgeChange: judge } = await buildSubject()
         const change = changeOf({
             approver_roles: ["manager", "manager", "owner"],
-            approver_rooms: ["sales", "sales"],
+            approver_rooms: [ROOM, ROOM],
             approver_members: [MEMBER, MEMBER],
             approval_policy: "all",
             timeout_minutes: 60,
@@ -81,7 +82,7 @@ describe("rule settings policy > the mode and the old limit", () => {
                 limit_vnd: 5000,
                 settings: {
                     approver_roles: ["manager", "owner"],
-                    approver_rooms: ["sales"],
+                    approver_rooms: [ROOM],
                     approver_members: [MEMBER],
                     approval_policy: "all",
                     timeout_minutes: 60,
@@ -167,7 +168,7 @@ describe("rule settings policy > the unit, the policy and the time", () => {
 describe("rule settings policy > the group and the agents", () => {
     it.each([
         { name: "an unknown role", change: Object.assign(changeOf(), { approver_roles: ["admin"] }) },
-        { name: "a malformed room key", change: changeOf({ approver_rooms: ["Sales Room"] }) },
+        { name: "a room that is not a team-chat room id", change: changeOf({ approver_rooms: ["sales"] }) },
         { name: "a malformed member id", change: changeOf({ approver_members: ["anh-minh"] }) },
     ])("refuses a group with $name", async ({ change }) => {
         const { judgeChange: judge } = await buildSubject()

@@ -10,6 +10,7 @@ import type {
     OutboundAccessGate,
     WorkItemClosedHook,
 } from "./work-engine.port"
+import type { WorkAgentDirectory } from "./work-lines.contracts"
 
 /** Token of the inbound event status port; the app root binds it to the inbox capability. */
 export const INBOUND_EVENT_STATUS: unique symbol = Symbol("domain.decisions.inbound-event-status")
@@ -50,3 +51,10 @@ export const InjectWorkItemClosed = (): TypedParameterDecorator<WorkItemClosedHo
 
 /** Injects the raised-for-a-claim hook. Parameter type: WorkRaisedHook. */
 export const InjectWorkRaised = (): TypedParameterDecorator<WorkRaisedHook> => injector<WorkRaisedHook>(WORK_RAISED)
+
+/** Token of the port that names the agent of a department. */
+export const WORK_AGENT_DIRECTORY: unique symbol = Symbol("domain.decisions.work-agent-directory")
+
+/** Injects the port that names the agent of a department. Parameter type: WorkAgentDirectory. */
+export const InjectWorkAgentDirectory = (): TypedParameterDecorator<WorkAgentDirectory> =>
+    injector<WorkAgentDirectory>(WORK_AGENT_DIRECTORY)

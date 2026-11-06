@@ -5,7 +5,6 @@ import { AgentRunParkedAlertsService } from "./agent-run-parked-alerts.service"
 import { GraphWorkDecisionService } from "./graph-work-decision.service"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { AGENT_DIRECTORY, MessagesModule } from "@modules/domain/messages"
 import { ExecutionsModule } from "@modules/domain/executions"
 import { AuthorityModule } from "@modules/domain/authority"
 import { AuthorityRulesModule } from "@modules/domain/authority-rules"
@@ -41,7 +40,9 @@ import {
     LEAD_GEN_FLOW,
     MODULE_CATALOG_SOURCE,
     OUTBOUND_ACCESS_GATE,
+    WORK_AGENT_DIRECTORY,
 } from "./work-engine.decorators"
+import { WorkLinesService } from "./work-lines.service"
 import { WorkPerformersService } from "./work-performers.service"
 import { WorkRecorderService } from "./work-recorder.service"
 import { DurableWorkService } from "./durable-work.service"
@@ -51,7 +52,6 @@ const decisionOwners = (options: typeof OPTIONS_TYPE): Array<DynamicModule> => [
     AuthorityRulesModule.register({ isGlobal: false }),
     MemberGrantsModule.register({ isGlobal: false }),
     ExecutionsModule.register({ isGlobal: false }),
-    MessagesModule.register({ isGlobal: false, agentDirectory: options.ports.agentDirectory }),
     ResponsibilitiesModule.register({ isGlobal: false, agentDirectory: options.ports.agentDirectory }),
     WorkItemsModule.register({ isGlobal: false, ports: { leads: options.ports.workItemLeads } }),
 ]
@@ -76,7 +76,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 { provide: INBOX, useClass: InboxService },
                 { provide: AGENT_RUN_ITEM_VERDICTS, useExisting: AgentRunItemVerdictsService },
                 { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },
-                { provide: AGENT_DIRECTORY, useExisting: options.ports.agentDirectory },
+                { provide: WORK_AGENT_DIRECTORY, useExisting: options.ports.agentDirectory },
                 { provide: INBOUND_EVENT_STATUS, useClass: options.ports.inboundEventStatus },
                 { provide: LEAD_DIRECTORY, useExisting: options.ports.leadDirectory },
                 { provide: LEAD_GEN_FLOW, useExisting: options.ports.leadGenFlow },
@@ -107,6 +107,7 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 WorkEngineService,
                 WorkIntakeService,
                 WorkPerformersService,
+                WorkLinesService,
                 WorkRecorderService,
             ],
             exports: [

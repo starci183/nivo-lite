@@ -2,7 +2,6 @@ import { Injectable, Optional } from "@nestjs/common"
 import { InjectWorkBranchDecider } from "@modules/domain/authority-rules"
 import type { WorkBranchDecider } from "@modules/domain/authority-rules"
 import type { EntityManager } from "typeorm"
-import { MessagesService } from "@modules/domain/messages"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ExecutionsService } from "@modules/domain/executions"
@@ -49,7 +48,6 @@ export class WorkDecisionService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly responsibilities: ResponsibilityJournalService,
         @InjectLeadDirectory() private readonly leads: LeadDirectory,
-        private readonly office: MessagesService,
         @Optional() @InjectWorkBranchDecider() private readonly branches?: WorkBranchDecider,
     ) {}
 
@@ -186,12 +184,6 @@ export class WorkDecisionService {
                 },
                 tx,
             )
-            await this.office.postSystem({
-                workspaceId,
-                leadId: lead.id,
-                manager: tx,
-                body: this.catalog.get(`legacy.${request.decision}Message`, params, request.locale),
-            })
             return settled
         })
     }

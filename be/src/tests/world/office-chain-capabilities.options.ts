@@ -14,6 +14,7 @@ import {
     AuthorityRulesModule,
 } from "@modules/domain/authority-rules"
 import { EventsModule } from "@modules/domain/events"
+import { ChatRoomDirectoryModule } from "@modules/domain/chat-room-directory"
 import { MEMBER_GRANTS_ERROR_KINDS, MEMBER_GRANTS_MESSAGES, MemberGrantsModule } from "@modules/domain/member-grants"
 import { OfficeRoomDirectoryService } from "@modules/domain/office-rooms"
 import { StaffModule } from "@modules/domain/staff"
@@ -74,6 +75,7 @@ export const OFFICE_CHAIN_MODULES: Array<DynamicModule> = [
     WorkspaceMembersModule.register({ isGlobal: true, accounts: OFFICE_ACCOUNTS }),
     ModuleInstallationsModule.register({ isGlobal: true }),
     AuthorityRulesModule.register({ isGlobal: true }),
+    ChatRoomDirectoryModule.register({ isGlobal: true }),
     MemberGrantsModule.register({ isGlobal: true }),
     ApprovalRequestsModule.register({
         isGlobal: true,
