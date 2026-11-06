@@ -147,6 +147,14 @@ describe("the fake engine", () => {
         expect(world.settings[0]?.data).toMatchObject({ openclawTimeoutSec: 40, holdingMessage: "b" })
     })
 
+    it("treats a key that names no unique constraint as holding no record, so the upsert stores a new one", async () => {
+        const world = memoryWorld()
+        const api = settingsApi(world)
+        await api.upsert("scope_key", { scope: "chatbot", openclawTimeoutSec: 25, holdingMessage: "a" })
+        await api.upsert("no_such_key", { scope: "other", openclawTimeoutSec: 30, holdingMessage: "b" })
+        expect(world.settings).toHaveLength(2)
+    })
+
     it("count and page the conversations inside the windows of a query only", async () => {
         const source = threadsList(memoryWorld())
         const query = {

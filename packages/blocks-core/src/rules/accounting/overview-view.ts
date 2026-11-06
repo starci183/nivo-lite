@@ -200,6 +200,9 @@ export interface Ageing {
     }>
 }
 
+/** The three age buckets, as indexes into the words and the counts, which are tuples of three. */
+const BUCKET_INDEXES: readonly [0, 1, 2] = [0, 1, 2]
+
 /** The ageing of the open invoices drawn from the figures: three gauges on the scale of their sum. */
 export const ageingOf = (figures: FiguresRecord, words: AgeingWords): Ageing => {
     const counts: readonly [number, number, number] = [
@@ -210,11 +213,11 @@ export const ageingOf = (figures: FiguresRecord, words: AgeingWords): Ageing => 
     const sum = counts.reduce((total, count) => total + count, 0)
     return {
         total: words.total.replaceAll("{count}", String(sum)),
-        points: counts.map((count, index) => ({
+        points: BUCKET_INDEXES.map((index) => ({
             id: `d${index}`,
-            label: words.buckets[index] ?? "",
-            value: count,
-            valueLabel: words.count.replaceAll("{count}", String(count)),
+            label: words.buckets[index],
+            value: counts[index],
+            valueLabel: words.count.replaceAll("{count}", String(counts[index])),
         })),
     }
 }
