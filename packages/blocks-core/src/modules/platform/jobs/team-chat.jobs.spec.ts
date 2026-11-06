@@ -31,14 +31,14 @@ describe("the platform jobs", () => {
     })
 
     it("posts the report through the door tool with the run, the agent and the trigger", async () => {
-        const { calls, door } = doorOf({ ok: true, data: {} })
+        const { calls, door } = doorOf({ ok: true, output: {} })
         const input = POST_REPORT_INPUT.parse({ runId: ID, agentId: ID, trigger: "tag" })
         await POST_REPORT.run({ door }, input, CONTEXT)
         expect(calls).toEqual([{ tool: CHAT_POST_REPORT_TOOL, input }])
     })
 
     it("posts the approval card through the door tool", async () => {
-        const { calls, door } = doorOf({ ok: true, data: {} })
+        const { calls, door } = doorOf({ ok: true, output: {} })
         const input = POST_APPROVAL_INPUT.parse({ decisionId: ID })
         await POST_APPROVAL.run({ door }, input, CONTEXT)
         expect(calls).toEqual([{ tool: CHAT_POST_APPROVAL_TOOL, input }])
