@@ -376,7 +376,8 @@
                   "descriptionPath": "contact",
                   "badgePath": "tier",
                   "selectParam": "member",
-                  "searchParam": "q"
+                  "searchParam": "q",
+                  "avatar": true
                 },
                 "bind": {
                   "rows": {
@@ -1572,7 +1573,8 @@
           },
           "intent": "danger"
         }
-      ]
+      ],
+      "isHeadless": true
     },
     "bind": {
       "queue": {

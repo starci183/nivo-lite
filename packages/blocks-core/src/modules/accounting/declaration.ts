@@ -9,6 +9,7 @@ import { entriesRead, entryCountsRead, entryStatusCountsRead } from "./reads/ent
 import { entryRead } from "./reads/entry.read"
 import { figuresRead } from "./reads/figures.read"
 import { settingsRead } from "./reads/settings.read"
+import { questionCountRead, questionsRead } from "./reads/questions.read"
 import { weeklyRead } from "./reads/weekly.read"
 import { accountingSpecDocument } from "./specs/accounting.spec-document"
 
@@ -30,6 +31,8 @@ export const accountingModule: ModuleDeclaration = defineModule({
         figuresRead,
         weeklyRead,
         decisionsRead,
+        questionCountRead,
+        questionsRead,
         closeCheckRead,
         settingsRead,
     ],
