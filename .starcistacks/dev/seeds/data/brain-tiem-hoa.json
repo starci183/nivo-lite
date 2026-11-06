@@ -1,0 +1,42 @@
+{
+  "schema": "nivo/brain-seed@1",
+  "origin": "seed:tiem-hoa",
+  "documents": [
+    {
+      "title": "Giới thiệu và giờ mở cửa",
+      "topic": "Giới thiệu",
+      "visibility": "public",
+      "content": "# Tiệm hoa Nắng Mai\n\nTiệm hoa Nắng Mai là một tiệm hoa tươi mẫu dùng để thử NIVO: tên, địa chỉ và số điện thoại dưới đây là thông tin giả định, không phải một cửa hàng có thật.\n\n- Địa chỉ: 99 Đường Hoa Giấy, Phường An Bình, Quận Mẫu, Thành phố Mẫu.\n- Điện thoại: 0900 000 000 (số mẫu).\n- Chuyên: hoa bó, hoa lẻ, giỏ hoa, kệ hoa khai trương, kèm thiệp chúc mừng.\n\n## Giờ mở cửa thường ngày\n\n- Thứ Hai đến Chủ nhật: 7:30 đến 21:00.\n- Nhận đặt hoa qua tin nhắn cả ngày; đơn nhắn sau 21:00 được xử lý từ 7:30 sáng hôm sau.\n\n## Ngày lễ và Tết\n\n- 14/2, 8/3, 20/10: mở sớm từ 6:30 và đóng muộn lúc 22:00 vì nhiều khách đặt hoa.\n- 28 tháng Chạp: mở đến 18:00.\n- Từ 29 tháng Chạp đến hết mùng 3 Tết: tiệm nghỉ, không nhận giao hoa.\n- Mùng 4 Tết: mở lại từ 8:00.\n- Khách muốn nhận hoa đúng dịp Tết nên đặt trước ngày 25 tháng Chạp."
+    },
+    {
+      "title": "Sản phẩm và bảng giá",
+      "topic": "Sản phẩm",
+      "visibility": "public",
+      "content": "# Sản phẩm và bảng giá\n\nGiá đã gồm VAT. Hoa tươi theo mùa: nếu loại hoa hết, tiệm đề nghị loại thay thế cùng tầm giá và hỏi khách trước khi làm.\n\n## Hoa bó\n\n- Bó hồng đỏ 10 bông: 250.000 ₫\n- Bó hồng đỏ 20 bông: 450.000 ₫\n- Bó hướng dương 5 bông: 180.000 ₫\n- Bó cúc họa mi: 150.000 ₫\n\n## Hoa lẻ\n\n- Một cành hoa cúc nhỏ: 5.000 ₫ một cành\n- Một cành hồng đỏ: 15.000 ₫ một cành\n- Một cành hướng dương: 25.000 ₫ một cành\n\n## Giỏ hoa và kệ hoa\n\n- Giỏ hoa nhỏ: 350.000 ₫\n- Giỏ hoa chúc mừng: 800.000 ₫\n- Giỏ hoa lớn: 1.500.000 ₫\n- Kệ hoa khai trương: 2.500.000 ₫\n\n## Thiệp kèm hoa\n\n- Thiệp nhỏ viết tay: 2.000 ₫ một thiệp\n- Thiệp lớn in lời chúc: 10.000 ₫ một thiệp\n\nMột đơn có thể gồm nhiều món; tổng tiền là tổng giá các món cộng phí giao hàng (xem tài liệu Giao hàng)."
+    },
+    {
+      "title": "Giao hàng",
+      "topic": "Giao hàng",
+      "visibility": "public",
+      "content": "# Giao hàng\n\n## Khu vực và phí\n\n- Trong 5 km quanh tiệm (Phường An Bình và các phường kề bên): 20.000 ₫.\n- Từ 5 đến 10 km: 35.000 ₫.\n- Trên 10 km: 50.000 ₫; tiệm xác nhận lại với khách trước khi nhận đơn.\n- Đơn từ 500.000 ₫ trở lên: miễn phí giao trong 5 km.\n- Tiệm chưa giao ra ngoài Thành phố Mẫu.\n\n## Thời gian giao\n\n- Hoa lẻ, hoa bó nhỏ và giỏ nhỏ: giao trong khoảng 1 đến 2 giờ sau khi thanh toán xong, với đơn đặt trước 16:00.\n- Đơn đặt sau 16:00: giao trong tối hôm đó nếu còn trước 20:30, nếu không thì giao sáng hôm sau.\n- Giỏ hoa lớn và kệ hoa khai trương: đặt trước ít nhất 1 ngày để kịp chuẩn bị.\n- Ngày 14/2, 8/3, 20/10 và dịp Tết: đặt trước 2 ngày; giờ giao cụ thể do tiệm xác nhận.\n\n## Lưu ý\n\nKhách cho tên người nhận, số điện thoại người nhận, địa chỉ và khung giờ mong muốn. Nếu không gọi được người nhận, tiệm liên hệ lại với người đặt."
+    },
+    {
+      "title": "Thanh toán và đổi trả",
+      "topic": "Thanh toán",
+      "visibility": "public",
+      "content": "# Thanh toán và đổi trả\n\n## Thanh toán bằng chuyển khoản\n\n- Khi chốt đơn, tiệm gửi cho khách số tiền cần chuyển, thông tin tài khoản nhận và mã thanh toán của đơn.\n- Khách chuyển đúng số tiền và ghi đúng mã thanh toán của đơn vào nội dung chuyển khoản. Nhờ mã này hệ thống đối chiếu được khoản tiền với đơn và tiệm bắt đầu làm hoa.\n- Nếu khách quên ghi mã hoặc chuyển sai số tiền, nhân viên sẽ đối chiếu thủ công và có thể mất thêm thời gian; khách nhắn cho tiệm kèm ảnh chuyển khoản.\n- Tiệm chỉ nhận chuyển khoản vào tài khoản được gửi trong tin nhắn thanh toán của đơn.\n\n## Đổi trả và làm lại\n\n- Hoa bị dập nát, héo hoặc khác mô tả do lỗi của tiệm: tiệm làm lại hoặc hoàn tiền, theo lựa chọn của khách, nếu khách báo trong 24 giờ kèm ảnh.\n- Hủy đơn trước khi tiệm cắm hoa: hoàn 100% số tiền đã chuyển.\n- Hủy đơn sau khi đã cắm hoa hoặc in thiệp: hoàn 50%, vì hoa và thiệp đã làm riêng cho đơn.\n- Giao sai địa chỉ do khách cung cấp: tiệm giao lại và tính thêm phí giao.\n- Thiệp đã in lời chúc theo yêu cầu không đổi được, trừ khi tiệm in sai.\n- Tiền hoàn được chuyển về đúng tài khoản đã chuyển trong tối đa 3 ngày làm việc."
+    },
+    {
+      "title": "Quy trình xử lý đơn",
+      "topic": "Quy trình nội bộ",
+      "visibility": "internal",
+      "content": "# Quy trình xử lý đơn (nội bộ)\n\n## Các bước\n\n1. Hỏi khách: món hoa, số lượng, người nhận, địa chỉ, khung giờ, lời chúc trên thiệp.\n2. Tính tổng tiền theo bảng giá và phí giao; báo lại cho khách và tạo đơn.\n3. Gửi cho khách số tiền và mã thanh toán của đơn.\n4. Khi tiền đã khớp với đơn, báo bộ phận làm hoa và giữ khung giờ giao.\n5. Giao xong thì báo khách và nhắc khách phản hồi trong 24 giờ nếu có vấn đề.\n\n## Khi nào chuyển cho người xử lý\n\nChuyển cho nhân viên hoặc chủ tiệm, không tự quyết, khi:\n\n- khách phàn nàn, đòi hoàn tiền hoặc làm lại;\n- khách xin giảm giá vượt mức cho phép (xem tài liệu Cách trả lời khách và giới hạn giảm giá);\n- đặt loại hoa hoặc kiểu cắm không có trong bảng giá;\n- giao ngoài khu vực hoặc ngoài khung giờ đã công bố;\n- tiền chuyển sai số hoặc không có mã thanh toán;\n- khách bực bội, hoặc nội dung thiệp nhạy cảm.\n\n## Đơn từ 5.000.000 ₫ trở lên\n\nĐơn có tổng tiền từ 5.000.000 ₫ trở lên cần chủ tiệm duyệt trước khi báo giá chính thức cho khách và trước khi nhận tiền. Chatbot chỉ ghi nhận yêu cầu, báo khách rằng chủ tiệm đang xem và chuyển đơn cho chủ tiệm; không tự chốt."
+    },
+    {
+      "title": "Cách trả lời khách và giới hạn giảm giá",
+      "topic": "Hướng dẫn trả lời",
+      "visibility": "internal",
+      "content": "# Cách trả lời khách và giới hạn giảm giá (nội bộ)\n\n## Cách nói chuyện\n\n- Xưng hô lịch sự, ấm áp, ngắn gọn; gọi khách là anh hoặc chị nếu chưa biết tên.\n- Chỉ nói giá và chính sách có trong tài liệu công khai; không bịa giá, không hứa giờ giao sớm hơn bảng thời gian giao hàng.\n- Hết loại hoa khách chọn thì gợi ý loại thay thế cùng tầm giá và hỏi lại khách.\n- Không nhận thanh toán ngoài tài khoản được gửi trong tin nhắn thanh toán của đơn.\n\n## Giảm giá\n\n- Mức giảm tối đa chatbot được tự đồng ý là 10%, đúng bằng cấu hình `maxDiscountPct` của module Bán hàng (mặc định 10). Nếu chủ tiệm đổi cấu hình này, mức tối đa đổi theo.\n- Khách xin giảm giá: chỉ giảm khi khách mua nhiều hoặc là khách quen, và không quá mức tối đa.\n- Khách xin giảm vượt mức: không từ chối cứng, nói rằng sẽ nhờ chủ tiệm xem và chuyển đơn cho người xử lý.\n- Hoa lẻ 5.000 ₫ và thiệp nhỏ 2.000 ₫ không áp dụng giảm giá.\n- Đơn từ 5.000.000 ₫ trở lên luôn cần chủ tiệm duyệt, kể cả khi không có giảm giá."
+    }
+  ]
+}
