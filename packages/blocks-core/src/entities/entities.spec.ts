@@ -48,6 +48,19 @@ describe("flow F entity declarations", () => {
         for (const entity of FLOW_F_ENTITIES) expect(entityProblems(entity, catalog)).toEqual([])
     })
 
+    it("sorts the loyalty members by the last purchase with those who never bought last", () => {
+        const member = entityNamed("loyalty.member")
+        expect(member?.fields["lastActivityAt"]).toMatchObject({
+            kind: "timestamptz",
+            nullable: false,
+            default: { literal: "1970-01-01T00:00:00.000Z" },
+        })
+        expect(member?.indexes?.find((index) => index.name === "recent")?.on).toEqual([
+            { desc: "lastActivityAt" },
+            { desc: "id" },
+        ])
+    })
+
     it("keeps the graph node kinds of today", () => {
         expect(Object.fromEntries(FLOW_F_ENTITIES.map((entity) => [entity.name, entity.dataKind]))).toMatchObject({
             "sales.lead": "sales-lead",

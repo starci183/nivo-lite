@@ -30,7 +30,7 @@ export const MEMBERS_LIST: ListShape = {
         tier: { field: "tierKey", op: "eq", of: TIER_KEYS, open: true },
     },
     sort: {
-        recent: [["lastVisitAt", "desc"]],
+        recent: [["lastActivityAt", "desc"]],
         points: [["points", "desc"]],
         spend: [["lifetimeSpendVnd", "desc"]],
         name: [["name", "asc"]],
