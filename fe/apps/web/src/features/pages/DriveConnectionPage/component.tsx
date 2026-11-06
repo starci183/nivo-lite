@@ -26,7 +26,7 @@ export const DriveConnectionPageBase = (props: DriveConnectionPageBaseProps) => 
         mainLabel={props.props.mainLabel}
         rail={props.props.rail}
         head={<ConnectionPageHead kind="drive" />}
-        aside={<ConnectionPageRail kind="drive" />}
+        aside={<ConnectionPageRail />}
     >
         <ConnectionPageNotices kind="drive" />
         <ConnectionHealthTiles kind="drive" />

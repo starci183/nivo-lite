@@ -42,7 +42,6 @@ export type {
     PublicSlotType,
 } from "./graphql/index"
 export type {
-    AgentChatTurnStatusType,
     AgentGenerationStatusType,
     AgentKnowledgeLensType,
     BillingPlanType,
@@ -264,7 +263,7 @@ export type { SubmitTelegramCodeMutation } from "./graphql/__generated__/graphql
 export type { SubmitTelegramPasswordMutation, SubmitTemplateListingMutation } from "./graphql/__generated__/graphql"
 export type { SyncMcpConnectorMutation } from "./graphql/__generated__/graphql"
 export type { TakeOverAgentChatConversationMutation } from "./graphql/__generated__/graphql"
-export type { TelegramConnectionEventsQuery, TelegramConnectionPageQuery } from "./graphql/__generated__/graphql"
+export type { TelegramConnectionPageQuery } from "./graphql/__generated__/graphql"
 export type { TelegramUserReadyQuery, TemplateUpdateOffersQuery } from "./graphql/__generated__/graphql"
 export type { TestDatabaseQuery, TestImapConnectionQuery } from "./graphql/__generated__/graphql"
 export type { TestOpenApiOperationQuery, TestWebhookConnectionMutation } from "./graphql/__generated__/graphql"
@@ -281,7 +280,7 @@ export type { VideoSourcesQuery, WantConnectorMutation } from "./graphql/__gener
 export type { WorkspaceAgentWorkQuery } from "./graphql/__generated__/graphql"
 export type { WorkspaceInvitesQuery, WorkspaceMembersQuery, WorkspaceShellQuery } from "./graphql/__generated__/graphql"
 export type { WorkspaceStaffQuery, WritePublicDocumentMutation } from "./graphql/__generated__/graphql"
-export type { ZaloConnectionEventsQuery, ZaloConnectionPageQuery } from "./graphql/__generated__/graphql"
+export type { ZaloConnectionPageQuery } from "./graphql/__generated__/graphql"
 export type { ZaloConnectionQuery } from "./graphql/__generated__/graphql"
 export { queryWorkbenchRead } from "./graphql/queries/workbench/query-workbench-read"
 export { mutateWorkbenchAction } from "./graphql/mutations/workbench/mutation-workbench-action"

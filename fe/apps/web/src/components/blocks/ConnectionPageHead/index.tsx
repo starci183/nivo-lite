@@ -39,7 +39,7 @@ export const ConnectionPageHead = (props: ConnectionPageHeadProps) => {
                 confirm: view.confirm,
                 backLabel: pane.backToList,
                 moreLabel: pane.moreActions,
-                railLabel: view.rail.openLabel,
+                ...(view.rail === undefined ? {} : { railLabel: view.rail.openLabel }),
                 markSrc: PROVIDER_LOGO[props.kind === "telegram" ? "telegram" : "google_drive"] ?? "",
                 ...(refusal === undefined ? {} : { refusal }),
             }}
