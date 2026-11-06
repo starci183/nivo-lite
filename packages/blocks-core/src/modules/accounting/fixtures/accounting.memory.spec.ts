@@ -258,10 +258,46 @@ describe("the memory engine writes", () => {
         await expect(records.insert({ a: 1 })).resolves.toMatchObject({ ok: true })
     })
 
+    it("finds the record a match key names or inserts it, and refuses a match key the entity does not declare", async () => {
+        const world = memoryWorld()
+        const leads = entityApi(world, "sales.lead")
+        const first = await leads.ensure("phone", { contactName: "Lan", phone: "84900000001" })
+        expect(first).toMatchObject({ ok: true, created: true })
+        const again = await leads.ensure("phone", { contactName: "Other", phone: "84900000001" })
+        expect(again).toMatchObject({ ok: true, created: false })
+        expect(rowsOf(world, "sales.lead")).toHaveLength(1)
+        await expect(leads.ensure("nope", { contactName: "x" })).resolves.toEqual({ ok: false, reason: "invalid" })
+        const none = entityApi(world, "elsewhere.thing")
+        await expect(none.ensure("nope", {})).resolves.toEqual({ ok: false, reason: "invalid" })
+    })
+
+    it("deletes a record at its version and the links it carries, and refuses a stale or an absent record", async () => {
+        const world = memoryWorld()
+        putTransaction(world, { ...TRANSACTION, orderId: "o1" })
+        putTransaction(world, { ...TRANSACTION, id: "t2", orderId: "o2" })
+        const transactions = entityApi(world, "payment.transaction")
+        await expect(transactions.delete("nope")).resolves.toEqual({ ok: false, reason: "missing" })
+        await expect(transactions.delete(TRANSACTION.id, "99")).resolves.toEqual({ ok: false, reason: "stale" })
+        await expect(transactions.delete(TRANSACTION.id)).resolves.toMatchObject({ ok: true })
+        expect(rowsOf(world, "payment.transaction")).toHaveLength(1)
+        expect(world.links).toEqual([{ entity: "payment.transaction", id: "t2", relation: "order", to: "o2" }])
+    })
+
+    it("fills the defaults the entity declares under what an insert gives", async () => {
+        const world = memoryWorld()
+        const members = entityApi(world, "loyalty.member")
+        await members.insert({ name: "Lan" })
+        expect(rowsOf(world, "loyalty.member")[0]?.data).toMatchObject({
+            name: "Lan",
+            points: 0,
+            note: "",
+            activity: "new",
+            joinedAt: "2026-11-04T12:00:00.000Z",
+        })
+    })
+
     it("does not run the calls the module never makes", async () => {
         const transactions = entityApi(memoryWorld(), "payment.transaction")
-        await expect(transactions.ensure("x", {})).rejects.toThrow("does not run")
-        await expect(transactions.delete("x")).rejects.toThrow("does not run")
         await expect(transactions.unlink("x", "order", "o1")).rejects.toThrow("does not run")
     })
 })

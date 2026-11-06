@@ -61,7 +61,7 @@ describe("redeem", () => {
     it("refuses a customer below the tier the reward needs and names the tier", () => {
         expect(redeemBlock(DEFAULT_CONFIG, rewardOf({ minTierKey: "bac" }), customerOf())).toEqual({
             code: "tier_required",
-            params: { tier: "Silver" },
+            params: { tier: "B\u1ea1c" },
         })
         expect(redeemBlock(DEFAULT_CONFIG, rewardOf({ minTierKey: "gone" }), customerOf({ tierKey: null }))).toBeNull()
         expect(redeemBlock(DEFAULT_CONFIG, rewardOf({ minTierKey: "bac" }), customerOf({ tierKey: "vang" }))).toBeNull()

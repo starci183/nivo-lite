@@ -7,7 +7,9 @@ import type { LoyaltyFigures, LoyaltyStats } from "../../../rules/loyalty/stats.
 import { LOYALTY_VIEW, WINDOW_DAYS } from "../constants"
 import { configOf } from "../config-store"
 import { tierRowsOf } from "../mappers"
-import { loyaltyCampaigns, loyaltyLedger, loyaltyMembers, loyaltyProgram } from "../ports"
+import { campaignsSentSince } from "../loyalty-catalogue-data"
+import { ledgerTotalsSince, membersAll } from "../loyalty-member-data"
+import { CAMPAIGNS, LEDGER, MEMBERS, PROGRAM } from "../ports"
 import type { MemberRow } from "../loyalty.types"
 import type { TierRowView } from "../views.types"
 
@@ -16,10 +18,10 @@ const DAY_MS = 86_400_000
 const variables: z.ZodObject<Record<string, never>> = z.object({})
 
 const boardPorts = {
-    members: loyaltyMembers,
-    ledger: loyaltyLedger,
-    campaigns: loyaltyCampaigns,
-    program: loyaltyProgram,
+    members: MEMBERS,
+    ledger: LEDGER,
+    campaigns: CAMPAIGNS,
+    program: PROGRAM,
 }
 
 /** The members and the statistics of the last 30 days worked out from them. */
@@ -30,9 +32,9 @@ const boardOf = async (
     const nowMs = context.now.getTime()
     const sinceIso = new Date(nowMs - WINDOW_DAYS * DAY_MS).toISOString()
     const [members, totals, sent, config] = await Promise.all([
-        ports.members.all(),
-        ports.ledger.totalsSince(sinceIso),
-        ports.campaigns.sentSince(sinceIso),
+        membersAll(ports.members),
+        ledgerTotalsSince(ports.ledger, sinceIso),
+        campaignsSentSince(ports.campaigns, sinceIso),
         configOf(ports.program),
     ])
     return { members, stats: computeStats(members, totals, config.tiers, sent, nowMs) }
@@ -102,8 +104,8 @@ export const tiersRead: ReadDefinition = defineRead({
     paths: { rows: "list" },
     variables,
     permission: LOYALTY_VIEW,
-    ports: { members: loyaltyMembers, program: loyaltyProgram },
+    ports: { members: MEMBERS, program: PROGRAM },
     run: async ({ members, program }): Promise<{ readonly rows: ReadonlyArray<TierRowView> }> => ({
-        rows: tierRowsOf(await configOf(program), await members.all()),
+        rows: tierRowsOf(await configOf(program), await membersAll(members)),
     }),
 })

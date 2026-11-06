@@ -1,9 +1,18 @@
 import { DEFAULT_CONFIG } from "../../../rules/loyalty/config"
-import type { MemoryState, StoredEntry } from "../memory"
-import type { CampaignRow, DecisionItem, MemberRow, ProgramRow, RewardRow } from "../loyalty.types"
+import type { CampaignRow, DecisionItem, LedgerRow, MemberRow, ProgramRow, RewardRow } from "../loyalty.types"
 
 /** The instant the sample data is drawn at: noon in Vietnam, 5 November 2026. */
 export const SAMPLE_NOW = "2026-11-05T05:00:00.000Z"
+
+/** A ledger entry of the sample: what the timeline shows, with the customer, the key and the reward behind it. */
+export interface StoredEntry extends LedgerRow {
+    /** The customer whose points moved. */
+    readonly customerId: string
+    /** The idempotency key of the entry. */
+    readonly ref: string
+    /** The reward behind a redeem, or null. */
+    readonly rewardId: string | null
+}
 
 const DAY = 86_400_000
 const ago = (days: number): string => new Date(Date.parse(SAMPLE_NOW) - days * DAY).toISOString()
@@ -21,7 +30,7 @@ export const SAMPLE_PROGRAM: ProgramRow = {
 export const MEMBER_GOLD: MemberRow = {
     id: "m-1",
     version: "1",
-    name: "Nguyen Thi Lan",
+    name: "Nguy\u1ec5n Th\u1ecb Lan",
     phone: "84912345678",
     email: "lan@example.com",
     birthday: "1990-11-20",
@@ -40,7 +49,7 @@ export const SAMPLE_MEMBERS: ReadonlyArray<MemberRow> = [
     {
         id: "m-2",
         version: "1",
-        name: "Tran Quoc Dung",
+        name: "Tr\u1ea7n Qu\u1ed1c D\u0169ng",
         phone: "84987654321",
         email: null,
         birthday: null,
@@ -55,7 +64,7 @@ export const SAMPLE_MEMBERS: ReadonlyArray<MemberRow> = [
     {
         id: "m-3",
         version: "1",
-        name: "Le Minh Chau",
+        name: "L\u00ea Minh Ch\u00e2u",
         phone: "84901112233",
         email: "chau@example.com",
         birthday: "1995-03-02",
@@ -70,7 +79,7 @@ export const SAMPLE_MEMBERS: ReadonlyArray<MemberRow> = [
     {
         id: "m-4",
         version: "1",
-        name: "Pham Thu Ha",
+        name: "Ph\u1ea1m Thu H\u00e0",
         phone: null,
         email: "ha@example.com",
         birthday: null,
@@ -85,7 +94,7 @@ export const SAMPLE_MEMBERS: ReadonlyArray<MemberRow> = [
     {
         id: "m-5",
         version: "1",
-        name: "Vo Hoang Nam",
+        name: "V\u00f5 Ho\u00e0ng Nam",
         phone: "84933445566",
         email: null,
         birthday: null,
@@ -133,7 +142,7 @@ export const SAMPLE_ENTRIES: ReadonlyArray<StoredEntry> = [
         kind: "earn",
         points: 1800,
         amountVnd: 1_200_000,
-        evidence: "1.5/1k x 1.5 Gold",
+        evidence: "1.5/1k x 1.5 V\u00e0ng",
         by: "NIVO",
         expiresAt: ago(-330),
         occurredAt: ago(3),
@@ -211,7 +220,7 @@ export const SAMPLE_REWARDS: ReadonlyArray<RewardRow> = [
 export const SAMPLE_CAMPAIGNS: ReadonlyArray<CampaignRow> = [
     {
         id: "c-1",
-        name: "Quiet silver members",
+        name: "Th\u00e0nh vi\u00ean h\u1ea1ng B\u1ea1c l\u00e2u ch\u01b0a quay l\u1ea1i",
         segment: { tiers: ["bac"], inactiveDays: 60, birthdayThisMonth: false, minSpendVnd: 0 },
         draft: "Hi {ten_khach}, we miss you at {ten_shop}. Come back this week for a free topping.",
         status: "waiting_decision",
@@ -242,7 +251,8 @@ export const SAMPLE_DECISIONS: ReadonlyArray<DecisionItem> = [
     {
         id: "d-1",
         action: "send_promo",
-        summary: "Send the promotion to quiet silver members",
+        summary:
+            "G\u1eedi khuy\u1ebfn m\u00e3i cho th\u00e0nh vi\u00ean h\u1ea1ng B\u1ea1c l\u00e2u ch\u01b0a quay l\u1ea1i",
         draft: "Hi {ten_khach}, we miss you at {ten_shop}. Come back this week for a free topping.",
         reason: "Bulk promotions always wait for the owner",
         amountVnd: null,
@@ -252,25 +262,11 @@ export const SAMPLE_DECISIONS: ReadonlyArray<DecisionItem> = [
     {
         id: "d-2",
         action: "adjust_points",
-        summary: "Add 200 points for a missed purchase",
+        summary: "C\u1ed9ng 200 \u0111i\u1ec3m cho l\u1ea7n mua ch\u01b0a \u0111\u01b0\u1ee3c t\u00edch",
         draft: "",
         reason: null,
         amountVnd: null,
         createdAt: new Date(Date.parse(SAMPLE_NOW) - 5 * 3_600_000).toISOString(),
-        customer: "Nguyen Thi Lan",
+        customer: "Nguy\u1ec5n Th\u1ecb Lan",
     },
 ]
-
-/** A memory state over the sample data, with `patch` laid over it. */
-export const sampleState = (patch: Partial<MemoryState> = {}): MemoryState => ({
-    members: SAMPLE_MEMBERS.map((member) => ({ ...member })),
-    entries: SAMPLE_ENTRIES.map((entry) => ({ ...entry })),
-    rewards: SAMPLE_REWARDS.map((reward) => ({ ...reward })),
-    program: SAMPLE_PROGRAM,
-    campaigns: [...SAMPLE_CAMPAIGNS],
-    decisions: [...SAMPLE_DECISIONS],
-    reachable: ["m-1", "m-2", "m-3"],
-    synced: { created: 2, linked: 3 },
-    now: SAMPLE_NOW,
-    ...patch,
-})

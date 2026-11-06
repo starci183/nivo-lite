@@ -6,7 +6,10 @@ import { resolveConfig } from "../../../rules/loyalty/config"
 import { programSlug } from "../../../rules/loyalty/slug"
 import { programOf } from "../config-store"
 import { LOYALTY_MANAGE } from "../constants"
-import { loyaltyMembers, loyaltyProgram } from "../ports"
+import { programSave } from "../loyalty-catalogue-data"
+import { syncMembers } from "../loyalty-member-data"
+import { LEADS, MEMBERS, PROGRAM } from "../ports"
+import { CONFLICT } from "../refusals"
 import { hostRecordId } from "./record-id"
 
 const number: z.ZodOptional<z.ZodNullable<z.ZodNumber>> = z.number().min(-1e13).max(1e13).nullable().optional()
@@ -61,7 +64,7 @@ export const saveProgramAction: ActionDefinition = defineAction({
     permission: LOYALTY_MANAGE,
     label: { key: "action_save_program" },
     input: saveInput,
-    ports: { program: loyaltyProgram },
+    ports: { program: PROGRAM },
     transactional: true,
     run: async ({ program }, input) => {
         const saved = await programOf(program)
@@ -92,13 +95,13 @@ export const saveProgramAction: ActionDefinition = defineAction({
                 batch: input.batch ?? promo.batch,
             },
         })
-        const written = await program.save({
+        const written = await programSave(program, {
             name: input.name,
             slug: saved.slug === "" ? programSlug(input.name) : saved.slug,
             enabled: input.enabled ?? saved.enabled,
             config,
         })
-        return { ok: true, data: { slug: written.slug } }
+        return written === null ? CONFLICT : { ok: true, data: { slug: written.slug } }
     },
     refreshes: ["loyalty.program", "loyalty.tiers", "loyalty.stats"],
     optimistic: false,
@@ -110,10 +113,10 @@ export const syncMembersAction: ActionDefinition = defineAction({
     permission: LOYALTY_MANAGE,
     label: { key: "action_sync_members" },
     input: z.object({ id: hostRecordId }),
-    ports: { members: loyaltyMembers },
+    ports: { members: MEMBERS, leads: LEADS },
     transactional: true,
-    run: async ({ members }) => {
-        const synced = await members.sync()
+    run: async ({ members, leads }) => {
+        const synced = await syncMembers(members, leads)
         return { ok: true, data: { created: synced.created, linked: synced.linked } }
     },
     refreshes: ["loyalty.members", "loyalty.member-counts", "loyalty.figures", "loyalty.stats", "loyalty.tiers"],

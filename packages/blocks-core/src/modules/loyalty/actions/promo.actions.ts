@@ -5,7 +5,9 @@ import { MAX_ID, MAX_LINE } from "../../../bounds"
 import { inSegment } from "../../../rules/loyalty/segment"
 import type { Segment } from "../../../rules/loyalty/segment.types"
 import { DECISION_COMMANDS, LOYALTY_DECIDE, LOYALTY_MANAGE, LOYALTY_VIEW } from "../constants"
-import { loyaltyCampaigns, loyaltyDecisions, loyaltyMembers } from "../ports"
+import { createCampaign, decide } from "../loyalty-catalogue-data"
+import { membersAll, membersReachable } from "../loyalty-member-data"
+import { CAMPAIGNS, CONVERSATIONS, DECISIONS, MEMBERS } from "../ports"
 import { CONFLICT, refusedWith } from "../refusals"
 import { hostRecordId } from "./record-id"
 
@@ -55,15 +57,16 @@ export const draftCampaignAction: ActionDefinition = defineAction({
     permission: LOYALTY_MANAGE,
     label: { key: "action_draft_campaign" },
     input: draftInput,
-    ports: { campaigns: loyaltyCampaigns },
+    ports: { campaigns: CAMPAIGNS },
     transactional: true,
     run: async ({ campaigns }, input, context) => {
-        const created = await campaigns.create({
+        const created = await createCampaign(campaigns, {
             name: (input.name ?? "").trim(),
             segment: segmentOf(input),
             brief: (input.brief ?? "").trim(),
             createdBy: context.memberId,
         })
+        if (created === null) return CONFLICT
         return {
             ok: true,
             data: { campaignId: created.campaignId, status: created.status, recipients: created.recipients },
@@ -79,12 +82,16 @@ export const previewSegmentAction: ActionDefinition = defineAction({
     permission: LOYALTY_VIEW,
     label: { key: "action_preview_segment" },
     input: z.object(segmentShape),
-    ports: { members: loyaltyMembers },
-    run: async ({ members }, input, context) => {
+    ports: { members: MEMBERS, conversations: CONVERSATIONS },
+    run: async ({ members, conversations }, input, context) => {
         const segment = segmentOf(input)
         const nowMs = context.now.getTime()
-        const held = (await members.all()).filter((member) => inSegment(member, segment, nowMs))
-        const reachable = await members.reachable(held.map((member) => member.id))
+        const held = (await membersAll(members)).filter((member) => inSegment(member, segment, nowMs))
+        const reachable = await membersReachable(
+            members,
+            conversations,
+            held.map((member) => member.id),
+        )
         return {
             ok: true,
             data: {
@@ -110,10 +117,10 @@ export const decideAction: ActionDefinition = defineAction({
     permission: LOYALTY_DECIDE,
     label: { key: "action_decide" },
     input: decideInput,
-    ports: { decisions: loyaltyDecisions },
+    ports: { decisions: DECISIONS },
     transactional: true,
     run: async ({ decisions }, { id, command }) => {
-        const decided = await decisions.decide(id, command === DECISION_COMMANDS.approve ? "approved" : "rejected")
+        const decided = await decide(decisions, id, command === DECISION_COMMANDS.approve ? "approved" : "rejected")
         if (decided.ok) return { ok: true, data: { id: decided.row.id } }
         return decided.reason === "missing" ? refusedWith("decision_missing") : CONFLICT
     },

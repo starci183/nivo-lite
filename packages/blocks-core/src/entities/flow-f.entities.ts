@@ -3,6 +3,12 @@ import type { AnyEntityDefinition } from "@nivo-lite/agent-sdk/entity"
 import { adjustmentEntity } from "./accounting/adjustment.entity"
 import { bookEntryEntity } from "./accounting/book-entry.entity"
 import { invoiceEntity } from "./accounting/invoice.entity"
+import { loyaltyMemberEntity } from "./loyalty/member.entity"
+import { loyaltyLedgerEntryEntity } from "./loyalty/ledger-entry.entity"
+import { loyaltyRewardEntity } from "./loyalty/reward.entity"
+import { loyaltyProgramEntity } from "./loyalty/program.entity"
+import { loyaltyCampaignEntity } from "./loyalty/campaign.entity"
+import { loyaltyDecisionEntity } from "./loyalty/decision.entity"
 import { agentNodeEffectEntity } from "./agent/node-effect.entity"
 import { agentRunStepEntity } from "./agent/run-step.entity"
 import { agentRunEntity } from "./agent/run.entity"
@@ -25,6 +31,12 @@ export const FLOW_F_ENTITIES: ReadonlyArray<AnyEntityDefinition> = [
     invoiceEntity,
     adjustmentEntity,
     bookEntryEntity,
+    loyaltyMemberEntity,
+    loyaltyLedgerEntryEntity,
+    loyaltyRewardEntity,
+    loyaltyProgramEntity,
+    loyaltyCampaignEntity,
+    loyaltyDecisionEntity,
     turnEntity,
     agentRunEntity,
     agentRunStepEntity,

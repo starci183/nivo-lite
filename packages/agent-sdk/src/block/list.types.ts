@@ -24,6 +24,12 @@ export type ListFilter =
           readonly op: "eq" | "in"
           /** The values the filter takes. */
           readonly of: ReadonlyArray<string>
+          /**
+           * With `open`, the filter takes any value up to the key bound, and `of` only lists the values that are known when the
+           * module is written (a ladder of tiers the owner renames). The module judges the value it is given, and its counts
+           * name the values the rows hold.
+           */
+          readonly open?: boolean
       }
     | {
           /** Named cases, each a comparison; the chosen case name selects one (stock `low` / `out`). */

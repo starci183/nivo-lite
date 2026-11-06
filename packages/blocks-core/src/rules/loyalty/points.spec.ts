@@ -6,7 +6,7 @@ const CONFIG: LoyaltyConfig = {
         perThousandVnd: 1,
         perVisit: 0,
         categories: [
-            { match: "Müsli", perThousandVnd: 3, label: "Coffee" },
+            { match: "M\u00fcsli", perThousandVnd: 3, label: "Coffee" },
             { match: "tea", perThousandVnd: 2, label: "" },
             { match: "water", perThousandVnd: 0.5, label: "Water" },
             { match: "", perThousandVnd: 9, label: "Nothing" },
@@ -21,7 +21,7 @@ const CONFIG: LoyaltyConfig = {
 }
 const SILVER: LoyaltyTier = {
     key: "bac",
-    name: "Silver",
+    name: "B\u1ea1c",
     minSpendVnd: 0,
     multiplier: 1.5,
     winbackDays: 45,
@@ -71,7 +71,7 @@ describe("points", () => {
             expect(pointsFor(config, { amountVnd: 10_000, items: "" }, SILVER)).toMatchObject({
                 points: 20,
                 multiplier: 1.5,
-                tierName: "Silver",
+                tierName: "B\u1ea1c",
                 perVisit: 5,
             })
         })
@@ -81,7 +81,7 @@ describe("points", () => {
                 points: 0,
                 belowMinimum: true,
                 multiplier: 1.5,
-                tierName: "Silver",
+                tierName: "B\u1ea1c",
             })
             expect(
                 pointsFor({ ...CONFIG, earn: { ...CONFIG.earn, minOrderVnd: 0 } }, { amountVnd: 0, items: "" }, null)
@@ -98,13 +98,13 @@ describe("earnEvidence", () => {
         rate: 3,
         label: "Coffee",
         multiplier: 1.5,
-        tierName: "Silver",
+        tierName: "B\u1ea1c",
         perVisit: 5,
         belowMinimum: false,
     }
 
     it("writes the rate, the tier multiplier and the visit points", () => {
-        expect(earnEvidence(calc)).toBe("3/1k Coffee x 1.5 Silver + 5")
+        expect(earnEvidence(calc)).toBe("3/1k Coffee x 1.5 B\u1ea1c + 5")
     })
 
     it("leaves out what does not apply", () => {

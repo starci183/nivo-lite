@@ -5,7 +5,8 @@ import { MAX_ID } from "../../../bounds"
 import { presetEdits, rewardKey, sanitizeReward } from "../../../rules/loyalty/reward"
 import { LOYALTY_MANAGE } from "../constants"
 import vi from "../messages/vi.json"
-import { loyaltyRewards } from "../ports"
+import { addMissingRewards, removeReward, saveReward } from "../loyalty-catalogue-data"
+import { LEDGER, REWARDS } from "../ports"
 import { CONFLICT, refusedWith } from "../refusals"
 import { hostRecordId } from "./record-id"
 
@@ -46,7 +47,7 @@ export const saveRewardAction: ActionDefinition = defineAction({
     permission: LOYALTY_MANAGE,
     label: { key: "action_save_reward" },
     input: saveInput,
-    ports: { rewards: loyaltyRewards },
+    ports: { rewards: REWARDS },
     transactional: true,
     run: async ({ rewards }, input) => {
         const id = input.id === undefined || input.id === "" ? undefined : input.id
@@ -64,7 +65,7 @@ export const saveRewardAction: ActionDefinition = defineAction({
             note: input.note ?? "",
             active: input.active ?? true,
         })
-        const written = await rewards.save(edit)
+        const written = await saveReward(rewards, edit)
         if (written.ok) return { ok: true, data: { id: written.row.id } }
         return written.reason === "missing" ? refusedWith("reward_missing") : CONFLICT
     },
@@ -78,10 +79,10 @@ export const removeRewardAction: ActionDefinition = defineAction({
     permission: LOYALTY_MANAGE,
     label: { key: "action_remove_reward" },
     input: z.object({ id: z.string().min(1).max(MAX_ID) }),
-    ports: { rewards: loyaltyRewards },
+    ports: { rewards: REWARDS, ledger: LEDGER },
     transactional: true,
-    run: async ({ rewards }, { id }) => {
-        const removal = await rewards.remove(id)
+    run: async ({ rewards, ledger }, { id }) => {
+        const removal = await removeReward(rewards, ledger, id)
         return removal === "missing" ? refusedWith("reward_missing") : { ok: true, data: { removal } }
     },
     refreshes: REWARD_READS,
@@ -97,9 +98,9 @@ export const addPresetRewardsAction: ActionDefinition = defineAction({
     permission: LOYALTY_MANAGE,
     label: { key: "action_add_preset_rewards" },
     input: z.object({ id: hostRecordId }),
-    ports: { rewards: loyaltyRewards },
+    ports: { rewards: REWARDS },
     transactional: true,
-    run: async ({ rewards }) => ({ ok: true, data: { added: await rewards.addMissing(presetEdits(vi)) } }),
+    run: async ({ rewards }) => ({ ok: true, data: { added: await addMissingRewards(rewards, presetEdits(vi)) } }),
     refreshes: REWARD_READS,
     optimistic: false,
 })

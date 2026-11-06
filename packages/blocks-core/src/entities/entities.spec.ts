@@ -8,7 +8,7 @@ const catalog = new Map<string, AnyEntityDefinition>(FLOW_F_ENTITIES.map((entity
 const entityNamed = (name: string): AnyEntityDefinition | undefined => catalog.get(name)
 
 describe("flow F entity declarations", () => {
-    it("declares the thirteen entities once each", () => {
+    it("declares the nineteen entities once each", () => {
         expect(FLOW_F_ENTITIES.map((entity) => entity.name)).toEqual([
             "sales.lead",
             "sales.order",
@@ -19,6 +19,12 @@ describe("flow F entity declarations", () => {
             "accounting.invoice",
             "accounting.adjustment",
             "accounting.book-entry",
+            "loyalty.member",
+            "loyalty.ledger-entry",
+            "loyalty.reward",
+            "loyalty.program",
+            "loyalty.campaign",
+            "loyalty.decision",
             "agent.turn",
             "agent.run",
             "agent.run-step",
@@ -40,6 +46,12 @@ describe("flow F entity declarations", () => {
             "chat.message": "message",
             "payment.transaction": "bank-transaction",
             "payment.claim": "payment-claim",
+            "loyalty.member": "loyalty-member",
+            "loyalty.ledger-entry": "loyalty-ledger",
+            "loyalty.reward": "loyalty-reward",
+            "loyalty.program": "loyalty-program",
+            "loyalty.campaign": "loyalty-campaign",
+            "loyalty.decision": "loyalty-decision",
         })
     })
 
