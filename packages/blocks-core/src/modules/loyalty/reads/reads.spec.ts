@@ -5,7 +5,14 @@ import type { DecisionItem } from "../loyalty.types"
 import { memoryProvider } from "../memory"
 import type { MemoryState, StoredEntry } from "../memory"
 import { figuresRead, statsRead, tiersRead } from "./board.read"
-import { memberCountsRead, memberLedgerRead, memberRead, memberRewardsRead, membersRead } from "./members.read"
+import {
+    memberCountsRead,
+    memberLedgerRead,
+    memberRead,
+    memberRewardsRead,
+    membersRead,
+    tierCountsRead,
+} from "./members.read"
 import { pendingCountRead, pendingRead, pendingWaitingRead } from "./pending.read"
 import { campaignsRead, programRead } from "./program.read"
 import { rewardRead, rewardsRead } from "./rewards.read"
@@ -169,6 +176,25 @@ describe("loyalty.members and loyalty.member-counts", () => {
             counts: { active: 0, at_risk: 1, new: 0 },
             total: 1,
         })
+    })
+})
+
+describe("the tier filter of loyalty.members and loyalty.tier-counts", () => {
+    it("narrows the members to one tier of the starter ladder", async () => {
+        expect(await run(membersRead, { tier: "dong", sort: "name" })).toMatchObject({
+            rows: [{ id: "m-3" }, { id: "m-5" }],
+        })
+    })
+
+    it("refuses a tier the list does not know", async () => {
+        expect(await run(membersRead, { tier: "platinum" })).toEqual({
+            refused: [{ code: "INPUT_INVALID", at: "tier" }],
+        })
+    })
+
+    it("counts the members of each tier under the same search", async () => {
+        expect(await run(tierCountsRead, {})).toMatchObject({ counts: { dong: 2, bac: 1, vang: 1 }, total: 4 })
+        expect(tierCountsRead.listing).toEqual({ kind: "counts", of: "loyalty.members", by: "tier" })
     })
 })
 

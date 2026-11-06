@@ -4,6 +4,7 @@ import { countsRead, listRead } from "@nivo-lite/agent-sdk/module"
 import type { ListReadDefinition } from "@nivo-lite/agent-sdk/module"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
+import { DEFAULT_CONFIG } from "../../../rules/loyalty/config"
 import { redeemBlock, redeemKeyOf } from "../../../rules/loyalty/redeem"
 import { configOf } from "../config-store"
 import { LOYALTY_VIEW, TIMELINE_ROWS } from "../constants"
@@ -15,10 +16,16 @@ import type { LedgerRowView, MemberDetail, RedeemableRowView } from "../views.ty
 /** The activities a members list can be narrowed to. */
 const ACTIVITIES: ReadonlyArray<string> = ["active", "at_risk", "new"]
 
-/** What the members list accepts: a search over the name and contact, the activity as a filter, four sorts. */
+/** The tier keys a members list can be narrowed to: the starter ladder (a ladder the owner renamed is read by `loyalty.tiers`). */
+const TIER_KEYS: ReadonlyArray<string> = DEFAULT_CONFIG.tiers.map((tier) => tier.key)
+
+/** What the members list accepts: a search over the name and contact, the activity and the tier as filters, four sorts. */
 export const MEMBERS_LIST: ListShape = {
     search: { fields: ["name", "contact"] },
-    filters: { activity: { field: "activity", op: "eq", of: ACTIVITIES } },
+    filters: {
+        activity: { field: "activity", op: "eq", of: ACTIVITIES },
+        tier: { field: "tierKey", op: "eq", of: TIER_KEYS },
+    },
     sort: {
         recent: [["lastVisitAt", "desc"]],
         points: [["points", "desc"]],
@@ -57,6 +64,9 @@ export const memberCountsRead: ReadDefinition = countsRead({
     of: membersRead,
     by: "activity",
 })
+
+/** `loyalty.tier-counts`: how many customers each tier holds, under the same search. */
+export const tierCountsRead: ReadDefinition = countsRead({ id: "loyalty.tier-counts", of: membersRead, by: "tier" })
 
 const byId: z.ZodObject<{ id: z.ZodString }> = z.object({ id: z.string().min(1).max(MAX_ID) })
 
