@@ -1,13 +1,16 @@
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { conversationEntity } from "../../entities/chat/conversation.entity"
 import { messageEntity } from "../../entities/chat/message.entity"
+import { settingsEntity } from "../../entities/chat/settings.entity"
 import { leadEntity } from "../../entities/sales/lead.entity"
 import {
     CONVERSATION_FIELDS,
     LEAD_FIELDS,
     MESSAGE_FIELDS,
     leadFactsOf,
+    SETTINGS_FIELDS,
     messageRecordOf,
+    settingsOf,
     threadRowOf,
 } from "./chatbot-records"
 
@@ -122,5 +125,21 @@ describe("the selected fields", () => {
         expect(CONVERSATION_FIELDS.filter((name) => !(name in conversationEntity.fields))).toEqual([])
         expect(MESSAGE_FIELDS.filter((name) => !(name in messageEntity.fields))).toEqual([])
         expect(LEAD_FIELDS.filter((name) => !(name in leadEntity.fields))).toEqual([])
+    })
+})
+
+describe("settingsOf", () => {
+    it("reads the rules a settings record holds, with who saved them, nobody when it says none", () => {
+        expect(settingsOf(recordOf({ openclawTimeoutSec: 40, holdingMessage: "Wait", updatedBy: "Lan" }))).toEqual({
+            openclawTimeoutSec: 40,
+            holdingMessage: "Wait",
+            updatedBy: "Lan",
+        })
+        expect(settingsOf(recordOf({ openclawTimeoutSec: 25, holdingMessage: "Wait" }))?.updatedBy).toBe("")
+    })
+
+    it("answers nothing for fields that are not the rules, and selects only declared fields", () => {
+        expect(settingsOf(recordOf({ openclawTimeoutSec: "soon", holdingMessage: "Wait" }))).toBeNull()
+        expect(SETTINGS_FIELDS.every((name) => name in settingsEntity.fields)).toBe(true)
     })
 })

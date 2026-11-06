@@ -3,6 +3,7 @@ import { z } from "zod"
 import { MAX_BODY, MAX_ID, MAX_LINE } from "../../bounds"
 import { MESSAGE_STATUSES } from "../../entities/chat/message.entity"
 import { CHATBOT_CHANNELS, INBOX_STATUSES, TAIL_TEXT_MAX } from "../../rules/chatbot"
+import type { ChatbotSettings } from "../../rules/chatbot/settings"
 import type { LeadFacts, MessageRecord, ThreadRow } from "./chatbot.types"
 
 /** The longest ISO 8601 text the engine writes for a time. */
@@ -114,4 +115,26 @@ export const messageRecordOf = (record: RecordRow): MessageRecord | null => {
 export const leadFactsOf = (joined: JoinedRecord | null): LeadFacts | null => {
     const parsed = joined === null ? null : leadData.safeParse(joined.data)
     return parsed?.success === true ? parsed.data : null
+}
+
+/** The declared fields of a `chat.settings` record. */
+const settingsData = z.object({
+    openclawTimeoutSec: z.number().int(),
+    holdingMessage: z.string().max(MAX_BODY),
+    updatedBy: nullableText(MAX_LINE),
+})
+
+/** The fields a query for the saved rules selects. */
+export const SETTINGS_FIELDS: ReadonlyArray<string> = ["scope", "openclawTimeoutSec", "holdingMessage", "updatedBy"]
+
+/** The rules a `chat.settings` record holds, with who saved them; null when its fields are not those of the rules. */
+export const settingsOf = (record: RecordRow): (ChatbotSettings & { readonly updatedBy: string }) | null => {
+    const parsed = settingsData.safeParse(record.data)
+    return parsed.success
+        ? {
+              openclawTimeoutSec: parsed.data.openclawTimeoutSec,
+              holdingMessage: parsed.data.holdingMessage,
+              updatedBy: parsed.data.updatedBy ?? "",
+          }
+        : null
 }

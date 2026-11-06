@@ -14,6 +14,7 @@ describe("flow F entity declarations", () => {
             "sales.order",
             "chat.conversation",
             "chat.message",
+            "chat.settings",
             "payment.transaction",
             "payment.claim",
             "accounting.invoice",
@@ -43,6 +44,7 @@ describe("flow F entity declarations", () => {
             "sales.order": "order",
             "chat.conversation": "conversation",
             "chat.message": "message",
+            "chat.settings": "chatbot-settings",
             "payment.transaction": "bank-transaction",
             "payment.claim": "payment-claim",
         })

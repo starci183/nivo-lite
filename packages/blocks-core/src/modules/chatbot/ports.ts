@@ -5,6 +5,7 @@ import type { ListSource } from "@nivo-lite/agent-sdk/block"
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import { conversationEntity } from "../../entities/chat/conversation.entity"
 import { messageEntity } from "../../entities/chat/message.entity"
+import { settingsEntity } from "../../entities/chat/settings.entity"
 import type { ThreadRow } from "./chatbot.types"
 
 /*
@@ -24,3 +25,6 @@ export const MESSAGES: PortDefinition<EntityApi> = entityPort(messageEntity)
 
 /** The port the inbox list runs on. */
 export const THREADS_LIST: PortDefinition<ThreadsList> = definePort<ThreadsList>("chatbot.threads-list")
+
+/** The port of the saved rules of the Chatbot (`chat.settings`, one record per workspace). */
+export const SETTINGS: PortDefinition<EntityApi> = entityPort(settingsEntity)

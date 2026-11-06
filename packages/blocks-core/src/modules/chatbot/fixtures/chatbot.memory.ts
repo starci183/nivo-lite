@@ -22,7 +22,7 @@ import type { MemberDirectory, MemberFacts } from "../../platform/platform.types
 import { membersPort } from "../../platform/ports"
 import { threadRowOf } from "../chatbot-records"
 import type { ThreadRow } from "../chatbot.types"
-import { CONVERSATIONS, MESSAGES, THREADS_LIST } from "../ports"
+import { CONVERSATIONS, MESSAGES, SETTINGS, THREADS_LIST } from "../ports"
 import type { ThreadsList } from "../ports"
 import { THREAD_ROWS } from "./chatbot.fixtures"
 
@@ -82,6 +82,8 @@ export interface MemoryWorld {
     readonly lines: Array<RecordRow>
     /** The declared fields of the `sales.lead` records, by id. */
     readonly leads: Map<string, Readonly<Record<string, unknown>>>
+    /** The `chat.settings` records. */
+    readonly settings: Array<RecordRow>
     /** The links between records. */
     readonly links: Array<MemoryLink>
     /** The members by id. */
@@ -118,6 +120,7 @@ export const putConversation = (world: MemoryWorld, row: ThreadRow): void => {
 export const memoryWorld = (): MemoryWorld => ({
     conversations: THREAD_ROWS.map(recordOfThread),
     lines: [],
+    settings: [],
     leads: new Map([
         [
             "l1",
@@ -180,6 +183,13 @@ const pick = (data: Readonly<Record<string, unknown>>, select: ReadonlyArray<str
 const slicePage = <T>(rows: ReadonlyArray<T>, cursor: string | null, size: number): ListPage<T> => {
     const from = cursor === null ? 0 : Number(cursor)
     return { rows: rows.slice(from, from + size), cursor: from + size < rows.length ? String(from + size) : null }
+}
+
+/** The record a declared unique constraint of the table's entity names holds, by the values of its fields. */
+const matching = (table: Table, on: string, values: WriteValues): RecordRow | undefined => {
+    const constraint = CATALOG.get(table.entity)?.constraints?.find((candidate) => candidate.name === on)
+    const fields = constraint?.kind === "unique" ? constraint.on : []
+    return table.rows.find((row) => fields.every((field) => valueOf(row, field) === values[field]))
 }
 
 /** What the fake engine does not do. */
@@ -260,7 +270,13 @@ const updated = (table: Table, key: string, expected: string, values: WriteValue
     return { ok: true, row: next, version: next.version }
 }
 
-/** The data port of one entity over a table of the fake engine: get, list, insert and update, the calls the module makes. */
+/** Writes a record by the unique constraint it carries: sets the fields of the one that holds the same key, else stores a new one. */
+const upserted = (table: Table, on: string, values: WriteValues): EngineResult => {
+    const found = matching(table, on, values)
+    return found === undefined ? inserted(table, values) : updated(table, found.id, found.version, values)
+}
+
+/** The data port of one entity over a table of the fake engine: get, list, insert, update and upsert, the calls the module makes. */
 const entityApi = (table: Table): EntityApi => ({
     get: (id) => Promise.resolve(table.rows.find((row) => row.id === id) ?? null),
     list: (query) => {
@@ -272,7 +288,7 @@ const entityApi = (table: Table): EntityApi => ({
     insert: (values, links) => Promise.resolve(inserted(table, values, links)),
     update: (key, expected, values) => Promise.resolve(updated(table, key, expected, values)),
     aggregate: unsupported,
-    upsert: unsupported,
+    upsert: (on, values) => Promise.resolve(upserted(table, on, values)),
     ensure: unsupported,
     delete: unsupported,
     link: unsupported,
@@ -287,22 +303,28 @@ export const conversationApi = (world: MemoryWorld): EntityApi =>
 export const messageApi = (world: MemoryWorld): EntityApi =>
     entityApi({ entity: "chat.message", prefix: "m", rows: world.lines, world })
 
+/** The `chat.settings` port over a world. */
+export const settingsApi = (world: MemoryWorld): EntityApi =>
+    entityApi({ entity: "chat.settings", prefix: "s", rows: world.settings, world })
+
 /** The inbox rows of the conversations of a world. */
-const threadRowsOf = (world: MemoryWorld): Array<ThreadRow> =>
+const threadRowsOf = (world: MemoryWorld, query?: ListQuery): Array<ThreadRow> =>
     world.conversations.flatMap((record) => {
         const row = threadRowOf(record)
-        return row === null ? [] : [row]
+        const at = row?.lastAt ?? ""
+        const isWithin = Object.values(query?.windows ?? {}).every((window) => at >= window.from && at < window.to)
+        return row === null || !isWithin ? [] : [row]
     })
 
 /** The list source over a world. */
 export const threadsList = (world: MemoryWorld): ThreadsList => ({
     page: (_shape: ListShape, query: ListQuery) => {
         world.queries.push(query)
-        return Promise.resolve(slicePage(threadRowsOf(world), query.cursor, query.size))
+        return Promise.resolve(slicePage(threadRowsOf(world, query), query.cursor, query.size))
     },
-    counts: (_shape: ListShape, by: string) => {
+    counts: (_shape: ListShape, by: string, query: ListQuery) => {
         const counts: Record<string, number> = {}
-        for (const row of threadRowsOf(world)) {
+        for (const row of threadRowsOf(world, query)) {
             const value = by === "channel" ? row.channel : row.status
             counts[value] = (counts[value] ?? 0) + 1
         }
@@ -335,6 +357,7 @@ export const memoryProvider = (world: MemoryWorld): PortProvider => ({
         if (port.id === THREADS_LIST.id) return threadsList(world)
         if (port.id === CONVERSATIONS.id) return conversationApi(world)
         if (port.id === MESSAGES.id) return messageApi(world)
+        if (port.id === SETTINGS.id) return settingsApi(world)
         if (port.id === membersPort.id) return memberDirectory(world)
         if (port.id === outboxPort.id) return outbox(world)
         if (port.id === doorPort.id) return doorApi(world)
