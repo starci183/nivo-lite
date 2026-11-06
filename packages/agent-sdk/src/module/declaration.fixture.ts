@@ -16,7 +16,7 @@ export interface Lead {
 /** The port the leads list runs on. */
 export const LEADS_PORT: PortDefinition<ListSource<Lead>> = definePort<ListSource<Lead>>("sales.leads-list")
 
-/** A list with search, an enumerated filter, a filter of named cases and two sorts. */
+/** A list with search, an enumerated filter, a filter of named cases, a time-window filter and two sorts. */
 export const LEADS_SHAPE: ListShape = {
     search: { fields: ["name", "phone"] },
     filters: {
@@ -27,6 +27,7 @@ export const LEADS_SHAPE: ListShape = {
                 out: { field: "quantity", op: "eq", value: 0 },
             },
         },
+        added: { field: "createdAt", op: "within", of: ["$today", "$thisWeek", "$thisMonth"] },
     },
     sort: {
         recent: [["updatedAt", "desc"]],

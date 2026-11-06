@@ -1,7 +1,7 @@
 import type { ActionDefinition, BlockDefinition, BlockReadSlot, BlockSlot, ReadDefinition } from "../block/block.types"
 import type { DataShape } from "../schema/schema.types"
 import { allowedValuesOf, paramProblems } from "./spec-param"
-import { paramNameOf } from "./spec-value"
+import { paramNameOf, valueAt } from "./spec-value"
 import type {
     SpecBinding,
     SpecNode,
@@ -110,7 +110,7 @@ const paramPropProblems = (
     at: string,
 ): ReadonlyArray<SpecProblem> =>
     (block.params ?? []).flatMap((name): ReadonlyArray<SpecProblem> => {
-        const value = node.props?.[name]
+        const value = valueAt(node.props, name)
         return typeof value === "string" && !Object.keys(params).includes(value)
             ? [{ code: "SPEC_PARAM_UNKNOWN", at: `${at}.${name}` }]
             : []

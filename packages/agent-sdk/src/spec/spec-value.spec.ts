@@ -61,6 +61,10 @@ describe("paramNameOf", () => {
         expect(paramNameOf("$q")).toBe("q")
         expect(paramNameOf("$")).toBe("")
         expect(paramNameOf(INSTALLATION_VARIABLE)).toBeNull()
+        expect(paramNameOf("$today")).toBeNull()
+        expect(paramNameOf("$thisWeek")).toBeNull()
+        expect(paramNameOf("$thisMonth")).toBeNull()
+        expect(paramNameOf("$thisYear")).toBe("thisYear")
         expect(paramNameOf("plain")).toBeNull()
         expect(paramNameOf(4)).toBeNull()
         expect(paramNameOf(null)).toBeNull()
@@ -79,6 +83,13 @@ describe("resolveVariables", () => {
                 paramValue,
             ),
         ).toEqual({ variables: { id: "inst-1", q: "an", stage: "won", n: 3, flag: true }, pending: [] })
+    })
+
+    it("passes a time token through as the literal it is, for the server to resolve", () => {
+        expect(resolveVariables({ due: "$today", from: "$thisMonth" }, "inst-1", paramValue)).toEqual({
+            variables: { due: "$today", from: "$thisMonth" },
+            pending: [],
+        })
     })
 
     it("leaves a variable null and names it pending when its param has no value", () => {

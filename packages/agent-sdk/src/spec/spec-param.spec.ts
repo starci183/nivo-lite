@@ -111,6 +111,18 @@ describe("paramProblems", () => {
         ])
     })
 
+    it("refuses a name that is a time token without its dollar sign", () => {
+        const problems = paramProblems(
+            {
+                today: { type: "string", url: "a" },
+                thisWeek: { type: "string", url: "b" },
+                week: { type: "string", url: "c" },
+            },
+            READS,
+        )
+        expect(problems.map((problem) => problem.at)).toEqual(["params.today", "params.thisWeek"])
+    })
+
     it("refuses a name a $variable cannot spell, and the installation variable", () => {
         const problems = paramProblems(
             {

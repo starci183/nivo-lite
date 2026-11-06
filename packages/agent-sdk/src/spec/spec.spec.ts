@@ -132,6 +132,8 @@ describe("specProblems params", () => {
         ])
         expect(specProblems(docOf(root, { params: PARAMS }), BLOCKS, BINDINGS)).toEqual([])
         expect(specProblems(docOf(withVariables({ q: "$installationId" })), BLOCKS, BINDINGS)).toEqual([])
+        expect(specProblems(docOf(withVariables({ q: "$today" })), BLOCKS, BINDINGS)).toEqual([])
+        expect(specProblems(docOf(withVariables({ q: "$thisMonth" })), BLOCKS, BINDINGS)).toEqual([])
         const unset: SpecNode = { id: "s", block: "test.search" }
         expect(specProblems(docOf(unset), BLOCKS, BINDINGS)).toEqual([])
     })
@@ -153,6 +155,16 @@ describe("specProblems params", () => {
         expect(specProblems(docOf(node), BLOCKS, BINDINGS)).toEqual([
             { code: "SPEC_PARAM_UNKNOWN", at: "main/s.searchParam" },
         ])
+    })
+
+    it("follows a dotted prop name into an object prop, and leaves out a prop the spec does not set", () => {
+        const gone: SpecNode = { id: "s", block: "test.sortable", props: { sort: { param: "gone" } } }
+        expect(specProblems(docOf(gone, { params: PARAMS }), BLOCKS, BINDINGS)).toEqual([
+            { code: "SPEC_PARAM_UNKNOWN", at: "main/s.sort.param" },
+        ])
+        const known: SpecNode = { id: "s", block: "test.sortable", props: { sort: { param: "q" } } }
+        expect(specProblems(docOf(known, { params: PARAMS }), BLOCKS, BINDINGS)).toEqual([])
+        expect(specProblems(docOf({ id: "s", block: "test.sortable" }), BLOCKS, BINDINGS)).toEqual([])
     })
 
     it("refuses a variable the read does not declare, only when the read is known", () => {

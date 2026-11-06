@@ -49,6 +49,16 @@ export const SEARCH: BlockDefinition = defineBlock({
     params: ["searchParam"],
 })
 
+/** A leaf block whose nested `sort.param` prop names a spec param. */
+export const SORTABLE: BlockDefinition = defineBlock({
+    id: "test.sortable",
+    title: { key: "sortable" },
+    props: z.object({ sort: z.object({ param: z.string().max(40) }).optional() }),
+    slots: {},
+    children: false,
+    params: ["sort.param"],
+})
+
 /** A read of the orders, narrowed by a search term. */
 export const ORDERS: ReadDefinition = defineRead({
     id: "sales.orders",
@@ -82,7 +92,7 @@ export const OPEN: ActionDefinition = defineAction({
 })
 
 /** The blocks of the spec specs. */
-export const BLOCKS: ReadonlyArray<BlockDefinition> = [STACK, LIST, FREE, SEARCH]
+export const BLOCKS: ReadonlyArray<BlockDefinition> = [STACK, LIST, FREE, SEARCH, SORTABLE]
 
 /** A node of the list block bound to the orders read. */
 export const listNode = (id: string, extra: Partial<SpecNode> = {}): SpecNode => ({
