@@ -17,15 +17,11 @@ export interface IncomeEntry {
 
 /** The income of each week of the period that starts on `fromDay` and ends before `toDay`; an entry outside the period adds to nothing. */
 export const weeklyIncomeOf = (entries: ReadonlyArray<IncomeEntry>, fromDay: string, toDay: string): WeeklyIncome => {
-    const totals: [number, number, number, number, number] = [0, 0, 0, 0, 0]
     const from = Date.parse(fromDay)
-    for (const entry of entries) {
-        if (entry.entryDate < fromDay || entry.entryDate >= toDay) continue
-        const week = Math.min(
-            Math.floor((Date.parse(entry.entryDate) - from) / DAY_MS / WEEK_DAYS),
-            WEEK_KEYS.length - 1,
-        )
-        totals[week] = (totals[week] ?? 0) + entry.amountVnd
-    }
-    return { w1: totals[0], w2: totals[1], w3: totals[2], w4: totals[3], w5: totals[4] }
+    const inPeriod = entries.filter((entry) => entry.entryDate >= fromDay && entry.entryDate < toDay)
+    const weekOf = (entry: IncomeEntry): number =>
+        Math.min(Math.floor((Date.parse(entry.entryDate) - from) / DAY_MS / WEEK_DAYS), WEEK_KEYS.length - 1)
+    const moneyOf = (week: number): number =>
+        inPeriod.reduce((sum, entry) => (weekOf(entry) === week ? sum + entry.amountVnd : sum), 0)
+    return { w1: moneyOf(0), w2: moneyOf(1), w3: moneyOf(2), w4: moneyOf(3), w5: moneyOf(4) }
 }
