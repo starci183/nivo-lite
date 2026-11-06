@@ -1,9 +1,10 @@
 import type { ReactNode } from "react"
-import { Badge, Pane, PaneGrid, PaneHeader, PaneSection } from "@starci/grammar/common"
+import { Badge, Pane, PaneGrid, PaneHeader, PaneSection, SurfaceCard } from "@starci/grammar/common"
 import type { ParamHandle, ReadDefinition } from "../../block/block.types"
 import { wordsOf } from "../../schema/namespaced"
 import type { SpecAsideSummary } from "../../spec/spec.types"
 import { resolveVariables, textOf, valueAt } from "../../spec/spec-value"
+import { useIsNarrow } from "./useIsNarrow"
 import { useWorkbenchHost } from "../host/WorkbenchHostProvider"
 
 /** What the aside summary reads: how much waits, and what is first. */
@@ -54,6 +55,8 @@ interface AsidePanesProps {
     readonly label: string
     /** How much waits in the aside; empty while unknown. */
     readonly count: string
+    /** Whether the screen is narrower than the wide layout: the aside is then a block of the well. */
+    readonly isNarrow: boolean
 }
 
 /**
@@ -77,15 +80,29 @@ const AsidePanes = (props: AsidePanesProps): ReactNode => (
         <Pane area="main" label={props.namespace}>
             <PaneSection>{props.main}</PaneSection>
         </Pane>
-        <Pane area="aside" surface label={props.label}>
-            <PaneSection align="center">
-                <PaneHeader
-                    title={props.label}
-                    {...(props.count === "" ? {} : { status: <Badge tone="accent">{props.count}</Badge> })}
-                />
-            </PaneSection>
-            <PaneSection grow>{props.aside}</PaneSection>
-        </Pane>
+        {props.isNarrow ? (
+            <Pane area="aside" label={props.label}>
+                <PaneSection>
+                    <SurfaceCard
+                        label={props.label}
+                        headingLevel={2}
+                        {...(props.count === "" ? {} : { fact: props.count })}
+                    >
+                        {props.aside}
+                    </SurfaceCard>
+                </PaneSection>
+            </Pane>
+        ) : (
+            <Pane area="aside" surface label={props.label}>
+                <PaneSection align="center">
+                    <PaneHeader
+                        title={props.label}
+                        {...(props.count === "" ? {} : { status: <Badge tone="accent">{props.count}</Badge> })}
+                    />
+                </PaneSection>
+                <PaneSection grow>{props.aside}</PaneSection>
+            </Pane>
+        )}
     </PaneGrid>
 )
 
@@ -108,6 +125,7 @@ export interface AsideFrameProps {
 /** The panes of the aside view, with the label and the count the summary names. */
 export const AsideFrame = (props: AsideFrameProps): ReactNode => {
     const host = useWorkbenchHost()
+    const isNarrow = useIsNarrow()
     const text = host.block.text("blocks")
     const owner = host.block.text(props.namespace)
     const locale = host.block.locale()
@@ -121,6 +139,7 @@ export const AsideFrame = (props: AsideFrameProps): ReactNode => {
                     namespace={text({ key: "renderer.main" })}
                     label={label}
                     count={figures.count}
+                    isNarrow={isNarrow}
                     tabs={props.tabs}
                     main={props.main}
                     aside={props.aside}
