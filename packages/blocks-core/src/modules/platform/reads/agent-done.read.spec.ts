@@ -8,6 +8,7 @@ const CONTEXT: RunContext = {
     memberId: "m1",
     now: new Date("2026-11-04T11:30:00.000Z"),
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 }
 
 const AGENT = "6f1c3a52-0f0b-4b57-9a2c-1c2f6d7e8a90"
@@ -60,14 +61,11 @@ const run = (listed: number, counted: number | null, raw: unknown = { agent: AGE
 describe("platform.agent-done", () => {
     it("counts what the agent finished, lists the newest runs, with how many more there are", async () => {
         const { queries, aggregates, result } = run(DONE_SHOWN, 42)
-        await expect(result).resolves.toMatchObject({
-            ok: true,
-            data: {
-                count: "42",
-                more: "+37",
-                rows: expect.arrayContaining([expect.objectContaining({ id: "r0", title: "tag" })]),
-            },
-        })
+        const answered = await result
+        expect(answered).toMatchObject({ ok: true, data: { count: "42", more: "+37" } })
+        const data = answered?.ok === true ? answered.data : null
+        expect(data).toHaveProperty("rows.0.id", "r0")
+        expect(data).toHaveProperty("rows.0.title", "tag")
         expect(queries[0]).toMatchObject({
             order: [
                 ["endedAt", "desc"],

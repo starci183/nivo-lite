@@ -5,7 +5,7 @@ const membersOf = (count: number, value: unknown): Record<string, unknown> =>
     Object.fromEntries(Array.from({ length: count }, (_unused, index) => [`k${String(index)}`, value]))
 
 describe("work-item-effects.schema", () => {
-    it("reads a raise payload with members of every JSON kind, its amount and its claim optional", () => {
+    it("reads a raise payload with members of every JSON kind, its amount optional", () => {
         const payload = { text: "x", amount: 5, paid: false, none: null, list: [1, "a"], nested: { a: [{ b: 1 }] } }
 
         expect(raisePayloadSchema.safeParse({ action: "review", title: "Review", payload }).success).toBe(true)
@@ -15,7 +15,6 @@ describe("work-item-effects.schema", () => {
                 title: "Review",
                 payload: {},
                 amountVnd: 0,
-                claimId: "c-1",
             }).success,
         ).toBe(true)
     })

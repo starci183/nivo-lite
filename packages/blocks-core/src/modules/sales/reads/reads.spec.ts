@@ -1,8 +1,9 @@
 import type { ReadDefinition, ReadRunResult } from "@nivo-lite/agent-sdk/block"
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
-import type { PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
+import type { PortProvider } from "@nivo-lite/agent-sdk/port"
 import { z } from "zod"
 import { ORDER_WAITING, sampleState, SAMPLE_NOW } from "../fixtures/sales.data"
+import { salesContextOf } from "../fixtures/sales.context"
 import { memoryProvider } from "../memory"
 import type { MemoryState } from "../memory"
 import { leadRead } from "./lead.read"
@@ -11,12 +12,7 @@ import { orderRead } from "./order.read"
 import { orderCountsRead, ordersRead } from "./orders.read"
 import { ordersWaitingRead, waitingHrefOf } from "./orders-waiting.read"
 
-const CONTEXT: RunContext = {
-    workspaceId: "w1",
-    memberId: "m1",
-    now: new Date(SAMPLE_NOW),
-    timeZone: "Asia/Ho_Chi_Minh",
-}
+const CONTEXT = salesContextOf()
 
 const page = z.object({
     rows: z.array(z.object({ id: z.string().max(100) })).max(100),

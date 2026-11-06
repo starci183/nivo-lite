@@ -36,6 +36,3 @@ export type Pane = "list" | "detail"
 
 /** The pane a `pane` param value names; anything else is the list. */
 export const paneOf = (value: string | null): Pane => (value === "detail" ? "detail" : "list")
-
-/** Whether a phone shows the aside pane of a spec that has one: the `pane` param names any pane but the main one (`list`). */
-export const isAsidePane = (value: string | null): boolean => value !== null && value !== "list"

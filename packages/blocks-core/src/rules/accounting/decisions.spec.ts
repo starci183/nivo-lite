@@ -10,15 +10,16 @@ const PAID = {
 const BARE = { id: "t2", amountVnd: 100, reference: null, payer: null, occurredAt: "2026-11-04T02:12:00.000Z" }
 
 describe("unmatchedQueueOf", () => {
-    it("draws each payment with its payer, its transfer content and its amount, and no command to run", () => {
+    it("draws each payment with its payer, its transfer content and its amount, and the two commands that resolve it", () => {
         const queue = unmatchedQueueOf([PAID, BARE], 5)
         expect(queue.count).toBe("5")
         expect(queue.rows[0]).toMatchObject({
             title: "Hoa Sen",
             description: "CK HOA SEN",
             amount: "3.500.000\u00a0₫",
-            primary: null,
-            menu: [],
+            amountValue: 3_500_000,
+            primary: { id: "assign-order", intent: "commit" },
+            menu: [{ id: "other-income" }],
         })
         expect(queue.rows[1]).toMatchObject({ title: "t2", description: "", proposal: "" })
     })

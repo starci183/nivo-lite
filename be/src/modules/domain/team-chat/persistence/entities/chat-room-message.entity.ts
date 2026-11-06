@@ -1,5 +1,6 @@
 import { UuidAbstractEntity } from "@modules/platform/database"
 import { Column, Entity } from "typeorm"
+import type { Attachment, AuthorKind, MessageKind, MessageRef, StoredMention } from "../../team-chat.contracts"
 
 @Entity({ schema: "public", name: "chat_room_messages" })
 /** One row of public.chat_room_messages: a text, a report of a run, an approval card of a decision, or a system line. */
@@ -14,7 +15,7 @@ export class ChatRoomMessageEntity extends UuidAbstractEntity {
 
     /** `user`, `agent` or `system`. */
     @Column({ name: "author_kind", type: "text" })
-    authorKind!: string
+    authorKind!: AuthorKind
 
     /** The account or the agent; null for a system line. */
     @Column({ name: "author_id", type: "uuid", nullable: true })
@@ -26,19 +27,19 @@ export class ChatRoomMessageEntity extends UuidAbstractEntity {
 
     /** `text`, `report`, `approval` or `system`. */
     @Column({ type: "text", default: () => "'text'" })
-    kind!: string
+    kind!: MessageKind
 
     /** The one engine object a report (`run_id`) or an approval (`decision_id`) is about. */
     @Column({ type: "jsonb", nullable: true })
-    ref!: Readonly<Record<string, string>> | null
+    ref!: MessageRef | null
 
     /** Who the author mentioned: `{kind, id}` entries. */
     @Column({ type: "jsonb", default: () => "'[]'::jsonb" })
-    mentions!: ReadonlyArray<Readonly<Record<string, string>>>
+    mentions!: ReadonlyArray<StoredMention>
 
     /** The files sent with the message. */
     @Column({ type: "jsonb", default: () => "'[]'::jsonb" })
-    attachments!: ReadonlyArray<Readonly<Record<string, string | number>>>
+    attachments!: ReadonlyArray<Attachment>
 
     /** The author's retry key. */
     @Column({ name: "client_id", type: "text", nullable: true })

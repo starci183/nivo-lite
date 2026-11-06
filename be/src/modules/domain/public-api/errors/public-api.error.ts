@@ -5,10 +5,8 @@ import type { ErrorKind } from "@modules/platform/errors"
 export enum PublicApiErrorCode {
     /** The `since` filter is not an ISO time. */
     SinceInvalid = "PUBLIC_API_SINCE_INVALID",
-    /** The workspace has no customer conversation with the requested id or customer. */
+    /** The workspace has no customer conversation with the requested id. */
     ConversationNotFound = "PUBLIC_API_CONVERSATION_NOT_FOUND",
-    /** A message needs a conversation id or a lead id. */
-    TargetMissing = "PUBLIC_API_TARGET_MISSING",
     /** The knowledge source text is longer than one source may be. */
     ContentTooLong = "PUBLIC_API_CONTENT_TOO_LONG",
     /** The insert answered no row: the knowledge source was not written. */
@@ -25,7 +23,6 @@ export enum PublicApiErrorCode {
 export const PUBLIC_API_ERROR_KINDS: Record<PublicApiErrorCode, ErrorKind> = {
     [PublicApiErrorCode.SinceInvalid]: "invalid",
     [PublicApiErrorCode.ConversationNotFound]: "not-found",
-    [PublicApiErrorCode.TargetMissing]: "invalid",
     [PublicApiErrorCode.ContentTooLong]: "invalid",
     [PublicApiErrorCode.NotWritten]: "internal",
     [PublicApiErrorCode.RequestInvalid]: "invalid",

@@ -10,8 +10,6 @@ export enum JobsLogEvent {
     FailureNotRecorded = "jobs.delivery.failure-not-recorded",
     /** The lease of a running job could not be renewed (the database failed, not the fence); the next beat tries again. */
     LeaseNotRenewed = "jobs.lease.not-renewed",
-    /** A job a retry cannot fix was parked until a fix. */
-    Parked = "jobs.parked",
     /** A parked job was handed back to its queue. */
     Resumed = "jobs.resumed",
     /** A recurring tick failed to put its job on the queue; the next firing tries again and the app keeps running. */

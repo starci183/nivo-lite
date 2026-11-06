@@ -4,6 +4,7 @@ import { CHANNEL_SENDER_REGISTRY, ZALO_INBOX_READS } from "./channels.decorators
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./channels.module-definition"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 import { ChannelSenderRegistryService } from "./channel-sender-registry.service"
+import { ChannelCustomerProfileService } from "./channel-customer-profile.service"
 import { ChannelDeliveryService } from "./channel-delivery.service"
 import { ChatSendNativeService } from "./chat-send-native.service"
 import { ChannelPlanNoticeService } from "./channel-plan-notice.service"
@@ -30,6 +31,7 @@ export class ChannelsModule extends ConfigurableModuleClass {
                 ZaloCredentialsService,
                 ChannelSenderRegistryService,
                 ChannelDeliveryService,
+                ChannelCustomerProfileService,
                 ChatSendNativeService,
                 ChannelPlanNoticeService,
                 ZaloDeliveryService,

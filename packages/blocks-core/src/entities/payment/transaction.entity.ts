@@ -3,8 +3,13 @@ import type { EntityDefinition, FieldDef } from "@nivo-lite/agent-sdk/entity"
 
 import { MAX_ID, MAX_LINE } from "../../bounds"
 
-/** Whether a transaction is tied to what it paid. */
-export const TRANSACTION_STATUSES: readonly [string, ...Array<string>] = ["unmatched", "matched", "needs_review"]
+/** Whether a transaction is tied to what it paid, or the owner called it other income. */
+export const TRANSACTION_STATUSES: readonly [string, ...Array<string>] = [
+    "unmatched",
+    "matched",
+    "needs_review",
+    "other_income",
+]
 
 type TransactionFields = {
     readonly channel: FieldDef<"enum", false>
@@ -44,6 +49,9 @@ export const transactionEntity: EntityDefinition<TransactionFields> = defineEnti
         invoice: { kind: "toOne", target: "accounting.invoice" },
     },
     indexes: [
+        { name: "key", on: ["id"] },
+        { name: "amount_recent", on: ["amountVnd", { desc: "createdAt" }, { desc: "id" }] },
+        { name: "status_recent", on: ["status", { desc: "createdAt" }, { desc: "id" }] },
         { name: "occurred", on: [{ desc: "occurredAt" }, { desc: "id" }] },
         { name: "status_occurred", on: ["status", { desc: "occurredAt" }, { desc: "id" }] },
         { name: "direction_occurred", on: ["direction", { desc: "occurredAt" }, { desc: "id" }] },

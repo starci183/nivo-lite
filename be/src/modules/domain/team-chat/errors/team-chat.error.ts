@@ -31,8 +31,10 @@ export enum TeamChatErrorCode {
     TooManyFiles = "TEAM_CHAT_TOO_MANY_FILES",
     /** A file is larger than 25 MB. */
     FileTooLarge = "TEAM_CHAT_FILE_TOO_LARGE",
-    /** The file type is not allowed. */
+    /** The file is not an image, a PDF, a text file or an Office file, so the upload or the send is refused. */
     FileTypeNotAllowed = "TEAM_CHAT_FILE_TYPE_NOT_ALLOWED",
+    /** The file store could not be reached or is not part of this app. */
+    StorageUnavailable = "TEAM_CHAT_STORAGE_UNAVAILABLE",
 }
 
 /** How the refusals travel over the API when a transport turns one into an error. */
@@ -52,6 +54,7 @@ export const TEAM_CHAT_ERROR_KINDS: Record<TeamChatErrorCode, ErrorKind> = {
     [TeamChatErrorCode.TooManyFiles]: "invalid",
     [TeamChatErrorCode.FileTooLarge]: "invalid",
     [TeamChatErrorCode.FileTypeNotAllowed]: "invalid",
+    [TeamChatErrorCode.StorageUnavailable]: "unavailable",
 }
 
 /** The typed error of the team chat capability. */

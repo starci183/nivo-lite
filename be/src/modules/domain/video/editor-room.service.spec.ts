@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import type { WorkContext } from "@modules/domain/decisions"
 import { EditorRoomService } from "./editor-room.service"
 import type { EditorCard } from "./editor-delegation.contracts"
@@ -9,10 +9,10 @@ const CTX: WorkContext = { workspaceId: "workspace-1", actor: "AI Editor", local
 const CARD: EditorCard = { v: 1, type: "video_ready", title: "Video" }
 
 const build = async () => {
-    const chat = mock<TeamChatService>()
+    const chat = mock<TeamChatRoomsService>()
     chat.postAsAgent.mockResolvedValue({ roomId: "room-1", messageId: "message-1", agentId: "agent-1" })
     const moduleRef = await Test.createTestingModule({
-        providers: [EditorRoomService, { provide: TeamChatService, useValue: chat }],
+        providers: [EditorRoomService, { provide: TeamChatRoomsService, useValue: chat }],
     }).compile()
     return { room: moduleRef.get(EditorRoomService), chat }
 }

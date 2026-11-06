@@ -364,5 +364,3 @@ export type PerformedBy = Decider | ActorRef
 export type { RuleMode }
 export type { Authority } from "@modules/domain/authority"
 export type { AuthorityRule, GateVerdict, OptionalAuthorityRule } from "@modules/domain/authority-rules"
-export type { OptionalAgentIdentity } from "@modules/domain/messages"
-export type { ResponsibilityRecord, ResponsibilityStatus } from "@modules/domain/responsibilities"

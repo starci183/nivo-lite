@@ -4,7 +4,7 @@ import { WorkEngineService, WORK_PERFORMER_REGISTRY } from "@modules/domain/deci
 import type { WorkPerformer, WorkPerformerRegistry } from "@modules/domain/decisions"
 import { ChatConversationsService } from "@modules/domain/chat-records"
 import { PublicMessagesService } from "@modules/domain/public-api"
-import { persistPublicApiConversation, persistPublicApiLead } from "../../fixtures/builders/public-api.builder"
+import { persistPublicApiConversation } from "../../fixtures/builders/public-api.builder"
 import { PUBLIC_API_PROOF_MODULES, PublicApiProofAccess } from "../../world/public-api-capabilities.options"
 import type { LiteWorld } from "../../world/lite-world.service"
 import { publicApiWork } from "../../world/public-api-proof.service"
@@ -77,8 +77,6 @@ describe("Public API stale message (persisted local integration)", () => {
             identity,
             world.id(),
         )
-        const leadId = world.id()
-        await persistPublicApiLead(world.db.primary, identity.workspaceId, leadId)
         const perform = automaticSender(world)
 
         await deliver(
@@ -88,7 +86,6 @@ describe("Public API stale message (persisted local integration)", () => {
                 keyId: identity.keyId,
                 keyName: "Public API proof",
                 conversationId,
-                leadId,
                 text: "Historical draft without approval",
                 requireApproval: false,
                 dedupeKey: `api.message:historical:${world.id()}`,

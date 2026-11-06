@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import type { HubCardPayload } from "./accounting-desk.contracts"
 
 /** The module whose agent (AI Ke toan) speaks to the owner. */
@@ -8,7 +8,7 @@ export const ACCOUNTING_DEPARTMENT = "accounting"
 @Injectable()
 /** The adapter to the team chat for the accounting desk: lines the accounting agent says to the owner in their direct room. */
 export class AccountingRoomService {
-    constructor(private readonly chat: TeamChatService) {}
+    constructor(private readonly chat: TeamChatRoomsService) {}
 
     /** Says one line as AI Ke toan to the owner; nothing happens when the workspace has no accounting agent. */
     async post(workspaceId: string, body: string): Promise<void> {

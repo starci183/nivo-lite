@@ -1,7 +1,6 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
 import { Type } from "class-transformer"
 import { ArrayMaxSize, IsArray, IsOptional, IsString, IsUUID, MaxLength, ValidateNested } from "class-validator"
-import { BODY_MAX, FILES_MAX, MENTIONS_MAX } from "@modules/domain/team-chat"
 import { ChatMemberRefInput } from "./chat-member-ref.input"
 
 @InputType()
@@ -24,14 +23,14 @@ export class SendChatMessageInput {
     /** The text; empty only with files. The service refuses one over the limit with `body_too_long`. */
     @Field(() => String)
     @IsString()
-    @MaxLength(BODY_MAX * 2)
+    @MaxLength(16000)
     body!: string
 
     /** The members it mentions. */
     @Field(() => [ChatMemberRefInput], { nullable: true })
     @IsOptional()
     @IsArray()
-    @ArrayMaxSize(MENTIONS_MAX * 2)
+    @ArrayMaxSize(40)
     @ValidateNested({ each: true })
     @Type(() => ChatMemberRefInput)
     mentions: Array<ChatMemberRefInput> | null = null
@@ -40,7 +39,7 @@ export class SendChatMessageInput {
     @Field(() => [String], { nullable: true })
     @IsOptional()
     @IsArray()
-    @ArrayMaxSize(FILES_MAX * 2)
+    @ArrayMaxSize(20)
     @IsString({ each: true })
     @MaxLength(300, { each: true })
     fileKeys: Array<string> | null = null

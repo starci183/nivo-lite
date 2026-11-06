@@ -11,14 +11,9 @@ const buildSubject = async () => {
 }
 
 const EMPTY = {
-    leadCount: 0,
-    openResponsibilityCount: 0,
     agents: [],
     hasChatbot: false,
     isFoundingMember: false,
-    approvals: [],
-    exceptions: [],
-    pendingDecisions: 0,
 }
 
 describe("toShellFacts", () => {
@@ -26,9 +21,6 @@ describe("toShellFacts", () => {
         const subject = await buildSubject()
         expect(
             subject.toShellFacts({
-                lead_count: 4,
-                open_responsibility_count: 2,
-                pending_decisions: 1,
                 has_chatbot: true,
                 is_founding_member: true,
                 agents: [
@@ -41,39 +33,14 @@ describe("toShellFacts", () => {
                     3,
                     true,
                 ],
-                pending: [
-                    {
-                        id: "x-1",
-                        draft: "Hello",
-                        next_action: "send",
-                        lead_id: "l-1",
-                        contact_name: "Minh",
-                    },
-                    { id: null, draft: 1, next_action: 2, lead_id: false },
-                ],
-                exceptions: [
-                    { id: "w-1", lead_id: "l-1", contact_name: "Minh", summary: "Late", error: "timeout" },
-                    {},
-                ],
             }),
         ).toEqual({
-            leadCount: 4,
-            openResponsibilityCount: 2,
-            pendingDecisions: 1,
             hasChatbot: true,
             isFoundingMember: true,
             agents: [
                 { id: "a-1", name: "Mai", module: "sales", status: "paused" },
                 { id: "a-2", name: "Lan", module: "chatbot", status: "active" },
                 { id: "", name: "", module: "", status: "active" },
-            ],
-            approvals: [
-                { id: "x-1", draft: "Hello", nextAction: "send", leadId: "l-1", contactName: "Minh" },
-                { id: "", draft: "", nextAction: null, leadId: null, contactName: null },
-            ],
-            exceptions: [
-                { id: "w-1", leadId: "l-1", contactName: "Minh", summary: "Late", error: "timeout" },
-                { id: "", leadId: null, contactName: null, summary: null, error: null },
             ],
         })
     })
@@ -89,14 +56,9 @@ describe("toShellFacts", () => {
         expect(subject.toShellFacts(true)).toEqual(EMPTY)
         expect(
             subject.toShellFacts({
-                lead_count: "4",
-                open_responsibility_count: null,
-                pending_decisions: false,
                 has_chatbot: "yes",
                 is_founding_member: false,
                 agents: "none",
-                pending: null,
-                exceptions: { id: "not-a-list" },
             }),
         ).toEqual(EMPTY)
     })

@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { MarketingCardsService } from "./marketing-cards.service"
@@ -9,7 +9,7 @@ import type { MarketingWeeklyReport } from "./content-agent.contracts"
 import type { DraftPostCard, ScheduleConfirmedCard, WeeklyReportCard } from "./marketing-cards.contracts"
 
 const build = async () => {
-    const chat = mock<TeamChatService>({
+    const chat = mock<TeamChatRoomsService>({
         postAsAgent: jest.fn(() => Promise.resolve({ roomId: "r-1", messageId: "m-1", agentId: "a-1" })),
     })
     const catalog = mock<MessageCatalog>()
@@ -19,7 +19,7 @@ const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             MarketingCardsService,
-            { provide: TeamChatService, useValue: chat },
+            { provide: TeamChatRoomsService, useValue: chat },
             { provide: MESSAGE_CATALOG, useValue: catalog },
         ],
     }).compile()

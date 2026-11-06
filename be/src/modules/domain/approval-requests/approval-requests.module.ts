@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { ModuleJobsQueueModule } from "@modules/queues/module-jobs"
 import { ApprovalAnnouncerService } from "./approval-announcer.service"
 import { ApprovalDecidingService } from "./approval-deciding.service"
 import { ApprovalEscalationService } from "./approval-escalation.service"
@@ -26,7 +25,7 @@ export class ApprovalRequestsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), ModuleJobsQueueModule.register({})],
+            imports: [...(base.imports ?? [])],
             providers: [
                 ...(base.providers ?? []),
                 { provide: APPROVAL_AGENT_OWNERS, useExisting: options.ports.agentOwners },

@@ -1,4 +1,4 @@
-import type { MemberRef } from "@modules/domain/team-chat"
+import type { ChatMemberRef, UploadAsk } from "@modules/domain/team-chat"
 
 /** The workspace selected by X-Workspace-Id; the service proves the caller's seat. */
 export interface TeamChatScope {
@@ -37,13 +37,13 @@ export interface CreateRoomRequest extends TeamChatScope {
     /** The name of a group. */
     readonly name: string | null
     /** The other members. */
-    readonly members: ReadonlyArray<MemberRef>
+    readonly members: ReadonlyArray<ChatMemberRef>
 }
 
 /** A member added to or removed from a room. */
 export interface RoomMemberRequest extends RoomRequest {
     /** The member. */
-    readonly member: MemberRef
+    readonly member: ChatMemberRef
 }
 
 /** A message to send. */
@@ -51,11 +51,11 @@ export interface SendMessageRequest extends TeamChatScope {
     /** The room; null for the first message to a member. */
     readonly roomId: string | null
     /** The member a first message goes to. */
-    readonly to: MemberRef | null
+    readonly to: ChatMemberRef | null
     /** The text. */
     readonly body: string
     /** The members it mentions. */
-    readonly mentions: ReadonlyArray<MemberRef>
+    readonly mentions: ReadonlyArray<ChatMemberRef>
     /** The files it carries. */
     readonly fileKeys: ReadonlyArray<string>
     /** The retry key. */
@@ -66,6 +66,23 @@ export interface SendMessageRequest extends TeamChatScope {
 export interface MarkReadRequest extends RoomRequest {
     /** The message read up to; null is the newest. */
     readonly messageId: string | null
+}
+
+/** A file to upload to a room. */
+export interface RequestUploadRequest extends RoomRequest, UploadAsk {}
+
+/** The mute of a room for the caller. */
+export interface SetMutedRequest extends RoomRequest {
+    /** True to mute. */
+    readonly muted: boolean
+}
+
+/** A verdict on the decision an approval card is about. */
+export interface DecideRequest extends TeamChatScope {
+    /** The decision (the approval request). */
+    readonly decisionId: string
+    /** Approve or reject. */
+    readonly verdict: "approve" | "reject"
 }
 
 /** A pin of one message. */

@@ -12,6 +12,7 @@ into private files outside the repository (`<KEY>_FILE`, which the back end read
 | `DEV_DB_APP_PASSWORD` | `db` | the `app_be` role of this environment; composed into `PRIMARY_DB_URL` (read through `PRIMARY_DB_URL_FILE`) |
 | `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` | `storage` | MinIO's root user and password (compose values) and the api's S3 credentials |
 | `CHANNEL_TOKEN_KEY` | `platform` | base64 of 32 bytes: seals the connection credentials; preserve it for existing encrypted data |
+| `ENTITY_ENGINE_CURSOR_KEY` | `platform` | base64 of 32 bytes: signs the list cursors of the entity engine (api, mcp and cli read it); changing it only invalidates open cursors |
 | `OTP_PEPPER` | `platform` | the pepper of the loyalty code hashes |
 | `N8N_SIGNING_SECRET` | `platform` | signs the n8n webhook calls |
 | `OPENCLAW_GATEWAY_TOKEN`, `OPENCLAW_BRIDGE_SECRET`, `OPENCLAW_TOOL_SECRET` | `openclaw` | the gateway token (api and gateway), the bridge plugin's signing secret and the per-turn tool token secret; the gateway container sees the first two through its least grant |

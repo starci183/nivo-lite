@@ -38,6 +38,27 @@ export const figureTextOf = (value: unknown, format: FigureFormat | undefined, c
     }
 }
 
+/** How the tiles of figures sit on the page: bare under the heading of the region, or as a ribbon: one surface, the figures side by side. */
+export const FIGURE_VARIANTS = ["strip", "ribbon"] as const
+
+/** One variant of tiles. */
+export type FigureVariant = (typeof FIGURE_VARIANTS)[number]
+
+/** How many figures a ribbon holds: its fewest and its most. */
+export interface RibbonBounds {
+    /** The fewest figures a ribbon holds. */
+    readonly min: number
+    /** The most figures a ribbon holds. */
+    readonly max: number
+}
+
+/** The figures a ribbon holds. */
+export const RIBBON_FIGURES: RibbonBounds = { min: 2, max: 5 }
+
+/** Whether a variant and a count of figures draw as a ribbon: the variant asks for it and the count fits one. */
+export const isRibbon = (variant: FigureVariant | undefined, count: number): boolean =>
+    variant === "ribbon" && count >= RIBBON_FIGURES.min && count <= RIBBON_FIGURES.max
+
 /** How a figures block draws its items: tiles in one card, bars on one scale, or one proportional gauge per item. */
 export const FIGURE_KINDS = ["tiles", "bars", "proportion"] as const
 

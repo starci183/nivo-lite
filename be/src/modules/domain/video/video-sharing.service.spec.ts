@@ -4,7 +4,7 @@ import { ConnectionSecretsErrorCode } from "@modules/domain/connection-secrets"
 import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { EventsService } from "@modules/domain/events"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { TELEGRAM } from "@modules/integrations/telegram"
 import type { TelegramClient } from "@modules/integrations/telegram"
@@ -113,7 +113,7 @@ const build = async (rows: ReadonlyArray<StoredProject> = [rowOf()], project: Wo
     connections.listByProvider.mockResolvedValue([connectionOf()])
     const secrets = mock<ConnectionSecretReadsService>()
     secrets.botToken.mockResolvedValue(ok("bot-token"))
-    const messages = mock<TeamChatService>()
+    const messages = mock<TeamChatRoomsService>()
     messages.postAsAgent.mockResolvedValue({ roomId: "room-1", messageId: "message-1", agentId: "agent-1" })
     const events = mock<EventsService>()
     const moduleRef = await Test.createTestingModule({
@@ -125,7 +125,7 @@ const build = async (rows: ReadonlyArray<StoredProject> = [rowOf()], project: Wo
             { provide: VideoMediaService, useValue: media },
             { provide: ConnectionsService, useValue: connections },
             { provide: ConnectionSecretReadsService, useValue: secrets },
-            { provide: TeamChatService, useValue: messages },
+            { provide: TeamChatRoomsService, useValue: messages },
             { provide: EventsService, useValue: events },
         ],
     }).compile()

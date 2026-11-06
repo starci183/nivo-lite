@@ -3,6 +3,7 @@ export const CONSOLE_ROUTES = {
     login: "/login",
     workspaceHome: "/agents",
     inbox: "/inbox",
+    chat: "/chat",
     authority: "/authority",
     connections: "/connections",
     team: "/team",
@@ -12,12 +13,6 @@ export const CONSOLE_ROUTES = {
 
 /** One section of the authority page. */
 export const authoritySectionPath = (section: string): string => `/authority/${section}`
-
-/** The chat page of one module agent. */
-export const agentChatHref = (agentId: string, tab?: string): string => {
-    const query = tab === undefined ? "" : `?tab=${tab}`
-    return `/modules/${agentId}/chat${query}`
-}
 
 /** The workbench of one module, opened on one work item. */
 export const workItemHref = (module: string, workItemId: string): string =>
@@ -35,13 +30,6 @@ export const AGENT_ROLES_ANCHOR = "agent-roles"
 /** The roles to add on the agents page, from anywhere. */
 export const AGENT_ROLES_HREF: "/agents#agent-roles" = `${AGENTS_ROUTE}#${AGENT_ROLES_ANCHOR}`
 
-/** The chat page of one module agent opened on one tab and, when given, on one conversation. */
-export const agentChatConversationHref = (agentId: string, tab: string, conversationId: string | null): string => {
-    const query = new URLSearchParams({ tab })
-    if (conversationId !== null) query.set("c", conversationId)
-    return `${agentChatHref(agentId)}?${query.toString()}`
-}
-
 /** The profile page of one agent: who answers for it, who may give it work, whom it may tag. */
 export const agentProfileHref = (agentId: string): string => `/agents/profile/${agentId}`
 
@@ -55,3 +43,6 @@ export const zaloReturnPath = (query: Readonly<Record<string, string | undefined
 /** The page of one Zalo OA connection, on a tab when one is named. */
 export const zaloConnectionHref = (connectionId: string, tab?: string): string =>
     tab === undefined ? `/connections/zalo/${connectionId}` : `/connections/zalo/${connectionId}?tab=${tab}`
+
+/** The team chat opened on one room. */
+export const chatRoomHref = (roomId: string): string => `${CONSOLE_ROUTES.chat}?room=${encodeURIComponent(roomId)}`

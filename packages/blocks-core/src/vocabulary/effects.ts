@@ -57,6 +57,12 @@ export interface OrderConfirmPayload {
     readonly orderId: string
 }
 
+/** An order that was just given a payment code, for which an earlier credit is looked for. */
+export interface PaymentRematchPayload {
+    /** The order the code was issued for. */
+    readonly orderId: string
+}
+
 /** An order a bank credit paid, with the evidence that matched them. */
 export interface PaymentMarkPaidPayload {
     /** The order that was paid. */
@@ -170,6 +176,8 @@ const paymentMarkPaidPayload: z.ZodType<PaymentMarkPaidPayload> = z.object({
     evidence: z.array(z.string().max(MAX_BODY)).max(MAX_ENTRIES),
 })
 
+const paymentRematchPayload: z.ZodType<PaymentRematchPayload> = z.object({ orderId: id })
+
 const paymentClaimRecordPayload: z.ZodType<PaymentClaimRecordPayload> = z.object({
     leadId: id.nullable(),
     conversationId: id,
@@ -255,6 +263,17 @@ export const paymentMarkPaidEffect: EffectDefinition<z.ZodType<PaymentMarkPaidPa
     ],
 })
 
+/**
+ * Asks the engine to look again for a credit that arrived before the order had a payment code: the back end enqueues the
+ * `payment.rematch` job for the order (the settlement itself is the job's, through the same path as an arrival); the subject is the order.
+ */
+export const paymentRematchEffect: EffectDefinition<z.ZodType<PaymentRematchPayload>> = defineEffect({
+    id: "payment.rematch",
+    title: { key: "effectPaymentRematch" },
+    payload: paymentRematchPayload,
+    rights: [],
+})
+
 /** Records what a customer said they paid; the subject is the claim. */
 export const paymentClaimRecordEffect: EffectDefinition<z.ZodType<PaymentClaimRecordPayload>> = defineEffect({
     id: "payment-claim.record",
@@ -308,6 +327,7 @@ export const coreEffects: ReadonlyArray<EffectDefinition> = [
     orderVoidEffect,
     orderConfirmEffect,
     paymentMarkPaidEffect,
+    paymentRematchEffect,
     paymentClaimRecordEffect,
     paymentClaimWithdrawEffect,
     agentTagEffect,

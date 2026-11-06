@@ -5,15 +5,19 @@ describe("salesFiguresOf", () => {
         expect(
             salesFiguresOf(
                 { new: 2, qualified: 1, proposal: 1, won: 3, lost: 1 },
-                { draftCount: 2, draftVnd: 10, closedCount: 2, closedVnd: 12 },
+                { draftCount: 2, draftVnd: 10, closedCount: 2, closedVnd: 212_000_000 },
             ),
         ).toEqual({
             openCount: 4,
             proposalCount: 2,
             proposalValueVnd: 10,
             closedCount: 2,
-            closedValueVnd: 12,
+            closedValueVnd: 212_000_000,
             conversion: 0.75,
+            openHint: { key: "fig_open_hint" },
+            proposalHint: { key: "fig_proposal_hint", values: { count: 2 } },
+            closedHint: { key: "fig_closed_hint", values: { amount: 212 } },
+            conversionHint: { key: "fig_conversion_hint" },
         })
     })
 
@@ -25,6 +29,10 @@ describe("salesFiguresOf", () => {
             closedCount: 0,
             closedValueVnd: 0,
             conversion: 0,
+            openHint: { key: "fig_open_hint" },
+            proposalHint: { key: "fig_proposal_hint", values: { count: 0 } },
+            closedHint: { key: "fig_closed_hint", values: { amount: 0 } },
+            conversionHint: { key: "fig_conversion_hint" },
         })
     })
 })

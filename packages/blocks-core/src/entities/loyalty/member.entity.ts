@@ -6,6 +6,9 @@ import { MAX_ID, MAX_LINE } from "../../bounds"
 /** Whether a customer bought lately, has gone quiet or is too new to tell. */
 export const MEMBER_ACTIVITIES: readonly [string, ...Array<string>] = ["active", "at_risk", "new"]
 
+/** What `lastActivityAt` holds for a customer who never bought: the epoch, so the "newest purchase first" order puts them last. */
+export const NEVER_BOUGHT = "1970-01-01T00:00:00.000Z"
+
 /** The longest note of the owner. */
 const MAX_NOTE = 2_000
 
@@ -22,6 +25,7 @@ type MemberFields = {
     readonly lifetimeSpendVnd: FieldDef<"money_vnd", false>
     readonly visits: FieldDef<"int", false>
     readonly lastVisitAt: FieldDef<"timestamptz", true>
+    readonly lastActivityAt: FieldDef<"timestamptz", false>
     readonly joinedAt: FieldDef<"timestamptz", false>
     readonly activity: FieldDef<"enum", false>
     readonly leadId: FieldDef<"uuid", true>
@@ -40,6 +44,7 @@ const memberFields: MemberFields = {
     lifetimeSpendVnd: field.moneyVnd({ default: { literal: 0 } }),
     visits: field.int({ default: { literal: 0 } }),
     lastVisitAt: field.timestamptz({ nullable: true }),
+    lastActivityAt: field.timestamptz({ default: { literal: NEVER_BOUGHT } }),
     joinedAt: field.timestamptz({ default: "now" }),
     activity: field.enum({ of: MEMBER_ACTIVITIES, default: { literal: "new" } }),
     leadId: field.uuid({ nullable: true }),
@@ -50,7 +55,7 @@ type IndexColumn = string | { readonly desc: string }
 
 /** The four sorts the members list takes: newest visit, most points, largest spend, name. */
 const SORTS: ReadonlyArray<readonly [string, ReadonlyArray<IndexColumn>]> = [
-    ["recent", [{ desc: "lastVisitAt" }, { desc: "id" }]],
+    ["recent", [{ desc: "lastActivityAt" }, { desc: "id" }]],
     ["points", [{ desc: "points" }, { desc: "id" }]],
     ["spend", [{ desc: "lifetimeSpendVnd" }, { desc: "id" }]],
     ["name", ["name", "id"]],
@@ -64,7 +69,7 @@ const sortIndexes = (
     SORTS.map(([name, columns]) => ({ name: `${prefix}${name}`, on: [...lead, ...columns] }))
 
 /**
- * A customer of the loyalty programme. The points, the spend, the tier (its key and its name) and the activity are kept with every
+ * A customer of the loyalty programme. The points, the spend, the last purchase (`lastActivityAt`, the epoch before the first one, because the engine cannot say NULLS LAST), the tier (its key and its name) and the activity are kept with every
  * ledger entry the actions post, so the list filters, sorts and counts on stored fields only. Graph node kind `loyalty-member`.
  */
 export const loyaltyMemberEntity: EntityDefinition<MemberFields> = defineEntity({

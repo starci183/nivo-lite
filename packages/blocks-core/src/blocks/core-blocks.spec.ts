@@ -149,6 +149,12 @@ describe("the props of the list blocks", () => {
         expect(recordListBlock.props.safeParse({ ...LIST, badgeTones: { open: "purple" } }).success).toBe(false)
     })
 
+    it("take the surface of a record list and refuse a surface it does not know", () => {
+        expect(recordListBlock.props.safeParse({ ...LIST, surface: "card" }).success).toBe(true)
+        expect(recordListBlock.props.safeParse({ ...LIST, surface: "plain" }).success).toBe(true)
+        expect(recordListBlock.props.safeParse({ ...LIST, surface: "raised" }).success).toBe(false)
+    })
+
     it("refuse more record list chips than the bound", () => {
         expect(recordListBlock.props.safeParse({ ...LIST, chipPaths: ["a", "b", "c", "d"] }).success).toBe(false)
     })

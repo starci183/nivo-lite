@@ -6,13 +6,11 @@ import { ConnectionsService } from "@modules/domain/connections"
 import { ConversationsService } from "@modules/domain/conversations"
 import { MetaCommentsService } from "@modules/domain/meta-comments"
 import {
-    META_EVENT_TAKER,
     MetaInboxErrorCode,
     MetaInboxService,
     MetaWebhookVerifierService,
     MetaReceiptPolicy,
 } from "@modules/domain/meta-inbox"
-import type { MetaEventTaker } from "@modules/domain/meta-inbox"
 import { MetaThreadsService } from "@modules/domain/meta-threads"
 import type { MetaClient } from "@modules/integrations/meta"
 import { QUEUE_OUTBOX, QueueOutboxService } from "@modules/platform/queue"
@@ -76,7 +74,6 @@ type WebhooksBuilderDoorShape = {
     connections: MockOf<ConnectionsService>
     conversations: MockOf<ConversationsService>
     threads: MockOf<MetaThreadsService>
-    taker: MockOf<MetaEventTaker>
 }
 
 type WebhooksBuilderMessageShape = { mid: string; text: string }
@@ -127,7 +124,6 @@ export const webhooksBuilder = (manager: EntityManager, meta: MetaClient, option
             const threads = mock<MetaThreadsService>()
             threads.touch.mockResolvedValue(undefined)
             const comments = mock<MetaCommentsService>()
-            const taker = mock<MetaEventTaker>()
             const outbox = new QueueOutboxService()
             const moduleRef = await Test.createTestingModule({
                 providers: [
@@ -142,7 +138,6 @@ export const webhooksBuilder = (manager: EntityManager, meta: MetaClient, option
                     { provide: ConversationsService, useValue: conversations },
                     { provide: MetaThreadsService, useValue: threads },
                     { provide: MetaCommentsService, useValue: comments },
-                    { provide: META_EVENT_TAKER, useValue: taker },
                 ],
             }).compile()
             const proofModule = await Test.createTestingModule({
@@ -165,7 +160,6 @@ export const webhooksBuilder = (manager: EntityManager, meta: MetaClient, option
                 connections,
                 conversations,
                 threads,
-                taker,
             }
         }
 

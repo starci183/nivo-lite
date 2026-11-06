@@ -4,8 +4,6 @@ import type { EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import type { WorkSpec } from "./decisions.contracts"
-import { InjectWorkRaised } from "./work-engine.decorators"
-import type { WorkRaisedHook } from "@modules/domain/work-items"
 import { WorkEngineService } from "./work-engine.service"
 import type { PayloadMembers, RaisedSubject } from "./work-item-effects.contracts"
 import { raisePayloadSchema } from "./work-item-effects.schema"
@@ -39,15 +37,13 @@ const subjectOf = (payload: PayloadMembers, turn: NodeTurn): RaisedSubject => {
 /**
  * The executor of the `work-item.raise` effect: a graph node asks a person to decide, and the work engine opens the item that waits for
  * them, once per business key. An action the catalogue does not list (a run's review, a flow's review) is a generic owner decision of
- * the raising agent's module. When the item answers a claim, the capability that owns claims is told through the raised hook, so the
- * engine names no claim of its own.
+ * the raising agent's module.
  */
 export class WorkItemRaiseExecutorService implements OnModuleInit {
     constructor(
         private readonly engine: WorkEngineService,
         private readonly installations: InstallationRecordsService,
         @Optional() private readonly registry?: GraphNodeRegistryService,
-        @Optional() @InjectWorkRaised() private readonly hook?: WorkRaisedHook,
     ) {}
 
     /** Registers the executor when the app hosts graph nodes; otherwise there is nothing to serve. */
@@ -77,7 +73,6 @@ export class WorkItemRaiseExecutorService implements OnModuleInit {
             { workspaceId: turn.workspaceId, actor: ACTOR, locale: turn.locale },
             spec,
         )
-        if (given.claimId !== undefined) await this.hook?.raised(turn.workspaceId, given.claimId, item.id)
         return { kind: "work-item", id: item.id }
     }
 }

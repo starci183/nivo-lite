@@ -3,17 +3,8 @@ export { CONTENT_ITEMS_MESSAGES } from "./messages/content-items.messages"
 export { ContentItemsModule } from "./content-items.module"
 export { ContentItemsService } from "./content-items.service"
 export { ContentEditorService } from "./content-editor.service"
-export { ContentPatchSelectionMapper } from "./content-editor-input.mapper"
-export { ContentItemViewMapper, ContentRangeSelectionMapper } from "./content-editor-view.mapper"
-export type {
-    ContentActor,
-    ContentFigures,
-    ContentItem,
-    ContentWorkbench,
-    OptionalPlanSummary,
-    CreateContentItem,
-    SaveContentItem,
-} from "./content-editor.contracts"
+
+export type { ContentItem, ContentWorkbench, OptionalPlanSummary } from "./content-editor.contracts"
 export type { AgentDraftRef, DueChannelPost, DueItem, ScheduleView } from "./content-items.contracts"
 
 export { ContentApprovalStoreService } from "./content-approval-store.service"

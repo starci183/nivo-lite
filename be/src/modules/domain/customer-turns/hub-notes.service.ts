@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import type { HubNote, HubNoteSource } from "./gateway-turns.contracts"
 
 /** What a note line refers to. */
@@ -30,7 +30,7 @@ export const toolSourcesOf = (tools: ReadonlyArray<string>): ReadonlyArray<HubNo
  * line, because its key is the line's key.
  */
 export class HubNotesService {
-    constructor(private readonly chat: TeamChatService) {}
+    constructor(private readonly chat: TeamChatRoomsService) {}
 
     /** Says one note as an agent of the workspace; nothing happens when the agent is not of the workspace. */
     async post(note: HubNote, agentId: string, _refs: NoteRefs): Promise<void> {

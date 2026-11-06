@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import { EventsService } from "@modules/domain/events"
 import { InjectTelegram } from "@modules/integrations/telegram"
 import type { TelegramClient } from "@modules/integrations/telegram"
@@ -20,7 +20,7 @@ export class VideoSharingService {
         private readonly media: VideoMediaService,
         private readonly connections: ConnectionsService,
         private readonly secrets: ConnectionSecretReadsService,
-        private readonly teamChat: TeamChatService,
+        private readonly teamChat: TeamChatRoomsService,
         private readonly events: EventsService,
     ) {}
 

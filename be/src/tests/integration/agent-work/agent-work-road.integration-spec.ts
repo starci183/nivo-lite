@@ -77,36 +77,52 @@ beforeEach(() => {
 
 afterEach(() => settleAgentWork(em(), WS))
 
+/** How long the proof waits for three fires of a once-a-second schedule, and how long a stopped scheduler must stay silent. */
+const POLL_BUDGET_MS = 15_000
+const SILENCE_MS = 2500
+
 describe("agent-work/road: the clock", () => {
-    it("agent-work/scheduler-fires-once: two workers on one fire queue handle each slot once, and a removed scheduler stops", async () => {
-        const queue = `fires-${world.prefix}`
-        const id = agentTriggerSchedulerId(world.id())
-        const seen: Array<string> = []
-        const handler = {
-            queue,
-            job: AGENT_SCHEDULE_FIRE_JOB,
-            scheduled: true,
-            handle: (delivery: QueueDelivery) => {
-                seen.push(delivery.id)
-                return Promise.resolve()
-            },
-        }
-        await transportOf(world).workFires(handler, 1)
-        await transportOf(world).workFires(handler, 1)
+    it(
+        "agent-work/scheduler-fires-once: two workers on one fire queue handle each slot once, and a removed scheduler stops",
+        async () => {
+            const queue = `fires-${world.prefix}`
+            const id = agentTriggerSchedulerId(world.id())
+            const seen: Array<string> = []
+            const handler = {
+                queue,
+                job: AGENT_SCHEDULE_FIRE_JOB,
+                scheduled: true,
+                handle: (delivery: QueueDelivery) => {
+                    seen.push(delivery.id)
+                    return Promise.resolve()
+                },
+            }
+            await transportOf(world).workFires(handler, 1)
+            await transportOf(world).workFires(handler, 1)
 
-        await transportOf(world).schedule(queue, id, { pattern: "* * * * * *", tz: "UTC" }, AGENT_SCHEDULE_FIRE_JOB, {})
-        await waitForProof(
-            () => Promise.resolve(seen.length),
-            (count) => count >= 3,
-            15_000,
-        )
-        await transportOf(world).unschedule(queue, id)
+            await transportOf(world).schedule(
+                queue,
+                id,
+                { pattern: "* * * * * *", tz: "UTC" },
+                AGENT_SCHEDULE_FIRE_JOB,
+                {},
+            )
+            await waitForProof(
+                () => Promise.resolve(seen.length),
+                (count) => count >= 3,
+                POLL_BUDGET_MS,
+            )
+            await transportOf(world).unschedule(queue, id)
 
-        expect(new Set(seen).size).toBe(seen.length)
-        const settled = seen.length
-        await transportOf(world).wait(2500)
-        expect(seen.length).toBeLessThanOrEqual(settled + 1)
-    })
+            expect(new Set(seen).size).toBe(seen.length)
+            const settled = seen.length
+            await transportOf(world).wait(SILENCE_MS)
+            expect(seen.length).toBeLessThanOrEqual(settled + 1)
+            // Honest wall time: the cron fires once a second (three slots take two to three seconds), the proof then waits 2.5 s for a stopped
+            // scheduler to stay silent, and the poll above may take up to 15 s under load, so the 5 s Jest default can never hold.
+        },
+        POLL_BUDGET_MS + SILENCE_MS + 2_500,
+    )
 
     it("agent-work/scheduler-recovered: with Redis lost, the sweep makes the scheduler again and wakes for the missed slot once", async () => {
         const triggers = world.resolve(AgentTriggersService)

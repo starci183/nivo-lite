@@ -96,6 +96,14 @@ export interface ParkedRunRow {
     readonly parkedAt: string
 }
 
+/** What `platform.parked-runs` answers. */
+export interface ParkedRunsView {
+    /** How many parked runs match, as text; null when none. */
+    readonly count: string | null
+    /** The newest ones, at most the limit. */
+    readonly rows: ReadonlyArray<ParkedRunRow>
+}
+
 /** Which parked runs a read asks for; every field narrows, none given lists all of the workspace. */
 export interface ParkedRunFilter {
     /** Only the runs of this module. */

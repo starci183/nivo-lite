@@ -1,5 +1,4 @@
 import type { ChatMessageFile } from "@/modules/types"
-export type { ChatMessageFile } from "@/modules/types"
 import { Link, Stack } from "@starci/grammar/common"
 import { CHAT_IMAGE_CLASS_NAME } from "./classNames"
 /** What {@link ChatMessageFiles} draws. */

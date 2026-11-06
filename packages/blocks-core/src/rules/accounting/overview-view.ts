@@ -6,22 +6,42 @@ import type { DueItem } from "./due-soon"
 const measure = z.looseObject({ vnd: z.number(), count: z.number() })
 const ageingBucket = z.looseObject({ count: z.number() })
 
+/** A sum of money and how many entries or invoices it is made of. */
+export interface FigureMeasure {
+    /** The money, in VND. */
+    readonly vnd: number
+    /** How many. */
+    readonly count: number
+}
+
+/** How many open invoices fall in one age bucket. */
+export interface AgeingBucket {
+    /** How many. */
+    readonly count: number
+}
+
+/** The open invoices by age. */
+export interface FigureAgeing {
+    /** Not yet overdue. */
+    readonly d0: AgeingBucket
+    /** Overdue up to 30 days. */
+    readonly d30: AgeingBucket
+    /** Overdue 60 days or more. */
+    readonly d60: AgeingBucket
+}
+
 /** The figures of a period as the figures read answers them, judged by the parts the overview draws. */
 export interface FiguresRecord {
     /** Which period the figures are for. */
     readonly periodKey: "this" | "last"
     /** Money received, and how many entries. */
-    readonly income: { readonly vnd: number; readonly count: number }
+    readonly income: FigureMeasure
     /** Money still owed, and how many invoices. */
-    readonly receivable: { readonly vnd: number; readonly count: number }
+    readonly receivable: FigureMeasure
     /** Payments nobody tied to anything. */
-    readonly unmatched: { readonly vnd: number; readonly count: number }
+    readonly unmatched: FigureMeasure
     /** The open invoices by age. */
-    readonly ageing: {
-        readonly d0: { readonly count: number }
-        readonly d30: { readonly count: number }
-        readonly d60: { readonly count: number }
-    }
+    readonly ageing: FigureAgeing
 }
 
 /** The figures the overview draws; a record that does not fit is a failed read. */
@@ -180,6 +200,9 @@ export interface Ageing {
     }>
 }
 
+/** The three age buckets, as indexes into the words and the counts, which are tuples of three. */
+const BUCKET_INDEXES: readonly [0, 1, 2] = [0, 1, 2]
+
 /** The ageing of the open invoices drawn from the figures: three gauges on the scale of their sum. */
 export const ageingOf = (figures: FiguresRecord, words: AgeingWords): Ageing => {
     const counts: readonly [number, number, number] = [
@@ -190,11 +213,11 @@ export const ageingOf = (figures: FiguresRecord, words: AgeingWords): Ageing => 
     const sum = counts.reduce((total, count) => total + count, 0)
     return {
         total: words.total.replaceAll("{count}", String(sum)),
-        points: counts.map((count, index) => ({
+        points: BUCKET_INDEXES.map((index) => ({
             id: `d${index}`,
-            label: words.buckets[index] ?? "",
-            value: count,
-            valueLabel: words.count.replaceAll("{count}", String(count)),
+            label: words.buckets[index],
+            value: counts[index],
+            valueLabel: words.count.replaceAll("{count}", String(counts[index])),
         })),
     }
 }

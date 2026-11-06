@@ -5,6 +5,8 @@ import { Avatar, Button, Cluster, Heading, PaneSection, Stack, Text } from "@sta
 export interface ThreadHead {
     /** The name of the customer. */
     readonly title: string
+    /** The link of the customer's picture; empty draws the initials. */
+    readonly avatar: string
     /** One line under the name, such as the channel; empty draws none. */
     readonly subtitle: string
 }
@@ -47,7 +49,12 @@ const HeadTitle = (props: Pick<ConversationHeadProps, "label" | "thread">): Reac
     if (props.thread === null) return <Heading level={2}>{props.label}</Heading>
     return (
         <Cluster gap="inline" wrap={false} align="center">
-            <Avatar name={props.thread.title} size="md" isDecorative />
+            <Avatar
+                name={props.thread.title}
+                {...(props.thread.avatar === "" ? {} : { src: props.thread.avatar })}
+                size="md"
+                isDecorative
+            />
             <Stack gap="inline">
                 <Heading level={2}>{props.thread.title}</Heading>
                 {props.thread.subtitle === "" ? null : (

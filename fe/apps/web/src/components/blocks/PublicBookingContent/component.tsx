@@ -62,7 +62,7 @@ const ShopIdentity = (props: ShopIdentityProps) => (
     <PageIntro
         title={props.page.shop}
         isLoading={props.isLoading}
-        mark={<Avatar name={props.page.shop} tone="accent" shape="rounded" size="lg" isLoading={props.isLoading} />}
+        mark={<Avatar name={props.page.shop} tone="accent" size="lg" isLoading={props.isLoading} />}
         lines={[props.page.address, props.page.note].filter((text) => text !== "").map((text) => ({ id: text, text }))}
         description={props.intro}
     />

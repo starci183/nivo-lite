@@ -27,7 +27,6 @@ export const TelegramConnectionPage = async (props: TelegramConnectionPageProps)
                 connectionId: id,
                 gridLabel: t("title"),
                 mainLabel: t("mainLabel"),
-                rail: { label: t("eventsTitle"), closeLabel: t("eventsClose") },
             }}
         />
     )

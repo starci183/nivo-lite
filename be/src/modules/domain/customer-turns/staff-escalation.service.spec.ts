@@ -3,7 +3,7 @@ import { mock } from "@starci/jest-preset"
 import type { Logger } from "@modules/platform/logging"
 import { EventsService } from "@modules/domain/events"
 import { StaffService } from "@modules/domain/staff"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -21,7 +21,7 @@ const escalation = { workItemId: "w1", leadId: "l1", customerName: "Lan", questi
 const build = async (staffRows: ReadonlyArray<ReturnType<typeof member>>) => {
     const staff = mock<StaffService>({ list: jest.fn().mockResolvedValue(staffRows) })
     const items = mock<WorkItemsService>({ assign: jest.fn().mockResolvedValue(true) })
-    const office = mock<TeamChatService>({ postAsAgent: jest.fn().mockResolvedValue(null) })
+    const office = mock<TeamChatRoomsService>({ postAsAgent: jest.fn().mockResolvedValue(null) })
     const events = mock<EventsService>({ record: jest.fn().mockResolvedValue(undefined) })
     const logger = mock<Logger>({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })
     const moduleRef = await Test.createTestingModule({
@@ -29,7 +29,7 @@ const build = async (staffRows: ReadonlyArray<ReturnType<typeof member>>) => {
             StaffEscalationService,
             { provide: StaffService, useValue: staff },
             { provide: WorkItemsService, useValue: items },
-            { provide: TeamChatService, useValue: office },
+            { provide: TeamChatRoomsService, useValue: office },
             { provide: EventsService, useValue: events },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },

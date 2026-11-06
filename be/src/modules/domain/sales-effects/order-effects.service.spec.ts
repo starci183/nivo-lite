@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import type { EngineResult, EntitiesApi, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
+import type { OutboxApi } from "@nivo-lite/agent-sdk/mutation"
 import type { SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
 import type { ScopedTx } from "@modules/domain/entity-engine"
@@ -9,6 +10,7 @@ import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
 import { CLOCK } from "@modules/platform/clock"
 import { OrderEffectsService } from "./order-effects.service"
+import { SalesEffectsErrorCode } from "./errors/sales-effects.error"
 
 const WORKSPACE = "11111111-1111-4111-8111-111111111111"
 const LEAD = "33333333-3333-4333-8333-333333333333"
@@ -57,8 +59,10 @@ const build = async () => {
     const registry = mock<GraphNodeRegistryService>()
     const api = mock<EntitiesApi>()
     const tx = mock<ScopedTx>()
+    const outbox = mock<OutboxApi>()
     engine.scoped.mockImplementation((_workspace, work) => work(tx))
     ports.entitiesApi.mockReturnValue(api)
+    ports.outboxApi.mockReturnValue(outbox)
     const moduleRef = await Test.createTestingModule({
         providers: [
             OrderEffectsService,
@@ -75,20 +79,20 @@ const build = async () => {
         assert(found !== undefined, `The service must register an executor for ${effect}`)
         return found
     }
-    return { engine, registry, api, executorOf }
+    return { engine, registry, api, outbox, executorOf }
 }
 
 const run = (executor: NodeEffectExecutor, payload: Readonly<Record<string, unknown>>): Promise<SubjectRef> =>
     executor.execute(TURN, payload, CALL)
 
 describe("OrderEffectsService registration", () => {
-    it("registers the executors of order.record, order.confirm and order.void", async () => {
+    it("registers the executors of order.record, order.confirm, order.void and payment.rematch", async () => {
         const { executorOf } = await build()
-        expect(["order.record", "order.confirm", "order.void"].map((effect) => executorOf(effect).effect)).toEqual([
-            "order.record",
-            "order.confirm",
-            "order.void",
-        ])
+        expect(
+            ["order.record", "order.confirm", "order.void", "payment.rematch"].map(
+                (effect) => executorOf(effect).effect,
+            ),
+        ).toEqual(["order.record", "order.confirm", "order.void", "payment.rematch"])
     })
 
     it("does nothing when the app hosts no graph nodes", async () => {
@@ -296,6 +300,42 @@ describe("OrderEffectsService order.void", () => {
         api.update.mockResolvedValue({ ok: false, reason: "stale" })
         await expect(run(executorOf("order.void"), { id: ORDER })).rejects.toMatchObject({
             code: "SALES_EFFECTS_WRITE_REFUSED",
+        })
+    })
+})
+
+describe("OrderEffectsService payment.rematch", () => {
+    it("enqueues the rematch job of the order with the instant of the run, once under the effect key of the call", async () => {
+        const { executorOf, api, outbox } = await build()
+        api.get.mockResolvedValue(orderRecord())
+
+        await expect(
+            executorOf("payment.rematch").execute(
+                TURN,
+                { orderId: ORDER },
+                { key: "k", dedupeKey: `payment-rematch:${ORDER}` },
+            ),
+        ).resolves.toEqual({ kind: "order", id: ORDER })
+
+        expect(outbox.enqueue).toHaveBeenCalledWith(
+            expect.objectContaining({ name: "payment.rematch" }),
+            { orderId: ORDER, at: "2026-11-05T09:30:00.000Z" },
+            { dedupeKey: `payment-rematch:${ORDER}` },
+        )
+    })
+
+    it("falls back to the step key when the node gave no business key, and refuses an order that is not there", async () => {
+        const { executorOf, api, outbox } = await build()
+        api.get.mockResolvedValueOnce(orderRecord()).mockResolvedValueOnce(null)
+
+        await run(executorOf("payment.rematch"), { orderId: ORDER })
+        expect(outbox.enqueue).toHaveBeenCalledWith(expect.anything(), expect.anything(), { dedupeKey: "k" })
+
+        await expect(run(executorOf("payment.rematch"), { orderId: ORDER })).rejects.toMatchObject({
+            code: SalesEffectsErrorCode.OrderNotFound,
+        })
+        await expect(run(executorOf("payment.rematch"), { orderId: "not-an-id" })).rejects.toMatchObject({
+            code: SalesEffectsErrorCode.OrderNotFound,
         })
     })
 })

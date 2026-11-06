@@ -5,7 +5,7 @@ import type { SWRMutationResponse } from "swr/mutation"
 import type { ReadVariables } from "@nivo-lite/agent-sdk/block"
 import { answeredData } from "@/hooks/workspaceread"
 import { valueOfJsonText } from "@/modules/workbench-host"
-import { queryWorkbenchRead } from "@/modules/api"
+import { queryWorkbenchRead } from "@/modules/api/graphql/queries/query-workbench-read"
 
 /** The SWR key of the next-page read of a paged workbench read. */
 export const QUERY_WORKBENCH_MORE_SWR_KEY = "QUERY_WORKBENCH_MORE_SWR"

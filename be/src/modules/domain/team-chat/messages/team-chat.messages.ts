@@ -21,6 +21,7 @@ export const TEAM_CHAT_MESSAGES: MessageBundle = {
         "errors.TEAM_CHAT_TOO_MANY_FILES": "Một tin nhắn gửi tối đa 10 tệp.",
         "errors.TEAM_CHAT_FILE_TOO_LARGE": "Tệp lớn hơn 25 MB.",
         "errors.TEAM_CHAT_FILE_TYPE_NOT_ALLOWED": "Loại tệp này không được gửi.",
+        "errors.TEAM_CHAT_STORAGE_UNAVAILABLE": "Kho tệp tạm thời không dùng được.",
     },
     en: {
         "teamChat.report": "Done: {{trigger}}",
@@ -41,5 +42,6 @@ export const TEAM_CHAT_MESSAGES: MessageBundle = {
         "errors.TEAM_CHAT_TOO_MANY_FILES": "A message carries at most 10 files.",
         "errors.TEAM_CHAT_FILE_TOO_LARGE": "The file is larger than 25 MB.",
         "errors.TEAM_CHAT_FILE_TYPE_NOT_ALLOWED": "This file type cannot be sent.",
+        "errors.TEAM_CHAT_STORAGE_UNAVAILABLE": "The file store is unavailable for now.",
     },
 }

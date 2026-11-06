@@ -62,9 +62,9 @@ and `AgentSyncService` rebuilds the workspace. `GatewayClient.created` is a per-
 One capability owns the tables, `be/src/modules/domain/agent-work` (BE-PERSISTENCE-3, -9). It imports platform and
 `modules/queues/agent-turn` only, so any domain capability can call it with no owner cycle (R27).
 
-Migration `db/migrations/20261110000100_agent-work-core.sql`, expand only: new tables and functions, nothing existing altered,
+The agent work core migration (folded into the baseline), expand only: new tables and functions, nothing existing altered,
 so old code runs beside it. Every table has `workspace_id`, cascades with its workspace, follows the `app_be` policy shape of
-`db/migrations/20261102003300_thread-work.sql`, and its entity extends `UuidAbstractEntity` (R342), except where a key is stated below.
+the thread work migration (folded into the baseline), and its entity extends `UuidAbstractEntity` (R342), except where a key is stated below.
 
 | Table                 | Key                                            | Columns                                                                                                                                                                                                                                                                                       |
 | --------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -96,8 +96,8 @@ SQL functions, `SECURITY DEFINER` with pinned `search_path` (BE-PERSISTENCE-19),
 | `agent_turn_finish(p_agent, p_fence, p_turn, p_status, ...)` | Under the fence: settles turn and wake, updates `failures` and `breaker_until`, clears the lease, answers `{ fenced, more }`                                                                                                                                                            |
 | `agent_work_due(p_limit)`                                    | For the sweep: leases expired, wakes due, tasks due and triggers overdue, bounded                                                                                                                                                                                                       |
 
-A second migration, `db/migrations/20261110000200_usage-kind-agent-work_contract_widen.sql`, adds `agent_work` to
-`ai_usage_events_kind_check`. A third, `db/migrations/20261110000300_agent-wake-event-queues.sql`, creates the pgmq queues of section 4.5. The
+A second migration, the usage kind agent work contract widen migration (folded into the baseline), adds `agent_work` to
+`ai_usage_events_kind_check`. A third, the agent wake event queues migration (folded into the baseline), creates the pgmq queues of section 4.5. The
 contract migration that drops `road` comes after the last workspace moves (section 11), and no brief here writes it.
 
 ## 4. The wake road
@@ -480,7 +480,7 @@ run when GraphQL changed; committed on the branch; report the sha. The lane owne
 
 Id `store`. Sections 3 and 4.1 to 4.4, and 9 for the budgets. Depends on nothing here.
 
-Paths: `db/migrations/20261110000100_agent-work-core.sql` (new), `be/src/modules/domain/agent-work/**` (new), `be/src/modules/queues/agent-turn/**` (new), `be/apps/api/src/compose/agent-work.ts` (new),
+Paths: the agent work core migration (folded into the baseline) (new), `be/src/modules/domain/agent-work/**` (new), `be/src/modules/queues/agent-turn/**` (new), `be/apps/api/src/compose/agent-work.ts` (new),
 `be/apps/api/src/app.module.ts` (its one spread), `be/src/modules/platform/database/entities.ts` (one import, one spread), `be/src/tests/integration/agent-work/agent-work-store.integration-spec.ts` (new),
 `be/src/tests/world/agent-work-capabilities.options.ts` (new).
 
@@ -514,7 +514,7 @@ Done: section 13.0, and `npx --no-install starci app check` shows R268 and R335 
 Id `turn`. Section 6. Needs W1. Runs beside W2.
 
 Paths: `be/src/modules/domain/agent-turns/**` (new), `be/src/modules/integrations/openclaw/agent-registry.service.ts` and spec, `be/src/modules/integrations/openclaw/openclaw.contracts.ts`, `be/src/modules/domain/agent-tools/agent-tools.service.ts` and spec, `be/src/modules/domain/agent-tools/agent-tools.contracts.ts`, `be/src/modules/domain/agent-tools/agent-tools.port.ts`, `be/src/modules/domain/agent-tools/tool-bearer.policy.ts` and spec,
-`be/src/features/api/agent-tools/**`, `be/src/modules/domain/ai-usage-events/ai-usage-events.contracts.ts`, `be/src/modules/domain/ai-usage-events/usage-kind.policy.ts` and spec, `be/src/modules/domain/ai-usage-events/quota.policy.ts` and spec, `db/migrations/20261110000200_usage-kind-agent-work_contract_widen.sql` (new),
+`be/src/features/api/agent-tools/**`, `be/src/modules/domain/ai-usage-events/ai-usage-events.contracts.ts`, `be/src/modules/domain/ai-usage-events/usage-kind.policy.ts` and spec, `be/src/modules/domain/ai-usage-events/quota.policy.ts` and spec, the usage kind agent work contract widen migration (folded into the baseline) (new),
 the runtime init of the OpenClaw runtime image (pinned in `.starcistacks/images/openclaw/Dockerfile`), `.starcistacks/images/openclaw/nivo-bridge/**` (new), `.starcistacks/production/infra/swarm/stack.yaml` (the `nivo-openclaw` block and its configs), `.starcistacks/production/runtime/env/KEYS.md`, `be/apps/api/src/compose/agents.ts`, `be/apps/api/src/compose/agent-api.ts`,
 `be/src/modules/domain/decisions/decisions.contracts.ts` (one optional field on `WorkSpec`), `be/src/tests/integration/agent-work/agent-work-bridge.integration-spec.ts` (new).
 
@@ -531,8 +531,7 @@ Done: section 13.0, plus the real gateway check of section 12, or reported block
 Id `customer`. Sections 4.5 and 11. Needs W2 and W3.
 
 Paths: `be/src/modules/domain/conversations/chat-turn.service.ts` and spec (extract only), `be/src/modules/domain/conversations/conversations.service.ts` and spec, `be/src/modules/domain/customer-turns/customer-work-handler.service.ts` and spec (new), `be/src/modules/domain/customer-turns/customer-turn-runtime.service.ts` and spec, `be/src/modules/domain/customer-turns/turn-tool-access.service.ts` and spec, `be/src/modules/domain/customer-turns/customer-outcomes.service.ts` and spec (one hunk, `origin`), `be/src/modules/domain/customer-turns/customer-turns.module.ts`, `be/src/modules/domain/customer-turns/messages/customer-turns.messages.ts`,
-`be/src/features/reactors/agent-wakes/**` (new), `be/src/modules/platform/event-bus/event-bus.queue.ts`, `db/migrations/20261110000300_agent-wake-event-queues.sql` (new), `be/src/modules/domain/automations/automation-operations-executors.service.ts` and spec, `be/src/modules/domain/automation-templates/policies/template-definition.policy.ts` and spec, `be/apps/api/src/compose/reactors.ts`, `be/apps/api/src/compose/messaging.ts`,
-`be/src/tests/integration/agent-work/agent-work-road-parity.integration-spec.ts` (new).
+`be/src/features/reactors/agent-wakes/**` (new), `be/src/modules/platform/event-bus/event-bus.queue.ts`, the agent wake event queues migration (folded into the baseline) (new), `be/src/modules/domain/automation-templates/policies/template-definition.policy.ts` and spec, `be/apps/api/src/compose/reactors.ts`, `be/apps/api/src/compose/messaging.ts`.
 
 Build: `ChatTurnService` gains public `answer(payload, runtimeProposal)` pieces by extraction, so `run` on the legacy road reads the same and the handler shares it. Intake picks by `road`. `CustomerWorkHandler` covers the takeover check, the holding line, stale wake and kill. `CustomerTurnRuntimeService.propose` runs through `AgentTurnRunner` on `core`. The token block goes for `core` turns only. The reactor with its three consumers. The `wake_agent` executor. `kind: "deliver"` stays. The default of `road` is `core` (section 11, point 3). Action graph (section 15.4): `CustomerOutcomesService` passes `origin` to `runWork` on `core`, and the `core` prompt takes the intents from W3's `AgentGraphBrief`. The branch itself runs in the engine, so `legacy` is covered with no change here.
 
@@ -544,9 +543,9 @@ Done: section 13.0, with migration applied by the integration world only. Report
 
 Id `office`. Sections 7 and 10, and 8 for the switches. Needs W2 and W3. Runs beside W4. Read `D:/.claude/contexts/ui/README.md`, `D:/.claude/contexts/ui/components/pane-grid.md`, `D:/.claude/contexts/code/fe/README.md`, `be/docs/guides/agents-pages.md` and `D:/starci-tmp/tino/mockups/nivo-agents-mockup.html` first.
 
-Paths: `be/src/modules/domain/office-command-candidates/office-tag.service.ts` and spec (new), `be/src/modules/domain/office-command-candidates/office-tag-handler.service.ts` and spec (new), `be/src/modules/domain/office-command-candidates/office-command-candidates.module.ts`, `be/src/modules/domain/office-command-candidates/index.ts`, `be/src/modules/domain/office-command-candidates/messages/office-command-candidates.messages.ts`, `be/src/modules/domain/messages/office-lines.service.ts` and spec, `be/src/modules/domain/messages/office-lines.contracts.ts`, `be/src/modules/domain/thread-work/thread-work.service.ts` and spec, `be/src/modules/domain/thread-work/thread-tag-handler.service.ts` and spec (new), `be/src/modules/domain/chat-typing/chat-typing.service.ts` and spec,
-`be/src/features/api/office/application/post-office-message.handler.ts`, `be/src/features/api/agent-work/**` (new), `be/apps/api/src/compose/api.ts`, `be/contracts/api/schema.graphql` (emitted), `be/src/tests/integration/agent-work/agent-work-tag.integration-spec.ts` (new),
-`fe/apps/web/src/hooks/office/useOfficeSend.ts`, `fe/apps/web/src/hooks/agentWork/**` (new), `fe/apps/web/src/hooks/swr/api/graphql/**`, `fe/apps/web/src/modules/api/graphql/**`, `fe/apps/web/src/modules/types/agentWork.ts` (new), `fe/apps/web/src/app/[locale]/(console)/agents/[module]/[installation]/work/**` (new), `fe/apps/web/src/features/pages/AgentWorkPage/**` (new), `fe/apps/web/src/components/blocks/AgentWork*/**` (new), `fe/apps/web/src/components/blocks/AgentInstanceFrame/**`, `fe/apps/web/src/features/pages/AgentSettingsPage/**`, and only your keys in `fe/apps/web/src/modules/i18n/messages/vi.json` and `fe/apps/web/src/modules/i18n/messages/en.json`.
+Paths: `be/src/modules/domain/messages/office-lines.service.ts` and spec, `be/src/modules/domain/messages/office-lines.contracts.ts`, `be/src/modules/domain/chat-typing/chat-typing.service.ts` and spec,
+`be/src/features/api/agent-work/**` (new), `be/apps/api/src/compose/api.ts`, `be/contracts/api/schema.graphql` (emitted),
+`fe/apps/web/src/hooks/agentWork/**` (new), `fe/apps/web/src/hooks/swr/api/graphql/**`, `fe/apps/web/src/modules/api/graphql/**`, `fe/apps/web/src/modules/types/agentWork.ts` (new), `fe/apps/web/src/app/[locale]/(console)/agents/[module]/[installation]/work/**` (new), `fe/apps/web/src/features/pages/AgentWorkPage/**` (new), `fe/apps/web/src/components/blocks/AgentWork*/**` (new), `fe/apps/web/src/components/blocks/AgentInstanceFrame/**`, `fe/apps/web/src/features/pages/AgentSettingsPage/**`, and only your keys in `fe/apps/web/src/modules/i18n/messages/vi.json` and `fe/apps/web/src/modules/i18n/messages/en.json`.
 
 Build: section 7 in full, with `OfficeTagHandler` calling `propose` before any turn; `ChatTypingService.setAgent`; `agent_id` on a line; the thread door; the GraphQL of section 10; the Work tab; the switches; `shouldPropose` removed from `useOfficeSend`, the mutation kept. Action graph (section 15.10): a row of Recent turns that opened a work item links to `setup?run=<workItemId>`, where W6 draws the trace. `settle` of a tag action passes `origin`. The Setup tab and the graph are W6's; touch neither.
 
@@ -560,7 +559,7 @@ Done: section 13.0, with the walk reported and the schema emitted.
 
 Id `graph`. Section 15 in full. Needs W1 to W3. Runs beside W4 and W5. Read `be/docs/guides/agents-pages.md`, `D:/.claude/contexts/ui/components/diagram.md`, `D:/.claude/contexts/ui/components/pane-grid.md`, `D:/.claude/contexts/code/fe/README.md` and `D:/starci-tmp/tino/mockups/agent-action-graph-mockup.html` first.
 
-Paths, back end: `db/migrations/20261110000400_agent-graphs.sql`, `db/migrations/20261110000500_work-item-reason-branch_contract_widen.sql`, `db/migrations/20261110000600_agent-graph-approvals.sql` (new), `be/src/modules/domain/agent-graphs/**` (new), `be/src/features/api/agent-graphs/**` (new), `be/src/features/jobs/watch-agent-graphs/**` (new), `be/src/features/reactors/agent-graph-approvals/**` (new), `be/apps/api/src/compose/agent-graphs.ts` (new), `be/apps/api/src/app.module.ts` (its one spread), `be/apps/api/src/compose/jobs.ts`, `be/apps/api/src/compose/reactors.ts` and `be/apps/api/src/compose/api.ts` (one line each), `be/src/modules/platform/database/entities.ts` (one import, one spread), `be/src/modules/platform/event-bus/event-bus.queue.ts` (one constant), `be/src/modules/platform/jobs/job-ticks.contracts.ts` (one entry), `.starcistacks/application-stacks.yaml` (one `jobs:` entry), `be/src/tests/integration/agent-graph/agent-graph-decider.integration-spec.ts` and `be/src/tests/integration/agent-graph/agent-graph-rights.integration-spec.ts` (new).
+Paths, back end: the agent graphs migration (folded into the baseline), the work item reason branch contract widen migration (folded into the baseline), the agent graph approvals migration (folded into the baseline) (new), `be/src/modules/domain/agent-graphs/**` (new), `be/src/features/api/agent-graphs/**` (new), `be/src/features/jobs/watch-agent-graphs/**` (new), `be/src/features/reactors/agent-graph-approvals/**` (new), `be/apps/api/src/compose/agent-graphs.ts` (new), `be/apps/api/src/app.module.ts` (its one spread), `be/apps/api/src/compose/jobs.ts`, `be/apps/api/src/compose/reactors.ts` and `be/apps/api/src/compose/api.ts` (one line each), `be/src/modules/platform/database/entities.ts` (one import, one spread), `be/src/modules/platform/event-bus/event-bus.queue.ts` (one constant), `be/src/modules/platform/jobs/job-ticks.contracts.ts` (one entry), `.starcistacks/application-stacks.yaml` (one `jobs:` entry), `be/src/tests/integration/agent-graph/agent-graph-decider.integration-spec.ts` and `be/src/tests/integration/agent-graph/agent-graph-rights.integration-spec.ts` (new).
 
 Shared hunks only, each file with its spec: `be/src/modules/domain/decisions/work-engine.service.ts` (`judge`, `resumeWork`), `be/src/modules/domain/decisions/work-engine.port.ts`, `be/src/modules/domain/decisions/work-engine.decorators.ts`, `be/src/modules/domain/decisions/work-approval.service.ts`, `be/src/modules/domain/work-items/work-items.contracts.ts` (`branch_ask`), the `engine.reason` catalogue keys, `be/src/modules/domain/approval-requests/approval-opening.service.ts`, `be/src/modules/domain/approval-requests/approval-deciding.service.ts`, `be/src/modules/domain/approval-requests/approval-requests.contracts.ts`, `be/src/modules/domain/approval-requests/persistence/entities/**`, `be/src/modules/domain/modules/setup-cards.service.ts`, `be/src/modules/domain/modules/setup-chat.service.ts`, `be/src/modules/domain/modules/policies/setup-turn.policy.ts`, `be/src/modules/domain/modules/policies/setup-writes.policy.ts`, `be/src/modules/domain/modules/modules.port.ts`, `be/src/modules/domain/module-setup-writes/module-setup-writes.contracts.ts`, `be/src/modules/domain/module-setup-writes/setup-writes.service.ts`, and `be/src/modules/domain/modules/modules.contracts.ts` (optional `graphFacts` on an action; each module declares its own in its `*.contracts.ts`, accounting first).
 
@@ -795,7 +794,7 @@ Each proposal lists its decisions as evidence, with amount, who and what they di
 
 ### 15.9 Data model
 
-Capability `be/src/modules/domain/agent-graphs`. Migration `db/migrations/20261110000400_agent-graphs.sql`, expand only, policy shape as section 3.
+Capability `be/src/modules/domain/agent-graphs`. The agent graphs migration (folded into the baseline), expand only, policy shape as section 3.
 
 | Table                   | Key                                                     | Columns                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ----------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -807,7 +806,7 @@ Capability `be/src/modules/domain/agent-graphs`. Migration `db/migrations/202611
 
 `turn_id` and `wake_id` carry no foreign key: turns go at 30 days (section 5.2) and a decision stays as the audit. A proposal whose branch is gone is `superseded`.
 
-Two more migrations: `db/migrations/20261110000500_work-item-reason-branch_contract_widen.sql` for `branch_ask`, and `db/migrations/20261110000600_agent-graph-approvals.sql` for the `approver_group` column and the pgmq queues (R336, R258).
+Two more migrations: the work item reason branch contract widen migration (folded into the baseline) for `branch_ask`, and the agent graph approvals migration (folded into the baseline) for the `approver_group` column and the pgmq queues (R336, R258).
 
 ### 15.10 The owner's screens
 

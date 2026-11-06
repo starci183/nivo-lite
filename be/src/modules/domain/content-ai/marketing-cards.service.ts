@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import type { MarketingCard } from "./marketing-cards.contracts"
@@ -26,7 +26,7 @@ export interface CardScope {
 export class MarketingCardsService {
     constructor(
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        private readonly chat: TeamChatService,
+        private readonly chat: TeamChatRoomsService,
     ) {}
 
     /** Says what a card reads as to the owner as AI Marketing (the team chat has text lines only); answers that text. */

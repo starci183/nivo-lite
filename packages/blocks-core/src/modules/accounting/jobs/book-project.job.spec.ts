@@ -119,6 +119,7 @@ describe("accounting.book-project", () => {
             postUnmatched: false,
             voidMode: "reversal",
             vatPeriod: "quarterly",
+            rematchDays: 7,
         })
         await run(off, "payment.transaction", TRANSACTION.id)
         expect(entriesOf(off)).toEqual([])

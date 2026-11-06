@@ -2,7 +2,8 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useAuthoritySection, visibleGroups } from "@/hooks/authority"
-import { useQueryAgentsSwr, useQueryApproverDirectorySwr, useQueryOfficeRoomsSwr } from "@/hooks/swr"
+import { useQueryAgentsSwr, useQueryApproverDirectorySwr, useQueryChatRoomsSwr } from "@/hooks/swr"
+import { useWorkspaceId } from "@/hooks/workspaces"
 import { slotOfReads } from "@/hooks/slot"
 import type { StoredRule } from "@/hooks/authority"
 import { asksPerson, defaultRule, modeKindOf } from "@/modules/permissions"
@@ -51,6 +52,9 @@ type UsePermissionBoardResult = {
     members: readonly Approver[]
 }
 
+/** The rooms an approver group may name: the group rooms of the team chat. */
+const GROUP_ROOMS = { kind: "group" } as const
+
 /**
  * What the Quyen page needs: the rule of every action the modules can be granted (the stored one, or "ask first" before anybody
  * saved one), worded for the table, and the agents, people and rooms the drawer picks from.
@@ -62,12 +66,10 @@ export const usePermissionBoard = (): UsePermissionBoardResult => {
     const { read, rules, isLocked } = authority
     const agents = useQueryAgentsSwr({})
     const directory = useQueryApproverDirectorySwr()
-    const rooms = useQueryOfficeRoomsSwr()
+    const rooms = useQueryChatRoomsSwr(useWorkspaceId(), GROUP_ROOMS)
 
     const agentOptions = (agents.data ?? []).map((agent) => ({ id: agent.id, label: agent.name }))
-    const roomOptions = (rooms.data ?? []).flatMap((room) =>
-        room.key === null ? [] : [{ id: room.key, label: room.name }],
-    )
+    const roomOptions = (rooms.data ?? []).map((room) => ({ id: room.id, label: room.name }))
     const members: ReadonlyArray<Approver> = (directory.data ?? []).map((member) => ({
         id: member.memberId,
         name: member.name,

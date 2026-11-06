@@ -1,7 +1,11 @@
 import { Test } from "@nestjs/testing"
+import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
 import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
+import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
+import { queryProblems } from "@nivo-lite/agent-sdk/query"
+import type { EntityCatalog } from "@nivo-lite/agent-sdk/query"
 import type { EntityNodeTurn } from "./entity-node.contracts"
-import { limitOf, nodeReadPlanOf, nodeRowOf, turnPathOf } from "./entity-node-read.policy"
+import { isLookup, limitOf, nodeReadPlanOf, nodeRowOf, turnPathOf } from "./entity-node-read.policy"
 
 const NODE_READ: unique symbol = Symbol("entity-node.node-read")
 
@@ -91,7 +95,7 @@ describe("turnPathOf", () => {
 })
 
 describe("nodeReadPlanOf", () => {
-    it("lists a workspace read newest first under the equalities, with only the declared fields selected", async () => {
+    it("lists a workspace read under the equalities, with only the declared fields selected, as a lookup when it pins the id", async () => {
         const policy = await build()
         const plan = policy.nodeReadPlanOf(
             ORDER,
@@ -111,10 +115,7 @@ describe("nodeReadPlanOf", () => {
                         { op: "eq", field: "id", value: "o-1" },
                     ],
                 },
-                order: [
-                    ["createdAt", "desc"],
-                    ["id", "desc"],
-                ],
+                order: [["id", "asc"]],
                 page: { size: 20 },
             },
             via: null,
@@ -202,5 +203,149 @@ describe("nodeRowOf", () => {
             ghost: null,
             constructor: null,
         })
+    })
+})
+
+const UNIQUE: EntityDefinition = {
+    entry: "entity",
+    name: "payment.claim",
+    dataKind: "payment-claim",
+    fields: {
+        dedupeKey: { kind: "text", nullable: false, maxLength: 40 },
+        status: { kind: "text", nullable: false, maxLength: 20 },
+    },
+    indexes: [{ name: "dedupe", on: ["dedupeKey", "id"] }],
+    constraints: [{ kind: "unique", name: "dedupe_key", on: ["dedupeKey"], refusal: "claim-already-recorded" }],
+}
+
+describe("isLookup", () => {
+    it("is a lookup of one record when the read pins the id or every field of a unique key", () => {
+        expect(isLookup(UNIQUE, ["id"])).toBe(true)
+        expect(isLookup(UNIQUE, ["dedupeKey"])).toBe(true)
+        expect(isLookup(UNIQUE, ["status", "dedupeKey"])).toBe(true)
+    })
+
+    it("is a listing when the fields pinned name no single record", () => {
+        expect(isLookup(UNIQUE, ["status"])).toBe(false)
+        expect(isLookup(UNIQUE, [])).toBe(false)
+        expect(isLookup(ORDER, ["total"])).toBe(false)
+    })
+})
+
+describe("the order a node read follows", () => {
+    const orderOf = async (
+        entity: EntityDefinition,
+        where: Readonly<Record<string, string | number>>,
+    ): Promise<ReadonlyArray<readonly [string, string]> | undefined> => {
+        const policy = await build()
+        return policy.nodeReadPlanOf(entity, kindOf, TURN, { where, fields: ["status"] }, "workspace")?.query.order
+    }
+
+    it("reads one record by its id, or by a unique key, in the order of the id", async () => {
+        expect(await orderOf(UNIQUE, { id: "c-1" })).toEqual([["id", "asc"]])
+        expect(await orderOf(UNIQUE, { dedupeKey: "d-1" })).toEqual([["id", "asc"]])
+    })
+
+    it("keeps every other read newest first, whatever indexes the entity has", async () => {
+        expect(await orderOf(UNIQUE, { status: "open" })).toEqual([
+            ["createdAt", "desc"],
+            ["id", "desc"],
+        ])
+    })
+})
+
+/** Every entity the flow F declares, by data kind and by name: the planner checks a node read against them as the engine does. */
+const BY_KIND: ReadonlyMap<string, EntityDefinition> = new Map(
+    FLOW_F_ENTITIES.map((entity) => [entity.dataKind, entity]),
+)
+const CATALOG: EntityCatalog = new Map(FLOW_F_ENTITIES.map((entity) => [entity.name, entity]))
+
+const TX_FIELDS = ["id", "amountVnd", "reference", "payer", "occurredAt", "orderId", "status"]
+const ORDER_FIELDS = ["id", "orderNo", "leadId", "items", "amountVnd", "status", "confirmedAt", "createdAt"]
+
+/** The data reads the payment and accounting nodes make, with the equality each filters on and the fields it takes (SePay-shaped rows). */
+const READS: ReadonlyArray<readonly [string, string, NodeQuery]> = [
+    [
+        "payment.evidence: the transaction that arrived",
+        "bank-transaction",
+        { where: { id: "t1" }, fields: TX_FIELDS, limit: 1 },
+    ],
+    [
+        "payment.evidence: the feed for a claim that names an amount",
+        "bank-transaction",
+        { where: { amountVnd: 5000 }, fields: TX_FIELDS, limit: 200 },
+    ],
+    [
+        "payment.evidence: the feed for a claim that names none",
+        "bank-transaction",
+        { where: { status: "unmatched" }, fields: TX_FIELDS, limit: 200 },
+    ],
+    [
+        "payment.evidence: the open orders",
+        "order",
+        { where: { status: "confirmed" }, fields: ORDER_FIELDS, limit: 200 },
+    ],
+    [
+        "payment.evidence: the open claims",
+        "payment-claim",
+        { where: { status: "open" }, fields: ["id", "status", "claimedAt"], limit: 200 },
+    ],
+    [
+        "payment.evidence: one claim",
+        "payment-claim",
+        { where: { id: "c1" }, fields: ["id", "status", "claimedAt"], limit: 1 },
+    ],
+    [
+        "payment.evidence: the name of a customer",
+        "sales-lead",
+        { where: { id: "l1" }, fields: ["id", "contactName"], limit: 1 },
+    ],
+    [
+        "payment.evidence: a conversation",
+        "conversation",
+        { where: { id: "v1" }, fields: ["id", "leadId", "lastAt"], limit: 1 },
+    ],
+    [
+        "payment.settle: the conversation of a customer",
+        "conversation",
+        { where: { leadId: "l1" }, fields: ["id", "leadId", "lastAt"], limit: 20 },
+    ],
+    [
+        "payment.settle: one order",
+        "order",
+        { where: { id: "o1" }, fields: ["id", "orderNo", "amountVnd", "status"], limit: 1 },
+    ],
+    [
+        "payment.request: one order",
+        "order",
+        { where: { id: "o1" }, fields: ["orderNo", "amountVnd", "status", "items"], limit: 1 },
+    ],
+]
+
+describe("the data reads of the payment and accounting nodes", () => {
+    for (const [name, kind, query] of READS) {
+        it(`${name} is a query the planner accepts`, async () => {
+            const entity = BY_KIND.get(kind)
+            expect(entity).toBeDefined()
+            if (entity === undefined) return
+            const policy = await build()
+            const plan = policy.nodeReadPlanOf(entity, kindOf, TURN, query, "workspace")
+            expect(plan).not.toBeNull()
+            if (plan === null) return
+            expect(queryProblems(plan.query, CATALOG)).toEqual([])
+        })
+    }
+
+    it("lists the reads of a non-unique filter newest first, so the newer of two matching credits comes first", async () => {
+        const policy = await build()
+        const newest = [
+            ["createdAt", "desc"],
+            ["id", "desc"],
+        ]
+        for (const [, kind, query] of READS.filter(([, , one]) => !("id" in (one.where ?? {})))) {
+            const entity = BY_KIND.get(kind)
+            const plan = entity === undefined ? null : policy.nodeReadPlanOf(entity, kindOf, TURN, query, "workspace")
+            expect(plan?.query.order).toEqual(newest)
+        }
     })
 })

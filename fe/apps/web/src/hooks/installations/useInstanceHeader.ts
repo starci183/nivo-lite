@@ -14,7 +14,7 @@ import {
     type AgentLifecycle,
     type InstallationConnectionNeed,
 } from "@/modules/installations"
-import { agentChatHref, agentProfileHref, workspaceHref } from "@/modules/routes"
+import { agentProfileHref, workspaceHref } from "@/modules/routes"
 import { useInstanceChannels } from "./useInstanceChannels"
 import { useInstanceGuard } from "./useInstanceGuard"
 import { useInstallations } from "./useInstallations"
@@ -35,7 +35,6 @@ export interface InstanceHeaderViewShape {
         statusTone: "success" | "neutral" | "warning" | "accent"
         channels: readonly string[]
         connectionNeeds: readonly InstallationConnectionNeed[]
-        chatHref: string | null
         profileHref: string | null
     }>
     name: string
@@ -49,7 +48,6 @@ export interface InstanceHeaderViewShape {
     statusTone: "success" | "neutral" | "warning" | "accent"
     channels: readonly string[]
     connectionNeeds: readonly InstallationConnectionNeed[]
-    chatHref: string | null
     profileHref: string | null
 }
 
@@ -90,8 +88,6 @@ export const useInstanceHeader = (module: ModuleKey, installationId: string): In
         statusTone: agentLifecycleTone(lifecycle),
         channels,
         connectionNeeds: installation?.connectionNeeds ?? [],
-        chatHref:
-            installation?.agentId == null ? null : workspaceHref(workspaceId, agentChatHref(installation.agentId)),
         profileHref:
             installation?.agentId == null ? null : workspaceHref(workspaceId, agentProfileHref(installation.agentId)),
     }

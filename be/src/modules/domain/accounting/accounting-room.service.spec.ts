@@ -1,15 +1,15 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import { AccountingRoomService } from "./accounting-room.service"
 import { buildDailySummary } from "./daily-summary.policy"
 
 const build = async () => {
-    const chat = mock<TeamChatService>({
+    const chat = mock<TeamChatRoomsService>({
         postAsAgent: jest.fn(() => Promise.resolve({ roomId: "r-1", messageId: "m-1", agentId: "a-1" })),
     })
     const moduleRef = await Test.createTestingModule({
-        providers: [AccountingRoomService, { provide: TeamChatService, useValue: chat }],
+        providers: [AccountingRoomService, { provide: TeamChatRoomsService, useValue: chat }],
     }).compile()
     return { room: moduleRef.get(AccountingRoomService), chat }
 }

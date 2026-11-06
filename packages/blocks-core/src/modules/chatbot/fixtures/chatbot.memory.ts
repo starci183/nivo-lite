@@ -38,6 +38,7 @@ export const STAFF_CONTEXT: RunContext = {
     memberId: STAFF_ID,
     now: new Date("2026-11-05T03:00:00.000Z"),
     timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
 }
 
 /** The instant every fake record was created and last written at. */
@@ -188,7 +189,8 @@ const slicePage = <T>(rows: ReadonlyArray<T>, cursor: string | null, size: numbe
 /** The record a declared unique constraint of the table's entity names holds, by the values of its fields. */
 const matching = (table: Table, on: string, values: WriteValues): RecordRow | undefined => {
     const constraint = CATALOG.get(table.entity)?.constraints?.find((candidate) => candidate.name === on)
-    const fields = constraint?.kind === "unique" ? constraint.on : []
+    if (constraint?.kind !== "unique") return undefined
+    const fields = constraint.on
     return table.rows.find((row) => fields.every((field) => valueOf(row, field) === values[field]))
 }
 

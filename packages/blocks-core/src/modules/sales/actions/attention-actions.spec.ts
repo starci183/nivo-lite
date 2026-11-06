@@ -1,6 +1,7 @@
 import type { ActionDefinition, ActionResult } from "@nivo-lite/agent-sdk/block"
-import type { PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
-import { LEAD_NEW, sampleState, SAMPLE_NOW } from "../fixtures/sales.data"
+import type { PortProvider } from "@nivo-lite/agent-sdk/port"
+import { LEAD_NEW, sampleState } from "../fixtures/sales.data"
+import { salesContextOf } from "../fixtures/sales.context"
 import { memoryProvider } from "../memory"
 import type { MemoryState } from "../memory"
 import { salesLeads } from "../ports"
@@ -8,12 +9,7 @@ import { followAction } from "./follow.action"
 import { replyAction } from "./reply.action"
 import { respondAction } from "./respond.action"
 
-const CONTEXT: RunContext = {
-    workspaceId: "w1",
-    memberId: "staff-1",
-    now: new Date(SAMPLE_NOW),
-    timeZone: "Asia/Ho_Chi_Minh",
-}
+const CONTEXT = salesContextOf()
 
 const run = (action: ActionDefinition, raw: unknown, provider: PortProvider): Promise<ActionResult> =>
     action.execute?.(provider, raw, CONTEXT) ?? Promise.resolve({ ok: false, reason: "failed", message: { key: "x" } })

@@ -5,7 +5,7 @@ import useSWR from "swr"
 import type { SWRResponse } from "swr"
 import type { ReadVariables } from "@nivo-lite/agent-sdk/block"
 import { answeredData } from "@/hooks/workspaceread"
-import { queryWorkbenchRead } from "@/modules/api"
+import { queryWorkbenchRead } from "@/modules/api/graphql/queries/query-workbench-read"
 import { WORKBENCH_READ_KEY, valueOfJsonText } from "@/modules/workbench-host"
 import { useOpenWorkspaceId } from "@/hooks/workspaceKey"
 

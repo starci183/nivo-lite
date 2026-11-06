@@ -1,13 +1,21 @@
 import assert from "node:assert/strict"
-import { TeamChatService } from "@modules/domain/team-chat"
-import type { MemberRef, TeamChatResult } from "@modules/domain/team-chat"
-import { persistTeamChat, teamChatIdentity } from "../../fixtures/builders/team-chat.builder"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
+import type { ChatMemberRef, TeamChatResult } from "@modules/domain/team-chat"
+import {
+    TEAM_CHAT_CODES,
+    openApprovalRequest,
+    persistTeamChat,
+    rejectApprovalRequest,
+    seatIdOf,
+    teamChatIdentity,
+} from "../../fixtures/builders/team-chat.builder"
 import type { TeamChatIdentity } from "../../fixtures/builders/team-chat.builder"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
-import { TeamChatProofModule } from "../../world/team-chat-proof.module"
+import { TEAM_CHAT_PROOF_MODULES } from "../../world/team-chat-capabilities.options"
+import { TeamChatProofStorage, TeamChatTagRecorder } from "../../world/team-chat-proof.module"
 import { useTestWorld } from "../../world/use-test-world"
 
-const world = useTestWorld({ modules: [TeamChatProofModule.register()] })
+const world = useTestWorld({ modules: TEAM_CHAT_PROOF_MODULES })
 
 const seed = async (): Promise<TeamChatIdentity> => {
     const identity = teamChatIdentity(() => world.id())
@@ -20,42 +28,27 @@ const seed = async (): Promise<TeamChatIdentity> => {
     return identity
 }
 
-const chat = (): TeamChatService => world.resolve(TeamChatService)
-const user = (memberId: string): MemberRef => ({ memberKind: "user", memberId })
+const chat = (): TeamChatRoomsService => world.resolve(TeamChatRoomsService)
+const user = (memberId: string): ChatMemberRef => ({ memberKind: "user", memberId })
 
 const valueOf = <V>(result: TeamChatResult<V>): V => {
     assert(result.ok, "expected a value, got a refusal")
     return result.value
 }
 
-interface SeatRow {
-    readonly id: string
-}
+const refusalOf = <V>(result: TeamChatResult<V>): string | null => (result.ok ? null : result.refusal)
 
-/** The seat id (workspace_members.id) of an account. */
-const seatOf = async (workspaceId: string, userId: string): Promise<string> => {
-    const rows: Array<SeatRow> = await world.db.primary.query(
-        "SELECT id FROM public.workspace_members WHERE workspace_id = $1 AND user_id = $2",
-        [workspaceId, userId],
-    )
-    return rows[0]?.id ?? ""
-}
+const seatOf = (workspaceId: string, userId: string): Promise<string> => seatIdOf(world.db.primary, workspaceId, userId)
 
-/** Writes a pending approval request that names the given seats as approvers. */
-const openRequest = async (workspaceId: string, seatIds: ReadonlyArray<string>, agentId: string): Promise<string> => {
-    const rows: Array<SeatRow> = await world.db.primary.query(
-        `INSERT INTO public.approval_requests
-             (workspace_id, chain_step_id, department, action, policy, approvers, timeout_minutes, expires_at, requested_by_agent_id)
-         VALUES ($1, gen_random_uuid(), 'sales', 'refund', 'any', $2::jsonb, 30, now() + interval '30 minutes', $3)
-         RETURNING id`,
-        [
-            workspaceId,
-            JSON.stringify(seatIds.map((memberId) => ({ memberId, name: "x", role: "staff", roomId: null }))),
-            agentId,
-        ],
-    )
-    return rows[0]?.id ?? ""
-}
+const openRequest = (workspaceId: string, seatIds: ReadonlyArray<string>, agentId: string): Promise<string> =>
+    openApprovalRequest(world.db.primary, {
+        id: world.id(),
+        chainStepId: world.id(),
+        workspaceId,
+        seatIds,
+        agentId,
+        department: "sales",
+    })
 
 describe("report cards", () => {
     it("writes one report per run in the direct room of the agent and the owner, opened on demand", async () => {
@@ -142,10 +135,7 @@ describe("approval cards", () => {
         expect(direct[0]?.lastMessage?.approval?.canDecide).toBe(true)
         const staffOnly = await chat().messages(workspaceId, ownerId, room.id, 10, null, false)
         expect(staffOnly.nodes[0]?.approval?.canDecide).toBe(false)
-        await world.db.primary.query(
-            "UPDATE public.approval_requests SET status = 'rejected', resolved_at = now(), resolved_by = $2 WHERE id = $1",
-            [decisionId, firstSeat],
-        )
+        await rejectApprovalRequest(world.db.primary, decisionId, firstSeat)
         const settled = await chat().messages(workspaceId, first, room.id, 10, null, false)
         expect(settled.nodes[0]?.approval).toMatchObject({
             status: "refused",
@@ -319,5 +309,177 @@ describe("postAsAgent", () => {
         expect(
             await chat().postAsAgent(world.id(), { agent: "chatbot", toUserId: null, body: "x", key: null }),
         ).toBeNull()
+    })
+})
+
+describe("the tag trigger", () => {
+    it("hands a message that mentions an agent to the work core once, with the room and the message, and not a retried one", async () => {
+        const identity = await seed()
+        const { workspaceId, ownerId, agentId } = identity
+        const recorder = world.resolve(TeamChatTagRecorder)
+        recorder.handed.length = 0
+        recorder.allowed = [agentId]
+        const room = valueOf(
+            await chat().createRoom(workspaceId, ownerId, {
+                kind: "group",
+                name: "Ops",
+                members: [{ memberKind: "agent", memberId: agentId }],
+            }),
+        )
+        const send = () =>
+            chat().send(workspaceId, ownerId, {
+                roomId: room.id,
+                to: null,
+                body: "@Bot quote two lanterns",
+                mentions: [{ memberKind: "agent", memberId: agentId }, user(identity.staffIds[0])],
+                fileKeys: [],
+                clientId: "tag-1",
+            })
+        const sent = valueOf(await send())
+        valueOf(await send())
+        expect(recorder.handed).toEqual([
+            {
+                workspaceId,
+                tag: { userId: ownerId, agentId, roomId: room.id, messageId: sent.id, text: "@Bot quote two lanterns" },
+            },
+        ])
+    })
+
+    it("hands nothing over for a message that mentions only people", async () => {
+        const identity = await seed()
+        const recorder = world.resolve(TeamChatTagRecorder)
+        recorder.handed.length = 0
+        const [first] = identity.staffIds
+        const room = valueOf(
+            await chat().createRoom(identity.workspaceId, identity.ownerId, {
+                kind: "direct",
+                name: null,
+                members: [user(first)],
+            }),
+        )
+        valueOf(
+            await chat().send(identity.workspaceId, identity.ownerId, {
+                roomId: room.id,
+                to: null,
+                body: "hi",
+                mentions: [user(first)],
+                fileKeys: [],
+                clientId: null,
+            }),
+        )
+        expect(recorder.handed).toEqual([])
+    })
+})
+
+const facts = (extra: object = {}) => ({
+    fileName: "Bao gia.pdf",
+    mimeType: "application/pdf",
+    sizeBytes: 1000,
+    ...extra,
+})
+
+describe("files of a room", () => {
+    it("issues an upload address to a person of the room, refuses a bad type or size as data, and refuses a stranger", async () => {
+        const identity = await seed()
+        const { workspaceId, ownerId } = identity
+        const [first, , third] = identity.staffIds
+        const room = valueOf(
+            await chat().createRoom(workspaceId, ownerId, { kind: "group", name: "Files", members: [user(first)] }),
+        )
+        const upload = valueOf(await chat().requestUpload(workspaceId, first, room.id, facts()))
+        expect(upload).toMatchObject({ method: "PUT", headers: [{ name: "Content-Type", value: "application/pdf" }] })
+        expect(upload.fileKey).toMatch(new RegExp(`^${workspaceId}/team-chat/${room.id}/[0-9a-f-]{36}/Bao gia\.pdf$`))
+        expect(upload.uploadUrl).toContain(upload.fileKey)
+        expect(
+            refusalOf(
+                await chat().requestUpload(
+                    workspaceId,
+                    first,
+                    room.id,
+                    facts({ mimeType: "application/x-msdownload" }),
+                ),
+            ),
+        ).toBe(TEAM_CHAT_CODES.fileTypeNotAllowed)
+        expect(
+            refusalOf(await chat().requestUpload(workspaceId, first, room.id, facts({ sizeBytes: 26 * 1024 * 1024 }))),
+        ).toBe(TEAM_CHAT_CODES.fileTooLarge)
+        expect(refusalOf(await chat().requestUpload(workspaceId, first, room.id, facts({ sizeBytes: 0 })))).toBe(
+            TEAM_CHAT_CODES.fileTooLarge,
+        )
+        expect(refusalOf(await chat().requestUpload(workspaceId, third, room.id, facts()))).toBe(
+            TEAM_CHAT_CODES.notFound,
+        )
+        const store = world.resolve(TeamChatProofStorage)
+        store.reachable = false
+        expect(refusalOf(await chat().requestUpload(workspaceId, first, room.id, facts()))).toBe(
+            TEAM_CHAT_CODES.storageUnavailable,
+        )
+        store.reachable = true
+    })
+    it("stores the checked files with the message and signs their read addresses, and removes a file over the limit", async () => {
+        const identity = await seed()
+        const { workspaceId, ownerId } = identity
+        const [first] = identity.staffIds
+        const store = world.resolve(TeamChatProofStorage)
+        const room = valueOf(
+            await chat().createRoom(workspaceId, ownerId, { kind: "group", name: "Files", members: [user(first)] }),
+        )
+        const upload = valueOf(await chat().requestUpload(workspaceId, first, room.id, facts()))
+        const send = (keys: Array<string>, body = "") =>
+            chat().send(workspaceId, first, {
+                roomId: room.id,
+                to: null,
+                body,
+                mentions: [],
+                fileKeys: keys,
+                clientId: null,
+            })
+        expect(refusalOf(await send([upload.fileKey]))).toBe(TEAM_CHAT_CODES.storageUnavailable)
+        store.sizes.set(upload.fileKey, 1234)
+        const sent = valueOf(await send([upload.fileKey]))
+        expect(sent.attachments).toEqual([
+            {
+                fileKey: upload.fileKey,
+                name: "Bao gia.pdf",
+                mimeType: "application/pdf",
+                sizeBytes: 1234,
+                url: `https://store.test/get/${upload.fileKey}`,
+            },
+        ])
+        const thread = await chat().messages(workspaceId, first, room.id, 5, null, false)
+        expect(thread.nodes[0]?.attachments[0]?.url).toBe(`https://store.test/get/${upload.fileKey}`)
+        const big = valueOf(await chat().requestUpload(workspaceId, first, room.id, facts()))
+        store.sizes.set(big.fileKey, 30 * 1024 * 1024)
+        expect(refusalOf(await send([big.fileKey]))).toBe(TEAM_CHAT_CODES.fileTooLarge)
+        expect(store.removed).toEqual([big.fileKey])
+        expect(refusalOf(await send(["somewhere/else.pdf"]))).toBe(TEAM_CHAT_CODES.fileTypeNotAllowed)
+        expect(refusalOf(await send([`${workspaceId}/team-chat/${room.id}/${world.id()}/run.exe`]))).toBe(
+            TEAM_CHAT_CODES.fileTypeNotAllowed,
+        )
+    })
+})
+
+describe("mute", () => {
+    it("mutes a room for one member only, and an owner who sits in no room has nothing to mute", async () => {
+        const identity = await seed()
+        const { workspaceId, ownerId } = identity
+        const [first, second] = identity.staffIds
+        const room = valueOf(
+            await chat().createRoom(workspaceId, ownerId, {
+                kind: "group",
+                name: "Quiet",
+                members: [user(first), user(second)],
+            }),
+        )
+        expect(valueOf(await chat().setMuted(workspaceId, first, room.id, true)).muted).toBe(true)
+        expect((await chat().room(workspaceId, second, room.id))?.muted).toBe(false)
+        expect(valueOf(await chat().setMuted(workspaceId, first, room.id, false)).muted).toBe(false)
+        const other = valueOf(
+            await chat().createRoom(workspaceId, first, { kind: "group", name: "Other", members: [user(second)] }),
+        )
+        expect(refusalOf(await chat().setMuted(workspaceId, ownerId, other.id, true))).toBe(TEAM_CHAT_CODES.notMember)
+        expect(refusalOf(await chat().setMuted(workspaceId, identity.staffIds[2], room.id, true))).toBe(
+            TEAM_CHAT_CODES.notFound,
+        )
     })
 })

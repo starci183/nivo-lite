@@ -10,7 +10,6 @@ import { DeskDailyService } from "./desk-daily.service"
 import { EinvoiceReviewService } from "./einvoice-review.service"
 import { ReceivablePaymentPerformerService } from "./receivable-payment-performer.service"
 import { ReceivableReconcileService } from "./receivable-reconcile.service"
-import { RenewalCashService } from "./renewal-cash.service"
 import { SupplierPaymentPerformerService } from "./supplier-payment-performer.service"
 import { SupplierPaymentsService } from "./supplier-payments.service"
 import { UnwiredAccountingGatewayService } from "./unwired-accounting-gateway.service"
@@ -27,7 +26,6 @@ export class AccountingModule extends ConfigurableModuleClass {
             DeskDailyService,
             EinvoiceReviewService,
             ReceivableReconcileService,
-            RenewalCashService,
             SupplierPaymentsService,
         ]
         const decisions = [

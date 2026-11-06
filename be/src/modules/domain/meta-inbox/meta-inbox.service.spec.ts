@@ -44,8 +44,6 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX } from "@modules/platform/inbox"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { META_INBOUND_QUEUE, META_DELIVERY_QUEUE } from "./meta-inbox.contracts"
-import { META_EVENT_TAKER } from "./meta-inbox.decorators"
-import type { MetaEventTaker } from "./meta-inbox.port"
 import type { MetaInboundJob } from "./meta-inbox.contracts"
 import { MetaInboxService } from "./meta-inbox.service"
 import { MetaInboxEntity } from "./persistence/entities"
@@ -108,8 +106,6 @@ const build = async (
     threads.touch.mockResolvedValue(undefined)
     const comments = mock<MetaCommentsService>()
     comments.note.mockResolvedValue(undefined)
-    const taker = mock<MetaEventTaker>()
-    taker.take.mockResolvedValue(false)
     const inbox = fakeInbox()
     if (!claimed) inbox.seen("meta", DELIVERY_ID)
     const moduleRef = await Test.createTestingModule({
@@ -123,7 +119,6 @@ const build = async (
             { provide: ConversationsService, useValue: conversations },
             { provide: MetaThreadsService, useValue: threads },
             { provide: MetaCommentsService, useValue: comments },
-            { provide: META_EVENT_TAKER, useValue: taker },
         ],
     }).compile()
     return {
@@ -137,7 +132,6 @@ const build = async (
         conversations,
         threads,
         comments,
-        taker,
     }
 }
 
@@ -418,17 +412,6 @@ describe("MetaInboxService deliver", () => {
             "connection-1",
             { platform: "facebook", personId: "person-1", visitor: "Lan", text: "Hello", eventId: "dm:message-1" },
         ])
-    })
-
-    it("leaves an event the taker took to the taker", async () => {
-        const { service, conversations, taker } = await build()
-        taker.take.mockResolvedValue(true)
-        const job = { connectionId: "connection-1", workspaceId: "workspace-1", event: event() }
-
-        await service.deliverPayload(job)
-
-        expect(taker.take).toHaveBeenCalledWith(job)
-        expect(conversations.acceptMeta).not.toHaveBeenCalled()
     })
 
     it("leaves a claimed job payload that is not a queued Meta event alone", async () => {

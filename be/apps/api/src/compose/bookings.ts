@@ -1,11 +1,15 @@
 import { BOOKING_PORTS } from "../api.options"
 import type { DynamicModule } from "@nestjs/common"
+import { BookingGraphqlModule } from "@features/api/booking"
+import { PublicBookingGraphqlModule } from "@features/api/public-booking"
 import { BOOKINGS_ERROR_KINDS, BOOKINGS_MESSAGES, BookingsModule } from "@modules/domain/bookings"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 /** The bookings area of the API, in registration order. */
 export const bookingsModules = (): Array<DynamicModule> => [
     BookingsModule.register({ isGlobal: true, ...BOOKING_PORTS }),
+    PublicBookingGraphqlModule.register({}),
+    BookingGraphqlModule.register({}),
 ]
 
 /** The error kinds of the capabilities this group registers, in registration order. */

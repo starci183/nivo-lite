@@ -1,6 +1,18 @@
-import type { ReactNode } from "react"
+import type { ReactElement, ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
-import { Avatar, Badge, Button, Cluster, ListBox, RelativeTime, Stack, Tabs, Text } from "@starci/grammar/common"
+import {
+    Avatar,
+    Badge,
+    Button,
+    Cluster,
+    Divider,
+    ListBox,
+    RelativeTime,
+    Stack,
+    SurfaceCard,
+    Tabs,
+    Text,
+} from "@starci/grammar/common"
 import type { BadgeTone, ListBoxItem } from "@starci/grammar/common"
 import type { inboxBlock } from "../../blocks/chatbot/inbox.block"
 import { countsView, EMPTY_TAB_COUNTS, tabEntriesOf, TAB_COUNTS_PLACEHOLDER } from "../../rows/filter-tabs"
@@ -50,13 +62,13 @@ const trailingOf = (row: ThreadListRow, words: RowWords): ReactNode => (
 const itemOf = (row: ThreadListRow, words: RowWords): ListBoxItem => ({
     id: row.id,
     label: row.name,
-    leading: <Avatar name={row.name} isDecorative />,
+    leading: <Avatar name={row.name} {...(row.avatar === "" ? {} : { src: row.avatar })} isDecorative />,
     ...(row.preview === "" ? {} : { description: row.preview }),
     trailing: trailingOf(row, words),
 })
 
 /** The tabs of the inbox with their counts; a counts read that failed or is empty leaves the tabs without them. */
-const InboxTabs = (props: InboxListProps): ReactNode => {
+const InboxTabs = (props: InboxListProps): ReactElement => {
     const words = useBlockWords()
     const labels = useSlotLabels()
     const specs: ReadonlyArray<TabSpec> = INBOX_TABS.map((value) => ({
@@ -65,7 +77,7 @@ const InboxTabs = (props: InboxListProps): ReactNode => {
         attention: value === "needs",
     }))
     const counts = parsedSlot(props.slots.counts.slot, countsView)
-    const tabs = (view: TabCounts | null): ReactNode => (
+    const tabs = (view: TabCounts | null): ReactElement => (
         <Tabs
             kind="filter"
             label={words({ key: "status_filter_label" })}
@@ -176,19 +188,22 @@ const InboxRows = (props: InboxListProps): ReactNode => {
     )
 }
 
-/** The list pane of the inbox: the search, the tabs with their counts, and a row per conversation. */
+/** The list pane of the inbox: one surface card with the tabs and their counts, the search, a divider and a row per conversation. */
 export const InboxList = (props: InboxListProps): ReactNode => {
     const words = useBlockWords()
     return (
-        <Stack gap="row">
-            <PaneSearch
-                param={props.props.searchParam}
-                params={props.params}
-                label={words({ key: "search_label" })}
-                clearLabel={words({ key: "searchClear" })}
-            />
-            <InboxTabs {...props} />
-            <InboxRows {...props} />
-        </Stack>
+        <SurfaceCard ariaLabel={words({ key: "list_label" })}>
+            <Stack gap="row">
+                <InboxTabs {...props} />
+                <PaneSearch
+                    param={props.props.searchParam}
+                    params={props.params}
+                    label={words({ key: "search_label" })}
+                    clearLabel={words({ key: "searchClear" })}
+                />
+                <Divider />
+                <InboxRows {...props} />
+            </Stack>
+        </SurfaceCard>
     )
 }

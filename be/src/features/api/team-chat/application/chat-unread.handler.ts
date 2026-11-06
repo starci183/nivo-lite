@@ -1,5 +1,5 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import type { UnreadView } from "@modules/domain/team-chat"
 import { ICQRSHandler } from "@modules/platform/cqrs"
 import { InjectLogger } from "@modules/platform/logging"
@@ -11,13 +11,12 @@ import { ChatUnreadQuery } from "./chat-unread.query"
 export class ChatUnreadHandler extends ICQRSHandler<ChatUnreadQuery, UnreadView> {
     constructor(
         @InjectLogger() logger: Logger,
-        private readonly chat: TeamChatService,
+        private readonly chat: TeamChatRoomsService,
     ) {
         super(logger)
     }
 
     protected override process(query: ChatUnreadQuery): Promise<UnreadView> {
-        const { principal: p, request: r } = query.params
-        return this.chat.unread(r.workspaceId, p.id)
+        return this.chat.unread(query.params.request.workspaceId, query.params.principal.id)
     }
 }

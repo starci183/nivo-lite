@@ -7,6 +7,8 @@ export interface ContactView {
     readonly name: string
     /** The proper name of the channel the customer writes from. */
     readonly channelName: string
+    /** The link of the customer's picture; empty when the channel gave none. */
+    readonly avatar: string
     /** The person who holds the conversation; empty while the AI answers. */
     readonly handledBy: string
     /** The stage of the customer; empty while the customer was not captured. */
@@ -26,6 +28,7 @@ export const contactOf = (record: unknown, untitled: string): ContactView | null
     return {
         name: read("name") || untitled,
         channelName: read("channelName"),
+        avatar: read("avatarUrl"),
         handledBy: read("handledBy"),
         stage: read("stage"),
         need: read("need"),

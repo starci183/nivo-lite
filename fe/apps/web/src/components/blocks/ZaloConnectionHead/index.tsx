@@ -47,7 +47,6 @@ export const ZaloConnectionHead = (props: ZaloConnectionHeadProps) => {
                 ...(refusal === undefined ? {} : { refusal }),
                 backLabel: pane.backToList,
                 moreLabel: pane.moreActions,
-                railLabel: t("eventsOpen"),
                 recheckLabel: t("recheck"),
                 isRechecking,
                 ...(isOwner && isLive

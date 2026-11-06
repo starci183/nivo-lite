@@ -2,10 +2,12 @@ import { defineModule } from "@nivo-lite/agent-sdk/module"
 import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
 import { answerQuestionAction } from "./actions/answer-question.action"
 import { adjustAction } from "./actions/adjust.action"
+import { resolveUnmatchedPaymentAction } from "./actions/resolve-unmatched-payment.action"
 import { saveSettingsAction } from "./actions/save-settings.action"
 import { settleAction } from "./actions/settle.action"
 import { closeCheckRead } from "./reads/close-check.read"
 import { decisionsRead } from "./reads/decisions.read"
+import { openOrdersRead } from "./reads/open-orders.read"
 import { entriesRead, entryCountsRead, entryStatusCountsRead } from "./reads/entries.read"
 import { dueSoonRead } from "./reads/due-soon.read"
 import { entryRead } from "./reads/entry.read"
@@ -36,12 +38,13 @@ export const accountingModule: ModuleDeclaration = defineModule({
         dueSoonRead,
         weeklyRead,
         decisionsRead,
+        openOrdersRead,
         questionCountRead,
         questionsRead,
         closeCheckRead,
         settingsRead,
     ],
-    actions: [adjustAction, saveSettingsAction, answerQuestionAction],
+    actions: [adjustAction, saveSettingsAction, answerQuestionAction, resolveUnmatchedPaymentAction],
     tools: ["ledger.status", "ledger.append"],
     specs: [accountingSpecDocument],
 })

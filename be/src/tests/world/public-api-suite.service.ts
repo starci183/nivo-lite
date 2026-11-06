@@ -1,29 +1,15 @@
-import type {
-    PublicApiRequestState,
-    PublicApiOutboxState,
-    PublicApiInboxState,
-    PublicApiSourceState,
-} from "./public-api-database.service"
+import type { PublicApiOutboxState, PublicApiInboxState, PublicApiSourceState } from "./public-api-database.service"
 import assert from "node:assert/strict"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
-import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
-import type { WorkPerformerRegistry } from "@modules/domain/decisions"
 import { ModulesService } from "@modules/domain/modules"
 import { PUBLIC_API_QUEUE } from "@modules/queues/public-api"
-import { HandoffLeadPerformerService } from "../../modules/domain/work-performers/handoff-lead-performer.service"
 import type { PublicApiIdentity } from "../fixtures/builders/public-api.builder"
-import { apiDealWon, apiInbox, apiLeadRequest, apiOutbox, apiSource } from "./public-api-database.service"
+import { apiInbox, apiOutbox, apiSource } from "./public-api-database.service"
 import type { LiteWorld } from "./lite-world.service"
 import { PublicApiProofAccess } from "./public-api-capabilities.options"
 import { openPublicApiProof } from "./public-api-proof.service"
 import { registerPublicApiProcessors } from "./public-api-registration.service"
 import type { RegisteredPublicApi } from "./public-api-registration.service"
-
-/** Historical producers used this exact fallback when the caller omitted its need. */
-export const DEFAULT_NEED = "Created through the API"
-
-/** The existing customer's need must survive an admission without a supplied need. */
-export const RETAINED_NEED = "Retain the annual service contract"
 
 const fixture = async (world: LiteWorld): Promise<PublicApiIdentity & { readonly authorization: string }> => {
     const identity = {
@@ -37,23 +23,11 @@ const fixture = async (world: LiteWorld): Promise<PublicApiIdentity & { readonly
     return { ...identity, authorization: `Bearer ${identity.key}` }
 }
 
-const requestForLead = async (
-    world: LiteWorld,
-    workspaceId: string,
-    externalId: string,
-): Promise<PublicApiRequestState> => {
-    const [row] = await apiLeadRequest(world.db.primary, workspaceId, externalId)
-    assert(row !== undefined)
-    return row
-}
-
 const observations = (world: LiteWorld) => ({
     source: (workspaceId: string, id: string): Promise<Array<PublicApiSourceState>> =>
         apiSource(world.db.primary, workspaceId, id),
     inbox: (workspaceId: string): Promise<Array<PublicApiInboxState>> => apiInbox(world.db.primary, workspaceId),
     outbox: (workspaceId: string): Promise<Array<PublicApiOutboxState>> => apiOutbox(world.db.primary, workspaceId),
-    dealsWon: (workspaceId: string): Promise<Array<Readonly<Record<string, unknown>>>> =>
-        apiDealWon(world.db.primary, workspaceId),
 })
 
 type PreparePublicApiProofResultFixtureShape = {
@@ -64,11 +38,9 @@ type PreparePublicApiProofResultShape = {
     source: (workspaceId: string, id: string) => Promise<Array<PublicApiSourceState>>
     inbox: (workspaceId: string) => Promise<Array<PublicApiInboxState>>
     outbox: (workspaceId: string) => Promise<Array<PublicApiOutboxState>>
-    dealsWon: (workspaceId: string) => Promise<Array<Readonly<Record<string, unknown>>>>
     registered: () => RegisteredPublicApi
     fixture: () => Promise<PublicApiIdentity & PreparePublicApiProofResultFixtureShape>
     deliver: (payload: object, job?: string) => Promise<void>
-    requestForLead: (workspaceId: string, externalId: string) => Promise<PublicApiRequestState>
 }
 
 /** Registers the world's real processors and gives each scenario its own local workspace and router delivery. */
@@ -77,9 +49,6 @@ export const preparePublicApiProof = (world: LiteWorld): PreparePublicApiProofRe
     beforeAll(async () => {
         await world.resolve(ModulesService).sync()
         registrations.push(await registerPublicApiProcessors(world, world.resolve(ProcessPublicApiQueueModule)))
-        world
-            .resolve<WorkPerformerRegistry>(WORK_PERFORMER_REGISTRY)
-            .add("handoff_lead", world.resolve(HandoffLeadPerformerService))
     })
     beforeEach(() => {
         jest.restoreAllMocks()
@@ -108,8 +77,6 @@ export const preparePublicApiProof = (world: LiteWorld): PreparePublicApiProofRe
             }
         > => fixture(world),
         deliver,
-        requestForLead: (workspaceId: string, externalId: string): Promise<PublicApiRequestState> =>
-            requestForLead(world, workspaceId, externalId),
         ...observations(world),
     }
 }

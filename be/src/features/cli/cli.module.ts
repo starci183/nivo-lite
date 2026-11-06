@@ -10,11 +10,13 @@ import { MigrateModule } from "./migrate/migrate.module"
 import { PruneWorkspacesModule } from "./prune-workspaces/prune-workspaces.module"
 import { SeedModule } from "./seed/seed.module"
 import { SeedAgentGraphsModule } from "./seed-agent-graphs/seed-agent-graphs.module"
+import { SeedBrainModule } from "./seed-brain/seed-brain.module"
 import { SeedCatalogueModule } from "./seed-catalogue/seed-catalogue.module"
 import { SeedKnowledgeModule } from "./seed-knowledge/seed-knowledge.module"
 import { SeedManagementModule } from "./seed-management/seed-management.module"
 import { SeedMediaModule } from "./seed-media/seed-media.module"
 import { SeedModulesModule } from "./seed-modules/seed-modules.module"
+import { SeedRecordsModule } from "./seed-records/seed-records.module"
 import { SeedTestAccountsModule } from "./seed-test-accounts/seed-test-accounts.module"
 import { SeedWorkspaceModule } from "./seed-workspace/seed-workspace.module"
 import { StorageCliModule } from "./storage/storage.module"
@@ -31,11 +33,13 @@ import { StorageCliModule } from "./storage/storage.module"
         PruneWorkspacesModule.register({}),
         SeedModule.register({}),
         SeedAgentGraphsModule.register({}),
+        SeedBrainModule.register({}),
         SeedCatalogueModule.register({}),
         SeedKnowledgeModule.register({}),
         SeedManagementModule.register({}),
         SeedMediaModule.register({}),
         SeedModulesModule.register({}),
+        SeedRecordsModule.register({}),
         SeedTestAccountsModule.register({}),
         SeedWorkspaceModule.register({}),
         StorageCliModule.register({}),

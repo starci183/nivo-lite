@@ -66,7 +66,12 @@ export interface DoorCalls {
 
 /** The calls to the door of one workspace, over the services of the world. */
 export const doorCallsOf = (world: LiteWorld, workspaceId: string): DoorCalls => {
-    const call = (name: string, payload: DoorPayload) => ({ workspaceId, name, payload: JSON.stringify(payload) })
+    const call = (name: string, payload: DoorPayload) => ({
+        workspaceId,
+        name,
+        payload: JSON.stringify(payload),
+        locale: "vi" as const,
+    })
     const data: DoorCalls["data"] = async (userId, name, payload = {}) =>
         jsonOf((await world.resolve(WorkbenchDoorService).read(userId, call(name, payload))).data)
     return {

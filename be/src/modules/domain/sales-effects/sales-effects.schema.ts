@@ -56,6 +56,9 @@ export const confirmSchema: z.ZodObject<{ orderId: z.ZodString }> = z.object({
 /** What `order.void` carries: the order to cut short. */
 export const voidSchema: z.ZodObject<{ id: z.ZodString }> = z.object({ id: z.string().min(1).max(ID_MAX) })
 
+/** What `payment.rematch` carries: the order whose payment code was just sent. */
+export const rematchSchema: z.ZodObject<{ orderId: z.ZodString }> = z.object({ orderId: z.string().min(1).max(ID_MAX) })
+
 /** What a conversation record holds that a customer is made from. */
 export const conversationSchema: z.ZodObject<{ name: z.ZodString; channel: z.ZodString }> = z.object({
     name: z.string().max(LINE_MAX),

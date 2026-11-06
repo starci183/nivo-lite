@@ -23,6 +23,7 @@ import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
 import { I18nModule } from "@modules/platform/i18n"
 import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
+import { OfficeChainQueueProofModule } from "./office-chain-queue-proof.module"
 
 /** The token of the Auth account directory of the office chain proofs. */
 const OFFICE_ACCOUNTS = Symbol("proof.office-chain.accounts")
@@ -75,6 +76,7 @@ export const OFFICE_CHAIN_MODULES: Array<DynamicModule> = [
     ModuleInstallationsModule.register({ isGlobal: true }),
     AuthorityRulesModule.register({ isGlobal: true }),
     MemberGrantsModule.register({ isGlobal: true }),
+    { module: OfficeChainQueueProofModule, global: true },
     ApprovalRequestsModule.register({
         isGlobal: true,
         ports: { agentOwners: AgentOwnershipService },

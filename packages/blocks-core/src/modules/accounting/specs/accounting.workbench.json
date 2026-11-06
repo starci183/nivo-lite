@@ -330,6 +330,16 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "rematchDays",
+              "label": {
+                "key": "settings_rematch"
+              },
+              "hint": {
+                "key": "settings_rematch_hint"
+              },
+              "kind": "number"
             }
           ]
         },
@@ -375,11 +385,72 @@
             "key": "decisions_more"
           },
           "currency": "VND",
-          "isHeadless": true
+          "isHeadless": true,
+          "commands": [
+            {
+              "id": "assign-order",
+              "label": {
+                "key": "action_assign_order"
+              },
+              "intent": "commit"
+            },
+            {
+              "id": "other-income",
+              "label": {
+                "key": "action_other_income"
+              },
+              "intent": "alternative"
+            }
+          ],
+          "choices": [
+            {
+              "command": "assign-order",
+              "sends": "accounting.resolve-unmatched-payment",
+              "pick": {
+                "valueName": "order",
+                "title": {
+                  "key": "picker_title"
+                },
+                "searchLabel": {
+                  "key": "picker_search"
+                },
+                "emptyBody": {
+                  "key": "picker_empty"
+                }
+              }
+            },
+            {
+              "command": "other-income",
+              "sends": "accounting.resolve-unmatched-payment",
+              "confirm": {
+                "title": {
+                  "key": "other_income_title"
+                },
+                "body": {
+                  "key": "other_income_body"
+                },
+                "confirmLabel": {
+                  "key": "action_other_income"
+                },
+                "cancelLabel": {
+                  "key": "picker_cancel"
+                },
+                "values": {
+                  "kind": "other-income"
+                }
+              }
+            }
+          ]
         },
         "bind": {
           "queue": {
             "read": "accounting.decisions"
+          },
+          "command": {
+            "action": "accounting.resolve-unmatched-payment"
+          },
+          "options": {
+            "read": "accounting.open-orders"
           }
         },
         "showWhen": {

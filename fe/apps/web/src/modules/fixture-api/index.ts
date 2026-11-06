@@ -1,5 +1,6 @@
 import { MODULE_DECLARATIONS } from "@nivo-lite/blocks-core/modules"
 import vi from "@/modules/i18n/messages/vi.json"
+import { chatAnswerOf } from "./chat"
 import viewer from "./viewer.json"
 import { PROTOTYPE_WORKSPACE_ID } from "@/modules/config"
 import type { ConsoleSessionView } from "@/modules/types"
@@ -127,7 +128,7 @@ const ANSWERS: Readonly<Record<string, FixtureAnswer>> = {
 
 /** The data the fixture gives an operation, or null when there is none. */
 export const fixtureAnswerOf = (operationName: string, variables: Variables): Record<string, unknown> | null =>
-    ANSWERS[operationName]?.(variables) ?? null
+    ANSWERS[operationName]?.(variables) ?? chatAnswerOf(operationName, variables)
 
 /** The session of the fixture viewer: the owner of the fixture workspace, with a name that has an initial. */
 export const fixtureSession = (workspaceId: string): ConsoleSessionView => ({

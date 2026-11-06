@@ -1,6 +1,4 @@
 export { useAddInstanceForm } from "./useAddInstanceForm"
-export { useAgentChatMessageForm } from "./useAgentChatMessageForm"
-export { useAgentChatVisitorForm } from "./useAgentChatVisitorForm"
 export { useApiKeyForm } from "./useApiKeyForm"
 export { useAuthorityGoalsForm } from "./useAuthorityGoalsForm"
 export { useAuthorityLimitsForm } from "./useAuthorityLimitsForm"

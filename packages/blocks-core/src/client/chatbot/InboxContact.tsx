@@ -18,8 +18,14 @@ interface ContactBodyProps {
 /** Resolves a text of the module in the viewer's language. */
 type Words = (text: SpecText) => string
 
+/** What the facts of the lead are given. */
+interface LeadFactsProps {
+    readonly contact: ContactView
+    readonly words: Words
+}
+
 /** The facts of the customer as a lead: the stage, the need and the phone, each only when known. */
-const LeadFacts = (props: { readonly contact: ContactView; readonly words: Words }): ReactNode => {
+const LeadFacts = (props: LeadFactsProps): ReactNode => {
     const facts = leadFactsOf(props.contact)
     if (facts.length === 0) return <Badge tone="neutral">{props.words({ key: "inbox_lead_none" })}</Badge>
     return (
@@ -43,7 +49,12 @@ const ContactBody = (props: ContactBodyProps): ReactNode => {
     return (
         <Stack gap="region">
             <Cluster gap="inline" wrap={false} align="center">
-                <Avatar name={contact.name} size="md" isDecorative />
+                <Avatar
+                    name={contact.name}
+                    {...(contact.avatar === "" ? {} : { src: contact.avatar })}
+                    size="md"
+                    isDecorative
+                />
                 <Stack gap="inline">
                     <Heading level={3} isLoading={props.isLoading}>
                         {contact.name}
@@ -84,6 +95,7 @@ const ContactBody = (props: ContactBodyProps): ReactNode => {
 const PLACEHOLDER: ContactView = {
     name: "........",
     channelName: "........",
+    avatar: "",
     handledBy: "",
     stage: "",
     need: "",

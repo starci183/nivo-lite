@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { TeamChatService } from "@modules/domain/team-chat"
+import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import type { HubNote } from "./gateway-turns.contracts"
 import { HubNotesService, noteBodyOf, toolSourcesOf } from "./hub-notes.service"
 
@@ -19,11 +19,11 @@ const NOTE: HubNote = {
 const REFS = { leadId: "l1", workItemId: null }
 
 const build = async () => {
-    const chat = mock<TeamChatService>({
+    const chat = mock<TeamChatRoomsService>({
         postAsAgent: jest.fn().mockResolvedValue({ roomId: "r1", messageId: "m1", agentId: "agent-1" }),
     })
     const moduleRef = await Test.createTestingModule({
-        providers: [HubNotesService, { provide: TeamChatService, useValue: chat }],
+        providers: [HubNotesService, { provide: TeamChatRoomsService, useValue: chat }],
     }).compile()
     return { service: moduleRef.get(HubNotesService), chat }
 }
