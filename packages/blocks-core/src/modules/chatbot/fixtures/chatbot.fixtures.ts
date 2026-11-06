@@ -93,7 +93,7 @@ const EMPTY_COUNTS: CountsResult = { counts: {}, total: 0 }
 const page = (rows: ReadonlyArray<ThreadRow>): ListPage<ThreadRow> => ({ rows, cursor: null })
 
 /** The conversations per status under no search. */
-export const STATUS_COUNTS: CountsResult = { counts: { needs: 1, handled: 1, ai: 2 }, total: 4 }
+export const STATUS_COUNTS: CountsResult = { counts: { needs: 1, handled: 1, ai: 2, today: 2 }, total: 4 }
 
 /** The conversations per channel under no search. */
 export const CHANNEL_COUNTS_DATA: CountsResult = { counts: { zalo: 1, telegram: 1, website: 1, facebook: 1 }, total: 4 }

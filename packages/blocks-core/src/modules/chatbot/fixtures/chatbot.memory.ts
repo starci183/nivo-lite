@@ -150,15 +150,22 @@ export const messageStore = (world: MemoryWorld): MessageStore => ({
         ),
 })
 
+/** The conversations that fall in every window of a query: a `within` filter keeps the rows whose last activity is inside its window. */
+const withinWindows = (world: MemoryWorld, query: ListQuery): ReadonlyArray<ThreadRow> =>
+    [...world.conversations.values()].filter((row) => {
+        const at = row.lastAt ?? ""
+        return Object.values(query.windows ?? {}).every((window) => at >= window.from && at < window.to)
+    })
+
 /** The list source over a world. */
 export const threadsList = (world: MemoryWorld): ThreadsList => ({
     page: (_shape: ListShape, query: ListQuery) => {
         world.queries.push(query)
-        return Promise.resolve(slicePage([...world.conversations.values()], query.cursor, query.size))
+        return Promise.resolve(slicePage(withinWindows(world, query), query.cursor, query.size))
     },
-    counts: (_shape: ListShape, by: string) => {
+    counts: (_shape: ListShape, by: string, query: ListQuery) => {
         const counts: Record<string, number> = {}
-        for (const row of world.conversations.values()) {
+        for (const row of withinWindows(world, query)) {
             const value = by === "channel" ? row.channel : row.status
             counts[value] = (counts[value] ?? 0) + 1
         }

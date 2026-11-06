@@ -2,7 +2,18 @@ import { useState } from "react"
 import type { ReactNode } from "react"
 import type { ActionHandle } from "@nivo-lite/agent-sdk/block"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
-import { Button, Cluster, DropdownMenu, Form, Quote, Stack, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import {
+    Button,
+    Cluster,
+    DropdownMenu,
+    Form,
+    Heading,
+    Quote,
+    Stack,
+    SurfaceCard,
+    Text,
+    Textarea,
+} from "@starci/grammar/common"
 import type { approvalCardBlock } from "../../blocks/chatbot/approval-card.block"
 import { PROPOSAL_FIELDS } from "../../rows/chatbot/inbox-fields"
 import { proposalOf } from "../../rows/chatbot/proposal"
@@ -104,8 +115,9 @@ const DraftCard = (props: DraftCardProps): ReactNode => {
     const [isEditing, setIsEditing] = useState(false)
     const { proposal } = props
     return (
-        <SurfaceCard label={words({ key: "approval_title" })} headingLevel={3}>
+        <SurfaceCard ariaLabel={words({ key: "approval_title" })}>
             <Stack gap="row">
+                <Heading level={3}>{words({ key: "approval_title" })}</Heading>
                 {proposal.asked === "" ? null : (
                     <Text size="sm" tone="muted">
                         {`${words({ key: "approval_asked_prefix" })}${proposal.asked}`}
