@@ -222,20 +222,15 @@ describe("McpAccountingGatewayService", () => {
 })
 
 describe("McpAccountingGatewayService readiness and refusals", () => {
-    it("names the connector that feeds payment credits and says which optional features are connected", async () => {
+    it("says which optional features are connected", async () => {
         const { service, gateway } = await build({ roles: ["payment.credits.list", "invoice.list", "receivable.find"] })
 
-        await expect(service.creditsSource("ws-1")).resolves.toBe("BANK")
-        await expect(service.payablesSource("ws-1")).resolves.toBe("INBOX")
         await expect(service.connections("ws-1")).resolves.toEqual({ invoices: true, receivables: false })
         expect(gateway.readiness).toHaveBeenCalledWith("ws-1", ["receivable.find", "receivable.recordPayment"])
     })
 
     it("reads nothing and cites no tool when the workspace has no tool for a role", async () => {
         const { service, gateway } = await build({ roles: [] })
-
-        await expect(service.creditsSource("ws-1")).resolves.toBeNull()
-        await expect(service.payablesSource("ws-1")).resolves.toBeNull()
 
         await expect(service.listEinvoices("ws-1", "2026-10-19T07:00:00.000Z")).resolves.toEqual({
             tool: null,

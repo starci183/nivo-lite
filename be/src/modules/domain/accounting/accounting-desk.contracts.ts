@@ -263,9 +263,6 @@ export interface SupplierPaymentQuestion extends PayablePayment {
     readonly summary: string
 }
 
-/** The display name of a connector, or null when the workspace has none for the role. */
-export type OptionalConnectorName = string | null
-
 /** The work item an exception card decides (hub-cards v1 `ref`). */
 export interface HubCardRef {
     /** Always a work item: the existing decision flow approves or declines it. */

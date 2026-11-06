@@ -1,62 +1,20 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
-import type { EffectCall, EffectPayload, NodeQuery, SubjectRef } from "@nivo-lite/agent-sdk/node"
-import type { RightScope } from "@nivo-lite/agent-sdk/rights"
-import { whenPresent } from "@modules/events/api"
+import type { EffectCall, EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import type { NodeDataPort, NodeEffectExecutor, NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
+import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
 import { OrderPaymentClaimsService } from "./order-payment-claims.service"
 import { PaymentDemandService } from "./payment-demand.service"
-import type { PaymentClaimRow, PaymentClaimStatus, PaymentClaimWhere } from "./orders.contracts"
-
-/** The most rows one read of the port answers. */
-const READ_LIMIT = 200
 
 const textOf = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined)
 
-const CLAIM_STATUSES: ReadonlyArray<PaymentClaimStatus> = ["open", "settled", "escalated", "withdrawn"]
-
-const claimStatusOf = (value: string | undefined): PaymentClaimStatus | undefined =>
-    CLAIM_STATUSES.find((status) => status === value)
-
-/** The equalities of a query the claims table can answer: id, lead, conversation and status; null when the status named is none a claim has. */
-const whereOf = (query: NodeQuery): PaymentClaimWhere | null => {
-    const { id, leadId, conversationId, status } = query.where ?? {}
-    const statusText = textOf(status)
-    if (statusText !== undefined && claimStatusOf(statusText) === undefined) return null
-    return {
-        ...whenPresent("id", textOf(id)),
-        ...whenPresent("leadId", textOf(leadId)),
-        ...whenPresent("conversationId", textOf(conversationId)),
-        ...whenPresent("status", claimStatusOf(statusText)),
-    }
-}
-
-/** A claim as the `payment-claim` data kind yields it. */
-const viewOf = (claim: PaymentClaimRow): NodeRow => ({
-    id: claim.id,
-    leadId: claim.leadId,
-    conversationId: claim.conversationId,
-    amountVnd: claim.amountVnd,
-    names: claim.names,
-    body: claim.body,
-    claimedAt: claim.claimedAt.toISOString(),
-    status: claim.status satisfies PaymentClaimStatus,
-})
-
-/** The fields the query asked for, nothing more. */
-const cut = (row: NodeRow, fields: ReadonlyArray<string>): NodeRow =>
-    Object.fromEntries(fields.map((field) => [field, row[field]]))
-
 @Injectable()
 /**
- * The graph nodes' door to what customers said about paying: the data port of the `payment-claim` kind (a `turn` read keeps to the
- * conversation of the turn, a `workspace` read reaches the workspace's claims) and the executor of `payment-claim.record`, which writes the
- * claim once per business key and has the bank-feed connections polled fast for a while. Escalating a claim whose money never came is `escalate`, which the work-item executor calls for the
- * `claimId` of its payload.
+ * The executor of `payment-claim.record`, which writes what a customer said about paying once per business key and has the bank-feed
+ * connections polled fast for a while. The `payment-claim` data kind is the entity engine's. Escalating a claim whose money never came is
+ * `escalate`, which the work-item executor calls for the `claimId` of its payload.
  */
-export class PaymentClaimGraphAdapter implements NodeDataPort, NodeEffectExecutor, OnModuleInit {
-    readonly kind = "payment-claim"
+export class PaymentClaimGraphAdapter implements NodeEffectExecutor, OnModuleInit {
     readonly effect = "payment-claim.record"
 
     constructor(
@@ -65,21 +23,9 @@ export class PaymentClaimGraphAdapter implements NodeDataPort, NodeEffectExecuto
         @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
 
-    /** Registers the port and the executor with the node host once the app has started. */
+    /** Registers the executor with the node host once the app has started. */
     onModuleInit(): void {
-        this.registry?.addDataPort(this)
         this.registry?.addExecutor(this)
-    }
-
-    /** Reads the claims of the query, cut to its fields. */
-    async read(turn: NodeTurn, query: NodeQuery, scope: RightScope): Promise<ReadonlyArray<NodeRow>> {
-        if (scope === "turn" && turn.conversationId === null) return []
-        const where = whereOf(query)
-        if (where === null) return []
-        const scoped =
-            scope === "turn" && turn.conversationId !== null ? { ...where, conversationId: turn.conversationId } : where
-        const rows = await this.claims.matching(turn.workspaceId, scoped, query.limit ?? READ_LIMIT)
-        return rows.map((claim) => cut(viewOf(claim), query.fields))
     }
 
     /** Records what the customer said, once per business key (or per run step), and answers the claim. */

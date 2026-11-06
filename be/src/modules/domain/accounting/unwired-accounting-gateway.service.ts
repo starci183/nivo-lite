@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { DeskConnections, GatewayPayable, OptionalConnectorName } from "./accounting-desk.contracts"
+import type { DeskConnections, GatewayPayable } from "./accounting-desk.contracts"
 import type {
     AccountingGateway,
     GatewayEinvoice,
@@ -39,16 +39,6 @@ export class UnwiredAccountingGatewayService implements AccountingGateway {
     /** Nothing is recorded. */
     recordPayment(): Promise<boolean> {
         return Promise.resolve(false)
-    }
-
-    /** No connector feeds payment credits. */
-    creditsSource(): Promise<OptionalConnectorName> {
-        return Promise.resolve(null)
-    }
-
-    /** No connector feeds supplier invoices. */
-    payablesSource(): Promise<OptionalConnectorName> {
-        return Promise.resolve(null)
     }
 
     /** No optional feature is connected. */
