@@ -4,12 +4,12 @@ import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import { z } from "zod"
 import { paymentRematchEffect } from "../../vocabulary"
 import type { PaymentInstruction } from "../../vocabulary"
-import type { OrderLine } from "./payment-request.policy"
 import { failureKindOf } from "../core/failure.policy"
 import {
     noAccountTitleOf,
     notPayableTitleOf,
     orderHeldMessageOf,
+    orderLinesOf,
     paymentMessageOf,
     transferContentOf,
 } from "./payment-request.policy"
@@ -43,7 +43,8 @@ interface PayableOrder {
     readonly orderNo: string
     readonly amountVnd: number | null
     readonly status: string
-    readonly items: ReadonlyArray<OrderLine>
+    /** The lines as the record keeps them: an object that holds them, read through `orderLinesOf`. */
+    readonly items: unknown
 }
 
 /** The NIVO MCP tool that answers how to pay: the account of the connected provider and the QR link of the transfer. */
@@ -143,7 +144,7 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
                 "channel.send",
                 {
                     conversationId: given.conversationId,
-                    text: orderHeldMessageOf({ amountVnd, lines: order.items }, given.locale),
+                    text: orderHeldMessageOf({ amountVnd, lines: orderLinesOf(order.items) }, given.locale),
                 },
                 { dedupeKey: `order-held:${given.orderId}` },
             )
@@ -155,7 +156,12 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
             return { status: "no_account", ...NOT_SENT }
         }
         const { instruction } = answer
-        const text = paymentMessageOf(instruction, { amountVnd, lines: order.items }, content, given.locale)
+        const text = paymentMessageOf(
+            instruction,
+            { amountVnd, lines: orderLinesOf(order.items) },
+            content,
+            given.locale,
+        )
         await context.effect(
             "channel.send",
             { conversationId: given.conversationId, text },
@@ -211,7 +217,7 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
                         orderNo: "DH-20261105-0001",
                         amountVnd: 300_000,
                         status: "confirmed",
-                        items: [{ name: "tea boxes", qty: 2 }],
+                        items: { lines: [{ name: "tea boxes", qty: 2, unitVnd: 150_000, amountVnd: 300_000 }] },
                     },
                 ],
             },
@@ -231,7 +237,9 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
                     },
                 },
             ],
-            store: { order: [{ id: "o1", orderNo: "DH-1", amountVnd: 300_000, status: "draft", items: [] }] },
+            store: {
+                order: [{ id: "o1", orderNo: "DH-1", amountVnd: 300_000, status: "draft", items: { lines: [] } }],
+            },
         },
         {
             name: "sends nothing for a confirmed order that has no amount",
@@ -248,7 +256,9 @@ export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typ
                     },
                 },
             ],
-            store: { order: [{ id: "o1", orderNo: "DH-1", amountVnd: null, status: "confirmed", items: [] }] },
+            store: {
+                order: [{ id: "o1", orderNo: "DH-1", amountVnd: null, status: "confirmed", items: { lines: [] } }],
+            },
         },
         {
             name: "sends nothing for an order that is gone",

@@ -1,6 +1,7 @@
 import {
     itemsTextOf,
     noAccountTitleOf,
+    orderLinesOf,
     notPayableTitleOf,
     orderHeldMessageOf,
     paymentMessageOf,
@@ -65,5 +66,15 @@ describe("payment request policy", () => {
     it("titles the owner item of an order that cannot be paid yet in the language asked", () => {
         expect(notPayableTitleOf("o1", "en")).toBe("Order o1 cannot be paid yet: it is not confirmed or has no amount")
         expect(notPayableTitleOf("o1", "vi")).toContain("o1")
+    })
+
+    it("reads the lines from the object a sales record keeps them in, and finds none in any other shape instead of failing", () => {
+        const record = { lines: [{ name: "tea", qty: 2, unitVnd: 150_000, amountVnd: 300_000 }] }
+
+        expect(orderLinesOf(record)).toEqual([{ name: "tea", qty: 2 }])
+        expect(orderLinesOf({ lines: [] })).toEqual([])
+        for (const other of [[{ name: "tea", qty: 2 }], "2 x tea", null, undefined, {}, { lines: "tea" }]) {
+            expect(orderLinesOf(other)).toEqual([])
+        }
     })
 })
