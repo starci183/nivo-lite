@@ -15,6 +15,7 @@ import {
 } from "@modules/domain/authority-rules"
 import { EventsModule } from "@modules/domain/events"
 import { ChatRoomDirectoryModule, ChatRoomDirectoryService } from "@modules/domain/chat-room-directory"
+import { teamChatEntities } from "@modules/domain/team-chat"
 import { MEMBER_GRANTS_ERROR_KINDS, MEMBER_GRANTS_MESSAGES, MemberGrantsModule } from "@modules/domain/member-grants"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
@@ -75,7 +76,7 @@ export const OFFICE_CHAIN_MODULES: Array<DynamicModule> = [
     WorkspaceMembersModule.register({ isGlobal: true, accounts: OFFICE_ACCOUNTS }),
     ModuleInstallationsModule.register({ isGlobal: true }),
     AuthorityRulesModule.register({ isGlobal: true }),
-    ChatRoomDirectoryModule.register({ isGlobal: true }),
+    ChatRoomDirectoryModule.register({ isGlobal: true, rooms: teamChatEntities[0], seats: teamChatEntities[1] }),
     MemberGrantsModule.register({ isGlobal: true }),
     { module: OfficeChainQueueProofModule, global: true },
     ApprovalRequestsModule.register({
