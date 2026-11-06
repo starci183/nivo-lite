@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
+import { SurfaceCard } from "@starci/grammar/common"
 import type { recordListBlock } from "../../blocks/record-list.block"
 import { RECORD_ROWS_PLACEHOLDER, recordsView, rowsOf } from "../../rows/rows"
 import { queryOf } from "../../rows/search"
@@ -9,6 +10,13 @@ import { RecordCardList } from "../composites/RecordCardList"
 import { SelectableRows } from "../composites/SelectableRows"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
+
+/** What a selectable list is drawn in: its own rows, or one surface card holding them. */
+const Listed = (props: {
+    readonly isCard: boolean
+    readonly label: string
+    readonly children: ReactNode
+}): ReactNode => (props.isCard ? <SurfaceCard ariaLabel={props.label}>{props.children}</SurfaceCard> : props.children)
 
 /** Bound records as a card with an action on each row, or as a selectable list that writes the chosen row to a param. */
 export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactNode => {
@@ -55,23 +63,26 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
                         empty={labels.empty}
                         isLoading={isLoading}
                         hasAvatar={props.props.avatar === true}
+                        isCard={props.props.surface === "card"}
                         action={open.isAllowed ? { label: open.label, press: openRow } : null}
                     />
                 ) : (
-                    <SelectableRows
-                        rows={items}
-                        selected={props.params.value(selectParam)}
-                        isLoading={isLoading}
-                        hasAvatar={props.props.avatar === true}
-                        page={read.page}
-                        onChoose={(id) => props.params.set(selectParam, id)}
-                        words={{
-                            label: words(props.props.label),
-                            loadMore: words({ key: "listLoadMore" }),
-                            loadFailed: words({ key: "listLoadFailed" }),
-                            retry: labels.retry,
-                        }}
-                    />
+                    <Listed isCard={props.props.surface === "card"} label={words(props.props.label)}>
+                        <SelectableRows
+                            rows={items}
+                            selected={props.params.value(selectParam)}
+                            isLoading={isLoading}
+                            hasAvatar={props.props.avatar === true}
+                            page={read.page}
+                            onChoose={(id) => props.params.set(selectParam, id)}
+                            words={{
+                                label: words(props.props.label),
+                                loadMore: words({ key: "listLoadMore" }),
+                                loadFailed: words({ key: "listLoadFailed" }),
+                                retry: labels.retry,
+                            }}
+                        />
+                    </Listed>
                 )
             }
         />

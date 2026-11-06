@@ -77,7 +77,8 @@
                   "path": "handledCount",
                   "format": "count"
                 }
-              ]
+              ],
+              "variant": "ribbon"
             },
             "bind": {
               "data": {
@@ -202,7 +203,8 @@
                         "needs": "warning",
                         "handled": "info",
                         "ai": "neutral"
-                      }
+                      },
+                      "surface": "card"
                     },
                     "bind": {
                       "rows": {
@@ -289,7 +291,8 @@
                 "needs": "warning",
                 "handled": "info",
                 "ai": "neutral"
-              }
+              },
+              "surface": "card"
             },
             "bind": {
               "rows": {

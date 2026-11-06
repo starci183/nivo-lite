@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ReadHandle } from "@nivo-lite/agent-sdk/block"
-import { Avatar, Badge, ListBox, Section, Select, Stack, Tabs, Text } from "@starci/grammar/common"
+import { Avatar, Badge, ListBox, Select, Stack, SurfaceCard, Tabs, Text } from "@starci/grammar/common"
 import type { ListBoxItem } from "@starci/grammar/common"
 import type { loyaltyMembersBlock } from "../../blocks/loyalty/members.block"
 import { cellContextOf, formatValue } from "../../rows/cell-format"
@@ -105,11 +105,10 @@ export const MembersBlock = (props: Props): ReactNode => {
         }
     }
     return (
-        <Section
-            title={words(props.props.label)}
-            headingLevel={3}
+        <SurfaceCard
+            label={words(props.props.label)}
             {...(tierCounts === null ? {} : { fact: formatValue(tierCounts.total, "number", context) })}
-            action={
+            labelEnd={
                 <Select
                     label={words(props.props.sortLabel)}
                     isLabelHidden
@@ -178,6 +177,6 @@ export const MembersBlock = (props: Props): ReactNode => {
                     )}
                 />
             </Stack>
-        </Section>
+        </SurfaceCard>
     )
 }

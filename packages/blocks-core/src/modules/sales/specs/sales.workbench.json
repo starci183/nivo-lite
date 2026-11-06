@@ -95,7 +95,8 @@
                   "path": "conversion",
                   "format": "percent"
                 }
-              ]
+              ],
+              "variant": "ribbon"
             },
             "bind": {
               "data": {
@@ -593,7 +594,8 @@
                             "key": "status_failed_system"
                           }
                         }
-                      }
+                      },
+                      "surface": "card"
                     },
                     "bind": {
                       "rows": {

@@ -1,4 +1,12 @@
-import { chartPointOf, figureTextOf, FIGURE_FORMATS, FIGURE_KINDS, proportionTotal } from "./figure-format"
+import {
+    chartPointOf,
+    figureTextOf,
+    FIGURE_FORMATS,
+    FIGURE_KINDS,
+    FIGURE_VARIANTS,
+    isRibbon,
+    proportionTotal,
+} from "./figure-format"
 
 const EN = { locale: "en", currency: "USD" }
 const VI = { locale: "vi", currency: "VND" }
@@ -54,5 +62,18 @@ describe("figure charts", () => {
         expect(proportionTotal(points)).toBe(5)
         expect(proportionTotal([chartPointOf("a", "A", 0, "0")])).toBe(1)
         expect(proportionTotal([])).toBe(1)
+    })
+})
+
+describe("isRibbon", () => {
+    it("draws a ribbon only when asked and when two to five figures fit it", () => {
+        expect(FIGURE_VARIANTS).toEqual(["strip", "ribbon"])
+        expect(isRibbon("ribbon", 4)).toBe(true)
+        expect(isRibbon("ribbon", 2)).toBe(true)
+        expect(isRibbon("ribbon", 5)).toBe(true)
+        expect(isRibbon("ribbon", 1)).toBe(false)
+        expect(isRibbon("ribbon", 6)).toBe(false)
+        expect(isRibbon("strip", 4)).toBe(false)
+        expect(isRibbon(undefined, 4)).toBe(false)
     })
 })

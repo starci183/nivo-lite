@@ -41,4 +41,11 @@ describe("figuresBlock", () => {
         expect(FIGURE_KINDS.every((kind) => accepts({ ...FIGURES, kind }))).toBe(true)
         expect(accepts({ ...FIGURES, kind: "pie" })).toBe(false)
     })
+
+    it("takes a strip or a ribbon for the tiles and refuses another variant", () => {
+        const base = { label: { key: "x" }, items: [] }
+        expect(accepts({ ...base, variant: "ribbon" })).toBe(true)
+        expect(accepts({ ...base, variant: "strip" })).toBe(true)
+        expect(accepts({ ...base, variant: "grid" })).toBe(false)
+    })
 })
