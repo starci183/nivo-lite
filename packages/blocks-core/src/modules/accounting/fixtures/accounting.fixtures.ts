@@ -1,5 +1,7 @@
 import type { CountsResult } from "@nivo-lite/agent-sdk/block"
 import { ADJUSTMENT, INVOICE, ORDER, TRANSACTION, transactionOf } from "../../../rules/accounting/accounting.fixtures"
+import { questionQueueOf } from "../../../rules/accounting/questions"
+import type { QuestionLine } from "../../../rules/accounting/questions"
 import { unmatchedQueueOf } from "../../../rules/accounting/decisions"
 import { entryStatusOf } from "../../../rules/accounting/entry-status"
 import { figuresOf } from "../../../rules/accounting/figures"
@@ -28,6 +30,7 @@ export const ENTRY_ROWS: ReadonlyArray<EntryRow> = [
         kind: "income",
         amountVnd: 5_000_000,
         status: entryStatusOf("income"),
+        counterparty: "Nguy\u1ec5n V\u0103n \u0110\u1ecbnh",
     },
     {
         id: "00000000-0000-4000-8000-0000000001a2",
@@ -36,6 +39,7 @@ export const ENTRY_ROWS: ReadonlyArray<EntryRow> = [
         kind: "adjustment",
         amountVnd: 1_800_000,
         status: entryStatusOf("adjustment"),
+        counterparty: "Lan",
     },
     {
         id: "00000000-0000-4000-8000-0000000001a3",
@@ -44,6 +48,7 @@ export const ENTRY_ROWS: ReadonlyArray<EntryRow> = [
         kind: "invoice",
         amountVnd: 2_000_000,
         status: entryStatusOf("invoice"),
+        counterparty: "Nguy\u1ec5n V\u0103n \u0110\u1ecbnh",
     },
 ]
 
@@ -80,6 +85,28 @@ export const UNMATCHED_PAYMENT = {
     payer: "Hoa Sen Spa",
     occurredAt: "2026-11-04T02:12:00.000Z",
 }
+
+/** The questions the department asks the owner. */
+export const QUESTIONS: ReadonlyArray<QuestionLine> = [
+    {
+        id: "00000000-0000-4000-8000-0000000001d1",
+        text: "Kho\u1ea3n 3.500.000 ₫ t\u1eeb SePay thu\u1ed9c H\u0110-0139 hay H\u0110-0140?",
+        source: "SePay · 04/11 09:12",
+        askedAt: "2026-11-04T02:12:00.000Z",
+    },
+    {
+        id: "00000000-0000-4000-8000-0000000001d2",
+        text: "\u0110\u01a1n #1088 \u0111\u00e3 ch\u1ed1t nh\u01b0ng ch\u01b0a c\u00f3 s\u1ed1 ti\u1ec1n, xu\u1ea5t h\u00f3a \u0111\u01a1n theo m\u1ee9c n\u00e0o?",
+        source: "\u0110\u01a1n #1088",
+        askedAt: "2026-11-03T08:00:00.000Z",
+    },
+    {
+        id: "00000000-0000-4000-8000-0000000001d3",
+        text: "Phi\u1ebfu chi PC-0012 c\u00f3 t\u00ednh v\u00e0o chi ph\u00ed th\u00e1ng n\u00e0y kh\u00f4ng?",
+        source: "PC-0012",
+        askedAt: "2026-11-02T08:00:00.000Z",
+    },
+]
 
 /** The detail of the income entry: the payment, the order it paid and the correction on it. */
 export const ENTRY_DETAIL: EntryDetail = {
@@ -175,10 +202,7 @@ export const ACCOUNTING_FIXTURES: ModuleFixtures = {
         "accounting.weekly": { ready: WEEKLY_VIEW, empty: WEEKLY_NONE },
         "accounting.decisions": { ready: unmatchedQueueOf([UNMATCHED_PAYMENT], 1), empty: unmatchedQueueOf([], 0) },
         "accounting.question-count": { ready: { count: 3 }, empty: { count: 0 } },
-        "accounting.questions": {
-            ready: { count: "3", rows: [], linkLabel: "", linkHref: "", more: null },
-            empty: { count: null, rows: [], linkLabel: "", linkHref: "", more: null },
-        },
+        "accounting.questions": { ready: questionQueueOf(QUESTIONS, 3), empty: questionQueueOf([], 0) },
         "accounting.entry": { ready: ENTRY_DETAIL, empty: null },
         "accounting.figures": { ready: FIGURES_VIEW, empty: FIGURES_NONE },
         "accounting.settings": { ready: ACCOUNTING_SETTINGS_DEFAULTS, empty: null },
@@ -187,6 +211,7 @@ export const ACCOUNTING_FIXTURES: ModuleFixtures = {
     actions: {
         "accounting.adjust": { ok: true, data: { id: "00000000-0000-4000-8000-0000000001a2" } },
         "accounting.save-settings": { ok: true },
+        "accounting.answer-question": { ok: true },
     },
 }
 

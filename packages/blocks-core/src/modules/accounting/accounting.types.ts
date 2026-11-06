@@ -142,6 +142,28 @@ export interface EntryRow {
     readonly amountVnd: number
     /** Where the entry stands for the reader: paid, open, expense or review. */
     readonly status: EntryStatus
+    /** The customer or the supplier the entry is with, for the second line of its row; empty when unknown. */
+    readonly counterparty: string
+}
+
+/** One question the accounting department asked the owner. */
+export interface AccountingQuestion {
+    /** The question id. */
+    readonly id: string
+    /** The question, in the words the department asked it. */
+    readonly text: string
+    /** The reference of the entry or order the question is about; empty when it is about none. */
+    readonly source: string
+    /** When it was asked, ISO text. */
+    readonly askedAt: string
+}
+
+/** The questions the owner is asked, and the answers. */
+export interface QuestionList {
+    /** The first questions that wait, oldest first, at most `limit`. */
+    readonly waiting: (limit: number) => Promise<ReadonlyArray<AccountingQuestion>>
+    /** Records the answer to a question; refused when the question is gone or already answered. */
+    readonly answer: (id: string, text: string, memberId: string) => Promise<{ readonly ok: boolean }>
 }
 
 /** The payments nobody tied to an invoice, for the decision queue. */

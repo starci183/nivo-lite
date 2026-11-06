@@ -15,6 +15,7 @@ import type {
     QuestionCounter,
     SettingsStore,
     TransactionStore,
+    QuestionList,
     UnmatchedList,
 } from "./accounting.types"
 
@@ -67,3 +68,6 @@ export const accountingSettingsPort: PortDefinition<SettingsStore> = definePort<
 
 /** The payments nobody tied to an invoice, listed for the owner's decisions. */
 export const unmatchedListPort: PortDefinition<UnmatchedList> = definePort<UnmatchedList>("accounting.unmatched-list")
+
+/** The questions the owner is asked, listed and answered. */
+export const questionListPort: PortDefinition<QuestionList> = definePort<QuestionList>("accounting.question-list")

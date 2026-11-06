@@ -22,6 +22,7 @@ describe("accounting module", () => {
         expect(accountingModule.actions.map((action) => action.id)).toEqual([
             "accounting.adjust",
             "accounting.save-settings",
+            "accounting.answer-question",
         ])
         expect(accountingModule.permissions).toEqual(["accounting.view", "accounting.manage"])
     })
