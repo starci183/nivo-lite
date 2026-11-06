@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { Stack } from "@starci/grammar/common"
 import type { ReadDefinition } from "../../block/block.types"
 import type { PlanNode, PlanView } from "../../spec/render-plan"
 import type { SpecAsideSummary } from "../../spec/spec.types"
@@ -10,6 +11,12 @@ import { ViewGate } from "./ViewGate"
 
 /** What the body of the open view takes. */
 export interface ViewBodyProps {
+    /** The tabs band of the page. */
+    readonly tabs: ReactNode
+    /** What stands above the open view: the problems alert and the head blocks. */
+    readonly before: ReactNode
+    /** What stands below the open view: the foot blocks. */
+    readonly after: ReactNode
     /** The open view; undefined when no view is open. */
     readonly view: PlanView | undefined
     /** The region at the right of every view; null when the spec has none. */
@@ -38,7 +45,15 @@ export const ViewBody = (props: ViewBodyProps): ReactNode => {
         </div>
     )
     const aside = props.aside
-    if (aside === null) return main
+    if (aside === null)
+        return (
+            <Stack gap="region">
+                {props.tabs}
+                {props.before}
+                {main}
+                {props.after}
+            </Stack>
+        )
     return (
         <AsideFrame
             summary={props.asideSummary}
@@ -47,7 +62,14 @@ export const ViewBody = (props: ViewBodyProps): ReactNode => {
             installationId={context.installationId}
             params={context.params}
             isAsideShown={isAsidePane(context.params.value("pane"))}
-            main={main}
+            tabs={props.tabs}
+            main={
+                <Stack gap="region">
+                    {props.before}
+                    {main}
+                    {props.after}
+                </Stack>
+            }
             aside={
                 <ViewGate>
                     <SpecNode node={aside} context={context} />

@@ -52,22 +52,24 @@ export interface AsideFrameProps {
     readonly params: ParamHandle
     /** Whether a phone shows the aside pane (else the main one). */
     readonly isAsideShown: boolean
+    /** The tabs band of the page, drawn on top of the main pane. */
+    readonly tabs: ReactNode
     /** The main pane. */
     readonly main: ReactNode
     /** The aside pane. */
     readonly aside: ReactNode
 }
 
-/** The arrangement of a phone, which shows one pane at a time, with the summary line above the main pane. */
+/** The arrangement of a phone, which shows one pane at a time: the tabs, the summary line of the aside, then the main pane. */
 const phoneAreas = (isAsideShown: boolean, hasSummary: boolean): ReadonlyArray<string> => {
     if (isAsideShown) return ["aside"]
-    return hasSummary ? ["summary", "main"] : ["main"]
+    return hasSummary ? ["tabs", "summary", "main"] : ["tabs", "main"]
 }
 
 /**
  * The view body of a spec that has an aside: the main pane and the aside pane side by side, and on a phone one at a time as the
- * `pane` param says. The main pane of a phone opens with the summary line of the aside; the aside pane opens with its head and a
- * way back to the main pane.
+ * `pane` param says. The tabs band tops the main pane, and the aside runs the whole height beside it; on a phone the tabs are followed
+ * by the summary line of the aside, and the aside pane shows alone with its head and a way back to the main pane.
  */
 export const AsideFrame = (props: AsideFrameProps): ReactNode => {
     const host = useWorkbenchHost()
@@ -77,18 +79,24 @@ export const AsideFrame = (props: AsideFrameProps): ReactNode => {
     const summary = props.summary
     const label =
         summary === null ? text({ key: "renderer.aside" }) : wordsOf(summary.label, (key) => owner({ key }), locale)
-    const hasSummary = summary !== null && !props.isAsideShown
+    const phone = phoneAreas(props.isAsideShown, summary !== null)
     return (
         <SummaryRead summary={summary} reads={props.reads} installationId={props.installationId} params={props.params}>
             {(figures) => (
                 <PaneGrid
                     label={label}
-                    areas={{ base: phoneAreas(props.isAsideShown, summary !== null), medium: ["main aside"] }}
+                    areas={{
+                        base: phoneAreas(props.isAsideShown, summary !== null),
+                        medium: ["tabs aside", "main aside"],
+                    }}
                     columns={{ base: ["fill"], medium: ["fill", "wide"] }}
-                    rows={{ base: hasSummary ? ["auto", "fill"] : ["fill"], medium: ["fill"] }}
+                    rows={{
+                        base: phone.map((area) => (area === "main" || area === "aside" ? "fill" : "auto")),
+                        medium: ["auto", "fill"],
+                    }}
                 >
                     {summary === null ? null : (
-                        <Pane area="summary">
+                        <Pane area="summary" surface>
                             <PaneSection>
                                 <Alert
                                     tone="accent"
@@ -103,10 +111,13 @@ export const AsideFrame = (props: AsideFrameProps): ReactNode => {
                             </PaneSection>
                         </Pane>
                     )}
-                    <Pane area="main" label={text({ key: "renderer.main" })} inset="flush">
+                    <Pane area="tabs" surface>
+                        <PaneSection align="center">{props.tabs}</PaneSection>
+                    </Pane>
+                    <Pane area="main" label={text({ key: "renderer.main" })} surface>
                         <PaneSection>{props.main}</PaneSection>
                     </Pane>
-                    <Pane area="aside" label={label}>
+                    <Pane area="aside" label={label} surface>
                         <PaneSection align="center">
                             <PaneHeader
                                 title={label}
