@@ -88,7 +88,7 @@
               "linkLabel": {
                 "key": "due_link"
               },
-              "linkPath": "connections"
+              "linkPath": "/connections"
             },
             "bind": {
               "due": {
@@ -101,60 +101,27 @@
           },
           {
             "id": "weekly",
-            "block": "core.figures",
+            "block": "accounting.weekly",
             "props": {
-              "label": {
+              "title": {
                 "key": "weekly_label"
               },
-              "kind": "bars",
-              "currency": "VND",
-              "items": [
-                {
-                  "term": {
-                    "key": "week_w1"
-                  },
-                  "path": "w1",
-                  "format": "money"
-                },
-                {
-                  "term": {
-                    "key": "week_w2"
-                  },
-                  "path": "w2",
-                  "format": "money"
-                },
-                {
-                  "term": {
-                    "key": "week_w3"
-                  },
-                  "path": "w3",
-                  "format": "money"
-                },
-                {
-                  "term": {
-                    "key": "week_w4"
-                  },
-                  "path": "w4",
-                  "format": "money"
-                },
-                {
-                  "term": {
-                    "key": "week_w5"
-                  },
-                  "path": "w5",
-                  "format": "money"
-                }
-              ]
+              "caption": {
+                "key": "weekly_caption"
+              },
+              "empty": {
+                "key": "weekly_empty"
+              },
+              "periodParam": "period"
             },
             "bind": {
-              "data": {
+              "weekly": {
                 "read": "accounting.weekly",
                 "variables": {
                   "period": "$period"
                 }
               }
-            },
-            "children": []
+            }
           },
           {
             "id": "ageing",
@@ -362,6 +329,27 @@
                   "value": "none",
                   "label": {
                     "key": "void_none"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "vatPeriod",
+              "label": {
+                "key": "settings_vat_period"
+              },
+              "kind": "choice",
+              "options": [
+                {
+                  "value": "monthly",
+                  "label": {
+                    "key": "vat_monthly"
+                  }
+                },
+                {
+                  "value": "quarterly",
+                  "label": {
+                    "key": "vat_quarterly"
                   }
                 }
               ]

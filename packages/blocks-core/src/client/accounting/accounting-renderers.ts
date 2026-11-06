@@ -6,17 +6,20 @@ import { accountingEntryDetailBlock } from "../../blocks/accounting/entry-detail
 import { accountingLedgerBlock } from "../../blocks/accounting/ledger.block"
 import { accountingPeriodFiguresBlock } from "../../blocks/accounting/period-figures.block"
 import { accountingQuestionsBlock } from "../../blocks/accounting/questions.block"
+import { accountingWeeklyBlock } from "../../blocks/accounting/weekly.block"
 import { BookBlock } from "./BookBlock"
 import { DueSoonBlock } from "./DueSoonBlock"
 import { EntryDetailBlock } from "./EntryDetailBlock"
 import { LedgerBlock } from "./LedgerBlock"
 import { PeriodFiguresBlock } from "./PeriodFiguresBlock"
 import { QuestionsBlock } from "./QuestionsBlock"
+import { WeeklyBlock } from "./WeeklyBlock"
 
 /** The components of the Accounting blocks, one per definition of `accountingBlocks`. */
 export const accountingRenderers: ReadonlyArray<BlockRenderer> = [
     defineRenderer(accountingPeriodFiguresBlock, PeriodFiguresBlock),
     defineRenderer(accountingDueSoonBlock, DueSoonBlock),
+    defineRenderer(accountingWeeklyBlock, WeeklyBlock),
     defineRenderer(accountingBookBlock, BookBlock),
     defineRenderer(accountingLedgerBlock, LedgerBlock),
     defineRenderer(accountingEntryDetailBlock, EntryDetailBlock),

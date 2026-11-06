@@ -44,7 +44,7 @@ describe("figureCellsOf", () => {
 })
 
 const DUE_WORDS: DueWords = {
-    title: { vat: "VAT {month}", pit: "PIT {month}" },
+    title: { vatMonth: "VAT m{period}", vatQuarter: "VAT q{period}", pit: "PIT {period}" },
     due: "Due {date}",
     left: "{count} days left",
     today: "Today",
@@ -54,19 +54,23 @@ describe("dueRowsOf", () => {
     it("writes the tax, the date day/month/year and the days left, or today", () => {
         const record = dueRecord.parse({
             rows: [
-                { id: "a", kind: "vat", month: 10, dueDay: "2026-11-20", daysLeft: 15 },
-                { id: "b", kind: "pit", month: 10, dueDay: "2026-11-20", daysLeft: 0 },
+                { id: "a", kind: "vat", unit: "quarter", period: 4, dueDay: "2026-11-20", daysLeft: 15 },
+                { id: "b", kind: "pit", unit: "month", period: 10, dueDay: "2026-11-20", daysLeft: 0 },
+                { id: "c", kind: "vat", unit: "month", period: 10, dueDay: "2026-11-20", daysLeft: 3 },
             ],
         })
         expect(dueRowsOf(record.rows, DUE_WORDS)).toEqual([
-            { id: "a", title: "VAT 10", description: "Due 20/11/2026", chip: "15 days left" },
+            { id: "a", title: "VAT q4", description: "Due 20/11/2026", chip: "15 days left" },
             { id: "b", title: "PIT 10", description: "Due 20/11/2026", chip: "Today" },
+            { id: "c", title: "VAT m10", description: "Due 20/11/2026", chip: "3 days left" },
         ])
     })
 
     it("refuses a month that is not one", () => {
         expect(
-            dueRecord.safeParse({ rows: [{ id: "a", kind: "vat", month: 13, dueDay: "x", daysLeft: 1 }] }).success,
+            dueRecord.safeParse({
+                rows: [{ id: "a", kind: "vat", unit: "month", period: 13, dueDay: "x", daysLeft: 1 }],
+            }).success,
         ).toBe(false)
     })
 })

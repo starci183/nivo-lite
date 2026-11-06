@@ -137,8 +137,7 @@
   "due_title": "Sắp đến hạn",
   "due_horizon": "· 30 ngày tới",
   "due_empty": "Không có hạn thuế nào trong 30 ngày tới.",
-  "due_vat": "Thuế GTGT · tháng {month}",
-  "due_pit": "Thuế TNCN khấu trừ · tháng {month}",
+  "due_pit": "Thuế TNCN khấu trừ · tháng {period}",
   "due_date": "Hạn {date}",
   "due_left": "Còn {count} ngày",
   "due_today": "Hôm nay",
@@ -153,5 +152,13 @@
   "ledger_closing": "Số dư cuối kỳ",
   "ledger_col_entry": "Diễn giải",
   "ledger_col_balance": "Số dư",
-  "ledger_day_balance": "Số dư cuối ngày"
+  "ledger_day_balance": "Số dư cuối ngày",
+  "settings_vat_period": "Kỳ khai thuế GTGT",
+  "vat_monthly": "Theo tháng",
+  "vat_quarterly": "Theo quý",
+  "due_vat_month": "Thuế GTGT · tháng {period}",
+  "due_vat_quarter": "Thuế GTGT · quý {period}",
+  "weekly_period": "kỳ",
+  "weekly_caption": "Hóa đơn đã thu, gom theo tuần thu tiền.",
+  "weekly_empty": "Chưa thu khoản nào trong kỳ."
 }

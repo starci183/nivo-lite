@@ -137,8 +137,7 @@
   "due_title": "Due soon",
   "due_horizon": "· next 30 days",
   "due_empty": "No tax deadline in the next 30 days.",
-  "due_vat": "VAT · month {month}",
-  "due_pit": "Personal income tax withheld · month {month}",
+  "due_pit": "Personal income tax withheld · month {period}",
   "due_date": "Due {date}",
   "due_left": "{count} days left",
   "due_today": "Today",
@@ -153,5 +152,13 @@
   "ledger_closing": "Closing balance",
   "ledger_col_entry": "Description",
   "ledger_col_balance": "Balance",
-  "ledger_day_balance": "Balance at day end"
+  "ledger_day_balance": "Balance at day end",
+  "settings_vat_period": "VAT filing period",
+  "vat_monthly": "Monthly",
+  "vat_quarterly": "Quarterly",
+  "due_vat_month": "VAT · month {period}",
+  "due_vat_quarter": "VAT · quarter {period}",
+  "weekly_period": "period",
+  "weekly_caption": "Invoices collected, grouped by the week the money came in.",
+  "weekly_empty": "Nothing collected in this period."
 }

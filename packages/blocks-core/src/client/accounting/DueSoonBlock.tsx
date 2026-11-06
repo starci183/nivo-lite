@@ -10,7 +10,7 @@ import type { RenderOf } from "../render-props"
 
 /** The rows shown while the first read is in flight. */
 const PLACEHOLDER: DueRecord = {
-    rows: [{ id: "placeholder", kind: "vat", month: 1, dueDay: "2026-01-20", daysLeft: 1 }],
+    rows: [{ id: "placeholder", kind: "vat", unit: "month", period: 1, dueDay: "2026-01-20", daysLeft: 1 }],
 }
 
 /** The tax declarations that fall due soon, and the notice that nothing else is listed until an invoice tool is connected. */
@@ -33,7 +33,11 @@ export const DueSoonBlock = (props: RenderOf<typeof accountingDueSoonBlock>): Re
                         headingLevel={3}
                         isLoading={isLoading}
                         items={dueRowsOf(due.rows, {
-                            title: { vat: words({ key: "due_vat" }), pit: words({ key: "due_pit" }) },
+                            title: {
+                                vatMonth: words({ key: "due_vat_month" }),
+                                vatQuarter: words({ key: "due_vat_quarter" }),
+                                pit: words({ key: "due_pit" }),
+                            },
                             due: words({ key: "due_date" }),
                             left: words({ key: "due_left" }),
                             today: words({ key: "due_today" }),

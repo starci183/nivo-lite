@@ -10,7 +10,6 @@ import { figuresOf } from "../../../rules/accounting/figures"
 import { lineageOf } from "../../../rules/accounting/lineage"
 import { closeVerdict, periodOf } from "../../../rules/accounting/period"
 import { weeklyIncomeOf } from "../../../rules/accounting/weekly"
-import type { WeeklyIncome } from "../../../rules/accounting/weekly"
 import { ACCOUNTING_SETTINGS_DEFAULTS } from "../../../rules/accounting/settings"
 import type { ModuleFixtures } from "../../module-fixtures"
 import type { BookEntryRecord } from "../../../rules/accounting/accounting.types"
@@ -20,6 +19,7 @@ import type { EntryDetail } from "../reads/entry.read"
 import type { DueSoonView } from "../reads/due-soon.read"
 import type { FiguresView } from "../reads/figures.read"
 import type { LedgerView } from "../reads/ledger.read"
+import type { WeeklyView } from "../reads/weekly.read"
 
 /** The shop's "now" of the fixtures: 4 Nov 2026, 18:30 shop time. */
 export const FIXTURE_NOW: Date = new Date("2026-11-04T11:30:00.000Z")
@@ -73,14 +73,22 @@ export const ENTRY_STATUS_COUNTS_NONE: CountsResult = {
 }
 
 /** The income of this month by week. */
-export const WEEKLY_VIEW: WeeklyIncome = weeklyIncomeOf(
-    ENTRY_ROWS.filter((row) => row.kind === "income"),
-    "2026-11-01",
-    "2026-12-01",
-)
+export const WEEKLY_VIEW: WeeklyView = {
+    periodKey: "this",
+    fromDay: "2026-11-01",
+    ...weeklyIncomeOf(
+        ENTRY_ROWS.filter((row) => row.kind === "income"),
+        "2026-11-01",
+        "2026-12-01",
+    ),
+}
 
 /** The income of a month with no entry. */
-export const WEEKLY_NONE: WeeklyIncome = weeklyIncomeOf([], "2026-11-01", "2026-12-01")
+export const WEEKLY_NONE: WeeklyView = {
+    periodKey: "this",
+    fromDay: "2026-11-01",
+    ...weeklyIncomeOf([], "2026-11-01", "2026-12-01"),
+}
 
 /** The payment nobody tied to an invoice. */
 export const UNMATCHED_PAYMENT = {
@@ -234,7 +242,7 @@ export const LEDGER_NONE: LedgerView = {
 }
 
 /** The tax declarations that fall due within 30 days of the fixtures' now. */
-export const DUE_SOON_VIEW: DueSoonView = { rows: dueSoonOf(FIXTURE_NOW) }
+export const DUE_SOON_VIEW: DueSoonView = { rows: dueSoonOf(FIXTURE_NOW, ACCOUNTING_SETTINGS_DEFAULTS.vatPeriod) }
 
 /** Nothing falls due. */
 export const DUE_SOON_NONE: DueSoonView = { rows: [] }

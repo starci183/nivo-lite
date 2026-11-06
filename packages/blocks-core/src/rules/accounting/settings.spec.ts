@@ -1,4 +1,4 @@
-import { ACCOUNTING_SETTINGS_DEFAULTS, VOID_MODES, accountingSettingsShape } from "./settings"
+import { ACCOUNTING_SETTINGS_DEFAULTS, VAT_PERIODS, VOID_MODES, accountingSettingsShape } from "./settings"
 
 describe("the accounting settings", () => {
     it("start at the demo defaults", () => {
@@ -7,8 +7,10 @@ describe("the accounting settings", () => {
             postOutgoing: true,
             postUnmatched: false,
             voidMode: "reversal",
+            vatPeriod: "quarterly",
         })
         expect(VOID_MODES).toEqual(["reversal", "none"])
+        expect(VAT_PERIODS).toEqual(["monthly", "quarterly"])
     })
 
     it("accept their own defaults and refuse a void mode they do not know", () => {
@@ -16,5 +18,8 @@ describe("the accounting settings", () => {
         expect(accountingSettingsShape.safeParse({ ...ACCOUNTING_SETTINGS_DEFAULTS, voidMode: "delete" }).success).toBe(
             false,
         )
+        expect(
+            accountingSettingsShape.safeParse({ ...ACCOUNTING_SETTINGS_DEFAULTS, vatPeriod: "yearly" }).success,
+        ).toBe(false)
     })
 })

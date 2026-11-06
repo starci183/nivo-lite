@@ -106,7 +106,8 @@ export const dueRecord: z.ZodType<DueRecord> = z.looseObject({
             z.looseObject({
                 id: z.string().min(1).max(MAX_ID),
                 kind: z.enum(["vat", "pit"]),
-                month: z.number().int().min(1).max(12),
+                unit: z.enum(["month", "quarter"]),
+                period: z.number().int().min(1).max(12),
                 dueDay: z.string().max(MAX_ID),
                 daysLeft: z.number().int(),
             }),
@@ -114,10 +115,10 @@ export const dueRecord: z.ZodType<DueRecord> = z.looseObject({
         .max(MAX_ENTRIES),
 })
 
-/** The words of the due-soon rows; `{month}`, `{date}` and `{count}` mark where the number goes. */
+/** The words of the due-soon rows; `{period}`, `{date}` and `{count}` mark where the number goes. */
 export interface DueWords {
-    /** The title of each tax; takes `{month}`. */
-    readonly title: Readonly<Record<"vat" | "pit", string>>
+    /** The title of the value added tax by month and by quarter, and of the personal income tax; each takes `{period}`. */
+    readonly title: Readonly<Record<"vatMonth" | "vatQuarter" | "pit", string>>
     /** The line under the title; takes `{date}`. */
     readonly due: string
     /** The chip while days are left; takes `{count}`. */
@@ -141,11 +142,17 @@ export interface DueRow {
 /** The date of a `YYYY-MM-DD` day written day/month/year. */
 const dateOf = (day: string): string => `${dayOf(day)}/${day.slice(0, 4)}`
 
+/** Which title a row takes: the value added tax by month or by quarter, or the personal income tax. */
+const titleKeyOf = (item: DueItem): "vatMonth" | "vatQuarter" | "pit" => {
+    if (item.kind === "pit") return "pit"
+    return item.unit === "quarter" ? "vatQuarter" : "vatMonth"
+}
+
 /** The rows of the due-soon list in the words of the viewer. */
 export const dueRowsOf = (items: ReadonlyArray<DueItem>, words: DueWords): ReadonlyArray<DueRow> =>
     items.map((item) => ({
         id: item.id,
-        title: words.title[item.kind].replaceAll("{month}", String(item.month)),
+        title: words.title[titleKeyOf(item)].replaceAll("{period}", String(item.period)),
         description: words.due.replaceAll("{date}", dateOf(item.dueDay)),
         chip: item.daysLeft === 0 ? words.today : words.left.replaceAll("{count}", String(item.daysLeft)),
     }))

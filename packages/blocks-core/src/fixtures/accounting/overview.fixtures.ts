@@ -2,18 +2,20 @@ import type { DataSlot } from "@nivo-lite/agent-sdk/client"
 import type { z } from "zod"
 import type { accountingDueSoonBlock } from "../../blocks/accounting/due-soon.block"
 import type { accountingLedgerBlock } from "../../blocks/accounting/ledger.block"
+import type { accountingWeeklyBlock } from "../../blocks/accounting/weekly.block"
 import type { accountingPeriodFiguresBlock } from "../../blocks/accounting/period-figures.block"
 import type { BookEntryRecord } from "../../rules/accounting/accounting.types"
 import type { Ledger } from "../../rules/accounting/ledger"
 import { ledgerOf } from "../../rules/accounting/ledger"
 import type { DueRecord, FiguresRecord } from "../../rules/accounting/overview-view"
+import type { WeeklyRecord } from "../../rules/accounting/weekly-view"
 
 /** The statuses a read is drawn in. */
 type Status = "ready" | "empty" | "error" | "loading" | "forbidden"
 
 /** The props of the period figures as the Accounting spec sets them. */
 export const periodFiguresFixtureProps: z.infer<(typeof accountingPeriodFiguresBlock)["props"]> = {
-    label: { vi: "Chỉ số chính", en: "Key figures" },
+    label: { vi: "Ch\u1ec9 s\u1ed1 ch\u00ednh", en: "Key figures" },
 }
 
 /** The figures of the canvas. */
@@ -36,19 +38,19 @@ export const periodFiguresFixtures: Readonly<Record<Status, DataSlot<FiguresReco
 
 /** The props of the due-soon list as the Accounting spec sets them. */
 export const dueSoonFixtureProps: z.infer<(typeof accountingDueSoonBlock)["props"]> = {
-    title: { vi: "Sắp đến hạn", en: "Due soon" },
-    horizon: { vi: "· 30 ngày tới", en: "· next 30 days" },
-    empty: { vi: "Không có hạn thuế nào.", en: "No tax deadline." },
-    notice: { vi: "Chỉ liệt kê hạn thuế.", en: "Only tax deadlines are listed." },
-    linkLabel: { vi: "Mở Cài đặt", en: "Open Settings" },
-    linkPath: "connections",
+    title: { vi: "S\u1eafp \u0111\u1ebfn h\u1ea1n", en: "Due soon" },
+    horizon: { vi: "\u00b7 30 ng\u00e0y t\u1edbi", en: "\u00b7 next 30 days" },
+    empty: { vi: "Kh\u00f4ng c\u00f3 h\u1ea1n thu\u1ebf n\u00e0o.", en: "No tax deadline." },
+    notice: { vi: "Ch\u1ec9 li\u1ec7t k\u00ea h\u1ea1n thu\u1ebf.", en: "Only tax deadlines are listed." },
+    linkLabel: { vi: "M\u1edf C\u00e0i \u0111\u1eb7t", en: "Open Settings" },
+    linkPath: "/connections",
 }
 
 /** The two declarations of the canvas. */
 export const DUE_READY: DueRecord = {
     rows: [
-        { id: "vat-2026-11-20", kind: "vat", month: 10, dueDay: "2026-11-20", daysLeft: 15 },
-        { id: "pit-2026-11-20", kind: "pit", month: 10, dueDay: "2026-11-20", daysLeft: 0 },
+        { id: "vat-2026-11-20", kind: "vat", unit: "quarter", period: 4, dueDay: "2026-11-20", daysLeft: 15 },
+        { id: "pit-2026-11-20", kind: "pit", unit: "month", period: 10, dueDay: "2026-11-20", daysLeft: 0 },
     ],
 }
 
@@ -63,8 +65,8 @@ export const dueSoonFixtures: Readonly<Record<Status, DataSlot<DueRecord>>> = {
 
 /** The props of the cash book as the Accounting spec sets them. */
 export const ledgerFixtureProps: z.infer<(typeof accountingLedgerBlock)["props"]> = {
-    title: { vi: "Sổ quỹ", en: "Cash book" },
-    empty: { vi: "Chưa có khoản thu chi nào.", en: "No money in or out yet." },
+    title: { vi: "S\u1ed5 qu\u1ef9", en: "Cash book" },
+    empty: { vi: "Ch\u01b0a c\u00f3 kho\u1ea3n thu chi n\u00e0o.", en: "No money in or out yet." },
     periodParam: "period",
 }
 
@@ -90,6 +92,34 @@ export const LEDGER_READY: Ledger = ledgerOf(12_000_000, [
 export const ledgerFixtures: Readonly<Record<Status | "waiting", DataSlot<Ledger>>> = {
     ready: { items: LEDGER_READY },
     waiting: { items: ledgerOf(12_000_000, []) },
+    empty: { isEmpty: true },
+    error: { isError: true },
+    loading: { isLoading: true },
+    forbidden: { isForbidden: true },
+}
+
+/** The props of the weekly chart as the Accounting spec sets them. */
+export const weeklyFixtureProps: z.infer<(typeof accountingWeeklyBlock)["props"]> = {
+    title: { vi: "Thu nh\u1eadp theo tu\u1ea7n", en: "Income by week" },
+    caption: { vi: "H\u00f3a \u0111\u01a1n \u0111\u00e3 thu, gom theo tu\u1ea7n.", en: "Invoices collected by week." },
+    empty: { vi: "Ch\u01b0a thu kho\u1ea3n n\u00e0o.", en: "Nothing collected." },
+    periodParam: "period",
+}
+
+/** Four weeks of income in the month of the canvas. */
+export const WEEKLY_READY: WeeklyRecord = {
+    periodKey: "this",
+    fromDay: "2026-11-01",
+    w1: 18_200_000,
+    w2: 31_000_000,
+    w3: 12_500_000,
+    w4: 22_500_000,
+    w5: 0,
+}
+
+/** The weekly read in every status. */
+export const weeklyFixtures: Readonly<Record<Status, DataSlot<WeeklyRecord>>> = {
+    ready: { items: WEEKLY_READY },
     empty: { isEmpty: true },
     error: { isError: true },
     loading: { isLoading: true },

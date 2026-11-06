@@ -5,11 +5,13 @@ import { accountingEntryDetailBlock } from "./entry-detail.block"
 import { accountingLedgerBlock } from "./ledger.block"
 import { accountingPeriodFiguresBlock } from "./period-figures.block"
 import { accountingQuestionsBlock } from "./questions.block"
+import { accountingWeeklyBlock } from "./weekly.block"
 
 /** The blocks of the Accounting module: the overview (figures, due dates), the entries, the cash book, the detail of an entry and the questions. */
 export const accountingBlocks: ReadonlyArray<BlockDefinition> = [
     accountingPeriodFiguresBlock,
     accountingDueSoonBlock,
+    accountingWeeklyBlock,
     accountingBookBlock,
     accountingLedgerBlock,
     accountingEntryDetailBlock,

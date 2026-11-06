@@ -2,7 +2,7 @@ import { defineAction } from "@nivo-lite/agent-sdk/block"
 import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
-import { VOID_MODES } from "../../../rules/accounting/settings"
+import { VAT_PERIODS, VOID_MODES } from "../../../rules/accounting/settings"
 import { textOf } from "../messages/copy"
 import { accountingSettingsPort } from "../ports"
 import { settingsOf } from "../settings-store"
@@ -15,12 +15,14 @@ const input: z.ZodObject<{
     postOutgoing: typeof flag
     postUnmatched: typeof flag
     voidMode: z.ZodOptional<z.ZodNullable<z.ZodEnum<{ reversal: "reversal"; none: "none" }>>>
+    vatPeriod: z.ZodOptional<z.ZodNullable<z.ZodEnum<{ monthly: "monthly"; quarterly: "quarterly" }>>>
 }> = z.object({
     id: z.string().max(MAX_ID).optional(),
     postExpenses: flag,
     postOutgoing: flag,
     postUnmatched: flag,
     voidMode: z.enum(VOID_MODES).nullable().optional(),
+    vatPeriod: z.enum(VAT_PERIODS).nullable().optional(),
 })
 
 /**
@@ -50,6 +52,7 @@ export const saveSettingsAction: ActionDefinition = defineAction({
             postOutgoing: given.postOutgoing ?? saved.postOutgoing,
             postUnmatched: given.postUnmatched ?? saved.postUnmatched,
             voidMode: given.voidMode ?? saved.voidMode,
+            vatPeriod: given.vatPeriod ?? saved.vatPeriod,
         })
         return { ok: true }
     },

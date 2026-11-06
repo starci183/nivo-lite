@@ -150,5 +150,6 @@
   "blockAccountingQuestions": "Accounting questions",
   "blockAccountingLedger": "Cash book",
   "blockAccountingPeriodFigures": "Period figures",
-  "blockAccountingDueSoon": "Due soon"
+  "blockAccountingDueSoon": "Due soon",
+  "blockAccountingWeekly": "Income by week"
 }

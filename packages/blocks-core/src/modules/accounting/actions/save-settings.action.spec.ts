@@ -39,8 +39,21 @@ describe("accounting.save-settings", () => {
     it("keeps the saved value of what is left empty", async () => {
         const saved = { ...ACCOUNTING_SETTINGS_DEFAULTS, postExpenses: false, voidMode: "none" } as const
         const { writes, run } = harness(saved)
-        await run({ id: "", postExpenses: null, postOutgoing: false, postUnmatched: null, voidMode: null })
+        await run({
+            id: "",
+            postExpenses: null,
+            postOutgoing: false,
+            postUnmatched: null,
+            voidMode: null,
+            vatPeriod: null,
+        })
         expect(writes).toEqual([{ ...saved, postOutgoing: false }])
+    })
+
+    it("saves the filing period of value added tax", async () => {
+        const { writes, run } = harness(null)
+        await run({ vatPeriod: "monthly" })
+        expect(writes).toEqual([{ ...ACCOUNTING_SETTINGS_DEFAULTS, vatPeriod: "monthly" }])
     })
 
     it("refuses a void mode it does not know", async () => {

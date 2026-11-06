@@ -1,21 +1,13 @@
 import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import {
-    Cluster,
-    DataTable,
-    EmptyNotice,
-    Heading,
-    SegmentedControl,
-    Section,
-    Stack,
-    Text,
-} from "@starci/grammar/common"
+import { Cluster, DataTable, EmptyNotice, Heading, Section, Stack, Text } from "@starci/grammar/common"
 import type { accountingLedgerBlock } from "../../blocks/accounting/ledger.block"
 import { bookPeriodOf } from "../../rules/accounting/book-view"
 import type { Ledger } from "../../rules/accounting/ledger"
 import { bandOf, ledgerRecord, sectionsOf } from "../../rules/accounting/ledger-view"
 import type { LedgerRow, LedgerSection } from "../../rules/accounting/ledger-view"
 import { parsedSlot } from "../../slots/slots"
+import { PeriodControl } from "./PeriodControl"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
@@ -103,17 +95,9 @@ export const LedgerBlock = (props: RenderOf<typeof accountingLedgerBlock>): Reac
         <Stack gap="row">
             <Cluster gap="inline" justify="between" align="center">
                 <Heading level={3}>{words(props.props.title)}</Heading>
-                <SegmentedControl
-                    label={words({ key: "ledger_period" })}
-                    isLabelHidden
-                    options={[
-                        { value: "this", label: words({ key: "book_period_this" }) },
-                        { value: "last", label: words({ key: "book_period_last" }) },
-                    ]}
-                    value={period}
-                    onValueChange={(value) =>
-                        props.params.set(props.props.periodParam, value === "last" ? "last" : null)
-                    }
+                <PeriodControl
+                    period={period}
+                    onChange={(next) => props.params.set(props.props.periodParam, next === "last" ? "last" : null)}
                 />
             </Cluster>
             <SlotView

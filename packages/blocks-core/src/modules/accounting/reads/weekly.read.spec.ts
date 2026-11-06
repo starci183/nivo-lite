@@ -29,12 +29,18 @@ describe("the accounting.weekly read", () => {
         expect(queries).toEqual([
             { q: null, filters: { kind: "income" }, sort: "recent", cursor: null, size: WEEKLY_ENTRIES_MAX },
         ])
-        expect(result).toEqual({ ok: true, data: { w1: 8_800_000, w2: 0, w3: 0, w4: 0, w5: 0 } })
+        expect(result).toEqual({
+            ok: true,
+            data: { periodKey: "this", fromDay: "2026-11-01", w1: 8_800_000, w2: 0, w3: 0, w4: 0, w5: 0 },
+        })
     })
 
     it("leaves out entries that fall outside the period asked", async () => {
         const { result } = await run({ period: "last" })
-        expect(result).toEqual({ ok: true, data: { w1: 0, w2: 0, w3: 0, w4: 0, w5: 0 } })
+        expect(result).toEqual({
+            ok: true,
+            data: { periodKey: "last", fromDay: "2026-10-01", w1: 0, w2: 0, w3: 0, w4: 0, w5: 0 },
+        })
     })
 
     it("is read with the view permission", () => {

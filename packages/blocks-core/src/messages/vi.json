@@ -150,5 +150,6 @@
   "blockAccountingQuestions": "Câu hỏi của kế toán",
   "blockAccountingLedger": "Sổ quỹ",
   "blockAccountingPeriodFigures": "Số liệu kỳ",
-  "blockAccountingDueSoon": "Sắp đến hạn"
+  "blockAccountingDueSoon": "Sắp đến hạn",
+  "blockAccountingWeekly": "Thu nhập theo tuần"
 }
