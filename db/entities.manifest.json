@@ -28,7 +28,9 @@
         "records_accounting_book_entry_source_id_chk"
       ],
       "indexes": [
+        "records_accounting_book_entry_amount",
         "records_accounting_book_entry_date",
+        "records_accounting_book_entry_kind_amount",
         "records_accounting_book_entry_kind_date",
         "records_accounting_book_entry_note_trgm_idx",
         "records_accounting_book_entry_source_key"
@@ -54,6 +56,7 @@
       "indexes": [
         "records_accounting_invoice_contract_period_key",
         "records_accounting_invoice_invoice_no_key",
+        "records_accounting_invoice_key",
         "records_accounting_invoice_order_key",
         "records_accounting_invoice_recent",
         "records_accounting_invoice_status_recent"
@@ -223,6 +226,7 @@
       ],
       "indexes": [
         "records_payment_claim_dedupe_key",
+        "records_payment_claim_key",
         "records_payment_claim_settled_transaction_key",
         "records_payment_claim_status_claimed"
       ]
@@ -236,6 +240,7 @@
         "records_payment_transaction_channel_chk",
         "records_payment_transaction_direction_chk",
         "records_payment_transaction_external_ref_chk",
+        "records_payment_transaction_invoice_id_chk",
         "records_payment_transaction_occurred_at_chk",
         "records_payment_transaction_order_id_chk",
         "records_payment_transaction_payer_chk",
@@ -244,6 +249,7 @@
       ],
       "indexes": [
         "records_payment_transaction_external_ref_key",
+        "records_payment_transaction_invoice",
         "records_payment_transaction_occurred",
         "records_payment_transaction_order_key",
         "records_payment_transaction_status_occurred"
@@ -297,6 +303,7 @@
       "indexes": [
         "records_sales_order_amount",
         "records_sales_order_items_trgm_idx",
+        "records_sales_order_key",
         "records_sales_order_lead_recent",
         "records_sales_order_note_trgm_idx",
         "records_sales_order_order_no_key",

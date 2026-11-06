@@ -1,7 +1,8 @@
 import type { ListShape, ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { countsRead, listRead } from "@nivo-lite/agent-sdk/module"
 import type { ListReadDefinition } from "@nivo-lite/agent-sdk/module"
-import { entriesSourcePort } from "../ports"
+import type { EntryRow } from "../accounting.types"
+import { ENTRIES_LIST } from "../ports"
 
 /** The kinds of book entry a filter takes. */
 export const ENTRY_KINDS: readonly ["income", "invoice", "adjustment"] = ["income", "invoice", "adjustment"]
@@ -24,17 +25,17 @@ export const ENTRIES_SHAPE: ListShape = {
         ],
     },
     page: { size: 30 },
-    row: { id: "id", title: "title", description: "entryDate", badge: "kind" },
+    row: { id: "id", title: "note", description: "entryDate", badge: "kind" },
 }
 
 /** `accounting.entries`: the entries of the books, searched, filtered by kind and paged. */
-export const entriesRead: ListReadDefinition = listRead({
+export const entriesRead: ListReadDefinition = listRead<EntryRow>({
     id: "accounting.entries",
     dataKind: "book-entry",
     permission: "accounting.view",
-    fields: ["id", "title", "entryDate", "kind", "amountVnd"],
+    fields: ["id", "note", "entryDate", "kind"],
     list: ENTRIES_SHAPE,
-    source: entriesSourcePort,
+    source: ENTRIES_LIST,
 })
 
 /** `accounting.entry-counts`: how many entries each kind holds under the same search. */

@@ -17,9 +17,9 @@ describe("posting", () => {
         ])
     })
 
-    it("leaves the note empty when the transfer names nobody", () => {
+    it("notes the entity of the payment when the transfer names nobody, so a list always has a title", () => {
         const [entry] = postTransaction({ ...matched, payer: null, reference: null })
-        expect(entry?.note).toBeNull()
+        expect(entry?.note).toBe("payment.transaction")
         const [referenceOnly] = postTransaction({ ...matched, payer: "", reference: "ck" })
         expect(referenceOnly?.note).toBe("ck")
     })

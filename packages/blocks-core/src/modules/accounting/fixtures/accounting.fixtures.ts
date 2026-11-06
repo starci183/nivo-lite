@@ -18,24 +18,21 @@ const matched = transactionOf({ status: "matched", orderId: ORDER.id })
 export const ENTRY_ROWS: ReadonlyArray<EntryRow> = [
     {
         id: "00000000-0000-4000-8000-0000000001a1",
-        title: "NGUYEN VAN DINH / NIVO8F3K2 chuyen tien",
+        note: "NGUYEN VAN DINH / NIVO8F3K2 chuyen tien",
         entryDate: "2026-11-04",
         kind: "income",
-        amountVnd: 5_000_000,
     },
     {
         id: "00000000-0000-4000-8000-0000000001a2",
-        title: "Lan / Discount agreed by phone",
+        note: "Lan / Discount agreed by phone",
         entryDate: "2026-11-02",
         kind: "adjustment",
-        amountVnd: 1_800_000,
     },
     {
         id: "00000000-0000-4000-8000-0000000001a3",
-        title: "INV-202611-0001 / Nguyen Van Dinh",
+        note: "INV-202611-0001 / Nguyen Van Dinh",
         entryDate: "2026-11-01",
         kind: "invoice",
-        amountVnd: 2_000_000,
     },
 ]
 

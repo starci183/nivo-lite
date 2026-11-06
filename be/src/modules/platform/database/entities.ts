@@ -1,4 +1,3 @@
-import { accountingAdjustmentsEntities } from "@modules/domain/accounting-adjustments"
 import { appErrorsEntities } from "@modules/domain/app-errors"
 import { agentAccessLogEntities } from "@modules/domain/agent-access-log"
 import { agentConnectionsEntities } from "@modules/domain/agent-connections"
@@ -148,7 +147,6 @@ import { realtimeEntities } from "@modules/platform/realtime"
  * `<c>Entities` array through its barrel. No globs.
  */
 export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
-    ...accountingAdjustmentsEntities,
     ...appErrorsEntities,
     ...agentAccessLogEntities,
     ...agentConnectionsEntities,

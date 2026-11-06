@@ -4782,25 +4782,6 @@ begin
 end $_$;
 
 --
--- Name: accounting_adjustments; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.accounting_adjustments (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    target_type text NOT NULL,
-    target_id uuid NOT NULL,
-    note text NOT NULL,
-    corrected_amount_vnd bigint,
-    created_by text NOT NULL,
-    created_by_user uuid DEFAULT auth.uid(),
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT accounting_adjustments_corrected_amount_vnd_check CHECK (((corrected_amount_vnd IS NULL) OR (corrected_amount_vnd >= 0))),
-    CONSTRAINT accounting_adjustments_note_check CHECK ((char_length(btrim(note)) >= 5)),
-    CONSTRAINT accounting_adjustments_target_type_check CHECK ((target_type = ANY (ARRAY['invoice'::text, 'transaction'::text])))
-);
-
---
 -- Name: agent_access_log; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7851,13 +7832,6 @@ CREATE TABLE public.zalo_wizard_drafts (
 );
 
 --
--- Name: accounting_adjustments accounting_adjustments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.accounting_adjustments
-    ADD CONSTRAINT accounting_adjustments_pkey PRIMARY KEY (id);
-
---
 -- Name: agent_access_log agent_access_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9272,12 +9246,6 @@ ALTER TABLE ONLY public.zalo_wizard_drafts
     ADD CONSTRAINT zalo_wizard_drafts_pkey PRIMARY KEY (connection_id);
 
 --
--- Name: accounting_adjustments_target; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX accounting_adjustments_target ON public.accounting_adjustments USING btree (workspace_id, target_type, target_id, created_at DESC);
-
---
 -- Name: agent_access_log_ws_time; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10512,13 +10480,6 @@ CREATE TRIGGER workspaces_add_owner_member AFTER INSERT ON public.workspaces FOR
 --
 
 CREATE TRIGGER workspaces_billing_guard BEFORE UPDATE ON public.workspaces FOR EACH ROW EXECUTE FUNCTION public.workspaces_billing_guard();
-
---
--- Name: accounting_adjustments accounting_adjustments_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.accounting_adjustments
-    ADD CONSTRAINT accounting_adjustments_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
 -- Name: agent_access_log agent_access_log_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -12696,36 +12657,6 @@ ALTER TABLE ONLY public.workspaces
 
 ALTER TABLE ONLY public.zalo_wizard_drafts
     ADD CONSTRAINT zalo_wizard_drafts_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.connections(id) ON DELETE CASCADE;
-
---
--- Name: accounting_adjustments; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.accounting_adjustments ENABLE ROW LEVEL SECURITY;
-
---
--- Name: accounting_adjustments accounting_adjustments_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY accounting_adjustments_app_be_insert ON public.accounting_adjustments FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: accounting_adjustments accounting_adjustments_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY accounting_adjustments_app_be_select ON public.accounting_adjustments FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: accounting_adjustments accounting_adjustments_manager_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY accounting_adjustments_manager_insert ON public.accounting_adjustments FOR INSERT TO authenticated WITH CHECK ((public.is_manager(workspace_id) AND (created_by_user = auth.uid())));
-
---
--- Name: accounting_adjustments accounting_adjustments_member_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY accounting_adjustments_member_select ON public.accounting_adjustments FOR SELECT TO authenticated USING (public.is_member(workspace_id));
 
 --
 -- Name: agent_access_log; Type: ROW SECURITY; Schema: public; Owner: -
@@ -18159,7 +18090,6 @@ CREATE POLICY zalo_wizard_drafts_app_be_select ON public.zalo_wizard_drafts FOR 
 
 -- Table privileges are declared below in full: the default privileges of the schema grant anon and authenticated on every new
 -- relation, so each one is cleared first and granted exactly what it needs. anon holds no table privilege.
-REVOKE ALL ON TABLE public.accounting_adjustments FROM anon, authenticated;
 REVOKE ALL ON TABLE public.agent_access_log FROM anon, authenticated;
 REVOKE ALL ON TABLE public.agent_connections FROM anon, authenticated;
 REVOKE ALL ON TABLE public.agent_conversations FROM anon, authenticated;
@@ -19818,13 +19748,6 @@ REVOKE EXECUTE ON FUNCTION public.zalo_wizard_start(p_workspace uuid, p_name tex
 GRANT ALL ON FUNCTION public.zalo_wizard_start(p_workspace uuid, p_name text, p_app_id text, p_app_secret text) TO authenticated;
 
 --
--- Name: TABLE accounting_adjustments; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.accounting_adjustments TO authenticated;
-GRANT SELECT,INSERT ON TABLE public.accounting_adjustments TO app_be;
-
---
 -- Name: TABLE agent_access_log; Type: ACL; Schema: public; Owner: -
 --
 
@@ -21138,10 +21061,6 @@ INSERT INTO public.plans (code, name_vi, name_en, price_vnd, period, seats, feat
 --
 
 --
--- Data for Name: accounting_adjustments; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
 -- Data for Name: modules; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -21919,7 +21838,6 @@ GRANT EXECUTE ON FUNCTION public.job_requeue_failed(integer) TO app_be;
 -- Idempotent: every statement is a no-op on a database that never had the object. The policies of the app_be role stay.
 
 -- Table and sequence privileges of the browser roles.
-REVOKE ALL ON TABLE public.accounting_adjustments FROM anon, authenticated;
 REVOKE ALL ON TABLE public.agent_access_log FROM anon, authenticated;
 REVOKE ALL ON TABLE public.agent_connections FROM anon, authenticated;
 REVOKE ALL ON TABLE public.agent_conversations FROM anon, authenticated;
@@ -22059,8 +21977,6 @@ REVOKE ALL ON TABLE public.workspaces FROM anon, authenticated;
 REVOKE ALL ON SEQUENCE public.hiring_apply_hits_id_seq FROM anon, authenticated;
 
 -- Policies of the browser roles (public tables and storage.objects).
-DROP POLICY IF EXISTS accounting_adjustments_manager_insert ON public.accounting_adjustments;
-DROP POLICY IF EXISTS accounting_adjustments_member_select ON public.accounting_adjustments;
 DROP POLICY IF EXISTS agent_access_log_manager_select ON public.agent_access_log;
 DROP POLICY IF EXISTS agent_connections_member_select ON public.agent_connections;
 DROP POLICY IF EXISTS agent_connections_owner_all ON public.agent_connections;
@@ -23377,7 +23293,6 @@ CREATE FUNCTION public.workspace_footprint(p_workspace uuid) RETURNS jsonb
     AS $$
   select
   jsonb_build_object(
-    'accounting_adjustments', (select count(*) from public.accounting_adjustments where workspace_id = p_workspace),
     'agent_access_log', (select count(*) from public.agent_access_log where workspace_id = p_workspace),
     'agent_connections', (select count(*) from public.agent_connections where workspace_id = p_workspace),
     'agent_conversations', (select count(*) from public.agent_conversations where workspace_id = p_workspace),
@@ -25705,12 +25620,9 @@ CREATE TRIGGER module_setup_writes_set_updated_at BEFORE UPDATE ON public.module
 
 -- ---- from 20261109100211_entity-base-accounting-to-booking.sql ----
 -- entity-base-accounting-to-booking: forward-only; immutable once on origin/main.
--- Entity-base round (BE-PERSISTENCE-3), accounting_adjustments through bookings (a to k): every table the entities now map through AbstractEntity / UuidAbstractEntity
+-- Entity-base round (BE-PERSISTENCE-3), the tables from a to k: every table the entities now map through AbstractEntity / UuidAbstractEntity
 -- carries created_at and updated_at as timestamptz NOT NULL DEFAULT now(), and a BEFORE UPDATE trigger (public.set_updated_at) stamps updated_at, so the application never writes it.
 -- Left out on purpose: append-only logs, ledgers and dedupe claims, where an updated_at would be wrong (listed in the entity-base round notes).
-
-ALTER TABLE public.accounting_adjustments ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER accounting_adjustments_set_updated_at BEFORE UPDATE ON public.accounting_adjustments FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 ALTER TABLE public.agent_conversations ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER agent_conversations_set_updated_at BEFORE UPDATE ON public.agent_conversations FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
@@ -26520,7 +26432,6 @@ CREATE OR REPLACE FUNCTION public.workspace_footprint(p_workspace uuid)
 AS $function$
   select
   jsonb_build_object(
-    'accounting_adjustments', (select count(*) from public.accounting_adjustments where workspace_id = p_workspace),
     'agent_access_log', (select count(*) from public.agent_access_log where workspace_id = p_workspace),
     'agent_connections', (select count(*) from public.agent_connections where workspace_id = p_workspace),
     'agent_conversations', (select count(*) from public.agent_conversations where workspace_id = p_workspace),
@@ -29181,6 +29092,10 @@ REVOKE EXECUTE ON FUNCTION public.engine_workspace() FROM PUBLIC, anon, authenti
 GRANT EXECUTE ON FUNCTION public.engine_workspace() TO app_engine;
 REVOKE EXECUTE ON FUNCTION public.engine_scope_enter(uuid) FROM PUBLIC, anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.engine_scope_enter(uuid) TO app_be;
+-- A declared job is enqueued in the transaction of the write that asks for it, so the engine role (the transaction's role after the scope is entered)
+-- calls the outbox function; it is SECURITY DEFINER and writes the outbox and the queue as its owner.
+GRANT EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text) TO app_engine;
+GRANT EXECUTE ON FUNCTION public.job_enqueue(uuid, text, text, jsonb, text, integer) TO app_engine;
 
 -- The search predicate of the engine (knowledge_fold(expr) LIKE knowledge_fold(:q)) runs as app_engine.
 GRANT EXECUTE ON FUNCTION public.knowledge_fold(text) TO app_engine;

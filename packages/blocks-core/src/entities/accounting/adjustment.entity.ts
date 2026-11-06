@@ -31,7 +31,7 @@ export const adjustmentEntity: EntityDefinition<AdjustmentFields> = defineEntity
     dataKind: "accounting-adjustment",
     fields: adjustmentFields,
     indexes: [
-        { name: "target", on: ["targetType", "targetId", { desc: "createdAt" }] },
+        { name: "target", on: ["targetType", "targetId", { desc: "createdAt" }, { desc: "id" }] },
         { name: "recent", on: [{ desc: "createdAt" }, { desc: "id" }] },
     ],
     constraints: [

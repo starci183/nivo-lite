@@ -4,7 +4,6 @@ import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { OrderPaymentClaimsService } from "./order-payment-claims.service"
 import { PaymentDemandService } from "./payment-demand.service"
-import type { PaymentClaimRow } from "./orders.contracts"
 import { PaymentClaimGraphAdapter } from "./payment-claim-graph.adapter"
 
 const turn: NodeTurn = {
@@ -16,22 +15,9 @@ const turn: NodeTurn = {
     locale: "vi",
 }
 
-const claimRow: PaymentClaimRow = {
-    id: "claim-dinh",
-    workspaceId: "ws-1",
-    leadId: "lead-dinh",
-    conversationId: "conversation-dinh",
-    amountVnd: 5000,
-    names: ["BUI NGUYEN DINH"],
-    body: "I transferred 5k, name BUI NGUYEN DINH",
-    claimedAt: new Date("2026-11-04T00:54:00.000Z"),
-    status: "open",
-}
-
 const build = async () => {
     const registry = mock<GraphNodeRegistryService>()
     const claims = mock<OrderPaymentClaimsService>()
-    claims.matching.mockResolvedValue([claimRow])
     const demand = mock<PaymentDemandService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -45,60 +31,12 @@ const build = async () => {
 }
 
 describe("PaymentClaimGraphAdapter", () => {
-    it("registers itself as the port of the payment-claim kind and the executor of payment-claim.record", async () => {
+    it("registers itself as the executor of payment-claim.record, and as no data port", async () => {
         const { adapter, registry } = await build()
         adapter.onModuleInit()
-        expect(registry.addDataPort).toHaveBeenCalledWith(adapter)
         expect(registry.addExecutor).toHaveBeenCalledWith(adapter)
-        expect([adapter.kind, adapter.effect]).toEqual(["payment-claim", "payment-claim.record"])
-    })
-
-    it("reads the workspace's claims cut to the asked fields, reading instants as ISO text", async () => {
-        const { adapter, claims } = await build()
-
-        await expect(
-            adapter.read(
-                turn,
-                { where: { status: "open", ignored: "x" }, fields: ["id", "claimedAt", "names"] },
-                "workspace",
-            ),
-        ).resolves.toEqual([{ id: "claim-dinh", claimedAt: "2026-11-04T00:54:00.000Z", names: ["BUI NGUYEN DINH"] }])
-
-        expect(claims.matching).toHaveBeenCalledWith("ws-1", { status: "open" }, 200)
-    })
-
-    it("reads nothing for a status no claim has", async () => {
-        const { adapter, claims } = await build()
-
-        await expect(adapter.read(turn, { where: { status: "bogus" }, fields: ["id"] }, "workspace")).resolves.toEqual(
-            [],
-        )
-
-        expect(claims.matching).not.toHaveBeenCalled()
-    })
-
-    it("honours the limit of a workspace read", async () => {
-        const { adapter, claims } = await build()
-        await adapter.read(turn, { fields: ["id"], limit: 3 }, "workspace")
-        expect(claims.matching).toHaveBeenCalledWith("ws-1", {}, 3)
-    })
-
-    it("keeps a turn read to the conversation of the turn, and reads nothing for a turn with none", async () => {
-        const { adapter, claims } = await build()
-
-        await adapter.read(
-            turn,
-            { where: { leadId: "lead-dinh", id: "claim-dinh", conversationId: "other" }, fields: ["id"], limit: 5 },
-            "turn",
-        )
-        await expect(adapter.read({ ...turn, conversationId: null }, { fields: ["id"] }, "turn")).resolves.toEqual([])
-
-        expect(claims.matching).toHaveBeenCalledTimes(1)
-        expect(claims.matching).toHaveBeenCalledWith(
-            "ws-1",
-            { leadId: "lead-dinh", id: "claim-dinh", conversationId: "conversation-dinh" },
-            5,
-        )
+        expect(registry.addDataPort).not.toHaveBeenCalled()
+        expect(adapter.effect).toBe("payment-claim.record")
     })
 })
 

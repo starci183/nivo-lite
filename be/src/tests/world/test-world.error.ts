@@ -9,6 +9,8 @@ export enum TestWorldErrorCode {
     AccountsUnread = "TEST_WORLD_ACCOUNTS_UNREAD",
     /** A row a proof wrote or expects is not in the local database. */
     RowMissing = "TEST_WORLD_ROW_MISSING",
+    /** The text a door answered is not JSON. */
+    AnswerMalformed = "TEST_WORLD_ANSWER_MALFORMED",
 }
 /** The test world's one named error family. */
 export class TestWorldError extends DomainError<TestWorldErrorCode> {}
