@@ -318,7 +318,7 @@
                         "key": "col_date"
                       },
                       "path": "entryDate",
-                      "format": "date"
+                      "format": "day"
                     },
                     {
                       "term": {
@@ -593,7 +593,8 @@
       "moreMenu": {
         "key": "decisions_more"
       },
-      "currency": "VND"
+      "currency": "VND",
+      "isHeadless": true
     },
     "bind": {
       "queue": {
