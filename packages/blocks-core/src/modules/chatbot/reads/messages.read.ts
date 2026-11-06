@@ -33,7 +33,7 @@ export const THREAD_MESSAGES: ReadDefinition = defineRead({
         if (conversation === null) return { rows: [], cursor: null }
         const page = await messages.list({
             select: MESSAGE_FIELDS,
-            where: q.eq("conversationId", threadId),
+            where: q.and(q.eq("conversationId", threadId), q.eq("status", "posted")),
             order: [
                 ["sentAt", "desc"],
                 ["id", "desc"],

@@ -1,6 +1,7 @@
 import type { JoinedRecord, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { z } from "zod"
 import { MAX_BODY, MAX_ID, MAX_LINE } from "../../bounds"
+import { MESSAGE_STATUSES } from "../../entities/chat/message.entity"
 import { CHATBOT_CHANNELS, INBOX_STATUSES, TAIL_TEXT_MAX } from "../../rules/chatbot"
 import type { LeadFacts, MessageRecord, ThreadRow } from "./chatbot.types"
 
@@ -46,6 +47,10 @@ const messageData = z.object({
     authorKind: orNull(z.enum(["ai", "human"])),
     authorName: nullableText(MAX_LINE),
     authorUserId: nullableText(MAX_ID),
+    status: z
+        .enum(MESSAGE_STATUSES)
+        .optional()
+        .transform((value) => value ?? "posted"),
     deliveryStatus: orNull(z.enum(["sent", "failed"])),
     deliveryError: nullableText(MAX_BODY),
 })
@@ -85,6 +90,7 @@ export const MESSAGE_FIELDS: ReadonlyArray<string> = [
     "authorKind",
     "authorName",
     "authorUserId",
+    "status",
     "deliveryStatus",
     "deliveryError",
 ]

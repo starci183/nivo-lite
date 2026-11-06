@@ -15,7 +15,7 @@ const keysIn = (value: unknown): ReadonlyArray<string> => {
 }
 
 describe("the Chatbot module declaration", () => {
-    it("declares the inbox reads and the three person actions under the module key", () => {
+    it("declares the inbox reads and the person actions under the module key", () => {
         expect(chatbotModule.key).toBe(CHATBOT_MODULE_KEY)
         expect(chatbotModule.reads.map((read) => read.id)).toEqual([
             "chatbot.threads",
@@ -23,11 +23,14 @@ describe("the Chatbot module declaration", () => {
             "chatbot.channel-counts",
             "chatbot.thread",
             "chatbot.messages",
+            "chatbot.proposals",
         ])
         expect(chatbotModule.actions.map((action) => action.id)).toEqual([
             "chatbot.reply",
             "chatbot.handoff",
             "chatbot.release",
+            "chatbot.approve-and-send",
+            "chatbot.reject-proposal",
         ])
     })
 
@@ -84,7 +87,7 @@ describe("the Chatbot seed spec", () => {
     it("words the action labels and refusals with catalogue keys too", () => {
         const known = new Set(chatbotCopyKeys("en"))
         const labels = chatbotModule.actions.flatMap((action) => keysIn(action.label))
-        expect(labels).toHaveLength(3)
+        expect(labels).toHaveLength(5)
         expect(labels.filter((key) => !known.has(key))).toEqual([])
     })
 

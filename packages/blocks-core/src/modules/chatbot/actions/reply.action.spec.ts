@@ -44,6 +44,7 @@ describe("the chatbot.reply action", () => {
                     authorKind: "human",
                     authorName: "Thu Ha Le",
                     authorUserId: "member-staff",
+                    status: "posted",
                 },
             },
         ])

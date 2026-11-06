@@ -240,7 +240,7 @@ const inserted = (table: Table, values: WriteValues, links: WriteLinks = {}): En
         version: "1",
         createdAt: CREATED,
         updatedAt: CREATED,
-        data: values,
+        data: table.entity === "chat.message" ? { status: "posted", ...values } : values,
     }
     table.rows.push(row)
     for (const [relation, to] of Object.entries(links))

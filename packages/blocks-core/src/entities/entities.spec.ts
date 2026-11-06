@@ -133,6 +133,10 @@ describe("flow F entity declarations", () => {
     it("indexes the messages of a conversation and keeps one transaction and one invoice per order", () => {
         expect(entityNamed("chat.message")?.indexes).toEqual([
             { name: "conversation_sent", on: ["conversationId", { desc: "sentAt" }, { desc: "id" }] },
+            {
+                name: "conversation_status_sent",
+                on: ["conversationId", "status", { desc: "sentAt" }, { desc: "id" }],
+            },
             { name: "channel_ref", on: ["channelRef", "id"] },
             { name: "reply_of", on: ["conversationId", "inReplyTo", { desc: "sentAt" }, { desc: "id" }] },
             { name: "role_recent", on: ["role", { desc: "sentAt" }, { desc: "id" }] },

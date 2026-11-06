@@ -43,6 +43,7 @@ const LINE = {
     authorKind: "human",
     authorName: "Ha",
     authorUserId: "m1",
+    status: "posted",
     deliveryStatus: "sent",
     deliveryError: null,
 }
@@ -79,7 +80,10 @@ describe("messageRecordOf", () => {
     it("reads a nullable field the engine left out as null", () => {
         const { authorKind, authorName, authorUserId, deliveryStatus, deliveryError, ...required } = LINE
         expect([authorKind, authorName, authorUserId, deliveryStatus, deliveryError]).toHaveLength(5)
-        expect(messageRecordOf(recordOf(required))).toMatchObject({
+        const { status, ...withoutStatus } = required
+        expect(status).toBe("posted")
+        expect(messageRecordOf(recordOf(withoutStatus))).toMatchObject({
+            status: "posted",
             authorKind: null,
             authorName: null,
             authorUserId: null,

@@ -185,10 +185,21 @@ export const CHATBOT_FIXTURES: ModuleFixtures = {
             empty: { rows: [], cursor: null },
             waiting: { rows: WAITING_LINES, cursor: null },
         },
+        "chatbot.proposals": {
+            ready: {
+                id: "m8",
+                asked: "Does this pot come with a root warranty?",
+                text: "Yes, the root is covered for one year.",
+                note: "",
+            },
+            empty: null,
+        },
     },
     actions: {
         "chatbot.reply": { ok: true, data: { messageId: "m9" } },
         "chatbot.handoff": { ok: true, data: { handledBy: "Thu Ha Le" } },
         "chatbot.release": { ok: true, data: { handledBy: null } },
+        "chatbot.approve-and-send": { ok: true, data: { messageId: "m8" } },
+        "chatbot.reject-proposal": { ok: true },
     },
 }
