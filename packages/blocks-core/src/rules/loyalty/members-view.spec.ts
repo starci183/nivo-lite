@@ -8,6 +8,7 @@ import {
     nextParamWrite,
     paramsOfTab,
     selectedMemberTab,
+    sortKeyOf,
     tiersView,
 } from "./members-view"
 
@@ -149,7 +150,13 @@ describe("memberLineOf and the sorts", () => {
         expect(entry && memberLineOf(entry, "")).toBe("0912 *** 418")
     })
 
-    it("offer the four sorts of the members read", () => {
+    it("offer the four sorts of the members read, each with a message key of its own", () => {
         expect(MEMBER_SORTS).toEqual(["points", "recent", "spend", "name"])
+        expect(MEMBER_SORTS.map(sortKeyOf)).toEqual([
+            "members_sort_points",
+            "members_sort_recent",
+            "members_sort_spend",
+            "members_sort_name",
+        ])
     })
 })
