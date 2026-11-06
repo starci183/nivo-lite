@@ -47,6 +47,8 @@ export interface RunStepView {
     readonly reason?: string | null | undefined
     /** The app path of the approval a waiting step waits for. */
     readonly approvalPath?: string | null | undefined
+    /** Whether the run stopped on this step and the engine may run it again from here, though the step is not drawn parked. */
+    readonly canResume?: boolean | undefined
 }
 
 /** One run as a read yields it: its id and state, and its steps in the order they ran. */
@@ -78,6 +80,7 @@ const step: z.ZodType<RunStepView> = z.looseObject({
     effectKey: z.string().max(ID_MAX).nullish(),
     reason: z.string().max(SUMMARY_MAX).nullish(),
     approvalPath: z.string().max(PATH_MAX).nullish(),
+    canResume: z.boolean().optional(),
 })
 
 /** The shape of the run read: the steps of one run with their calls, effect keys and reasons. */
