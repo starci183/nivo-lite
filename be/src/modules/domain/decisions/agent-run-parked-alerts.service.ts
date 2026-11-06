@@ -43,7 +43,8 @@ export class AgentRunParkedAlertsService implements FlowAlerts, OnModuleInit {
     /** Opens the review item of a parked run; an alert of another kind of flow, or of a run that is gone, raises nothing. */
     async raise(alert: ParkedFlowAlert): Promise<void> {
         if (alert.flowKind !== "agent-run") return
-        const run = await this.runs.runOf(alert.jobId)
+        if (alert.workspaceId === undefined) return
+        const run = await this.runs.runOf(alert.workspaceId, alert.jobId)
         if (run === null) return
         const conversationId = textOf(run.context.conversationId)
         const locale: Locale = run.context.locale === "en" ? "en" : "vi"
