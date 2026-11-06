@@ -51,7 +51,12 @@ describe("AgentRunOwnerResumeService", () => {
 
         await expect(service.resume(REQUEST)).resolves.toEqual({ kind: "resumed", stepKey: "turn" })
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1", ["owner", "manager"])
-        expect(resumes.resume).toHaveBeenCalledWith({ runId: "run-1", actor: "member-1", reason: "fixed the price" })
+        expect(resumes.resume).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            runId: "run-1",
+            actor: "member-1",
+            reason: "fixed the price",
+        })
     })
 
     it("answers a run of another workspace, and a run that does not exist, as not found, and resumes nothing", async () => {

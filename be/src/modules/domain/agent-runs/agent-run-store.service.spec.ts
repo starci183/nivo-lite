@@ -1,161 +1,420 @@
 import { Test } from "@nestjs/testing"
-import { mock, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
+import { FakeClock, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import {
-    runRowOf,
-    runningWaitRowOf,
-    stepRowOf,
-    stepSpecOf,
-    unboundPlanRunRowOf,
-    conflictingPlanRunRowsOf,
-    boundPlanRunRowOf,
-    unboundCompatiblePlanRowsOf,
-    invalidPlanBindingRowsOf,
-    linkedStepRowsOf,
-} from "@tests/fixtures/builders/agent-runs.builder"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { EntityEngineService } from "@modules/domain/entity-engine"
+import type { ScopedTx } from "@modules/domain/entity-engine"
+import { CLOCK } from "@modules/platform/clock"
 import { AgentStepQueue } from "@modules/queues/agent-step"
+import { AgentRunRecordsService } from "./agent-run-records.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
-import { AgentRunsErrorCode } from "./errors/agent-runs.error"
-import { AgentRunEntity, AgentRunStepEntity } from "./persistence/entities"
+import { OPEN, WHEN, runRecordOf, runRowOf, stepRecordOf } from "@tests/fixtures/builders/agent-runs.builder"
+import type { StepSpec } from "./agent-runs.contracts"
 
-const call = (name: string, args: number): string =>
-    `SELECT * FROM "public"."${name}"(${Array.from({ length: args }, (_, index) => `$${String(index + 1)}`).join(", ")})`
+const scoped = mock<ScopedTx>({ workspaceId: "ws-1" })
 
-const stepRow = (seq: number, over: Partial<AgentRunStepEntity> = {}): AgentRunStepEntity =>
-    stepRowOf({ id: `s-${String(seq)}`, seq, stepKey: `step-${String(seq)}`, ...over })
+const spec = (stepKey: string, input: Record<string, unknown> = {}): StepSpec => ({
+    stepKey,
+    nodeKey: "node",
+    kind: "tool",
+    effect: { kind: "read" },
+    input,
+})
 
-const build = async (em: MockEntityManager) => {
-    const queue = mock<AgentStepQueue>({ enqueueAdvance: jest.fn().mockResolvedValue(undefined) })
-    const container = await Test.createTestingModule({
+const build = async () => {
+    const em: MockEntityManager = mockEntityManager()
+    const engine = mock<EntityEngineService>()
+    engine.scoped.mockImplementation((_ws, work) => work(scoped))
+    engine.within.mockImplementation((_manager, _ws, work) => work(scoped))
+    const records = mock<AgentRunRecordsService>()
+    const queue = mock<AgentStepQueue>()
+    const moduleRef = await Test.createTestingModule({
         providers: [
             AgentRunStoreService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: CLOCK, useValue: new FakeClock(WHEN) },
+            { provide: EntityEngineService, useValue: engine },
+            { provide: AgentRunRecordsService, useValue: records },
             { provide: AgentStepQueue, useValue: queue },
         ],
     }).compile()
-    return { service: container.get(AgentRunStoreService), queue }
+    return { store: moduleRef.get(AgentRunStoreService), engine, records, queue, em }
 }
 
-const REF = { runId: "run-1", workspaceId: "ws-1" }
-const PLAN = {
-    planning: true,
-    workspaceId: "ws-1",
-    agentId: "agent-1",
-    wakeId: "wake-1",
-    trigger: "tag",
-    versionId: "v1",
-    context: { message: "Plan context" },
-}
+describe("AgentRunStoreService open", () => {
+    it("inserts the run of a wake that has none", async () => {
+        const { store, records, em } = await build()
+        records.runOfWake.mockResolvedValue(null)
+        records.insertRun.mockResolvedValue({ ok: true, row: runRowOf(), version: "1" })
 
-describe("AgentRunStoreService.open", () => {
-    it("inserts the run once and answers the run of the wake", async () => {
-        const em = mockEntityManager({ findOneByOrFail: [AgentRunEntity, runRowOf()] })
-        const [insert] = queueQueryBuilders(em, [{ execute: { raw: [] } }])
-        const { service } = await build(em)
+        await expect(store.open(em, OPEN)).resolves.toMatchObject({ id: "run-1", status: "running" })
+        expect(records.insertRun).toHaveBeenCalledWith(
+            scoped,
+            expect.objectContaining({ wakeId: "wake-1", planning: false, status: "running", stepSeq: 0 }),
+        )
+    })
 
-        const run = await service.open(em, {
-            workspaceId: "ws-1",
-            agentId: "agent-1",
-            wakeId: "wake-1",
-            trigger: "customer_message",
-            versionId: null,
-            context: { conversationId: "c-1" },
+    it("answers the run a wake already has, so a replay opens none", async () => {
+        const { store, records, em } = await build()
+        records.runOfWake.mockResolvedValue(runRecordOf())
+
+        await store.open(em, OPEN)
+
+        expect(records.insertRun).not.toHaveBeenCalled()
+    })
+
+    it("reads the run again when a racing open took the wake first, and refuses any other refusal", async () => {
+        const { store, records, em } = await build()
+        records.runOfWake.mockResolvedValueOnce(null).mockResolvedValueOnce(runRecordOf())
+        records.insertRun.mockResolvedValue({
+            ok: false,
+            reason: "taken",
+            constraint: "wake_planning_key",
+            refusal: "x",
         })
 
-        expect(run).toMatchObject({ id: "run-1", wakeId: "wake-1", status: "running" })
-        expect(insert?.callsOf("orIgnore")).toHaveLength(1)
-        expect(em.findOneByOrFail).toHaveBeenCalledWith(AgentRunEntity, {
-            wakeId: "wake-1",
-            workspaceId: "ws-1",
-            agentId: "agent-1",
+        await expect(store.open(em, OPEN)).resolves.toMatchObject({ id: "run-1" })
+
+        records.runOfWake.mockReset().mockResolvedValue(null)
+        await expect(store.open(em, OPEN)).rejects.toMatchObject({ code: "AGENT_RUNS_RESULT_REJECTED" })
+        records.runOfWake.mockReset().mockResolvedValue(null)
+        records.insertRun.mockResolvedValue({ ok: false, reason: "invalid" })
+        await expect(store.open(em, OPEN)).rejects.toMatchObject({ code: "AGENT_RUNS_RESULT_REJECTED" })
+    })
+
+    it("refuses a context JSON cannot carry", async () => {
+        const { store, records, em } = await build()
+        records.runOfWake.mockResolvedValue(null)
+
+        await expect(store.open(em, { ...OPEN, context: { bad: () => 1 } })).rejects.toMatchObject({
+            code: "AGENT_RUNS_RESULT_REJECTED",
         })
     })
 })
 
-describe("AgentRunStoreService.append", () => {
-    it("writes the steps with their budgets filled and the job that drives them, together", async () => {
-        const em = mockEntityManager({ query: [call("agent_run_append", 2), [{ agent_run_append: 2 }]] })
-        const { service, queue } = await build(em)
-        const specs = [stepSpecOf({ stepKey: "a" }), stepSpecOf({ stepKey: "b", maxAttempts: 5 })]
+const planOpen = (store: AgentRunStoreService, em: MockEntityManager) => store.open(em, { ...OPEN, planning: true })
 
-        await expect(service.append(em, REF, specs)).resolves.toBe(2)
+const planOf = (graphVersionId: string, versionId: string, trigger: string) => ({
+    graphVersionId,
+    context: { planBinding: { versionId, trigger } },
+})
 
-        const [, params] = em.query.mock.calls[0] ?? []
-        expect(params?.[0]).toBe("run-1")
-        expect(params?.[1]).toContain(
-            JSON.stringify({
+const CONFLICT = { code: "AGENT_RUNS_PLAN_CONFLICT" }
+
+describe("AgentRunStoreService open with a plan", () => {
+    it("binds the plan of an unbound run once, keeping its original context", async () => {
+        const { store, records, em } = await build()
+        records.runOfWake.mockResolvedValue(runRecordOf({ context: { adapter: "webhook" } }))
+        records.stepsOf.mockResolvedValue([])
+        records.patchRun.mockResolvedValue(runRecordOf({ planning: true, graphVersionId: "v-1" }))
+
+        await planOpen(store, em)
+
+        expect(records.patchRun).toHaveBeenCalledWith(scoped, expect.anything(), {
+            graphVersionId: "v-1",
+            planning: true,
+            context: {
+                adapter: "webhook",
+                planBinding: { versionId: "v-1", trigger: "tag", context: { conversationId: "c-1" } },
+            },
+        })
+    })
+
+    it("answers a replay of the same bound plan", async () => {
+        const { store, records, em } = await build()
+        records.runOfWake.mockResolvedValue(runRecordOf(planOf("v-1", "v-1", "tag")))
+
+        await expect(planOpen(store, em)).resolves.toMatchObject({ id: "run-1" })
+    })
+
+    it.each([
+        ["another version on the run", planOf("v-2", "v-1", "tag")],
+        ["a malformed binding", { graphVersionId: "v-1", context: { planBinding: "broken" } }],
+        ["a binding of another version", planOf("v-1", "v-2", "tag")],
+        ["a binding of another trigger", planOf("v-1", "v-1", "other")],
+        ["an unbound run on another version", { graphVersionId: "v-2" }],
+        ["an unbound run whose counter moved", { stepSeq: 2 }],
+    ])("refuses %s", async (_name, over) => {
+        const { store, records, em } = await build()
+        records.runOfWake.mockResolvedValue(runRecordOf(over))
+
+        await expect(planOpen(store, em)).rejects.toMatchObject(CONFLICT)
+    })
+
+    it("refuses to bind a plan after steps began, and when another writer moved the run", async () => {
+        const { store, records, em } = await build()
+        records.runOfWake.mockResolvedValue(runRecordOf())
+        records.stepsOf.mockResolvedValue([stepRecordOf()])
+        await expect(planOpen(store, em)).rejects.toMatchObject(CONFLICT)
+
+        records.stepsOf.mockResolvedValue([])
+        records.patchRun.mockResolvedValue(null)
+        await expect(planOpen(store, em)).rejects.toMatchObject({ code: "AGENT_RUNS_RUN_CONTENDED" })
+    })
+})
+
+const ref = { runId: "run-1", workspaceId: "ws-1" }
+
+const arrange = (store: ReturnType<typeof mock<AgentRunRecordsService>>, run = runRecordOf()): void => {
+    store.stepsOf.mockResolvedValue([stepRecordOf({ stepKey: "old" })])
+    store.run.mockResolvedValue(run)
+    store.patchRun.mockResolvedValue({ ...run, stepSeq: run.stepSeq + 2 })
+    store.insertStep.mockResolvedValue({ ok: true, row: runRowOf(), version: "1" })
+}
+
+describe("AgentRunStoreService append", () => {
+    it("writes nothing for no spec and nothing for steps already there", async () => {
+        const { store, records, em } = await build()
+        arrange(records)
+
+        await expect(store.appendRows(em, ref, [])).resolves.toBe(0)
+        await expect(store.appendRows(em, ref, [spec("old")])).resolves.toBe(0)
+
+        expect(records.patchRun).not.toHaveBeenCalled()
+    })
+
+    it("reserves ordinals on the run's counter, then writes the steps in order with their budget and link", async () => {
+        const { store, records, em } = await build()
+        arrange(records)
+
+        const written = await store.appendRows(em, ref, [spec("a", { workItemId: "item-9" }), spec("b")])
+
+        expect(written).toBe(2)
+        expect(records.patchRun).toHaveBeenCalledWith(scoped, expect.anything(), { stepSeq: 2 })
+        expect(records.insertStep).toHaveBeenNthCalledWith(
+            1,
+            scoped,
+            "run-1",
+            expect.objectContaining({
+                ordinal: 1,
                 stepKey: "a",
-                nodeKey: "node-tool",
-                kind: "tool",
-                effect: { kind: "read" },
-                input: {},
+                status: "pending",
+                workItemId: "item-9",
                 maxAttempts: 3,
-                deadlineMs: 120_000,
             }),
         )
-        expect(params?.[1]).toContain(
-            JSON.stringify({
-                stepKey: "b",
-                nodeKey: "node-tool",
-                kind: "tool",
-                effect: { kind: "read" },
-                input: {},
-                maxAttempts: 5,
-                deadlineMs: 120_000,
-            }),
+        expect(records.insertStep).toHaveBeenNthCalledWith(
+            2,
+            scoped,
+            "run-1",
+            expect.objectContaining({ ordinal: 2, stepKey: "b" }),
         )
-        expect(queue.enqueueAdvance).toHaveBeenCalledWith({ workspaceId: "ws-1", runId: "run-1" }, "a", "append", em)
     })
 
-    it("writes no job when every step key was already there", async () => {
-        const em = mockEntityManager({ query: [call("agent_run_append", 2), [{ agent_run_append: 0 }]] })
-        const { service, queue } = await build(em)
+    it("wakes a waiting run when it takes a step", async () => {
+        const { store, records, em } = await build()
+        arrange(records, runRecordOf({ status: "waiting" }))
 
-        await expect(service.append(em, REF, [stepSpecOf()])).resolves.toBe(0)
-        expect(queue.enqueueAdvance).not.toHaveBeenCalled()
+        await store.appendRows(em, ref, [spec("a")])
+
+        expect(records.patchRun).toHaveBeenCalledWith(scoped, expect.anything(), { stepSeq: 1, status: "running" })
     })
 
-    it("writes nothing for no steps", async () => {
-        const em = mockEntityManager()
-        const { service, queue } = await build(em)
+    it("takes no step into a run that has ended or been given away", async () => {
+        const { store, records, em } = await build()
+        arrange(records, runRecordOf({ status: "parked" }))
 
-        await expect(service.append(em, REF, [])).resolves.toBe(0)
-        await expect(service.appendRows(em, REF, [])).resolves.toBe(0)
-        expect(queue.enqueueAdvance).not.toHaveBeenCalled()
+        await expect(store.appendRows(em, ref, [spec("a")])).resolves.toBe(0)
+        expect(records.insertStep).not.toHaveBeenCalled()
     })
 
-    it("refuses an answer that is not a count", async () => {
-        const em = mockEntityManager({ query: [call("agent_run_append", 2), [{ agent_run_append: "x" }]] })
-        const { service } = await build(em)
+    it("refuses a step past the most a run holds", async () => {
+        const { store, records, em } = await build()
+        arrange(records, runRecordOf({ stepSeq: 100 }))
 
-        await expect(service.appendRows(em, REF, [stepSpecOf()])).rejects.toMatchObject({
-            code: AgentRunsErrorCode.ResultRejected,
-        })
+        await expect(store.appendRows(em, ref, [spec("a")])).rejects.toMatchObject({ code: "AGENT_RUNS_RUN_TOO_LONG" })
     })
 })
 
-describe("AgentRunStoreService.resume", () => {
-    it("finishes the waiting step, writes the steps that follow and one job, in the caller's transaction", async () => {
-        const em = mockEntityManager({
-            query: [
-                [call("agent_step_resume", 3), [{ agent_step_resume: { result: "resumed", runId: "run-1" } }]],
-                [call("agent_run_append", 2), [{ agent_run_append: 1 }]],
-            ],
-            findOneByOrFail: [AgentRunEntity, runRowOf()],
+describe("AgentRunStoreService append refusals and the job", () => {
+    it("skips a step another writer took first and refuses any other refusal", async () => {
+        const { store, records, em } = await build()
+        arrange(records)
+        records.insertStep.mockResolvedValueOnce({
+            ok: false,
+            reason: "taken",
+            constraint: "run_step_key",
+            refusal: "x",
         })
-        const { service, queue } = await build(em)
+
+        await expect(store.appendRows(em, ref, [spec("a"), spec("b")])).resolves.toBe(1)
+
+        records.insertStep.mockResolvedValue({ ok: false, reason: "invalid" })
+        await expect(store.appendRows(em, ref, [spec("c")])).rejects.toMatchObject({
+            code: "AGENT_RUNS_RESULT_REJECTED",
+        })
+    })
+
+    it("writes the job that drives the first step in the same transaction, only when a step was written", async () => {
+        const { store, records, queue, em } = await build()
+        arrange(records)
+
+        await expect(store.append(em, ref, [spec("a")])).resolves.toBe(1)
+        expect(queue.enqueueAdvance).toHaveBeenCalledWith({ workspaceId: "ws-1", runId: "run-1" }, "a", "append", em)
+
+        queue.enqueueAdvance.mockClear()
+        await store.append(em, ref, [])
+        await store.append(em, ref, [spec("old")])
+        expect(queue.enqueueAdvance).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentRunStoreService scope, patchRunWith and settleIn", () => {
+    it("joins the caller's transaction when it holds one and opens its own when it does not", async () => {
+        const { store, engine, em } = await build()
+
+        await store.at("ws-1", em, () => Promise.resolve(1))
+        await store.at("ws-1", undefined, () => Promise.resolve(1))
+
+        expect(engine.within).toHaveBeenCalledWith(em, "ws-1", expect.any(Function))
+        expect(engine.scoped).toHaveBeenCalledWith("ws-1", expect.any(Function))
+    })
+
+    it("builds again from a fresh read when another writer moved the run", async () => {
+        const { store, records } = await build()
+        records.run.mockResolvedValue(runRecordOf())
+        records.patchRun.mockResolvedValueOnce(null).mockResolvedValueOnce(runRecordOf({ status: "done" }))
+        const build_ = jest.fn().mockReturnValue({ status: "done" })
+
+        await expect(store.patchRunWith(scoped, "run-1", build_)).resolves.toMatchObject({ status: "done" })
+        expect(build_).toHaveBeenCalledTimes(2)
+    })
+
+    it("writes nothing when the builder asks for no write, and tells the caller to try again past the tries", async () => {
+        const { store, records } = await build()
+        records.run.mockResolvedValue(runRecordOf())
+        records.patchRun.mockResolvedValue(null)
+
+        await expect(store.patchRunWith(scoped, "run-1", () => null)).resolves.toBeNull()
+        await expect(store.patchRunWith(scoped, "run-1", () => ({ status: "done" }))).rejects.toMatchObject({
+            code: "AGENT_RUNS_RUN_CONTENDED",
+        })
+    })
+
+    it("refuses a run that is not there", async () => {
+        const { store, records } = await build()
+        records.run.mockResolvedValue(null)
+
+        await expect(store.patchRunWith(scoped, "run-1", () => ({ status: "done" }))).rejects.toMatchObject({
+            code: "AGENT_RUNS_RESULT_REJECTED",
+        })
+    })
+
+    it("settles the run's status from its steps: done with an end time, or running, or only a bump on a closed run", async () => {
+        const { store, records } = await build()
+        records.patchRun.mockResolvedValue(runRecordOf())
+        records.run.mockResolvedValue(runRecordOf())
+        records.stepsOf.mockResolvedValue([stepRecordOf()])
+
+        await store.settleIn(scoped, "run-1", false)
+        expect(records.patchRun).toHaveBeenLastCalledWith(scoped, expect.anything(), {
+            status: "done",
+            endedAt: WHEN.toISOString(),
+        })
+
+        await store.settleIn(scoped, "run-1", true)
+        expect(records.patchRun).toHaveBeenLastCalledWith(scoped, expect.anything(), { status: "running" })
+
+        records.run.mockResolvedValue(runRecordOf({ status: "parked", stepSeq: 4 }))
+        await store.settleIn(scoped, "run-1", false)
+        expect(records.patchRun).toHaveBeenLastCalledWith(scoped, expect.anything(), { stepSeq: 4 })
+    })
+})
+
+describe("AgentRunStoreService reads", () => {
+    it("reads the run of a wake, the run by id and through a transaction", async () => {
+        const { store, records, em } = await build()
+        records.runOfWake.mockResolvedValueOnce(runRecordOf()).mockResolvedValueOnce(null)
+        records.run
+            .mockResolvedValueOnce(runRecordOf())
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce(runRecordOf())
+
+        await expect(store.runOfWake("ws-1", "wake-1")).resolves.toMatchObject({ wakeId: "wake-1" })
+        await expect(store.runOfWake("ws-1", "wake-2", em)).resolves.toBeNull()
+        await expect(store.runById("ws-1", "run-1")).resolves.toMatchObject({ id: "run-1" })
+        await expect(store.runById("ws-1", "run-2")).resolves.toBeNull()
+        await expect(store.runIn(em, "ws-1", "run-1")).resolves.toMatchObject({ id: "run-1" })
+    })
+
+    it("reads the steps of a run as handlers, trace rows, route rows and one step", async () => {
+        const { store, records } = await build()
+        records.run.mockResolvedValue(runRecordOf())
+        records.stepsOf.mockResolvedValue([stepRecordOf({ stepKey: "a" }), stepRecordOf({ stepKey: "b", ordinal: 2 })])
+
+        await expect(store.viewsOf("ws-1", "run-1")).resolves.toHaveLength(2)
+        await expect(store.stepsOf("ws-1", "run-1")).resolves.toHaveLength(2)
+        await expect(store.routeStepsOf("ws-1", "run-1")).resolves.toMatchObject([{ stepKey: "a" }, { stepKey: "b" }])
+        await expect(store.stepOf("ws-1", "run-1", "b")).resolves.toMatchObject({ stepKey: "b" })
+        await expect(store.stepOf("ws-1", "run-1", "zz")).resolves.toBeNull()
+
+        records.run.mockResolvedValue(null)
+        await expect(store.viewsOf("ws-1", "run-1")).resolves.toEqual([])
+    })
+
+    it("lists the open waits of the workspace, the oldest deadline first", async () => {
+        const { store, records } = await build()
+        records.stepsOfStatus.mockResolvedValue([stepRecordOf({ waitItemId: "item-1", status: "running" })])
+
+        await expect(store.openWaits("ws-1", 5)).resolves.toMatchObject([{ waitItemId: "item-1" }])
+        expect(records.stepsOfStatus).toHaveBeenCalledWith(
+            scoped,
+            "running",
+            { op: "notNull", field: "waitItemId" },
+            [
+                ["claimedUntil", "asc"],
+                ["id", "asc"],
+            ],
+            5,
+        )
+    })
+
+    it("finds the links of a work item with the owner agent of each, and refuses any other key", async () => {
+        const { store, records } = await build()
+        records.stepsAbout.mockResolvedValue([stepRecordOf({ kind: "approval", input: { workItemId: "item-1" } })])
+        records.run.mockResolvedValue(runRecordOf({ agentId: "agent-7" }))
+
+        await expect(store.linksFor("ws-1", "approval", "workItemId", "item-1")).resolves.toEqual([
+            { kind: "approval", agentId: "agent-7", status: "done", waitItemId: null, input: { workItemId: "item-1" } },
+        ])
+        await expect(store.linksFor("ws-1", "approval", "messageId", "m-1")).rejects.toMatchObject({
+            code: "AGENT_RUNS_LINK_KEY_UNSUPPORTED",
+        })
+    })
+
+    it("reads the step that waits on a work item as its handler reads it, or null", async () => {
+        const { store, records, em } = await build()
+        records.stepsWaitingOn.mockResolvedValueOnce([stepRecordOf({ status: "running", waitItemId: "item-1" })])
+        records.run.mockResolvedValue(runRecordOf())
+        records.stepsOf.mockResolvedValue([stepRecordOf({ status: "running", waitItemId: "item-1" })])
+
+        await expect(store.waitingOn("ws-1", "item-1", em)).resolves.toMatchObject({ stepKey: "step-1", fence: 2 })
+
+        records.stepsWaitingOn.mockResolvedValueOnce([stepRecordOf({ status: "done" })])
+        await expect(store.waitingOn("ws-1", "item-1")).resolves.toBeNull()
+    })
+})
+
+describe("AgentRunStoreService resume", () => {
+    const waiting = stepRecordOf({ status: "running", waitItemId: "item-1" })
+
+    it("finishes the step that waits, writes what follows and the job that drives it", async () => {
+        const { store, records, queue, em } = await build()
+        records.stepsWaitingOn.mockResolvedValue([waiting])
+        records.patchStep.mockResolvedValue(stepRecordOf())
+        records.stepsOf.mockResolvedValue([stepRecordOf()])
+        records.run.mockResolvedValue(runRecordOf())
+        records.patchRun.mockResolvedValue(runRecordOf())
+        records.insertStep.mockResolvedValue({ ok: true, row: runRowOf(), version: "1" })
 
         await expect(
-            service.resume(em, "item-1", { result: { outcome: "approved" }, next: [stepSpecOf({ stepKey: "after" })] }),
+            store.resume(em, "ws-1", "item-1", { result: { approved: true }, next: [spec("after")] }),
         ).resolves.toBe(true)
 
-        expect(em.query).toHaveBeenNthCalledWith(1, call("agent_step_resume", 3), [
-            "item-1",
-            JSON.stringify({ outcome: "approved" }),
-            true,
-        ])
-        expect(queue.enqueueAdvance).toHaveBeenCalledTimes(1)
+        expect(records.patchStep).toHaveBeenCalledWith(
+            scoped,
+            waiting,
+            expect.objectContaining({ status: "done", result: { approved: true }, waitItemId: null }),
+        )
+        expect(records.insertStep).toHaveBeenCalledWith(scoped, "run-1", expect.objectContaining({ stepKey: "after" }))
         expect(queue.enqueueAdvance).toHaveBeenCalledWith(
             { workspaceId: "ws-1", runId: "run-1" },
             "item-1",
@@ -164,328 +423,72 @@ describe("AgentRunStoreService.resume", () => {
         )
     })
 
-    it("answers false and writes nothing when no step waits on the item", async () => {
-        const em = mockEntityManager({
-            query: [call("agent_step_resume", 3), [{ agent_step_resume: { result: "none" } }]],
-        })
-        const { service, queue } = await build(em)
+    it("answers false when no step waits or the step moved on first", async () => {
+        const { store, records, queue, em } = await build()
+        records.stepsWaitingOn.mockResolvedValueOnce([]).mockResolvedValueOnce([waiting])
+        records.patchStep.mockResolvedValue(null)
 
-        await expect(service.resume(em, "item-9", { result: {}, next: [] })).resolves.toBe(false)
+        await expect(store.resume(em, "ws-1", "item-1", { result: {}, next: [] })).resolves.toBe(false)
+        await expect(store.resume(em, "ws-1", "item-1", { result: {}, next: [] })).resolves.toBe(false)
         expect(queue.enqueueAdvance).not.toHaveBeenCalled()
     })
-
-    it("refuses an answer that is not an object", async () => {
-        const em = mockEntityManager({ query: [call("agent_step_resume", 3), [{ agent_step_resume: null }]] })
-        const { service } = await build(em)
-
-        await expect(service.resume(em, "item-1", { result: {}, next: [] })).rejects.toMatchObject({
-            code: AgentRunsErrorCode.ResultRejected,
-        })
-    })
 })
 
-describe("AgentRunStoreService reads", () => {
-    it("reads the wake's run through the supplied producer transaction", async () => {
-        const em = mockEntityManager()
-        const manager = mockEntityManager({ findOneBy: [AgentRunEntity, runRowOf()] })
-        const { service } = await build(em)
-        await expect(service.runOfWake("wake-1", manager)).resolves.toMatchObject({ id: "run-1" })
-        expect(manager.findOneBy).toHaveBeenCalledWith(AgentRunEntity, { wakeId: "wake-1" })
-        expect(em.findOneBy).not.toHaveBeenCalled()
-    })
+describe("AgentRunStoreService route and spoken", () => {
+    it("moves a run from the status read to the one chosen, compensating the named done steps", async () => {
+        const { store, records, em } = await build()
+        records.run.mockResolvedValue(runRecordOf())
+        records.patchRun.mockResolvedValue(runRecordOf({ status: "compensating" }))
+        records.stepsOf.mockResolvedValue([stepRecordOf({ stepKey: "a" }), stepRecordOf({ stepKey: "b", id: "s-2" })])
+        records.patchStep.mockResolvedValue(stepRecordOf())
 
-    it("finds the run of a wake, or none", async () => {
-        const em = mockEntityManager({
-            findOneBy: [
-                [AgentRunEntity, runRowOf()],
-                [AgentRunEntity, null],
-            ],
+        await expect(
+            store.route("ws-1", "run-1", { from: "running", to: "compensating", code: "boom", compensate: ["a"] }, em),
+        ).resolves.toBe(true)
+
+        expect(records.patchRun).toHaveBeenCalledWith(scoped, expect.anything(), {
+            status: "compensating",
+            error: { code: "boom" },
         })
-        const { service } = await build(em)
-
-        await expect(service.runOfWake("wake-1")).resolves.toMatchObject({ id: "run-1" })
-        await expect(service.runOfWake("wake-2")).resolves.toBeNull()
-    })
-
-    it("finds a run by id, or none", async () => {
-        const em = mockEntityManager({
-            findOneBy: [
-                [AgentRunEntity, runRowOf()],
-                [AgentRunEntity, null],
-            ],
-        })
-        const { service } = await build(em)
-
-        await expect(service.runById("run-1")).resolves.toMatchObject({ id: "run-1" })
-        await expect(service.runById("run-2")).resolves.toBeNull()
-    })
-})
-
-describe("AgentRunStoreService reads", () => {
-    it("reads a run in a transaction", async () => {
-        const em = mockEntityManager({ findOneByOrFail: [AgentRunEntity, runRowOf({ status: "waiting" })] })
-        const { service } = await build(em)
-
-        await expect(service.runIn(em, "run-1")).resolves.toMatchObject({ status: "waiting" })
-    })
-
-    it("lists the steps in order for the trace, the failure route and the handlers", async () => {
-        const steps = [stepRow(1), stepRow(2, { status: "failed" })]
-        const em = mockEntityManager({
-            find: [
-                [AgentRunStepEntity, steps],
-                [AgentRunStepEntity, steps],
-                [AgentRunStepEntity, steps],
-            ],
-        })
-        const { service } = await build(em)
-
-        const trace = await service.stepsOf(em, "run-1")
-        const route = await service.routeStepsOf(em, "run-1")
-        const views = await service.viewsOf("run-1")
-
-        expect(trace.map((step) => step.stepKey)).toEqual(["step-1", "step-2"])
-        expect(route).toEqual([
-            { stepKey: "step-1", seq: 1, status: "done", effect: { kind: "read" } },
-            { stepKey: "step-2", seq: 2, status: "failed", effect: { kind: "read" } },
-        ])
-        expect(views[1]).toMatchObject({ status: "failed", runId: "run-1" })
-        expect(em.find).toHaveBeenCalledWith(AgentRunStepEntity, {
-            where: { runId: "run-1" },
-            order: { seq: "ASC" },
-            take: 200,
+        expect(records.patchStep).toHaveBeenCalledTimes(1)
+        expect(records.patchStep).toHaveBeenCalledWith(scoped, expect.objectContaining({ stepKey: "a" }), {
+            status: "compensating",
+            claimedUntil: null,
         })
     })
 
-    it("finds one step, or none", async () => {
-        const em = mockEntityManager({
-            findOneBy: [
-                [AgentRunStepEntity, stepRow(1)],
-                [AgentRunStepEntity, null],
-            ],
+    it("records why and when a run was parked, and stops with false when another path decided first", async () => {
+        const { store, records } = await build()
+        records.run.mockResolvedValue(runRecordOf())
+        records.patchRun.mockResolvedValue(runRecordOf({ status: "parked" }))
+        records.stepsOf.mockResolvedValue([])
+
+        await store.route("ws-1", "run-1", { from: "running", to: "parked", code: "boom", compensate: [] })
+        expect(records.patchRun).toHaveBeenCalledWith(scoped, expect.anything(), {
+            status: "parked",
+            error: { code: "boom" },
+            parkReason: "boom",
+            endedAt: WHEN.toISOString(),
         })
-        const { service } = await build(em)
 
-        await expect(service.stepOf("run-1", "step-1")).resolves.toMatchObject({ stepKey: "step-1" })
-        await expect(service.stepOf("run-1", "nope")).resolves.toBeNull()
-    })
-})
-
-describe("AgentRunStoreService waits", () => {
-    it("lists the open waits and finds the step that waits on an item as its handler reads it", async () => {
-        const waiting = runningWaitRowOf()
-        const em = mockEntityManager({
-            find: [
-                [AgentRunStepEntity, [waiting]],
-                [AgentRunStepEntity, [stepRow(1), waiting]],
-                [AgentRunStepEntity, []],
-            ],
-            findOneBy: [
-                [AgentRunStepEntity, waiting],
-                [AgentRunStepEntity, waiting],
-                [AgentRunStepEntity, null],
-            ],
-        })
-        const { service } = await build(em)
-
-        await expect(service.openWaits(50)).resolves.toMatchObject([{ stepKey: "step-2", waitItemId: "item-1" }])
-        await expect(service.waitingOn(em, "item-1")).resolves.toMatchObject({ stepKey: "step-2", earlier: {} })
-        await expect(service.waitingOn(em, "item-1")).resolves.toBeNull()
-        await expect(service.waitingOn(em, "item-9")).resolves.toBeNull()
-    })
-})
-
-describe("AgentRunStoreService writes through functions", () => {
-    it("moves a run to the status a policy chose, with the steps to undo", async () => {
-        const em = mockEntityManager({
-            query: [
-                [call("agent_run_route", 5), [{ agent_run_route: true }]],
-                [call("agent_run_route", 5), [{ agent_run_route: false }]],
-            ],
-        })
-        const { service } = await build(em)
-        const move = { from: "running", to: "compensating", code: "x", compensate: ["b", "a"] }
-
-        await expect(service.route(em, "run-1", move)).resolves.toBe(true)
-        await expect(service.route(em, "run-1", move)).resolves.toBe(false)
-        expect(em.query).toHaveBeenCalledWith(call("agent_run_route", 5), [
-            "run-1",
-            "running",
-            "compensating",
-            "x",
-            ["b", "a"],
-        ])
+        records.patchRun.mockClear()
+        await expect(
+            store.route("ws-1", "run-1", { from: "waiting", to: "dead", code: "x", compensate: [] }),
+        ).resolves.toBe(false)
+        expect(records.patchRun).not.toHaveBeenCalled()
     })
 
-    it("marks a run told once", async () => {
-        const em = mockEntityManager({
-            query: [
-                [call("agent_run_spoken", 1), [{ agent_run_spoken: true }]],
-                [call("agent_run_spoken", 1), [{ agent_run_spoken: false }]],
-            ],
-        })
-        const { service } = await build(em)
+    it("marks a stopped run as told once", async () => {
+        const { store, records } = await build()
+        records.patchRun.mockResolvedValue(runRecordOf())
+        records.run
+            .mockResolvedValueOnce(runRecordOf({ status: "parked" }))
+            .mockResolvedValueOnce(runRecordOf({ status: "parked", deadLetteredAt: WHEN }))
+        records.run.mockResolvedValueOnce(runRecordOf({ status: "running" }))
 
-        await expect(service.spoken("run-1")).resolves.toBe(true)
-        await expect(service.spoken("run-1")).resolves.toBe(false)
-    })
-
-    it("lists what the sweep must look at, and refuses rows it cannot read", async () => {
-        const row = {
-            due_kind: "ready",
-            due_run: "run-1",
-            due_workspace: "ws-1",
-            due_agent: "agent-1",
-            due_step: "a",
-            due_fence: 0,
-            due_at: new Date("2026-11-01T10:00:00Z"),
-        }
-        const em = mockEntityManager({
-            query: [
-                [call("agent_run_due", 1), [row]],
-                [call("agent_run_due", 1), [{ due_kind: "weird" }]],
-            ],
-        })
-        const { service } = await build(em)
-
-        await expect(service.due(50)).resolves.toMatchObject([{ kind: "ready", runId: "run-1" }])
-        await expect(service.due(50)).rejects.toMatchObject({ code: AgentRunsErrorCode.ResultRejected })
-    })
-})
-
-describe("AgentRunStoreService planning bind", () => {
-    it("first-binds under the run lock and preserves the original inbound facts", async () => {
-        const row = unboundPlanRunRowOf()
-        const em = mockEntityManager({
-            findOneOrFail: [AgentRunEntity, row],
-            update: [AgentRunEntity, { affected: 1, raw: [], generatedMaps: [] }],
-        })
-        em.exists.mockResolvedValue(false)
-        queueQueryBuilders(em, [{ execute: { raw: [] } }])
-        const { service } = await build(em)
-        expect(await service.open(em, PLAN)).toMatchObject({ versionId: "v1" })
-        expect(em.findOneOrFail).toHaveBeenCalledWith(AgentRunEntity, {
-            where: { workspaceId: "ws-1", agentId: "agent-1", wakeId: "wake-1" },
-            lock: { mode: "pessimistic_write" },
-        })
-        expect(em.exists).toHaveBeenCalledWith(AgentRunStepEntity, { where: { runId: row.id } })
-        expect(em.update).toHaveBeenCalledWith(
-            AgentRunEntity,
-            { id: row.id },
-            {
-                versionId: "v1",
-                context: {
-                    adapter: "webhook",
-                    inbound: { source: "original" },
-                    planBinding: {
-                        versionId: "v1",
-                        trigger: "tag",
-                        context: PLAN.context,
-                    },
-                },
-            },
-        )
-        expect(em.update).toHaveBeenCalledTimes(1)
-    })
-
-    it.each(conflictingPlanRunRowsOf())(
-        "refuses a conflicting replay without overwriting an established plan",
-        async (row) => {
-            const em = mockEntityManager({ findOneOrFail: [AgentRunEntity, row] })
-            queueQueryBuilders(em, [{ execute: { raw: [] } }])
-            const { service } = await build(em)
-            await expect(service.open(em, PLAN)).rejects.toMatchObject({ code: AgentRunsErrorCode.PlanConflict })
-            expect(em.update).not.toHaveBeenCalled()
-        },
-    )
-})
-
-describe("AgentRunStoreService planning replay", () => {
-    it("returns the original plan binding without rewriting it on an exact replay", async () => {
-        const row = boundPlanRunRowOf()
-        const em = mockEntityManager({ findOneOrFail: [AgentRunEntity, row] })
-        queueQueryBuilders(em, [{ execute: { raw: [] } }])
-        const { service } = await build(em)
-
-        await expect(service.open(em, PLAN)).resolves.toMatchObject({ versionId: "v1", context: row.context })
-        expect(em.update).not.toHaveBeenCalled()
-        expect(em.exists).not.toHaveBeenCalled()
-    })
-
-    it.each(unboundCompatiblePlanRowsOf())(
-        "binds compatible unbound contexts while preserving their existing facts",
-        async (row) => {
-            const em = mockEntityManager({
-                findOneOrFail: [AgentRunEntity, row],
-                update: [AgentRunEntity, { affected: 1, raw: [], generatedMaps: [] }],
-            })
-            em.exists.mockResolvedValue(false)
-            queueQueryBuilders(em, [{ execute: { raw: [] } }])
-            const { service } = await build(em)
-
-            await expect(service.open(em, PLAN)).resolves.toMatchObject({ versionId: "v1" })
-            expect(em.update).toHaveBeenCalledWith(
-                AgentRunEntity,
-                { id: row.id },
-                {
-                    versionId: "v1",
-                    context: {
-                        ...row.context,
-                        planBinding: { versionId: "v1", trigger: "tag", context: PLAN.context },
-                    },
-                },
-            )
-        },
-    )
-})
-
-describe("AgentRunStoreService planning refusals", () => {
-    it.each(invalidPlanBindingRowsOf())(
-        "refuses malformed or incompatible stored bindings before writing",
-        async (row) => {
-            const em = mockEntityManager({ findOneOrFail: [AgentRunEntity, row] })
-            queueQueryBuilders(em, [{ execute: { raw: [] } }])
-            const { service } = await build(em)
-
-            await expect(service.open(em, PLAN)).rejects.toMatchObject({ code: AgentRunsErrorCode.PlanConflict })
-            expect(em.update).not.toHaveBeenCalled()
-            expect(em.exists).not.toHaveBeenCalled()
-        },
-    )
-
-    it("refuses a first binding after steps already exist", async () => {
-        const em = mockEntityManager({ findOneOrFail: [AgentRunEntity, unboundPlanRunRowOf()] })
-        em.exists.mockResolvedValue(true)
-        queueQueryBuilders(em, [{ execute: { raw: [] } }])
-        const { service } = await build(em)
-
-        await expect(service.open(em, PLAN)).rejects.toMatchObject({ code: AgentRunsErrorCode.PlanConflict })
-        expect(em.exists).toHaveBeenCalledWith(AgentRunStepEntity, { where: { runId: "run-1" } })
-        expect(em.update).not.toHaveBeenCalled()
-    })
-})
-
-describe("AgentRunStoreService.linksFor", () => {
-    it("returns at most two scoped immutable input links with their full owner and wait facts", async () => {
-        const em = mockEntityManager()
-        const [query] = queueQueryBuilders(em, [{ getMany: linkedStepRowsOf() }])
-        const { service } = await build(em)
-
-        await expect(service.linksFor("ws-1", "reply", "messageId", "m-1")).resolves.toEqual([
-            { kind: "reply", agentId: "agent-1", status: "running", waitItemId: "item-1", input: { messageId: "m-1" } },
-            { kind: "reply", agentId: "agent-2", status: "done", waitItemId: null, input: { messageId: "m-1" } },
-        ])
-        expect(query?.callsOf("where")).toEqual([
-            ["s.workspace_id = :workspaceId AND s.kind = :kind", { workspaceId: "ws-1", kind: "reply" }],
-        ])
-        expect(query?.callsOf("andWhere")).toEqual([["s.input ->> :key = :value", { key: "messageId", value: "m-1" }]])
-        expect(query?.callsOf("limit")).toEqual([[2]])
-    })
-
-    it("returns no links when the scoped consumer key has no match", async () => {
-        const em = mockEntityManager()
-        queueQueryBuilders(em, [{ getMany: [] }])
-        const { service } = await build(em)
-        await expect(service.linksFor("ws-1", "reply", "messageId", "missing")).resolves.toEqual([])
+        await expect(store.spoken("ws-1", "run-1")).resolves.toBe(true)
+        await expect(store.spoken("ws-1", "run-1")).resolves.toBe(false)
+        await expect(store.spoken("ws-1", "run-1")).resolves.toBe(false)
+        expect(records.patchRun).toHaveBeenCalledWith(scoped, expect.anything(), { deadLetteredAt: WHEN.toISOString() })
     })
 })

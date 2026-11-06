@@ -214,6 +214,8 @@ export type RunTimeoutClaim =
 
 /** Who asks to run a parked run again and why; recorded on the run. */
 export interface ResumeRequest {
+    /** The workspace of the run. */
+    readonly workspaceId: string
     /** The run. */
     readonly runId: string
     /** A member id for a person, `build` or `sweep` for the machine. */
@@ -278,6 +280,8 @@ export interface ParkedRef {
 
 /** What the resume function is asked. */
 export interface ResumeWrite {
+    /** The workspace of the run. */
+    readonly workspaceId: string
     /** The run. */
     readonly runId: string
     /** Who. */
@@ -296,6 +300,8 @@ export interface ResumeWrite {
 
 /** Which parked runs a pass may take. */
 export interface ParkedQuery {
+    /** The workspace to look in. */
+    readonly workspaceId: string
     /** The most runs. */
     readonly limit: number
     /** The running build. */

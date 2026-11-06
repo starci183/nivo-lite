@@ -5,8 +5,14 @@ import type { ErrorKind } from "@modules/platform/errors"
 export enum AgentRunsErrorCode {
     /** A replay selected a different plan or tried to bind one after steps began. */
     PlanConflict = "AGENT_RUNS_PLAN_CONFLICT",
-    /** A database function answered something the engine cannot read. */
+    /** A record answered something the engine cannot read, or a write the engine refused. */
     ResultRejected = "AGENT_RUNS_RESULT_REJECTED",
+    /** A run already holds the most steps one run may have. */
+    RunTooLong = "AGENT_RUNS_RUN_TOO_LONG",
+    /** A link was asked for by a key no step keeps. */
+    LinkKeyUnsupported = "AGENT_RUNS_LINK_KEY_UNSUPPORTED",
+    /** The run changed under every try of a write: the caller tries again. */
+    RunContended = "AGENT_RUNS_RUN_CONTENDED",
     /** Two handlers claim the same step kind. */
     HandlerDuplicate = "AGENT_RUNS_HANDLER_DUPLICATE",
     /** The wake has no running run to add a step to. */
@@ -23,6 +29,9 @@ export enum AgentRunsErrorCode {
 export const AGENT_RUNS_ERROR_KINDS: Record<AgentRunsErrorCode, ErrorKind> = {
     [AgentRunsErrorCode.PlanConflict]: "conflict",
     [AgentRunsErrorCode.ResultRejected]: "internal",
+    [AgentRunsErrorCode.RunTooLong]: "conflict",
+    [AgentRunsErrorCode.LinkKeyUnsupported]: "internal",
+    [AgentRunsErrorCode.RunContended]: "unavailable",
     [AgentRunsErrorCode.HandlerDuplicate]: "internal",
     [AgentRunsErrorCode.RunNotFound]: "not-found",
     [AgentRunsErrorCode.StepFailed]: "internal",

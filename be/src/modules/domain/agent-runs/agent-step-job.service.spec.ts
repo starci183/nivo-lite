@@ -20,7 +20,7 @@ describe("AgentStepJobService.run", () => {
 
         await expect(service.run({ workspaceId: "ws-1", runId: "run-1" })).resolves.toBeUndefined()
 
-        expect(runs.advance).toHaveBeenCalledWith("run-1", expect.any(AbortSignal))
+        expect(runs.advance).toHaveBeenCalledWith("ws-1", "run-1", expect.any(AbortSignal))
     })
 
     it("asks the queue to run the job again when a step is held by its backoff", async () => {
