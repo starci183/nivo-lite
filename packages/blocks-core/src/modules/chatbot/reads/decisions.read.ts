@@ -15,7 +15,7 @@ export const DECISIONS_SHOWN = 5
 /** `chatbot.decisions`: the customers who wait for a person, newest activity first, each to take over. */
 export const DECISIONS: ReadDefinition = defineRead({
     id: "chatbot.decisions",
-    dataKind: "chatbot-decision",
+    dataKind: "conversation",
     shape: "record",
     fields: ["count", "more", "rows"],
     paths: { rows: "list" },

@@ -27,7 +27,7 @@ const sum = (counts: Readonly<Record<string, number>>): number =>
  */
 export const THREAD_COUNTS: ReadDefinition = defineRead({
     id: "chatbot.thread-counts",
-    dataKind: "counts",
+    dataKind: "conversation",
     shape: "record",
     fields: ["counts", "total"],
     paths: { counts: "record" },

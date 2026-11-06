@@ -14,7 +14,7 @@ export const ALL_THREADS: ListQuery = { q: null, filters: {}, sort: "recent", cu
 /** `chatbot.figures`: the conversations, the share the AI answers, who waits for a person and who holds one. */
 export const FIGURES: ReadDefinition = defineRead({
     id: "chatbot.figures",
-    dataKind: "chatbot-figures",
+    dataKind: "conversation",
     shape: "record",
     fields: ["total", "aiShare", "needsCount", "handledCount"],
     paths: {},
