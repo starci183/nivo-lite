@@ -292,6 +292,11 @@ export class TeamChatRoomsService {
         return this.cards.postApproval(workspaceId, approval)
     }
 
+    /** In how many rooms the approval card of a decision stands; 0 when none was posted (no request opened, or nobody to show it to). */
+    cardRooms(workspaceId: string, decisionId: string): Promise<number> {
+        return this.cards.cardRooms(workspaceId, decisionId)
+    }
+
     /** Writes one line of an agent or of the system into a room, or into the direct room with one person. */
     postMessage(workspaceId: string, line: LineInput): Promise<OptionalLine> {
         return this.cards.postMessage(workspaceId, line)

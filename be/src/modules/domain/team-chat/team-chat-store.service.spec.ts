@@ -437,6 +437,19 @@ describe("TeamChatStoreService cards", () => {
     })
 })
 
+describe("TeamChatStoreService card count", () => {
+    it("counts the approval cards of a decision in the workspace", async () => {
+        const em = mockEntityManager({})
+        const [counted] = queueQueryBuilders(em, [{ getCount: 2 }])
+        const store = await build(em)
+        await expect(store.cardCount(WS, BEN)).resolves.toBe(2)
+        expect(counted?.callsOf("where")[0]).toEqual([
+            "msg.workspace_id = :workspaceId AND msg.kind = :kind AND (msg.ref ->> CAST(:key AS text)) = :decisionId",
+            { workspaceId: WS, kind: "approval", key: "decision_id", decisionId: BEN },
+        ])
+    })
+})
+
 describe("TeamChatStoreService lines", () => {
     it("stores a line of an agent or of the system under its key, and answers none when the key already wrote it", async () => {
         const em = mockEntityManager({ findOne: [ChatRoomMessageEntity, message] })

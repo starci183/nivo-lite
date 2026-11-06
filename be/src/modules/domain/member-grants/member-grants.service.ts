@@ -3,7 +3,8 @@ import { In, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { OfficeRoomDirectoryService } from "@modules/domain/office-rooms"
+import { InjectChatRoomDirectory } from "@modules/domain/chat-room-directory"
+import type { ChatRoomDirectory } from "@modules/domain/chat-room-directory"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import type { MemberRow } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -39,12 +40,12 @@ export class MemberGrantsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersReadService,
-        private readonly rooms: OfficeRoomDirectoryService,
+        @InjectChatRoomDirectory() private readonly rooms: ChatRoomDirectory,
         private readonly actions: AuthorityActionsService,
         private readonly rules: AuthorityRulesService,
     ) {}
 
-    /** Everyone of the workspace with the rooms they sit in, owners first. */
+    /** Everyone of the workspace with the team-chat groups they sit in, owners first. */
     async directory(workspaceId: string): Promise<ReadonlyArray<DirectoryMember>> {
         const people = await this.members.directory(workspaceId, LIST_MAX)
         const seats = await this.rooms.seatRoomsOf(

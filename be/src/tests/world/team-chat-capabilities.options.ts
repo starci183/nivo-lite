@@ -7,7 +7,7 @@ import { ClockModule } from "@modules/platform/clock"
 import { IdsModule } from "@modules/platform/ids"
 import { TeamChatProofModule } from "./team-chat-proof.module"
 
-/** The team chat over the capabilities it reads through: the ids and the clock, the seats of the workspace, the workspace owner. */
+/** The team chat over the capabilities it reads through: the ids and the clock, the events the seats announce on, the seats of the workspace, the workspace owner. */
 export const TEAM_CHAT_PROOF_MODULES: ReadonlyArray<DynamicModule> = [
     IdsModule.register({ isGlobal: true }),
     ClockModule.register({ isGlobal: true }),

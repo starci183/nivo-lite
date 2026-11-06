@@ -2,6 +2,7 @@ import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type {
     AgentConnectionsDirectory,
+    AgentRooms,
     InstallationDirectory,
     KnowledgeLens,
     ModuleProfiles,
@@ -49,3 +50,9 @@ export const AGENTS_WORK: unique symbol = Symbol("domain.agents.work")
 /** Injects the dashboard work lists port. Parameter type: WorkDashboardDirectory. */
 export const InjectWorkDashboard = (): TypedParameterDecorator<WorkDashboardDirectory> =>
     injector<WorkDashboardDirectory>(AGENTS_WORK)
+
+/** Token of the team-chat room directory port (the chat room directory capability). */
+export const AGENTS_ROOMS: unique symbol = Symbol("domain.agents.rooms")
+
+/** Injects the team-chat room directory port. Parameter type: AgentRooms. */
+export const InjectAgentRooms = (): TypedParameterDecorator<AgentRooms> => injector<AgentRooms>(AGENTS_ROOMS)

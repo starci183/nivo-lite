@@ -410,6 +410,7 @@ describe("TeamChatRoomsService engine side", () => {
         cards.postApproval.mockResolvedValue(4)
         cards.postMessage.mockResolvedValue(null)
         cards.postAsAgent.mockResolvedValue(null)
+        cards.cardRooms.mockResolvedValue(2)
         expect(await subject.approvalOf(WS, ANA, MSG)).toBeNull()
         expect(await subject.approvalRequest(WS, MSG)).toBeNull()
         expect(await subject.postReport(WS, { runId: MSG, agentId: BOT, body: "done", roomId: null })).toBeNull()
@@ -426,5 +427,7 @@ describe("TeamChatRoomsService engine side", () => {
             await subject.postMessage(WS, { key: "k", authorAgentId: BOT, body: "hi", roomId: ROOM, toUserId: null }),
         ).toBeNull()
         expect(await subject.postAsAgent(WS, { agent: "sales", body: "hi", toUserId: null, key: null })).toBeNull()
+        expect(await subject.cardRooms(WS, MSG)).toBe(2)
+        expect(cards.cardRooms).toHaveBeenCalledWith(WS, MSG)
     })
 })

@@ -207,3 +207,27 @@ export interface WorkDashboardDirectory {
     /** The lines of one dashboard list; each carries the count before the limit. */
     dashboardList(query: WorkListRequest): Promise<ReadonlyArray<DashboardLine>>
 }
+
+/** The one door to the team-chat groups an agent's ownership names: the root binds the room directory. */
+export interface AgentRooms {
+    /** The names of the groups of a workspace by room id, in room order, at most `limit`. */
+    labelsOf(workspaceId: string, roomIds: ReadonlyArray<string>, limit: number): Promise<Array<AgentRoomName>>
+    /** The groups the given accounts sit in, in room order, at most `limit` seats. */
+    seatRoomsOf(workspaceId: string, userIds: ReadonlyArray<string>, limit: number): Promise<Array<AgentSeatRoom>>
+}
+
+/** The name of one team-chat group. */
+export interface AgentRoomName {
+    /** The room id. */
+    readonly key: string
+    /** The display name. */
+    readonly name: string
+}
+
+/** One team-chat group an account sits in. */
+export interface AgentSeatRoom {
+    /** The account id. */
+    readonly userId: string
+    /** The room id. */
+    readonly key: string
+}

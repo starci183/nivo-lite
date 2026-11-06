@@ -1,6 +1,7 @@
 import type { Type } from "@nestjs/common"
 import type {
     AgentConnectionsDirectory,
+    AgentRooms,
     InstallationDirectory,
     KnowledgeLens,
     ModuleProfiles,
@@ -15,6 +16,8 @@ export interface AgentsSetupPorts {
     readonly modules: Type<ModuleProfiles>
     /** Implements the agent connections port; an existing provider of the app. */
     readonly connections: Type<AgentConnectionsDirectory>
+    /** Implements the team-chat room directory port; an existing provider of the app. */
+    readonly rooms: Type<AgentRooms>
 }
 
 /** The classes that implement the ports of the other lanes; the app root passes them and the module binds each token to them. */

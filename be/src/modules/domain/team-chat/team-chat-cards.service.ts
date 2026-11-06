@@ -65,6 +65,11 @@ export class TeamChatCardsService {
         return rooms.length
     }
 
+    /** In how many rooms the approval card of a decision stands; 0 when none was posted (no request opened, or nobody to show it to). */
+    cardRooms(workspaceId: string, decisionId: string): Promise<number> {
+        return this.store.cardCount(workspaceId, decisionId)
+    }
+
     /**
      * Writes one line of an agent (or of the system when no agent speaks) into a room: the replacement of the old Office lines. The room is
      * named, or the line goes to one person and the direct room between them and the agent is opened on demand. The same key from the same

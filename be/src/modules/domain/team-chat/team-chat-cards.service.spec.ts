@@ -46,6 +46,15 @@ const build = async () => {
     return { cards: moduleRef.get(TeamChatCardsService), store, access, seats, agents, workspaces }
 }
 
+describe("TeamChatCardsService cardRooms", () => {
+    it("counts the rooms the approval card of a decision stands in, from the store", async () => {
+        const { cards, store } = await build()
+        store.cardCount.mockResolvedValue(2)
+        await expect(cards.cardRooms(WS, DECISION)).resolves.toBe(2)
+        expect(store.cardCount).toHaveBeenCalledWith(WS, DECISION)
+    })
+})
+
 describe("TeamChatCardsService postReport", () => {
     const report = { runId: RUN, agentId: BOT, body: "Done", roomId: NAMED }
 

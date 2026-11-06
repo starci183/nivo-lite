@@ -2,7 +2,6 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { AgentDirectoryService, AgentOwnershipService } from "@modules/domain/agents"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import { OfficeRoomDirectoryService } from "@modules/domain/office-rooms"
 import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { DepartmentRuleLine } from "@modules/domain/authority-rules"
@@ -67,15 +66,12 @@ const build = async (
     const logger = mock<Logger>()
     const directory = mock<AgentDirectoryService>()
     directory.headOf.mockResolvedValue(head)
-    const rooms = mock<OfficeRoomDirectoryService>()
-    rooms.homeRoomNameOf.mockResolvedValue("Sales")
     const installations = mock<InstallationRecordsService>()
     installations.ofAgent.mockResolvedValue(installationRecordOf({ operatingMode: "assist" }))
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentProfileService,
             { provide: AgentDirectoryService, useValue: directory },
-            { provide: OfficeRoomDirectoryService, useValue: rooms },
             { provide: InstallationRecordsService, useValue: installations },
             { provide: LOGGER, useValue: logger },
             { provide: AgentOwnershipService, useValue: agents },
@@ -90,7 +86,6 @@ const build = async (
         activity,
         authority,
         directory,
-        rooms,
         installations,
     }
 }
@@ -101,7 +96,7 @@ describe("AgentProfileService", () => {
 
         const page = await service.page("u1", "w1", "a1")
 
-        expect(page.agent).toMatchObject({ id: "a1", roomName: "Sales", operatingMode: "assist" })
+        expect(page.agent).toMatchObject({ id: "a1", roomName: null, operatingMode: "assist" })
         expect(page.ownership).toBe(OWNERSHIP)
         expect(page.rules).toEqual({
             ok: true,

@@ -383,6 +383,18 @@ export class TeamChatStoreService {
         return kept === undefined ? null : { messageId: kept.id, created: false }
     }
 
+    /** In how many rooms the approval card of a decision stands; 0 when none was posted. */
+    cardCount(workspaceId: string, decisionId: string): Promise<number> {
+        const { key } = cardRefOf("approval", decisionId)
+        return this.entityManager
+            .createQueryBuilder(ChatRoomMessageEntity, "msg")
+            .where(
+                "msg.workspace_id = :workspaceId AND msg.kind = :kind AND (msg.ref ->> CAST(:key AS text)) = :decisionId",
+                { workspaceId, kind: "approval", key, decisionId },
+            )
+            .getCount()
+    }
+
     /** Stores one line of an agent or of the system; the id of the new message, or null when the same key already wrote it. */
     async insertLine(line: NewLine): Promise<OptionalId> {
         const inserted = await this.entityManager

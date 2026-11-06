@@ -5,7 +5,8 @@ import type { MockEntityManager } from "@starci/jest-preset"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import type { ApprovalSetup } from "@modules/domain/authority-rules"
-import { OfficeRoomDirectoryService } from "@modules/domain/office-rooms"
+import { CHAT_ROOM_DIRECTORY } from "@modules/domain/chat-room-directory"
+import type { ChatRoomDirectory } from "@modules/domain/chat-room-directory"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import type { MemberRow } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -31,7 +32,7 @@ const build = async (entityManager: MockEntityManager, owners: Owners = {}) => {
         directory: jest.fn().mockResolvedValue(owners.people ?? []),
         lockMember: jest.fn().mockResolvedValue(owners.member ?? true),
     })
-    const rooms = mock<OfficeRoomDirectoryService>({ seatRoomsOf: jest.fn().mockResolvedValue(owners.seats ?? []) })
+    const rooms = mock<ChatRoomDirectory>({ seatRoomsOf: jest.fn().mockResolvedValue(owners.seats ?? []) })
     const actions = mock<AuthorityActionsService>({ exists: jest.fn().mockResolvedValue(owners.action ?? true) })
     const rules = mock<AuthorityRulesService>({
         approvalSetup: jest
@@ -43,7 +44,7 @@ const build = async (entityManager: MockEntityManager, owners: Owners = {}) => {
             MemberGrantsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: WorkspaceMembersReadService, useValue: members },
-            { provide: OfficeRoomDirectoryService, useValue: rooms },
+            { provide: CHAT_ROOM_DIRECTORY, useValue: rooms },
             { provide: AuthorityActionsService, useValue: actions },
             { provide: AuthorityRulesService, useValue: rules },
         ],
