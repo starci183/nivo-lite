@@ -38,7 +38,11 @@ const build = async () => {
     const lead = mock<EntityDefinition>({
         name: "sales.lead",
         dataKind: "lead",
-        fields: { name: { kind: "text", nullable: false }, stage: { kind: "text", nullable: false } },
+        fields: {
+            name: { kind: "text", nullable: false },
+            stage: { kind: "text", nullable: false },
+            phone: { kind: "text", nullable: true },
+        },
     })
     const engine = mock<EntityEngineService>({ catalog: new Map([["sales.lead", lead]]) })
     const ports = mock<EntityPortsService>()
@@ -60,7 +64,13 @@ const build = async () => {
         ],
     }).compile()
     const runIn: RunIn = (use) => use(tx)
-    const run: DoorRun = { workspaceId: "ws-1", runIn, name: "sales.leads", dataKind: "lead" }
+    const run: DoorRun = {
+        workspaceId: "ws-1",
+        runIn,
+        name: "sales.leads",
+        dataKind: "lead",
+        fields: ["id", "name", "stage", "unknown"],
+    }
     return { service: moduleRef.get(DoorPortsService), ports, lists, tx, runIn, run, installations, seats, grants }
 }
 
@@ -232,3 +242,17 @@ const isRightsDirectory = (
     value: unknown,
 ): value is { readonly holds: (memberId: string | null, permission: string) => Promise<unknown> } =>
     typeof value === "object" && value !== null && "holds" in value
+
+describe("DoorPortsService list fields", () => {
+    it("selects only the fields the read declares: a field the entity holds and the read does not name (phone) is never read from the record", async () => {
+        const { service, lists, run } = await build()
+        lists.page.mockResolvedValue({ rows: [], next: null })
+        const only: DoorRun = { ...run, fields: ["id", "name"] }
+        const source = service.providerFor(only).implementationOf(portOf("sales.leads-list"))
+        await (isListSource(source) ? source.page(SHAPE, QUERY) : Promise.reject(new Error("no source")))
+        expect(lists.page.mock.calls[0]?.[1].select).toEqual(["name"])
+        const none = service.providerFor({ ...run, fields: [] }).implementationOf(portOf("sales.leads-list"))
+        await (isListSource(none) ? none.page(SHAPE, QUERY) : Promise.reject(new Error("no source")))
+        expect(lists.page.mock.calls[1]?.[1].select).toEqual([])
+    })
+})

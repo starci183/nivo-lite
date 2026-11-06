@@ -87,6 +87,7 @@ export class WorkbenchDoorService {
                     runIn: (use) => use(tx),
                     name: call.name,
                     dataKind: read.dataKind,
+                    fields: read.definition.fields,
                 }),
                 parsed.value,
                 context,
@@ -131,7 +132,7 @@ export class WorkbenchDoorService {
      */
     private async run(call: DoorCall, caller: Caller, action: DoorAction, input: unknown): Promise<ActionResult> {
         const context = this.contextOf(call, caller)
-        const run = { workspaceId: call.workspaceId, name: action.id, dataKind: null }
+        const run = { workspaceId: call.workspaceId, name: action.id, dataKind: null, fields: [] }
         const answered: ActionAnswered = {}
         try {
             if (action.transactional !== true) {
