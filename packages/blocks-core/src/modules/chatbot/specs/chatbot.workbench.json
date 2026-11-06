@@ -305,14 +305,58 @@
         "key": "tab_inbox"
       },
       "root": {
-        "id": "inbox",
-        "block": "core.master-detail",
+        "id": "thread",
+        "block": "core.conversation",
         "props": {
-          "emptyTitle": {
-            "key": "master_empty_title"
+          "label": {
+            "key": "thread_label"
           },
-          "emptyBody": {
-            "key": "master_empty_body"
+          "empty": {
+            "key": "thread_empty"
+          },
+          "pick": {
+            "key": "thread_pick"
+          },
+          "idPath": "id",
+          "textPath": "text",
+          "authorPath": "who",
+          "timePath": "at",
+          "statusPath": "state",
+          "sidePath": "side",
+          "markPath": "mark",
+          "composer": true,
+          "selectParam": "selected",
+          "maxLength": 4000,
+          "listLabel": {
+            "key": "list_label"
+          },
+          "contactLabel": {
+            "key": "customer_label"
+          },
+          "head": {
+            "titlePath": "name",
+            "subtitlePath": "channelName"
+          }
+        },
+        "bind": {
+          "messages": {
+            "read": "chatbot.messages",
+            "path": "rows",
+            "variables": {
+              "threadId": "$selected"
+            }
+          },
+          "send": {
+            "action": "chatbot.reply"
+          },
+          "handoff": {
+            "action": "chatbot.handoff"
+          },
+          "thread": {
+            "read": "chatbot.thread",
+            "variables": {
+              "id": "$selected"
+            }
           }
         },
         "children": [
@@ -440,149 +484,100 @@
             "bind": {}
           },
           {
-            "id": "thread-side",
-            "block": "core.aside-detail",
+            "id": "customer",
+            "block": "core.detail",
             "props": {
-              "width": "medium"
-            },
-            "children": [
-              {
-                "id": "thread",
-                "block": "core.conversation",
-                "props": {
-                  "label": {
-                    "key": "thread_label"
-                  },
-                  "empty": {
-                    "key": "thread_empty"
-                  },
-                  "pick": {
-                    "key": "thread_pick"
-                  },
-                  "idPath": "id",
-                  "textPath": "text",
-                  "authorPath": "who",
-                  "timePath": "at",
-                  "statusPath": "state",
-                  "sidePath": "side",
-                  "markPath": "mark",
-                  "composer": true,
-                  "selectParam": "selected",
-                  "maxLength": 4000
-                },
-                "bind": {
-                  "messages": {
-                    "read": "chatbot.messages",
-                    "path": "rows",
-                    "variables": {
-                      "threadId": "$selected"
-                    }
-                  },
-                  "send": {
-                    "action": "chatbot.reply"
-                  },
-                  "handoff": {
-                    "action": "chatbot.handoff"
-                  }
-                }
+              "label": {
+                "key": "customer_label"
               },
-              {
-                "id": "customer",
-                "block": "core.detail",
-                "props": {
-                  "label": {
-                    "key": "customer_label"
+              "idle": {
+                "key": "customer_idle"
+              },
+              "idPath": "id",
+              "items": [
+                {
+                  "term": {
+                    "key": "fact_name"
                   },
-                  "idle": {
-                    "key": "customer_idle"
-                  },
-                  "idPath": "id",
-                  "items": [
-                    {
-                      "term": {
-                        "key": "fact_name"
-                      },
-                      "path": "name"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_channel"
-                      },
-                      "path": "channelName"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_handled_by"
-                      },
-                      "path": "handledBy"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_stage"
-                      },
-                      "path": "stage"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_need"
-                      },
-                      "path": "need"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_company"
-                      },
-                      "path": "company"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_phone"
-                      },
-                      "path": "phone"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_email"
-                      },
-                      "path": "email"
-                    }
-                  ],
-                  "labels": {
-                    "stage": {
-                      "new": {
-                        "key": "stage_new"
-                      },
-                      "qualified": {
-                        "key": "stage_qualified"
-                      },
-                      "proposal": {
-                        "key": "stage_proposal"
-                      },
-                      "won": {
-                        "key": "stage_won"
-                      },
-                      "lost": {
-                        "key": "stage_lost"
-                      }
-                    }
-                  }
+                  "path": "name"
                 },
-                "bind": {
-                  "record": {
-                    "read": "chatbot.thread",
-                    "variables": {
-                      "id": "$selected"
-                    }
+                {
+                  "term": {
+                    "key": "fact_channel"
                   },
-                  "primary": {
-                    "action": "chatbot.handoff"
+                  "path": "channelName"
+                },
+                {
+                  "term": {
+                    "key": "fact_handled_by"
                   },
-                  "secondary": {
-                    "action": "chatbot.release"
+                  "path": "handledBy"
+                },
+                {
+                  "term": {
+                    "key": "fact_stage"
+                  },
+                  "path": "stage"
+                },
+                {
+                  "term": {
+                    "key": "fact_need"
+                  },
+                  "path": "need"
+                },
+                {
+                  "term": {
+                    "key": "fact_company"
+                  },
+                  "path": "company"
+                },
+                {
+                  "term": {
+                    "key": "fact_phone"
+                  },
+                  "path": "phone"
+                },
+                {
+                  "term": {
+                    "key": "fact_email"
+                  },
+                  "path": "email"
+                }
+              ],
+              "labels": {
+                "stage": {
+                  "new": {
+                    "key": "stage_new"
+                  },
+                  "qualified": {
+                    "key": "stage_qualified"
+                  },
+                  "proposal": {
+                    "key": "stage_proposal"
+                  },
+                  "won": {
+                    "key": "stage_won"
+                  },
+                  "lost": {
+                    "key": "stage_lost"
                   }
                 }
               }
-            ]
+            },
+            "bind": {
+              "record": {
+                "read": "chatbot.thread",
+                "variables": {
+                  "id": "$selected"
+                }
+              },
+              "primary": {
+                "action": "chatbot.handoff"
+              },
+              "secondary": {
+                "action": "chatbot.release"
+              }
+            }
           }
         ]
       }

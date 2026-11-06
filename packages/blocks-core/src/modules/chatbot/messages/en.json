@@ -1,7 +1,5 @@
 {
   "tab_inbox": "Inbox",
-  "master_empty_title": "Pick a conversation",
-  "master_empty_body": "Pick a customer in the list to read the messages and reply.",
   "filter_all": "All",
   "status_filter_label": "Status",
   "status_needs": "Needs a person",

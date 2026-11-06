@@ -363,135 +363,95 @@
             ]
           },
           {
-            "id": "side",
-            "block": "core.stack",
+            "id": "detail",
+            "block": "core.detail",
             "props": {
-              "gap": "section"
-            },
-            "children": [
-              {
-                "id": "detail",
-                "block": "core.detail",
-                "props": {
-                  "label": {
-                    "key": "entry"
+              "label": {
+                "key": "entry"
+              },
+              "idle": {
+                "key": "entry_idle"
+              },
+              "idPath": "id",
+              "currency": "VND",
+              "items": [
+                {
+                  "term": {
+                    "key": "fact_date"
                   },
-                  "idle": {
-                    "key": "entry_idle"
-                  },
-                  "idPath": "id",
-                  "currency": "VND",
-                  "items": [
-                    {
-                      "term": {
-                        "key": "fact_date"
-                      },
-                      "path": "entryDate",
-                      "format": "date"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_kind"
-                      },
-                      "path": "kind",
-                      "format": "badge"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_amount"
-                      },
-                      "path": "amountVnd",
-                      "format": "money"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_note"
-                      },
-                      "path": "note",
-                      "format": "text"
-                    },
-                    {
-                      "term": {
-                        "key": "fact_source"
-                      },
-                      "path": "sourceEntity",
-                      "format": "text"
-                    }
-                  ],
-                  "labels": {
-                    "kind": {
-                      "income": {
-                        "key": "kind_income"
-                      },
-                      "expense": {
-                        "key": "kind_expense"
-                      },
-                      "invoice": {
-                        "key": "kind_invoice"
-                      },
-                      "reversal": {
-                        "key": "kind_reversal"
-                      },
-                      "adjustment": {
-                        "key": "kind_adjustment"
-                      }
-                    }
-                  }
+                  "path": "entryDate",
+                  "format": "date"
                 },
-                "bind": {
-                  "record": {
-                    "read": "accounting.entry",
-                    "variables": {
-                      "id": "$selected"
-                    }
+                {
+                  "term": {
+                    "key": "fact_kind"
+                  },
+                  "path": "kind",
+                  "format": "badge"
+                },
+                {
+                  "term": {
+                    "key": "fact_amount"
+                  },
+                  "path": "amountVnd",
+                  "format": "money"
+                },
+                {
+                  "term": {
+                    "key": "fact_note"
+                  },
+                  "path": "note",
+                  "format": "text"
+                },
+                {
+                  "term": {
+                    "key": "fact_source"
+                  },
+                  "path": "sourceEntity",
+                  "format": "text"
+                }
+              ],
+              "labels": {
+                "kind": {
+                  "income": {
+                    "key": "kind_income"
+                  },
+                  "expense": {
+                    "key": "kind_expense"
+                  },
+                  "invoice": {
+                    "key": "kind_invoice"
+                  },
+                  "reversal": {
+                    "key": "kind_reversal"
+                  },
+                  "adjustment": {
+                    "key": "kind_adjustment"
                   }
                 }
               },
-              {
-                "id": "lineage",
-                "block": "core.record-list",
-                "props": {
-                  "label": {
-                    "key": "lineage"
-                  },
-                  "empty": {
-                    "key": "lineage_empty"
-                  },
-                  "idPath": "id",
-                  "titlePath": "title",
-                  "descriptionPath": "detail",
-                  "badgePath": "kind",
-                  "labels": {
-                    "kind": {
-                      "income": {
-                        "key": "kind_income"
-                      },
-                      "expense": {
-                        "key": "kind_expense"
-                      },
-                      "invoice": {
-                        "key": "kind_invoice"
-                      },
-                      "reversal": {
-                        "key": "kind_reversal"
-                      },
-                      "adjustment": {
-                        "key": "kind_adjustment"
-                      }
-                    }
-                  }
+              "titlePath": "note",
+              "kind": {
+                "key": "entry_kind"
+              },
+              "closeParam": "selected",
+              "timeline": {
+                "title": {
+                  "key": "lineage"
                 },
-                "bind": {
-                  "rows": {
-                    "read": "accounting.entry",
-                    "path": "lineage",
-                    "variables": {
-                      "id": "$selected"
-                    }
-                  }
+                "listPath": "lineage",
+                "textPath": "title",
+                "notePath": "detail"
+              }
+            },
+            "bind": {
+              "record": {
+                "read": "accounting.entry",
+                "variables": {
+                  "id": "$selected"
                 }
               }
-            ]
+            }
           }
         ]
       }
