@@ -107,7 +107,7 @@
   "conversationDiscard": "Bỏ tin nhắn",
   "conversationComposerLabel": "Tin nhắn trả lời",
   "conversationComposerPlaceholder": "Nhập tin nhắn trả lời",
-  "conversationLocked": "Bạn không thể trả lời cuộc trò chuyện này lúc này.",
+  "conversationLocked": "Hãy tiếp quản hội thoại để tự trả lời.",
   "conversationTooLong": "Tin nhắn quá dài.",
   "conversationActionFailed": "Không thực hiện được. Hãy thử lại.",
   "blockListPane": "Ngăn danh sách",
@@ -140,5 +140,8 @@
   "runCallFailed": "Thất bại",
   "runStepApproval": "Xem yêu cầu duyệt",
   "runTimelineIdle": "Chọn một lần chạy để xem các bước",
+  "conversationContact": "Khách hàng",
+  "detailClose": "Đóng",
+  "conversationContactClose": "Đóng",
   "conversationProposalMore": "Thêm"
 }

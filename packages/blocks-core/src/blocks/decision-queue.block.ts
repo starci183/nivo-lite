@@ -46,6 +46,7 @@ const edit: EditSchema = z.object({
 
 const props: z.ZodObject<{
     surface: EnumSchema<(typeof QUEUE_SURFACES)[number]>
+    isHeadless: z.ZodOptional<z.ZodBoolean>
     commandSize: z.ZodOptional<EnumSchema<(typeof QUEUE_COMMAND_SIZES)[number]>>
     label: TextSchema
     emptyTitle: TextSchema
@@ -57,6 +58,7 @@ const props: z.ZodObject<{
     edit: z.ZodOptional<EditSchema>
 }> = z.object({
     surface: z.enum(QUEUE_SURFACES),
+    isHeadless: z.boolean().optional(),
     commandSize: z.enum(QUEUE_COMMAND_SIZES).optional(),
     label: specText,
     emptyTitle: specText,

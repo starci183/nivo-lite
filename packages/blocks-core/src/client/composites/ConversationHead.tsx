@@ -14,6 +14,16 @@ export interface ConversationHeadAction {
     readonly onPress: () => void
 }
 
+/** The control that shows or hides the contact pane beside the thread. */
+export interface ConversationContactToggle {
+    /** The accessible name of the control. */
+    readonly label: string
+    /** Whether the contact pane is shown now. */
+    readonly isOpen: boolean
+    /** Shows or hides the contact pane. */
+    readonly onToggle: () => void
+}
+
 /** The heading of the thread and the actions beside it. */
 interface ConversationHeadProps {
     /** The name of the pane, drawn as the heading when the thread has no record of its own. */
@@ -21,6 +31,8 @@ interface ConversationHeadProps {
     /** Who the thread is with; null draws the name of the pane. */
     readonly thread: ThreadHead | null
     readonly actions: ReadonlyArray<ConversationHeadAction>
+    /** The control of the contact pane; null when the thread has none. */
+    readonly contact: ConversationContactToggle | null
 }
 
 /** Who the thread is with: the avatar, the name and the line under it; the name of the pane when the thread has none. */
@@ -46,19 +58,23 @@ export const ConversationHead = (props: ConversationHeadProps): ReactNode => (
     <PaneSection align="center">
         <Cluster gap="row" wrap={false} justify="between">
             <HeadTitle label={props.label} thread={props.thread} />
-            {props.actions.length === 0 ? null : (
-                <Cluster gap="inline" wrap={false}>
+            {props.actions.length === 0 && props.contact === null ? null : (
+                <Cluster gap="inline" wrap={false} align="center">
                     {props.actions.map((action) => (
                         <Button
                             key={action.id}
-                            intent="neutral"
-                            size="sm"
+                            intent="alternative"
                             isPending={action.isRunning}
                             onPress={action.onPress}
                         >
                             {action.label}
                         </Button>
                     ))}
+                    {props.contact === null ? null : (
+                        <Button intent="neutral" aria-pressed={props.contact.isOpen} onPress={props.contact.onToggle}>
+                            {props.contact.label}
+                        </Button>
+                    )}
                 </Cluster>
             )}
         </Cluster>

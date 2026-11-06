@@ -1,10 +1,10 @@
 import { useState } from "react"
 import type { ReactNode } from "react"
-import { Badge, Button, Cluster, DropdownMenu, Stack, Text } from "@starci/grammar/common"
+import { Badge, Button, Cluster, DropdownMenu, Link, Quote, Stack, Text } from "@starci/grammar/common"
 import type { EditAnswer } from "../../rows/decision-commands"
 import type { FormValues } from "../../rows/form-values"
 import type { CommandView, DecisionRowView } from "../../views/views.types"
-import { TraceLine } from "../leaves/TraceLine"
+import { decisionLinesOf } from "../../rows/decision-lines"
 import { DecisionEditForm } from "./DecisionEditForm"
 import type { DecisionEditFormProps } from "./DecisionEditForm"
 
@@ -118,7 +118,7 @@ const RowActions = (props: RowActionsProps): ReactNode => {
     if (primary === null) return <WaitingFor row={row} />
     const edit = row.edit
     return (
-        <Cluster gap="inline">
+        <Cluster gap="inline" wrap={false}>
             <RowButton
                 command={primary}
                 fallback="alternative"
@@ -148,14 +148,32 @@ const RowActions = (props: RowActionsProps): ReactNode => {
     )
 }
 
+/** The commands of a row and the words of the link to why. */
+interface RowFootProps extends RowActionsProps {
+    readonly seeWhyLabel: string
+}
+
+/** The line under the commands: the commands, and the link to why the agent stopped when a decision is recorded. */
+const RowFoot = (props: RowFootProps): ReactNode => {
+    const whyHref = props.row.trace?.whyHref ?? null
+    return (
+        <Cluster gap="row" wrap={false} justify="between" align="center">
+            <RowActions {...props} />
+            {whyHref === null ? null : <Link href={whyHref}>{props.seeWhyLabel}</Link>}
+        </Cluster>
+    )
+}
+
 /**
- * One decision waiting for a person: the reason, the amount, the proposal, the trace and the expiry under the copy, then a named
- * command, a neutral edit and a menu for the rest. The named command is an alternative button, never a commit. With an edit form
- * declared by the spec, the edit control opens that form under the commands instead of running the edit command at once.
+ * One decision waiting for a person: what the agent stopped on under the copy (the reason, the amount as a neutral chip, the words
+ * proposed in a quote, the trace and the expiry, none of them repeating a line above), then a named command, a neutral edit and a
+ * menu for the rest, and the link to why. With an edit form declared by the spec, the edit control opens that form under the
+ * commands instead of running the edit command at once.
  */
 export const DecisionRow = (props: DecisionRowProps): ReactNode => {
     const row = props.row
     const edit = props.edit
+    const lines = decisionLinesOf(row)
     const [isEditing, setIsEditing] = useState(false)
     return (
         <Stack gap="identity">
@@ -168,27 +186,32 @@ export const DecisionRow = (props: DecisionRowProps): ReactNode => {
                     ))}
                 </Cluster>
             )}
-            {row.reason === null ? null : (
+            {lines.reason === null ? null : (
                 <Text size="sm" tone="muted">
-                    {row.reason}
+                    {lines.reason}
                 </Text>
             )}
             {row.amount === null ? null : (
-                <Text size="md" isStrong tabular>
-                    {row.amount}
+                <Cluster gap="inline">
+                    <Badge tone="neutral">{row.amount}</Badge>
+                </Cluster>
+            )}
+            {lines.proposal === null ? null : <Quote text={lines.proposal} />}
+            {lines.trace === null ? null : (
+                <Text size="xs" tone="muted">
+                    {lines.trace}
                 </Text>
             )}
-            <Text size="sm">{row.proposal}</Text>
-            {row.trace === null ? null : <TraceLine trace={row.trace} seeWhyLabel={props.seeWhyLabel} />}
             {row.expiry === null ? null : (
                 <Text size="xs" tone="muted">
                     {row.expiry}
                 </Text>
             )}
-            <RowActions
+            <RowFoot
                 row={row}
                 commandSize={props.commandSize}
                 moreLabel={props.moreLabel}
+                seeWhyLabel={props.seeWhyLabel}
                 onCommand={props.onCommand}
                 {...(edit === null ? {} : { onEdit: () => setIsEditing(true) })}
             />

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { Button, Cluster, Form, PaneSection, Text, Textarea } from "@starci/grammar/common"
+import { Button, Cluster, Form, PaneSection, Textarea } from "@starci/grammar/common"
 
 /** The words and state of the composer. */
 interface ConversationComposerProps {
@@ -23,15 +23,7 @@ interface ConversationComposerProps {
 
 /** The band under the thread: the reply field with its send control, or the reason the viewer cannot reply. */
 export const ConversationComposer = (props: ConversationComposerProps): ReactNode => {
-    if (props.lockedText !== null) {
-        return (
-            <PaneSection>
-                <Text size="sm" tone="muted">
-                    {props.lockedText}
-                </Text>
-            </PaneSection>
-        )
-    }
+    const isLocked = props.lockedText !== null
     return (
         <PaneSection>
             <Form
@@ -47,8 +39,9 @@ export const ConversationComposer = (props: ConversationComposerProps): ReactNod
                         name="message"
                         label={props.label}
                         isLabelHidden
-                        rows={2}
-                        placeholder={props.placeholder}
+                        rows={1}
+                        isDisabled={isLocked}
+                        placeholder={props.lockedText ?? props.placeholder}
                         value={props.draft}
                         maxLength={props.maxLength}
                         onValueChange={props.onDraft}
@@ -57,7 +50,12 @@ export const ConversationComposer = (props: ConversationComposerProps): ReactNod
                             if (props.canSend) props.onSend()
                         }}
                     />
-                    <Button type="submit" intent="commit" isPending={props.isSending} isDisabled={!props.canSend}>
+                    <Button
+                        type="submit"
+                        intent="commit"
+                        isPending={props.isSending}
+                        isDisabled={isLocked || !props.canSend}
+                    >
                         {props.sendLabel}
                     </Button>
                 </Cluster>

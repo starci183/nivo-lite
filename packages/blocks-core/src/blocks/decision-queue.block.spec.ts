@@ -45,6 +45,11 @@ describe("decisionQueueBlock", () => {
         expect(accepts({ ...QUEUE, commands: [{ ...COMMAND, id: "c".repeat(65) }] })).toBe(false)
     })
 
+    it("takes the flag that leaves the heading to the pane around the queue", () => {
+        expect(accepts({ ...QUEUE, isHeadless: true })).toBe(true)
+        expect(accepts({ ...QUEUE, isHeadless: "yes" })).toBe(false)
+    })
+
     it("takes the size of the commands and refuses another", () => {
         expect(accepts({ ...QUEUE, commandSize: "md" })).toBe(true)
         expect(accepts({ ...QUEUE, commandSize: "xl" })).toBe(false)

@@ -20,6 +20,8 @@ interface DecisionListWords {
 /** The decisions waiting for a person and where they stand. */
 interface DecisionListProps {
     readonly surface: DecisionListSurface
+    /** Whether the heading is left to the pane around the queue: the label then only names the list. */
+    readonly isHeadless: boolean
     /** How large the commands of the rows are. */
     readonly commandSize: "sm" | "md"
     readonly words: DecisionListWords
@@ -71,14 +73,24 @@ export const DecisionList = (props: DecisionListProps): ReactNode => {
     }
     return (
         <>
-            <Section
-                kind="list"
-                title={props.words.label}
-                headingLevel={3}
-                isLoading={props.isLoading}
-                items={rows}
-                empty={empty}
-            />
+            {props.isHeadless ? (
+                <Section
+                    kind="list"
+                    ariaLabel={props.words.label}
+                    isLoading={props.isLoading}
+                    items={rows}
+                    empty={empty}
+                />
+            ) : (
+                <Section
+                    kind="list"
+                    title={props.words.label}
+                    headingLevel={3}
+                    isLoading={props.isLoading}
+                    items={rows}
+                    empty={empty}
+                />
+            )}
             {more}
         </>
     )
