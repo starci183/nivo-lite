@@ -33,7 +33,6 @@ import { ProviderRegistryModule } from "@modules/domain/provider-registry"
 import { BillingModule, BILLING_MESSAGES } from "@modules/domain/billing"
 import { PaymentTransactionsModule } from "@modules/domain/payment-transactions"
 import { SepayTransactionsModule } from "@modules/domain/sepay-transactions"
-import { TransactionsModule } from "@modules/domain/transactions"
 import { BankFeedInboxModule } from "@modules/domain/bank-feed-inbox"
 import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { MetaInboxModule } from "@modules/domain/meta-inbox"
@@ -133,7 +132,6 @@ const domainModules = (tokenKey: Secret): Array<DynamicModule> => [
     WorkspacesModule.register({ isGlobal: true, allowFreeWorkspace: false }),
     PaymentOrdersModule.register({ isGlobal: true }),
     BankFeedInboxModule.register({ isGlobal: true }),
-    TransactionsModule.register({ isGlobal: true }),
     ChannelSetupModule.register({ isGlobal: true, zaloOauthBase: undefined, siteUrl: undefined, timeoutMs: 1000 }),
     ChannelConnectionsModule.register({ isGlobal: true }),
     ProviderRegistryModule.register({ isGlobal: true }),
