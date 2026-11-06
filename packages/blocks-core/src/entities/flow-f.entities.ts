@@ -11,6 +11,7 @@ import { conversationEntity } from "./chat/conversation.entity"
 import { messageEntity } from "./chat/message.entity"
 import { claimEntity } from "./payment/claim.entity"
 import { transactionEntity } from "./payment/transaction.entity"
+import { workspaceSettingsEntity } from "./workspace/settings.entity"
 import { leadEntity } from "./sales/lead.entity"
 import { orderEntity } from "./sales/order.entity"
 
@@ -29,4 +30,5 @@ export const FLOW_F_ENTITIES: ReadonlyArray<AnyEntityDefinition> = [
     agentRunEntity,
     agentRunStepEntity,
     agentNodeEffectEntity,
+    workspaceSettingsEntity,
 ]

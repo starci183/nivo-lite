@@ -336,6 +336,12 @@
         "records_sales_order_status_amount",
         "records_sales_order_status_recent"
       ]
+    },
+    {
+      "entity": "workspace.settings",
+      "partition": "records_workspace_settings",
+      "checks": ["records_workspace_settings_key_chk", "records_workspace_settings_time_zone_chk"],
+      "indexes": ["records_workspace_settings_key_id", "records_workspace_settings_workspace_key"]
     }
   ]
 }

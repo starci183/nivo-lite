@@ -22,7 +22,7 @@ import { holdsPermission } from "./door-permission.policy"
 import { DoorPortsService } from "./door-ports.service"
 import { servableModulesOf } from "./door-servable.policy"
 import { registryOf } from "./door-registry.policy"
-import { timeZoneOfWorkspace } from "./workspace-time-zone.policy"
+import { WorkspaceTimeZoneService } from "./workspace-time-zone.service"
 import { InjectWorkbenchDoorOptions } from "./workbench-door.decorators"
 import { WorkbenchDoorError, WorkbenchDoorErrorCode } from "./errors/workbench-door.error"
 import type { ActionAnswered, DoorAction, DoorAnswer, DoorCall, DoorRegistry } from "./workbench-door.contracts"
@@ -62,6 +62,7 @@ export class WorkbenchDoorService {
         private readonly rules: AuthorityRulesService,
         private readonly engine: EntityEngineService,
         private readonly ports: DoorPortsService,
+        private readonly zones: WorkspaceTimeZoneService,
     ) {
         this.registry = registryOf(servableModulesOf(options.modules, options.entities), options.entities)
     }
@@ -78,7 +79,7 @@ export class WorkbenchDoorService {
         const parsed = parsePayload(call.payload)
         if (!parsed.ok)
             throw new WorkbenchDoorError({ code: WorkbenchDoorErrorCode.PayloadInvalid, params: { issues: "." } })
-        const context = this.contextOf(call, caller)
+        const context = await this.contextOf(call, caller)
         const result = await this.engine.scoped(call.workspaceId, (tx) =>
             invokeRead(
                 read.definition,
@@ -130,7 +131,7 @@ export class WorkbenchDoorService {
      * a failure the door does not know propagates.
      */
     private async run(call: DoorCall, caller: Caller, action: DoorAction, input: unknown): Promise<ActionResult> {
-        const context = this.contextOf(call, caller)
+        const context = await this.contextOf(call, caller)
         const run = { workspaceId: call.workspaceId, name: action.id, dataKind: null }
         const answered: ActionAnswered = {}
         try {
@@ -166,12 +167,13 @@ export class WorkbenchDoorService {
         return holdsPermission(caller.role, caller.memberId, await this.grants.forAction(call.workspaceId, permission))
     }
 
-    private contextOf(call: DoorCall, caller: Caller): RunContext {
+    private async contextOf(call: DoorCall, caller: Caller): Promise<RunContext> {
         return {
             workspaceId: call.workspaceId,
             memberId: caller.memberId,
             now: this.clock.now(),
-            timeZone: timeZoneOfWorkspace(call.workspaceId),
+            timeZone: await this.zones.timeZoneOf(call.workspaceId),
+            locale: call.locale,
         }
     }
 

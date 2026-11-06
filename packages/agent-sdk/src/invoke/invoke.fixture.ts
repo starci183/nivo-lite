@@ -20,7 +20,7 @@ export const provider: PortProvider = {
     implementationOf: (port) => (port.id === counterPort.id ? { next: () => 7 } : unprovided(port)),
 }
 
-export const context: RunContext = { workspaceId: "w", memberId: null, now: new Date("2026-11-05T00:00:00Z"), timeZone: "Asia/Ho_Chi_Minh" }
+export const context: RunContext = { workspaceId: "w", memberId: null, now: new Date("2026-11-05T00:00:00Z"), timeZone: "Asia/Ho_Chi_Minh", locale: "vi" }
 export const jobContext: JobContext = { workspaceId: "w", attempt: 1, effectKey: (step) => `k:${step}` }
 
 const readBase = { dataKind: "demo", shape: "value", fields: ["n"], paths: {}, permission: "demo.read" } as const

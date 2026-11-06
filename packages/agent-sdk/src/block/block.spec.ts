@@ -70,7 +70,7 @@ interface Counter {
     readonly next: () => number
 }
 const COUNTER = definePort<Counter>("billing.counter")
-const CONTEXT = { workspaceId: "w1", memberId: null, now: new Date("2026-11-05T00:00:00Z"), timeZone: "Asia/Ho_Chi_Minh" } as const
+const CONTEXT = { workspaceId: "w1", memberId: null, now: new Date("2026-11-05T00:00:00Z"), timeZone: "Asia/Ho_Chi_Minh", locale: "vi" } as const
 const PROVIDER: PortProvider = { implementationOf: () => ({ next: () => 7 }) }
 
 describe("defineRead that runs", () => {

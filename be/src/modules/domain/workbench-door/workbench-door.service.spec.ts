@@ -31,6 +31,7 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { DoorPortsService } from "./door-ports.service"
+import { WorkspaceTimeZoneService } from "./workspace-time-zone.service"
 import type { DoorRun } from "./door-ports.service"
 import { WORKBENCH_DOOR_OPTIONS } from "./workbench-door.decorators"
 import { WorkbenchDoorErrorCode } from "./errors/workbench-door.error"
@@ -142,6 +143,7 @@ const build = async ({
     engine.scoped.mockImplementation((_workspace, work) => work(tx))
     const provider = mock<PortProvider>()
     const ports = mock<DoorPortsService>()
+    const zones = mock<WorkspaceTimeZoneService>({ timeZoneOf: jest.fn().mockResolvedValue("Asia/Ho_Chi_Minh") })
     ports.providerFor.mockReturnValue(provider)
     const catalog = mock<MessageCatalog>({
         get: jest.fn((key: string, _params: unknown, locale: string) => `${locale}:${key}`),
@@ -162,6 +164,7 @@ const build = async ({
             { provide: AuthorityRulesService, useValue: rules },
             { provide: EntityEngineService, useValue: engine },
             { provide: DoorPortsService, useValue: ports },
+            { provide: WorkspaceTimeZoneService, useValue: zones },
         ],
     }).compile()
     return {
@@ -179,7 +182,15 @@ const build = async ({
 
 const USER = "user-1"
 
-const callOf = (name: string, payload = "{}"): DoorCall => ({ workspaceId: WORKSPACE, name, payload })
+const RUN_CONTEXT = {
+    workspaceId: WORKSPACE,
+    memberId: "member-1",
+    now: new Date(NOW),
+    timeZone: "Asia/Ho_Chi_Minh",
+    locale: "vi",
+}
+
+const callOf = (name: string, payload = "{}"): DoorCall => ({ workspaceId: WORKSPACE, name, payload, locale: "vi" })
 
 /** The JSON text of an answer, read back. */
 const parsed = (answer: DoorAnswer): unknown => {
@@ -213,11 +224,7 @@ describe("WorkbenchDoorService.read", () => {
         const run: DoorRun | undefined = ports.providerFor.mock.calls[0]?.[0]
         expect(run).toMatchObject({ name: "sales.leads", dataKind: "lead" })
         await expect(run?.runIn((scoped) => Promise.resolve(scoped))).resolves.toBe(tx)
-        expect(read).toHaveBeenCalledWith(
-            provider,
-            { q: "an" },
-            { workspaceId: WORKSPACE, memberId: "member-1", now: new Date(NOW), timeZone: "Asia/Ho_Chi_Minh" },
-        )
+        expect(read).toHaveBeenCalledWith(provider, { q: "an" }, RUN_CONTEXT)
     })
 
     it("refuses a caller who is not a member before it looks at the name, the permission or the payload", async () => {
@@ -315,11 +322,7 @@ describe("WorkbenchDoorService.act", () => {
 
         expect(parsed(answer)).toEqual(ACTION_OK)
         expect(rules.ownerRuleFor).toHaveBeenCalledWith({ workspaceId: WORKSPACE }, "sales.move-stage")
-        expect(act).toHaveBeenCalledWith(
-            provider,
-            { id: "lead-1" },
-            { workspaceId: WORKSPACE, memberId: "member-1", now: new Date(NOW), timeZone: "Asia/Ho_Chi_Minh" },
-        )
+        expect(act).toHaveBeenCalledWith(provider, { id: "lead-1" }, RUN_CONTEXT)
         expect(engine.scoped).not.toHaveBeenCalled()
         const run: DoorRun | undefined = ports.providerFor.mock.calls[0]?.[0]
         expect(run).toMatchObject({ name: "sales.move-stage", dataKind: null })

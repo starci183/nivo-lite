@@ -50,7 +50,7 @@ export const LEADS: ListReadDefinition = listRead({
 export const LEAD_COUNTS: ReadDefinition = countsRead({ id: "sales.lead-counts", of: LEADS, by: "stage" })
 
 /** A request scope for a run. */
-export const CONTEXT: RunContext = { workspaceId: "w1", memberId: "m1", now: new Date("2026-11-05T00:00:00Z"), timeZone: "Asia/Ho_Chi_Minh" }
+export const CONTEXT: RunContext = { workspaceId: "w1", memberId: "m1", now: new Date("2026-11-05T00:00:00Z"), timeZone: "Asia/Ho_Chi_Minh", locale: "vi" }
 
 /** What a recording source saw. */
 export interface SourceCalls {
