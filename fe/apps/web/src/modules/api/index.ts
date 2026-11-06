@@ -278,6 +278,4 @@ export type { WorkspaceInvitesQuery, WorkspaceMembersQuery, WorkspaceShellQuery 
 export type { WorkspaceStaffQuery, WritePublicDocumentMutation } from "./graphql/__generated__/graphql"
 export type { ZaloConnectionPageQuery } from "./graphql/__generated__/graphql"
 export type { ZaloConnectionQuery } from "./graphql/__generated__/graphql"
-export { queryWorkbenchRead } from "./graphql/queries/workbench/query-workbench-read"
-export { mutateWorkbenchAction } from "./graphql/mutations/workbench/mutation-workbench-action"
 export type { ChatMessagesQuery, ChatRoomsQuery, ChatUnreadQuery } from "./graphql/__generated__/graphql"

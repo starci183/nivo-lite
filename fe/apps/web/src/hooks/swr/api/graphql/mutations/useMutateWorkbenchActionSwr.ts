@@ -5,7 +5,7 @@ import type { SWRMutationResponse } from "swr/mutation"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { answeredData } from "@/hooks/workspaceread"
 import { valueOfJsonText } from "@/modules/workbench-host"
-import { mutateWorkbenchAction } from "@/modules/api"
+import { mutateWorkbenchAction } from "@/modules/api/graphql/mutations/mutation-workbench-action"
 
 /** The SWR key of the generic workbench action mutation. */
 export const MUTATE_WORKBENCH_ACTION_SWR_KEY = "MUTATE_WORKBENCH_ACTION_SWR"

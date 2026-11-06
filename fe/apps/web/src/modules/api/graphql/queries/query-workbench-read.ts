@@ -1,7 +1,7 @@
 import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
 import type { ReadVariables } from "@nivo-lite/agent-sdk/block"
-import { createAuthApolloClient } from "../../clients"
-import type { GraphQLOperationContext } from "../../types"
+import { createAuthApolloClient } from "../clients"
+import type { GraphQLOperationContext } from "../types"
 
 /** What the generic read operation answers: the data of the named read, as JSON text. */
 interface WorkbenchReadData {
@@ -16,8 +16,8 @@ interface WorkbenchReadVariables {
 
 /**
  * The one generic read operation of the back end door: it runs any read of the module declarations by its name, under the viewer
- * rights. The document is hand-written and lives outside `queries/` on purpose: the codegen of the typed documents reads that
- * folder against the schema snapshot and would refuse an operation the snapshot does not hold yet.
+ * rights. The document is hand-written and typed here: the schema snapshot holds `workbenchRead`, so the codegen of the typed documents reads
+ * it with the other queries.
  */
 const query1: TypedDocumentNode<WorkbenchReadData, WorkbenchReadVariables> = gql`
     query WorkbenchRead($name: String!, $variables: String!) {
