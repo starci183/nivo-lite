@@ -68,7 +68,7 @@ export class CustomerDoorStepService implements OnModuleInit {
     private async turnOf(input: DoorInput, finalOwed: boolean): Promise<CustomerTurn | undefined> {
         const { wake } = input
         const ref = turnRefOf(wake.context)
-        const loaded = ref === null ? undefined : await this.chat.turnOf(ref)
+        const loaded = ref === null ? undefined : await this.chat.turnOf(wake.workspaceId, ref)
         return loaded === undefined
             ? undefined
             : { ...loaded, ...(finalOwed ? { finalOwed } : {}), origin: { turnId: wake.turnId, wakeId: wake.wakeId } }

@@ -25,7 +25,7 @@ export class QuotePerformerService implements WorkPerformer {
     /** The summary and the fields the owner reads; the amount comes from the proposal, never from a model. */
     async prepare(ctx: WorkContext, item: WorkItem): Promise<Prepared> {
         const lead = await this.leads.require(ctx.workspaceId, this.leadIdOf(item))
-        const contact = await this.delivery.contactOf(ctx.workspaceId, lead)
+        const contact = this.delivery.contactOf(lead)
         const amount = typeof item.proposal.amount_vnd === "number" ? item.proposal.amount_vnd : null
         const summary = this.kit.text(ctx, "quoteSummary", {
             name: lead.contact_name,

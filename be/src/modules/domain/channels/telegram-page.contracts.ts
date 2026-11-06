@@ -19,25 +19,3 @@ export interface TelegramPageView {
     /** The agents that use the connection. */
     readonly agentIds: ReadonlyArray<string>
 }
-
-/** The kinds of line the live panel lists. */
-export type TelegramEventKind = "user_message" | "agent_reply"
-
-/** What happened to the event. */
-export type TelegramEventOutcome = "received" | "sent" | "not_sent"
-
-/** One line of the live Telegram events panel; it carries no message text. */
-export interface TelegramPageEvent {
-    /** A stable id of the line. */
-    readonly id: string
-    /** The kind. */
-    readonly kind: TelegramEventKind
-    /** What happened to it. */
-    readonly outcome: TelegramEventOutcome
-    /** When, ISO 8601. */
-    readonly at: string
-    /** The customer's chat id with its middle hidden, or an empty text. */
-    readonly who: string
-    /** Why a reply was not sent, in the stable terms of the delivery path; null otherwise. */
-    readonly reason: string | null
-}

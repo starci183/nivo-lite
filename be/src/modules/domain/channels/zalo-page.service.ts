@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
-import { AgentMessagesFeedReadService } from "@modules/domain/agent-messages"
-import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
-import type { ConnectionConversation } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { zaloFailureOf } from "@modules/integrations/zalo"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -13,12 +11,10 @@ import { ChannelDeliveryService } from "./channel-delivery.service"
 import { InjectZaloInboxReads } from "./channels.decorators"
 import type { ZaloInboxReads } from "./channels.port"
 import type { LoadedZalo } from "./channels.contracts"
-import { CONVERSATIONS_MAX, EVENTS_MAX, messageRowsOf } from "./connection-events.policy"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
-import type { LastReplyRow, RecipientRow } from "./persistence/zalo-page.rows"
-import type { ZaloPageEvent, ZaloPageView, ZaloTestSendResult } from "./zalo-page.contracts"
-import { checksOf, eventsOf, maskTail, recipientsOf, sendBlockOf, tokenUsable, tokenViewOf } from "./zalo-page.policy"
+import type { ZaloPageView, ZaloTestSendResult } from "./zalo-page.contracts"
+import { checksOf, maskTail, recipientsOf, sendBlockOf, tokenUsable, tokenViewOf } from "./zalo-page.policy"
 import { ZALO_FREE_WINDOW_MS } from "./zalo-delivery.service"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 import { znsRenewalOf } from "./zns-renewal.policy"
@@ -40,7 +36,7 @@ const invalid = (field: string): never => {
 @Injectable()
 /**
  * The read model and the two actions of the page of one Zalo OA connection: the check list, the followers a test message can reach, the
- * live events, the re-check and the real test send. Every secret leaves masked to its last four characters; no token leaves at all.
+ * re-check and the real test send. Every secret leaves masked to its last four characters; no token leaves at all.
  */
 export class ZaloPageService {
     constructor(
@@ -50,35 +46,13 @@ export class ZaloPageService {
         private readonly credentials: ZaloCredentialsService,
         private readonly delivery: ChannelDeliveryService,
         @InjectZaloInboxReads() private readonly inboxReads: ZaloInboxReads,
-        private readonly conversations: AgentConversationsReadService,
-        private readonly feed: AgentMessagesFeedReadService,
+        private readonly conversations: ChatConversationsService,
     ) {}
 
     /** The page of a Zalo connection (owner or manager). */
     async view(actor: ConnectionActor, connectionId: string): Promise<ZaloPageView> {
         await this.connections.authorize(actor, MANAGER)
         return this.viewOf(actor, await this.zaloOf(actor, connectionId))
-    }
-
-    /** The live events of a Zalo connection, newest first (owner or manager). */
-    async events(actor: ConnectionActor, connectionId: string): Promise<ReadonlyArray<ZaloPageEvent>> {
-        await this.connections.authorize(actor, MANAGER)
-        const connection = await this.zaloOf(actor, connectionId)
-        const token = await this.tokenOf(connection)
-        const conversations = await this.conversations.onConnection(
-            actor.workspaceId,
-            connection.id,
-            ZALO_CHANNEL,
-            CONVERSATIONS_MAX,
-        )
-        const [feed, follows] = await Promise.all([
-            this.feed.recentIn(
-                conversations.map((conversation) => conversation.id),
-                EVENTS_MAX,
-            ),
-            this.inboxReads.followEvents(connection.id),
-        ])
-        return eventsOf(messageRowsOf(feed, conversations), follows, token.view)
     }
 
     /**
@@ -106,13 +80,7 @@ export class ZaloPageService {
         const connection = await this.zaloOf(actor, connectionId)
         const body = text.trim()
         if (body.length === 0 || body.length > TEXT_MAX) invalid("text")
-        const conversations = await this.conversations.onConnection(
-            actor.workspaceId,
-            connection.id,
-            ZALO_CHANNEL,
-            CONVERSATIONS_MAX,
-        )
-        const recipients = await this.recipientsOf(conversations)
+        const recipients = await this.recipientsOf(actor.workspaceId, connection.id)
         if (!recipients.some((one) => one.userId === recipientId)) invalid("recipientId")
         return this.delivery
             .sendToPerson({
@@ -140,16 +108,9 @@ export class ZaloPageService {
     private async viewOf(actor: ConnectionActor, connection: ConnectionRecord): Promise<ZaloPageView> {
         const loaded = await this.tokenOf(connection)
         const secret = loaded.secret
-        const conversations = await this.conversations.onConnection(
-            actor.workspaceId,
-            connection.id,
-            ZALO_CHANNEL,
-            CONVERSATIONS_MAX,
-        )
-        const [recipients, inbox, lastReply, agentIds] = await Promise.all([
-            this.recipientsOf(conversations),
+        const [recipients, inbox, agentIds] = await Promise.all([
+            this.recipientsOf(actor.workspaceId, connection.id),
             this.inboxReads.factsOf(connection.id),
-            this.lastReplyOf(conversations),
             this.connections.agentIds(actor.workspaceId, connection.id),
         ])
         const token = loaded.view
@@ -167,7 +128,7 @@ export class ZaloPageService {
             callbackUrl: this.credentials.callbackUrl(),
             webhookUrl: this.connections.webhookUrl(PROVIDER, connection.id),
             access: token,
-            checks: checksOf({ appSaved, oaSecretSaved, token, inbox, lastReply }),
+            checks: checksOf({ appSaved, oaSecretSaved, token, inbox }),
             recipients,
             sendBlock: sendBlockOf(token, recipients.length),
             agentIds,
@@ -175,38 +136,16 @@ export class ZaloPageService {
         }
     }
 
-    private async recipientsOf(conversations: ReadonlyArray<ConnectionConversation>) {
+    private async recipientsOf(workspaceId: string, connectionId: string) {
         const since = new Date(this.clock.now().getTime() - ZALO_FREE_WINDOW_MS)
-        const reachable = conversations.flatMap((conversation) =>
-            conversation.externalId === null
-                ? []
-                : [{ id: conversation.id, externalId: conversation.externalId, visitorName: conversation.visitorName }],
+        return recipientsOf(
+            await this.conversations.followersOn(workspaceId, {
+                channel: ZALO_CHANNEL,
+                connectionId,
+                since,
+                limit: RECIPIENTS_MAX,
+            }),
         )
-        const writes = await this.feed.lastWritesSince(
-            reachable.map((conversation) => conversation.id),
-            since,
-            RECIPIENTS_MAX,
-        )
-        const byId = new Map(reachable.map((conversation) => [conversation.id, conversation]))
-        const rows = writes.flatMap((write): Array<RecipientRow> => {
-            const conversation = byId.get(write.conversationId)
-            return conversation === undefined
-                ? []
-                : [
-                      {
-                          external_id: conversation.externalId,
-                          visitor_name: conversation.visitorName,
-                          last_at: write.lastAt,
-                      },
-                  ]
-        })
-        return recipientsOf(rows)
-    }
-
-    /** The verdict of the newest agent reply on the connection whose delivery was tried, or null. */
-    private async lastReplyOf(conversations: ReadonlyArray<ConnectionConversation>): Promise<LastReplyRow | null> {
-        const reply = await this.feed.lastDeliveredReplyIn(conversations.map((conversation) => conversation.id))
-        return reply === null ? null : { delivery_status: reply.deliveryStatus, delivery_error: reply.deliveryError }
     }
 
     private async tokenOf(connection: ConnectionRecord) {

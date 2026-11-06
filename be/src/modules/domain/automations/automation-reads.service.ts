@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AgentConversationsAutomationReadService } from "@modules/domain/agent-conversations"
-import { AgentMessagesAutomationReadService } from "@modules/domain/agent-messages"
+import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
+import type { ChatHumanConversation } from "@modules/domain/chat-records"
 import { ContractsReadService } from "@modules/domain/contracts"
 import type { ContractFacts } from "@modules/domain/contracts"
 import { EventsActivityReadService } from "@modules/domain/events"
@@ -31,6 +31,14 @@ const CONTRACTS_SCANNED = 100
 /** The most decisions the day report lists as waiting. */
 const WAITING_LISTED = 50
 
+/** The columns of a conversation an executor reads. */
+const conversationReadOf = (conversation: ChatHumanConversation): ConversationRead => ({
+    id: conversation.id,
+    channel: conversation.channel,
+    handled_by: conversation.handledBy,
+    lead_id: conversation.leadId,
+})
+
 @Injectable()
 /**
  * The reads an automation makes of what other capabilities own (leads, conversations, events, orders, invoices, contracts, work
@@ -40,8 +48,8 @@ export class AutomationReadsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly leads: LeadAutomationReadService,
-        private readonly conversations: AgentConversationsAutomationReadService,
-        private readonly messages: AgentMessagesAutomationReadService,
+        private readonly conversations: ChatConversationsService,
+        private readonly messages: ChatMessagesService,
         private readonly events: EventsActivityReadService,
         private readonly orders: OrdersAutomationReadService,
         private readonly invoices: InvoicesAutomationReadService,
@@ -55,13 +63,15 @@ export class AutomationReadsService {
     }
 
     /** One conversation of a workspace. */
-    conversation(workspaceId: string, conversationId: string): Promise<ConversationRead | undefined> {
-        return this.conversations.conversation(workspaceId, conversationId)
+    async conversation(workspaceId: string, conversationId: string): Promise<ConversationRead | undefined> {
+        const found = await this.conversations.humanOf(workspaceId, conversationId)
+        return found === null ? undefined : conversationReadOf(found)
     }
 
     /** The latest real conversation of a lead (website chat, Telegram...): where a message to the customer leaves. */
-    latestConversation(workspaceId: string, leadId: string): Promise<ConversationRead | undefined> {
-        return this.conversations.latestOfLead(workspaceId, leadId)
+    async latestConversation(workspaceId: string, leadId: string): Promise<ConversationRead | undefined> {
+        const [latest] = await this.conversations.ofLeads(workspaceId, [leadId])
+        return latest === undefined ? undefined : conversationReadOf(latest)
     }
 
     /** The leads created after an instant, newest first. */
@@ -70,8 +80,12 @@ export class AutomationReadsService {
     }
 
     /** The leads, among some, that have a real conversation; bounded by the ids. */
-    leadsWithChat(workspaceId: string, leadIds: ReadonlyArray<string>): Promise<Array<{ lead_id: string }>> {
-        return this.conversations.leadsWithChat(workspaceId, leadIds)
+    async leadsWithChat(workspaceId: string, leadIds: ReadonlyArray<string>): Promise<Array<{ lead_id: string }>> {
+        const found = await this.conversations.ofLeads(workspaceId, leadIds)
+        const ids = new Set(
+            found.flatMap((conversation) => (conversation.leadId === null ? [] : [conversation.leadId])),
+        )
+        return [...ids].map((lead_id) => ({ lead_id }))
     }
 
     /** The instant of the last event of each lead; bounded by the ids. */
@@ -120,8 +134,9 @@ export class AutomationReadsService {
     }
 
     /** When the customer last wrote in a conversation, the start of the 48-hour window of Zalo. */
-    lastCustomerMessage(conversationId: string): Promise<LastCustomerMessage | undefined> {
-        return this.messages.lastCustomerMessage(conversationId)
+    async lastCustomerMessage(workspaceId: string, conversationId: string): Promise<LastCustomerMessage | undefined> {
+        const last = await this.messages.lastCustomerAt(workspaceId, conversationId)
+        return last.kind === "ok" ? { created_at: last.value } : undefined
     }
 
     /** The active contracts ending between two days, soonest first; bounded. */

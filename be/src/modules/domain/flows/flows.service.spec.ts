@@ -46,16 +46,13 @@ describe("FlowsService", () => {
             },
         )
 
-        it.each(["decide", "hold", "take_over", "send_as_human", "owner_chat"] as const)(
-            "asks only for a member before %s",
-            async (kind) => {
-                const { flows, members } = await build()
+        it.each(["decide", "hold", "owner_chat"] as const)("asks only for a member before %s", async (kind) => {
+            const { flows, members } = await build()
 
-                await flows.run("user-1", "ws-1", { kind, payload: {} })
+            await flows.run("user-1", "ws-1", { kind, payload: {} })
 
-                expect(members.require).toHaveBeenCalledWith("user-1", "ws-1", [])
-            },
-        )
+            expect(members.require).toHaveBeenCalledWith("user-1", "ws-1", [])
+        })
 
         it("does not reach the engine for a stranger", async () => {
             const { flows, members, gate } = await build()

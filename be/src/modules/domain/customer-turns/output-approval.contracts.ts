@@ -11,10 +11,10 @@ export interface OutputApprovalWait {
     readonly scope: OutputScope
 }
 
-/** An approval request, with its durable run wait when it came from the core road. */
+/** An approval request, with its durable run wait when a run asked for it. */
 export interface OutputApprovalRequest {
     /** The work that the policy gate puts before a person. */
     readonly spec: WorkSpec
-    /** The run waiting on the item, or null on the legacy road. */
+    /** The run waiting on the item, or null when none did. */
     readonly wait: OutputApprovalWait | null
 }

@@ -11,7 +11,7 @@ import { ProviderToolsService } from "./provider-tools.service"
 /** The SePay connector with its status tool: the two bank tools unchanged, and `status` beside them. */
 export const SEPAY_STATUS_MANIFEST: NativeConnectorManifest = {
     ...SEPAY_MANIFEST,
-    tools: [...SEPAY_MANIFEST.tools, ...providerTools("SePay", false)],
+    tools: [...SEPAY_MANIFEST.tools, ...providerTools("SePay")],
 }
 
 /** A bank connection as `status` answers it: the account as SePay reported it masked, never a number in clear. */
@@ -23,7 +23,7 @@ const lineOf = (connection: ConnectionStatusFacts): GatewayJson => ({
     needsAttention: needsAttention(connection.status, connection.lastError),
 })
 
-const ROUTE: ProviderRoute = { provider: "sepay", channel: null, line: lineOf }
+const ROUTE: ProviderRoute = { provider: "sepay", line: lineOf }
 
 @Injectable()
 /**

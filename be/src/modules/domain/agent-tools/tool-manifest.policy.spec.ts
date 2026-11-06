@@ -37,7 +37,6 @@ describe("tool manifest policy", () => {
             "memory.read",
             "lead.create_or_update",
             "approval.request",
-            "handoff.to_person",
             "conversation.handOff",
             "tool.search",
             "tool.describe",
@@ -51,7 +50,7 @@ describe("tool manifest policy", () => {
 
     it("knows a manifest name and refuses any other text", async () => {
         const subject = await build()
-        expect(subject.isToolName("handoff.to_person")).toBe(true)
+        expect(subject.isToolName("approval.request")).toBe(true)
         expect(subject.isToolName("shell.exec")).toBe(false)
     })
 

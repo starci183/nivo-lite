@@ -52,7 +52,6 @@ const identity: RenewalIdentity = {
     careAgentId: world.id(),
     connectionId: world.id(),
     leadId: world.id(),
-    conversationId: world.id(),
     contractId: world.id(),
     pipelineId: world.id(),
 }

@@ -6,13 +6,13 @@ import { providerTools } from "./provider-tools.policy"
 import type { ProviderRoute } from "./provider-tools.service"
 import { ProviderToolsService } from "./provider-tools.service"
 
-/** The Zalo OA native connector: the official accounts of the workspace and their latest messages, for internal use. */
+/** The Zalo OA native connector: the official accounts of the workspace, for internal use. */
 export const ZALO_MANIFEST: NativeConnectorManifest = {
     key: "zalo",
     name: "Zalo OA",
     kind: "native",
     contractVersion: "zalo-native@1",
-    tools: providerTools("Zalo OA", true),
+    tools: providerTools("Zalo OA"),
 }
 
 /** An official account as `status` answers it: its id, never its tokens. */
@@ -24,10 +24,10 @@ const lineOf = (connection: ConnectionStatusFacts): GatewayJson => ({
     needsAttention: needsAttention(connection.status, connection.lastError),
 })
 
-const ROUTE: ProviderRoute = { provider: "zalo_oa", channel: "zalo", line: lineOf }
+const ROUTE: ProviderRoute = { provider: "zalo_oa", line: lineOf }
 
 @Injectable()
-/** Runs the Zalo OA tools: `status` and `events`, read through the connections and the message feed of the workspace. */
+/** Runs the Zalo OA tool `status`, read through the connections of the workspace. */
 export class ZaloNativeService implements NativeAdapter {
     readonly manifest: NativeConnectorManifest = ZALO_MANIFEST
 

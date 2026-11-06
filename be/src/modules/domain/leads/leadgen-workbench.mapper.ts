@@ -9,16 +9,19 @@ import type {
     LeadGenWorkItemRecord,
     LeadOrigin,
 } from "./leadgen-workbench.contracts"
-import { conversationFacts, median, vnDayStart } from "./leadgen-conversations.mapper"
 import { clip, firstText, leadOriginOf, platformOf, scoreFromFields, text } from "./leadgen-origin.policy"
 
 const DAY_MS = 86_400_000
+const VN_OFFSET_MS = 7 * 3_600_000
 const CONVERSION_WINDOW_DAYS = 90
 const OPEN_STAGES: ReadonlySet<string> = new Set(["new", "qualified", "proposal"])
 const MAX_LEAD_ROWS = 100
 const fieldsOf = (item: Pick<LeadGenWorkItemRecord, "proposal">): Record<string, unknown> => item.proposal?.fields ?? {}
 
-/** The oldest instant used to measure lead conversion and replies. */
+/** Midnight of the reporting day in the workspace time zone. */
+export const vnDayStart = (now: number): number => Math.floor((now + VN_OFFSET_MS) / DAY_MS) * DAY_MS - VN_OFFSET_MS
+
+/** The oldest instant used to measure lead conversion. */
 export const conversionSinceIso = (nowMs: number): string =>
     new Date(nowMs - CONVERSION_WINDOW_DAYS * DAY_MS).toISOString()
 
@@ -122,21 +125,18 @@ export const buildLeadGenWorkbench = (rows: LeadGenWorkbenchInput): LeadGenWorkb
                     scoring.has(lead.id) ||
                     platformOf(lead.channel) !== "other"),
         )
-    const facts = conversationFacts(rows)
-
     const leadRows: Array<LeadGenLead> = leads.map((lead) => {
         const captured = capture.get(lead.id)
         const fields = captured ? fieldsOf(captured) : {}
         const scored = scoring.get(lead.id)
-        const last = facts.last.get(lead.id)
         return {
             id: lead.id,
             name: lead.contact_name,
             stage: lead.stage,
             score: (scored ? scoreFromFields(fieldsOf(scored)) : null) ?? scoreFromFields(fields),
             origin: leadOriginOf(fields, text(fields.channel_label), lead.channel),
-            lastText: last?.text ?? clip(lead.need),
-            lastAt: last?.at ?? lead.created_at,
+            lastText: clip(lead.need),
+            lastAt: lead.created_at,
             createdAt: lead.created_at,
             href: `/leads/${lead.id}`,
         }
@@ -151,15 +151,14 @@ export const buildLeadGenWorkbench = (rows: LeadGenWorkbenchInput): LeadGenWorkb
     const since = conversionSinceIso(nowMs)
     const dayStart = new Date(vnDayStart(nowMs)).toISOString()
     const inWindow = leads.filter((lead) => lead.created_at >= since)
-    const p50 = median(facts.replyMinutes)
     return {
         metrics: {
             newToday: leads.filter((lead) => lead.created_at >= dayStart).length,
             hotWaiting: leadRows.filter(
                 (row) => row.score === "hot" && OPEN_STAGES.has(row.stage) && classify.get(row.id)?.status !== "done",
             ).length,
-            firstReplyP50Min: p50 === null ? null : Math.round(p50 * 10) / 10,
-            firstReplySample: facts.replyMinutes.length,
+            firstReplyP50Min: null,
+            firstReplySample: 0,
             conversionWindowDays: CONVERSION_WINDOW_DAYS,
             conversionLeads: inWindow.length,
             conversionWon: inWindow.filter((lead) => lead.stage === "won").length,

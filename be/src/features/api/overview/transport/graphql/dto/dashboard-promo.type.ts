@@ -26,7 +26,7 @@ export class DashboardPromoType {
     @Field()
     hasCustomerConversation!: boolean
 
-    /** Whether a conversation is tied to a lead. */
+    /** Whether the workspace has captured a lead. */
     @Field()
     hasLeadConversation!: boolean
 

@@ -3,17 +3,17 @@ import { ConnectionsModule } from "@modules/domain/connections"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { DataRecordsReadService } from "@modules/domain/data-records"
 import { Injectable, Module } from "@nestjs/common"
-import { mock } from "@starci/jest-preset"
 import type { DynamicModule } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ApiKeysService } from "@modules/domain/api-keys"
-import { AgentConversationsReadService, AgentConversationsService } from "@modules/domain/agent-conversations"
-import { AgentsModule, AgentsService } from "@modules/domain/agents"
+import { AGENTS_INSTALLATIONS, AgentsModule, AgentsService } from "@modules/domain/agents"
 import { AuthorityService } from "@modules/domain/authority"
 import { AuthorityActionsModule } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
+import { ChatRecordsModule } from "@modules/domain/chat-records"
 import { DurableWorkService, EvidenceService, WorkEngineService } from "@modules/domain/decisions"
 import type { InboundEventStatus, LeadGenFlow, OutboundAccessGate } from "@modules/domain/decisions"
+import { EntityEngineModule, ReadOnlyEngineAlertsService } from "@modules/domain/entity-engine"
 import { EventsModule } from "@modules/domain/events"
 import { ExecutionsModule } from "@modules/domain/executions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
@@ -33,6 +33,8 @@ import { Secret } from "@modules/platform/config"
 import { EVENT_BUS } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
 import { WebhookEventsService } from "@modules/domain/webhook-connections"
+import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
+import { MODULE_JOBS } from "@nivo-lite/blocks-core/modules"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { InstallationOperationsService, InstallationRecordsService } from "@modules/domain/module-installations"
@@ -64,9 +66,9 @@ import { WORK_PERFORMER_REGISTRY } from "../../modules/domain/decisions/work-per
 import { WorkPerformersService } from "../../modules/domain/decisions/work-performers.service"
 import { WorkRecorderService } from "../../modules/domain/decisions/work-recorder.service"
 import { HandoffLeadPerformerService } from "../../modules/domain/work-performers/handoff-lead-performer.service"
-import { LeadHandoverService } from "../../modules/domain/work-performers/lead-handover.service"
 import { PerformerKitService } from "../../modules/domain/work-performers/performer-kit.service"
 import { queueOptions } from "./test-capabilities.options"
+import { QUIET_INSTALLATIONS } from "./quiet-peers.options"
 import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
 
 @Injectable()
@@ -170,8 +172,6 @@ class PublicApiProofPeersModule {
     static register(): DynamicModule {
         const services = [
             ApiKeysService,
-            AgentConversationsService,
-            AgentConversationsReadService,
             ApiKnowledgeSourcesService,
             ContractsService,
             ContractLinkService,
@@ -213,11 +213,8 @@ class PublicApiProofPeersModule {
             imports: [KnowledgeQueueModule.register({})],
             providers: [
                 ...services,
-                // No sales agent is bound in these proofs, so a handover moves nothing.
-                {
-                    provide: LeadHandoverService,
-                    useFactory: () => mock<LeadHandoverService>({ toSales: jest.fn().mockResolvedValue(false) }),
-                },
+                // No proof installs a module, so no agent has an installation.
+                QUIET_INSTALLATIONS,
                 { provide: KNOWLEDGE_STORAGE, useClass: PublicApiProofStorage },
                 { provide: RESPONSIBILITY_LEAD_DESK, useClass: PublicApiProofLeadDesk },
                 { provide: AGENT_DIRECTORY, useExisting: PublicApiProofDirectory },
@@ -237,7 +234,7 @@ class PublicApiProofPeersModule {
                     useFactory: (): Pick<WebhookEventsService, "publish"> => ({ publish: () => Promise.resolve() }),
                 },
             ],
-            exports: [...services, RESPONSIBILITY_LEAD_DESK],
+            exports: [...services, RESPONSIBILITY_LEAD_DESK, AGENTS_INSTALLATIONS],
         }
     }
 }
@@ -259,6 +256,14 @@ export const publicApiProofModules = (options: QueueOptions): Array<DynamicModul
     EventsModule.register({ isGlobal: true }),
     AuthorityActionsModule.register({ isGlobal: true }),
     AgentsModule.register({ isGlobal: true, directoryOnly: true }),
+    EntityEngineModule.register({
+        isGlobal: true,
+        alerts: ReadOnlyEngineAlertsService,
+        entities: FLOW_F_ENTITIES,
+        jobs: MODULE_JOBS,
+        cursorKey: PUBLIC_API_PROOF_TOKEN_KEY,
+    }),
+    ChatRecordsModule.register({ isGlobal: true }),
     ConnectionSecretsModule.register({ isGlobal: true, tokenKey: PUBLIC_API_PROOF_TOKEN_KEY }),
     ConnectionsModule.register({
         isGlobal: true,

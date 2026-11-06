@@ -17,6 +17,7 @@ type MessageFields = {
     readonly deliveryStatus: FieldDef<"enum", true>
     readonly deliveryError: FieldDef<"text", true>
     readonly channelRef: FieldDef<"text", true>
+    readonly inReplyTo: FieldDef<"uuid", true>
 }
 
 const messageFields: MessageFields = {
@@ -30,6 +31,7 @@ const messageFields: MessageFields = {
     deliveryStatus: field.enum({ of: ["sent", "failed"], nullable: true }),
     deliveryError: field.text({ maxLength: MAX_DELIVERY_ERROR, nullable: true }),
     channelRef: field.text({ maxLength: MAX_ID, nullable: true }),
+    inReplyTo: field.uuid({ nullable: true }),
 }
 
 /** One message of a conversation. Graph node kind `message`. */
@@ -38,7 +40,12 @@ export const messageEntity: EntityDefinition<MessageFields> = defineEntity({
     dataKind: "message",
     fields: messageFields,
     relations: { conversation: { kind: "toOne", target: "chat.conversation", required: true, onDelete: "cascade" } },
-    indexes: [{ name: "conversation_sent", on: ["conversationId", { desc: "sentAt" }, { desc: "id" }] }],
+    indexes: [
+        { name: "conversation_sent", on: ["conversationId", { desc: "sentAt" }, { desc: "id" }] },
+        { name: "channel_ref", on: ["channelRef", "id"] },
+        { name: "reply_of", on: ["conversationId", "inReplyTo", { desc: "sentAt" }, { desc: "id" }] },
+        { name: "role_recent", on: ["role", { desc: "sentAt" }, { desc: "id" }] },
+    ],
     constraints: [
         {
             kind: "unique",
@@ -46,6 +53,19 @@ export const messageEntity: EntityDefinition<MessageFields> = defineEntity({
             on: ["channelRef"],
             where: { op: "notNull", field: "channelRef" },
             refusal: "message-already-stored",
+        },
+        {
+            kind: "unique",
+            name: "reply_once_key",
+            on: ["conversationId", "inReplyTo"],
+            where: {
+                op: "and",
+                of: [
+                    { op: "eq", field: "role", value: "agent" },
+                    { op: "notNull", field: "inReplyTo" },
+                ],
+            },
+            refusal: "reply-exists",
         },
     ],
 })

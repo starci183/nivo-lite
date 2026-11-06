@@ -37,9 +37,3 @@ export const emailMasked = (email: string | null): string => {
  */
 export const needsAttention = (status: string, lastError: string | null): boolean =>
     status !== "connected" || (lastError !== null && lastError.trim() !== "")
-
-/** The instant a database words in text, as ISO 8601; empty when the text is not an instant. */
-export const isoTextOf = (text: string): string => {
-    const at = new Date(text)
-    return Number.isNaN(at.getTime()) ? "" : at.toISOString()
-}

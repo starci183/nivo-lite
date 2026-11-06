@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { AgentWorkSettingsService } from "@modules/domain/agent-work"
+import { ChatConversationsService, ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { backboneInboundOf } from "../../world/backbone-inbound.service"
 import { useTestWorld } from "../../world/use-test-world"
@@ -244,6 +245,31 @@ describe("backbone/tags-and-images: authority remains with actual contracts", ()
     })
 })
 
+describe("backbone/chat: the customer conversation is a record of its workspace", () => {
+    it("is read and answered inside its own workspace scope and found by no other workspace", async () => {
+        const conversations = world.resolve(ChatConversationsService)
+        const messages = world.resolve(ChatMessagesService)
+        const { workspaceId, conversationId, messageId } = inbound.who
+
+        await expect(conversations.targetOf(workspaceId, conversationId)).resolves.toMatchObject({
+            kind: "ok",
+            value: { id: conversationId, channel: "website", workspaceId },
+        })
+        await expect(messages.find(workspaceId, conversationId, messageId)).resolves.toMatchObject({
+            kind: "ok",
+            value: { id: messageId, role: "user", body: INBOUND_QUESTION },
+        })
+        await expect(conversations.targetOf(world.id(), conversationId)).resolves.toEqual({
+            kind: "refused",
+            code: ChatRecordsErrorCode.NotFound,
+        })
+        await expect(messages.find(world.id(), conversationId, messageId)).resolves.toEqual({
+            kind: "refused",
+            code: ChatRecordsErrorCode.NotFound,
+        })
+    })
+})
+
 describe("backbone/runtime: keyless runtime and kill switch", () => {
     it("runtime down on arrival stores an honest holding reply once for the real customer message", async () => {
         const event = inbound.eventOf("runtime-down", {
@@ -266,7 +292,7 @@ describe("backbone/runtime: keyless runtime and kill switch", () => {
         const replies = await inbound.replies()
         expect(replies).toHaveLength(1)
         expect(replies[0]?.body).toBe(INBOUND_HOLDING_REPLY)
-        expect(replies[0]?.inReplyTo).toBe(inbound.who.messageId)
+        expect(await inbound.replyTo(inbound.who.messageId)).toBe(true)
         const requests = await inbound.items()
         expect(requests).toHaveLength(1)
         expect(requests[0]).toMatchObject({

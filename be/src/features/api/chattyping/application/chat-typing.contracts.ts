@@ -4,7 +4,7 @@ import type { ChatTarget } from "@modules/domain/chat-markers"
 export interface ChatTypingRequest {
     /** The selected workspace; the domain proves active membership. */
     readonly workspaceId: string
-    /** One room or conversation. */
+    /** One room. */
     readonly target: ChatTarget
 }
 

@@ -304,7 +304,6 @@ export type BuildWiringProofResultOptionsShape = {
     workspaces: BuildWiringProofResultOptionsWorkspacesShape
     workspaceInvites: BuildWiringProofResultOptionsWorkspaceInvitesShape
     billing: BuildWiringProofResultOptionsBillingShape
-    chatFilesImportRoot: string
     connectionPoll: BuildWiringProofResultOptionsConnectionPollShape
     redis: BuildWiringProofResultOptionsRedisShape
     openclaw: BuildWiringProofResultOptionsOpenclawShape

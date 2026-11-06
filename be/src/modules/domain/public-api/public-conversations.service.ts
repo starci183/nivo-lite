@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
-import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 
 /** A customer conversation of a workspace as the public API reads it. */
 export interface PublicConversationRef {
@@ -11,27 +10,19 @@ export interface PublicConversationRef {
 }
 
 @Injectable()
-/** The customer conversations the public API reads, through the manager of the caller's transaction. */
+/** The customer conversations the public API reads, as the chat records hold them. */
 export class PublicConversationsService {
-    constructor(private readonly chats: AgentConversationsReadService) {}
+    constructor(private readonly chats: ChatConversationsService) {}
 
     /** A customer conversation of the workspace by id; another workspace's is not found. */
-    async find(
-        workspaceId: string,
-        conversationId: string,
-        manager: EntityManager,
-    ): Promise<PublicConversationRef | undefined> {
-        const chat = await this.chats.customerChat(workspaceId, conversationId, manager)
+    async find(workspaceId: string, conversationId: string): Promise<PublicConversationRef | undefined> {
+        const chat = await this.chats.humanOf(workspaceId, conversationId)
         return chat === null ? undefined : { id: chat.id, lead_id: chat.leadId }
     }
 
     /** The latest customer conversation of a customer. */
-    async ofLead(
-        workspaceId: string,
-        leadId: string,
-        manager: EntityManager,
-    ): Promise<PublicConversationRef | undefined> {
-        const chat = await this.chats.latestCustomerChatOfLead(workspaceId, leadId, manager)
-        return chat === null ? undefined : { id: chat.id, lead_id: chat.leadId }
+    async ofLead(workspaceId: string, leadId: string): Promise<PublicConversationRef | undefined> {
+        const [chat] = await this.chats.ofLeads(workspaceId, [leadId])
+        return chat === undefined ? undefined : { id: chat.id, lead_id: chat.leadId }
     }
 }

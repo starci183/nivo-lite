@@ -46,7 +46,7 @@ export class CarePerformerService implements WorkPerformer {
     /** One model call: the thank-you, written from the item, the invoice and the amount that was paid; the template when it fails. */
     async prepare(ctx: WorkContext, item: WorkItem): Promise<Prepared> {
         const lead = await this.leads.require(ctx.workspaceId, this.leadIdOf(item))
-        const contact = await this.delivery.contactOf(ctx.workspaceId, lead)
+        const contact = this.delivery.contactOf(lead)
         const base = item.proposal.fields
         const note = await this.paymentNote(ctx, item, textOf(base.invoice_id))
         const summary = this.kit.text(ctx, "careSummary", { name: lead.contact_name })

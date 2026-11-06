@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import { WorkEngineService, formatVnd } from "@modules/domain/decisions"
 import type { WorkContext, WorkItem } from "@modules/domain/decisions"
@@ -24,7 +24,7 @@ export class TurnPurchasesService {
         private readonly engine: WorkEngineService,
         private readonly inbound: InboundEventsService,
         private readonly orders: OrdersService,
-        private readonly conversations: AgentConversationsService,
+        private readonly conversations: ChatConversationsService,
         private readonly claims: PaymentClaimsService,
     ) {}
 

@@ -84,7 +84,8 @@ export class ReplyCommentPublicPerformerService implements WorkPerformer, OnModu
                 draft,
             )
             if (outcome === null) throw new LeadFlowsError({ code: LeadFlowsErrorCode.NoPage })
-            if (line !== null) await this.kit.transcript.markDelivery(line.id, outcome.ok, outcome.failure)
+            if (line !== null)
+                await this.kit.transcript.markDelivery(ctx.workspaceId, line.id, outcome.ok, outcome.failure)
             if (!outcome.ok) throw this.kit.metaRefused(outcome.failure)
         }
         return this.kit.done(

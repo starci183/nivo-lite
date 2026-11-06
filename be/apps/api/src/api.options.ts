@@ -5,7 +5,6 @@ import { ApprovalRequesterService, ModuleApprovalGateService, ModulePerformersSe
 import {
     BookingToolsService,
     ConversationLeadsService,
-    HandoffToolService,
     InboundStatusService,
     LeadWriterService,
     OutboundAccessService,
@@ -60,8 +59,6 @@ interface AgentToolsPorts {
     readonly bookingTools: typeof BookingToolsService
     /** The approvalRequester port. */
     readonly approvalRequester: typeof ApprovalRequesterService
-    /** The handoffTool port. */
-    readonly handoffTool: typeof HandoffToolService
     /** The conversationLeads port. */
     readonly conversationLeads: typeof ConversationLeadsService
     /** The gatewayTools port. */
@@ -78,7 +75,6 @@ export const AGENT_TOOLS_PORTS: AgentToolsPorts = {
     leadWriter: LeadWriterService,
     bookingTools: BookingToolsService,
     approvalRequester: ApprovalRequesterService,
-    handoffTool: HandoffToolService,
     conversationLeads: ConversationLeadsService,
     gatewayTools: TurnGatewayToolsService,
     agentHandoff: TurnHandoffService,

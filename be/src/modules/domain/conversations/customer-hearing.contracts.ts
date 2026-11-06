@@ -1,4 +1,3 @@
-import type { DownloadedChatFile } from "@modules/domain/chat-files"
 import type { FrontAgent } from "./conversations.contracts"
 
 /** Where a customer was met, and who answers them. */
@@ -23,8 +22,6 @@ export interface Hearing extends Meeting {
     readonly text: string
     /** The channel's own id of the message, the key that stores it once in its conversation. */
     readonly channelEventId: string
-    /** The pictures and files that came with the message, already read. */
-    readonly files?: ReadonlyArray<DownloadedChatFile>
     /** When the channel says the customer sent it, in epoch milliseconds; absent or null stores it at the time it arrived. */
     readonly sentAt?: number | null
 }

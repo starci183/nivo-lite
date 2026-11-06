@@ -42,24 +42,21 @@ const routeOf = (tools: jest.Mocked<ProviderToolsService>): ProviderRoute => {
 }
 
 describe("ZaloNativeService", () => {
-    it("declares a status and an events tool for internal use, the customer masked in the audit", () => {
+    it("declares a status tool for internal use", () => {
         expect(ZALO_MANIFEST.key).toBe("zalo")
         expect(
             ZALO_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.internalOnly, tool.secretFields]),
-        ).toEqual([
-            ["status", "read", true, undefined],
-            ["events", "read", true, ["customerMasked"]],
-        ])
+        ).toEqual([["status", "read", true, undefined]])
     })
 
-    it("runs the tools of the zalo_oa provider on the zalo channel", async () => {
+    it("runs the tools of the zalo_oa provider", async () => {
         const { zalo, tools } = await build()
 
         await expect(zalo.invoke(WS, "status", {}, CALLER)).resolves.toEqual({ connections: [] })
 
         expect(tools.answer).toHaveBeenCalledWith(
             WS,
-            expect.objectContaining({ provider: "zalo_oa", channel: "zalo" }),
+            expect.objectContaining({ provider: "zalo_oa" }),
             "status",
             {},
             CALLER,
@@ -91,7 +88,7 @@ describe("ZaloNativeService", () => {
         const { zalo, tools } = await build()
         tools.answer.mockRejectedValue(nativeRefusal("not_connected"))
 
-        await expect(zalo.invoke(WS, "events", { connectionId: "c1" }, CALLER)).rejects.toMatchObject({
+        await expect(zalo.invoke(WS, "status", {}, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
             params: { reason: "not_connected" },
         })

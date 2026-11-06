@@ -91,7 +91,7 @@ describe("ReplyCustomerPerformerService", () => {
         const performed = await service.perform(ctx, itemOf(), proposalOf(), { name: "NIVO engine" })
 
         expect(performed.summary).toBe("replyPosted")
-        expect(delivery.inConversation).toHaveBeenCalledWith("ws-1", "conv-1", "It is 30k a box")
+        expect(delivery.inConversation).toHaveBeenCalledWith("ws-1", "conv-1", "item-1", "It is 30k a box")
         expect(delivery.approvedInConversation).not.toHaveBeenCalled()
     })
 
@@ -167,7 +167,7 @@ describe("ReplyCustomerPerformerService", () => {
             lead_id: "lead-1",
             detail: "It is 30k a box",
         })
-        expect(delivery.inConversation).toHaveBeenCalledWith("ws-1", "conv-1", "It is 30k a box")
+        expect(delivery.inConversation).toHaveBeenCalledWith("ws-1", "conv-1", "item-1", "It is 30k a box")
         expect(delivery.approvedInConversation).not.toHaveBeenCalled()
     })
 })

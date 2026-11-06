@@ -103,7 +103,7 @@ const build = async (lead: LeadRecordRow = leadOf()) => {
     const writer = mock<PromptWriter>()
     writer.draftFollowUp.mockResolvedValue("Hi Lan, here is the quote")
     const delivery = mock<CustomerDeliveryService>()
-    delivery.contactOf.mockResolvedValue("84901234567")
+    delivery.contactOf.mockReturnValue("84901234567")
     delivery.toCustomer.mockResolvedValue({ summary: "deliveredTelegram|Lan", real: true })
     const executions = mock<ExecutionsService>()
     executions.open.mockResolvedValue("exec-9")
@@ -197,6 +197,7 @@ describe("FollowUpPerformerService perform a renewal", () => {
         const proposal = proposalOf(
             {
                 responsibility_id: "resp-1",
+                conversation_id: "conv-1",
                 renewal_customer: "Lan",
                 renewal_phone: "0901234567",
                 renewal_plan: "Pro",
@@ -210,7 +211,7 @@ describe("FollowUpPerformerService perform a renewal", () => {
 
         await service.perform(ctx, itemOf(), proposal, { name: "Mai" })
 
-        expect(delivery.toCustomer).toHaveBeenCalledWith(ctx, leadOf(), "Hi Lan", {
+        expect(delivery.toCustomer).toHaveBeenCalledWith(ctx, leadOf(), "conv-1", "item-1", "Hi Lan", {
             kind: "renewal",
             phone: "0901234567",
             fields: {
@@ -226,9 +227,17 @@ describe("FollowUpPerformerService perform a renewal", () => {
 })
 
 describe("FollowUpPerformerService perform", () => {
+    it("names no conversation to the delivery when the work names none", async () => {
+        const { service, delivery } = await build()
+
+        await service.perform(ctx, itemOf(), proposalOf({ responsibility_id: "resp-1" }, "Hi Lan"), { name: "Mai" })
+
+        expect(delivery.toCustomer).toHaveBeenCalledWith(ctx, leadOf(), null, "item-1", "Hi Lan")
+    })
+
     it("delivers the draft, approves the card and closes the responsibility", async () => {
         const { service, delivery, executions, responsibilities, evidence } = await build()
-        const proposal = proposalOf({ responsibility_id: "resp-1" }, "Hi Lan")
+        const proposal = proposalOf({ responsibility_id: "resp-1", conversation_id: "conv-1" }, "Hi Lan")
 
         await expect(service.perform(ctx, itemOf(), proposal, { name: "Mai" })).resolves.toEqual({
             summary: "deliveredTelegram|Lan",
@@ -237,7 +246,7 @@ describe("FollowUpPerformerService perform", () => {
             lead_id: "lead-1",
             detail: "Hi Lan",
         })
-        expect(delivery.toCustomer).toHaveBeenCalledWith(ctx, leadOf(), "Hi Lan")
+        expect(delivery.toCustomer).toHaveBeenCalledWith(ctx, leadOf(), "conv-1", "item-1", "Hi Lan")
         expect(executions.settle).toHaveBeenCalledWith({
             workspaceId: "ws-1",
             executionId: "exec-1",

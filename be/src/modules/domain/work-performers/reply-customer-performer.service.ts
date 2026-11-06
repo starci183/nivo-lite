@@ -50,6 +50,6 @@ export class ReplyCustomerPerformerService implements WorkPerformer {
     ): Promise<boolean> {
         return by !== undefined && "kind" in by && (by.kind === "owner" || by.kind === "staff")
             ? this.delivery.approvedInConversation(ctx.workspaceId, conversationId, text, by.name, item.id)
-            : this.delivery.inConversation(ctx.workspaceId, conversationId, text)
+            : this.delivery.inConversation(ctx.workspaceId, conversationId, item.id, text)
     }
 }

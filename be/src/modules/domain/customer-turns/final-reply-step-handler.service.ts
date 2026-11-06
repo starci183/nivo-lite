@@ -1,7 +1,7 @@
 import { outputScopeSchema } from "./output-steps.schema"
 import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
-import { AgentMessagesService, DELIVERY_OUTCOME_UNKNOWN } from "@modules/domain/agent-messages"
+import { CHAT_DELIVERY_UNKNOWN, ChatMessagesService } from "@modules/domain/chat-records"
 import { AgentRunHandlersService } from "@modules/domain/agent-runs"
 import type { AgentStepHandler, StepAnswer, StepView } from "@modules/domain/agent-runs"
 import { ChatTurnService } from "@modules/domain/conversations"
@@ -34,7 +34,7 @@ export class FinalReplyStepHandlerService implements AgentStepHandler, OnModuleI
         private readonly handlers: AgentRunHandlersService,
         private readonly chat: ChatTurnService,
         private readonly finals: FinalReplyService,
-        private readonly messages: AgentMessagesService,
+        private readonly messages: ChatMessagesService,
         private readonly delivery: CustomerDeliveryService,
     ) {}
 
@@ -48,19 +48,24 @@ export class FinalReplyStepHandlerService implements AgentStepHandler, OnModuleI
         const parsed = outputScopeSchema.safeParse(step.input)
         if (!parsed.success) return { kind: "failed", code: INVALID_INPUT }
         const scope = parsed.data
-        const turn = await this.chat.turnOf({
+        const turn = await this.chat.turnOf(step.workspaceId, {
             conversationId: scope.conversationId,
             messageId: scope.messageId,
             channelEventId: "",
         })
         if (turn === undefined) return { kind: "failed", code: TARGET_GONE }
         const key = scope.workItemId ?? scope.messageId
-        const stored = await this.messages.storedReply(scope.conversationId, scope.messageId, scope.workItemId)
+        const stored = await this.messages.storedReply(
+            step.workspaceId,
+            scope.conversationId,
+            scope.messageId,
+            scope.workItemId,
+        )
         const reply = stored ?? (await this.written(turn, scope, step, key))
         const send = stored !== null || (await this.chat.settleLate(turn, reply, key)).send
         if (send) {
             const delivered = await this.deliver(turn, scope, reply)
-            if (delivered === "ambiguous") return { kind: "failed", code: DELIVERY_OUTCOME_UNKNOWN }
+            if (delivered === "ambiguous") return { kind: "failed", code: CHAT_DELIVERY_UNKNOWN }
             if (delivered === "rejected") return { kind: "retry", code: DELIVERY_UNAVAILABLE }
         }
         return { kind: "done", result: { reply, sent: send, declined: scope.declined }, next: [] }

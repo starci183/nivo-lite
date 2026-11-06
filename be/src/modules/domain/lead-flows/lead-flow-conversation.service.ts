@@ -1,11 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { AgentsService } from "@modules/domain/agents"
 import type { AgentProfile } from "@modules/domain/agents"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
+import { InjectIds } from "@modules/platform/ids"
+import type { Ids } from "@modules/platform/ids"
 import type { LeadFlow } from "./lead-flows.contracts"
 
 /** Who a conversation is "handled by" while a person must take over: the bot is silent until they hand it back. */
@@ -60,11 +59,11 @@ export interface StableLine {
 /** The transcript of a prospect: the conversation a person can read and take over, and the lead_gen agent that speaks in it. */
 export class LeadFlowConversationService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly bindings: AgentBindingsService,
         private readonly agents: AgentsService,
-        private readonly conversations: AgentConversationsService,
-        private readonly messages: AgentMessagesService,
+        private readonly conversations: ChatConversationsService,
+        private readonly messages: ChatMessagesService,
+        @InjectIds() private readonly ids: Ids,
     ) {}
 
     /** The lead_gen agent bound to the connection as a lead source (and allowed to act), else the workspace's first active one. */
@@ -84,45 +83,44 @@ export class LeadFlowConversationService {
     async ensure(target: FlowConversationTarget): Promise<string | null> {
         const connectionId = target.flow.connection_id
         if (connectionId === null || target.externalId === "") return null
-        const channel = target.flow.platform ?? "facebook"
-        const found = await this.conversations.find(target.workspaceId, channel, connectionId, target.externalId)
-        if (found.kind === "ok") {
-            if (found.value.agentId !== target.agentId)
-                await this.conversations.rebind(found.value.id, target.agentId, this.entityManager)
-            if (target.flow.lead_id !== null && found.value.leadId === null)
-                await this.conversations.attachLead(target.workspaceId, found.value.id, target.flow.lead_id)
-            return found.value.id
-        }
-        const opened = await this.conversations.open(
-            {
-                workspaceId: target.workspaceId,
-                agentId: target.agentId,
-                channel,
-                customerId: target.externalId,
-                visitor: target.flow.name ?? "",
-                connectionId,
-            },
-            this.entityManager,
-        )
-        if (target.flow.lead_id !== null)
-            await this.conversations.attachLead(target.workspaceId, opened.id, target.flow.lead_id)
-        return opened.id
+        const met = await this.conversations.meet({
+            workspaceId: target.workspaceId,
+            agentId: target.agentId,
+            channel: target.flow.platform ?? "facebook",
+            customerId: target.externalId,
+            visitor: target.flow.name ?? "",
+            connectionId,
+        })
+        const { id, leadId } = met.conversation
+        if (target.flow.lead_id !== null && leadId === null)
+            await this.conversations.attachLead(target.workspaceId, id, target.flow.lead_id)
+        return id
     }
 
     /** Stores one line of the transcript; an empty line or a flow without a conversation stores nothing. */
     async say(line: FlowTranscriptLine): Promise<void> {
         if (line.conversationId === null || line.body.trim() === "") return
         if (line.role === "user") {
-            await this.messages.storeCustomer(line.workspaceId, line.conversationId, line.body, this.entityManager)
+            await this.messages.storeCustomer(line.workspaceId, line.conversationId, line.body, null, null)
             return
         }
         if (line.role === "system") {
             await this.messages.storeLine(line.workspaceId, line.conversationId, line.body)
             return
         }
-        const id = await this.messages.storeAgentMessage(line.workspaceId, line.conversationId, line.body)
+        const stored = await this.messages.storeAgentLine({
+            workspaceId: line.workspaceId,
+            conversationId: line.conversationId,
+            body: line.body,
+            key: this.ids.next(),
+        })
         if (line.delivery !== null)
-            await this.messages.markDelivery(id, line.delivery.sent, line.delivery.error ?? undefined)
+            await this.messages.markDelivery(
+                line.workspaceId,
+                stored.id,
+                line.delivery.sent,
+                line.delivery.error ?? undefined,
+            )
     }
 
     /** Stores the company line of a work item once, under the item id, and tells whether it already went out. */
@@ -133,26 +131,24 @@ export class LeadFlowConversationService {
         author: string,
         itemId: string,
     ): Promise<StableLine> {
-        const id = await this.messages.storeHumanMessage(
+        const stored = await this.messages.storeAgentLine({
             workspaceId,
             conversationId,
             body,
-            author,
-            this.entityManager,
-            itemId,
-        )
-        const stored = await this.messages.find(id, conversationId)
-        return { id, sent: stored.kind === "ok" && stored.value.deliveryStatus === "sent" }
+            key: itemId,
+            human: { name: author, userId: null },
+        })
+        return { id: stored.id, sent: stored.sent }
     }
 
     /** Writes whether Meta accepted a stored line. */
-    async markDelivery(messageId: string, sent: boolean, error: string | null): Promise<void> {
-        await this.messages.markDelivery(messageId, sent, error ?? undefined)
+    async markDelivery(workspaceId: string, messageId: string, sent: boolean, error: string | null): Promise<void> {
+        await this.messages.markDelivery(workspaceId, messageId, sent, error ?? undefined)
     }
 
     /** True while a person holds one of the conversations (the bot stays silent); with none to look at, the flow's own state decides. */
     async heldByPerson(
-        flow: Pick<LeadFlow, "state" | "conversation_id">,
+        flow: Pick<LeadFlow, "workspace_id" | "state" | "conversation_id">,
         ...more: Array<string | null>
     ): Promise<boolean> {
         if (flow.state !== "escalated") return false
@@ -160,8 +156,8 @@ export class LeadFlowConversationService {
         if (ids.length === 0) return true
         const held = await Promise.all(
             ids.map(async (id) => {
-                const turn = await this.conversations.turnOf(id)
-                return turn.kind === "ok" && turn.value.handledBy !== null
+                const found = await this.conversations.humanOf(flow.workspace_id, id)
+                return found !== null && found.handledBy !== null
             }),
         )
         return held.some(Boolean)
@@ -169,6 +165,6 @@ export class LeadFlowConversationService {
 
     /** A person holds the conversation from now on. */
     async handToPerson(workspaceId: string, conversationId: string): Promise<void> {
-        await this.conversations.handToPerson(workspaceId, conversationId, LEAD_GEN_ACTOR)
+        await this.conversations.setHolder(workspaceId, conversationId, LEAD_GEN_ACTOR)
     }
 }

@@ -6,13 +6,13 @@ import { providerTools } from "./provider-tools.policy"
 import type { ProviderRoute } from "./provider-tools.service"
 import { ProviderToolsService } from "./provider-tools.service"
 
-/** The Telegram native connector: the bots of the workspace and their latest messages, for internal use. */
+/** The Telegram native connector: the bots of the workspace, for internal use. */
 export const TELEGRAM_MANIFEST: NativeConnectorManifest = {
     key: "telegram",
     name: "Telegram",
     kind: "native",
     contractVersion: "telegram-native@1",
-    tools: providerTools("Telegram", true),
+    tools: providerTools("Telegram"),
 }
 
 /** A bot as `status` answers it: its handle, never its token. */
@@ -24,10 +24,10 @@ const lineOf = (connection: ConnectionStatusFacts): GatewayJson => ({
     needsAttention: needsAttention(connection.status, connection.lastError),
 })
 
-const ROUTE: ProviderRoute = { provider: "telegram", channel: "telegram", line: lineOf }
+const ROUTE: ProviderRoute = { provider: "telegram", line: lineOf }
 
 @Injectable()
-/** Runs the Telegram tools: `status` and `events`, read through the connections and the message feed of the workspace. */
+/** Runs the Telegram tool `status`, read through the connections of the workspace. */
 export class TelegramNativeService implements NativeAdapter {
     readonly manifest: NativeConnectorManifest = TELEGRAM_MANIFEST
 

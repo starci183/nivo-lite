@@ -1,7 +1,6 @@
 import type { EntityManager } from "typeorm"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { agentConnectionsEntities } from "@modules/domain/agent-connections"
-import { agentConversationsEntities } from "@modules/domain/agent-conversations"
 import { agentsEntities } from "@modules/domain/agents"
 import { automationPipelinesEntities } from "@modules/domain/automation-pipelines"
 import { connectionsEntities } from "@modules/domain/connections"
@@ -11,7 +10,6 @@ import { moduleInstallationsEntities } from "@modules/domain/module-installation
 import { workspacesEntities } from "@modules/domain/workspaces"
 
 const [AgentEntity] = agentsEntities
-const [AgentConversationEntity] = agentConversationsEntities
 const [AgentConnectionEntity] = agentConnectionsEntities
 const [AutomationPipelineEntity] = automationPipelinesEntities
 
@@ -31,7 +29,6 @@ export interface RenewalIdentity {
     readonly careAgentId: string
     readonly connectionId: string
     readonly leadId: string
-    readonly conversationId: string
     readonly contractId: string
     readonly pipelineId: string
 }
@@ -143,7 +140,7 @@ const persistMoneyConnection = async (tx: EntityManager, world: RenewalWorld): P
     })
 }
 
-/** The customer's lead with a Zalo conversation held by AI CSKH. */
+/** The customer's lead. */
 const persistCustomer = async (tx: EntityManager, identity: RenewalIdentity): Promise<void> => {
     await tx.insert(LeadEntity, {
         id: identity.leadId,
@@ -154,15 +151,6 @@ const persistCustomer = async (tx: EntityManager, identity: RenewalIdentity): Pr
         need: "Spa membership renewal",
         stage: "won",
         phone: "0901234567",
-    })
-    await tx.insert(AgentConversationEntity, {
-        id: identity.conversationId,
-        workspaceId: identity.workspaceId,
-        agentId: identity.careAgentId,
-        kind: "customer",
-        channel: "zalo",
-        visitorName: "Chi Thao",
-        leadId: identity.leadId,
     })
 }
 
@@ -183,8 +171,7 @@ export const persistCustomerContract = async (manager: EntityManager, customer: 
 
 /**
  * Persists the shop of the demo loop: the owner, the accounting agent installed on autopilot, a live SePay money connection that
- * stores the full account number and is bound to that agent for its bank feed (auto access), the customer's lead with a Zalo
- * conversation, an active contract of the lead ending soon, and the contract renewal pipeline switched on (standard wording, the
+ * stores the full account number and is bound to that agent for its bank feed (auto access), the customer's lead, an active contract of the lead ending soon, and the contract renewal pipeline switched on (standard wording, the
  * owner decides each message). Answers the owner's member id.
  */
 export const persistRenewalWorld = (manager: EntityManager, world: RenewalWorld): Promise<string> =>

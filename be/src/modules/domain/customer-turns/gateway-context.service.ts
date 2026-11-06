@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import { InjectInstallations } from "@modules/domain/agents"
 import type { InstallationDirectory } from "@modules/domain/agents"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
@@ -51,11 +51,11 @@ export class GatewayContextService {
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectInstallations() private readonly installations: InstallationDirectory,
         private readonly gateway: McpGatewayService,
-        private readonly conversations: AgentConversationsService,
+        private readonly conversations: ChatConversationsService,
     ) {}
 
     /** True when the conversation's agent holds any connector grant other than never. */
-    async servesConnectors(conversation: TurnConversation): Promise<boolean> {
+    async servesConnectors(conversation: ChatTurnConversation): Promise<boolean> {
         const grants = await this.gateway.grantsOf(conversation.workspaceId, conversation.agent.id)
         return grants.some((grant) => grant.mode !== "never")
     }
@@ -64,7 +64,7 @@ export class GatewayContextService {
      * The party of the conversation's customer: the remembered one, else (matching by channel) the one `identity.find` answers for
      * the channel identity; null when none is known yet and no connector can tell.
      */
-    async partyOf(conversation: TurnConversation): Promise<OptionalPartyContext> {
+    async partyOf(conversation: ChatTurnConversation): Promise<OptionalPartyContext> {
         const remembered = await this.conversations.partyOf(conversation.workspaceId, conversation.id)
         if (remembered !== null) return { found: true, partyId: remembered.partyId, name: remembered.name }
         if (conversation.externalId === null || (await this.matchOf(conversation)) !== "channel") return null
@@ -85,8 +85,7 @@ export class GatewayContextService {
      * Makes the customer who gave their name a party of the connector: the one `identity.find` answers for their key (the chat
      * identity, or the phone), else the one `identity.upsert` creates, keyed by the message so a replayed turn creates nobody twice.
      */
-    async remember(conversation: TurnConversation, lead: CapturedLead, messageId: string): Promise<void> {
-        if (await this.conversations.isTestChat(conversation.id)) return
+    async remember(conversation: ChatTurnConversation, lead: CapturedLead, messageId: string): Promise<void> {
         if ((await this.conversations.partyOf(conversation.workspaceId, conversation.id)) !== null) return
         const key = await this.keyOf(conversation, lead)
         if (key === null) return
@@ -104,7 +103,7 @@ export class GatewayContextService {
     }
 
     /** The identity the workspace matches this customer by; null while it is not known (no channel identity, or no phone yet). */
-    private async keyOf(conversation: TurnConversation, lead: CapturedLead): Promise<IdentityKey | null> {
+    private async keyOf(conversation: ChatTurnConversation, lead: CapturedLead): Promise<IdentityKey | null> {
         if ((await this.matchOf(conversation)) === "phone") {
             return lead.phone === null ? null : { channel: PHONE_CHANNEL, externalId: lead.phone }
         }
@@ -113,13 +112,13 @@ export class GatewayContextService {
     }
 
     /** How the workspace matches customers for the conversation's agent; by channel unless its installation says `phone`. */
-    private async matchOf(conversation: TurnConversation): Promise<IdentityMatch> {
+    private async matchOf(conversation: ChatTurnConversation): Promise<IdentityMatch> {
         const installation = await this.installations.ofAgent(conversation.workspaceId, conversation.agent.id)
         return installation?.settings[MATCH_SETTING] === PHONE_CHANNEL ? "phone" : "channel"
     }
 
     /** The party `identity.find` answers for a key, remembered on the conversation when found; null without the role or on failure. */
-    private async find(conversation: TurnConversation, key: IdentityKey): Promise<OptionalPartyContext> {
+    private async find(conversation: ChatTurnConversation, key: IdentityKey): Promise<OptionalPartyContext> {
         const tool = await this.toolFor(conversation, "identity.find")
         if (tool === null) return null
         const found = await this.gateway.call(this.callerOf(conversation), tool, { ...key })
@@ -134,21 +133,17 @@ export class GatewayContextService {
         return party
     }
 
-    private async toolFor(conversation: TurnConversation, role: CapabilityRole): Promise<string | null> {
+    private async toolFor(conversation: ChatTurnConversation, role: CapabilityRole): Promise<string | null> {
         const resolved = await this.gateway.toolForRole(conversation.workspaceId, role)
         return resolved.ok ? resolved.tool.name : null
     }
 
-    private async rememberParty(conversation: TurnConversation, partyId: string, name: string): Promise<void> {
-        await this.conversations.rememberParty({
-            workspaceId: conversation.workspaceId,
-            conversationId: conversation.id,
-            party: { partyId, name },
-        })
+    private async rememberParty(conversation: ChatTurnConversation, partyId: string, name: string): Promise<void> {
+        await this.conversations.rememberParty(conversation.workspaceId, conversation.id, { partyId, name })
     }
 
     /** The gateway caller of a conversation's agent. */
-    private callerOf(conversation: TurnConversation): GatewayCaller {
+    private callerOf(conversation: ChatTurnConversation): GatewayCaller {
         return {
             workspaceId: conversation.workspaceId,
             agentId: conversation.agent.id,

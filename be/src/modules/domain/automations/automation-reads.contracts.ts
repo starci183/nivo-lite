@@ -26,8 +26,6 @@ export interface ConversationRead {
     readonly channel: string
     /** The person who took it over. */
     readonly handled_by: string | null
-    /** The name the visitor gave. */
-    readonly visitor_name: string | null
     /** The lead. */
     readonly lead_id: string | null
 }

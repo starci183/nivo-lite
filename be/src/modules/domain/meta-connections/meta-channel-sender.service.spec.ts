@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import type { ConversationTarget } from "@modules/domain/agent-conversations"
+import type { ChatConversationTarget } from "@modules/domain/chat-records"
 import { CHANNEL_SENDER_REGISTRY } from "@modules/domain/channels"
 import type { ChannelSenderRegistry } from "@modules/domain/channels"
 import { ConnectionsService } from "@modules/domain/connections"
@@ -11,7 +11,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { MetaChannelSender } from "./meta-channel-sender.service"
 
-const target = (overrides: Partial<ConversationTarget> = {}): ConversationTarget => ({
+const target = (overrides: Partial<ChatConversationTarget> = {}): ChatConversationTarget => ({
     id: "conversation-1",
     workspaceId: "workspace-1",
     channel: "facebook",

@@ -15,12 +15,12 @@ import {
     roadOutputOf,
 } from "@tests/fixtures/builders/turn-gateway-harness.builder"
 
-import { AgentConversationsErrorCode } from "@modules/domain/agent-conversations"
+import { ChatRecordsErrorCode } from "@modules/domain/chat-records"
 
 import type { GatewayToolName } from "@modules/domain/agent-tools"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { AgentRunsService } from "@modules/domain/agent-runs"
 import { OUTPUT_NODE_READER } from "@modules/domain/authority-rules"
 import type { OutputNodeReader } from "@modules/domain/authority-rules"
@@ -35,7 +35,7 @@ import { TurnSourcesService } from "./turn-sources.service"
 
 const build = async (refuses = false, includeNodes = true) => {
     const gateway = mock<McpGatewayService>()
-    const conversations = mock<AgentConversationsService>()
+    const conversations = mock<ChatConversationsService>()
     const approvals = mock<OutputApprovalService>()
     const notes = mock<HubNotesService>()
     const sources = mock<TurnSourcesService>()
@@ -54,7 +54,7 @@ const build = async (refuses = false, includeNodes = true) => {
                   { provide: TurnGatewayPipelineService, useValue: pipeline },
                   { provide: MESSAGE_CATALOG, useValue: catalog },
                   { provide: McpGatewayService, useValue: gateway },
-                  { provide: AgentConversationsService, useValue: conversations },
+                  { provide: ChatConversationsService, useValue: conversations },
                   { provide: OutputApprovalService, useValue: approvals },
                   { provide: HubNotesService, useValue: notes },
                   { provide: TurnSourcesService, useValue: sources },
@@ -67,7 +67,7 @@ const build = async (refuses = false, includeNodes = true) => {
                   { provide: TurnGatewayPipelineService, useValue: pipeline },
                   { provide: MESSAGE_CATALOG, useValue: catalog },
                   { provide: McpGatewayService, useValue: gateway },
-                  { provide: AgentConversationsService, useValue: conversations },
+                  { provide: ChatConversationsService, useValue: conversations },
                   { provide: OutputApprovalService, useValue: approvals },
                   { provide: HubNotesService, useValue: notes },
                   { provide: TurnSourcesService, useValue: sources },
@@ -96,17 +96,13 @@ describe("TurnGatewayToolsService discovery", () => {
         })
     })
 
-    it("answers not found for a missing conversation or one of another workspace, and calls nothing", async () => {
+    it("answers not found for a conversation the workspace of the job does not have, and calls nothing", async () => {
         const { service, gateway, conversations } = await build()
-        conversations.turnOf.mockResolvedValueOnce({ kind: "refused", code: AgentConversationsErrorCode.NotFound })
+        conversations.turnOf.mockResolvedValueOnce({ kind: "refused", code: ChatRecordsErrorCode.NotFound })
         await expect(service.run(CTX, "tool.search", { query: "x" })).resolves.toEqual({
             error: "conversation_not_found",
         })
-        conversations.turnOf.mockResolvedValueOnce({ kind: "ok", value: { ...CONVERSATION, workspaceId: "other" } })
-        await expect(service.run(CTX, "tool.call", { name: "crm.order.place" })).resolves.toEqual({
-            error: "conversation_not_found",
-        })
-        expect(conversations.turnOf).toHaveBeenCalledWith("c1")
+        expect(conversations.turnOf).toHaveBeenCalledWith(CTX.workspaceId, "c1")
         expect(gateway.search).not.toHaveBeenCalled()
         expect(gateway.call).not.toHaveBeenCalled()
     })
@@ -327,6 +323,17 @@ describe("TurnGatewayToolsService sequence", () => {
         expect(spec?.seed).toMatchObject(SEQUENCE_APPROVAL_SEED)
     })
 
+    it("holds a step that names no arguments with an empty object for them", async () => {
+        const { service, gateway, approvals } = await build()
+        gateway.describe.mockResolvedValue(READ)
+        await expect(
+            service.run(CTX, "tool.sequence", { steps_json: JSON.stringify([{ name: "crm.stock.read" }]) }),
+        ).resolves.toMatchObject({ status: "approval_requested" })
+        expect(approvals.ask.mock.calls[0]?.[1].spec.seed?.fields?.steps_json).toBe(
+            JSON.stringify([{ name: "crm.stock.read", arguments: {} }]),
+        )
+    })
+
     it("tells the customer the approved line when the agent gave no reply", async () => {
         const { service, approvals } = await build()
         await service.run(CTX, "tool.sequence", { steps_json: SEQUENCE_STEPS })
@@ -360,44 +367,6 @@ describe("TurnGatewayToolsService sequence validation", () => {
         }
         expect(gateway.describe).not.toHaveBeenCalled()
         expect(approvals.ask).not.toHaveBeenCalled()
-    })
-})
-
-describe("TurnGatewayToolsService test chat", () => {
-    it("runs a granted read-scope call of a test chat for real", async () => {
-        const { service, gateway, conversations } = await build()
-        conversations.isTestChat.mockResolvedValue(true)
-        gateway.describe.mockResolvedValueOnce(READ)
-        await expect(service.run(CTX, "tool.call", { name: "crm.stock.read" })).resolves.toEqual({
-            result: { orderId: "o1" },
-        })
-        expect(gateway.describe).toHaveBeenCalledWith(CALLER, "crm.stock.read")
-    })
-
-    it("refuses a write, an unknown call or a writing sequence of a test chat with a simulation answer", async () => {
-        const { service, gateway, approvals, conversations, notes } = await build()
-        conversations.isTestChat.mockResolvedValue(true)
-        const simulation = { error: "simulation", detail: "a test chat runs connector tools read-only" }
-        await expect(service.run(CTX, "tool.call", { name: "crm.order.place" })).resolves.toEqual(simulation)
-        gateway.describe.mockResolvedValueOnce(null)
-        await expect(service.run(CTX, "tool.call", { name: "crm.unknown" })).resolves.toEqual(simulation)
-        await expect(
-            service.run(CTX, "tool.sequence", { steps_json: JSON.stringify([{ name: "crm.order.place" }]) }),
-        ).resolves.toEqual(simulation)
-        expect(conversations.isTestChat).toHaveBeenCalledWith("c1")
-        expect(gateway.call).not.toHaveBeenCalled()
-        expect(approvals.ask).not.toHaveBeenCalled()
-        expect(notes.postOnce).not.toHaveBeenCalled()
-    })
-
-    it("holds a read-only sequence of a test chat like any other, since nothing runs before approval", async () => {
-        const { service, gateway, conversations, approvals } = await build()
-        conversations.isTestChat.mockResolvedValue(true)
-        gateway.describe.mockResolvedValue(READ)
-        await expect(
-            service.run(CTX, "tool.sequence", { steps_json: JSON.stringify([{ name: "crm.stock.read" }]) }),
-        ).resolves.toMatchObject({ status: "approval_requested" })
-        expect(approvals.ask).toHaveBeenCalledTimes(1)
     })
 })
 

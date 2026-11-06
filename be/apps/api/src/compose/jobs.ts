@@ -31,7 +31,6 @@ import { PollDueConnectionsQueueModule } from "@features/jobs/poll-due-connectio
 import { ReconcileZaloInboxQueueModule } from "@features/jobs/reconcile-zalo-inbox"
 import { ReconcileBankFeedQueueModule } from "@features/jobs/reconcile-bank-feed"
 import { RunZaloWizardQueueModule } from "@features/jobs/run-zalo-wizard"
-import { RunChatTurnQueueModule } from "@features/jobs/run-chat-turn"
 import { RunLeadActionQueueModule } from "@features/jobs/run-lead-action"
 import { RunModuleJobQueueModule } from "@features/jobs/module-jobs"
 import { ParkedJobsQueueModule } from "@features/jobs/parked-jobs"
@@ -91,7 +90,6 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     ReconcileZaloInboxQueueModule.register({}),
     PollDueConnectionsQueueModule.register({}),
     RunZaloWizardQueueModule.register({}),
-    RunChatTurnQueueModule.register({}),
     RunLeadActionQueueModule.register({}),
     RunModuleJobQueueModule.register({}),
     ParkedJobsQueueModule.register({}),

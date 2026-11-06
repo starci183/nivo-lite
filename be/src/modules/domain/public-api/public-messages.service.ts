@@ -34,8 +34,8 @@ export class PublicMessagesService {
         return this.entityManager.transaction(async (tx) => {
             const conversation =
                 conversationId === ""
-                    ? await this.conversations.ofLead(who.workspaceId, leadId, tx)
-                    : await this.conversations.find(who.workspaceId, conversationId, tx)
+                    ? await this.conversations.ofLead(who.workspaceId, leadId)
+                    : await this.conversations.find(who.workspaceId, conversationId)
             if (conversation === undefined) throw new PublicApiError({ code: PublicApiErrorCode.ConversationNotFound })
             const body: MessageRequestBody = {
                 conversationId: conversation.id,

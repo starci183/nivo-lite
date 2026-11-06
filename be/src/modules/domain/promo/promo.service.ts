@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { AgentDirectoryService } from "@modules/domain/agents"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { EventsReadService } from "@modules/domain/events"
 import { ExecutionsFiguresService } from "@modules/domain/executions"
 import { LeadReadService } from "@modules/domain/leads"
@@ -43,7 +43,7 @@ export class PromoService {
         private readonly agents: AgentDirectoryService,
         private readonly events: EventsReadService,
         private readonly leads: LeadReadService,
-        private readonly conversations: AgentConversationsReadService,
+        private readonly conversations: ChatConversationsService,
         private readonly executions: ExecutionsFiguresService,
         private readonly responsibilities: ResponsibilityReadService,
     ) {}
@@ -153,6 +153,11 @@ export class PromoService {
         }
     }
 
+    /** Whether the workspace has captured a lead. */
+    private async hasLead(workspaceId: string): Promise<boolean> {
+        return (await this.leads.recentNames(workspaceId, 1)).length > 0
+    }
+
     /** The conversation, approval, win and invoice facts of the onboarding steps. */
     private async activity(workspaceId: string): Promise<{
         readonly hasCustomerConversation: boolean
@@ -162,8 +167,8 @@ export class PromoService {
         readonly invoiceApproved: boolean
     }> {
         const [hasCustomerConversation, hasLeadConversation, approved, won, invoiceSteps] = await Promise.all([
-            this.conversations.hasCustomerChat(workspaceId),
-            this.conversations.hasLeadChat(workspaceId),
+            this.conversations.hasAny(workspaceId),
+            this.hasLead(workspaceId),
             this.executions.countApproved(workspaceId),
             this.leads.idsAtStage(workspaceId, "won"),
             this.responsibilities.idsTitledLike(workspaceId, INVOICE_TITLES, INVOICE_STEP_LIMIT),

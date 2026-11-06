@@ -9,7 +9,6 @@ export type {
     BridgeTurns,
     ConversationLeads,
     GatewayTools,
-    HandoffTool,
     InternalTools,
     KnowledgeSearch,
     LeadWriter,

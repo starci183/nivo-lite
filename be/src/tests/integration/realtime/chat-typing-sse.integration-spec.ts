@@ -10,7 +10,7 @@ import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.ser
 
 const world = useTestWorld({ modules: [] })
 const identity = chatMarkersIdentity(() => world.id())
-const OFFICE: ChatTarget = { room: null, conversationId: null }
+const OFFICE: ChatTarget = { room: null }
 
 /** The wire contract is independent of the GraphQL mutation's response shape. */
 interface TypingFrame {
@@ -153,27 +153,17 @@ describe("chat typing SSE admission and isolation", () => {
 })
 
 describe("chat typing SSE target isolation", () => {
-    it("realtime/foreign-topic-is-isolated: a room stream excludes other rooms, conversations and workspaces through a sentinel", async () => {
+    it("realtime/foreign-topic-is-isolated: a room stream excludes other rooms and workspaces through a sentinel", async () => {
         await withTypingReplicas(world, identity, async (a, b) => {
-            const room: ChatTarget = { room: "sales", conversationId: null }
+            const room: ChatTarget = { room: "sales" }
             const stream = await b.open({
                 principalId: identity.readerIds[0],
                 workspaceId: identity.workspaceId,
                 target: room,
             })
             await opened(stream)
-            await a.typing.set(
-                identity.ownerId,
-                identity.workspaceId,
-                { room: "marketing", conversationId: null },
-                true,
-            )
-            await a.typing.set(
-                identity.ownerId,
-                identity.workspaceId,
-                { room: null, conversationId: identity.conversationIds[0] },
-                true,
-            )
+            await a.typing.set(identity.ownerId, identity.workspaceId, { room: "marketing" }, true)
+            await a.typing.set(identity.ownerId, identity.workspaceId, OFFICE, true)
             await a.typing.set(identity.foreignOwnerId, identity.foreignWorkspaceId, OFFICE, true)
             await a.typing.set(identity.ownerId, identity.workspaceId, room, false)
             await received(stream, 1)

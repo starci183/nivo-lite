@@ -3,8 +3,7 @@ import { agentGraphsEntities } from "@modules/domain/agent-graphs"
 import { approvalRequestsEntities } from "@modules/domain/approval-requests"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { agentsEntities } from "@modules/domain/agents"
-import { agentConversationsEntities } from "@modules/domain/agent-conversations"
-import { agentMessagesEntities } from "@modules/domain/agent-messages"
+import { entityEngineEntities } from "@modules/domain/entity-engine"
 import { moduleInstallationsEntities } from "@modules/domain/module-installations"
 import { OWNER_EXAMPLE, graphOf } from "./agent-graph.builder"
 import { persistGraph } from "./agent-graph-world.builder"
@@ -21,8 +20,7 @@ export interface OutputApprovalIdentity {
 /** Creates the actual chatbot installation and its customer message with all database constraints enabled. */
 export const persistOutputProofTurn = async (manager: EntityManager, who: OutputApprovalIdentity): Promise<void> => {
     const [AgentEntity] = agentsEntities
-    const [ConversationEntity] = agentConversationsEntities
-    const [MessageEntity] = agentMessagesEntities
+    const [RecordEntity] = entityEngineEntities
     const [InstallationEntity] = moduleInstallationsEntities
     await manager.update(AgentEntity, { id: who.agentId }, { module: "chatbot" })
     await manager.insert(InstallationEntity, {
@@ -35,38 +33,32 @@ export const persistOutputProofTurn = async (manager: EntityManager, who: Output
         operatingMode: "autopilot",
         liveEnabled: true,
     })
-    await manager.insert(ConversationEntity, {
+    await manager.insert(RecordEntity, {
+        entity: "chat.conversation",
         id: who.conversationId,
         workspaceId: who.workspaceId,
-        agentId: who.agentId,
-        installationId: who.installationId,
-        kind: "customer",
-        channel: "website",
+        data: {
+            channel: "website",
+            name: "",
+            status: "ai",
+            waiting: false,
+            unanswered: false,
+            lastText: "",
+            messageCount: 0,
+            agentId: who.agentId,
+        },
     })
-    await manager.insert(MessageEntity, {
+    await manager.insert(RecordEntity, {
+        entity: "chat.message",
         id: who.customerMessageId,
         workspaceId: who.workspaceId,
-        conversationId: who.conversationId,
-        role: "user",
-        body: "Place one order after approval",
-    })
-}
-
-/** Switches only the proof conversation between its website and external-channel delivery boundary. */
-export const setOutputProofChannel = async (
-    manager: EntityManager,
-    conversationId: string,
-    external: boolean,
-): Promise<void> => {
-    const [ConversationEntity] = agentConversationsEntities
-    await manager.update(
-        ConversationEntity,
-        { id: conversationId },
-        {
-            channel: external ? "telegram" : "website",
-            externalId: external ? "proof-recipient" : null,
+        data: {
+            conversationId: who.conversationId,
+            role: "user",
+            text: "Place one order after approval",
+            sentAt: "2026-11-06T03:00:00.000Z",
         },
-    )
+    })
 }
 
 type OutputApprovalRequestOfResultWaitScopeShape = {

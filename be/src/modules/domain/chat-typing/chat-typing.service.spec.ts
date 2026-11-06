@@ -17,7 +17,7 @@ const memberOf = builder<WorkspaceMember>({
     status: "active",
 })
 
-const OFFICE = { room: null, conversationId: null }
+const OFFICE = { room: null }
 const NOW = "2026-10-25T03:00:00.000Z"
 
 const build = async () => {
@@ -72,7 +72,7 @@ describe("ChatTypingService.set", () => {
         )
     })
 
-    it("expires a stop signal immediately and targets only its conversation", async () => {
+    it("expires a stop signal immediately and targets only its room", async () => {
         const { service, realtime } = await build()
         const signal = {
             id: "user-1",
@@ -82,11 +82,9 @@ describe("ChatTypingService.set", () => {
             expiresAt: NOW,
         }
 
-        await expect(
-            service.set("principal", "workspace-1", { room: null, conversationId: "c-1" }, false),
-        ).resolves.toEqual(signal)
+        await expect(service.set("principal", "workspace-1", { room: "sales" }, false)).resolves.toEqual(signal)
         expect(realtime.publish).toHaveBeenCalledWith(
-            expect.objectContaining({ name: "chat-typing:user-2:workspace-1:conversation:c-1" }),
+            expect.objectContaining({ name: "chat-typing:user-2:workspace-1:room:sales" }),
             { id: `user-1:${NOW}`, actorId: "user-1", actorName: "Mai Linh", state: "stop", at: NOW },
         )
     })
@@ -145,7 +143,7 @@ describe("ChatTypingService.setAgent", () => {
     it("clears the indicator in a department room when the turn ends", async () => {
         const { service, realtime } = await build()
 
-        await service.setAgent("workspace-1", { room: "sales", conversationId: null }, AGENT, false)
+        await service.setAgent("workspace-1", { room: "sales" }, AGENT, false)
 
         expect(realtime.publish).toHaveBeenCalledWith(
             expect.objectContaining({ name: "chat-typing:user-1:workspace-1:room:sales" }),

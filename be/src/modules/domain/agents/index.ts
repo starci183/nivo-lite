@@ -24,8 +24,8 @@ export type {
     AgentCard,
     AgentHandleCard,
     AgentHeader,
-    AgentLens,
     AgentSheet,
+    AgentTurnFacts,
     AgentViewScope,
 } from "./agent-directory.contracts"
 export { AgentIdentityService } from "./agent-identity.service"

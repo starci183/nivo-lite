@@ -120,7 +120,6 @@ const options = {
     channels: { siteUrl: "https://site.invalid" },
     telegram: { apiBase: "https://telegram.invalid", timeoutMs: 1000 },
     sepay: { apiBase: "https://sepay.invalid", timeoutMs: 1000 },
-    chatFilesImportRoot: "wiring/imports",
     connectionPoll: { schedule: WIRING_POLL_SCHEDULE, redis: undefined },
     redis: { connectTimeoutMs: 1000 },
     remoteFiles: { maxBytes: 10 * 1024 * 1024, timeoutMs: 1000, maxRedirects: 3 },

@@ -86,14 +86,14 @@ describe("SepayStatusNativeService", () => {
 })
 
 describe("SepayStatusNativeService status", () => {
-    it("runs the status tool of the sepay provider, which is no channel, through the shared tools", async () => {
+    it("runs the status tool of the sepay provider, through the shared tools", async () => {
         const { status, tools, sepay } = await build()
 
         await status.invoke(WS, "status", {}, CALLER)
 
         expect(tools.answer).toHaveBeenCalledWith(
             WS,
-            expect.objectContaining({ provider: "sepay", channel: null }),
+            expect.objectContaining({ provider: "sepay" }),
             "status",
             {},
             CALLER,

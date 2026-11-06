@@ -12,17 +12,13 @@ export class ChatMarkerEntity extends AbstractEntity {
     @PrimaryColumn({ name: "user_id", type: "uuid" })
     userId!: string
 
-    /** The target key: the conversation id, else the room. A database column derived from the two. */
+    /** The target key: the room. A database column derived from it. */
     @PrimaryColumn({ name: "target_key", type: "text", insert: false, update: false })
     targetKey!: string
 
-    /** The office room of the target; empty for the office and for a conversation. */
+    /** The office room of the target; empty for the office. */
     @Column({ name: "room", type: "text", default: () => "''::text" })
     room!: string
-
-    /** The customer conversation of the target; null for a room. */
-    @Column({ name: "conversation_id", type: "uuid", nullable: true })
-    conversationId!: string | null
 
     /** When the newest delivered message was created. */
     @Column({ name: "delivered_at", type: "timestamptz", nullable: true })

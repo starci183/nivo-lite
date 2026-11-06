@@ -15,7 +15,7 @@ const BOOKING_RULE = "intentContracts.limit.booking"
 const LOYALTY_RULE = "intentContracts.limit.loyalty"
 const APPLICATION_RULE = "intentContracts.limit.application"
 
-/** The rules of the customer reply, in the order the legacy reply contract states them. */
+/** The rules of the customer reply, in the order the reply contract states them. */
 const REPLY_RULES: ReadonlyArray<string> = [
     "intentContracts.limit.reply_style",
     LEAD_RULE,

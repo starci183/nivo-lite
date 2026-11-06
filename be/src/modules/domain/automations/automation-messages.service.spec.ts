@@ -112,7 +112,7 @@ describe("AutomationMessagesService words", () => {
         expect(service.noChannel("An").steps[0]?.detail).toBe('noChannel{"name":"An"}')
     })
 })
-const CONVERSATION = { id: "cv-1", channel: "web", handled_by: null, visitor_name: null, lead_id: "l-1" }
+const CONVERSATION = { id: "cv-1", channel: "web", handled_by: null, lead_id: "l-1" }
 
 describe("AutomationMessagesService loaders", () => {
     it("reads a lead, the conversation of a lead and the first staff member", async () => {

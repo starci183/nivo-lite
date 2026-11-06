@@ -68,7 +68,7 @@ export type CustomerMatch =
     | { readonly kind: "matched"; readonly customer: CustomerRecord }
     | { readonly kind: "unmatched"; readonly reason: UnmatchedReason }
 
-/** A lead the link may tie a contract to: its contact and whether a customer conversation already reaches it. */
+/** A lead the link may tie a contract to: its contact. */
 export interface LinkLead {
     /** The lead id. */
     readonly id: string
@@ -76,8 +76,6 @@ export interface LinkLead {
     readonly phone: string | null
     /** The email, or null. */
     readonly email: string | null
-    /** True when the lead has a customer conversation, so a renewal message can leave. */
-    readonly reachable: boolean
 }
 
 /** What the link does with one matched contract. */
@@ -192,9 +190,8 @@ const keepOrFill = (lead: LinkLead, customer: CustomerRecord): LinkPlan =>
 
 /**
  * Decides which lead a matched contract belongs to, preferring one lead per customer: a contract tied on purpose to a lead with
- * another contact keeps it; the lead a customer conversation already reaches wins, so the renewal finds that conversation; a lead
- * that already holds the phone or the email comes next; the contract's own lead without a contact gains the customer's; only a
- * customer no lead holds gets a new lead.
+ * another contact keeps it; a lead that already holds the phone or the email comes next; the contract's own lead without a contact
+ * gains the customer's; only a customer no lead holds gets a new lead.
  */
 export const planLink = (
     current: LinkLead | null,
@@ -202,14 +199,12 @@ export const planLink = (
     customer: CustomerRecord,
 ): LinkPlan => {
     const others = candidates.filter((lead) => lead.id !== current?.id)
-    const reachable = others.find((lead) => lead.reachable)
     if (current !== null) {
         const known = current.phone !== null || current.email !== null
         if (known && !holds(current, customer)) return KEEP
-        if (current.reachable) return keepOrFill(current, customer)
-        if (reachable === undefined && (known || others.length === 0)) return keepOrFill(current, customer)
+        if (known || others.length === 0) return keepOrFill(current, customer)
     }
-    const target = reachable ?? others[0]
+    const [target] = others
     return target === undefined ? { kind: "create" } : { kind: "move", leadId: target.id }
 }
 

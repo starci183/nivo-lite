@@ -49,12 +49,7 @@ export class TeamChatService {
             .execute()
         const row = postedMessageOf(result.raw)
         if (row === undefined) throw new MessagesError({ code: MessagesErrorCode.LineNotStored })
-        await this.activity.message(
-            workspaceId,
-            chatActivityTarget({ room: target, conversationId: null }),
-            member.userId,
-            manager,
-        )
+        await this.activity.message(workspaceId, chatActivityTarget({ room: target }), member.userId, manager)
         return row
     }
 

@@ -1,10 +1,9 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { EffectCall, EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ChannelDeliveryService, ZALO_FREE_WINDOW_MS } from "@modules/domain/channels"
+import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
 import { InjectClock } from "@modules/platform/clock"
@@ -13,7 +12,6 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import {
     RECIPIENT_NOT_LINKED,
-    messageIdOf,
     placeholderRecipient,
     recipientLinked,
     recipientRefused,
@@ -27,8 +25,8 @@ const EFFECT = "channel.send"
 
 @Injectable()
 /**
- * The executor of the `channel.send` effect: it sends one text to a customer conversation through the existing outbound path (the
- * message is stored in the conversation, then pushed to Zalo OA, Telegram or the web). It speaks only where the agent may: in the
+ * The executor of the `channel.send` effect: it sends one text to a customer conversation through the outbound path (the
+ * message is stored on the conversation record, then pushed to Zalo OA, Telegram or the web). It speaks only where the agent may: in the
  * conversation of the running turn, never once a person took it over or another agent holds it, and never on Zalo after the free
  * 48-hour window closed. Each of those is a refusal with a code, never a silent drop and never a send outside the rule.
  */
@@ -39,8 +37,8 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
     constructor(
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
-        private readonly conversations: AgentConversationsService,
-        private readonly messages: AgentMessagesService,
+        private readonly conversations: ChatConversationsService,
+        private readonly messages: ChatMessagesService,
         private readonly delivery: ChannelDeliveryService,
         @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
@@ -51,7 +49,7 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
     }
 
     /**
-     * Stores the text once per effect call (a retry of the same call finds the message and only pushes again) and pushes it; answers the
+     * Stores the text once per effect call (a retry of the same call finds the line under its key and only pushes again) and pushes it; answers the
      * stored message. A recipient the channel cannot reach keeps the message as not sent and succeeds, so the run goes on; any other
      * refusal of a rule or of the channel throws, and the step is parked.
      */
@@ -66,18 +64,28 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
             throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.NotSpeaking })
         }
         const linked = recipientLinked(conversation) && !placeholderRecipient(conversation)
-        if (linked && conversation.channel === "zalo" && (await this.windowClosed(conversation.id))) {
+        if (
+            linked &&
+            conversation.channel === "zalo" &&
+            (await this.windowClosed(conversation.workspaceId, conversation.id))
+        ) {
             throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.ZaloWindowExpired })
         }
         const text = textWithLinks(parsed.data)
-        const messageId = await this.messages.storeFinalReply(
-            conversation.workspaceId,
-            conversation.id,
-            text,
-            messageIdOf(call.dedupeKey ?? call.key),
-        )
+        const stored = await this.messages.storeAgentLine({
+            workspaceId: conversation.workspaceId,
+            conversationId: conversation.id,
+            body: text,
+            key: call.dedupeKey ?? call.key,
+        })
+        const messageId = stored.id
         if (!linked) return this.keptUndelivered(conversation, messageId)
-        const receipt = await this.delivery.deliver({ conversationId: conversation.id, messageId, text })
+        const receipt = await this.delivery.deliver({
+            workspaceId: conversation.workspaceId,
+            conversationId: conversation.id,
+            messageId,
+            text,
+        })
         if (!receipt.delivered && receipt.failure === "channel_plan")
             return this.keptPlanBlocked(conversation, messageId)
         if (!receipt.delivered && receipt.outcome === "rejected" && recipientRefused(receipt.failure)) {
@@ -94,8 +102,8 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
     }
 
     /** The message stays in the conversation for the owner to see, marked as not sent; the customer cannot be reached yet, which is not a failure of the step. */
-    private async keptUndelivered(conversation: TurnConversation, messageId: string): Promise<SubjectRef> {
-        await this.messages.markDelivery(messageId, false, RECIPIENT_NOT_LINKED)
+    private async keptUndelivered(conversation: ChatTurnConversation, messageId: string): Promise<SubjectRef> {
+        await this.messages.markDelivery(conversation.workspaceId, messageId, false, RECIPIENT_NOT_LINKED)
         this.logger.info(ChatNodePortsLogEvent.Undelivered, {
             conversationId: conversation.id,
             channel: conversation.channel,
@@ -105,7 +113,7 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
     }
 
     /** The plan of the channel does not let the agent answer: the message stays in the conversation marked as such (the channel layer stored the reason and told the owner once), and the run goes on, since no retry can help. */
-    private keptPlanBlocked(conversation: TurnConversation, messageId: string): SubjectRef {
+    private keptPlanBlocked(conversation: ChatTurnConversation, messageId: string): SubjectRef {
         this.logger.info(ChatNodePortsLogEvent.PlanBlocked, {
             conversationId: conversation.id,
             channel: conversation.channel,
@@ -113,20 +121,20 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         return { kind: "message", id: messageId }
     }
 
-    private async conversationOf(turn: NodeTurn, conversationId: string): Promise<TurnConversation> {
+    private async conversationOf(turn: NodeTurn, conversationId: string): Promise<ChatTurnConversation> {
         if (turn.conversationId !== null && turn.conversationId !== conversationId) {
             throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.WrongConversation })
         }
-        const found = await this.conversations.turnOf(conversationId)
-        if (found.kind !== "ok" || found.value.workspaceId !== turn.workspaceId) {
+        const found = await this.conversations.turnOf(turn.workspaceId, conversationId)
+        if (found.kind !== "ok") {
             throw new ChatNodePortsError({ code: ChatNodePortsErrorCode.ConversationNotFound })
         }
         return found.value
     }
 
     /** True when the customer last wrote longer ago than the free window; a conversation they never wrote in is open. */
-    private async windowClosed(conversationId: string): Promise<boolean> {
-        const last = await this.messages.lastCustomerAt(conversationId)
+    private async windowClosed(workspaceId: string, conversationId: string): Promise<boolean> {
+        const last = await this.messages.lastCustomerAt(workspaceId, conversationId)
         return last.kind === "ok" && this.clock.now().getTime() - last.value.getTime() > ZALO_FREE_WINDOW_MS
     }
 }

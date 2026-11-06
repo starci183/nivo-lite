@@ -10,8 +10,6 @@ const KINDS: ReadonlyArray<FlowCommandKind> = [
     "decide",
     "hold",
     "assign",
-    "take_over",
-    "send_as_human",
     "authority_from_chat",
     "owner_chat",
 ]

@@ -1,13 +1,12 @@
 import { Test } from "@nestjs/testing"
 import {
     CHAT_FILE_MAX_BYTES,
-    chatFileExtensionOf,
     chatFileNameOf,
+    filesOfMessage,
     chatFilePathOf,
     isAcceptedChatFile,
     isChatFilePath,
     sniffChatFile,
-    sniffUnsupportedImage,
 } from "./chat-file.policy"
 
 const POLICY = Symbol("chat-file.policy")
@@ -19,13 +18,12 @@ const build = async () => {
             {
                 provide: POLICY,
                 useValue: {
-                    chatFileExtensionOf,
                     chatFileNameOf,
+                    filesOfMessage,
                     chatFilePathOf,
                     isAcceptedChatFile,
                     isChatFilePath,
                     sniffChatFile,
-                    sniffUnsupportedImage,
                 },
             },
         ],
@@ -33,7 +31,7 @@ const build = async () => {
     return moduleRef.get<typeof import("./chat-file.policy")>(POLICY)
 }
 
-const SCOPE = { workspaceId: "ws-1", conversationId: "conv-1" }
+const SCOPE = { workspaceId: "ws-1" }
 const OBJECT_ID = "0f8fad5b-d9cb-469f-a165-70867728950e"
 
 describe("isAcceptedChatFile", () => {
@@ -54,9 +52,9 @@ describe("isAcceptedChatFile", () => {
 })
 
 describe("chat file paths", () => {
-    it("keeps a file inside the folder of its workspace and conversation", async () => {
+    it("keeps a file inside the Office folder of its workspace", async () => {
         expect((await build()).chatFilePathOf(SCOPE, OBJECT_ID, "application/pdf")).toBe(
-            `ws-1/chat/conv-1/${OBJECT_ID}.pdf`,
+            `ws-1/chat/office/${OBJECT_ID}.pdf`,
         )
     })
 
@@ -64,25 +62,17 @@ describe("chat file paths", () => {
         expect((await build()).isChatFilePath(SCOPE, chatFilePathOf(SCOPE, OBJECT_ID, "image/png"))).toBe(true)
     })
 
-    it("uses the separate Office folder when no conversation owns the file", async () => {
-        const policy = await build()
-        const office = { workspaceId: "ws-1", conversationId: null }
-        expect(policy.chatFilePathOf(office, OBJECT_ID, "image/png")).toBe(`ws-1/chat/office/${OBJECT_ID}.png`)
-        expect(policy.isChatFilePath(office, `ws-1/chat/office/${OBJECT_ID}.png`)).toBe(true)
-        expect(policy.isChatFilePath(SCOPE, `ws-1/chat/office/${OBJECT_ID}.png`)).toBe(false)
-    })
-
     it("issues no recognized extension for an unsupported content type", async () => {
         expect((await build()).chatFilePathOf(SCOPE, OBJECT_ID, "application/zip")).toBe(
-            `ws-1/chat/conv-1/${OBJECT_ID}.`,
+            `ws-1/chat/office/${OBJECT_ID}.`,
         )
     })
 
     it.each([
-        ["another workspace", `ws-2/chat/conv-1/${OBJECT_ID}.png`],
-        ["another conversation", `ws-1/chat/conv-2/${OBJECT_ID}.png`],
-        ["a traversal", `ws-1/chat/conv-1/../${OBJECT_ID}.png`],
-        ["another extension", `ws-1/chat/conv-1/${OBJECT_ID}.svg`],
+        ["another workspace", `ws-2/chat/office/${OBJECT_ID}.png`],
+        ["another folder", `ws-1/chat/other/${OBJECT_ID}.png`],
+        ["a traversal", `ws-1/chat/office/../${OBJECT_ID}.png`],
+        ["another extension", `ws-1/chat/office/${OBJECT_ID}.svg`],
     ])("refuses %s", async (_case, path) => {
         expect((await build()).isChatFilePath(SCOPE, path)).toBe(false)
     })
@@ -121,41 +111,16 @@ describe("chatFileNameOf", () => {
     })
 })
 
-describe("chatFileExtensionOf", () => {
-    it("names the extension of an accepted type and nothing for any other", async () => {
-        const policy = await build()
-
-        expect(["image/jpeg", "image/png", "image/webp", "application/pdf"].map(policy.chatFileExtensionOf)).toEqual([
-            "jpg",
-            "png",
-            "webp",
-            "pdf",
-        ])
-        expect(policy.chatFileExtensionOf("image/gif")).toBe("")
-    })
-})
-
-describe("sniffUnsupportedImage", () => {
-    const ftyp = (brand: string): Uint8Array =>
-        Uint8Array.from([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, ...Buffer.from(brand), 0, 0])
-
-    it.each(["heic", "heix", "mif1", "avif", "avis"])("knows an ISO media picture of brand %s", async (brand) => {
-        expect((await build()).sniffUnsupportedImage(ftyp(brand))).toBe("image/heif")
-    })
-
-    it("knows a GIF of either version", async () => {
-        const policy = await build()
-
-        expect(policy.sniffUnsupportedImage(Buffer.from("GIF89a....."))).toBe("image/gif")
-        expect(policy.sniffUnsupportedImage(Buffer.from("GIF87a....."))).toBe("image/gif")
-    })
-
-    it("knows nothing about an ISO media file of another brand, a page or an accepted picture", async () => {
-        const policy = await build()
-
-        expect(policy.sniffUnsupportedImage(ftyp("mp42"))).toBeNull()
-        expect(policy.sniffUnsupportedImage(Buffer.from("<html></html>"))).toBeNull()
-        expect(policy.sniffUnsupportedImage(Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]))).toBeNull()
-        expect(policy.sniffUnsupportedImage(new Uint8Array(0))).toBeNull()
+describe("filesOfMessage", () => {
+    it("keeps the files of the named line only", async () => {
+        const mine = {
+            id: "f-1",
+            messageId: "m-1",
+            name: "a.png",
+            contentType: "image/png",
+            url: "https://x.invalid/a",
+        }
+        const other = { ...mine, id: "f-2", messageId: "m-2" }
+        expect((await build()).filesOfMessage([mine, other], "m-1")).toEqual([mine])
     })
 })

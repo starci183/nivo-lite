@@ -14,8 +14,8 @@ export const CONVERSATION_LAST_ROLES: readonly [string, ...Array<string>] = ["us
 const MAX_LAST_TEXT = 142
 
 type ConversationFields = {
-    readonly kind: FieldDef<"enum", false>
     readonly channel: FieldDef<"enum", false>
+    readonly connectionId: FieldDef<"uuid", true>
     readonly externalId: FieldDef<"text", true>
     readonly name: FieldDef<"text", false>
     readonly status: FieldDef<"enum", false>
@@ -29,11 +29,13 @@ type ConversationFields = {
     readonly messageCount: FieldDef<"int", false>
     readonly agentId: FieldDef<"uuid", true>
     readonly frontAgentId: FieldDef<"uuid", true>
+    readonly connectorPartyId: FieldDef<"text", true>
+    readonly connectorPartyName: FieldDef<"text", true>
 }
 
 const conversationFields: ConversationFields = {
-    kind: field.enum({ of: ["customer", "test"], default: { literal: "customer" } }),
     channel: field.enum({ of: LEAD_CHANNELS, default: { literal: "website" } }),
+    connectionId: field.uuid({ nullable: true }),
     externalId: field.text({ maxLength: MAX_ID, nullable: true }),
     name: field.text({ maxLength: MAX_LINE, searchable: true, default: "empty" }),
     status: field.enum({ of: CONVERSATION_STATUSES, default: { literal: "ai" } }),
@@ -47,6 +49,8 @@ const conversationFields: ConversationFields = {
     messageCount: field.int({ default: { literal: 0 } }),
     agentId: field.uuid({ nullable: true }),
     frontAgentId: field.uuid({ nullable: true }),
+    connectorPartyId: field.text({ maxLength: MAX_ID, nullable: true }),
+    connectorPartyName: field.text({ maxLength: MAX_LINE, nullable: true }),
 }
 
 /**
@@ -68,14 +72,17 @@ export const conversationEntity: EntityDefinition<ConversationFields> = defineEn
         { name: "channel_recent", on: ["channel", { desc: "lastAt" }, { desc: "id" }] },
         { name: "status_recent", on: ["status", { desc: "lastAt" }, { desc: "id" }] },
         { name: "status_channel_recent", on: ["status", "channel", { desc: "lastAt" }, { desc: "id" }] },
+        { name: "customer", on: ["channel", "connectionId", "externalId", "id"] },
+        { name: "connection_recent", on: ["channel", "connectionId", { desc: "lastAt" }, { desc: "id" }] },
     ],
     constraints: [
         {
             kind: "unique",
             name: "channel_external_key",
-            on: ["channel", "externalId"],
+            on: ["channel", "connectionId", "externalId"],
             where: { op: "notNull", field: "externalId" },
             refusal: "conversation-exists",
         },
     ],
+    matchKeys: [{ name: "channel_external", on: ["channel", "connectionId", "externalId"] }],
 })

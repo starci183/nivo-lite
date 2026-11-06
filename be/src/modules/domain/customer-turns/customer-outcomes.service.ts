@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { AgentBindingsService, PURPOSES } from "@modules/domain/agent-connections"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import { KnowledgeGapNotesService, viewOf } from "@modules/domain/agent-knowledge"
 import type { CustomerTurn, ChatTurnProposal, CustomerOutcomes, TurnVerdict } from "@modules/domain/conversations"
 import { CommandBusService, EvidenceService, WorkEngineService } from "@modules/domain/decisions"
@@ -68,7 +68,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         private readonly items: WorkItemsService,
         private readonly inbound: InboundEventsService,
         private readonly invoices: InvoicesService,
-        private readonly conversations: AgentConversationsService,
+        private readonly conversations: ChatConversationsService,
         private readonly bindings: AgentBindingsService,
         private readonly rules: AuthorityRulesService,
         private readonly hiring: HiringPublicService,
@@ -191,7 +191,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
     }
 
     /** The price and payment rules: an order only at a price the owner wrote, and "I have paid" answered with fixed text. */
-    private async judge(conversation: TurnConversation, reply: CustomerReply): Promise<Judged> {
+    private async judge(conversation: ChatTurnConversation, reply: CustomerReply): Promise<Judged> {
         const asked = reply.paymentClaim ? null : reply.order
         const knownPrice = asked === null || isKnownPrice(conversation.agent.knowledge, asked.amountVnd)
         const base: Judged = knownPrice
@@ -318,7 +318,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
     }
 
     /** True when the owner's reply rule asks first, or this agent may not send through the conversation's connection on its own. */
-    private async needsApproval(conversation: TurnConversation): Promise<boolean> {
+    private async needsApproval(conversation: ChatTurnConversation): Promise<boolean> {
         const rule = await this.rules.ruleFor(
             { workspaceId: conversation.workspaceId },
             REPLY_ACTION,
@@ -383,7 +383,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
             },
         })
         // The conversation is now this customer: named after them (a channel account name is often not the person's name).
-        await this.conversations.rename(conversation.id, lead.contactName)
+        await this.conversations.rename(ctx.workspaceId, conversation.id, lead.contactName)
         if (item.lead_id !== null) await this.conversations.attachLead(ctx.workspaceId, conversation.id, item.lead_id)
         return {
             lines: [this.handoffLine(item)],
@@ -428,8 +428,8 @@ export class CustomerOutcomesService implements CustomerOutcomes {
     }
 
     /**
-     * A preset reply_customer item that always asks a person; `existed` when an earlier delivery of the turn already opened it. On the
-     * core road the item carries the turn and wake it came from.
+     * A preset reply_customer item that always asks a person; `existed` when an earlier delivery of the turn already opened it. The
+     * item carries the turn and wake it came from, when the turn has them.
      */
     private async openReplyItem(ctx: WorkContext, turn: CustomerTurn, spec: ReplyItemSpec): Promise<OpenedReplyItem> {
         const { conversation } = turn
@@ -456,7 +456,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
 
     private escalate(
         item: WorkItem,
-        conversation: TurnConversation,
+        conversation: ChatTurnConversation,
         question: string,
         proposed: string | null,
     ): Promise<boolean> {
@@ -483,7 +483,7 @@ export class CustomerOutcomesService implements CustomerOutcomes {
         })
     }
 
-    private channelOf(conversation: TurnConversation): CustomerChannel {
+    private channelOf(conversation: ChatTurnConversation): CustomerChannel {
         const key = channelKeyOf(conversation.channel)
         return { key, label: this.text(`channel.${key}`, {}) }
     }

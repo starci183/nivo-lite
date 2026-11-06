@@ -1,16 +1,16 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
-import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { ConversationTarget } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
+import { fakeIds, mock } from "@starci/jest-preset"
 import { ChannelDeliveryService } from "@modules/domain/channels"
+import { ChatConversationsService, ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
+import type { ChatConversationTarget } from "@modules/domain/chat-records"
+import { IDS } from "@modules/platform/ids"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ok, refused } from "@modules/platform/primitives"
 import { ChannelCandidateChatService } from "./channel-candidate-chat.service"
 import { HiringLogEvent } from "./hiring.log-events"
 
-const TARGET: ConversationTarget = {
+const TARGET: ChatConversationTarget = {
     id: "conv-1",
     workspaceId: "ws-1",
     channel: "telegram",
@@ -19,16 +19,18 @@ const TARGET: ConversationTarget = {
 }
 
 const build = async () => {
-    const conversations = mock<AgentConversationsService>()
-    const messages = mock<AgentMessagesService>()
-    messages.storeAgentMessage.mockResolvedValue("msg-1")
+    const conversations = mock<ChatConversationsService>()
+    const messages = mock<ChatMessagesService>()
+    messages.storeAgentLine.mockResolvedValue({ id: "msg-1", body: "Interview at 10:00", sent: false })
+    const ids = fakeIds()
     const delivery = mock<ChannelDeliveryService>()
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ChannelCandidateChatService,
-            { provide: AgentConversationsService, useValue: conversations },
-            { provide: AgentMessagesService, useValue: messages },
+            { provide: ChatConversationsService, useValue: conversations },
+            { provide: ChatMessagesService, useValue: messages },
+            { provide: IDS, useValue: ids },
             { provide: ChannelDeliveryService, useValue: delivery },
             { provide: LOGGER, useValue: logger },
         ],
@@ -44,8 +46,15 @@ describe("ChannelCandidateChatService", () => {
 
         await expect(chat.deliver("ws-1", "conv-1", "Interview at 10:00")).resolves.toBe(true)
 
-        expect(messages.storeAgentMessage).toHaveBeenCalledWith("ws-1", "conv-1", "Interview at 10:00")
+        expect(conversations.targetOf).toHaveBeenCalledWith("ws-1", "conv-1")
+        expect(messages.storeAgentLine).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            conversationId: "conv-1",
+            body: "Interview at 10:00",
+            key: "00000000-0000-4000-8000-000000000001",
+        })
         expect(delivery.deliver).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
             conversationId: "conv-1",
             messageId: "msg-1",
             text: "Interview at 10:00",
@@ -60,14 +69,12 @@ describe("ChannelCandidateChatService", () => {
         await expect(chat.deliver("ws-1", "conv-1", "x")).resolves.toBe(false)
     })
 
-    it("refuses a conversation of another workspace or one that is gone", async () => {
+    it("refuses a conversation that is gone in the workspace", async () => {
         const { chat, conversations, messages } = await build()
-        conversations.targetOf.mockResolvedValueOnce(ok({ ...TARGET, workspaceId: "ws-2" }))
-        conversations.targetOf.mockResolvedValueOnce(refused(AgentConversationsErrorCode.NotFound))
+        conversations.targetOf.mockResolvedValue(refused(ChatRecordsErrorCode.NotFound))
 
         await expect(chat.deliver("ws-1", "conv-1", "x")).resolves.toBe(false)
-        await expect(chat.deliver("ws-1", "conv-1", "x")).resolves.toBe(false)
-        expect(messages.storeAgentMessage).not.toHaveBeenCalled()
+        expect(messages.storeAgentLine).not.toHaveBeenCalled()
     })
 
     it("never throws: a failure is logged and answers false", async () => {

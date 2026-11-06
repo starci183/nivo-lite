@@ -3,8 +3,8 @@ import type { MockOf } from "@starci/jest-preset"
 import { AgentRunsService } from "@modules/domain/agent-runs"
 import type { StepJson } from "@modules/domain/agent-runs"
 import type { OutputNodeReader } from "@modules/domain/authority-rules"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import type { ToolContext } from "@modules/domain/agent-tools"
 import type { WorkItem } from "@modules/domain/decisions"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
@@ -13,7 +13,7 @@ import type { TurnGatewayToolsService } from "@modules/domain/customer-turns"
 /** Shared typed fixture setup for these behavior proofs. */
 export const CTX: ToolContext = { jobId: "m1", workspaceId: "ws", conversationId: "c1" }
 /** Shared typed fixture setup for these behavior proofs. */
-export const CONVERSATION: TurnConversation = {
+export const CONVERSATION: ChatTurnConversation = {
     id: "c1",
     workspaceId: "ws",
     channel: "zalo",
@@ -128,7 +128,7 @@ export const roadOutputOf = (
 
 interface TurnGatewayDoubles {
     readonly gateway: MockOf<McpGatewayService>
-    readonly conversations: MockOf<AgentConversationsService>
+    readonly conversations: MockOf<ChatConversationsService>
     readonly approvals: MockOf<Dependencies[3]>
     readonly notes: MockOf<Dependencies[4]>
     readonly sources: MockOf<Dependencies[5]>
@@ -144,7 +144,6 @@ export const arrangeTurnGateway = (doubles: TurnGatewayDoubles, refuses = false)
     gateway.describe.mockResolvedValue(DESCRIBED)
     gateway.call.mockResolvedValue({ ok: true, value: { orderId: "o1" } })
     conversations.turnOf.mockResolvedValue({ kind: "ok", value: CONVERSATION })
-    conversations.isTestChat.mockResolvedValue(false)
     approvals.ask.mockResolvedValue(mock<WorkItem>({ id: "w1" }))
     notes.postOnce.mockResolvedValue(undefined)
     sources.of.mockReturnValue(PRICE_LIST)

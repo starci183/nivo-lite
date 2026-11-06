@@ -2,16 +2,8 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { MessagesReadService } from "@modules/domain/messages"
 import type { LineReader } from "@modules/domain/messages"
-import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectRoomsAgents, InjectRoomsTestChats } from "./office-rooms.decorators"
-import type { RoomsAgentChats, RoomsAgents, RoomsChatLine, RoomsTestChats } from "./office-rooms.port"
-import type {
-    AgentConversationFacts,
-    ConversationUnreadFacts,
-    RoomFacts,
-    RoomSummaryFacts,
-} from "./office-rooms.contracts"
+import type { ConversationUnreadFacts, RoomFacts, RoomSummaryFacts } from "./office-rooms.contracts"
 import {
     OfficeRoomEntity,
     OfficeRoomMemberEntity,
@@ -21,12 +13,9 @@ import {
 
 /** How many department rooms the list answers. */
 const ROOM_LIMIT = 20
-/** How many agent conversations the unread read answers. */
-const AGENT_LIMIT = 100
 /** How many customer conversations the unread read answers. */
 const LEAD_LIMIT = 500
-/** The read marker key prefixes of the direct conversations. */
-const AGENT_KEY = "agent:"
+/** The read marker key prefix of the customer conversations. */
 const LEAD_KEY = "lead:"
 /** The text shape a marker instant is read in: the database JSON rendering, microsecond exact. */
 const MARK_INSTANT = "to_json(rd.last_read_at) #>> '{}'"
@@ -56,9 +45,6 @@ export class OfficeRoomReadsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly messages: MessagesReadService,
-        @InjectRoomsAgents() private readonly agents: RoomsAgents,
-        @InjectRoomsTestChats() private readonly testChats: RoomsTestChats,
-        private readonly members: WorkspaceMembersReadService,
     ) {}
 
     /** The general Office room as the list shows it: every line of the workspace, read from the caller's `''` marker. */
@@ -122,32 +108,6 @@ export class OfficeRoomReadsService {
         }))
     }
 
-    /** Every agent of the workspace with the caller's unread line count of its test chats and the newest line. */
-    async agentConversations(
-        workspaceId: string,
-        userId: string,
-        displayName: string,
-    ): Promise<Array<AgentConversationFacts>> {
-        const agentIds = await this.agents.idsOf(workspaceId, AGENT_LIMIT)
-        const marks = new Map(
-            (await this.marksOf(workspaceId, userId, "rd.room LIKE 'agent:%'")).map((mark) => [
-                mark.room,
-                mark.read_at,
-            ]),
-        )
-        const chats = await this.testChats.activityOf(
-            workspaceId,
-            { userId, displayName },
-            agentIds.map((agentId) => ({ agentId, readAt: marks.get(`${AGENT_KEY}${agentId}`) ?? null })),
-        )
-        const authors = await this.members.namesOf(
-            workspaceId,
-            chats.flatMap(({ newest }) => (newest?.author_user_id ? [newest.author_user_id] : [])),
-        )
-        const names = new Map(authors.map((author) => [author.userId, author.displayName]))
-        return chats.map((chat): AgentConversationFacts => conversationFactsOf(chat, names))
-    }
-
     /** The caller's unread line counts of the customer conversations that have unread lines. */
     async leadConversations(
         workspaceId: string,
@@ -176,19 +136,3 @@ export class OfficeRoomReadsService {
             .getRawMany<MarkRaw>()
     }
 }
-
-/** The name a line shows for its author: the name written on the line, else the member's display name. */
-const authorOf = (newest: RoomsChatLine, names: ReadonlyMap<string, string>): string | null => {
-    if (newest.author_name !== null) return newest.author_name
-    return newest.author_user_id === null ? null : (names.get(newest.author_user_id) ?? null)
-}
-
-/** One agent's direct conversation from the activity of its test chats. */
-const conversationFactsOf = (chat: RoomsAgentChats, names: ReadonlyMap<string, string>): AgentConversationFacts => ({
-    id: chat.agentId,
-    unread: chat.unread,
-    last_body: chat.newest?.body ?? null,
-    last_author_id: chat.newest?.author_user_id ?? null,
-    last_author: chat.newest === undefined ? null : authorOf(chat.newest, names),
-    last_at: chat.newest?.at ?? null,
-})

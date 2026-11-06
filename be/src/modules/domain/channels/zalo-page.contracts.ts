@@ -7,7 +7,7 @@ export type ZaloTokenState = "none" | "valid" | "renewable" | "expired"
 export type ZaloCheckState = "ok" | "fail" | "warn"
 
 /** The parts of a Zalo OA connection the check list names. */
-export type ZaloCheckKey = "app" | "token" | "webhook" | "permissions"
+export type ZaloCheckKey = "app" | "token" | "webhook"
 
 /** What the OA access token looks like to the owner; no token is ever returned. */
 export interface ZaloAccessView {
@@ -82,30 +82,6 @@ export interface ZaloPageView {
     readonly agentIds: ReadonlyArray<string>
     /** The ZNS renewal template the connection falls back to outside the 48-hour window, or null when none is configured. */
     readonly znsRenewal: OptionalZnsRenewal
-}
-
-/** The kinds of line the live panel lists. */
-export type ZaloEventKind = "user_send_text" | "follow" | "agent_reply" | "renewal_qr"
-
-/** What happened to the event. */
-export type ZaloEventOutcome = "received" | "sent" | "not_sent"
-
-/** One line of the live Zalo events panel. */
-export interface ZaloPageEvent {
-    /** A stable id of the line. */
-    readonly id: string
-    /** The kind. */
-    readonly kind: ZaloEventKind
-    /** What happened to it. */
-    readonly outcome: ZaloEventOutcome
-    /** When, ISO 8601. */
-    readonly at: string
-    /** The customer, when known. */
-    readonly who: string
-    /** A short excerpt of the text. */
-    readonly text: string
-    /** Why a reply was not sent, in the stable terms of the delivery path; null otherwise. */
-    readonly reason: string | null
 }
 
 /** What a test send answers. */

@@ -62,24 +62,3 @@ export const readZaloEvent = (
         ? refused(ConversationsErrorCode.NotAnswered)
         : ok({ appId, userId, messageId, text, attachments, sentAt })
 }
-
-/** True when the event is a picture or a file: the events whose shape is worth a log line when no attachment can be read from them. */
-export const isZaloAttachmentEvent = (raw?: Buffer): boolean => {
-    const body = readJsonObject(raw)
-    return body.kind === "ok" && ATTACHMENT_EVENTS.has(textField(body.value, "event_name"))
-}
-
-/** The names, never the values, of the fields of a picture or file message, so an unknown shape can be logged without any address or secret. */
-export const zaloAttachmentShapeOf = (raw?: Buffer): string => {
-    const body = readJsonObject(raw)
-    if (body.kind !== "ok") return ""
-    const message = body.value.message
-    const first: unknown = listField(message, "attachments")[0]
-    const keysOf = (value: unknown): string =>
-        isRecord(value)
-            ? Object.keys(value)
-                  .sort((a, b) => a.localeCompare(b))
-                  .join(",")
-            : "-"
-    return `message[${keysOf(message)}] attachment[${keysOf(first)}] payload[${keysOf(isRecord(first) ? first.payload : undefined)}]`
-}

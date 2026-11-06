@@ -1,8 +1,8 @@
 import { builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
 import type { LeadDraft, ToolContext } from "@modules/domain/agent-tools"
+import { ChatConversationsService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import { CommandBusService } from "@modules/domain/decisions"
 import type { WorkItem } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
@@ -14,7 +14,7 @@ const ctx: ToolContext = { jobId: "job-1", workspaceId: "ws-1", conversationId: 
 
 const draft: LeadDraft = { contactName: "Lan", need: "50 tea boxes", company: null, contact: "0901234567" }
 
-const turnOf = (leadId: string | null): TurnConversation => ({
+const turnOf = (leadId: string | null): ChatTurnConversation => ({
     id: "conv-1",
     workspaceId: "ws-1",
     channel: "telegram",
@@ -70,7 +70,7 @@ const itemOf = builder<WorkItem>({
 const build = async () => {
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key) => `label of ${key}`)
-    const conversations = mock<AgentConversationsService>()
+    const conversations = mock<ChatConversationsService>()
     conversations.turnOf.mockResolvedValue({ kind: "ok", value: turnOf(null) })
     const inbound = mock<InboundEventsService>()
     inbound.recordInput.mockResolvedValue({ duplicate: false, inboundEventId: "ev-1" })
@@ -80,7 +80,7 @@ const build = async () => {
         providers: [
             LeadWriterService,
             { provide: MESSAGE_CATALOG, useValue: catalog },
-            { provide: AgentConversationsService, useValue: conversations },
+            { provide: ChatConversationsService, useValue: conversations },
             { provide: InboundEventsService, useValue: inbound },
             { provide: CommandBusService, useValue: bus },
         ],
@@ -125,7 +125,7 @@ describe("LeadWriterService", () => {
                 },
             },
         )
-        expect(conversations.rename).toHaveBeenCalledWith("conv-1", "Lan")
+        expect(conversations.rename).toHaveBeenCalledWith("ws-1", "conv-1", "Lan")
         expect(conversations.attachLead).toHaveBeenCalledWith("ws-1", "conv-1", "lead-9")
     })
 
@@ -144,7 +144,7 @@ describe("LeadWriterService", () => {
 
     it("answers unavailable when the conversation cannot be read", async () => {
         const { writer, conversations, inbound } = await build()
-        conversations.turnOf.mockResolvedValue({ kind: "refused", code: AgentConversationsErrorCode.NotFound })
+        conversations.turnOf.mockResolvedValue({ kind: "refused", code: ChatRecordsErrorCode.NotFound })
 
         await expect(writer.createOrUpdate(ctx, draft)).resolves.toEqual({ leadId: null, status: "unavailable" })
 

@@ -1,12 +1,9 @@
 import { FakeClock, builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { ConversationRef } from "@modules/domain/agent-conversations"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
-import { AgentDirectoryService } from "@modules/domain/agents"
 import { ChannelsErrorCode, ZaloCredentialsService } from "@modules/domain/channels"
-import { InboundFilesService } from "@modules/domain/chat-files"
-import type { DownloadedChatFile } from "@modules/domain/chat-files"
+import { ChatConversationsService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
+import type { ChatConversationRef } from "@modules/domain/chat-records"
 import { ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { CLOCK } from "@modules/platform/clock"
@@ -19,14 +16,7 @@ import { CustomerHearingService } from "./customer-hearing.service"
 
 const NOW = Date.parse("2026-10-12T10:00:00.000Z")
 const CONNECTION = "c-1"
-const FRONT_AGENT = { id: "agent-1", greeting: "Welcome!" }
-
-const receipt: DownloadedChatFile = {
-    bytes: new Uint8Array([1, 2, 3]),
-    contentType: "image/png",
-    name: "a.png",
-    sourceUrl: "https://cdn.test/a.png",
-}
+const FRONT_AGENT = { id: "agent-1" }
 
 const PICTURE = { kind: "image", url: "https://cdn.test/a.png", thumbnailUrl: "", name: "", localPath: "" } as const
 
@@ -39,7 +29,7 @@ const hearingOf = builder<Hearing>({
     visitor: "Minh Tran",
     agent: FRONT_AGENT,
     text: "Hello",
-    channelEventId: "tg:555:9",
+    channelEventId: "tg:c-1:555:9",
 })
 
 /** The hearing of a Zalo message from a new guest. */
@@ -49,12 +39,11 @@ const zaloHearingOf = (patch: Partial<Hearing> = {}): Hearing =>
         customerId: "user-1",
         visitor: "<conversations.zaloGuest>",
         channelEventId: "zalo:m-1",
-        files: [],
         sentAt: null,
         ...patch,
     })
 
-const known = (patch: Partial<ConversationRef> = {}): ConversationRef => ({
+const known = (patch: Partial<ChatConversationRef> = {}): ChatConversationRef => ({
     id: "conv-1",
     agentId: "agent-1",
     leadId: null,
@@ -99,7 +88,7 @@ const zaloSecretOf = (appId: string) => ({
 
 interface Setup {
     readonly connection?: boolean
-    readonly existing?: ConversationRef
+    readonly existing?: ChatConversationRef
 }
 
 const bindingOf = (agent: FrontAgent) => ({
@@ -114,8 +103,6 @@ const build = async (setup: Setup = {}, front: ReadonlyArray<FrontAgent> = []) =
     const [first] = front
     const bindings = mock<AgentBindingsService>()
     bindings.routeInbound.mockResolvedValue({ front: first === undefined ? null : bindingOf(first), handovers: [] })
-    const agents = mock<AgentDirectoryService>()
-    agents.greetingOf.mockResolvedValue(first === undefined ? null : first.greeting)
     const connections = mock<ConnectionsService>()
     connections.intakeOf.mockResolvedValue(
         setup.connection === false
@@ -123,10 +110,10 @@ const build = async (setup: Setup = {}, front: ReadonlyArray<FrontAgent> = []) =
             : { kind: "ok", value: { id: CONNECTION, workspaceId: "ws-1", status: "connected" } },
     )
     connections.markReceived.mockResolvedValue(undefined)
-    const conversations = mock<AgentConversationsService>()
+    const conversations = mock<ChatConversationsService>()
     conversations.find.mockResolvedValue(
         setup.existing === undefined
-            ? { kind: "refused", code: AgentConversationsErrorCode.NotFound }
+            ? { kind: "refused", code: ChatRecordsErrorCode.NotFound }
             : { kind: "ok", value: setup.existing },
     )
     conversations.archive.mockResolvedValue(undefined)
@@ -134,23 +121,19 @@ const build = async (setup: Setup = {}, front: ReadonlyArray<FrontAgent> = []) =
     inboundEvents.keepUnrouted.mockResolvedValue(undefined)
     const hearing = mock<CustomerHearingService>()
     hearing.hear.mockResolvedValue(undefined)
-    hearing.greet.mockResolvedValue(undefined)
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key) => `<${key}>`)
     const zalo = mock<ZaloCredentialsService>()
-    const inboundFiles = mock<InboundFilesService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ConversationsService,
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: ConnectionsService, useValue: connections },
-            { provide: AgentConversationsService, useValue: conversations },
+            { provide: ChatConversationsService, useValue: conversations },
             { provide: InboundEventsService, useValue: inboundEvents },
             { provide: ZaloCredentialsService, useValue: zalo },
             { provide: AgentBindingsService, useValue: bindings },
-            { provide: AgentDirectoryService, useValue: agents },
-            { provide: InboundFilesService, useValue: inboundFiles },
             { provide: CustomerHearingService, useValue: hearing },
         ],
     }).compile()
@@ -158,14 +141,12 @@ const build = async (setup: Setup = {}, front: ReadonlyArray<FrontAgent> = []) =
     return {
         service,
         bindings,
-        agents,
         connections,
         conversations,
         inboundEvents,
         hearing,
         catalog,
         zalo,
-        inboundFiles,
     }
 }
 
@@ -176,7 +157,6 @@ const registerTelegram = () => {
 
         await expect(service.acceptTelegram(CONNECTION, telegram(), manager)).resolves.toBeUndefined()
         expect(hearing.hear).toHaveBeenCalledWith(hearingOf(), manager)
-        expect(hearing.greet).not.toHaveBeenCalled()
     })
 
     it("only keeps the message in the inbox when no agent is bound to the connection", async () => {
@@ -203,49 +183,33 @@ const registerTelegram = () => {
         expect(hearing.hear).not.toHaveBeenCalled()
     })
 
-    it("opens a new visit on /start: archives the old conversation and greets it", async () => {
+    it("opens a new visit on /start: archives the old conversation, and the next message starts a new one", async () => {
         const manager = mockEntityManager()
         const { service, hearing, conversations } = await build({}, [FRONT_AGENT])
 
         await expect(
             service.acceptTelegram(CONNECTION, telegram({ text: "/start", isStart: true }), manager),
         ).resolves.toBeUndefined()
-        expect(conversations.archive).toHaveBeenCalledWith("ws-1", "telegram", CONNECTION, "555", `555:${NOW}`, manager)
-        const { text: _text, channelEventId: _id, ...meeting } = hearingOf()
-        expect(hearing.greet).toHaveBeenCalledWith(meeting, "tg:555:9", manager)
+        expect(conversations.archive).toHaveBeenCalledWith("ws-1", "telegram", CONNECTION, "555", `555:${NOW}`)
         expect(hearing.hear).not.toHaveBeenCalled()
-    })
-
-    it("greets with an empty line when the agent has no greeting, leaving the default to the hearing", async () => {
-        const manager = mockEntityManager()
-        const { service, hearing, agents } = await build({}, [FRONT_AGENT])
-        agents.greetingOf.mockResolvedValue(null)
-
-        await service.acceptTelegram(CONNECTION, telegram({ text: "/start", isStart: true }), manager)
-
-        expect(hearing.greet).toHaveBeenCalledWith(
-            expect.objectContaining({ agent: { id: "agent-1", greeting: "" } }),
-            "tg:555:9",
-            manager,
-        )
     })
 }
 
 const registerZalo = () => {
-    it("marks the connection received and hands the message with its files and time to the hearing", async () => {
+    it("marks the connection received and hands the message with its time to the hearing", async () => {
         const manager = mockEntityManager()
         const { service, hearing, connections, zalo } = await build({}, [FRONT_AGENT])
         zalo.load.mockResolvedValue(zaloSecretOf("app-1"))
 
         await expect(
-            service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1", sentAt: NOW - 1000 }), manager, [receipt]),
+            service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1", sentAt: NOW - 1000 }), manager),
         ).resolves.toBe(true)
         expect(connections.markReceived).toHaveBeenCalledWith(
             CONNECTION,
             { amount: 0, content: "<conversations.zaloGuest>", at: new Date(NOW).toISOString(), text: "Hello" },
             manager,
         )
-        expect(hearing.hear).toHaveBeenCalledWith(zaloHearingOf({ files: [receipt], sentAt: NOW - 1000 }), manager)
+        expect(hearing.hear).toHaveBeenCalledWith(zaloHearingOf({ sentAt: NOW - 1000 }), manager)
     })
 
     it("keeps the name of a known customer and cuts the first event text at 160 characters", async () => {
@@ -302,9 +266,9 @@ const registerZaloInbox = () => {
         const manager = mockEntityManager()
         const { service, hearing, inboundEvents } = await build({}, [])
 
-        await expect(
-            service.acceptZalo(CONNECTION, zaloMessage({ attachments: [PICTURE] }), manager, [receipt]),
-        ).resolves.toBe(false)
+        await expect(service.acceptZalo(CONNECTION, zaloMessage({ attachments: [PICTURE] }), manager)).resolves.toBe(
+            false,
+        )
         expect(inboundEvents.keepUnrouted).toHaveBeenCalledWith(manager, {
             workspaceId: "ws-1",
             channel: "zalo",
@@ -335,16 +299,6 @@ const registerZaloInbox = () => {
 
         await expect(service.acceptZalo(CONNECTION, zaloMessage({ appId: "app-1" }), manager)).resolves.toBe(true)
         expect(connections.markReceived).toHaveBeenCalledTimes(1)
-    })
-
-    it("reads the files before the message is stored, leaving out the ones that cannot be read", async () => {
-        const { service, inboundFiles } = await build({}, [FRONT_AGENT])
-        inboundFiles.download.mockResolvedValueOnce(receipt).mockResolvedValueOnce(null)
-        const second = { ...PICTURE, url: "https://cdn.test/b.png" }
-
-        await expect(service.readFiles([PICTURE, second], true, "m-9")).resolves.toEqual([receipt])
-        expect(inboundFiles.download).toHaveBeenNthCalledWith(1, PICTURE, true, "m-9", 0)
-        expect(inboundFiles.download).toHaveBeenNthCalledWith(2, second, true, "m-9", 1)
     })
 }
 
@@ -418,7 +372,7 @@ describe("ConversationsService", () => {
 
     describe("acceptZalo", registerZalo)
 
-    describe("acceptZalo inbox and files", registerZaloInbox)
+    describe("acceptZalo inbox", registerZaloInbox)
 
     describe("acceptMeta", registerMeta)
 })

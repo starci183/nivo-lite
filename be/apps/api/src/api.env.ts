@@ -1,6 +1,5 @@
 import { parseKnowledgeConfig } from "@modules/domain/knowledge"
 import { parseBillingConfig } from "@modules/domain/billing"
-import { parseChatFilesImportRoot } from "@modules/domain/chat-files"
 import { parseConnectionPollConfig } from "@modules/domain/connection-poll"
 import { parseServerConfig, type EnvSource } from "@modules/platform/config"
 import { parsePrimaryDatabaseConfig } from "@modules/platform/database"
@@ -73,8 +72,6 @@ export interface ApiOptions {
     readonly workspaceInvites: ReturnType<typeof parseWorkspaceInvitesConfig>
     /** The payment feeds: keys, bank account and the credential key. */
     readonly billing: ReturnType<typeof parseBillingConfig>
-    /** The folder a manual import's local attachment paths are read from. */
-    readonly chatFilesImportRoot: ReturnType<typeof parseChatFilesImportRoot>
     /** The adaptive poll of connections: intervals, jitter, breaker thresholds and the limiter Redis. */
     readonly connectionPoll: ReturnType<typeof parseConnectionPollConfig>
     /** The Redis connections the capabilities that keep state in Redis open. */
@@ -161,7 +158,6 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     workspaces: parseWorkspacesConfig(env),
     workspaceInvites: parseWorkspaceInvitesConfig(env),
     billing: parseBillingConfig(env),
-    chatFilesImportRoot: parseChatFilesImportRoot(env),
     connectionPoll: parseConnectionPollConfig(env),
     redis: parseRedisConfig(env),
     remoteFiles: parseRemoteFilesConfig(env),

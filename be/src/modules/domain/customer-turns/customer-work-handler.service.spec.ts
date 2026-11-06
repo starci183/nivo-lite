@@ -87,7 +87,11 @@ describe("CustomerWorkHandlerService.prepare", () => {
             plan: PLAN,
         })
 
-        expect(chat.turnOf).toHaveBeenCalledWith({ conversationId: "c1", messageId: "m1", channelEventId: "tg:42:1" })
+        expect(chat.turnOf).toHaveBeenCalledWith("ws-1", {
+            conversationId: "c1",
+            messageId: "m1",
+            channelEventId: "tg:42:1",
+        })
         expect(chat.ready).toHaveBeenCalledWith(runtimeTurn, true)
         expect(plans.planOf).toHaveBeenCalledWith(runtimeTurn, expect.anything())
     })

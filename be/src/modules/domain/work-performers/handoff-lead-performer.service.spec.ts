@@ -1,6 +1,6 @@
 import { builder, fakeTransaction, mock, mockEntityManager, recordingEventBus } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { AgentsService } from "@modules/domain/agents"
 import { EvidenceService } from "@modules/domain/decisions"
 import type { Proposal, WorkContext, WorkItem } from "@modules/domain/decisions"
@@ -15,7 +15,6 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { EVENT_BUS } from "@modules/platform/event-bus"
 import type { BaseEvent } from "@modules/platform/event-bus"
 import { HandoffLeadPerformerService } from "./handoff-lead-performer.service"
-import { LeadHandoverService } from "./lead-handover.service"
 import { PerformerKitService } from "./performer-kit.service"
 
 const ctx: WorkContext = { workspaceId: "ws-1", actor: "Lan", locale: "en" }
@@ -81,7 +80,7 @@ const build = async () => {
     leads.capture.mockResolvedValue(leadOf())
     const agents = mock<AgentsService>()
     agents.agentOfDepartment.mockResolvedValue({ id: "agent-1", name: "Mai" })
-    const conversations = mock<AgentConversationsService>()
+    const conversations = mock<ChatConversationsService>()
     const inbound = mock<InboundEventsService>()
     const responsibilities = mock<ResponsibilityJournalService>()
     const evidence = mock<EvidenceService>()
@@ -89,14 +88,13 @@ const build = async () => {
     const tx = fakeTransaction(mockEntityManager())
     const apiCompletion = mock<PublicLeadCompletionService>()
     const contracts = mock<ContractsService>()
-    const handover = mock<LeadHandoverService>({ toSales: jest.fn().mockResolvedValue(true) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             HandoffLeadPerformerService,
             { provide: PerformerKitService, useValue: kit },
             { provide: LeadRecordsService, useValue: leads },
             { provide: AgentsService, useValue: agents },
-            { provide: AgentConversationsService, useValue: conversations },
+            { provide: ChatConversationsService, useValue: conversations },
             { provide: InboundEventsService, useValue: inbound },
             { provide: ResponsibilityJournalService, useValue: responsibilities },
             { provide: EvidenceService, useValue: evidence },
@@ -104,7 +102,6 @@ const build = async () => {
             { provide: EVENT_BUS, useValue: bus },
             { provide: PublicLeadCompletionService, useValue: apiCompletion },
             { provide: ContractsService, useValue: contracts },
-            { provide: LeadHandoverService, useValue: handover },
         ],
     }).compile()
     return {
@@ -119,7 +116,6 @@ const build = async () => {
         tx,
         apiCompletion,
         contracts,
-        handover,
     }
 }
 
@@ -218,7 +214,7 @@ describe("HandoffLeadPerformerService perform rollback", () => {
     })
 
     it("fills in the blanks of a new customer who shared little", async () => {
-        const { service, leads, agents, conversations, inbound, evidence, handover } = await build()
+        const { service, leads, agents, conversations, inbound, evidence } = await build()
         agents.agentOfDepartment.mockResolvedValue(null)
         const sparse = { contact_name: "Lan", need: "tea", email: "Lan@HueTea.vn" }
 
@@ -233,7 +229,6 @@ describe("HandoffLeadPerformerService perform rollback", () => {
         expect(evidence.log.mock.calls[0]?.[1]).toMatchObject({ actor: "Chatbot", evidence: null })
         expect(inbound.mark).not.toHaveBeenCalled()
         expect(conversations.attachLead).not.toHaveBeenCalled()
-        expect(handover.toSales).not.toHaveBeenCalled()
     })
 })
 
@@ -329,27 +324,5 @@ describe("HandoffLeadPerformerService contact enrichment", () => {
         expect(leads.capture).toHaveBeenCalled()
         expect(responsibilities.ensureFor).toHaveBeenCalledWith(ctx, "lead-1")
         expect(apiCompletion.complete).toHaveBeenCalledWith(ctx, item, "lead-1", { summary: "reviewed", fields }, false)
-    })
-})
-
-describe("HandoffLeadPerformerService hand-over to Sales", () => {
-    it("hands the conversation to Sales once it is tied to the customer", async () => {
-        const { service, handover, conversations } = await build()
-
-        await service.perform(ctx, itemOf(), { summary: "s", fields })
-
-        expect(handover.toSales).toHaveBeenCalledWith(ctx, "conv-1", "Lan")
-        expect(conversations.attachLead.mock.invocationCallOrder[0]).toBeLessThan(
-            handover.toSales.mock.invocationCallOrder[0] ?? 0,
-        )
-    })
-
-    it("hands a known customer's conversation over under the customer's name on record", async () => {
-        const { service, leads, handover } = await build()
-        leads.match.mockResolvedValue(leadOf({ contact_name: "Lan Pham" }))
-
-        await service.perform(ctx, itemOf(), { summary: "s", fields })
-
-        expect(handover.toSales).toHaveBeenCalledWith(ctx, "conv-1", "Lan Pham")
     })
 })

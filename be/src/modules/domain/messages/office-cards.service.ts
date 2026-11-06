@@ -103,12 +103,7 @@ export class OfficeCardsService {
         manager: EntityManager,
     ): Promise<PostedCard> {
         const posted = row ?? { id: "", room }
-        await this.activity.message(
-            workspaceId,
-            chatActivityTarget({ room: posted.room, conversationId: null }),
-            null,
-            manager,
-        )
+        await this.activity.message(workspaceId, chatActivityTarget({ room: posted.room }), null, manager)
         return posted
     }
 }

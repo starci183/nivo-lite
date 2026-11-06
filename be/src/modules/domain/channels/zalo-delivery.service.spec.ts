@@ -1,7 +1,7 @@
 import { FakeClock, builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import type { ConversationTarget } from "@modules/domain/agent-conversations"
-import { AgentMessagesErrorCode, AgentMessagesService } from "@modules/domain/agent-messages"
+import { ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
+import type { ChatConversationTarget } from "@modules/domain/chat-records"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { ZALO, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
@@ -21,7 +21,7 @@ const OUTSIDE = NOW - 30 * 24 * HOUR
 
 const QR = "https://qr.sepay.vn/img?acc=0123456789&bank=MB&amount=1500000&des=INV2026100001&template=compact"
 
-const target: ConversationTarget = {
+const target: ChatConversationTarget = {
     id: "conv-1",
     workspaceId: "ws-1",
     channel: "zalo",
@@ -29,7 +29,7 @@ const target: ConversationTarget = {
     connectionId: "c-1",
 }
 
-const request: DeliveryRequest = { conversationId: "conv-1", messageId: "msg-1", text: "Hello" }
+const request: DeliveryRequest = { workspaceId: "ws-1", conversationId: "conv-1", messageId: "msg-1", text: "Hello" }
 const withQr: DeliveryRequest = { ...request, text: `Hoa don INV-202610-0001\nQR: ${QR}` }
 const byConsultation = { delivered: true, outcome: "acknowledged", failure: null, via: "consultation" }
 const byZns = { delivered: true, outcome: "acknowledged", failure: null, via: "zns" }
@@ -87,10 +87,10 @@ const refusal = (zaloCode: number, path = "/v3.0/oa/message/cs") =>
     new ZaloError({ code: ZaloErrorCode.Rejected, params: { path, reason: "no", zaloCode } })
 
 const build = async (lastCustomerAt: number | null = INSIDE) => {
-    const messages = mock<AgentMessagesService>()
+    const messages = mock<ChatMessagesService>()
     messages.lastCustomerAt.mockResolvedValue(
         lastCustomerAt === null
-            ? { kind: "refused", code: AgentMessagesErrorCode.NotFound }
+            ? { kind: "refused", code: ChatRecordsErrorCode.NotFound }
             : { kind: "ok", value: new Date(lastCustomerAt) },
     )
     const zalo = mock<ZaloClient>()
@@ -108,7 +108,7 @@ const build = async (lastCustomerAt: number | null = INSIDE) => {
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: ZALO, useValue: zalo },
             { provide: LOGGER, useValue: logger },
-            { provide: AgentMessagesService, useValue: messages },
+            { provide: ChatMessagesService, useValue: messages },
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ConnectionsService, useValue: connections },
         ],

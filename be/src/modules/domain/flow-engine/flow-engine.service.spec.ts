@@ -1,6 +1,5 @@
 import { builder, mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { ChatReplyService } from "@modules/domain/chatreply"
 import { DecisionsService, WorkDecisionService, WorkPlacementService } from "@modules/domain/decisions"
 import { StaffService } from "@modules/domain/staff"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
@@ -51,20 +50,6 @@ const registerDecisionCommands = () => {
             "ws-1",
             expect.objectContaining({ action: "send_quote", mode: "ask", required_fields: [] }),
         )
-    })
-
-    it("takes a conversation over and answers who handles it", async () => {
-        const { service, setHandling } = await build()
-
-        const result = await service.run({
-            kind: "take_over",
-            workspaceId: "ws-1",
-            member,
-            payload: { conversationId: "conv-1", take: true },
-        })
-
-        expect(setHandling).toHaveBeenCalledWith("user-1", "ws-1", "conv-1", true, "vi")
-        expect(result.data).toEqual({ conversation_id: "conv-1", handled_by: "An" })
     })
 }
 
@@ -158,24 +143,6 @@ const registerPlacementCommands = () => {
         expect(result).toEqual({ data: { id: "item-1", assigned_staff_id: "staff-1" } })
     })
 
-    it("requests a human reply using the legacy conversation and text names", async () => {
-        const { service, requestReply } = await build()
-
-        const result = await service.run({
-            kind: "send_as_human",
-            workspaceId: "ws-1",
-            member,
-            payload: { conversation_id: "conv-1", body: "Thanks", locale: "en" },
-        })
-
-        expect(requestReply).toHaveBeenCalledWith("user-1", "ws-1", {
-            conversationId: "conv-1",
-            body: "Thanks",
-            locale: "en",
-        })
-        expect(result).toEqual({ data: { id: "reply-1", status: "queued" } })
-    })
-
     it("applies authority chat with the member in the command workspace", async () => {
         const { service, apply } = await build()
 
@@ -204,18 +171,15 @@ const build = async () => {
     const decide = jest.fn().mockResolvedValue({ id: "item-1", status: "done" })
     const hold = jest.fn().mockResolvedValue({ id: "item-1", status: "waiting_decision" })
     const saveRule = jest.fn().mockResolvedValue({ action: "send_quote", mode: "ask" })
-    const setHandling = jest.fn().mockResolvedValue({ conversationId: "conv-1", handledBy: "An" })
     const reply = jest.fn().mockResolvedValue({ handled: true, reply: "ok", posted: false })
     const updateAuthority = jest.fn().mockResolvedValue({ policies: "check limits" })
     const save = jest.fn().mockResolvedValue({ id: "staff-1", name: "An" })
     const assign = jest.fn().mockResolvedValue({ id: "item-1", assigned_staff_id: "staff-1" })
-    const requestReply = jest.fn().mockResolvedValue({ id: "reply-1", status: "queued" })
     const apply = jest.fn().mockResolvedValue({ summary: "saved", authority: null, rules: [] })
     const decisions = mock<DecisionsService>({ saveRule, updateAuthority })
     const work = mock<WorkDecisionService>({ decide })
     const placement = mock<WorkPlacementService>({ hold, assign })
     const staff = mock<StaffService>({ save })
-    const chats = mock<ChatReplyService>({ setHandling, requestReply })
     const authorityChat = mock<AuthorityChatService>({ apply })
     const ownerChat = mock<OwnerChatService>({ reply })
     const moduleRef = await Test.createTestingModule({
@@ -225,7 +189,6 @@ const build = async () => {
             { provide: WorkDecisionService, useValue: work },
             { provide: WorkPlacementService, useValue: placement },
             { provide: StaffService, useValue: staff },
-            { provide: ChatReplyService, useValue: chats },
             { provide: AuthorityChatService, useValue: authorityChat },
             { provide: OwnerChatService, useValue: ownerChat },
         ],
@@ -235,12 +198,10 @@ const build = async () => {
         decide,
         hold,
         saveRule,
-        setHandling,
         reply,
         updateAuthority,
         save,
         assign,
-        requestReply,
         apply,
     }
 }

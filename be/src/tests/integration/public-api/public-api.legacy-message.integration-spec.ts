@@ -1,5 +1,6 @@
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
-import { persistPublicApiConversation } from "../../fixtures/builders/public-api.builder"
+import { ChatConversationsService } from "@modules/domain/chat-records"
+import { persistPublicApiConversation, persistPublicApiLead } from "../../fixtures/builders/public-api.builder"
 import { PUBLIC_API_PROOF_MODULES } from "../../world/public-api-capabilities.options"
 import { publicApiWork } from "../../world/public-api-proof.service"
 import { preparePublicApiProof } from "../../world/public-api-suite.service"
@@ -11,9 +12,13 @@ describe("Public API legacy-message (persisted local integration)", () => {
 
     it("retains a historical inline message's original work dedupe and approval", async () => {
         const identity = await fixture()
-        const conversationId = world.id()
+        const conversationId = await persistPublicApiConversation(
+            world.resolve(ChatConversationsService),
+            identity,
+            world.id(),
+        )
         const leadId = world.id()
-        await persistPublicApiConversation(world.db.primary, identity, conversationId, leadId)
+        await persistPublicApiLead(world.db.primary, identity.workspaceId, leadId)
         const dedupeKey = `api.message:historical:${world.id()}`
         const payload = {
             kind: "message",

@@ -93,7 +93,6 @@ export type ToolName =
     | ReadToolName
     | "lead.create_or_update"
     | "approval.request"
-    | "handoff.to_person"
     | "conversation.handOff"
     | BookingToolName
     | GatewayToolName
@@ -210,9 +209,6 @@ export interface ApprovalResult {
     readonly status: string
 }
 
-/** A lead id, or null when there is none. */
-export type OptionalToolLeadId = string | null
-
 /** The claims of a tool token: its job and an expiry in unix seconds. */
 export interface TokenClaims extends ToolContext {
     /** Expiry, unix seconds. */
@@ -221,3 +217,6 @@ export interface TokenClaims extends ToolContext {
 
 /** The claims of a valid token, or null. */
 export type OptionalToolClaims = TokenClaims | null
+
+/** A lead id, or null when there is none. */
+export type OptionalToolLeadId = string | null

@@ -1,10 +1,11 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
-import { AgentMessagesFeedReadService } from "@modules/domain/agent-messages"
+import { ChatConversationsService, ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
 import { LeadReadService } from "@modules/domain/leads"
 import type { LeadView } from "@modules/domain/leads"
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
+import { ok, refused } from "@modules/platform/primitives"
+import { humanConversation } from "@tests/fixtures/builders/chat-features.builder"
 import { CUSTOMER_MANIFEST, CustomerNativeService } from "./customer-native.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
@@ -25,8 +26,8 @@ const LEAD: LeadView = {
 }
 
 const build = async () => {
-    const conversations = mock<AgentConversationsReadService>({
-        customerChat: jest.fn().mockResolvedValue({ id: "conv-1", leadId: "lead-1" }),
+    const conversations = mock<ChatConversationsService>({
+        humanOf: jest.fn().mockResolvedValue(humanConversation({ leadId: "lead-1" })),
     })
     const leads = mock<LeadReadService>({
         listByIds: jest.fn().mockResolvedValue([LEAD]),
@@ -34,15 +35,15 @@ const build = async () => {
             .fn()
             .mockResolvedValue({ id: "lead-1", contact_name: "Lan", phone: "84901234567", email: null }),
     })
-    const messages = mock<AgentMessagesFeedReadService>({
-        lastCustomerAtIn: jest.fn().mockResolvedValue(WROTE),
+    const messages = mock<ChatMessagesService>({
+        lastCustomerAt: jest.fn().mockResolvedValue(ok(WROTE)),
     })
     const moduleRef = await Test.createTestingModule({
         providers: [
             CustomerNativeService,
-            { provide: AgentConversationsReadService, useValue: conversations },
+            { provide: ChatConversationsService, useValue: conversations },
             { provide: LeadReadService, useValue: leads },
-            { provide: AgentMessagesFeedReadService, useValue: messages },
+            { provide: ChatMessagesService, useValue: messages },
         ],
     }).compile()
     return { customer: moduleRef.get(CustomerNativeService), conversations, leads, messages }
@@ -69,14 +70,14 @@ describe("CustomerNativeService brief", () => {
             lastCustomerAt: "2026-10-30T08:15:00.000Z",
             phoneMasked: "84…7",
         })
-        expect(conversations.customerChat).toHaveBeenCalledWith(WS, "conv-1")
+        expect(conversations.humanOf).toHaveBeenCalledWith(WS, "conv-1")
         expect(leads.listByIds).toHaveBeenCalledWith(WS, ["lead-1"])
-        expect(messages.lastCustomerAtIn).toHaveBeenCalledWith("conv-1")
+        expect(messages.lastCustomerAt).toHaveBeenCalledWith(WS, "conv-1")
     })
 
     it("answers a null last message and an empty phone for a customer who never wrote or shared one", async () => {
         const { customer, leads, messages } = await build()
-        messages.lastCustomerAtIn.mockResolvedValueOnce(null)
+        messages.lastCustomerAt.mockResolvedValueOnce(refused(ChatRecordsErrorCode.NotFound))
         leads.contactOf.mockResolvedValueOnce(null)
 
         await expect(customer.invoke(WS, "brief", {}, CALLER)).resolves.toMatchObject({
@@ -103,16 +104,16 @@ describe("CustomerNativeService refusals", () => {
             code: McpGatewayErrorCode.NativeRefused,
             params: { reason: "not_found" },
         })
-        expect(conversations.customerChat).not.toHaveBeenCalled()
+        expect(conversations.humanOf).not.toHaveBeenCalled()
     })
 
-    it("answers not found for a conversation of another workspace, one with no customer and a customer that is gone", async () => {
+    it("answers not found for a conversation the workspace does not hold, one with no customer and a customer that is gone", async () => {
         const { customer, conversations, leads } = await build()
-        conversations.customerChat.mockResolvedValueOnce(null)
+        conversations.humanOf.mockResolvedValueOnce(null)
         await expect(customer.invoke(WS, "brief", {}, CALLER)).rejects.toMatchObject({
             params: { reason: "not_found" },
         })
-        conversations.customerChat.mockResolvedValueOnce({ id: "conv-1", leadId: null })
+        conversations.humanOf.mockResolvedValueOnce(humanConversation())
         await expect(customer.invoke(WS, "brief", {}, CALLER)).rejects.toMatchObject({
             params: { reason: "not_found" },
         })
@@ -129,7 +130,7 @@ describe("CustomerNativeService refusals", () => {
             code: McpGatewayErrorCode.InvalidArguments,
             params: { tool: "brief" },
         })
-        expect(conversations.customerChat).not.toHaveBeenCalled()
+        expect(conversations.humanOf).not.toHaveBeenCalled()
     })
 
     it("refuses a tool the connector does not have", async () => {

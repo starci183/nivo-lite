@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { AgentDirectoryService } from "@modules/domain/agents"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { AuthorityService } from "@modules/domain/authority"
 import { DecisionsFiguresService } from "@modules/domain/decisions"
 import { EventsReadService } from "@modules/domain/events"
@@ -39,7 +39,7 @@ export class OverviewFiguresService {
         private readonly eventReads: EventsReadService,
         private readonly leadReads: LeadReadService,
         private readonly leadRecords: LeadRecordsService,
-        private readonly conversations: AgentConversationsReadService,
+        private readonly conversations: ChatConversationsService,
         private readonly executionFigures: ExecutionsFiguresService,
         private readonly responsibilityReads: ResponsibilityReadService,
         private readonly authority: AuthorityService,
@@ -62,8 +62,8 @@ export class OverviewFiguresService {
                     new Date(window.foundingTo),
                 ),
                 this.leadReads.websiteOf(workspaceId),
-                this.conversations.hasCustomerChat(workspaceId),
-                this.conversations.hasLeadChat(workspaceId),
+                this.conversations.hasAny(workspaceId),
+                this.hasLead(workspaceId),
                 this.executionFigures.countApproved(workspaceId),
             ])
         const [firstEvents, hasWon, invoiceApproved] = await Promise.all([
@@ -126,6 +126,11 @@ export class OverviewFiguresService {
             decisions7: decisions7.map((decision) => ({ ...decision, createdAt: instant(decision.createdAt) })),
             recent,
         }
+    }
+
+    /** Whether the workspace has captured a lead. */
+    private async hasLead(workspaceId: string): Promise<boolean> {
+        return (await this.leadReads.recentNames(workspaceId, 1)).length > 0
     }
 
     /** Whether an outcome was recorded for a customer who was won. */

@@ -1,5 +1,5 @@
 import type { InjectionToken, Type } from "@nestjs/common"
-import type { BookingTools, ConversationLeads, HandoffTool, KnowledgeSearch, LeadWriter } from "./agent-tools.port"
+import type { BookingTools, ConversationLeads, KnowledgeSearch, LeadWriter } from "./agent-tools.port"
 
 /** The owners of the ports the tools reach through: the app root names a class for each one. */
 export interface AgentToolsPorts {
@@ -11,9 +11,7 @@ export interface AgentToolsPorts {
     readonly bookingTools: Type<BookingTools>
     /** Provider that asks the owner to approve an answer (the work engine). */
     readonly approvalRequester: InjectionToken
-    /** Hands a conversation to a person (the channels lane). */
-    readonly handoffTool: Type<HandoffTool>
-    /** Finds the lead of a conversation (the channels lane). */
+    /** Finds the lead of a conversation (the chat records). */
     readonly conversationLeads: Type<ConversationLeads>
     /** Provider that runs the connector meta-tools for a conversation's agent (the customer turns). */
     readonly gatewayTools: InjectionToken

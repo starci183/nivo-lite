@@ -1,8 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
-import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
-import { AgentMessagesReadService, AgentTestChatsService } from "@modules/domain/agent-messages"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { EventsService } from "@modules/domain/events"
 import { LeadReadService } from "@modules/domain/leads"
@@ -10,7 +8,6 @@ import { MessagesReadService, OfficeCardsService } from "@modules/domain/message
 import {
     OFFICE_ROOMS_AGENTS,
     OFFICE_ROOMS_LEADS,
-    OFFICE_ROOMS_TEST_CHATS,
     OfficeRoomMembersService,
     OfficeRoomReadsService,
     OfficeRoomsService,
@@ -34,13 +31,9 @@ import type { MessageCatalog } from "@modules/platform/i18n"
         WorkspaceMembersReadService,
         MessagesReadService,
         AgentDirectoryService,
-        AgentConversationsReadService,
-        AgentMessagesReadService,
-        AgentTestChatsService,
         LeadReadService,
         { provide: OFFICE_ROOMS_AGENTS, useExisting: AgentDirectoryService },
         { provide: OFFICE_ROOMS_LEADS, useExisting: LeadReadService },
-        { provide: OFFICE_ROOMS_TEST_CHATS, useExisting: AgentTestChatsService },
         EventsService,
         StaffService,
         StaffDirectoryService,

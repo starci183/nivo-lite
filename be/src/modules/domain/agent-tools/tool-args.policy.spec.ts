@@ -3,7 +3,6 @@ import {
     agentHandoffOf as realAgentHandoffOf,
     approvalOf as realApprovalOf,
     clipText as realClipText,
-    handoffReasonOf as realHandoffReasonOf,
     leadOf as realLeadOf,
     queryOf as realQueryOf,
 } from "./tool-args.policy"
@@ -12,7 +11,7 @@ import { AgentToolsError, AgentToolsErrorCode } from "./errors/agent-tools.error
 const SUBJECT = Symbol("tool-args.policy")
 type Subject = Pick<
     typeof import("./tool-args.policy"),
-    "agentHandoffOf" | "approvalOf" | "clipText" | "handoffReasonOf" | "leadOf" | "queryOf"
+    "agentHandoffOf" | "approvalOf" | "clipText" | "leadOf" | "queryOf"
 >
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
@@ -23,7 +22,6 @@ const build = async () => {
                     agentHandoffOf: realAgentHandoffOf,
                     approvalOf: realApprovalOf,
                     clipText: realClipText,
-                    handoffReasonOf: realHandoffReasonOf,
                     leadOf: realLeadOf,
                     queryOf: realQueryOf,
                 },
@@ -143,14 +141,6 @@ describe("tool args policy > approvalOf", () => {
     it("requires a question", async () => {
         const subject = await build()
         expect(thrownBy(() => subject.approvalOf({}))?.params).toEqual({ field: "question" })
-    })
-})
-
-describe("tool args policy > handoffReasonOf", () => {
-    it("clips the reason to 300 and allows none", async () => {
-        const subject = await build()
-        expect(subject.handoffReasonOf({ reason: "r".repeat(400) })).toHaveLength(300)
-        expect(subject.handoffReasonOf({})).toBe("")
     })
 })
 

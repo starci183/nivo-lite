@@ -3,7 +3,7 @@ import { IsBoolean } from "class-validator"
 import { ChatTargetInput } from "./chat-target.input"
 
 @InputType()
-/** Sets only the current member's preference for this conversation. */
+/** Sets only the current member's preference for this room. */
 export class ChatMuteInput extends ChatTargetInput {
     /** True means the frontend uses a red dot for unread activity. */
     @Field(() => Boolean)

@@ -6,12 +6,10 @@ export interface ChatFileFacts {
     readonly sizeBytes: number
 }
 
-/** Where a file belongs: a conversation, or the Office of the workspace. */
+/** Where a file belongs: the Office of a workspace. */
 export interface ChatFileScope {
-    /** The workspace, whose folder holds the object. */
+    /** The workspace, whose Office folder holds the object. */
     readonly workspaceId: string
-    /** The conversation, whose folder holds the object; null is the Office. */
-    readonly conversationId: string | null
 }
 
 /** The turn that reads the file of a message, whoever sent it. */
@@ -54,34 +52,7 @@ export interface VerifiedChatFile {
     readonly sizeBytes: number
 }
 
-/** A file a channel brought in, before it is read: where its bytes are. */
-export interface InboundFileSource {
-    /** The https address to download it from; empty when the file is a local import. */
-    readonly url: string
-    /** The address of a smaller preview, tried when the full file cannot be read; empty when there is none. */
-    readonly thumbnailUrl: string
-    /** The path of a manual import, relative to the import folder; empty for a download. */
-    readonly localPath: string
-    /** The name the sender gave it, or an empty text. */
-    readonly name: string
-}
-
-/** An inbound file whose bytes were read and proved to be an accepted type, ready to be stored on a message. */
-export interface DownloadedChatFile {
-    /** The bytes. */
-    readonly bytes: Uint8Array
-    /** The type read from the bytes. */
-    readonly contentType: string
-    /** The name to keep. */
-    readonly name: string
-    /** The address or local path it came from. */
-    readonly sourceUrl: string
-}
-
-/** What a download of one inbound file answers: the file read, or null when it was left out. */
-export type InboundDownload = DownloadedChatFile | null
-
-/** A file as a conversation shows it. */
+/** A file as a line of the Office shows it. */
 export interface ChatFileView {
     /** The attachment. */
     readonly id: string

@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
 import { ZaloCredentialsService } from "@modules/domain/channels"
 import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
@@ -17,7 +16,6 @@ import { MarketingChannelsService } from "./marketing-channels.service"
 // Tuesday 2026-10-20 14:00 in Vietnam.
 const NOW = "2026-10-20T07:00:00.000Z"
 const INSIGHTS = [{ day: "2026-10-12", reach: 100, engagements: 10 }]
-const MESSAGES = [{ channel: "zalo", day: "2026-10-12", messages: 3 }]
 
 const build = async () => {
     const meta = mock<MetaClient>()
@@ -25,7 +23,6 @@ const build = async () => {
     const connections = mock<ConnectionsService>()
     const credentials = mock<ZaloCredentialsService>()
     const daily = mock<ContentEngagementDailyService>()
-    const messages = mock<AgentMessagesService>()
     const logger = mock<Logger>()
     connections.listByProvider.mockImplementation((_workspaceId, provider) =>
         Promise.resolve([mock<ConnectionRecord>({ id: provider === "meta" ? "conn-meta" : "conn-zalo" })]),
@@ -37,8 +34,6 @@ const build = async () => {
     credentials.accessToken.mockResolvedValue("zalo-token")
     meta.pageInsights.mockResolvedValue(INSIGHTS)
     daily.upsert.mockResolvedValue(1)
-    daily.upsertMessages.mockResolvedValue(1)
-    messages.customerMessagesPerDay.mockResolvedValue(MESSAGES)
     const moduleRef = await Test.createTestingModule({
         providers: [
             MarketingChannelsService,
@@ -49,18 +44,17 @@ const build = async () => {
             { provide: ConnectionsService, useValue: connections },
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ContentEngagementDailyService, useValue: daily },
-            { provide: AgentMessagesService, useValue: messages },
         ],
     }).compile()
     const service = moduleRef.get(MarketingChannelsService)
-    return { service, meta, zalo, connections, credentials, daily, messages, logger }
+    return { service, meta, zalo, connections, credentials, daily, logger }
 }
 
 describe("MarketingChannelsService sync", () => {
-    it("reads fifteen days of Page insights and of customer messages into the daily table", async () => {
-        const { service, meta, daily, messages } = await build()
+    it("reads fifteen days of Page insights into the daily table", async () => {
+        const { service, meta, daily } = await build()
 
-        await expect(service.sync("ws-1")).resolves.toBe(2)
+        await expect(service.sync("ws-1")).resolves.toBe(1)
 
         expect(meta.pageInsights).toHaveBeenCalledWith(
             { pageId: "PAGE", pageToken: "ptok" },
@@ -68,18 +62,16 @@ describe("MarketingChannelsService sync", () => {
             "2026-10-20",
         )
         expect(daily.upsert).toHaveBeenCalledWith("ws-1", "facebook", INSIGHTS)
-        expect(messages.customerMessagesPerDay).toHaveBeenCalledWith("ws-1", "2026-10-05", "2026-10-21")
-        expect(daily.upsertMessages).toHaveBeenCalledWith("ws-1", MESSAGES)
     })
 
-    it("stores only the messages without a live Page or with an incomplete credential", async () => {
+    it("stores nothing without a live Page or with an incomplete credential", async () => {
         const { service, connections, meta, daily } = await build()
         connections.listByProvider.mockResolvedValueOnce([])
-        await expect(service.sync("ws-1")).resolves.toBe(1)
+        await expect(service.sync("ws-1")).resolves.toBe(0)
         connections.readSecret.mockResolvedValueOnce(null)
-        await expect(service.sync("ws-1")).resolves.toBe(1)
+        await expect(service.sync("ws-1")).resolves.toBe(0)
         connections.readSecret.mockResolvedValueOnce({ plain: JSON.stringify({ pageId: "PAGE" }), webhookSecret: "" })
-        await expect(service.sync("ws-1")).resolves.toBe(1)
+        await expect(service.sync("ws-1")).resolves.toBe(0)
         expect(meta.pageInsights).not.toHaveBeenCalled()
         expect(daily.upsert).not.toHaveBeenCalled()
     })

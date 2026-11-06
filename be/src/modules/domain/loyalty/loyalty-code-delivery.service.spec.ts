@@ -1,9 +1,9 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock } from "@starci/jest-preset"
-import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { ConversationTarget } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
+import { builder, fakeIds, mock } from "@starci/jest-preset"
 import { ChannelDeliveryService } from "@modules/domain/channels"
+import { ChatConversationsService, ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
+import type { ChatConversationTarget } from "@modules/domain/chat-records"
+import { IDS } from "@modules/platform/ids"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ok, refused } from "@modules/platform/primitives"
@@ -11,7 +11,7 @@ import { LoyaltyCodeDeliveryService } from "./loyalty-code-delivery.service"
 import { LoyaltyLogEvent } from "./loyalty.log-events"
 
 const PARAMS = { workspaceId: "ws-1", conversationId: "conversation-1", text: "Your loyalty code is 123456" }
-const targetOf = builder<ConversationTarget>({
+const targetOf = builder<ChatConversationTarget>({
     id: "conversation-1",
     workspaceId: "ws-1",
     channel: "telegram",
@@ -21,16 +21,18 @@ const targetOf = builder<ConversationTarget>({
 
 const build = async () => {
     const logger = mock<Logger>()
-    const conversations = mock<AgentConversationsService>()
-    const messages = mock<AgentMessagesService>()
+    const conversations = mock<ChatConversationsService>()
+    const messages = mock<ChatMessagesService>()
     const channels = mock<ChannelDeliveryService>()
+    const ids = fakeIds()
     const moduleRef = await Test.createTestingModule({
         providers: [
             LoyaltyCodeDeliveryService,
             { provide: LOGGER, useValue: logger },
-            { provide: AgentConversationsService, useValue: conversations },
-            { provide: AgentMessagesService, useValue: messages },
+            { provide: ChatConversationsService, useValue: conversations },
+            { provide: ChatMessagesService, useValue: messages },
             { provide: ChannelDeliveryService, useValue: channels },
+            { provide: IDS, useValue: ids },
         ],
     }).compile()
     return { service: moduleRef.get(LoyaltyCodeDeliveryService), logger, conversations, messages, channels }
@@ -44,16 +46,15 @@ describe("LoyaltyCodeDeliveryService", () => {
         })
 
         it.each([
-            { reason: "missing conversation", target: refused(AgentConversationsErrorCode.NotFound) },
-            { reason: "another workspace", target: ok(targetOf({ workspaceId: "another-workspace" })) },
+            { reason: "missing conversation", target: refused(ChatRecordsErrorCode.NotFound) },
             { reason: "unsupported channel", target: ok(targetOf({ channel: "website" })) },
         ])("does not store or send a code for $reason", async ({ target }) => {
             const { service, conversations, messages, channels, logger } = await build()
             conversations.targetOf.mockResolvedValue(target)
 
             expect(await service.send(PARAMS)).toBe(false)
-            expect(conversations.targetOf).toHaveBeenCalledWith("conversation-1")
-            expect(messages.storeAgentMessage).not.toHaveBeenCalled()
+            expect(conversations.targetOf).toHaveBeenCalledWith("ws-1", "conversation-1")
+            expect(messages.storeAgentLine).not.toHaveBeenCalled()
             expect(channels.deliver).not.toHaveBeenCalled()
             expect(logger.error).not.toHaveBeenCalled()
         })
@@ -65,7 +66,7 @@ describe("LoyaltyCodeDeliveryService", () => {
         ])("stores the code for $channel and returns delivery $delivered", async ({ channel, delivered }) => {
             const { service, conversations, messages, channels, logger } = await build()
             conversations.targetOf.mockResolvedValue(ok(targetOf({ channel })))
-            messages.storeAgentMessage.mockResolvedValue("message-1")
+            messages.storeAgentLine.mockResolvedValue({ id: "message-1", body: PARAMS.text, sent: false })
             channels.deliver.mockResolvedValue({
                 delivered,
                 outcome: delivered ? "acknowledged" : "rejected",
@@ -73,26 +74,42 @@ describe("LoyaltyCodeDeliveryService", () => {
             })
 
             expect(await service.send(PARAMS)).toBe(delivered)
-            expect(conversations.targetOf).toHaveBeenCalledWith("conversation-1")
-            expect(messages.storeAgentMessage).toHaveBeenCalledWith("ws-1", "conversation-1", PARAMS.text)
+            expect(conversations.targetOf).toHaveBeenCalledWith("ws-1", "conversation-1")
+            expect(messages.storeAgentLine).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                conversationId: "conversation-1",
+                body: PARAMS.text,
+                key: "00000000-0000-4000-8000-000000000001",
+            })
             expect(channels.deliver).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
                 conversationId: "conversation-1",
                 messageId: "message-1",
                 text: PARAMS.text,
             })
             expect(logger.error).not.toHaveBeenCalled()
         })
+    })
+})
 
+describe("LoyaltyCodeDeliveryService", () => {
+    describe("send failures", () => {
         it("logs a rejected channel delivery and reports failure", async () => {
             const { service, conversations, messages, channels, logger } = await build()
             const failure = { code: "CHANNEL_DELIVERY_FAILED" }
             conversations.targetOf.mockResolvedValue(ok(targetOf()))
-            messages.storeAgentMessage.mockResolvedValue("message-1")
+            messages.storeAgentLine.mockResolvedValue({ id: "message-1", body: PARAMS.text, sent: false })
             channels.deliver.mockRejectedValue(failure)
 
             expect(await service.send(PARAMS)).toBe(false)
-            expect(messages.storeAgentMessage).toHaveBeenCalledWith("ws-1", "conversation-1", PARAMS.text)
+            expect(messages.storeAgentLine).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
+                conversationId: "conversation-1",
+                body: PARAMS.text,
+                key: "00000000-0000-4000-8000-000000000001",
+            })
             expect(channels.deliver).toHaveBeenCalledWith({
+                workspaceId: "ws-1",
                 conversationId: "conversation-1",
                 messageId: "message-1",
                 text: PARAMS.text,
@@ -106,7 +123,7 @@ describe("LoyaltyCodeDeliveryService", () => {
             const { service, conversations, messages, channels, logger } = await build()
             const failure = { code: "AGENT_MESSAGES_NOT_STORED" }
             conversations.targetOf.mockResolvedValue(ok(targetOf()))
-            messages.storeAgentMessage.mockRejectedValue(failure)
+            messages.storeAgentLine.mockRejectedValue(failure)
 
             await expect(service.send(PARAMS)).rejects.toBe(failure)
             expect(channels.deliver).not.toHaveBeenCalled()

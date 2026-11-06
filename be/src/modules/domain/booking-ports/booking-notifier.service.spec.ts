@@ -1,10 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
-import { AgentConversationsErrorCode, AgentConversationsService } from "@modules/domain/agent-conversations"
-import type { ConversationTarget } from "@modules/domain/agent-conversations"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
 import type { BookingNotice } from "@modules/domain/bookings"
 import { ChannelDeliveryService } from "@modules/domain/channels"
+import { ChatConversationsService, ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
+import type { ChatConversationTarget } from "@modules/domain/chat-records"
 import { EventsService } from "@modules/domain/events"
 import { N8N_MAILER } from "@modules/domain/n8n-runs"
 import type { N8nMailer } from "@modules/domain/n8n-runs"
@@ -37,7 +36,18 @@ const EVIDENCE = {
     leadId: "lead-1",
     workItemId: null,
 }
-const DELIVERY = { conversationId: "conversation-1", messageId: "message-1", text: "Your appointment is confirmed" }
+const LINE = {
+    workspaceId: "ws-1",
+    conversationId: "conversation-1",
+    body: "Your appointment is confirmed",
+    key: "booking_notice:booking-1:confirmed",
+}
+const DELIVERY = {
+    workspaceId: "ws-1",
+    conversationId: "conversation-1",
+    messageId: "message-1",
+    text: "Your appointment is confirmed",
+}
 const EMAIL = {
     workspaceId: "ws-1",
     to: "customer@example.com",
@@ -50,26 +60,19 @@ const EMAIL = {
     subjectId: "lead-1",
     leadId: "lead-1",
 }
-const targetOf = builder<ConversationTarget>({
+const targetOf = builder<ChatConversationTarget>({
     id: "conversation-1",
     workspaceId: "ws-1",
     channel: "telegram",
     externalId: "customer-1",
     connectionId: "connection-1",
 })
-const latestOf = builder<NonNullable<Awaited<ReturnType<AgentConversationsService["latestOfLead"]>>>>({
-    id: "latest-conversation",
-    agentId: "agent-1",
-    channel: "zalo",
-    visitorName: "Customer",
-})
 
 const build = async () => {
-    const conversations = mock<AgentConversationsService>()
+    const conversations = mock<ChatConversationsService>()
     conversations.targetOf.mockResolvedValue(ok(targetOf()))
-    conversations.latestOfLead.mockResolvedValue(null)
-    const messages = mock<AgentMessagesService>()
-    messages.storeAgentMessage.mockResolvedValue("message-1")
+    const messages = mock<ChatMessagesService>()
+    messages.storeAgentLine.mockResolvedValue({ id: "message-1", body: "Your appointment is confirmed", sent: false })
     const channels = mock<ChannelDeliveryService>()
     channels.deliver.mockResolvedValue({ delivered: true, outcome: "acknowledged", failure: null })
     const events = mock<EventsService>()
@@ -82,8 +85,8 @@ const build = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             BookingNotifierService,
-            { provide: AgentConversationsService, useValue: conversations },
-            { provide: AgentMessagesService, useValue: messages },
+            { provide: ChatConversationsService, useValue: conversations },
+            { provide: ChatMessagesService, useValue: messages },
             { provide: ChannelDeliveryService, useValue: channels },
             { provide: EventsService, useValue: events },
             { provide: MESSAGE_CATALOG, useValue: catalog },
@@ -112,11 +115,8 @@ describe("BookingNotifierService", () => {
 
             await expect(service.notify(NOTICE)).resolves.toEqual({ delivered: true, kept: true, via: channel })
 
-            expect(conversations.targetOf.mock.calls).toEqual([["conversation-1"]])
-            expect(conversations.latestOfLead).not.toHaveBeenCalled()
-            expect(messages.storeAgentMessage.mock.calls).toEqual([
-                ["ws-1", "conversation-1", "Your appointment is confirmed"],
-            ])
+            expect(conversations.targetOf.mock.calls).toEqual([["ws-1", "conversation-1"]])
+            expect(messages.storeAgentLine.mock.calls).toEqual([[LINE]])
             expect(channels.deliver.mock.calls).toEqual([[DELIVERY]])
             expect(events.record.mock.calls).toEqual([[EVIDENCE]])
             expect(catalog.get.mock.calls).toEqual([
@@ -127,6 +127,19 @@ describe("BookingNotifierService", () => {
             expect(logger.error).not.toHaveBeenCalled()
         },
     )
+
+    it("does not push a notice an earlier attempt already delivered", async () => {
+        const { service, messages, channels } = await build()
+        messages.storeAgentLine.mockResolvedValue({
+            id: "message-1",
+            body: "Your appointment is confirmed",
+            sent: true,
+        })
+
+        await expect(service.notify(NOTICE)).resolves.toEqual({ delivered: true, kept: true, via: "telegram" })
+
+        expect(channels.deliver).not.toHaveBeenCalled()
+    })
 })
 
 describe("BookingNotifierService", () => {
@@ -150,9 +163,7 @@ describe("BookingNotifierService", () => {
 
         await expect(service.notify(NOTICE)).resolves.toEqual({ delivered: false, kept: true, via: "telegram" })
 
-        expect(messages.storeAgentMessage.mock.calls).toEqual([
-            ["ws-1", "conversation-1", "Your appointment is confirmed"],
-        ])
+        expect(messages.storeAgentLine.mock.calls).toEqual([[LINE]])
         expect(channels.deliver.mock.calls).toEqual([[DELIVERY]])
         expect(events.record.mock.calls).toEqual([[{ ...EVIDENCE, summary: "bookingPorts.failed" }]])
         expect(catalog.get.mock.calls).toEqual([
@@ -171,9 +182,7 @@ describe("BookingNotifierService", () => {
 
         await expect(service.notify(NOTICE)).resolves.toEqual({ delivered: false, kept: true, via: "telegram" })
 
-        expect(messages.storeAgentMessage.mock.calls).toEqual([
-            ["ws-1", "conversation-1", "Your appointment is confirmed"],
-        ])
+        expect(messages.storeAgentLine.mock.calls).toEqual([[LINE]])
         expect(channels.deliver.mock.calls).toEqual([[DELIVERY]])
         expect(logger.error.mock.calls).toEqual([
             [BookingPortsLogEvent.DeliveryFailed, failure, { workspaceId: "ws-1", bookingId: "booking-1" }],
@@ -185,48 +194,34 @@ describe("BookingNotifierService", () => {
 
 describe("BookingNotifierService", () => {
     it.each([
-        { name: "missing", target: refused(AgentConversationsErrorCode.NotFound) },
-        { name: "another workspace's", target: ok(targetOf({ workspaceId: "ws-2" })) },
-    ])("uses the lead's latest channel when the original conversation is $name", async ({ target }) => {
-        const { service, conversations, messages, channels, events, catalog, mailer } = await build()
-        conversations.targetOf.mockResolvedValue(target)
-        conversations.latestOfLead.mockResolvedValue(latestOf())
+        { reason: "names none", conversationId: null, leadId: "lead-1", lookups: [] },
+        {
+            reason: "is gone",
+            conversationId: "conversation-1",
+            leadId: "lead-1",
+            lookups: [["ws-1", "conversation-1"]],
+        },
+        {
+            reason: "is gone for a lead-less booking",
+            conversationId: "conversation-1",
+            leadId: null,
+            lookups: [["ws-1", "conversation-1"]],
+        },
+    ])("falls back to email when the booking's conversation $reason", async ({ conversationId, leadId, lookups }) => {
+        const { service, conversations, messages, channels, mailer, events } = await build()
+        conversations.targetOf.mockResolvedValue(refused(ChatRecordsErrorCode.NotFound))
 
-        await expect(service.notify(NOTICE)).resolves.toEqual({ delivered: true, kept: true, via: "zalo" })
-
-        expect(conversations.targetOf.mock.calls).toEqual([["conversation-1"]])
-        expect(conversations.latestOfLead.mock.calls).toEqual([["ws-1", "lead-1", null]])
-        expect(messages.storeAgentMessage.mock.calls).toEqual([
-            ["ws-1", "latest-conversation", "Your appointment is confirmed"],
-        ])
-        expect(channels.deliver.mock.calls).toEqual([[{ ...DELIVERY, conversationId: "latest-conversation" }]])
-        expect(events.record.mock.calls).toEqual([[EVIDENCE]])
-        expect(catalog.get.mock.calls).toEqual([
-            ["bookings.evidence.actor", {}, "vi"],
-            ["bookingPorts.delivered", { channel: "zalo" }, "vi"],
-        ])
-        expect(mailer.requestCustomerEmail).not.toHaveBeenCalled()
-    })
-})
-
-describe("BookingNotifierService", () => {
-    it("routes a public-page booking straight to the lead's latest conversation", async () => {
-        const { service, conversations, messages, channels, mailer } = await build()
-        conversations.latestOfLead.mockResolvedValue(latestOf({ channel: "instagram" }))
-
-        await expect(service.notify(noticeOf({ conversationId: null }))).resolves.toEqual({
+        await expect(service.notify(noticeOf({ conversationId, leadId }))).resolves.toEqual({
             delivered: true,
             kept: true,
-            via: "instagram",
+            via: "email",
         })
 
-        expect(conversations.targetOf).not.toHaveBeenCalled()
-        expect(conversations.latestOfLead.mock.calls).toEqual([["ws-1", "lead-1", null]])
-        expect(messages.storeAgentMessage.mock.calls).toEqual([
-            ["ws-1", "latest-conversation", "Your appointment is confirmed"],
-        ])
-        expect(channels.deliver.mock.calls).toEqual([[{ ...DELIVERY, conversationId: "latest-conversation" }]])
-        expect(mailer.requestCustomerEmail).not.toHaveBeenCalled()
+        expect(conversations.targetOf.mock.calls).toEqual(lookups)
+        expect(messages.storeAgentLine).not.toHaveBeenCalled()
+        expect(channels.deliver).not.toHaveBeenCalled()
+        expect(mailer.requestCustomerEmail.mock.calls).toEqual([[{ ...EMAIL, subjectId: leadId, leadId }]])
+        expect(events.record.mock.calls).toEqual([[{ ...EVIDENCE, leadId }]])
     })
 })
 
@@ -240,7 +235,7 @@ describe("BookingNotifierService", () => {
         { status: "failed", delivered: false, kept: false, summary: "bookingPorts.failed" },
         { status: "rate_limited", delivered: false, kept: false, summary: "bookingPorts.failed" },
     ])(
-        "reports a $status email outcome when the lead has no conversation",
+        "reports a $status email outcome when the booking has no conversation",
         async ({ status, delivered, kept, summary }) => {
             const { service, conversations, messages, channels, mailer, events, catalog } = await build()
             mailer.requestCustomerEmail.mockResolvedValue({ status })
@@ -252,8 +247,7 @@ describe("BookingNotifierService", () => {
             })
 
             expect(conversations.targetOf).not.toHaveBeenCalled()
-            expect(conversations.latestOfLead.mock.calls).toEqual([["ws-1", "lead-1", null]])
-            expect(messages.storeAgentMessage).not.toHaveBeenCalled()
+            expect(messages.storeAgentLine).not.toHaveBeenCalled()
             expect(channels.deliver).not.toHaveBeenCalled()
             expect(mailer.requestCustomerEmail.mock.calls).toEqual([[EMAIL]])
             expect(events.record.mock.calls).toEqual([[{ ...EVIDENCE, summary }]])
@@ -266,56 +260,11 @@ describe("BookingNotifierService", () => {
 })
 
 describe("BookingNotifierService", () => {
-    it.each([
-        {
-            name: "missing and has no lead",
-            target: refused(AgentConversationsErrorCode.NotFound),
-            leadId: null,
-            latestCalls: [],
-        },
-        {
-            name: "another workspace's and has no lead",
-            target: ok(targetOf({ workspaceId: "ws-2" })),
-            leadId: null,
-            latestCalls: [],
-        },
-        {
-            name: "missing and the lead has no latest conversation",
-            target: refused(AgentConversationsErrorCode.NotFound),
-            leadId: "lead-1",
-            latestCalls: [["ws-1", "lead-1", null]],
-        },
-        {
-            name: "another workspace's and the lead has no latest conversation",
-            target: ok(targetOf({ workspaceId: "ws-2" })),
-            leadId: "lead-1",
-            latestCalls: [["ws-1", "lead-1", null]],
-        },
-    ])("falls back to email when the original conversation is $name", async ({ target, leadId, latestCalls }) => {
-        const { service, conversations, messages, channels, mailer, events } = await build()
-        conversations.targetOf.mockResolvedValue(target)
-
-        await expect(service.notify(noticeOf({ leadId }))).resolves.toEqual({
-            delivered: true,
-            kept: true,
-            via: "email",
-        })
-
-        expect(conversations.targetOf.mock.calls).toEqual([["conversation-1"]])
-        expect(conversations.latestOfLead.mock.calls).toEqual(latestCalls)
-        expect(messages.storeAgentMessage).not.toHaveBeenCalled()
-        expect(channels.deliver).not.toHaveBeenCalled()
-        expect(mailer.requestCustomerEmail.mock.calls).toEqual([[{ ...EMAIL, subjectId: leadId, leadId }]])
-        expect(events.record.mock.calls).toEqual([[{ ...EVIDENCE, leadId }]])
-    })
-})
-
-describe("BookingNotifierService", () => {
     it.each([null, "", " \t\n "])(
         "records failure without sending when no conversation or email exists (%p)",
         async (email) => {
             const { service, conversations, messages, channels, mailer, events, catalog } = await build()
-            conversations.targetOf.mockResolvedValue(refused(AgentConversationsErrorCode.NotFound))
+            conversations.targetOf.mockResolvedValue(refused(ChatRecordsErrorCode.NotFound))
 
             await expect(service.notify(noticeOf({ email }))).resolves.toEqual({
                 delivered: false,
@@ -323,9 +272,8 @@ describe("BookingNotifierService", () => {
                 via: "none",
             })
 
-            expect(conversations.targetOf.mock.calls).toEqual([["conversation-1"]])
-            expect(conversations.latestOfLead.mock.calls).toEqual([["ws-1", "lead-1", null]])
-            expect(messages.storeAgentMessage).not.toHaveBeenCalled()
+            expect(conversations.targetOf.mock.calls).toEqual([["ws-1", "conversation-1"]])
+            expect(messages.storeAgentLine).not.toHaveBeenCalled()
             expect(channels.deliver).not.toHaveBeenCalled()
             expect(mailer.requestCustomerEmail).not.toHaveBeenCalled()
             expect(events.record.mock.calls).toEqual([[{ ...EVIDENCE, summary: "bookingPorts.failed" }]])
@@ -372,19 +320,16 @@ describe("BookingNotifierService", () => {
 
         await expect(service.notify(NOTICE)).rejects.toBe(failure)
 
-        expect(conversations.latestOfLead).not.toHaveBeenCalled()
-        expect(messages.storeAgentMessage).not.toHaveBeenCalled()
+        expect(messages.storeAgentLine).not.toHaveBeenCalled()
         expect(channels.deliver).not.toHaveBeenCalled()
         expect(mailer.requestCustomerEmail).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
     })
-})
 
-describe("BookingNotifierService", () => {
     it("propagates a storage failure without attempting delivery or recording a verdict", async () => {
         const { service, messages, channels, events, mailer } = await build()
         const failure = new Error("Message could not be stored")
-        messages.storeAgentMessage.mockRejectedValue(failure)
+        messages.storeAgentLine.mockRejectedValue(failure)
 
         await expect(service.notify(NOTICE)).rejects.toBe(failure)
 

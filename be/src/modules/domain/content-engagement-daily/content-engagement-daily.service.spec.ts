@@ -53,23 +53,6 @@ describe("ContentEngagementDailyService", () => {
         await expect(service.upsert("ws-1", "facebook", [])).resolves.toBe(0)
     })
 
-    it("upserts the new customer messages of the days in one statement, and nothing for no days", async () => {
-        const em = mockEntityManager({ upsert: [ContentEngagementDailyEntity, {}] })
-        const service = await build(em)
-        const days = [{ channel: "zalo", day: "2026-10-12", messages: 3 }]
-
-        await expect(service.upsertMessages("ws-1", days)).resolves.toBe(1)
-        await expect(service.upsertMessages("ws-1", [])).resolves.toBe(0)
-        expect(em.upsert).toHaveBeenCalledTimes(1)
-        expect(upsertsOf(em)).toEqual([
-            [
-                ContentEngagementDailyEntity,
-                [{ workspaceId: "ws-1", channel: "zalo", day: "2026-10-12", messages: 3, syncedAt: "now()" }],
-                ["workspaceId", "channel", "day"],
-            ],
-        ])
-    })
-
     it("lists the rows between two days", async () => {
         const rows: Array<ContentEngagementDailyEntity> = [
             {

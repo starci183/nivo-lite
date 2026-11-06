@@ -20,7 +20,7 @@ import { Test } from "@nestjs/testing"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { KnowledgeGapNotesService } from "@modules/domain/agent-knowledge"
 import { CommandBusService, EvidenceService, WorkEngineService } from "@modules/domain/decisions"
 import { HiringPublicService } from "@modules/domain/hiring"
@@ -51,7 +51,7 @@ const build = async () => {
     const gaps = mock<KnowledgeGapNotesService>()
     const directory = mock<AgentDirectoryService>()
     const modules = mock<TurnModulesService>()
-    const conversations = mock<AgentConversationsService>()
+    const conversations = mock<ChatConversationsService>()
     const evidence = mock<EvidenceService>()
     const items = mock<WorkItemsService>()
     const bindings = mock<AgentBindingsService>()
@@ -76,7 +76,7 @@ const build = async () => {
             { provide: WorkItemsService, useValue: items },
             { provide: InboundEventsService, useValue: inbound },
             { provide: InvoicesService, useValue: invoices },
-            { provide: AgentConversationsService, useValue: conversations },
+            { provide: ChatConversationsService, useValue: conversations },
             { provide: AgentBindingsService, useValue: bindings },
             { provide: AuthorityRulesService, useValue: rules },
             { provide: HiringPublicService, useValue: hiring },
@@ -118,16 +118,16 @@ describe("CustomerOutcomesService", () => {
         expect(engine.runWork.mock.calls[0]?.[1]?.forceAsk).toBe("unclear_outcome")
     })
 
-    it("hands the turn and wake of the core road to the item a held-over question opens, and nothing on the legacy road", async () => {
+    it("hands the turn and wake to the item a held-over question opens, and nothing when the turn has none", async () => {
         const core = await build()
-        const legacy = await build()
+        const bare = await build()
         const turn = turnOf()
 
         await core.outcomes.holdOver({ ...turn, origin: { turnId: "turn-1", wakeId: "wake-1" } }, "quota_exceeded")
-        await legacy.outcomes.holdOver(turn, "quota_exceeded")
+        await bare.outcomes.holdOver(turn, "quota_exceeded")
 
         expect(core.engine.runWork.mock.calls[0]?.[1]?.origin).toEqual({ turnId: "turn-1", wakeId: "wake-1" })
-        expect(legacy.engine.runWork.mock.calls[0]?.[1]?.origin).toBeUndefined()
+        expect(bare.engine.runWork.mock.calls[0]?.[1]?.origin).toBeUndefined()
     })
 
     it.each(replyDecisionCases)(
@@ -407,7 +407,7 @@ describe("CustomerOutcomesService handoff to Sales", () => {
         expect(verdict.lines).toContain("customerTurns.chatHandoffWaiting")
         expect(verdict.lines).not.toContain("customerTurns.chatHandoff")
         expect(asking.conversations.attachLead).not.toHaveBeenCalled()
-        expect(asking.conversations.rename).toHaveBeenCalledWith("c1", "Lan")
+        expect(asking.conversations.rename).toHaveBeenCalledWith(WS, "c1", "Lan")
     })
 })
 

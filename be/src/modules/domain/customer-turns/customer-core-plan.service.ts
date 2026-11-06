@@ -9,14 +9,12 @@ import {
 import type { IntentScope } from "@modules/domain/agent-turns"
 import type { AgentTurnPlan, AgentTurnView } from "@modules/domain/agent-work"
 import { replyTimeoutSec } from "@modules/domain/agents"
-import { ChatFileReadsService } from "@modules/domain/chat-files"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import { threadKeyFor } from "@modules/integrations/openclaw"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { CustomerIntentContextService } from "./customer-intent-context.service"
 import { planFilesOf } from "./customer-intent.policy"
-import { fileTurnOf } from "./customer-turn.policy"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import { turnMessageOf } from "./turn-prompt.policy"
@@ -32,7 +30,7 @@ const BLOCK_SEPARATOR = "\n\n"
 
 @Injectable()
 /**
- * The plan of a customer turn on the core road. It makes the installation gate and builds the context the legacy road builds (persona,
+ * The plan of a customer turn. It makes the installation gate and builds the context of the turn (persona,
  * authority, the PUBLIC knowledge recalled for the question, open jobs, the reply contract), adds the intents the agent's action graph
  * allows, and leaves the token block out: the agent reaches its tools through the bridge, which finds the turn by its session. The quota
  * and the breaker are the executor's gates, not these. What the turn read is kept for the cards its tool calls open, until `end`.
@@ -49,7 +47,6 @@ export class CustomerCorePlanService {
         private readonly intents: IntentTurnService,
         private readonly pipeline: IntentPipelineService,
         private readonly context: CustomerIntentContextService,
-        private readonly fileReads: ChatFileReadsService,
     ) {}
 
     /** The plan of the turn, or the reason it cannot run. */
@@ -81,7 +78,6 @@ export class CustomerCorePlanService {
                     turn.transcript,
                     turn.body,
                 ),
-                attachments: await this.fileReads.attachmentsOf(fileTurnOf(turn)),
                 timeoutMs: replyTimeoutSec(installation?.settings ?? null) * 1000,
             }
         } catch (cause) {

@@ -338,138 +338,23 @@ $$;
 --
 
 CREATE FUNCTION public.admin_workspace_stats() RETURNS TABLE(workspace_id uuid, members integer, last_customer_message_at timestamp with time zone, messages_7d integer, open_decisions integer)
-    LANGUAGE sql STABLE SECURITY DEFINER
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
     SET search_path TO 'public'
     AS $$
+begin
+  return query
   select
     w.id,
     (select count(*)::int from public.workspace_members m where m.workspace_id = w.id and m.status = 'active'),
-    (select max(am.created_at) from public.agent_messages am join public.agent_conversations c on c.id = am.conversation_id
-       where am.workspace_id = w.id and am.role = 'user' and c.kind = 'customer'),
-    (select count(*)::int from public.agent_messages am join public.agent_conversations c on c.id = am.conversation_id
-       where am.workspace_id = w.id and am.role = 'user' and c.kind = 'customer' and am.created_at > now() - interval '7 days'),
+    (select max((r.data ->> 'sentAt')::timestamptz) from public.records r
+       where r.entity = 'chat.message' and r.workspace_id = w.id and r.data ->> 'role' = 'user'),
+    (select count(*)::int from public.records r
+       where r.entity = 'chat.message' and r.workspace_id = w.id and r.data ->> 'role' = 'user'
+         and (r.data ->> 'sentAt')::timestamptz > now() - interval '7 days'),
     (select count(*)::int from public.work_items wi where wi.workspace_id = w.id and wi.status = 'waiting_decision')
   from public.workspaces w;
+end;
 $$;
-
---
--- Name: agent_chat_send(uuid, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.agent_chat_send(p_conversation uuid, p_body text) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-    v_workspace uuid;
-    v_kind text;
-    v_holder text;
-    v_body text := btrim(coalesce(p_body, ''));
-    v_name text;
-    v_message uuid;
-    v_by_person boolean;
-begin
-    if v_body = '' or length(v_body) > 4000 then
-        raise exception 'agent_chat_body' using errcode = '23514';
-    end if;
-    select workspace_id, kind, handled_by into v_workspace, v_kind, v_holder from public.agent_conversations where id = p_conversation;
-    if v_workspace is null or not public.is_member(v_workspace) then
-        raise exception 'only a member of the workspace writes in a conversation' using errcode = '42501';
-    end if;
-    -- While a person holds a customer conversation the AI stays quiet and the member writes as the company.
-    v_by_person := v_kind = 'customer' and v_holder is not null;
-    if v_by_person then
-        select display_name into v_name from public.workspace_members
-        where workspace_id = v_workspace and user_id = auth.uid() and status = 'active';
-        insert into public.agent_messages (workspace_id, conversation_id, role, body, author_kind, author_name)
-        values (v_workspace, p_conversation, 'agent', v_body, 'human', v_name)
-        returning id into v_message;
-    else
-        insert into public.agent_messages (workspace_id, conversation_id, role, body)
-        values (v_workspace, p_conversation, 'user', v_body)
-        returning id into v_message;
-    end if;
-    perform public.job_enqueue(
-        v_workspace,
-        'chat_turn',
-        case when v_by_person then 'chat-turn.deliver' else 'chat-turn.turn' end,
-        jsonb_build_object(
-            'kind', case when v_by_person then 'deliver' else 'turn' end,
-            'workspaceId', v_workspace,
-            'conversationId', p_conversation,
-            'messageId', v_message,
-            'channelEventId', 'agentchat:' || v_message,
-            'lookupName', false
-        ),
-        case when v_by_person then 'chat-turn.deliver:' else 'chat-turn.turn:' end || v_message
-    );
-    return v_message;
-end $$;
-
---
--- Name: agent_chat_start(uuid, text, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.agent_chat_start(p_agent uuid, p_kind text, p_visitor text DEFAULT NULL::text) RETURNS uuid
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-    v_workspace uuid;
-    v_greeting text;
-    v_conversation uuid;
-    v_visitor text := nullif(left(btrim(coalesce(p_visitor, '')), 80), '');
-begin
-    if p_kind is null or p_kind not in ('test', 'customer') then
-        raise exception 'agent_chat_kind' using errcode = '23514';
-    end if;
-    select workspace_id, greeting into v_workspace, v_greeting from public.agents where id = p_agent;
-    if v_workspace is null or not public.is_member(v_workspace) then
-        raise exception 'only a member of the workspace opens a conversation' using errcode = '42501';
-    end if;
-    if p_kind = 'test' and v_visitor is null then
-        select display_name into v_visitor from public.workspace_members
-        where workspace_id = v_workspace and user_id = auth.uid() and status = 'active';
-    end if;
-    insert into public.agent_conversations (workspace_id, agent_id, kind, visitor_name)
-    values (v_workspace, p_agent, p_kind, v_visitor)
-    returning id into v_conversation;
-    if coalesce(v_greeting, '') <> '' then
-        insert into public.agent_messages (workspace_id, conversation_id, role, body)
-        values (v_workspace, v_conversation, 'agent', v_greeting);
-    end if;
-    return v_conversation;
-end $$;
-
---
--- Name: agent_chat_take_over(uuid, boolean, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.agent_chat_take_over(p_conversation uuid, p_take boolean, p_line text DEFAULT ''::text) RETURNS text
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-declare
-    v_workspace uuid;
-    v_name text;
-    v_holder text;
-begin
-    select workspace_id into v_workspace from public.agent_conversations where id = p_conversation;
-    if v_workspace is null or not public.is_member(v_workspace) then
-        raise exception 'only a member of the workspace takes a conversation over' using errcode = '42501';
-    end if;
-    select display_name into v_name from public.workspace_members
-    where workspace_id = v_workspace and user_id = auth.uid() and status = 'active';
-    v_holder := case when p_take then coalesce(v_name, 'staff') else null end;
-    update public.agent_conversations
-    set handled_by = v_holder, handled_at = case when p_take then now() else null end
-    where id = p_conversation;
-    if btrim(coalesce(p_line, '')) <> '' then
-        insert into public.agent_messages (workspace_id, conversation_id, role, body)
-        values (v_workspace, p_conversation, 'system', replace(left(p_line, 400), '{user}', coalesce(v_name, '')));
-    end if;
-    return coalesce(v_holder, '');
-end $$;
 
 --
 -- Name: agent_connections_same_workspace(); Type: FUNCTION; Schema: public; Owner: -
@@ -485,38 +370,6 @@ begin
   end if;
   return new;
 end $$;
-
---
--- Name: agent_conversations_attribute_lead(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.agent_conversations_attribute_lead() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  if new.lead_id is not null and new.installation_id is not null then
-    update public.leads set installation_id = new.installation_id where id = new.lead_id and installation_id is null;
-  end if;
-  return null;
-end;
-$$;
-
---
--- Name: agent_conversations_fill_installation(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.agent_conversations_fill_installation() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-begin
-  if new.installation_id is null or (tg_op = 'UPDATE' and new.agent_id is distinct from old.agent_id) then
-    new.installation_id := (select i.id from public.module_installations i where i.agent_id = new.agent_id);
-  end if;
-  return new;
-end;
-$$;
 
 --
 -- Name: ai_credit_period(uuid, date); Type: FUNCTION; Schema: public; Owner: -
@@ -2587,7 +2440,7 @@ CREATE FUNCTION public.job_status(p_workspace uuid, p_queue text, p_dedupe text)
   where o.workspace_id = p_workspace
     and o.queue = p_queue
     and o.dedupe_key = p_dedupe
-    and p_queue in ('chat_turn', 'decisions')
+    and p_queue = 'decisions'
   limit 1
 $$;
 
@@ -3214,8 +3067,6 @@ CREATE FUNCTION public.promo_state(ws uuid, founding_from timestamp with time zo
                               from (select lead_id, min(created_at) as first_at from events
                                     where workspace_id = ws and kind in ('execution.approved', 'responsibility.assigned')
                                       and lead_id in (select id from website) group by lead_id) e), '[]'::jsonb),
-    'has_customer_conversation', exists (select 1 from agent_conversations c where c.workspace_id = ws and c.kind = 'customer'),
-    'has_lead_conversation', exists (select 1 from agent_conversations c where c.workspace_id = ws and c.lead_id is not null),
     'approved_count', (select count(*) from approved),
     'has_won', exists (select 1 from events e where e.workspace_id = ws and e.kind = 'outcome.recorded'
                        and e.lead_id in (select id from leads where workspace_id = ws and stage = 'won')),
@@ -3570,24 +3421,9 @@ begin
     return query select i.id, 'single'::text from public.module_installations i where i.workspace_id = p_ws and i.module_key = p_module;
     return;
   end if;
-  if p_conversation is not null then
-    select i.id into found from public.agent_conversations c join public.module_installations i on i.id = c.installation_id
-     where c.id = p_conversation and c.workspace_id = p_ws and i.module_key = p_module;
-    if found is not null then return query select found, 'conversation'::text; return; end if;
-    select i.id into found from public.agent_conversations c
-      join public.agent_connections ac on ac.connection_id = c.connection_id
-      join public.module_installations i on i.agent_id = ac.agent_id
-     where c.id = p_conversation and c.workspace_id = p_ws and c.connection_id is not null and i.module_key = p_module
-     order by i.created_at limit 1;
-    if found is not null then return query select found, 'connection'::text; return; end if;
-  end if;
   if p_lead is not null then
     select i.id into found from public.leads l join public.module_installations i on i.id = l.installation_id
      where l.id = p_lead and l.workspace_id = p_ws and i.module_key = p_module;
-    if found is null then
-      select i.id into found from public.agent_conversations c join public.module_installations i on i.id = c.installation_id
-       where c.lead_id = p_lead and c.workspace_id = p_ws and i.module_key = p_module order by c.created_at desc limit 1;
-    end if;
     if found is null then
       select i.id into found from public.lead_flows f join public.module_installations i on i.id = f.installation_id
        where f.lead_id = p_lead and f.workspace_id = p_ws and i.module_key = p_module order by f.created_at desc limit 1;
@@ -4814,48 +4650,6 @@ CREATE TABLE public.agent_connections (
     access text DEFAULT 'ask'::text NOT NULL,
     CONSTRAINT agent_connections_access_check CHECK ((access = ANY (ARRAY['read'::text, 'ask'::text, 'auto'::text]))),
     CONSTRAINT agent_connections_purpose_check CHECK ((purpose = ANY (ARRAY['inbound_chat'::text, 'outbound_chat'::text, 'bank_feed'::text, 'data_source'::text, 'tool'::text, 'lead_source'::text])))
-);
-
---
--- Name: agent_conversations; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.agent_conversations (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    agent_id uuid NOT NULL,
-    kind text NOT NULL,
-    visitor_name text,
-    lead_id uuid,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    handled_by text,
-    handled_at timestamp with time zone,
-    channel text DEFAULT 'website'::text NOT NULL,
-    external_id text,
-    connection_id uuid,
-    installation_id uuid,
-    CONSTRAINT agent_conversations_kind_check CHECK ((kind = ANY (ARRAY['test'::text, 'customer'::text])))
-);
-
---
--- Name: agent_messages; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.agent_messages (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    workspace_id uuid NOT NULL,
-    conversation_id uuid NOT NULL,
-    role text NOT NULL,
-    body text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    author_kind text,
-    author_name text,
-    delivery_status text,
-    delivery_error text,
-    in_reply_to uuid,
-    CONSTRAINT agent_messages_author_kind_check CHECK ((author_kind = ANY (ARRAY['ai'::text, 'human'::text]))),
-    CONSTRAINT agent_messages_delivery_status_check CHECK ((delivery_status = ANY (ARRAY['sent'::text, 'failed'::text]))),
-    CONSTRAINT agent_messages_role_check CHECK ((role = ANY (ARRAY['user'::text, 'agent'::text, 'system'::text])))
 );
 
 --
@@ -7846,20 +7640,6 @@ ALTER TABLE ONLY public.agent_connections
     ADD CONSTRAINT agent_connections_pkey PRIMARY KEY (agent_id, connection_id);
 
 --
--- Name: agent_conversations agent_conversations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_conversations
-    ADD CONSTRAINT agent_conversations_pkey PRIMARY KEY (id);
-
---
--- Name: agent_messages agent_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_messages
-    ADD CONSTRAINT agent_messages_pkey PRIMARY KEY (id);
-
---
 -- Name: agents agents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -9258,42 +9038,6 @@ CREATE INDEX agent_access_log_ws_time ON public.agent_access_log USING btree (wo
 CREATE INDEX agent_connections_connection ON public.agent_connections USING btree (connection_id);
 
 --
--- Name: agent_conversations_agent_id_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX agent_conversations_agent_id_idx ON public.agent_conversations USING btree (agent_id);
-
---
--- Name: agent_conversations_channel_external; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX agent_conversations_channel_external ON public.agent_conversations USING btree (workspace_id, channel, COALESCE(connection_id, '00000000-0000-0000-0000-000000000000'::uuid), external_id) WHERE (external_id IS NOT NULL);
-
---
--- Name: agent_conversations_installation; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX agent_conversations_installation ON public.agent_conversations USING btree (workspace_id, installation_id, created_at DESC);
-
---
--- Name: agent_messages_conversation_id_created_at_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX agent_messages_conversation_id_created_at_idx ON public.agent_messages USING btree (conversation_id, created_at);
-
---
--- Name: agent_messages_one_reply_per_message_key; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX agent_messages_one_reply_per_message_key ON public.agent_messages USING btree (conversation_id, in_reply_to) WHERE ((role = 'agent'::text) AND (in_reply_to IS NOT NULL));
-
---
--- Name: agent_messages_ws_created; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX agent_messages_ws_created ON public.agent_messages USING btree (workspace_id, created_at DESC);
-
---
 -- Name: agents_workspace_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -10362,18 +10106,6 @@ CREATE INDEX workspace_members_user ON public.workspace_members USING btree (use
 CREATE TRIGGER agent_connections_same_workspace BEFORE INSERT OR UPDATE ON public.agent_connections FOR EACH ROW EXECUTE FUNCTION public.agent_connections_same_workspace();
 
 --
--- Name: agent_conversations agent_conversations_attribute_lead; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER agent_conversations_attribute_lead AFTER INSERT OR UPDATE OF lead_id ON public.agent_conversations FOR EACH ROW EXECUTE FUNCTION public.agent_conversations_attribute_lead();
-
---
--- Name: agent_conversations agent_conversations_fill_installation; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER agent_conversations_fill_installation BEFORE INSERT OR UPDATE OF agent_id ON public.agent_conversations FOR EACH ROW EXECUTE FUNCTION public.agent_conversations_fill_installation();
-
---
 -- Name: ai_usage_events ai_usage_events_settle; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -10522,55 +10254,6 @@ ALTER TABLE ONLY public.agent_connections
 
 ALTER TABLE ONLY public.agent_connections
     ADD CONSTRAINT agent_connections_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: agent_conversations agent_conversations_agent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_conversations
-    ADD CONSTRAINT agent_conversations_agent_id_fkey FOREIGN KEY (agent_id) REFERENCES public.agents(id) ON DELETE CASCADE;
-
---
--- Name: agent_conversations agent_conversations_connection_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_conversations
-    ADD CONSTRAINT agent_conversations_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.connections(id) ON DELETE SET NULL;
-
---
--- Name: agent_conversations agent_conversations_installation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_conversations
-    ADD CONSTRAINT agent_conversations_installation_id_fkey FOREIGN KEY (installation_id) REFERENCES public.module_installations(id) ON DELETE SET NULL;
-
---
--- Name: agent_conversations agent_conversations_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_conversations
-    ADD CONSTRAINT agent_conversations_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: agent_messages agent_messages_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_messages
-    ADD CONSTRAINT agent_messages_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.agent_conversations(id) ON DELETE CASCADE;
-
---
--- Name: agent_messages agent_messages_in_reply_to_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_messages
-    ADD CONSTRAINT agent_messages_in_reply_to_fkey FOREIGN KEY (in_reply_to) REFERENCES public.agent_messages(id) ON DELETE SET NULL;
-
---
--- Name: agent_messages agent_messages_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.agent_messages
-    ADD CONSTRAINT agent_messages_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
 -- Name: agents agents_module_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -10804,13 +10487,6 @@ ALTER TABLE ONLY public.booking_settings
     ADD CONSTRAINT booking_settings_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
--- Name: booking_waitlist booking_waitlist_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.booking_waitlist
-    ADD CONSTRAINT booking_waitlist_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.agent_conversations(id) ON DELETE SET NULL;
-
---
 -- Name: booking_waitlist booking_waitlist_lead_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10837,13 +10513,6 @@ ALTER TABLE ONLY public.booking_waitlist
 
 ALTER TABLE ONLY public.booking_waitlist
     ADD CONSTRAINT booking_waitlist_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
-
---
--- Name: bookings bookings_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.bookings
-    ADD CONSTRAINT bookings_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.agent_conversations(id) ON DELETE SET NULL;
 
 --
 -- Name: bookings bookings_installation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -11245,13 +10914,6 @@ ALTER TABLE ONLY public.hiring_availability
     ADD CONSTRAINT hiring_availability_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
--- Name: hiring_candidates hiring_candidates_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.hiring_candidates
-    ADD CONSTRAINT hiring_candidates_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.agent_conversations(id) ON DELETE SET NULL;
-
---
 -- Name: hiring_candidates hiring_candidates_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11616,13 +11278,6 @@ ALTER TABLE ONLY public.knowledge_chunks
     ADD CONSTRAINT knowledge_chunks_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
 
 --
--- Name: knowledge_gaps knowledge_gaps_example_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.knowledge_gaps
-    ADD CONSTRAINT knowledge_gaps_example_conversation_id_fkey FOREIGN KEY (example_conversation_id) REFERENCES public.agent_conversations(id) ON DELETE SET NULL;
-
---
 -- Name: knowledge_gaps knowledge_gaps_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11691,13 +11346,6 @@ ALTER TABLE ONLY public.lead_actions
 
 ALTER TABLE ONLY public.lead_flows
     ADD CONSTRAINT lead_flows_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.connections(id) ON DELETE SET NULL;
-
---
--- Name: lead_flows lead_flows_conversation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.lead_flows
-    ADD CONSTRAINT lead_flows_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.agent_conversations(id) ON DELETE SET NULL;
 
 --
 -- Name: lead_flows lead_flows_installation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -12723,78 +12371,6 @@ CREATE POLICY agent_connections_member_select ON public.agent_connections FOR SE
 --
 
 CREATE POLICY agent_connections_owner_all ON public.agent_connections TO authenticated USING (public.is_owner(workspace_id)) WITH CHECK (public.is_owner(workspace_id));
-
---
--- Name: agent_conversations; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.agent_conversations ENABLE ROW LEVEL SECURITY;
-
---
--- Name: agent_conversations agent_conversations_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agent_conversations_app_be_delete ON public.agent_conversations FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: agent_conversations agent_conversations_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agent_conversations_app_be_insert ON public.agent_conversations FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: agent_conversations agent_conversations_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agent_conversations_app_be_select ON public.agent_conversations FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: agent_conversations agent_conversations_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agent_conversations_app_be_update ON public.agent_conversations FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: agent_conversations agent_conversations_member_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agent_conversations_member_all ON public.agent_conversations TO authenticated USING (public.is_member(workspace_id)) WITH CHECK (public.is_member(workspace_id));
-
---
--- Name: agent_messages; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.agent_messages ENABLE ROW LEVEL SECURITY;
-
---
--- Name: agent_messages agent_messages_app_be_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agent_messages_app_be_delete ON public.agent_messages FOR DELETE TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: agent_messages agent_messages_app_be_insert; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agent_messages_app_be_insert ON public.agent_messages FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: agent_messages agent_messages_app_be_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agent_messages_app_be_select ON public.agent_messages FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-
---
--- Name: agent_messages agent_messages_app_be_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agent_messages_app_be_update ON public.agent_messages FOR UPDATE TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
-
---
--- Name: agent_messages agent_messages_member_all; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY agent_messages_member_all ON public.agent_messages TO authenticated USING (public.is_member(workspace_id)) WITH CHECK (public.is_member(workspace_id));
 
 --
 -- Name: agents; Type: ROW SECURITY; Schema: public; Owner: -
@@ -18092,8 +17668,6 @@ CREATE POLICY zalo_wizard_drafts_app_be_select ON public.zalo_wizard_drafts FOR 
 -- relation, so each one is cleared first and granted exactly what it needs. anon holds no table privilege.
 REVOKE ALL ON TABLE public.agent_access_log FROM anon, authenticated;
 REVOKE ALL ON TABLE public.agent_connections FROM anon, authenticated;
-REVOKE ALL ON TABLE public.agent_conversations FROM anon, authenticated;
-REVOKE ALL ON TABLE public.agent_messages FROM anon, authenticated;
 REVOKE ALL ON TABLE public.agents FROM anon, authenticated;
 REVOKE ALL ON TABLE public.ai_generations FROM anon, authenticated;
 REVOKE ALL ON TABLE public.ai_quota_overrides FROM anon, authenticated;
@@ -18352,44 +17926,11 @@ REVOKE EXECUTE ON FUNCTION public.admin_workspace_stats() FROM PUBLIC, anon, aut
 GRANT EXECUTE ON FUNCTION public.admin_workspace_stats() TO app_be;
 
 --
--- Name: FUNCTION agent_chat_send(p_conversation uuid, p_body text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.agent_chat_send(p_conversation uuid, p_body text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.agent_chat_send(p_conversation uuid, p_body text) TO authenticated;
-
---
--- Name: FUNCTION agent_chat_start(p_agent uuid, p_kind text, p_visitor text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.agent_chat_start(p_agent uuid, p_kind text, p_visitor text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.agent_chat_start(p_agent uuid, p_kind text, p_visitor text) TO authenticated;
-
---
--- Name: FUNCTION agent_chat_take_over(p_conversation uuid, p_take boolean, p_line text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.agent_chat_take_over(p_conversation uuid, p_take boolean, p_line text) FROM PUBLIC, anon, authenticated;
-GRANT ALL ON FUNCTION public.agent_chat_take_over(p_conversation uuid, p_take boolean, p_line text) TO authenticated;
-
---
 -- Name: FUNCTION agent_connections_same_workspace(); Type: ACL; Schema: public; Owner: -
 --
 
 GRANT ALL ON FUNCTION public.agent_connections_same_workspace() TO anon;
 GRANT ALL ON FUNCTION public.agent_connections_same_workspace() TO authenticated;
-
---
--- Name: FUNCTION agent_conversations_attribute_lead(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.agent_conversations_attribute_lead() FROM PUBLIC, anon, authenticated;
-
---
--- Name: FUNCTION agent_conversations_fill_installation(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE EXECUTE ON FUNCTION public.agent_conversations_fill_installation() FROM PUBLIC, anon, authenticated;
 
 --
 -- Name: FUNCTION ai_credit_period(p_workspace uuid, p_period date); Type: ACL; Schema: public; Owner: -
@@ -19762,20 +19303,6 @@ GRANT ALL ON TABLE public.agent_connections TO authenticated;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.agent_connections TO app_be;
 
 --
--- Name: TABLE agent_conversations; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.agent_conversations TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.agent_conversations TO app_be;
-
---
--- Name: TABLE agent_messages; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.agent_messages TO authenticated;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.agent_messages TO app_be;
-
---
 -- Name: TABLE agents; Type: ACL; Schema: public; Owner: -
 --
 
@@ -20980,7 +20507,6 @@ SELECT pgmq.create('agents');
 SELECT pgmq.create('automation');
 SELECT pgmq.create('bank_credit_received');
 SELECT pgmq.create('booking_status');
-SELECT pgmq.create('chat_turn');
 SELECT pgmq.create('connection_commands');
 SELECT pgmq.create('connection_health');
 SELECT pgmq.create('content_tick');
@@ -21095,14 +20621,6 @@ INSERT INTO public.modules (key, sort_order, status, category, audience, knowled
 
 --
 -- Data for Name: module_installations; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: agent_conversations; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
---
--- Data for Name: agent_messages; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 --
@@ -21840,8 +21358,6 @@ GRANT EXECUTE ON FUNCTION public.job_requeue_failed(integer) TO app_be;
 -- Table and sequence privileges of the browser roles.
 REVOKE ALL ON TABLE public.agent_access_log FROM anon, authenticated;
 REVOKE ALL ON TABLE public.agent_connections FROM anon, authenticated;
-REVOKE ALL ON TABLE public.agent_conversations FROM anon, authenticated;
-REVOKE ALL ON TABLE public.agent_messages FROM anon, authenticated;
 REVOKE ALL ON TABLE public.agents FROM anon, authenticated;
 REVOKE ALL ON TABLE public.ai_generations FROM anon, authenticated;
 REVOKE ALL ON TABLE public.ai_quota_overrides FROM anon, authenticated;
@@ -21980,8 +21496,6 @@ REVOKE ALL ON SEQUENCE public.hiring_apply_hits_id_seq FROM anon, authenticated;
 DROP POLICY IF EXISTS agent_access_log_manager_select ON public.agent_access_log;
 DROP POLICY IF EXISTS agent_connections_member_select ON public.agent_connections;
 DROP POLICY IF EXISTS agent_connections_owner_all ON public.agent_connections;
-DROP POLICY IF EXISTS agent_conversations_member_all ON public.agent_conversations;
-DROP POLICY IF EXISTS agent_messages_member_all ON public.agent_messages;
 DROP POLICY IF EXISTS agents_manager_delete ON public.agents;
 DROP POLICY IF EXISTS agents_manager_insert ON public.agents;
 DROP POLICY IF EXISTS agents_manager_update ON public.agents;
@@ -22215,9 +21729,6 @@ REVOKE EXECUTE ON FUNCTION public.admin_console_workspace_stats() FROM anon, aut
 REVOKE EXECUTE ON FUNCTION public.admin_extend_subscription(uuid, pg_catalog.int4) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.admin_set_workspace_plan(uuid, text, pg_catalog.int8) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.admin_set_workspace_status(uuid, text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.agent_chat_send(uuid, text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.agent_chat_start(uuid, text, text) FROM anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.agent_chat_take_over(uuid, pg_catalog.bool, text) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.api_key_create(uuid, text) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.api_key_revoke(uuid, uuid) FROM anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.assign_lead_responsibility(uuid, uuid, text, text, pg_catalog.timestamptz, text, text) FROM anon, authenticated;
@@ -22938,39 +22449,22 @@ CREATE TABLE public.mcp_call_log (
 );
 CREATE INDEX mcp_call_log_ws_time ON public.mcp_call_log USING btree (workspace_id, created_at DESC);
 
-CREATE TABLE public.conversation_ownership_events (
-    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
-    workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    conversation_id uuid NOT NULL REFERENCES public.agent_conversations(id) ON DELETE CASCADE,
-    from_agent_id uuid,
-    to_agent_id uuid NOT NULL,
-    reason text NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT conversation_ownership_events_reason_length CHECK ((char_length(reason) >= 1 AND char_length(reason) <= 400))
-);
-CREATE INDEX conversation_ownership_events_conversation ON public.conversation_ownership_events USING btree (conversation_id, created_at DESC);
-
 ALTER TABLE public.mcp_connectors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mcp_tool_grants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mcp_call_log ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.conversation_ownership_events ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON TABLE public.mcp_connectors FROM anon, authenticated;
 REVOKE ALL ON TABLE public.mcp_tool_grants FROM anon, authenticated;
 REVOKE ALL ON TABLE public.mcp_call_log FROM anon, authenticated;
-REVOKE ALL ON TABLE public.conversation_ownership_events FROM anon, authenticated;
 
 GRANT SELECT, INSERT, UPDATE ON TABLE public.mcp_connectors TO app_be;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.mcp_tool_grants TO app_be;
 GRANT SELECT, INSERT ON TABLE public.mcp_call_log TO app_be;
-GRANT SELECT, INSERT ON TABLE public.conversation_ownership_events TO app_be;
 
 CREATE POLICY mcp_connectors_app_be_all ON public.mcp_connectors TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 CREATE POLICY mcp_tool_grants_app_be_all ON public.mcp_tool_grants TO app_be USING ((workspace_id IS NOT NULL)) WITH CHECK ((workspace_id IS NOT NULL));
 CREATE POLICY mcp_call_log_app_be_select ON public.mcp_call_log FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
 CREATE POLICY mcp_call_log_app_be_insert ON public.mcp_call_log FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
-CREATE POLICY conversation_ownership_events_app_be_select ON public.conversation_ownership_events FOR SELECT TO app_be USING ((workspace_id IS NOT NULL));
-CREATE POLICY conversation_ownership_events_app_be_insert ON public.conversation_ownership_events FOR INSERT TO app_be WITH CHECK ((workspace_id IS NOT NULL));
 
 -- The approval of a gated gateway call (an argument over its constraint, an amount over the limit, a tool in "ask" mode).
 INSERT INTO public.authority_actions (action, module_key, sort_order, default_mode, default_limit_vnd, default_required_fields, amount_limit, max_mode, label) VALUES
@@ -23072,22 +22566,6 @@ ALTER TABLE public.api_keys
     ADD CONSTRAINT api_keys_agent_scope_check CHECK (((agent_id IS NULL) OR (scopes = ARRAY['tools:call'::text])));
 
 CREATE INDEX api_keys_agent_id_idx ON public.api_keys USING btree (agent_id) WHERE (agent_id IS NOT NULL);
-
--- ---- from 20261101000904_conversation-connector-party.sql ----
--- Customer conversations remember the party a connector keeps for their customer (the answer of the `identity.find` or
--- `identity.upsert` role), so a turn does not ask the connector again; how a customer is matched (channel identity or phone) is
--- the workspace's own data in the installation settings, never code.
-
-ALTER TABLE public.agent_conversations
-    ADD COLUMN connector_party_id text,
-    ADD COLUMN connector_party_name text,
-    ADD COLUMN connector_party_at timestamp with time zone;
-
-ALTER TABLE public.agent_conversations
-    ADD CONSTRAINT agent_conversations_connector_party_id_length
-        CHECK ((connector_party_id IS NULL OR char_length(connector_party_id) BETWEEN 1 AND 200)),
-    ADD CONSTRAINT agent_conversations_connector_party_name_length
-        CHECK ((connector_party_name IS NULL OR char_length(connector_party_name) <= 200));
 
 -- ---- from 20261101000905_content-weekly-reports.sql ----
 -- The weekly marketing report per workspace and week: the top posts and the model's suggestion it computed (so a report read
@@ -23295,8 +22773,6 @@ CREATE FUNCTION public.workspace_footprint(p_workspace uuid) RETURNS jsonb
   jsonb_build_object(
     'agent_access_log', (select count(*) from public.agent_access_log where workspace_id = p_workspace),
     'agent_connections', (select count(*) from public.agent_connections where workspace_id = p_workspace),
-    'agent_conversations', (select count(*) from public.agent_conversations where workspace_id = p_workspace),
-    'agent_messages', (select count(*) from public.agent_messages where workspace_id = p_workspace),
     'agents', (select count(*) from public.agents where workspace_id = p_workspace),
     'ai_generations', (select count(*) from public.ai_generations where workspace_id = p_workspace),
     'ai_quota_overrides', (select count(*) from public.ai_quota_overrides where workspace_id = p_workspace),
@@ -23336,8 +22812,7 @@ CREATE FUNCTION public.workspace_footprint(p_workspace uuid) RETURNS jsonb
     'content_plans', (select count(*) from public.content_plans where workspace_id = p_workspace),
     'content_settings', (select count(*) from public.content_settings where workspace_id = p_workspace),
     'content_weekly_reports', (select count(*) from public.content_weekly_reports where workspace_id = p_workspace),
-    'contracts', (select count(*) from public.contracts where workspace_id = p_workspace),
-    'conversation_ownership_events', (select count(*) from public.conversation_ownership_events where workspace_id = p_workspace)
+    'contracts', (select count(*) from public.contracts where workspace_id = p_workspace)
   )
   ||
   jsonb_build_object(
@@ -24477,7 +23952,6 @@ SELECT pgmq.drop_queue('agents');
 SELECT pgmq.drop_queue('automation');
 SELECT pgmq.drop_queue('bank_credit_received');
 SELECT pgmq.drop_queue('booking_status');
-SELECT pgmq.drop_queue('chat_turn');
 SELECT pgmq.drop_queue('connection_commands');
 SELECT pgmq.drop_queue('connection_health');
 SELECT pgmq.drop_queue('content_tick');
@@ -24605,19 +24079,15 @@ GRANT EXECUTE ON FUNCTION be_access.workspace_member_avatars(uuid, uuid[]) TO ap
 -- ---- from 20261106000200_chat-member-states.sql ----
 -- Stable actors are additive: historical messages remain unattributed rather than guessed from names.
 ALTER TABLE public.messages ADD COLUMN author_user_id uuid;
-ALTER TABLE public.agent_messages ADD COLUMN author_user_id uuid;
 COMMENT ON COLUMN public.messages.author_user_id IS 'The proven workspace account that posted this human message; NULL for legacy or automated lines.';
-COMMENT ON COLUMN public.agent_messages.author_user_id IS 'The proven workspace account that submitted this message; NULL for customer, legacy or automated lines.';
 CREATE INDEX messages_author_cursor ON public.messages (workspace_id, author_user_id, created_at DESC, id DESC)
     WHERE author_user_id IS NOT NULL;
 CREATE INDEX messages_room_author_cursor ON public.messages (workspace_id, room, author_user_id, created_at DESC, id DESC)
     WHERE author_user_id IS NOT NULL;
-CREATE INDEX agent_messages_author_cursor ON public.agent_messages (workspace_id, conversation_id, author_user_id, created_at DESC, id DESC)
-    WHERE author_user_id IS NOT NULL;
 
 -- The same admission predicate serves backend markers and private realtime channel policies.
 -- Department rooms follow the existing Office APIs: all active workspace members may enter.
-CREATE FUNCTION be_access.chat_target_member(p_workspace uuid, p_user uuid, p_room text, p_conversation uuid)
+CREATE FUNCTION be_access.chat_target_member(p_workspace uuid, p_user uuid, p_room text)
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path TO ''
@@ -24627,25 +24097,20 @@ AS $$
             OR p_user = auth.uid())
        AND EXISTS (SELECT 1 FROM public.workspace_members m
                    WHERE m.workspace_id = p_workspace AND m.user_id = p_user AND m.status = 'active')
-       AND CASE WHEN p_conversation IS NOT NULL THEN
-                    p_room IS NULL AND EXISTS (SELECT 1 FROM public.agent_conversations c
-                                              WHERE c.id = p_conversation AND c.workspace_id = p_workspace)
-                ELSE p_room IS NULL OR EXISTS (SELECT 1 FROM public.office_rooms r
-                                              WHERE r.workspace_id = p_workspace AND r.key = p_room)
-           END;
+       AND (p_room IS NULL OR EXISTS (SELECT 1 FROM public.office_rooms r
+                                      WHERE r.workspace_id = p_workspace AND r.key = p_room));
 $$;
-REVOKE ALL ON FUNCTION be_access.chat_target_member(uuid, uuid, text, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION be_access.chat_target_member(uuid, uuid, text) FROM PUBLIC, anon, authenticated;
 GRANT USAGE ON SCHEMA be_access TO authenticated;
-GRANT EXECUTE ON FUNCTION be_access.chat_target_member(uuid, uuid, text, uuid) TO app_be, authenticated;
+GRANT EXECUTE ON FUNCTION be_access.chat_target_member(uuid, uuid, text) TO app_be, authenticated;
 
 -- A fetched cursor advances only to an identified persisted message, never the current wall clock.
--- Room reads retain office_rooms_reads as their source of truth. Conversation reads live here without calculating unread.
+-- Room reads retain office_rooms_reads as their source of truth; the markers keep the delivered and read cursors and the mute of a room.
 CREATE TABLE public.chat_markers (
     workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
     user_id uuid NOT NULL,
     room text NOT NULL DEFAULT '',
-    conversation_id uuid REFERENCES public.agent_conversations(id) ON DELETE CASCADE,
-    target_key text GENERATED ALWAYS AS (COALESCE(conversation_id::text, room)) STORED,
+    target_key text GENERATED ALWAYS AS (room) STORED,
     delivered_at timestamptz,
     delivered_message_id uuid,
     read_at timestamptz,
@@ -24654,8 +24119,7 @@ CREATE TABLE public.chat_markers (
     PRIMARY KEY (workspace_id, user_id, target_key),
     FOREIGN KEY (workspace_id, user_id) REFERENCES public.workspace_members(workspace_id, user_id) ON DELETE CASCADE,
     CONSTRAINT chat_markers_target CHECK (
-        (conversation_id IS NOT NULL AND room = '') OR
-        (conversation_id IS NULL AND room = ANY (ARRAY['', 'executive', 'frontdesk', 'sales', 'marketing', 'care', 'accounting']))),
+        room = ANY (ARRAY['', 'executive', 'frontdesk', 'sales', 'marketing', 'care', 'accounting'])),
     CONSTRAINT chat_markers_delivered_cursor CHECK ((delivered_at IS NULL) = (delivered_message_id IS NULL)),
     CONSTRAINT chat_markers_read_cursor CHECK ((read_at IS NULL) = (read_message_id IS NULL))
 );
@@ -24664,14 +24128,14 @@ CREATE INDEX chat_markers_delivered_cursor
     WHERE delivered_at IS NOT NULL;
 ALTER TABLE public.chat_markers ENABLE ROW LEVEL SECURITY;
 CREATE POLICY chat_markers_app_be_select ON public.chat_markers FOR SELECT TO app_be
-    USING (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, ''), conversation_id));
+    USING (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, '')));
 CREATE POLICY chat_markers_app_be_insert ON public.chat_markers FOR INSERT TO app_be
-    WITH CHECK (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, ''), conversation_id));
+    WITH CHECK (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, '')));
 CREATE POLICY chat_markers_app_be_update ON public.chat_markers FOR UPDATE TO app_be
-    USING (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, ''), conversation_id))
-    WITH CHECK (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, ''), conversation_id));
+    USING (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, '')))
+    WITH CHECK (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, '')));
 CREATE POLICY chat_markers_app_be_delete ON public.chat_markers FOR DELETE TO app_be
-    USING (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, ''), conversation_id));
+    USING (be_access.chat_target_member(workspace_id, user_id, NULLIF(room, '')));
 REVOKE ALL ON public.chat_markers FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.chat_markers TO app_be;
 
@@ -25624,11 +25088,6 @@ CREATE TRIGGER module_setup_writes_set_updated_at BEFORE UPDATE ON public.module
 -- carries created_at and updated_at as timestamptz NOT NULL DEFAULT now(), and a BEFORE UPDATE trigger (public.set_updated_at) stamps updated_at, so the application never writes it.
 -- Left out on purpose: append-only logs, ledgers and dedupe claims, where an updated_at would be wrong (listed in the entity-base round notes).
 
-ALTER TABLE public.agent_conversations ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER agent_conversations_set_updated_at BEFORE UPDATE ON public.agent_conversations FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-ALTER TABLE public.agent_messages ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
-CREATE TRIGGER agent_messages_set_updated_at BEFORE UPDATE ON public.agent_messages FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 ALTER TABLE public.agents ADD COLUMN updated_at timestamptz NOT NULL DEFAULT now();
 CREATE TRIGGER agents_set_updated_at BEFORE UPDATE ON public.agents FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
@@ -26076,7 +25535,6 @@ ALTER TABLE public.connector_interest ADD COLUMN IF NOT EXISTS updated_at timest
 ALTER TABLE public.content_plans ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.content_weekly_reports ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.content_weekly_reports ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
-ALTER TABLE public.conversation_ownership_events ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.email_messages ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 ALTER TABLE public.hiring_apply_hits ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
@@ -26110,8 +25568,6 @@ DROP TRIGGER IF EXISTS content_plans_set_updated_at ON public.content_plans;
 CREATE TRIGGER content_plans_set_updated_at BEFORE UPDATE ON public.content_plans FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 DROP TRIGGER IF EXISTS content_weekly_reports_set_updated_at ON public.content_weekly_reports;
 CREATE TRIGGER content_weekly_reports_set_updated_at BEFORE UPDATE ON public.content_weekly_reports FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-DROP TRIGGER IF EXISTS conversation_ownership_events_set_updated_at ON public.conversation_ownership_events;
-CREATE TRIGGER conversation_ownership_events_set_updated_at BEFORE UPDATE ON public.conversation_ownership_events FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 DROP TRIGGER IF EXISTS email_messages_set_updated_at ON public.email_messages;
 CREATE TRIGGER email_messages_set_updated_at BEFORE UPDATE ON public.email_messages FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 DROP TRIGGER IF EXISTS events_set_updated_at ON public.events;
@@ -26434,8 +25890,6 @@ AS $function$
   jsonb_build_object(
     'agent_access_log', (select count(*) from public.agent_access_log where workspace_id = p_workspace),
     'agent_connections', (select count(*) from public.agent_connections where workspace_id = p_workspace),
-    'agent_conversations', (select count(*) from public.agent_conversations where workspace_id = p_workspace),
-    'agent_messages', (select count(*) from public.agent_messages where workspace_id = p_workspace),
     'agents', (select count(*) from public.agents where workspace_id = p_workspace),
     'ai_generations', (select count(*) from public.ai_generations where workspace_id = p_workspace),
     'ai_quota_overrides', (select count(*) from public.ai_quota_overrides where workspace_id = p_workspace),
@@ -26475,8 +25929,7 @@ AS $function$
     'content_plans', (select count(*) from public.content_plans where workspace_id = p_workspace),
     'content_settings', (select count(*) from public.content_settings where workspace_id = p_workspace),
     'content_weekly_reports', (select count(*) from public.content_weekly_reports where workspace_id = p_workspace),
-    'contracts', (select count(*) from public.contracts where workspace_id = p_workspace),
-    'conversation_ownership_events', (select count(*) from public.conversation_ownership_events where workspace_id = p_workspace)
+    'contracts', (select count(*) from public.contracts where workspace_id = p_workspace)
   )
   ||
   jsonb_build_object(
@@ -26586,9 +26039,6 @@ DROP FUNCTION IF EXISTS public.admin_console_workspace_stats();
 DROP FUNCTION IF EXISTS public.admin_extend_subscription(uuid,integer);
 DROP FUNCTION IF EXISTS public.admin_set_workspace_plan(uuid,text,bigint);
 DROP FUNCTION IF EXISTS public.admin_set_workspace_status(uuid,text);
-DROP FUNCTION IF EXISTS public.agent_chat_send(uuid,text);
-DROP FUNCTION IF EXISTS public.agent_chat_start(uuid,text,text);
-DROP FUNCTION IF EXISTS public.agent_chat_take_over(uuid,boolean,text);
 DROP FUNCTION IF EXISTS public.api_key_create(uuid,text);
 DROP FUNCTION IF EXISTS public.api_key_revoke(uuid,uuid);
 DROP FUNCTION IF EXISTS public.assign_lead_responsibility(uuid,uuid,text,text,timestamp with time zone,text,text);
@@ -27536,29 +26986,6 @@ WHERE content_hash IS NULL
 ALTER TABLE public.brain_extractions ADD COLUMN IF NOT EXISTS passage_hashes text[] NOT NULL DEFAULT '{}'::text[];
 ALTER TABLE public.brain_extractions ADD COLUMN IF NOT EXISTS facts_changed boolean NOT NULL DEFAULT false;
 
--- ---- from 20261110100400_conversation-front-agent.sql ----
--- One customer, two agents: a conversation remembers the agent that opened the door (`front_agent_id`) while `agent_id` stays the
--- agent that speaks. The first hand-over fills it (COALESCE keeps the first front agent on a second hand-over); a hand-back after a won
--- deal returns the conversation to it. Expand only: the column is nullable, no row changes, an old reader never selects it.
-
-ALTER TABLE public.agent_conversations
-    ADD COLUMN front_agent_id uuid;
-
-ALTER TABLE ONLY public.agent_conversations
-    ADD CONSTRAINT agent_conversations_front_agent_id_fkey FOREIGN KEY (front_agent_id) REFERENCES public.agents(id) ON DELETE SET NULL;
-
-CREATE INDEX agent_conversations_front_agent
-    ON public.agent_conversations USING btree (workspace_id, front_agent_id)
-    WHERE (front_agent_id IS NOT NULL);
-
--- The consumer queue of the conversation_handback reactor (be/src/features/reactors/conversation-handback): a won deal returns the
--- conversation to the agent that opened it. The queue, its dead-letter queue and its topic binding follow event-bus.queue.ts; every
--- call is idempotent.
-
-select pgmq.create('deal_won__conversation_handback');
-select pgmq.create('deal_won__conversation_handback__dead');
-select pgmq.bind_topic('deal_won', 'deal_won__conversation_handback');
-
 -- ---- from 20261110100500_agent-serial.sql ----
 -- An agent is named by its role and a generated id ("Agent Chatbot #23233"), and the owner renames it freely. The id is stored next to the
 -- name so two agents of a workspace never draw the same one: five digits, unique inside the workspace. Expand only: the column is nullable,
@@ -27602,16 +27029,15 @@ ALTER TABLE public.knowledge_sources
     CHECK (stage IS NULL OR stage IN ('read', 'chunk', 'embed', 'store', 'facts', 'critic'));
 
 -- ---- from 20261110100700_chat-files.sql ----
--- chat-files: a file sent with a message, by a customer in a conversation or by a member in the Office (a transfer screenshot, a PDF).
--- Expand only: one new table, nothing existing altered. message_id names a row of agent_messages or, with no conversation, of messages,
--- so it carries no foreign key; a conversation or a workspace takes its rows with it.
--- The bytes sit in the private store under <workspace>/chat/<conversation or office>/, read through short-lived addresses; a row exists only for
+-- chat-files: a file sent with a message by a member in the Office (a transfer screenshot, a PDF).
+-- Expand only: one new table, nothing existing altered. message_id names a row of messages, so it carries no foreign key; a workspace takes
+-- its rows with it.
+-- The bytes sit in the private store under <workspace>/chat/office/, read through short-lived addresses; a row exists only for
 -- an object whose bytes were checked when the message was sent, so an upload nobody sent leaves no row.
 
-CREATE TABLE public.agent_message_attachments (
+CREATE TABLE public.office_file_attachments (
     id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
     workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    conversation_id uuid REFERENCES public.agent_conversations(id) ON DELETE CASCADE,
     message_id uuid NOT NULL,
     path text NOT NULL,
     name text NOT NULL,
@@ -27620,20 +27046,20 @@ CREATE TABLE public.agent_message_attachments (
     read jsonb,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT agent_message_attachments_path_key UNIQUE (path),
-    CONSTRAINT agent_message_attachments_type_check CHECK (content_type IN ('image/jpeg', 'image/png', 'image/webp', 'application/pdf')),
-    CONSTRAINT agent_message_attachments_size_check CHECK (size_bytes > 0 AND size_bytes <= 10485760)
+    CONSTRAINT office_file_attachments_path_key UNIQUE (path),
+    CONSTRAINT office_file_attachments_type_check CHECK (content_type IN ('image/jpeg', 'image/png', 'image/webp', 'application/pdf')),
+    CONSTRAINT office_file_attachments_size_check CHECK (size_bytes > 0 AND size_bytes <= 10485760)
 );
-CREATE INDEX agent_message_attachments_message_idx ON public.agent_message_attachments USING btree (workspace_id, message_id);
+CREATE INDEX office_file_attachments_message_idx ON public.office_file_attachments USING btree (workspace_id, message_id);
 
-CREATE TRIGGER agent_message_attachments_set_updated_at BEFORE UPDATE ON public.agent_message_attachments FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+CREATE TRIGGER office_file_attachments_set_updated_at BEFORE UPDATE ON public.office_file_attachments FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-ALTER TABLE public.agent_message_attachments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY agent_message_attachments_app_be_select ON public.agent_message_attachments FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
-CREATE POLICY agent_message_attachments_app_be_insert ON public.agent_message_attachments FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
-CREATE POLICY agent_message_attachments_app_be_update ON public.agent_message_attachments FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
-REVOKE ALL ON TABLE public.agent_message_attachments FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, UPDATE ON TABLE public.agent_message_attachments TO app_be;
+ALTER TABLE public.office_file_attachments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY office_file_attachments_app_be_select ON public.office_file_attachments FOR SELECT TO app_be USING (workspace_id IS NOT NULL);
+CREATE POLICY office_file_attachments_app_be_insert ON public.office_file_attachments FOR INSERT TO app_be WITH CHECK (workspace_id IS NOT NULL);
+CREATE POLICY office_file_attachments_app_be_update ON public.office_file_attachments FOR UPDATE TO app_be USING (workspace_id IS NOT NULL) WITH CHECK (workspace_id IS NOT NULL);
+REVOKE ALL ON TABLE public.office_file_attachments FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.office_file_attachments TO app_be;
 
 -- ---- from 20261110100900_agent-graph-proposal-kinds_contract_widen.sql ----
 -- agent-graphs: a proposal can be a `gap` (work no intent of the published graph fits, raised for the owner to decline or turn into a
@@ -28557,13 +27983,6 @@ COMMENT ON COLUMN public.orders.note IS
 ALTER TABLE public.connection_poll_schedule ADD COLUMN unavailable_reason text;
 ALTER TABLE public.connection_poll_schedule ADD CONSTRAINT connection_poll_schedule_unavailable_check CHECK (unavailable_reason IS NULL OR unavailable_reason IN ('plan'));
 
--- ---- from 20261111101700_agent-message-attachments-source.sql ----
--- Where an attachment a channel brought in came from, so the same file is stored once: `source_url` is the address the channel gave (or the local
--- path of a manual import) and `source_ref` is the channel's own id of the message. A file a person uploads in the web chat has neither.
-ALTER TABLE public.agent_message_attachments ADD COLUMN source_url text;
-ALTER TABLE public.agent_message_attachments ADD COLUMN source_ref text;
-CREATE UNIQUE INDEX agent_message_attachments_source_key ON public.agent_message_attachments (workspace_id, source_ref, source_url) WHERE source_url IS NOT NULL;
-
 -- ---- from 20261111101900_sliding-burst-window.sql ----
 -- sliding-burst-window: every new message of a conversation extends the wait by the window, up to a longest wait counted from the first
 -- message of the burst. agent_turn_begin gains p_max_ms: a wake waits while a newer wake of its scope is inside the window and the wake itself
@@ -28844,26 +28263,17 @@ $$;
 REVOKE ALL ON FUNCTION public.agent_turn_begin(uuid, text, text, integer, integer, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.agent_turn_begin(uuid, text, text, integer, integer, integer) TO app_be;
 
--- ---- from 20261111102300_agent-message-channel-ref.sql ----
--- agent-message-channel-ref: forward-only; immutable once on origin/main. Expand only: one new nullable column and its index, nothing existing altered.
--- A customer message keeps the channel's own id of the message it came from (`zalo:<message id>`, `tg:<chat>:<message>`, `meta:<event>`), so
--- the same message heard twice in one conversation - a webhook and the poll that reconciles it, a manual import, a replayed inbound event - is
--- stored once. Rows written before this column, and lines no channel brought in, carry none.
-ALTER TABLE public.agent_messages ADD COLUMN channel_ref text;
-COMMENT ON COLUMN public.agent_messages.channel_ref IS 'The channel''s own id of the customer message this row stores; NULL for lines no channel brought in and for rows written before it.';
-CREATE UNIQUE INDEX agent_messages_channel_ref_key ON public.agent_messages (conversation_id, channel_ref)
-    WHERE channel_ref IS NOT NULL;
 
 -- ---- from 20261111102400_agent-speaker-queue.sql ----
 -- agent-speaker-queue: forward-only; immutable once on origin/main. Expand only: one new table, nothing existing altered.
--- One agent speaks to the customer of a conversation at a time: the holder (agent_conversations.agent_id). A hand-off passes the right
+-- One agent speaks to the customer of a conversation at a time: the holder (the agentId of the chat.conversation record). A hand-off passes the right
 -- to speak to the agent it tags; a second hand-off while another agent holds the conversation waits here, in order, and is written as
 -- that agent's wake only when the holder hands the conversation on. When the holder's work is done and nobody waits, the conversation
 -- returns to the agent that opened the door.
 CREATE TABLE public.agent_speaker_queue (
     id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
     workspace_id uuid NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
-    conversation_id uuid NOT NULL REFERENCES public.agent_conversations(id) ON DELETE CASCADE,
+    conversation_id uuid NOT NULL,
     to_agent_id uuid NOT NULL REFERENCES public.agents(id) ON DELETE CASCADE,
     event_key text NOT NULL,
     request jsonb NOT NULL,

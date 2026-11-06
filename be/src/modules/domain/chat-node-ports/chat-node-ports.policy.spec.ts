@@ -1,27 +1,15 @@
 import { Test } from "@nestjs/testing"
 import {
     NODE_ROWS_MAX,
-    messageIdOf,
     placeholderRecipient,
     recipientRefused,
     recipientLinked,
     cutFields,
     limitOf,
     matchesWhere,
-    statusOf,
     textWithLinks,
-    turnConversationOf,
 } from "./chat-node-ports.policy"
 import { channelSendSchema } from "./chat-node-ports.schema"
-
-const TURN = {
-    turnId: "t",
-    workspaceId: "ws-1",
-    agentId: "a-1",
-    subject: null,
-    conversationId: "c1",
-    locale: "vi" as const,
-}
 
 const SUBJECT = Symbol("chat-node-ports.policy")
 
@@ -31,16 +19,13 @@ const build = async () => {
             {
                 provide: SUBJECT,
                 useValue: {
-                    messageIdOf,
                     placeholderRecipient,
                     recipientRefused,
                     recipientLinked,
                     cutFields,
                     limitOf,
                     matchesWhere,
-                    statusOf,
                     textWithLinks,
-                    turnConversationOf,
                 },
             },
         ],
@@ -68,11 +53,6 @@ describe("chat-node-ports policy", () => {
         expect(policy.matchesWhere({ a: 1 }, { a: 2 })).toBe(false)
         expect(policy.matchesWhere({ a: 1 }, undefined)).toBe(true)
     })
-
-    it("names who holds the conversation", () => {
-        expect(policy.statusOf(null)).toBe("agent")
-        expect(policy.statusOf("Lan")).toBe("with_person")
-    })
 })
 
 describe("chat-node-ports policy recipients and links", () => {
@@ -91,13 +71,6 @@ describe("chat-node-ports policy recipients and links", () => {
                 attachments: [{ url: "https://x/y", name: "Menu" }],
             }),
         ).toBe("Hi\nMenu: https://x/y")
-    })
-
-    it("reaches only the conversation the turn serves", () => {
-        expect(policy.turnConversationOf(TURN, undefined)).toBe("c1")
-        expect(policy.turnConversationOf(TURN, "c1")).toBe("c1")
-        expect(policy.turnConversationOf(TURN, "c2")).toBeNull()
-        expect(policy.turnConversationOf({ ...TURN, conversationId: null }, undefined)).toBeNull()
     })
 
     it("needs a customer id and a connection to push to, except on the website chat", () => {
@@ -121,14 +94,6 @@ describe("chat-node-ports policy recipients and links", () => {
         expect(policy.recipientRefused("zalo_unfollowed")).toBe(true)
         expect(policy.recipientRefused("zalo_quota")).toBe(false)
         expect(policy.recipientRefused(null)).toBe(false)
-    })
-
-    it("derives one uuid per send key, the same every time", () => {
-        expect(policy.messageIdOf("run:1")).toBe(policy.messageIdOf("run:1"))
-        expect(policy.messageIdOf("run:1")).not.toBe(policy.messageIdOf("run:2"))
-        expect(policy.messageIdOf("run:1")).toMatch(
-            /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u,
-        )
     })
 
     it("admits a conversation id and a text, and refuses anything else", () => {

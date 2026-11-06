@@ -69,7 +69,7 @@ const build = async () => {
     const leads = mock<LeadRecordsService>()
     leads.require.mockResolvedValue(lead)
     const delivery = mock<CustomerDeliveryService>()
-    delivery.contactOf.mockResolvedValue("lan@huetea.vn")
+    delivery.contactOf.mockReturnValue("lan@huetea.vn")
     const moduleRef = await Test.createTestingModule({
         providers: [
             QuotePerformerService,

@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import { WorkEngineService } from "@modules/domain/decisions"
 import type { WorkContext } from "@modules/domain/decisions"
@@ -91,7 +91,7 @@ const build = async (
         listForLead: jest.fn().mockResolvedValue(openOrders),
         find: jest.fn().mockResolvedValue(recorded),
     })
-    const conversations = mock<AgentConversationsService>({ attachLead: jest.fn() })
+    const conversations = mock<ChatConversationsService>({ attachLead: jest.fn() })
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => key) })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -100,7 +100,7 @@ const build = async (
             { provide: WorkEngineService, useValue: engine },
             { provide: InboundEventsService, useValue: inbound },
             { provide: OrdersService, useValue: orders },
-            { provide: AgentConversationsService, useValue: conversations },
+            { provide: ChatConversationsService, useValue: conversations },
             { provide: PaymentClaimsService, useValue: claims },
         ],
     }).compile()

@@ -1,6 +1,6 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OnApplicationBootstrap } from "@nestjs/common"
-import { DELIVERY_OUTCOME_UNKNOWN } from "@modules/domain/agent-messages"
+import { CHAT_DELIVERY_UNKNOWN } from "@modules/domain/chat-records"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -26,7 +26,7 @@ const ACTOR_BUILD = "build"
 const ACTOR_SWEEP = "sweep"
 
 /** The codes of a step whose effect may have happened: it is never run again by anything, only a person reconciles it. */
-const OUTCOME_UNKNOWN: ReadonlyArray<string> = [TOOL_OUTCOME_UNKNOWN, DELIVERY_OUTCOME_UNKNOWN, DECISION_ACTOR_UNKNOWN]
+const OUTCOME_UNKNOWN: ReadonlyArray<string> = [TOOL_OUTCOME_UNKNOWN, CHAT_DELIVERY_UNKNOWN, DECISION_ACTOR_UNKNOWN]
 
 @Injectable()
 /**

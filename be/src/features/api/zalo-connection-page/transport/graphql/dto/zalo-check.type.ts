@@ -3,7 +3,7 @@ import { Field, ObjectType } from "@nestjs/graphql"
 @ObjectType()
 /** One row of the check list of a Zalo OA connection. */
 export class ZaloCheckType {
-    /** app, token, webhook or permissions. */
+    /** app, token or webhook. */
     @Field(() => String)
     key!: string
 

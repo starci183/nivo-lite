@@ -1,6 +1,5 @@
-import { createHash } from "node:crypto"
 import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
-import type { NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
+import type { NodeRow } from "@modules/domain/graph-nodes"
 
 /** The most rows one node read answers. */
 export const NODE_ROWS_MAX = 50
@@ -26,19 +25,9 @@ export const cutFields = (row: NodeRow, fields: ReadonlyArray<string>): NodeRow 
 export const matchesWhere = (row: NodeRow, where: NodeQuery["where"]): boolean =>
     Object.entries(where ?? {}).every(([name, value]) => row[name] === value)
 
-/** The status a node sees: a person holds the conversation, or the agent answers. */
-export const statusOf = (handledBy: string | null): "with_person" | "agent" =>
-    handledBy === null ? "agent" : "with_person"
-
 /** The text with its attachments as links under it, one per line. */
 export const textWithLinks = (send: ChannelSend): string =>
     [send.text, ...(send.attachments ?? []).map((file) => `${file.name}: ${file.url}`)].join("\n")
-
-/** The one conversation a `turn` read may reach, or null when the turn serves none: a `where.id` of another conversation reaches nothing. */
-export const turnConversationOf = (turn: NodeTurn, wanted: unknown): string | null =>
-    turn.conversationId !== null && (wanted === undefined || wanted === turn.conversationId)
-        ? turn.conversationId
-        : null
 
 export { RECIPIENT_NOT_LINKED, recipientLinked } from "@modules/domain/channels"
 
@@ -65,10 +54,3 @@ const UNREACHABLE_FAILURES: ReadonlySet<string> = new Set(["zalo_recipient", "za
 /** True when the channel refused a message because of who it was for, not because of the window, the quota or its own state. */
 export const recipientRefused = (failure: string | null): boolean =>
     failure !== null && UNREACHABLE_FAILURES.has(failure)
-
-/** The id of the stored message of one send: the same on every attempt of the same effect call, so a retry finds the message and never stores a second. */
-export const messageIdOf = (key: string): string => {
-    const hex = createHash("sha1").update(`channel.send:${key}`).digest("hex")
-    const variant = ((Number.parseInt(hex.slice(16, 18), 16) & 0x3f) | 0x80).toString(16)
-    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${variant}${hex.slice(18, 20)}-${hex.slice(20, 32)}`
-}

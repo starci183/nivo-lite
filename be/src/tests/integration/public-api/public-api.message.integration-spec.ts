@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
 import { WorkEngineService, WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
 import type { WorkPerformer, WorkPerformerRegistry } from "@modules/domain/decisions"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { PublicMessagesService } from "@modules/domain/public-api"
 import { persistPublicApiConversation } from "../../fixtures/builders/public-api.builder"
 import { PUBLIC_API_PROOF_MODULES, PublicApiProofAccess } from "../../world/public-api-capabilities.options"
@@ -17,8 +18,11 @@ describe("Public API message (persisted local integration)", () => {
 
     const admittedMessage = async (approval: boolean) => {
         const identity = await fixture()
-        const conversationId = world.id()
-        await persistPublicApiConversation(world.db.primary, identity, conversationId, world.id())
+        const conversationId = await persistPublicApiConversation(
+            world.resolve(ChatConversationsService),
+            identity,
+            world.id(),
+        )
         await world.resolve(PublicMessagesService).acceptMessage({
             authorization: identity.authorization,
             conversationId,

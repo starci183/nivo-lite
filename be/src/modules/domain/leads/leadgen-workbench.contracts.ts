@@ -168,26 +168,6 @@ export type LeadGenWorkItemRecord = Pick<
     | "completed_at"
 >
 
-/** A customer's conversation linked to a lead. */
-export interface LeadGenConversationRecord {
-    /** Identity of the stored record. */
-    readonly id: string
-    /** The captured prospect linked to this conversation. */
-    readonly lead_id: string | null
-}
-
-/** One chronological message used to measure replies. */
-export interface LeadGenMessageRecord {
-    /** Customer conversation linked to this captured prospect. */
-    readonly conversation_id: string
-    /** Message author role. */
-    readonly role: string
-    /** Stored message text. */
-    readonly body: string
-    /** Creation instant, ISO 8601. */
-    readonly created_at: string
-}
-
 /** Rows required to reproduce the Lead Gen workbench. */
 export interface LeadGenWorkbenchInput {
     /** Clock instant used for reporting windows. */
@@ -198,10 +178,6 @@ export interface LeadGenWorkbenchInput {
     readonly leads: ReadonlyArray<LeadGenLeadRecord>
     /** Existing capture, scoring, reply and handoff work items. */
     readonly items: ReadonlyArray<LeadGenWorkItemRecord>
-    /** Customer conversations attached to captured prospects. */
-    readonly conversations: ReadonlyArray<LeadGenConversationRecord>
-    /** Chronological customer conversation messages. */
-    readonly messages: ReadonlyArray<LeadGenMessageRecord>
     /** Checks whether any customer name marks a test run. */
     readonly isTestRun: (...names: ReadonlyArray<string | null | undefined>) => boolean
 }

@@ -1,6 +1,5 @@
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { agentMessagesEntities } from "@modules/domain/agent-messages"
 import { chatMarkersEntities } from "@modules/domain/chat-markers"
 import { messagesEntities } from "@modules/domain/messages"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
@@ -8,7 +7,6 @@ import { sql } from "@modules/platform/database"
 
 const [WorkspaceMemberEntity] = workspaceMembersEntities
 
-const [AgentMessageEntity] = agentMessagesEntities
 const [ChatMarkerEntity] = chatMarkersEntities
 const [MessageEntity] = messagesEntities
 
@@ -38,10 +36,8 @@ export interface ChatMarkerPrivilegeRow {
 export interface ChatMarkerStateRow {
     /** The member the preference belongs to. */
     readonly user_id: string
-    /** The room key, or empty for a conversation target. */
+    /** The room key, or empty for the Office. */
     readonly room: string | null
-    /** The conversation, or null for a room target. */
-    readonly conversation_id: string | null
     /** Whether the target is muted. */
     readonly muted: boolean
 }
@@ -79,7 +75,6 @@ export const readChatMarkerStates = async (
     return rows.map((row) => ({
         user_id: row.userId,
         room: row.room,
-        conversation_id: row.conversationId,
         muted: row.muted,
     }))
 }
@@ -102,7 +97,7 @@ export const deleteChatMarkerState = async (
     await manager.delete(ChatMarkerEntity, { workspaceId, userId })
 }
 
-/** Reads the cursors of one target key ('' for the room, the conversation id otherwise). */
+/** Reads the cursors of one target key (the room, or '' for the Office). */
 export const chatMarkerCursor = async (
     manager: EntityManager,
     workspaceId: string,
@@ -113,7 +108,7 @@ export const chatMarkerCursor = async (
     return rows.map((row) => ({ delivered_message_id: row.deliveredMessageId, read_message_id: row.readMessageId }))
 }
 
-/** Reads the stable author ids stored for both team and conversation messages. */
+/** Reads the stable author ids stored for team messages. */
 export const chatMessageActors = async (
     manager: EntityManager,
     messageIds: ReadonlyArray<string>,
@@ -121,8 +116,7 @@ export const chatMessageActors = async (
     const ids = In([...messageIds])
     const select = { id: true, authorUserId: true } as const
     const team = await manager.find(MessageEntity, { select, where: { id: ids }, take: PROOF_ROWS_MAX })
-    const agent = await manager.find(AgentMessageEntity, { select, where: { id: ids }, take: PROOF_ROWS_MAX })
-    return [...team, ...agent]
+    return team
         .map((row) => ({ id: row.id, author_user_id: row.authorUserId }))
         .toSorted((left, right) => left.id.localeCompare(right.id))
 }

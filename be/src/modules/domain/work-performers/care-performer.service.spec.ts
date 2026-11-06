@@ -112,7 +112,7 @@ const build = async () => {
     const writer = mock<PromptWriter>()
     writer.draftCare.mockResolvedValue("Thank you")
     const delivery = mock<CustomerDeliveryService>()
-    delivery.contactOf.mockResolvedValue("84901234567")
+    delivery.contactOf.mockReturnValue("84901234567")
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [

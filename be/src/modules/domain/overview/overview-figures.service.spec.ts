@@ -1,9 +1,9 @@
 import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
-import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { AuthorityService } from "@modules/domain/authority"
 import type { AuthorityProfile } from "@modules/domain/authority"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { DecisionsFiguresService } from "@modules/domain/decisions"
 import { EventsReadService } from "@modules/domain/events"
 import { ExecutionsFiguresService } from "@modules/domain/executions"
@@ -73,7 +73,7 @@ const build = async () => {
     const events = mock<EventsReadService>()
     const leads = mock<LeadReadService>()
     const leadRecords = mock<LeadRecordsService>()
-    const conversations = mock<AgentConversationsReadService>()
+    const conversations = mock<ChatConversationsService>()
     const executions = mock<ExecutionsFiguresService>()
     const responsibilities = mock<ResponsibilityReadService>()
     const authority = mock<AuthorityService>()
@@ -89,7 +89,7 @@ const build = async () => {
             { provide: EventsReadService, useValue: events },
             { provide: LeadReadService, useValue: leads },
             { provide: LeadRecordsService, useValue: leadRecords },
-            { provide: AgentConversationsReadService, useValue: conversations },
+            { provide: ChatConversationsService, useValue: conversations },
             { provide: ExecutionsFiguresService, useValue: executions },
             { provide: ResponsibilityReadService, useValue: responsibilities },
             { provide: AuthorityService, useValue: authority },
@@ -124,8 +124,8 @@ describe("OverviewFiguresService.promo", () => {
         world.agents.earliestSheetOfModule.mockResolvedValue(BOT_SHEET)
         world.events.existsOfKindBetween.mockResolvedValue(true)
         world.leads.websiteOf.mockResolvedValue([{ id: "l-web", createdAt: AT }])
-        world.conversations.hasCustomerChat.mockResolvedValue(true)
-        world.conversations.hasLeadChat.mockResolvedValue(false)
+        world.conversations.hasAny.mockResolvedValue(true)
+        world.leads.recentNames.mockResolvedValue([])
         world.executions.countApproved.mockResolvedValue(2)
         world.events.firstAtByLead.mockResolvedValue([{ leadId: "l-web", at: new Date("2026-10-01T01:00:00.000Z") }])
         world.leads.idsAtStage.mockResolvedValue(["l-won"])
@@ -169,8 +169,8 @@ describe("OverviewFiguresService.promo", () => {
         world.agents.earliestSheetOfModule.mockResolvedValue(null)
         world.events.existsOfKindBetween.mockResolvedValue(false)
         world.leads.websiteOf.mockResolvedValue([])
-        world.conversations.hasCustomerChat.mockResolvedValue(false)
-        world.conversations.hasLeadChat.mockResolvedValue(false)
+        world.conversations.hasAny.mockResolvedValue(false)
+        world.leads.recentNames.mockResolvedValue([])
         world.executions.countApproved.mockResolvedValue(0)
         world.events.firstAtByLead.mockResolvedValue([])
         world.leads.idsAtStage.mockResolvedValue([])

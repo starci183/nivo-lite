@@ -8,15 +8,15 @@ import type { MessageCatalog } from "@modules/platform/i18n"
 import { ok, refused } from "@modules/platform/primitives"
 import { In } from "typeorm"
 import { chatFileAttachmentOf, chatFileAttachmentRowsOf } from "@tests/fixtures/builders/chat-files.builder"
-import { AgentMessageAttachmentEntity } from "./persistence/entities"
+import { OfficeFileAttachmentEntity } from "./persistence/entities"
 import { CHAT_FILE_MAX_BYTES } from "./chat-file.policy"
 import { CHAT_FILES_STORAGE } from "./chat-files.decorators"
 import { ChatFilesService } from "./chat-files.service"
 import { ChatFilesErrorCode } from "./errors/chat-files.error"
 
-const SCOPE = { workspaceId: "ws-1", conversationId: "conv-1" }
+const SCOPE = { workspaceId: "ws-1" }
 const OBJECT_ID = "0f8fad5b-d9cb-469f-a165-70867728950e"
-const PATH = `ws-1/chat/conv-1/${OBJECT_ID}.png`
+const PATH = `ws-1/chat/office/${OBJECT_ID}.png`
 const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0])
 
 const build = async () => {
@@ -45,9 +45,9 @@ describe("ChatFilesService", () => {
         expect(storage.signedUpload).not.toHaveBeenCalled()
     })
 
-    it("refuses a path outside the conversation before touching the store", async () => {
+    it("refuses a path outside the Office folder before touching the store", async () => {
         const { service, storage } = await build()
-        await expect(service.verify(SCOPE, `ws-2/chat/conv-1/${OBJECT_ID}.png`, "a.png")).rejects.toMatchObject({
+        await expect(service.verify(SCOPE, `ws-2/chat/office/${OBJECT_ID}.png`, "a.png")).rejects.toMatchObject({
             code: ChatFilesErrorCode.PathInvalid,
         })
         expect(storage.sizeOf).not.toHaveBeenCalled()
@@ -196,9 +196,8 @@ describe("ChatFilesService.wordsOf and attach", () => {
                 tx,
             ),
         ).resolves.toBeUndefined()
-        expect(tx.insert).toHaveBeenCalledWith(AgentMessageAttachmentEntity, {
+        expect(tx.insert).toHaveBeenCalledWith(OfficeFileAttachmentEntity, {
             workspaceId: "ws-1",
-            conversationId: "conv-1",
             messageId: "m-1",
             path: PATH,
             name: "a.png",
@@ -238,7 +237,7 @@ describe("ChatFilesService.viewsOf", () => {
                 url: "https://files.example.test/read",
             },
         ])
-        expect(em.find).toHaveBeenCalledWith(AgentMessageAttachmentEntity, {
+        expect(em.find).toHaveBeenCalledWith(OfficeFileAttachmentEntity, {
             where: { workspaceId: "ws-1", messageId: In(["m-1", "m-2"]) },
             order: { createdAt: "ASC", id: "ASC" },
             take: 200,
@@ -280,7 +279,7 @@ describe("ChatFilesService stored content", () => {
             bytes: PNG,
             read: null,
         })
-        expect(em.findOne).toHaveBeenCalledWith(AgentMessageAttachmentEntity, {
+        expect(em.findOne).toHaveBeenCalledWith(OfficeFileAttachmentEntity, {
             where: { workspaceId: "ws-1", messageId: "m-1" },
             order: { createdAt: "ASC", id: "ASC" },
         })
@@ -292,7 +291,7 @@ describe("ChatFilesService stored content", () => {
         em.update.mockResolvedValue({ affected: 1, raw: [], generatedMaps: [] })
         await expect(service.keepRead("ws-1", "attachment-1", read)).resolves.toBeUndefined()
         expect(em.update).toHaveBeenCalledWith(
-            AgentMessageAttachmentEntity,
+            OfficeFileAttachmentEntity,
             { id: "attachment-1", workspaceId: "ws-1" },
             { read },
         )

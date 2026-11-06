@@ -38,9 +38,9 @@ const underWake = (loaded: CustomerTurn, wake: AgentWakeView | AgentTurnView): C
 
 @Injectable()
 /**
- * The customer's side of the core road. A customer wake runs the same code as the queued turn of the legacy road: the takeover check, the
- * holding line (at most once per hour), `CustomerOutcomesService.settle` and the reply stored once per message are the methods of
- * `ChatTurnService`, called here under the lease. The handler adds what only a wake has: a wake older than ten minutes is held over, and a
+ * The customer's side of the work core. A customer wake runs the takeover check, the holding line (at most once per hour),
+ * `CustomerOutcomesService.settle` and the reply stored once per message, which are the methods of `ChatTurnService`, called here under
+ * the lease. The handler adds what only a wake has: a wake older than ten minutes is held over, and a
  * model turn runs in the executor, under its gates, between `prepare` and `settle`. Every effect is idempotent per customer message, so a
  * retried wake or a stored proposal repeats nothing. A turn the published graph holds contracts for settles through the contract pipeline
  * instead (`CustomerIntentSettleService`), whose door reaches the same `respond`.
@@ -106,6 +106,6 @@ export class CustomerWorkHandlerService implements AgentWorkHandler, OnModuleIni
 
     private async load(turn: AgentWakeView): Promise<CustomerTurn | undefined> {
         const ref = turnRefOf(turn.context)
-        return ref === null ? undefined : this.chat.turnOf(ref)
+        return ref === null ? undefined : this.chat.turnOf(turn.workspaceId, ref)
     }
 }

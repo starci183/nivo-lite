@@ -2,8 +2,8 @@ import { Test } from "@nestjs/testing"
 import { In } from "typeorm"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { AgentConversationReadService } from "@modules/domain/agent-conversations"
-import type { CustomerChat } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
+import type { ChatHumanConversation } from "@modules/domain/chat-records"
 import { LeadReadService } from "@modules/domain/leads"
 import { LoyaltyCustomersService } from "@modules/domain/loyalty-customers"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -14,8 +14,9 @@ import { LoyaltyCustomerLinkEntity } from "./persistence/entities"
 import type { LoyaltyCustomerLinkKind } from "./persistence/entities"
 
 const build = async (entityManager: MockEntityManager) => {
-    const chats = mock<AgentConversationReadService>()
-    chats.customerChatsOf.mockResolvedValue([])
+    const chats = mock<ChatConversationsService>()
+    chats.humansOf.mockResolvedValue([])
+    chats.ofLeads.mockResolvedValue([])
     const leads = mock<LeadReadService>()
     leads.contactOf.mockResolvedValue(null)
     const customers = mock<LoyaltyCustomersService>()
@@ -24,7 +25,7 @@ const build = async (entityManager: MockEntityManager) => {
         providers: [
             LoyaltyCustomerLinksService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
-            { provide: AgentConversationReadService, useValue: chats },
+            { provide: ChatConversationsService, useValue: chats },
             { provide: LeadReadService, useValue: leads },
             { provide: LoyaltyCustomersService, useValue: customers },
         ],
@@ -43,12 +44,13 @@ const refOf = (externalId: string | null, leadId: string | null = "l1"): ChatCus
 const linkOf = (customerId: string, kind: LoyaltyCustomerLinkKind, ref: string): LoyaltyCustomerLinkEntity =>
     Object.assign(new LoyaltyCustomerLinkEntity(), { workspaceId: "ws-1", customerId, kind, ref })
 
-const chatOf = (fields: Partial<CustomerChat> & Pick<CustomerChat, "id">): CustomerChat => ({
+const chatOf = (fields: Partial<ChatHumanConversation> & Pick<ChatHumanConversation, "id">): ChatHumanConversation => ({
+    workspaceId: "ws-1",
     leadId: null,
     channel: "website",
     externalId: null,
+    connectionId: null,
     handledBy: null,
-    createdAt: new Date("2026-10-13T02:00:00.000Z"),
     ...fields,
 })
 
@@ -75,8 +77,9 @@ describe("LoyaltyCustomerLinksService / linkLeads", () => {
             { id: "c1", phone: "84912345678", email: null },
             { id: "c2", phone: null, email: "b@x.com" },
         ])
-        chats.customerChatsOf
-            .mockResolvedValueOnce([chatOf({ id: "v1", leadId: "l1" }), chatOf({ id: "v1", leadId: "l1" })])
+        chats.ofLeads.mockResolvedValueOnce([chatOf({ id: "v1", leadId: "l1" }), chatOf({ id: "v1", leadId: "l1" })])
+        chats.humansOf
+            .mockResolvedValueOnce([])
             .mockResolvedValueOnce([
                 chatOf({ id: "v1", channel: "telegram", externalId: "123:abc" }),
                 chatOf({ id: "v9", channel: "zalo", externalId: null }),
@@ -104,12 +107,7 @@ describe("LoyaltyCustomerLinksService / linkLeads", () => {
             ],
         ])
         expect(leadInsert?.callsOf("orUpdate")).toEqual([[["customer_id"], ["workspace_id", "kind", "ref"]]])
-        expect(chats.customerChatsOf).toHaveBeenNthCalledWith(
-            1,
-            "ws-1",
-            { conversationIds: [], leadIds: ["l1"] },
-            manager,
-        )
+        expect(chats.ofLeads).toHaveBeenNthCalledWith(1, "ws-1", ["l1"])
         expect(manager.find).toHaveBeenNthCalledWith(1, LoyaltyCustomerLinkEntity, {
             where: { workspaceId: "ws-1", kind: "lead" },
             take: 5000,
@@ -117,12 +115,7 @@ describe("LoyaltyCustomerLinksService / linkLeads", () => {
         expect(conversationInsert?.callsOf("values")).toEqual([
             [[{ workspaceId: "ws-1", customerId: "c1", kind: "conversation", ref: "v1" }]],
         ])
-        expect(chats.customerChatsOf).toHaveBeenNthCalledWith(
-            2,
-            "ws-1",
-            { conversationIds: ["v1"], leadIds: [] },
-            manager,
-        )
+        expect(chats.humansOf).toHaveBeenNthCalledWith(2, "ws-1", ["v1"])
         expect(channelInsert?.callsOf("values")).toEqual([
             [[{ workspaceId: "ws-1", customerId: "c1", kind: "channel", ref: "telegram:123" }]],
         ])
@@ -194,10 +187,10 @@ describe("LoyaltyCustomerLinksService / countReachable", () => {
             ],
         })
         const { service, chats } = await build(em)
-        chats.customerChatsOf.mockResolvedValue([
+        chats.humansOf.mockResolvedValue([chatOf({ id: "v1", leadId: "l1" }), chatOf({ id: "v3" })])
+        chats.ofLeads.mockResolvedValue([
             chatOf({ id: "v1", leadId: "l1" }),
             chatOf({ id: "v2", leadId: "l2", handledBy: "Lan" }),
-            chatOf({ id: "v3" }),
         ])
 
         await expect(service.countReachable("ws-1", ["c1", "c2", "c3"])).resolves.toBe(2)
@@ -205,10 +198,8 @@ describe("LoyaltyCustomerLinksService / countReachable", () => {
             where: { workspaceId: "ws-1", customerId: In(["c1", "c2", "c3"]), kind: In(["conversation", "lead"]) },
             take: 5000,
         })
-        expect(chats.customerChatsOf).toHaveBeenCalledWith("ws-1", {
-            conversationIds: ["v1", "v3"],
-            leadIds: ["l1", "l2"],
-        })
+        expect(chats.humansOf).toHaveBeenCalledWith("ws-1", ["v1", "v3"])
+        expect(chats.ofLeads).toHaveBeenCalledWith("ws-1", ["l1", "l2"])
     })
 
     it("is zero for no customers", async () => {
@@ -226,8 +217,8 @@ describe("LoyaltyCustomerLinksService / pushConversation", () => {
             find: [LoyaltyCustomerLinkEntity, [linkOf("c1", "lead", "l1"), linkOf("c1", "conversation", "v1")]],
         })
         const { service, chats } = await build(em)
-        chats.customerChatsOf.mockResolvedValueOnce([
-            chatOf({ id: "v1", channel: "website" }),
+        chats.humansOf.mockResolvedValueOnce([chatOf({ id: "v1", channel: "website" })])
+        chats.ofLeads.mockResolvedValueOnce([
             chatOf({ id: "v2", leadId: "l1", channel: "telegram" }),
             chatOf({ id: "v3", leadId: "l1", channel: "zalo" }),
             chatOf({ id: "v4", leadId: "other", channel: "zalo" }),

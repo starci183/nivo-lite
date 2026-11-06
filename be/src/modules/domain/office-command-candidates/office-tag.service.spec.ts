@@ -119,7 +119,7 @@ describe("OfficeTagService > a line with a file", () => {
 
         await service.post("user-1", "ws-1", { ...request("@ke-toan xem giup"), file })
 
-        expect(files.verify).toHaveBeenCalledWith({ workspaceId: "ws-1", conversationId: null }, file.path, file.name)
+        expect(files.verify).toHaveBeenCalledWith({ workspaceId: "ws-1" }, file.path, file.name)
         expect(chat.postHuman.mock.calls[0]?.[2]).toBe("@ke-toan xem giup")
         expect(files.attach.mock.calls[0]?.slice(1, 3)).toEqual([CHECKED_FILE, POSTED.id])
     })
@@ -283,7 +283,7 @@ describe("OfficeTagService > requestFileUpload", () => {
         await expect(service.requestFileUpload("user-1", "ws-1", facts)).resolves.toEqual(upload)
 
         expect(members.require).toHaveBeenCalledWith("user-1", "ws-1")
-        expect(files.requestUpload).toHaveBeenCalledWith({ workspaceId: "ws-1", conversationId: null }, facts)
+        expect(files.requestUpload).toHaveBeenCalledWith({ workspaceId: "ws-1" }, facts)
         expect(chat.postHuman).not.toHaveBeenCalled()
         expect(wakes.wake).not.toHaveBeenCalled()
     })

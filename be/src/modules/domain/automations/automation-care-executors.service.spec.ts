@@ -27,7 +27,7 @@ const LEAD: LeadRead = {
     email: null,
 }
 const SENT: RunResult = { status: "done", steps: [{ label: "sent", status: "done" }], evidence: "ok" }
-const CONVERSATION = { id: "cv-1", channel: "web", handled_by: null, visitor_name: "Khach", lead_id: null }
+const CONVERSATION = { id: "cv-1", channel: "web", handled_by: null, lead_id: null }
 
 const context = (config: ExecutorContext["config"] = {}): ExecutorContext => ({
     workspaceId: "ws-1",
@@ -369,13 +369,13 @@ describe("AutomationCareExecutorsService after_hours", () => {
 
         expect(messages.replyWithoutLead).toHaveBeenCalledWith(expect.anything(), {
             conversationId: "cv-1",
-            name: "Khach",
+            name: "customer{}",
             dedupe: "after:cv-1",
         })
         expect(office.openFollowUp).not.toHaveBeenCalled()
         expect(office.postLine).toHaveBeenCalledWith(
             "ws-1",
-            `after.officeLine${JSON.stringify({ name: "Khach", text: "t".repeat(160) })}`,
+            `after.officeLine${JSON.stringify({ name: "customer{}", text: "t".repeat(160) })}`,
             null,
         )
         expect(result).toEqual({
@@ -386,7 +386,7 @@ describe("AutomationCareExecutorsService after_hours", () => {
     })
 
     it("calls an unnamed visitor by a standard word", async () => {
-        const { run, messages } = await build(undefined, null, { ...CONVERSATION, visitor_name: null })
+        const { run, messages } = await build(undefined, null, CONVERSATION)
         messages.leadOf.mockResolvedValue(null)
         messages.replyWithoutLead.mockResolvedValue(SENT)
 

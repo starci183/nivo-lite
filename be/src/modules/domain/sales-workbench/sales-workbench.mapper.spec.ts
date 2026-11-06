@@ -27,14 +27,14 @@ import {
 import { Test } from "@nestjs/testing"
 import type { SalesDecision, AttentionRow } from "./sales-workbench.contracts"
 import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
-import { autoDoneItemsOf, buildSalesWorkbench, conversationIdsOf, type SalesRows } from "./sales-workbench.mapper"
+import { autoDoneItemsOf, buildSalesWorkbench, type SalesRows } from "./sales-workbench.mapper"
 
 const SUBJECT = Symbol("sales-workbench.mapper")
 type Subject = typeof import("./sales-workbench.mapper")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { conversationIdsOf, autoDoneItemsOf, buildSalesWorkbench } }],
+        providers: [{ provide: SUBJECT, useValue: { autoDoneItemsOf, buildSalesWorkbench } }],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -368,7 +368,6 @@ it("flags one unanswered conversation per open lead after three minutes from the
         { id: "step", lead_id: "step", handled_by: null },
         { id: "unowned", lead_id: "unowned", handled_by: null },
     ]
-    expect(subject.conversationIdsOf(conversations.slice(0, 2))).toEqual(["none", "assistant"])
     const result = benchOf(subject, {
         leads: [
             leadOf(),

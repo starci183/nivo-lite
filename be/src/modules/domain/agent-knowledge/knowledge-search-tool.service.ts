@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
-import { AgentConversationsService } from "@modules/domain/agent-conversations"
 import type { KnowledgeCaller, KnowledgePassages, KnowledgeSearch } from "@modules/domain/agent-tools"
 import { AgentDirectoryService } from "@modules/domain/agents"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { McpCallLogService } from "@modules/domain/mcp-call-log"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -66,7 +66,7 @@ interface Read<Answer> {
  */
 export class KnowledgeSearchToolService implements KnowledgeSearch {
     constructor(
-        private readonly conversations: AgentConversationsService,
+        private readonly conversations: ChatConversationsService,
         private readonly recall: KnowledgeRecallService,
         private readonly agents: AgentDirectoryService,
         private readonly callLog: McpCallLogService,
@@ -120,8 +120,8 @@ export class KnowledgeSearchToolService implements KnowledgeSearch {
                 view: viewOf({ workspaceId, module: facts?.module ?? DEFAULT_MODULE, installationId: null }),
             }
         }
-        const turn = await this.conversations.turnOf(conversationId)
-        const own = turn.kind === "ok" && turn.value.workspaceId === workspaceId ? turn.value : null
+        const turn = await this.conversations.turnOf(workspaceId, conversationId)
+        const own = turn.kind === "ok" ? turn.value : null
         return {
             agentId: agentId ?? own?.agent.id ?? null,
             view: viewOf({

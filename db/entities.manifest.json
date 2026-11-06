@@ -168,11 +168,13 @@
       "checks": [
         "records_chat_conversation_agent_id_chk",
         "records_chat_conversation_channel_chk",
+        "records_chat_conversation_connection_id_chk",
+        "records_chat_conversation_connector_party_id_chk",
+        "records_chat_conversation_connector_party_name_chk",
         "records_chat_conversation_external_id_chk",
         "records_chat_conversation_front_agent_id_chk",
         "records_chat_conversation_handled_at_chk",
         "records_chat_conversation_handled_by_chk",
-        "records_chat_conversation_kind_chk",
         "records_chat_conversation_last_at_chk",
         "records_chat_conversation_last_role_chk",
         "records_chat_conversation_last_text_chk",
@@ -185,6 +187,8 @@
       "indexes": [
         "records_chat_conversation_channel_external_key",
         "records_chat_conversation_channel_recent",
+        "records_chat_conversation_connection_recent",
+        "records_chat_conversation_customer",
         "records_chat_conversation_key",
         "records_chat_conversation_last_text_trgm_idx",
         "records_chat_conversation_name_trgm_idx",
@@ -204,11 +208,19 @@
         "records_chat_message_conversation_id_chk",
         "records_chat_message_delivery_error_chk",
         "records_chat_message_delivery_status_chk",
+        "records_chat_message_in_reply_to_chk",
         "records_chat_message_role_chk",
         "records_chat_message_sent_at_chk",
         "records_chat_message_text_chk"
       ],
-      "indexes": ["records_chat_message_channel_ref_key", "records_chat_message_conversation_sent"]
+      "indexes": [
+        "records_chat_message_channel_ref",
+        "records_chat_message_channel_ref_key",
+        "records_chat_message_conversation_sent",
+        "records_chat_message_reply_of",
+        "records_chat_message_reply_once_key",
+        "records_chat_message_role_recent"
+      ]
     },
     {
       "entity": "payment.claim",

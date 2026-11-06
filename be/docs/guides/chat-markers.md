@@ -1,6 +1,6 @@
 # Chat delivery, seen, mute and typing
 
-The chat-state API uses the same authenticated principal and selected workspace as the existing Office and agent-chat APIs. A target has `room` and `conversationId`: omit both for the general Office thread, set `room` for a department, or set `conversationId` for an agent test or customer conversation. Supplying both is refused. The caller must be an active member and the target must belong to that workspace.
+The chat-state API uses the same authenticated principal and selected workspace as the existing Office APIs. A target has `room` and `conversationId`: omit both for the general Office thread, set `room` for a department, or set `conversationId` for an agent test or customer conversation. Supplying both is refused. The caller must be an active member and the target must belong to that workspace.
 
 `chatMarkerState(input: ChatTargetInput!)` returns the caller's `muted` preference and `lastOwnMessage`. The latter is null until the caller has posted an attributed message in that target. It identifies the caller's latest message even when another member has posted a newer line. Historical messages are not attributed by matching display names.
 

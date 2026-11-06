@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { AgentMessagesService } from "@modules/domain/agent-messages"
+import { ChatMessagesService } from "@modules/domain/chat-records"
 import { AgentRunHandlersService } from "@modules/domain/agent-runs"
 import type { StepView } from "@modules/domain/agent-runs"
 import { ChatTurnService } from "@modules/domain/conversations"
@@ -28,7 +28,11 @@ const STEP = { tool: "orders.draft", status: "ok", code: null, summary: "ORD-1" 
 
 const viewOf = (scope: OutputScope): StepView => {
     const view = mock<StepView>()
-    Object.assign(view, { input: scope, earlier: { "output:orders.draft:1": outputResultOf(STEP, scope) } })
+    Object.assign(view, {
+        workspaceId: "ws",
+        input: scope,
+        earlier: { "output:orders.draft:1": outputResultOf(STEP, scope) },
+    })
     return view
 }
 
@@ -42,7 +46,7 @@ const build = async (stored: string | null = null, send = true) => {
         write: jest.fn().mockResolvedValue("Drafted ORD-1"),
         declined: jest.fn().mockReturnValue("The shop will get back to you"),
     })
-    const messages = mock<AgentMessagesService>({ storedReply: jest.fn().mockResolvedValue(stored) })
+    const messages = mock<ChatMessagesService>({ storedReply: jest.fn().mockResolvedValue(stored) })
     const delivery = mock<CustomerDeliveryService>({ finalInConversation: jest.fn().mockResolvedValue("acknowledged") })
     const handlers = mock<AgentRunHandlersService>()
     const moduleRef = await Test.createTestingModule({
@@ -51,11 +55,11 @@ const build = async (stored: string | null = null, send = true) => {
             { provide: AgentRunHandlersService, useValue: handlers },
             { provide: ChatTurnService, useValue: chat },
             { provide: FinalReplyService, useValue: finals },
-            { provide: AgentMessagesService, useValue: messages },
+            { provide: ChatMessagesService, useValue: messages },
             { provide: CustomerDeliveryService, useValue: delivery },
         ],
     }).compile()
-    return { handler: moduleRef.get(FinalReplyStepHandlerService), chat, finals, delivery, handlers }
+    return { handler: moduleRef.get(FinalReplyStepHandlerService), chat, finals, delivery, handlers, messages }
 }
 
 describe("FinalReplyStepHandlerService", () => {
@@ -82,6 +86,7 @@ describe("FinalReplyStepHandlerService", () => {
             result: { reply: "Drafted ORD-1", sent: true, declined: false },
             next: [],
         })
+        expect(chat.turnOf).toHaveBeenCalledWith("ws", { conversationId: "c1", messageId: "m1", channelEventId: "" })
         expect(finals.write).toHaveBeenCalledWith(TURN, [expect.objectContaining({ summary: "ORD-1" })], "m1", "")
         expect(chat.settleLate).toHaveBeenCalledWith(TURN, "Drafted ORD-1", "m1")
         expect(chat.sendReply).toHaveBeenCalledWith(TURN, "Drafted ORD-1")
@@ -95,8 +100,9 @@ describe("FinalReplyStepHandlerService", () => {
     })
 
     it("resumes after a kill: a stored reply is sent once and neither written nor judged again", async () => {
-        const { handler, chat, finals } = await build("Stored reply")
+        const { handler, chat, finals, messages } = await build("Stored reply")
         await handler.run(viewOf(SCOPE))
+        expect(messages.storedReply).toHaveBeenCalledWith("ws", "c1", "m1", null)
         expect(finals.write).not.toHaveBeenCalled()
         expect(chat.settleLate).not.toHaveBeenCalled()
         expect(chat.sendReply).toHaveBeenCalledWith(TURN, "Stored reply")

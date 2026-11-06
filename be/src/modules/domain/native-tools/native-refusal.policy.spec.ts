@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
 import type { GatewayJson } from "@modules/domain/mcp-gateway"
 import { argumentsOf, nativeRefusal, unknownTool } from "./native-refusal.policy"
-import { PROVIDER_EVENTS_SCHEMA } from "./provider-tools.schema"
+import { PROVIDER_STATUS_SCHEMA } from "./provider-tools.schema"
 
 const SUBJECT = Symbol("native-refusal.policy")
 
@@ -12,8 +12,6 @@ const build = async () => {
     }).compile()
     return moduleRef.get<typeof import("./native-refusal.policy")>(SUBJECT)
 }
-
-const CONNECTION = "00000000-0000-4000-8000-000000000001"
 
 describe("nativeRefusal", () => {
     it("is the expected refusal the gateway answers as a tool error, with its reason", async () => {
@@ -38,33 +36,25 @@ describe("unknownTool", () => {
 })
 
 describe("argumentsOf", () => {
-    it("returns the arguments as the validator reads them, with its defaults", async () => {
+    it("returns the arguments as the validator reads them", async () => {
         const subject = await build()
 
-        expect(subject.argumentsOf("t", PROVIDER_EVENTS_SCHEMA, { connectionId: CONNECTION })).toEqual({
-            connectionId: CONNECTION,
-            limit: 20,
-        })
-        expect(subject.argumentsOf("t", PROVIDER_EVENTS_SCHEMA, { connectionId: CONNECTION, limit: 2 })).toEqual({
-            connectionId: CONNECTION,
-            limit: 2,
-        })
+        expect(subject.argumentsOf("t", PROVIDER_STATUS_SCHEMA, {})).toEqual({})
     })
 
     it("refuses arguments that do not fit, naming the tool", async () => {
         const subject = await build()
         const refusal = (args: GatewayJson): unknown => {
             try {
-                return subject.argumentsOf("t", PROVIDER_EVENTS_SCHEMA, args)
+                return subject.argumentsOf("t", PROVIDER_STATUS_SCHEMA, args)
             } catch (cause) {
                 return cause
             }
         }
 
-        expect(refusal({ connectionId: CONNECTION, limit: "2" })).toMatchObject({
+        expect(refusal({ other: 1 })).toMatchObject({
             code: McpGatewayErrorCode.InvalidArguments,
             params: { tool: "t" },
         })
-        expect(refusal({ other: 1 })).toMatchObject({ code: McpGatewayErrorCode.InvalidArguments })
     })
 })

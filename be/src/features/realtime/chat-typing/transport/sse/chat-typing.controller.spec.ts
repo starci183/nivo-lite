@@ -9,7 +9,7 @@ import { ChatTypingController } from "./chat-typing.controller"
 
 const principal: Principal = { id: "person-1", role: "authenticated" }
 const WS = "ws-1"
-const ROOM = { room: "sales", conversationId: null }
+const ROOM = { room: "sales" }
 const EVENT: MessageEvent = { id: "a:t", data: { id: "a:t", actorId: "a", actorName: "An", state: "start", at: "t" } }
 
 /** A recording hub whose event stream yields one event and records the topic, the resume point and the release. */
@@ -42,20 +42,9 @@ describe("ChatTypingController", () => {
         const { hub, streamed } = hubAnswering()
         const door = await build(hub)
 
-        door.stream(principal, WS, { room: "sales", conversationId: null }, undefined).subscribe().unsubscribe()
+        door.stream(principal, WS, { room: "sales" }, undefined).subscribe().unsubscribe()
 
         expect(streamed).toEqual([{ topic: chatTypingTopic(principal.id, WS, ROOM).name, after: undefined }])
-    })
-
-    it("streams a conversation target", async () => {
-        const { hub, streamed } = hubAnswering()
-        const door = await build(hub)
-
-        door.stream(principal, WS, { room: null, conversationId: "c-1" }, undefined).subscribe().unsubscribe()
-
-        expect(streamed.map((entry) => entry.topic)).toEqual([
-            chatTypingTopic(principal.id, WS, { room: null, conversationId: "c-1" }).name,
-        ])
     })
 
     it("isolates another authenticated principal's topic", async () => {

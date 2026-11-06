@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { AgentConversationReadService } from "@modules/domain/agent-conversations"
-import type { CustomerChat } from "@modules/domain/agent-conversations"
+import { ChatConversationsService } from "@modules/domain/chat-records"
+import type { ChatHumanConversation } from "@modules/domain/chat-records"
 import { LeadReadService } from "@modules/domain/leads"
 import { LoyaltyCustomersService } from "@modules/domain/loyalty-customers"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -36,6 +36,14 @@ interface RankedCustomerRaw {
     readonly rank: number
 }
 
+/** The conversation ids and the lead ids a set of chats is found by. */
+interface ChatRefs {
+    /** The conversations named by id. */
+    readonly conversationIds: ReadonlyArray<string>
+    /** The leads whose conversations are wanted. */
+    readonly leadIds: ReadonlyArray<string>
+}
+
 /** Finds the id of the customer that owns a lead's contact, or undefined. */
 type OwnerOf = (lead: LeadLinkSource) => string | undefined
 
@@ -44,7 +52,7 @@ type OwnerOf = (lead: LeadLinkSource) => string | undefined
 export class LoyaltyCustomerLinksService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        private readonly chats: AgentConversationReadService,
+        private readonly chats: ChatConversationsService,
         private readonly leads: LeadReadService,
         private readonly customers: LoyaltyCustomersService,
     ) {}
@@ -71,7 +79,7 @@ export class LoyaltyCustomerLinksService {
     async countReachable(workspaceId: string, customerIds: ReadonlyArray<string>): Promise<number> {
         if (customerIds.length === 0) return 0
         const links = await this.chatLinksOf(workspaceId, customerIds)
-        const chats = await this.chats.customerChatsOf(workspaceId, refsOf(links))
+        const chats = await this.chatsOf(workspaceId, refsOf(links))
         const reachable = new Set(chats.filter((chat) => chat.handledBy === null).flatMap(chatRefs))
         return new Set(
             links.filter((link) => reachable.has(refKey(link.kind, link.ref))).map((link) => link.customerId),
@@ -81,7 +89,7 @@ export class LoyaltyCustomerLinksService {
     /** The chat to send a customer a message in, or null when the customer has none. */
     async pushConversation(workspaceId: string, customerId: string): Promise<PushTarget> {
         const links = await this.chatLinksOf(workspaceId, [customerId])
-        const chats = await this.chats.customerChatsOf(workspaceId, refsOf(links))
+        const chats = await this.chatsOf(workspaceId, refsOf(links))
         const linked = new Set(links.map((link) => refKey(link.kind, link.ref)))
         const best = chats
             .filter((chat) => chatRefs(chat).some((key) => linked.has(key)))
@@ -122,6 +130,15 @@ export class LoyaltyCustomerLinksService {
             CHAT_LOOKUP_LIMIT,
         )
         return matches.map((customer) => ({ customer_id: customer.id, rank: customer.phone === lead.phone ? 3 : 4 }))
+    }
+
+    /** The chats the references name: the conversations by id and the conversations of the leads, each chat once. */
+    private async chatsOf(workspaceId: string, refs: ChatRefs): Promise<ReadonlyArray<ChatHumanConversation>> {
+        const [named, ofLeads] = await Promise.all([
+            this.chats.humansOf(workspaceId, refs.conversationIds),
+            this.chats.ofLeads(workspaceId, refs.leadIds),
+        ])
+        return [...new Map([...named, ...ofLeads].map((chat) => [chat.id, chat])).values()]
     }
 
     /** The conversation and lead links of the customers, the references their chats are found by. */
@@ -167,11 +184,10 @@ export class LoyaltyCustomerLinksService {
             where: { workspaceId, kind: "lead" },
             take: DERIVED_LIMIT,
         })
-        const chats = await this.chats.customerChatsOf(
-            workspaceId,
-            { conversationIds: [], leadIds: leadLinks.map((link) => link.ref) },
-            manager,
-        )
+        const chats = await this.chatsOf(workspaceId, {
+            conversationIds: [],
+            leadIds: leadLinks.map((link) => link.ref),
+        })
         const pairs = distinctPairs(
             leadLinks.flatMap((link) =>
                 chats
@@ -188,11 +204,10 @@ export class LoyaltyCustomerLinksService {
             where: { workspaceId, kind: "conversation" },
             take: DERIVED_LIMIT,
         })
-        const chats = await this.chats.customerChatsOf(
-            workspaceId,
-            { conversationIds: chatLinks.map((link) => link.ref), leadIds: [] },
-            manager,
-        )
+        const chats = await this.chatsOf(workspaceId, {
+            conversationIds: chatLinks.map((link) => link.ref),
+            leadIds: [],
+        })
         const pairs = distinctPairs(
             chatLinks.flatMap((link) =>
                 chats.flatMap((chat) =>
@@ -240,19 +255,19 @@ export class LoyaltyCustomerLinksService {
 const refKey = (kind: LoyaltyCustomerLinkKind, ref: string): string => `${kind}:${ref}`
 
 /** The keys a chat is reachable by: its own conversation key and, when it has one, its lead key. */
-const chatRefs = (chat: CustomerChat): Array<string> => [
+const chatRefs = (chat: ChatHumanConversation): Array<string> => [
     refKey("conversation", chat.id),
     ...(chat.leadId === null ? [] : [refKey("lead", chat.leadId)]),
 ]
 
 /** The references that find the chats the links point at. */
-const refsOf = (links: ReadonlyArray<LoyaltyCustomerLinkEntity>) => ({
+const refsOf = (links: ReadonlyArray<LoyaltyCustomerLinkEntity>): ChatRefs => ({
     conversationIds: links.filter((link) => link.kind === "conversation").map((link) => link.ref),
     leadIds: links.filter((link) => link.kind === "lead").map((link) => link.ref),
 })
 
 /** Whether the chat is on a push channel (Telegram or Zalo). */
-const isPush = (chat: CustomerChat): boolean => chat.channel === "telegram" || chat.channel === "zalo"
+const isPush = (chat: ChatHumanConversation): boolean => chat.channel === "telegram" || chat.channel === "zalo"
 
 /** The pairs without repeats, in first-seen order. */
 const distinctPairs = (pairs: ReadonlyArray<DerivedLinkRaw>): Array<DerivedLinkRaw> => [

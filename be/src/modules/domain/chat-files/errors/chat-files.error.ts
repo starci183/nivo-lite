@@ -5,7 +5,7 @@ import type { ErrorKind } from "@modules/platform/errors"
 export enum ChatFilesErrorCode {
     /** The file is over the limit, or its stored bytes are not an accepted type. */
     FileInvalid = "CHAT_FILES_INVALID",
-    /** The path is not a file of this conversation. */
+    /** The path is not a file of the Office of this workspace. */
     PathInvalid = "CHAT_FILES_PATH_INVALID",
     /** The store could not issue an address or read the file. */
     StorageUnavailable = "CHAT_FILES_STORAGE_UNAVAILABLE",

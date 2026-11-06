@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
 import type { BoundAgent } from "@modules/domain/agent-connections"
-import type { TurnConversation } from "@modules/domain/agent-conversations"
+import type { ChatTurnConversation } from "@modules/domain/chat-records"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import { EvidenceService, WorkEngineService } from "@modules/domain/decisions"
 import type { WorkContext } from "@modules/domain/decisions"
@@ -21,7 +21,7 @@ type ChatRedeemIntent = Awaited<ReturnType<LoyaltyChatService["redeemIntent"]>>
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const ctx: WorkContext = { workspaceId: WS, actor: "OpenClaw", locale: "vi" }
-const conversationOf = (module = "chatbot", visitorName: string | null = "Lan"): TurnConversation => ({
+const conversationOf = (module = "chatbot", visitorName: string | null = "Lan"): ChatTurnConversation => ({
     id: "c1",
     workspaceId: WS,
     channel: "telegram",
@@ -44,7 +44,7 @@ const conversationOf = (module = "chatbot", visitorName: string | null = "Lan"):
     },
     speaksAs: null,
 })
-const turnOf = (conversation: TurnConversation = conversationOf()): CustomerTurn => ({
+const turnOf = (conversation: ChatTurnConversation = conversationOf()): CustomerTurn => ({
     conversation,
     messageId: "m1",
     body: "Book a haircut and redeem my voucher",

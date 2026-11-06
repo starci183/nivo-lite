@@ -7,20 +7,20 @@ import type { ChatTargetInput } from "./dto/chat-target.input"
 /** Adds the selected workspace to one explicit target. */
 export const toChatMarkerRequest = (workspaceId: string, input: ChatTargetInput): ChatMarkerRequest => ({
     workspaceId,
-    target: { room: input.room, conversationId: input.conversationId },
+    target: { room: input.room },
 })
 
 /** Adds a persisted-message receipt to the selected target. */
 export const toChatReceiptRequest = (workspaceId: string, input: ChatReceiptInput): ChatReceiptRequest => ({
     workspaceId,
-    target: { room: input.room, conversationId: input.conversationId },
+    target: { room: input.room },
     messageId: input.messageId,
 })
 
 /** Adds the caller's new preference to the selected target. */
 export const toChatMuteRequest = (workspaceId: string, input: ChatMuteInput): ChatMuteRequest => ({
     workspaceId,
-    target: { room: input.room, conversationId: input.conversationId },
+    target: { room: input.room },
     muted: input.muted,
 })
 

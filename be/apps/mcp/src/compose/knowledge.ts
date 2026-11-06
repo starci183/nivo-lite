@@ -1,14 +1,12 @@
 import type { DynamicModule } from "@nestjs/common"
+import { CHAT_RECORDS_ERROR_KINDS, CHAT_RECORDS_MESSAGES, ChatRecordsModule } from "@modules/domain/chat-records"
 import {
-    AGENT_CONVERSATIONS_ERROR_KINDS,
-    AGENT_CONVERSATIONS_MESSAGES,
-    AgentConversationsModule,
-} from "@modules/domain/agent-conversations"
-import {
-    AGENT_MESSAGES_ERROR_KINDS,
-    AGENT_MESSAGES_MESSAGES,
-    AgentMessagesModule,
-} from "@modules/domain/agent-messages"
+    ENTITY_ENGINE_ERROR_KINDS,
+    ENTITY_ENGINE_MESSAGES,
+    EntityEngineModule,
+    ReadOnlyEngineAlertsService,
+} from "@modules/domain/entity-engine"
+import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
 import {
     BRAIN_DOSSIERS_ERROR_KINDS,
     BRAIN_DOSSIERS_MESSAGES,
@@ -56,15 +54,21 @@ export const mcpKnowledgeModules = (options: McpAppOptions): Array<DynamicModule
     BrainDossiersModule.register({ isGlobal: true, readOnly: true }),
     DossierReviewModule.register({ isGlobal: true, readOnly: true }),
     ConnectionsModule.readOnly({ isGlobal: true, readOnly: true }),
-    AgentConversationsModule.register({ isGlobal: true, readOnly: true }),
-    AgentMessagesModule.register({ isGlobal: true, readOnly: true }),
+    EntityEngineModule.register({
+        isGlobal: true,
+        entities: FLOW_F_ENTITIES,
+        jobs: [],
+        alerts: ReadOnlyEngineAlertsService,
+        ...options.entityEngine,
+    }),
+    ChatRecordsModule.register({ isGlobal: true }),
     NativeToolsModule.register({ isGlobal: true, customer: true, leadReader: true }),
 ]
 
 /** The error kinds of the capabilities this group registers. */
 export const mcpKnowledgeErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
-    AGENT_CONVERSATIONS_ERROR_KINDS,
-    AGENT_MESSAGES_ERROR_KINDS,
+    CHAT_RECORDS_ERROR_KINDS,
+    ENTITY_ENGINE_ERROR_KINDS,
     BRAIN_DOSSIERS_ERROR_KINDS,
     BRAIN_FACTS_ERROR_KINDS,
     CONNECTIONS_ERROR_KINDS,
@@ -77,8 +81,8 @@ export const mcpKnowledgeErrorKinds: ReadonlyArray<Readonly<Record<string, Error
 
 /** The message bundles of the capabilities this group registers. */
 export const mcpKnowledgeMessages: ReadonlyArray<MessageBundle> = [
-    AGENT_CONVERSATIONS_MESSAGES,
-    AGENT_MESSAGES_MESSAGES,
+    CHAT_RECORDS_MESSAGES,
+    ENTITY_ENGINE_MESSAGES,
     BRAIN_DOSSIERS_MESSAGES,
     BRAIN_FACTS_MESSAGES,
     CONNECTIONS_MESSAGES,

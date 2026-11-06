@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import { AgentConversationsReadService } from "@modules/domain/agent-conversations"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import type { AgentSheet } from "@modules/domain/agents"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { EventsReadService } from "@modules/domain/events"
 import { ExecutionsFiguresService } from "@modules/domain/executions"
 import { LeadReadService } from "@modules/domain/leads"
@@ -47,7 +47,7 @@ const build = async (at: string = IN_OFFER) => {
     const agents = mock<AgentDirectoryService>()
     const events = mock<EventsReadService>()
     const leads = mock<LeadReadService>()
-    const conversations = mock<AgentConversationsReadService>()
+    const conversations = mock<ChatConversationsService>()
     const executions = mock<ExecutionsFiguresService>()
     const responsibilities = mock<ResponsibilityReadService>()
     const moduleRef = await Test.createTestingModule({
@@ -58,7 +58,7 @@ const build = async (at: string = IN_OFFER) => {
             { provide: AgentDirectoryService, useValue: agents },
             { provide: EventsReadService, useValue: events },
             { provide: LeadReadService, useValue: leads },
-            { provide: AgentConversationsReadService, useValue: conversations },
+            { provide: ChatConversationsService, useValue: conversations },
             { provide: ExecutionsFiguresService, useValue: executions },
             { provide: ResponsibilityReadService, useValue: responsibilities },
         ],
@@ -86,8 +86,8 @@ const empty = (world: World) => {
     world.events.firstAtOfKind.mockResolvedValue(null)
     world.leads.websiteOf.mockResolvedValue([])
     world.leads.idsAtStage.mockResolvedValue([])
-    world.conversations.hasCustomerChat.mockResolvedValue(false)
-    world.conversations.hasLeadChat.mockResolvedValue(false)
+    world.conversations.hasAny.mockResolvedValue(false)
+    world.leads.recentNames.mockResolvedValue([])
     world.executions.countApproved.mockResolvedValue(0)
     world.executions.hasApprovedAmong.mockResolvedValue(false)
     world.responsibilities.idsTitledLike.mockResolvedValue([])
@@ -179,7 +179,7 @@ describe("PromoService state", () => {
             { leadId: "w2", at: new Date("2026-10-13T07:00:00.000Z") },
             { leadId: "w4", at: new Date("2026-10-13T04:00:00.000Z") },
         ])
-        world.conversations.hasCustomerChat.mockResolvedValue(true)
+        world.conversations.hasAny.mockResolvedValue(true)
         world.executions.countApproved.mockResolvedValue(3)
 
         await expect(world.promo.state("user-1", "ws-1")).resolves.toEqual({
@@ -211,7 +211,7 @@ describe("PromoService state", () => {
         world.agents.earliestSheetOfModule.mockResolvedValue({ ...BOT, knowledge: "   " })
         world.leads.idsAtStage.mockResolvedValue(["won-1"])
         world.events.existsOfKindForLeads.mockResolvedValue(true)
-        world.conversations.hasLeadChat.mockResolvedValue(true)
+        world.leads.recentNames.mockResolvedValue([{ id: "lead-1", contactName: "An", company: "Acme" }])
         world.responsibilities.idsTitledLike.mockResolvedValue(["r-1"])
         world.executions.hasApprovedAmong.mockResolvedValue(true)
 

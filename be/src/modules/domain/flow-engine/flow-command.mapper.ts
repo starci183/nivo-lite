@@ -153,9 +153,3 @@ export const noteOf = (payload: FlowPayload, name: string): string | undefined =
 
 /** The staff member to give the item to, or null to take it back. */
 export const staffIdOf = (payload: FlowPayload): string | null => optionalText(payload, "staffId", "staff_id")
-
-/** The customer conversation the payload names. */
-export const conversationIdOf = (payload: FlowPayload): string => text(payload, "conversationId", "conversation_id")
-
-/** True to take the conversation over, false to hand it back to the AI. */
-export const takeOf = (payload: FlowPayload): boolean => optionalBoolean(payload, "take", "takeOver") ?? true

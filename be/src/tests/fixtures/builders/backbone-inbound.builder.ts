@@ -1,7 +1,6 @@
 import { builder } from "@starci/jest-preset"
 import type { EntityManager } from "typeorm"
-import { agentConversationsEntities } from "@modules/domain/agent-conversations"
-import { agentMessagesEntities } from "@modules/domain/agent-messages"
+import type { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
 import { moduleInstallationsEntities } from "@modules/domain/module-installations"
 import type { ConnectionsService } from "@modules/domain/connections"
 import type { AgentTriggersService } from "@modules/domain/agent-work"
@@ -12,8 +11,6 @@ import { nodeOf } from "./agent-graph.builder"
 import { persistGraph, persistGraphTenant } from "./agent-graph-world.builder"
 import type { GraphTenant } from "./agent-graph-world.builder"
 
-const ConversationEntity: (typeof agentConversationsEntities)[0] = agentConversationsEntities[0]
-const MessageEntity: (typeof agentMessagesEntities)[0] = agentMessagesEntities[0]
 const InstallationEntity: (typeof moduleInstallationsEntities)[0] = moduleInstallationsEntities[0]
 const GraphEntity: (typeof agentGraphsEntities)[0] = agentGraphsEntities[0]
 const VersionEntity: (typeof agentGraphsEntities)[1] = agentGraphsEntities[1]
@@ -74,18 +71,44 @@ export const INBOUND_GRAPH: GraphDocument = {
     ],
 }
 
-/** The tenant and the real customer message the runtime-outage proof answers. */
+/** The tenant and the real customer message the runtime-outage proof answers; the conversation and the message exist once the scene is seeded. */
 export interface InboundIdentity extends GraphTenant {
     readonly conversationId: string
     readonly messageId: string
 }
 
-/** The created endpoint and its per-seed signing identity, retained only by the test world's signing fake. */
-export interface InboundEndpoint {
+/** The chat records the scene seeds its conversation and customer message through. */
+export interface InboundChat {
+    /** The conversations of the chat records. */
+    readonly conversations: ChatConversationsService
+    /** The messages of the chat records. */
+    readonly messages: ChatMessagesService
+}
+
+/** The scene a seeded world holds: empty until it is seeded, replaced by every seed. */
+export interface InboundSceneHolder {
+    /** The scene the last seed made, or null before any. */
+    current: InboundScene | null
+}
+
+/** The ids of the website visitor and of the connection the scene's conversation is opened for. */
+export interface InboundVisitor {
+    /** The visitor's id on the channel. */
+    readonly customerId: string
+    /** The connection the visitor came in on. */
+    readonly connectionId: string
+}
+
+/** The created endpoint and its per-seed signing identity, retained only by the test world's signing fake, with the chat the scene opened. */
+export interface InboundScene {
     /** The real sealed connection used by the intake proof. */
     readonly endpoint: string
     /** An ephemeral per-seed key shared only with the signing fake. */
     readonly signingKey: string
+    /** The record of the customer conversation. */
+    readonly conversationId: string
+    /** The record of the customer message waiting for its answer. */
+    readonly messageId: string
 }
 
 /** Publishes the next actual version between a turn's read and replay, to prove a stale plan cannot rewrite its run. */
@@ -116,39 +139,32 @@ export const publishAlternativeInboundVersion = async (
     })
 }
 
-/** Seeds a published, installed graph and an actual website conversation; every service under test reads these rows. */
+/** Seeds a published, installed graph and an actual website conversation as chat records; every service under test reads them. */
 export const persistInboundScene = async (
     manager: EntityManager,
-    who: InboundIdentity,
+    who: GraphTenant,
     connections: ConnectionsService,
     triggers: AgentTriggersService,
+    chat: InboundChat,
+    visitor: InboundVisitor,
     signingKey: string,
-): Promise<InboundEndpoint> => {
+): Promise<InboundScene> => {
     await persistGraphTenant(manager, who)
     const installationId = await persistGraph(manager, who, INBOUND_GRAPH, "enforced")
-    await manager.transaction(async (tx) => {
-        await tx.update(
-            InstallationEntity,
-            { id: installationId },
-            { settings: { holdingMessage: INBOUND_HOLDING_REPLY } },
-        )
-        await tx.insert(ConversationEntity, {
-            id: who.conversationId,
-            workspaceId: who.workspaceId,
-            agentId: who.agentId,
-            kind: "customer",
-            channel: "website",
-            visitorName: "Lan",
-            installationId,
-        })
-        await tx.insert(MessageEntity, {
-            id: who.messageId,
-            workspaceId: who.workspaceId,
-            conversationId: who.conversationId,
-            role: "user",
-            body: INBOUND_QUESTION,
-        })
+    await manager.update(
+        InstallationEntity,
+        { id: installationId },
+        { settings: { holdingMessage: INBOUND_HOLDING_REPLY } },
+    )
+    const met = await chat.conversations.meet({
+        workspaceId: who.workspaceId,
+        agentId: who.agentId,
+        channel: "website",
+        customerId: visitor.customerId,
+        visitor: "Lan",
+        connectionId: visitor.connectionId,
     })
+    const heard = await chat.messages.storeCustomer(who.workspaceId, met.conversation.id, INBOUND_QUESTION, null, null)
     const endpoint = await connections.create({
         workspaceId: who.workspaceId,
         createdBy: who.userId,
@@ -172,7 +188,7 @@ export const persistInboundScene = async (
         enabled: true,
         sources: ["generic_webhook"],
     })
-    return { endpoint, signingKey }
+    return { endpoint, signingKey, conversationId: met.conversation.id, messageId: heard.id }
 }
 
 /** External model text at the real parser boundary; no successful handler or business result is scripted into the app. */

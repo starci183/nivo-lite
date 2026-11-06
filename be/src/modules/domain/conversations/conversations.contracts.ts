@@ -1,5 +1,4 @@
-import type { TurnConversation } from "@modules/domain/agent-conversations"
-import type { TranscriptLine } from "@modules/domain/agent-messages"
+import type { ChatTranscriptLine, ChatTurnConversation } from "@modules/domain/chat-records"
 
 /** The customer's message of one Telegram update. */
 export interface TelegramInbound {
@@ -64,7 +63,7 @@ export interface MetaInbound {
 /** A customer turn, or none when its conversation or message is gone. */
 export type OptionalCustomerTurn = CustomerTurn | undefined
 
-/** Which customer message a turn answers: what a queued job or a wake carries. */
+/** Which customer message a turn answers: what a wake carries. */
 export interface TurnRef {
     /** The conversation. */
     readonly conversationId: string
@@ -76,8 +75,8 @@ export interface TurnRef {
     readonly mergedMessageIds?: ReadonlyArray<string> | undefined
 }
 
-/** A stored customer message that is waiting to be answered. */
-export interface MessageIntake {
+/** A stored customer message with the agent that speaks in its conversation, waiting to be answered. */
+export interface CustomerIntake {
     /** The workspace. */
     readonly workspaceId: string
     /** The conversation. */
@@ -88,10 +87,6 @@ export interface MessageIntake {
     readonly channelEventId: string
     /** True when the customer was just met, so the answer should ask the channel for their name. */
     readonly lookupName: boolean
-}
-
-/** A stored customer message with the agent that speaks in its conversation. */
-export interface CustomerIntake extends MessageIntake {
     /** The agent that answers. */
     readonly agentId: string
 }
@@ -100,14 +95,12 @@ export interface CustomerIntake extends MessageIntake {
 export interface FrontAgent {
     /** The agent id. */
     readonly id: string
-    /** The greeting that opens a visit; may be empty. */
-    readonly greeting: string
 }
 
 /** One customer turn as the runtime and the outcome handler see it. */
 export interface CustomerTurn {
     /** The conversation. */
-    readonly conversation: TurnConversation
+    readonly conversation: ChatTurnConversation
     /** The stored customer message this turn answers. */
     readonly messageId: string
     /** What the customer wrote in it. */
@@ -115,10 +108,10 @@ export interface CustomerTurn {
     /** The channel's own id of that message: the idempotency key of everything the turn starts. */
     readonly channelEventId: string
     /** The conversation so far, oldest first, the customer's message last. */
-    readonly transcript: ReadonlyArray<TranscriptLine>
+    readonly transcript: ReadonlyArray<ChatTranscriptLine>
     /** True when an output of the turn came to something: the final reply step answers, and the model's own text does not leave. */
     readonly finalOwed?: boolean
-    /** The turn and wake that run it on the core road; absent on the legacy road. Work it opens carries it. */
+    /** The turn and wake that run it; work it opens carries it. */
     readonly origin?: TurnOrigin
 }
 
@@ -147,15 +140,6 @@ export interface ChatTurnProposal {
 /** The structured findings of a proposal, opaque to this capability. */
 export type ProposalDetail = Readonly<Record<string, unknown>>
 
-/** The AI step's answer: a proposal, or the reason it could not answer. */
-export type RuntimeAnswer = ChatTurnProposal | string
-
-/** The AI step of a turn; the openclaw adapter implements it. */
-export interface ChatTurnRuntime {
-    /** Proposes the reply, or answers a text naming why it cannot (unavailable, too slow, refused). */
-    propose(turn: CustomerTurn): Promise<RuntimeAnswer>
-}
-
 /** What the outcome handler decided about a proposed reply. */
 export interface TurnVerdict {
     /** The text to send to the customer. */
@@ -176,16 +160,11 @@ export interface CustomerOutcomes {
     settleLate(turn: CustomerTurn, reply: string, key: string): Promise<TurnVerdict>
 }
 
-/** A registered AI step, or none. */
-export type RegisteredRuntime = ChatTurnRuntime | undefined
-
 /** A registered outcome handler, or none. */
 export type RegisteredOutcomes = CustomerOutcomes | undefined
 
-/** Where the AI step and the outcome handler the app root plugged in are read from. */
+/** Where the outcome handler the app root plugged in is read from. */
 export interface ChatTurnExtensions {
-    /** The registered AI step, or undefined. */
-    runtime(): RegisteredRuntime
     /** The registered outcome handler, or undefined. */
     outcomes(): RegisteredOutcomes
 }

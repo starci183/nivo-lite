@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { ChatTurnModule } from "@modules/queues/chat-turn"
-import { CHAT_TURN_EXTENSIONS, CHAT_TURN_OUTCOMES, CHAT_TURN_RUNTIME } from "./conversations.decorators"
+import { CHAT_TURN_EXTENSIONS, CHAT_TURN_OUTCOMES } from "./conversations.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./conversations.module-definition"
 import { ChatTurnExtensionsService } from "./chat-turn-extensions.service"
 import { ConversationsService } from "./conversations.service"
@@ -15,13 +14,10 @@ export class ConversationsModule extends ConfigurableModuleClass {
     /** Registers the capability once in the API app. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
-        const plugged = [
-            ...(options.runtime === undefined ? [] : [{ provide: CHAT_TURN_RUNTIME, useClass: options.runtime }]),
-            ...(options.outcomes === undefined ? [] : [{ provide: CHAT_TURN_OUTCOMES, useClass: options.outcomes }]),
-        ]
+        const plugged =
+            options.outcomes === undefined ? [] : [{ provide: CHAT_TURN_OUTCOMES, useClass: options.outcomes }]
         return {
             ...base,
-            imports: [...(base.imports ?? []), ChatTurnModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 ...plugged,
@@ -32,13 +28,7 @@ export class ConversationsModule extends ConfigurableModuleClass {
                 ChatTurnService,
                 { provide: CHAT_TURN_EXTENSIONS, useExisting: ChatTurnExtensionsService },
             ],
-            exports: [
-                CHAT_TURN_EXTENSIONS,
-                ConversationsService,
-                CustomerIntakeService,
-                ChatTurnService,
-                ChatTurnModule,
-            ],
+            exports: [CHAT_TURN_EXTENSIONS, ConversationsService, CustomerIntakeService, ChatTurnService],
         }
     }
 }

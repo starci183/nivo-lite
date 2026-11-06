@@ -82,28 +82,8 @@ export interface ConversationUnreadView {
     readonly unread: number
 }
 
-/** The newest line of one direct conversation, as its row reads it. */
-export interface ConversationLastView {
-    /** The line's text. */
-    readonly body: string
-    /** When the line was written, ISO 8601. */
-    readonly at: string
-    /** The workspace account id of the line's author; null for the agent's own lines and unattributed legacy ones. */
-    readonly authorId: string | null
-    /** The display name of the line's human author; null for the agent's own and system lines. */
-    readonly author: string | null
-}
-
-/** One agent's direct conversation: the caller's unread count and the newest line, listed even when fully read. */
-export interface AgentConversationView extends ConversationUnreadView {
-    /** The newest line, or null while nobody wrote. */
-    readonly last: ConversationLastView | null
-}
-
 /** The caller's unread counts of the direct conversations; only customer conversations above zero are listed. */
 export interface ConversationUnreadListView {
-    /** The agent conversations, read or not: the rows draw their newest line. */
-    readonly agents: ReadonlyArray<AgentConversationView>
     /** The unread customer conversations. */
     readonly leads: ReadonlyArray<ConversationUnreadView>
 }
@@ -156,18 +136,6 @@ export interface ConversationUnreadFacts {
     readonly id: string
     /** Lines the caller has not read, at most 99. */
     readonly unread: number
-}
-
-/** One agent's direct conversation: its unread count and its newest line. */
-export interface AgentConversationFacts extends ConversationUnreadFacts {
-    /** The newest line's text; null while nobody wrote. */
-    readonly last_body: string | null
-    /** The workspace account id of the newest line's author; null for the agent's own lines and unattributed legacy ones. */
-    readonly last_author_id: string | null
-    /** The display name of the newest line's human author; null for the agent's own and system lines. */
-    readonly last_author: string | null
-    /** When the newest line was written, in the text shape of the database JSON timestamp (ISO 8601); null while nobody wrote. */
-    readonly last_at: string | null
 }
 
 /** How many department rooms one setup opened. */

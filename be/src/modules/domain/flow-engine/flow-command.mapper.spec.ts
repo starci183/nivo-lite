@@ -3,14 +3,12 @@ import { FlowEngineError, FlowEngineErrorCode } from "./errors/flow-engine.error
 import {
     authorityPatchOf,
     chatTextOf,
-    conversationIdOf,
     editsOf,
     localeOf,
     noteOf,
     ruleChangeOf,
     staffIdOf,
     staffWriteOf,
-    takeOf,
     verdictOf,
     workItemIdOf,
 } from "./flow-command.mapper"
@@ -45,8 +43,6 @@ const buildSubject = async () => {
                     editsOf,
                     noteOf,
                     staffIdOf,
-                    conversationIdOf,
-                    takeOf,
                 },
             },
         ],
@@ -70,7 +66,6 @@ const registerCommandLocaleAndText = () => {
         expect(subject.chatTextOf({ text: "", body: "legacy" })).toBe("")
         expect(subject.workItemIdOf({ work_item_id: "item" })).toBe("item")
         expect(subject.workItemIdOf({ workItemId: "new", work_item_id: "old" })).toBe("new")
-        expect(subject.conversationIdOf({ conversation_id: "conversation" })).toBe("conversation")
         expect(subject.staffIdOf({ staff_id: "staff" })).toBe("staff")
         expect(subject.staffIdOf({ staffId: null, staff_id: "ignored" })).toBeNull()
         expect(subject.staffIdOf({})).toBeNull()
@@ -220,16 +215,6 @@ const registerStaffCommands = () => {
         expect(subject.staffWriteOf("ws", { name: "An", active: null }).active).toBeNull()
         expect(subject.staffWriteOf("ws", { name: "An", active: false }).active).toBe(false)
         expectInvalid(() => subject.staffWriteOf("ws", { name: "An", active: "true" }), "active")
-    })
-
-    it("defaults conversation takeover to true while preserving false and aliases", async () => {
-        const subject = await buildSubject()
-
-        expect(subject.takeOf({})).toBe(true)
-        expect(subject.takeOf({ take: null })).toBe(true)
-        expect(subject.takeOf({ take: true })).toBe(true)
-        expect(subject.takeOf({ takeOver: false })).toBe(false)
-        expectInvalid(() => subject.takeOf({ take: 1 }), "take")
     })
 
     it.each([{}, { edits: undefined }, { edits: null }, { edits: {} }])("omits absent edits %p", async (payload) => {
