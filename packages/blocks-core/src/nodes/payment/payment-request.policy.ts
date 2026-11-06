@@ -28,6 +28,19 @@ export const itemsTextOf = (lines: ReadonlyArray<OrderLine>): string =>
 const fill = (template: string, values: Readonly<Record<string, string>>): string =>
     Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{{${name}}}`, value), template)
 
+/** The amount of an order in the language asked, with the currency. */
+const amountTextOf = (amountVnd: number, locale: RequestLocale): string =>
+    `${new Intl.NumberFormat(locale === "vi" ? "vi-VN" : "en-US").format(amountVnd)} ${REQUEST_WORDS[locale].currency}`
+
+/** The message that tells the customer the order is recorded when the payment details cannot be given yet: the items and the amount, and that the shop will send the details. */
+export const orderHeldMessageOf = (order: PayableLines, locale: RequestLocale): string => {
+    const items = itemsTextOf(order.lines)
+    return fill(REQUEST_WORDS[locale].held, {
+        items: items === "" ? "—" : items,
+        amount: amountTextOf(order.amountVnd, locale),
+    })
+}
+
 /** The message that asks the customer to pay: the amount, the items, the account, the transfer content and the QR link. */
 export const paymentMessageOf = (
     instruction: PaymentInstruction,
@@ -36,7 +49,7 @@ export const paymentMessageOf = (
     locale: RequestLocale,
 ): string => {
     const words = REQUEST_WORDS[locale]
-    const amount = `${new Intl.NumberFormat(locale === "vi" ? "vi-VN" : "en-US").format(order.amountVnd)} ${words.currency}`
+    const amount = amountTextOf(order.amountVnd, locale)
     const items = itemsTextOf(order.lines)
     return [
         fill(words.intro, { items: items === "" ? "—" : items, amount }),
@@ -52,3 +65,7 @@ export const paymentMessageOf = (
 /** The title of the work item that tells the owner the payment request could not go out. */
 export const noAccountTitleOf = (orderNo: string, locale: RequestLocale): string =>
     fill(REQUEST_WORDS[locale].noAccount, { order: orderNo })
+
+/** The title of the work item that tells the owner an order reached the payment request without being confirmed or having an amount. */
+export const notPayableTitleOf = (orderId: string, locale: RequestLocale): string =>
+    fill(REQUEST_WORDS[locale].notPayable, { order: orderId })

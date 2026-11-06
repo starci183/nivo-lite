@@ -116,12 +116,15 @@ describe("payment.request", () => {
         expect(executed[1]?.dedupeKey).toBe("payment-rematch:o1")
     })
 
-    it("raises a connect_sepay work item and sends nothing when the tool fails, naming the kind of the failure", async () => {
+    it("tells the customer the order is recorded and raises a connect_sepay work item when the tool fails, naming the kind of the failure", async () => {
         const { output, executed } = await run([], new Error("no provider connected"))
 
         expect(output).toEqual({ status: "no_account", content: null, qrUrl: null })
-        expect(executed.map((one) => one.id)).toEqual(["work-item.raise"])
-        expect(executed[0]?.payload).toMatchObject({
+        expect(executed.map((one) => one.id)).toEqual(["channel.send", "work-item.raise"])
+        expect(executed[0]?.dedupeKey).toBe("order-held:o1")
+        expect(String(executed[0]?.payload.text)).toContain("recorded your order")
+        expect(String(executed[0]?.payload.text)).not.toContain("Bank:")
+        expect(executed[1]?.payload).toMatchObject({
             action: "connect_sepay",
             payload: { orderId: "o1", failure: "Error" },
         })
