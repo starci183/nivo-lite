@@ -25,6 +25,8 @@ interface TeamChatRoomHeadProps {
     readonly other: ChatParty | null
     readonly memberCount: number
     readonly isWaiting: boolean
+    /** The head has a way back to the list of rooms (the chat page; the agent tab has none). */
+    readonly canGoBack: boolean
     /** The viewer muted the room; null when no room is open. */
     readonly isMuted: boolean | null
     readonly onBack: () => void
@@ -46,10 +48,10 @@ export const TeamChatRoomHead = (props: TeamChatRoomHeadProps) => {
     return (
         <PaneHead
             title={props.roomId === null ? props.copy.title : props.title}
-            headingLevel={1}
+            headingLevel={props.canGoBack ? 1 : 2}
             {...(isGroup ? { description: `${props.memberCount} ${props.copy.members}` } : {})}
             {...(mark === undefined ? {} : { mark })}
-            back={{ label: props.copy.back, onPress: props.onBack }}
+            {...(props.canGoBack ? { back: { label: props.copy.back, onPress: props.onBack } } : {})}
             isLoading={props.isWaiting}
             actions={
                 <>

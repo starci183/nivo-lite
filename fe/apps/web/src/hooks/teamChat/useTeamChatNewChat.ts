@@ -50,7 +50,7 @@ export interface TeamChatNewChatView {
 /** The new-chat drawer: its form, the people and agents it picks from, and the opening of the room it asks for. */
 export const useTeamChatNewChat = (
     openRoom: (request: NewRoomRequest) => Promise<string | null>,
-    onOpened: () => void,
+    onOpened: (roomId: string) => void,
 ): TeamChatNewChatView => {
     const [form, setForm] = useState<NewChatForm>(CLOSED_FORM)
     const { people, agents } = useTeamChatPeople(form.isOpen)
@@ -69,7 +69,7 @@ export const useTeamChatNewChat = (
             return
         }
         setForm(CLOSED_FORM)
-        onOpened()
+        onOpened(opened)
     }
     return {
         form,

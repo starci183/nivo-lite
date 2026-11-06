@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useMember } from "@/hooks/member"
 import {
@@ -15,12 +14,9 @@ import { otherPartyOf, roomRowsOf } from "./teamChat.shared"
 import type { ChatRoomNode } from "./teamChat.shared"
 import { useChatRowWords } from "./useChatRowWords"
 
-/** What the chat opens on: every room of the viewer, on the room the address names or the direct room with the agent it names. */
-export interface TeamChatScope {
-    readonly kind: "page"
-    /** The room the address names, or null. */
-    readonly initialRoomId: string | null
-    /** The agent the address asks to talk to, or null: its direct room opens, and the first message opens it when none exists. */
+/** Which room is open: the one named by id, or the viewer's direct room with one agent (the first message to it opens the room). */
+export interface TeamChatTarget {
+    readonly roomId: string | null
     readonly withAgentId: string | null
 }
 
@@ -42,7 +38,6 @@ export interface TeamChatRoomsView {
     /** Who a direct open room is with; null for a group or none open. */
     readonly other: ChatParty | null
     readonly viewerId: string
-    readonly select: (roomId: string) => void
     readonly toggleMute: () => Promise<void>
     /** Opens a room and answers its id, or null when the door refused. */
     readonly open: (input: NewRoom) => Promise<string | null>
@@ -56,14 +51,14 @@ const directWith = (rooms: ReadonlyArray<ChatRoomNode>, agentId: string): ChatRo
             room.kind === "direct" && room.members.some((m) => m.memberKind === "agent" && m.memberId === agentId),
     )
 
-/** The open room: the chosen one; before one is chosen the direct room with the agent the address names, else the first. */
-const openOf = (scope: TeamChatScope, rooms: ReadonlyArray<ChatRoomNode>, chosen: string | null) => {
-    if (chosen !== null) return rooms.find((room) => room.id === chosen)
-    return scope.withAgentId === null ? rooms[0] : directWith(rooms, scope.withAgentId)
+/** The open room: the room the target names, else the direct room with the agent it names. */
+const openOf = (target: TeamChatTarget, rooms: ReadonlyArray<ChatRoomNode>): ChatRoomNode | undefined => {
+    if (target.roomId !== null) return rooms.find((room) => room.id === target.roomId)
+    return target.withAgentId === null ? undefined : directWith(rooms, target.withAgentId)
 }
 
 /** The rooms of the viewer in the open workspace, the open one, and what is done to a room: choose it, mute it, open another. */
-export const useTeamChatRooms = (scope: TeamChatScope): TeamChatRoomsView => {
+export const useTeamChatRooms = (target: TeamChatTarget): TeamChatRoomsView => {
     const workspaceId = useWorkspaceId()
     const viewerId = useMember()?.userId ?? ""
     const words = useChatRowWords()
@@ -71,8 +66,7 @@ export const useTeamChatRooms = (scope: TeamChatScope): TeamChatRoomsView => {
     const unread = useQueryChatUnreadSwr(workspaceId)
     const mute = useMutateSetChatRoomMutedSwr(workspaceId ?? "")
     const create = useMutateCreateChatRoomSwr(workspaceId ?? "")
-    const [chosen, setChosen] = useState<string | null>(scope.initialRoomId)
-    const room = rooms.data === undefined ? undefined : openOf(scope, rooms.data, chosen)
+    const room = rooms.data === undefined ? undefined : openOf(target, rooms.data)
     const roomId = room?.id ?? null
     const rows = rooms.data === undefined ? [] : roomRowsOf(rooms.data, roomId, viewerId, words)
     const { mutate: refreshRooms } = rooms
@@ -89,7 +83,6 @@ export const useTeamChatRooms = (scope: TeamChatScope): TeamChatRoomsView => {
         isMuted: room?.muted === true,
         other: room === undefined ? null : otherPartyOf(room, viewerId),
         viewerId,
-        select: setChosen,
         refresh,
         toggleMute: async () => {
             if (roomId === null) return
@@ -103,7 +96,6 @@ export const useTeamChatRooms = (scope: TeamChatScope): TeamChatRoomsView => {
                 members: input.members.map((party) => ({ memberKind: party.kind, memberId: party.id })),
             })
             if (made.room === null) return null
-            setChosen(made.room.id)
             refresh()
             return made.room.id
         },

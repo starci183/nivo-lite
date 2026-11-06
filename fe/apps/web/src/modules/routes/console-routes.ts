@@ -44,5 +44,5 @@ export const zaloReturnPath = (query: Readonly<Record<string, string | undefined
 export const zaloConnectionHref = (connectionId: string, tab?: string): string =>
     tab === undefined ? `/connections/zalo/${connectionId}` : `/connections/zalo/${connectionId}?tab=${tab}`
 
-/** The team chat opened on the direct room with one agent (the first message to it opens the room). */
-export const chatWithHref = (agentId: string): string => `${CONSOLE_ROUTES.chat}?with=${encodeURIComponent(agentId)}`
+/** The team chat opened on one room. */
+export const chatRoomHref = (roomId: string): string => `${CONSOLE_ROUTES.chat}?room=${encodeURIComponent(roomId)}`

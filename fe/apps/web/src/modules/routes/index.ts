@@ -36,7 +36,7 @@ export {
     AGENT_ROLES_HREF,
     CONSOLE_ROUTES,
     agentProfileHref,
-    chatWithHref,
+    chatRoomHref,
     authoritySectionPath,
     teamInviteHref,
     workItemHref,
