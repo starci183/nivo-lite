@@ -3,7 +3,7 @@ import type { ModuleFixtures } from "../../module-fixtures"
 import { RUN_PARKED } from "../../../fixtures/run-timeline.fixtures"
 import type { AgentRunCounts, AgentRunRow } from "../agent-runs"
 import { PLATFORM_MESSAGES } from "../platform-messages"
-import type { InstallationFacts, InstallationView, ParkedRunRow, ParkedRunsView } from "../platform.types"
+import type { InstallationFacts, InstallationView, ParkedRunsView } from "../platform.types"
 
 /** An installation with one enabled module and one the workspace has not enabled. */
 export const INSTALLATION: InstallationView = {
@@ -147,12 +147,6 @@ const parkedRunsIn = (words: Readonly<Record<string, string>>): ParkedRunsView =
         },
     ],
 })
-
-/** What platform.parked-runs answers. */
-interface ParkedRunsView {
-    readonly count: string | null
-    readonly rows: ReadonlyArray<ParkedRunRow>
-}
 
 /** Two runs the engine parked, in the default language (Vietnamese): the words are those of the platform messages. */
 export const PARKED_RUNS_VIEW: ParkedRunsView = parkedRunsIn(PLATFORM_MESSAGES.vi)
