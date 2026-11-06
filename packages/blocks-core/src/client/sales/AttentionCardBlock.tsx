@@ -86,7 +86,7 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
             ...(item.description === "" ? {} : { description: item.description }),
             leading: { avatar: { name: item.title } },
             badges: [{ label: word(view.chipKey), tone: view.tone }],
-            ...(item.at === "" ? {} : { meta: { text: formatValue(item.at, "dateTime", context) } }),
+            ...(item.at === "" ? {} : { meta: { text: formatValue(item.at, "day", context) } }),
             ...(handle.isAllowed
                 ? { action: { label: word(view.commandKey), press: () => run(handle, item.id) } }
                 : {}),
