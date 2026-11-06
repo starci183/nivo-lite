@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import {
     NODE_ROWS_MAX,
+    channelBusy,
     placeholderRecipient,
     recipientRefused,
     recipientLinked,
@@ -114,5 +115,15 @@ describe("chat-node-ports policy recipients and links", () => {
         expect(proposeReplySchema.safeParse({ conversationId: "c", text: "t", asked: "q" }).success).toBe(true)
         expect(proposeReplySchema.safeParse({ conversationId: "c", text: "", asked: "q" }).success).toBe(false)
         expect(proposeReplySchema.safeParse({ conversationId: "c", text: "t" }).success).toBe(false)
+    })
+})
+
+describe("channelBusy", () => {
+    it("is true for the Zalo refusals that say the channel is not taking messages for now, false for every other verdict", () => {
+        expect(channelBusy("zalo_quota")).toBe(true)
+        expect(channelBusy("zalo_night_hours")).toBe(true)
+        for (const failure of ["zalo_window_expired", "zalo_token", "zalo_error", "channel_plan", null]) {
+            expect(channelBusy(failure)).toBe(false)
+        }
     })
 })

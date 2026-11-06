@@ -78,7 +78,14 @@ describe("core.raise-work-item", () => {
 })
 
 describe("payment.request", () => {
-    const order = { id: "o1", orderNo: "DH-20261105-0001", amountVnd: 300_000, status: "confirmed", items: [] }
+    /** The order as the sales record keeps it: `items` is an object that holds the lines. */
+    const order = {
+        id: "o1",
+        orderNo: "DH-20261105-0001",
+        amountVnd: 300_000,
+        status: "confirmed",
+        items: { lines: [{ name: "tea", qty: 2, unitVnd: 150_000, amountVnd: 300_000 }] },
+    }
     const instruction = {
         bankName: "",
         bankCode: "MBBank",
@@ -111,6 +118,7 @@ describe("payment.request", () => {
         expect(output).toEqual({ status: "sent", content: "DH202611050001", qrUrl: "https://qr.example/x" })
         expect(executed.map((one) => one.id)).toEqual(["channel.send", "payment.rematch"])
         expect(String(executed[0]?.payload.text)).toContain("Bank: MBBank")
+        expect(String(executed[0]?.payload.text)).toContain("2 x tea")
         expect(executed[0]?.dedupeKey).toBe("payment-request:o1")
         expect(executed[1]?.payload).toEqual({ orderId: "o1" })
         expect(executed[1]?.dedupeKey).toBe("payment-rematch:o1")
@@ -122,7 +130,7 @@ describe("payment.request", () => {
         expect(output).toEqual({ status: "no_account", content: null, qrUrl: null })
         expect(executed.map((one) => one.id)).toEqual(["channel.send", "work-item.raise"])
         expect(executed[0]?.dedupeKey).toBe("order-held:o1")
-        expect(String(executed[0]?.payload.text)).toContain("recorded your order")
+        expect(String(executed[0]?.payload.text)).toContain("recorded your order: 2 x tea")
         expect(String(executed[0]?.payload.text)).not.toContain("Bank:")
         expect(executed[1]?.payload).toMatchObject({
             action: "connect_sepay",

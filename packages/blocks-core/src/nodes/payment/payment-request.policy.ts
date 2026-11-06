@@ -1,3 +1,4 @@
+import { ORDER_ITEMS_SHAPE } from "../../entities/sales/order.entity"
 import type { PaymentInstruction } from "../../vocabulary"
 import { REQUEST_WORDS } from "./payment-request.messages"
 import type { RequestLocale } from "./payment-request.messages"
@@ -16,6 +17,16 @@ export interface PayableLines {
     readonly amountVnd: number
     /** The lines of the order. */
     readonly lines: ReadonlyArray<OrderLine>
+}
+
+/**
+ * The lines of an order as its record keeps them: `items` is an object that holds the lines (`{ lines: [{ name, qty, unitVnd, amountVnd }] }`), not
+ * a list. A value that is not that shape (a record from before the lines were kept, a damaged one) has no lines, so the message is still
+ * written, with a dash in place of the items.
+ */
+export const orderLinesOf = (items: unknown): ReadonlyArray<OrderLine> => {
+    const parsed = ORDER_ITEMS_SHAPE.safeParse(items)
+    return parsed.success ? parsed.data.lines.map((line) => ({ name: line.name, qty: line.qty })) : []
 }
 
 /** The transfer content of an order number: letters and digits only, upper case (`DH-20261105-0001` becomes `DH202611050001`). */

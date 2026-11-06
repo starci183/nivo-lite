@@ -12,6 +12,7 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import {
     RECIPIENT_NOT_LINKED,
+    channelBusy,
     placeholderRecipient,
     recipientLinked,
     recipientRefused,
@@ -20,6 +21,9 @@ import {
 import { channelSendSchema } from "./chat-node-ports.schema"
 import { ChatNodePortsLogEvent } from "./chat-node-ports.log-events"
 import { ChatNodePortsError, ChatNodePortsErrorCode } from "./errors/chat-node-ports.error"
+
+/** What one push answers: delivered, or why not. */
+type DeliveryReceipt = Awaited<ReturnType<ChannelDeliveryService["deliver"]>>
 
 const EFFECT = "channel.send"
 
@@ -102,18 +106,20 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
             messageId,
             text,
         })
-        if (!receipt.delivered && receipt.failure === "channel_plan") return this.keptPlanBlocked(conversation)
-        if (!receipt.delivered && receipt.outcome === "rejected" && recipientRefused(receipt.failure)) {
-            return this.keptUndelivered(conversation, messageId)
-        }
-        if (!receipt.delivered) {
-            const code =
-                receipt.outcome === "rejected"
-                    ? ChatNodePortsErrorCode.DeliveryRejected
-                    : ChatNodePortsErrorCode.DeliveryUnconfirmed
-            throw new ChatNodePortsError({ code })
-        }
+        if (!receipt.delivered) return this.refused(conversation, messageId, receipt)
         return { kind: "message", id: messageId }
+    }
+
+    /** What a refused push ends the step with: a plan that does not allow the reply, a recipient the channel cannot reach, a channel not taking messages for now (tried again), a rejection, or an outcome nobody knows. */
+    private refused(conversation: ChatTurnConversation, messageId: string, receipt: DeliveryReceipt): Promise<never> {
+        if (receipt.failure === "channel_plan") return Promise.resolve(this.keptPlanBlocked(conversation))
+        const rejected = receipt.outcome === "rejected"
+        if (rejected && recipientRefused(receipt.failure)) return this.keptUndelivered(conversation, messageId)
+        if (rejected && channelBusy(receipt.failure)) {
+            return Promise.reject(new ChatNodePortsError({ code: ChatNodePortsErrorCode.DeliveryRateLimited }))
+        }
+        const code = rejected ? ChatNodePortsErrorCode.DeliveryRejected : ChatNodePortsErrorCode.DeliveryUnconfirmed
+        return Promise.reject(new ChatNodePortsError({ code }))
     }
 
     /** The message stays in the conversation for the owner to see, marked as not sent, and the step fails: the customer cannot be reached, and a run must not report done for a message nobody received. */

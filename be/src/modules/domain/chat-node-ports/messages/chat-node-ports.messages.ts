@@ -12,6 +12,8 @@ export const CHAT_NODE_PORTS_MESSAGES: MessageBundle = {
         "errors.CHAT_NODE_PORTS_ZALO_WINDOW_EXPIRED":
             "Khách nhắn lần cuối trên Zalo đã quá 48 giờ, nên không thể gửi tin trả lời.",
         "errors.CHAT_NODE_PORTS_DELIVERY_REJECTED": "Kênh chat từ chối tin nhắn.",
+        "errors.CHAT_NODE_PORTS_DELIVERY_RATE_LIMITED":
+            "Kênh chat đang tạm không nhận tin (hết hạn mức hoặc ngoài giờ gửi). Tin chưa gửi, hệ thống sẽ thử lại.",
         "errors.CHAT_NODE_PORTS_DELIVERY_UNCONFIRMED": "Kênh chat chưa xác nhận đã nhận tin nhắn.",
         "errors.CHAT_NODE_PORTS_RECIPIENT_UNREACHABLE":
             "Không gửi được tin cho khách: kênh chat không tìm thấy người nhận. Tin được giữ trong cuộc trò chuyện và đánh dấu chưa gửi.",
@@ -29,6 +31,8 @@ export const CHAT_NODE_PORTS_MESSAGES: MessageBundle = {
         "errors.CHAT_NODE_PORTS_ZALO_WINDOW_EXPIRED":
             "The customer last wrote on Zalo more than 48 hours ago, so a reply cannot be sent.",
         "errors.CHAT_NODE_PORTS_DELIVERY_REJECTED": "The chat channel refused the message.",
+        "errors.CHAT_NODE_PORTS_DELIVERY_RATE_LIMITED":
+            "The chat channel is not taking messages for now (quota or night hours). Nothing was sent; the system will try again.",
         "errors.CHAT_NODE_PORTS_DELIVERY_UNCONFIRMED": "The chat channel did not confirm it took the message.",
         "errors.CHAT_NODE_PORTS_RECIPIENT_UNREACHABLE":
             "The message could not be sent: the chat channel cannot find the recipient. It stays in the conversation marked not sent.",
