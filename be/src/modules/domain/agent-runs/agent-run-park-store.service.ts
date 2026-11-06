@@ -11,6 +11,7 @@ import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { stepViewOf } from "./agent-runs.mapper"
 import { jsonValueOf } from "./policies/json-value.policy"
+import { subjectOfRun } from "./policies/run-subject.policy"
 import type {
     OptionalFailedStep,
     OptionalRunStanding,
@@ -174,17 +175,19 @@ export class AgentRunParkStoreService {
             )
             const found: Array<ParkedFacts> = []
             await eachInOrder(newestFirst, async (run) => {
-                const steps = (await this.records.stepsOf(scoped, run.id)).map(stepViewOf)
+                const steps = await this.records.stepsOf(scoped, run.id)
                 const failed = steps.find((step) => step.status === "failed")
-                if (failed !== undefined)
-                    found.push({
-                        runId: run.id,
-                        agentId: run.agentId,
-                        context: run.context,
-                        stepKey: failed.stepKey,
-                        errorCode: failed.errorCode ?? "",
-                        parkedAt: (run.endedAt ?? new Date(0)).toISOString(),
-                    })
+                if (failed === undefined) return
+                const subject = subjectOfRun(steps[0]?.input, run.context)
+                found.push({
+                    runId: run.id,
+                    agentId: run.agentId,
+                    subjectKind: subject?.kind ?? "",
+                    subjectId: subject?.id ?? "",
+                    stepKey: failed.stepKey,
+                    errorCode: failed.errorCode ?? "",
+                    parkedAt: (run.endedAt ?? new Date(0)).toISOString(),
+                })
             })
             return found
         })

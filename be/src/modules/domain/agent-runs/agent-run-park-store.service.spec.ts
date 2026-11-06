@@ -249,16 +249,24 @@ describe("AgentRunParkStoreService parked facts and standing", () => {
                 agentId: "a1",
                 status: "parked",
                 endedAt: WHEN,
-                context: { subject: { kind: "x", id: "1" } },
+                context: { subject: { kind: "wake", id: "w1" } },
             }),
             runRecordOf({ id: "r2", status: "parked", endedAt: null }),
             runRecordOf({ id: "r3", status: "parked", endedAt: null }),
+            runRecordOf({ id: "r4", status: "parked", endedAt: new Date(WHEN.getTime() - 1000) }),
         ])
         records.stepsOf.mockImplementation((_scoped, runId) =>
             Promise.resolve(
                 runId === "r3"
                     ? [stepRecordOf({ stepKey: "ok", status: "done" })]
-                    : [stepRecordOf({ stepKey: "send", status: "failed", errorCode: runId === "r1" ? "boom" : null })],
+                    : [
+                          stepRecordOf({
+                              stepKey: "send",
+                              status: "failed",
+                              errorCode: runId === "r1" ? "boom" : null,
+                              input: runId === "r1" ? { trigger: { subject: { kind: "x", id: "1" } } } : {},
+                          }),
+                      ],
             ),
         )
 
@@ -266,10 +274,12 @@ describe("AgentRunParkStoreService parked facts and standing", () => {
 
         expect(found.map((fact) => [fact.runId, fact.agentId, fact.stepKey, fact.errorCode])).toEqual([
             ["r1", "a1", "send", "boom"],
+            ["r4", runRecordOf().agentId, "send", ""],
             ["r2", runRecordOf().agentId, "send", ""],
         ])
-        expect(found[0]).toMatchObject({ parkedAt: WHEN.toISOString(), context: { subject: { kind: "x", id: "1" } } })
-        expect(found[1]?.parkedAt).toBe(new Date(0).toISOString())
+        expect(found[0]).toMatchObject({ parkedAt: WHEN.toISOString(), subjectKind: "x", subjectId: "1" })
+        expect(found[1]).toMatchObject({ subjectKind: "", subjectId: "" })
+        expect(found[2]?.parkedAt).toBe(new Date(0).toISOString())
         expect(records.runsOf.mock.calls[0]?.[4]).toBe(100)
     })
 

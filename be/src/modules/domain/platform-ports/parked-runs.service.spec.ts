@@ -9,10 +9,16 @@ import { ParkedRunsService } from "./parked-runs.service"
 
 const ASKER = { workspaceId: "w1", memberId: "m1", locale: "vi" } as const
 
-const fact = (runId: string, agentId: string, subject: object | null, errorCode = "ORDER_STUCK"): ParkedFacts => ({
+const fact = (
+    runId: string,
+    agentId: string,
+    subject: { kind: string; id: string } | null,
+    errorCode = "ORDER_STUCK",
+): ParkedFacts => ({
     runId,
     agentId,
-    context: subject === null ? {} : { subject },
+    subjectKind: subject === null ? "" : subject.kind,
+    subjectId: subject === null ? "" : subject.id,
     stepKey: "order.confirm",
     errorCode,
     parkedAt: "2026-11-06T09:00:00.000Z",

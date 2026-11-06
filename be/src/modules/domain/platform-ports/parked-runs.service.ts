@@ -4,7 +4,7 @@ import { AgentRunParkStoreService, AgentRunResumeService } from "@modules/domain
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
-import { PARKED_LOOKED_AT, errorKeyOf, subjectOfContext } from "./parked-runs.policy"
+import { PARKED_LOOKED_AT, errorKeyOf } from "./parked-runs.policy"
 
 /** Who asks and in which language: the words of the parked runs are theirs, and so is the seat that resumes one. */
 export interface ParkedRunsAsker {
@@ -60,14 +60,13 @@ export class ParkedRunsService {
         const rows: Array<ParkedRunRow> = await Promise.all(
             facts.map(async (fact) => {
                 const agent = await this.directory.find(asker.workspaceId, fact.agentId)
-                const subject = subjectOfContext(fact.context)
                 const key = errorKeyOf(fact.errorCode)
                 const words = this.catalog.get(key, {}, asker.locale)
                 return {
                     id: fact.runId,
                     module: agent?.module ?? "",
-                    subjectKind: subject.kind,
-                    subjectId: subject.id,
+                    subjectKind: fact.subjectKind,
+                    subjectId: fact.subjectId,
                     step: fact.stepKey,
                     errorCode: fact.errorCode,
                     errorWords: words === key ? fact.errorCode : words,

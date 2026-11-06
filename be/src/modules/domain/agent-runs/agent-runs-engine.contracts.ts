@@ -322,8 +322,10 @@ export interface ParkedFacts {
     readonly runId: string
     /** The agent it works for. */
     readonly agentId: string
-    /** The trigger, intact. */
-    readonly context: StepJson
+    /** The kind of the record it is about, or an empty text when it names none. */
+    readonly subjectKind: string
+    /** The id of the record it is about, or an empty text when it names none. */
+    readonly subjectId: string
     /** The step it stopped at. */
     readonly stepKey: string
     /** The code of the failure, or an empty text when none was recorded. */
