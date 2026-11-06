@@ -1,5 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { InjectWorkBranchDecider, isOverLimit } from "@modules/domain/authority-rules"
+import { AuthorityRulesService, InjectWorkBranchDecider, isOverLimit } from "@modules/domain/authority-rules"
 import type { WorkBranchDecider } from "@modules/domain/authority-rules"
 import { ExecutionsService } from "@modules/domain/executions"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
@@ -34,9 +34,20 @@ export class WorkApprovalService {
         private readonly modules: ModuleCatalogService,
         private readonly evidence: EvidenceService,
         private readonly lines: WorkLinesService,
+        private readonly rules: AuthorityRulesService,
         private readonly responsibilities: ResponsibilityJournalService,
         @Optional() @InjectWorkBranchDecider() private readonly branches?: WorkBranchDecider,
     ) {}
+
+    /**
+     * Whether an approval card will be posted for this ask: the rule names approvers (roles, rooms or members), and the card the
+     * approval hook posts to their rooms is then the one message of the ask. Without approvers no card goes anywhere and the ask
+     * is one line to the owner.
+     */
+    private async cardPosted(ctx: WorkContext, item: WorkItem): Promise<boolean> {
+        const group = (await this.rules.approvalSetup(ctx.workspaceId, item.action))?.group
+        return group !== undefined && group.roles.length + group.rooms.length + group.members.length > 0
+    }
 
     /** The names of the fields in the language of the reader; a field without a label shows as it is. */
     fieldLabels(ctx: WorkContext, fields: ReadonlyArray<string>): string {
@@ -74,16 +85,18 @@ export class WorkApprovalService {
             summary: `${reason}: ${proposal.summary}`,
             evidence: notes.length === 0 ? null : notes.join(SEPARATOR),
         })
-        await this.lines.say(ctx, {
-            department: waiting.department,
-            installationId: waiting.installation_id,
-            body: this.catalog.get(
-                "engine.ask",
-                { dept, reason, summary: withEvidence(proposal.summary, this.evidenceNote(ctx, proposal)) },
-                ctx.locale,
-            ),
-            key: `ask:${waiting.id}`,
-        })
+        if (!(await this.cardPosted(ctx, waiting))) {
+            await this.lines.say(ctx, {
+                department: waiting.department,
+                installationId: waiting.installation_id,
+                body: this.catalog.get(
+                    "engine.ask",
+                    { dept, reason, summary: withEvidence(proposal.summary, this.evidenceNote(ctx, proposal)) },
+                    ctx.locale,
+                ),
+                key: `ask:${waiting.id}`,
+            })
+        }
         if (judgement.branchDecisionId !== undefined) {
             await this.branches?.route({
                 workspaceId: ctx.workspaceId,

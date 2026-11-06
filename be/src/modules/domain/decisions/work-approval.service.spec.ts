@@ -3,8 +3,8 @@ import { Test } from "@nestjs/testing"
 import { ExecutionsService } from "@modules/domain/executions"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import type { ResponsibilityRecord } from "@modules/domain/responsibilities"
-import { WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
-import type { WorkBranchDecider } from "@modules/domain/authority-rules"
+import { AuthorityRulesService, WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
+import type { ApproverGroup, WorkBranchDecider } from "@modules/domain/authority-rules"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -78,9 +78,14 @@ const catalogDouble = mock<MessageCatalog>({
     }),
 })
 
-const build = async (waiting: WorkItem = waitingOf(), agent: OptionalAgentIdentity = null) => {
+const build = async (
+    waiting: WorkItem = waitingOf(),
+    agent: OptionalAgentIdentity = null,
+    group: ApproverGroup | null = null,
+) => {
     const evidence = jest.fn().mockResolvedValue(undefined)
     const office = jest.fn().mockResolvedValue(undefined)
+    const approvalSetup = jest.fn().mockResolvedValue(group === null ? null : { group })
     const inbound = jest.fn().mockResolvedValue(undefined)
     const agents = jest.fn().mockResolvedValue(agent)
     const markWaiting = jest.fn().mockResolvedValue(waiting)
@@ -101,6 +106,7 @@ const build = async (waiting: WorkItem = waitingOf(), agent: OptionalAgentIdenti
                 useValue: mock<ModuleCatalogService>({ nameOf: jest.fn().mockResolvedValue("Sales AI") }),
             },
             { provide: EvidenceService, useValue: mock<EvidenceService>({ log: evidence }) },
+            { provide: AuthorityRulesService, useValue: mock<AuthorityRulesService>({ approvalSetup }) },
             { provide: WorkLinesService, useValue: mock<WorkLinesService>({ say: office }) },
             {
                 provide: ResponsibilityJournalService,
@@ -163,6 +169,23 @@ describe("WorkApprovalService", () => {
                 key: "ask:item-1",
             })
             expect(inbound).toHaveBeenCalledWith(ctx, "in-1", "needs_decision", "lead-1")
+        })
+
+        it("says one line to the owner when the rule names no approver, and none when the approval card is the message of the ask", async () => {
+            const alone = await build()
+            await alone.service.ask(ctx, itemOf(), proposalOf(), askOf())
+            expect(alone.office).toHaveBeenCalledTimes(1)
+
+            const group: ApproverGroup = { roles: ["manager"], rooms: [], members: [] }
+            const carded = await build(waitingOf(), null, group)
+            await carded.service.ask(ctx, itemOf(), proposalOf(), askOf())
+            expect(carded.office).not.toHaveBeenCalled()
+            const rooms = await build(waitingOf(), null, { roles: [], rooms: ["room-1"], members: [] })
+            await rooms.service.ask(ctx, itemOf(), proposalOf(), askOf())
+            expect(rooms.office).not.toHaveBeenCalled()
+            const members = await build(waitingOf(), null, { roles: [], rooms: [], members: ["m-1"] })
+            await members.service.ask(ctx, itemOf(), proposalOf(), askOf())
+            expect(members.office).not.toHaveBeenCalled()
         })
 
         it("names missing fields before the limit and skips an absent inbound event", async () => {

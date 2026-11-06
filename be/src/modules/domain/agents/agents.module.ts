@@ -4,8 +4,10 @@ import { AgentTagEffectService } from "./agent-tag-effect.service"
 import type { DynamicModule } from "@nestjs/common"
 import { AgentsQueueModule } from "@modules/queues/agents"
 import { AgentBundleService } from "./agent-bundle.service"
+import { OFFICE_ROOMS_AGENTS } from "@modules/domain/office-rooms"
 import { AgentDirectoryModule } from "./agent-directory.module"
 import { AgentCreationService } from "./agent-creation.service"
+import { AgentDirectoryService } from "./agent-directory.service"
 import { AgentIdentityService } from "./agent-identity.service"
 import { AgentLensesService } from "./agent-lenses.service"
 import { AgentOwnershipService } from "./agent-ownership.service"
@@ -48,6 +50,7 @@ export class AgentsModule extends ConfigurableModuleClass {
             { provide: AGENTS_MODULES, useClass: options.ports.modules },
             { provide: AGENTS_CONNECTIONS, useExisting: options.ports.connections },
             { provide: AGENTS_ROOMS, useExisting: options.ports.rooms },
+            { provide: OFFICE_ROOMS_AGENTS, useExisting: AgentDirectoryService },
             PauseClient,
             AgentsService,
             AgentCreationService,
@@ -64,6 +67,7 @@ export class AgentsModule extends ConfigurableModuleClass {
             AgentsService,
             EngineStatusService,
             AgentDirectoryModule,
+            OFFICE_ROOMS_AGENTS,
             AgentIdentityService,
             AgentBundleService,
             AgentOwnershipService,
