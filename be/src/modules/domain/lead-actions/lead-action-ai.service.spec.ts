@@ -6,7 +6,7 @@ import type { WorkContext } from "@modules/domain/decisions"
 import { EventsService } from "@modules/domain/events"
 import { LeadRecordsService } from "@modules/domain/leads"
 import type { LeadRecordRow } from "@modules/domain/leads"
-import { MessagesService } from "@modules/domain/messages"
+import { TeamChatService } from "@modules/domain/team-chat"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { ResponsibilityListing } from "@modules/domain/responsibilities"
@@ -99,8 +99,8 @@ const build = async () => {
     const agents = mock<AgentsService>()
     agents.list.mockResolvedValue([sales])
     agents.profileOf.mockResolvedValue(profile)
-    const messages = mock<MessagesService>()
-    messages.postSystem.mockResolvedValue(undefined)
+    const messages = mock<TeamChatService>()
+    messages.postAsAgent.mockResolvedValue(null)
     const members = mock<WorkspaceMembersService>()
     members.idOf.mockResolvedValue("member-1")
     ai.proposeResponsibility.mockResolvedValue(proposal)
@@ -116,7 +116,7 @@ const build = async () => {
             { provide: EventsService, useValue: events },
             { provide: AgentsService, useValue: agents },
             { provide: ResponsibilityJournalService, useValue: responsibilities },
-            { provide: MessagesService, useValue: messages },
+            { provide: TeamChatService, useValue: messages },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: AI_TASKS, useValue: ai },
         ],
@@ -246,11 +246,11 @@ describe("LeadActionAiService", () => {
             { name: "Lan", owner: "@tea-expert", next: "Persisted next action" },
             "vi",
         )
-        expect(messages.postSystem).toHaveBeenCalledWith({
-            workspaceId: "ws-1",
-            leadId: LEAD,
-            manager,
+        expect(messages.postAsAgent).toHaveBeenCalledWith("ws-1", {
+            agent: "sales",
+            toUserId: null,
             body: "Owner assigned",
+            key: null,
         })
         expect(tx.outcomes).toEqual(["commit"])
     })
@@ -372,6 +372,6 @@ describe("LeadActionAiService", () => {
         expect(tx.outcomes).toEqual([])
         expect(responsibilities.create).not.toHaveBeenCalled()
         expect(events.record).not.toHaveBeenCalled()
-        expect(messages.postSystem).not.toHaveBeenCalled()
+        expect(messages.postAsAgent).not.toHaveBeenCalled()
     })
 })

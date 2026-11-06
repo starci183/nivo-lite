@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { MessagesService } from "@modules/domain/messages"
+import { TeamChatService } from "@modules/domain/team-chat"
 import { ResponsibilitiesService } from "@modules/domain/responsibilities"
 import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { InjectMessageCatalog, InjectRequestLocale } from "@modules/platform/i18n"
@@ -36,18 +36,18 @@ export class LeadsService {
         @InjectRequestLocale() private readonly requestLocale: RequestLocale,
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
-        private readonly teamChat: MessagesService,
+        private readonly teamChat: TeamChatService,
         private readonly responsibilities: ResponsibilitiesService,
     ) {}
 
     /**
-     * Records the outcome of the journey of a lead: the stage, the evidence line and the team-chat line are written in one
-     * transaction. A won deal is handed to the workspace Accounting agent as the next responsibility, when there is one.
+     * Records the outcome of the journey of a lead: the stage and the evidence line are written in one transaction, and the
+     * sales agent tells the owner once it committed. A won deal is handed to the workspace Accounting agent as the next responsibility, when there is one.
      */
     async recordOutcome(params: RecordOutcomeParams): Promise<RecordedOutcome> {
         const member = await this.members.require(params.userId, params.workspaceId)
         const locale = this.requestLocale.of(params.acceptLanguage)
-        return this.entityManager.transaction(async (tx) => {
+        const outcome = await this.entityManager.transaction(async (tx) => {
             const moved = await tx
                 .createQueryBuilder(LeadEntity, "l")
                 .update()
@@ -74,12 +74,6 @@ export class LeadsService {
                 },
                 tx,
             )
-            await this.teamChat.postSystem({
-                workspaceId: params.workspaceId,
-                leadId: params.leadId,
-                body: this.messages.get("leads.stage-message", { name: lead.contact_name, stage }, locale),
-                manager: tx,
-            })
             const handedToAccounting =
                 params.stage === "won" &&
                 (await this.responsibilities.handToAccounting({
@@ -99,5 +93,16 @@ export class LeadsService {
                 handedToAccounting,
             }
         })
+        await this.teamChat.postAsAgent(params.workspaceId, {
+            agent: "sales",
+            toUserId: null,
+            body: this.messages.get(
+                "leads.stage-message",
+                { name: outcome.contactName, stage: this.messages.get(`leads.stage.${params.stage}`, {}, locale) },
+                locale,
+            ),
+            key: null,
+        })
+        return outcome
     }
 }

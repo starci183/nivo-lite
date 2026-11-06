@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { AGENT_DIRECTORY } from "@modules/domain/messages"
+import { RESPONSIBILITY_AGENTS } from "./responsibilities.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./responsibilities.module-definition"
 import { ResponsibilitiesService } from "./responsibilities.service"
 import { ResponsibilityJournalService } from "./responsibility-journal.service"
@@ -17,7 +17,7 @@ export class ResponsibilitiesModule extends ConfigurableModuleClass {
             ...base,
             providers: [
                 ...(base.providers ?? []),
-                { provide: AGENT_DIRECTORY, useExisting: options.agentDirectory },
+                { provide: RESPONSIBILITY_AGENTS, useExisting: options.agentDirectory },
                 ResponsibilitiesService,
                 ResponsibilityJournalService,
                 ResponsibilityOwnersService,

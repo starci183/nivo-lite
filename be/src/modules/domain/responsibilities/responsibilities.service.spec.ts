@@ -3,8 +3,8 @@ import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@s
 import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
-import { AGENT_DIRECTORY } from "@modules/domain/messages"
-import type { AgentDirectory } from "@modules/domain/messages"
+import { RESPONSIBILITY_AGENTS } from "./responsibilities.decorators"
+import type { ResponsibilityAgents } from "./responsibilities.port"
 import { EventsService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -103,14 +103,14 @@ const build = async (
     const owners = mock<ResponsibilityOwnersService>()
     if (owner instanceof Error) owners.resolve.mockRejectedValue(owner)
     else owners.resolve.mockResolvedValue(owner)
-    const agents = mock<AgentDirectory>()
+    const agents = mock<ResponsibilityAgents>()
     agents.agentOfDepartment.mockImplementation(() => Promise.resolve(world.accountingAgent ?? null))
     const leads = mock<LeadDesk>()
     leads.hold.mockImplementation(() => Promise.resolve(world.leadHeld ?? true))
     const moduleRef = await Test.createTestingModule({
         providers: [
             ResponsibilitiesService,
-            { provide: AGENT_DIRECTORY, useValue: agents },
+            { provide: RESPONSIBILITY_AGENTS, useValue: agents },
             { provide: RESPONSIBILITY_LEAD_DESK, useValue: leads },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: MESSAGE_CATALOG, useValue: messages },

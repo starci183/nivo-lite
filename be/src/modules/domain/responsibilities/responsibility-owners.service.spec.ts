@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { AGENT_DIRECTORY } from "@modules/domain/messages"
-import type { AgentDirectory } from "@modules/domain/messages"
+import { RESPONSIBILITY_AGENTS } from "./responsibilities.decorators"
+import type { ResponsibilityAgents } from "./responsibilities.port"
 import { MemberLookupService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
@@ -19,14 +19,14 @@ const build = async (em: MockEntityManager = mockEntityManager()) => {
     members.activeById.mockResolvedValue(null)
     members.byId.mockResolvedValue(null)
     members.activeNamed.mockResolvedValue(null)
-    const agents = mock<AgentDirectory>()
+    const agents = mock<ResponsibilityAgents>()
     agents.agentById.mockResolvedValue(null)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ResponsibilityOwnersService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: MemberLookupService, useValue: members },
-            { provide: AGENT_DIRECTORY, useValue: agents },
+            { provide: RESPONSIBILITY_AGENTS, useValue: agents },
         ],
     }).compile()
     return { service: moduleRef.get(ResponsibilityOwnersService), members, agents }

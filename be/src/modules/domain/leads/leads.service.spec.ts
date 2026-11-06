@@ -4,7 +4,7 @@ import { isTransactionManager } from "@starci/jest-preset/entity-manager"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { EventsService } from "@modules/domain/events"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { MessagesService } from "@modules/domain/messages"
+import { TeamChatService } from "@modules/domain/team-chat"
 import { ResponsibilitiesService } from "@modules/domain/responsibilities"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
@@ -50,8 +50,8 @@ const build = async (entityManager: MockEntityManager) => {
     })
     const events = mock<EventsService>()
     events.record.mockResolvedValue(undefined)
-    const teamChat = mock<MessagesService>()
-    teamChat.postSystem.mockResolvedValue(undefined)
+    const teamChat = mock<TeamChatService>()
+    teamChat.postAsAgent.mockResolvedValue(null)
     const responsibilities = mock<ResponsibilitiesService>()
     responsibilities.handToAccounting.mockResolvedValue(true)
     const moduleRef = await Test.createTestingModule({
@@ -62,7 +62,7 @@ const build = async (entityManager: MockEntityManager) => {
             { provide: REQUEST_LOCALE, useValue: requestLocale },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: EventsService, useValue: events },
-            { provide: MessagesService, useValue: teamChat },
+            { provide: TeamChatService, useValue: teamChat },
             { provide: ResponsibilitiesService, useValue: responsibilities },
         ],
     }).compile()
@@ -105,13 +105,12 @@ describe("LeadsService", () => {
                 anything(),
             )
             expect(isTransactionManager(events.record.mock.calls[0]?.[1])).toBe(true)
-            expect(teamChat.postSystem).toHaveBeenCalledWith({
-                workspaceId: "ws-1",
-                leadId: "lead-1",
+            expect(teamChat.postAsAgent).toHaveBeenCalledWith("ws-1", {
+                agent: "sales",
+                toUserId: null,
                 body: 'leads.stage-message:{"name":"Anh Minh","stage":"leads.stage.proposal:{}"}',
-                manager: anything(),
+                key: null,
             })
-            expect(isTransactionManager(teamChat.postSystem.mock.calls[0]?.[0].manager)).toBe(true)
             expect(tx.commits).toBe(1)
         })
 
@@ -136,7 +135,7 @@ describe("LeadsService", () => {
             })
 
             expect(events.record).not.toHaveBeenCalled()
-            expect(teamChat.postSystem).not.toHaveBeenCalled()
+            expect(teamChat.postAsAgent).not.toHaveBeenCalled()
             expect(tx.rollbacks).toBe(1)
         })
     })

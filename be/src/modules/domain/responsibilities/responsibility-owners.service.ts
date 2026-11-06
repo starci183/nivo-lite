@@ -1,10 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectAgentDirectory } from "@modules/domain/messages"
-import type { AgentDirectory } from "@modules/domain/messages"
 import { MemberLookupService } from "@modules/domain/workspace-members"
 import type { NamedMember } from "@modules/domain/workspace-members"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectResponsibilityAgents } from "./responsibilities.decorators"
+import type { ResponsibilityAgents } from "./responsibilities.port"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
 import { isOwnerId, resolveOwner } from "./responsibility-owner.policy"
 import type { OwnerCandidates, ResolvedOwner } from "./responsibility-owner.policy"
@@ -22,7 +22,7 @@ export class ResponsibilityOwnersService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: MemberLookupService,
-        @InjectAgentDirectory() private readonly agents: AgentDirectory,
+        @InjectResponsibilityAgents() private readonly agents: ResponsibilityAgents,
     ) {}
 
     /**

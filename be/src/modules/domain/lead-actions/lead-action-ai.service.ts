@@ -4,8 +4,8 @@ import { AgentsService } from "@modules/domain/agents"
 import type { AgentProfile } from "@modules/domain/agents"
 import { EventsService } from "@modules/domain/events"
 import { LeadRecordsService } from "@modules/domain/leads"
-import { MessagesService } from "@modules/domain/messages"
 import { ResponsibilityJournalService } from "@modules/domain/responsibilities"
+import { TeamChatService } from "@modules/domain/team-chat"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectAiTasks } from "@modules/domain/ai-tasks"
 import type { AiTasksService } from "@modules/domain/ai-tasks"
@@ -34,7 +34,7 @@ export class LeadActionAiService {
         private readonly events: EventsService,
         private readonly agents: AgentsService,
         private readonly responsibilities: ResponsibilityJournalService,
-        private readonly messages: MessagesService,
+        private readonly teamChat: TeamChatService,
         private readonly members: WorkspaceMembersService,
         @InjectAiTasks() private readonly ai: AiTasksService,
     ) {}
@@ -83,7 +83,7 @@ export class LeadActionAiService {
             proposal.owner_kind === "agent"
                 ? (agents.find((agent) => agent.handle === proposal.owner_handle) ?? agents[0])
                 : undefined
-        return this.entityManager.transaction(async (manager) => {
+        const proposed = await this.entityManager.transaction(async (manager) => {
             const saved = await this.responsibilities.create(
                 userId,
                 ctx.workspaceId,
@@ -107,22 +107,23 @@ export class LeadActionAiService {
                 },
                 manager,
             )
-            await this.messages.postSystem({
-                workspaceId: ctx.workspaceId,
-                leadId: lead.id,
-                manager,
-                body: this.catalog.get(
-                    "lead-actions.owner",
-                    {
-                        name: lead.contact_name,
-                        owner: owner === undefined ? saved.owner_name : `@${owner.handle}`,
-                        next: saved.next_action,
-                    },
-                    ctx.locale,
-                ),
-            })
-            return { leadId: lead.id, responsibilityId: saved.id }
+            return { saved }
         })
+        await this.teamChat.postAsAgent(ctx.workspaceId, {
+            agent: "sales",
+            toUserId: null,
+            body: this.catalog.get(
+                "lead-actions.owner",
+                {
+                    name: lead.contact_name,
+                    owner: owner === undefined ? proposed.saved.owner_name : `@${owner.handle}`,
+                    next: proposed.saved.next_action,
+                },
+                ctx.locale,
+            ),
+            key: null,
+        })
+        return { leadId: lead.id, responsibilityId: proposed.saved.id }
     }
 
     private async eligibleAgents(userId: string, workspaceId: string): Promise<Array<AgentProfile>> {

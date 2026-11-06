@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { EventsService } from "@modules/domain/events"
-import { OfficeLinesService } from "@modules/domain/messages"
 import { StaffService } from "@modules/domain/staff"
+import { TeamChatService } from "@modules/domain/team-chat"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
@@ -12,16 +12,16 @@ import type { Escalation } from "./customer-turns.contracts"
 import { clipText } from "./customer-turn.policy"
 import { handleAmong, isAdvisorRole } from "./staff-handle.policy"
 
-/** The Office department whose agent speaks for a customer question. */
+/** The module whose agent speaks for a customer question. */
 const CHATBOT_DEPARTMENT = "chatbot"
 const QUESTION_MAX = 400
 const PROPOSED_MAX = 300
 
 @Injectable()
 /**
- * The Office is one group chat of people and AI. When the Chatbot cannot answer alone, the waiting item is assigned to the staff member
- * who advises customers (a sales or customer-care role, else the oldest active colleague) and the Chatbot tags them in the Office with
- * the customer's question and its own draft. A workspace with no active staff keeps the item for the owner. It never throws: the item
+ * When the Chatbot cannot answer alone, the waiting item is assigned to the staff member who advises customers (a sales or
+ * customer-care role, else the oldest active colleague) and the Chatbot tells the workspace owner in the team chat, naming that
+ * colleague, with the customer's question and its own draft (a staff record is not a user, so the line goes to the owner). A workspace with no active staff keeps the item for the owner. It never throws: the item
  * already waits in Decisions either way.
  */
 export class StaffEscalationService {
@@ -30,11 +30,11 @@ export class StaffEscalationService {
         @InjectLogger() private readonly logger: Logger,
         private readonly staff: StaffService,
         private readonly items: WorkItemsService,
-        private readonly office: OfficeLinesService,
+        private readonly chat: TeamChatService,
         private readonly events: EventsService,
     ) {}
 
-    /** Assigns the waiting item and tags the person in the Office; answers whether someone was tagged. */
+    /** Assigns the waiting item and says it in the team chat; answers whether a colleague was assigned. */
     async escalate(workspaceId: string, escalation: Escalation, locale: Locale): Promise<boolean> {
         try {
             const active = (await this.staff.list(workspaceId)).filter((member) => member.active)
@@ -65,10 +65,12 @@ export class StaffEscalationService {
                 actor: "NIVO",
                 summary: `→ ${person.name}`,
             })
-            await this.office.post(
-                { workspaceId },
-                { body, lead_id: escalation.leadId, work_item_id: escalation.workItemId, dept: CHATBOT_DEPARTMENT },
-            )
+            await this.chat.postAsAgent(workspaceId, {
+                agent: CHATBOT_DEPARTMENT,
+                toUserId: null,
+                body,
+                key: `escalation:${escalation.workItemId}`,
+            })
             return true
         } catch (cause) {
             this.logger.error(CustomerTurnsLogEvent.EscalationFailed, cause, { workItemId: escalation.workItemId })

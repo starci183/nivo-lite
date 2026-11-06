@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
-import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
-import { MessagesService } from "@modules/domain/messages"
+import { TeamChatService } from "@modules/domain/team-chat"
 import { EventsService } from "@modules/domain/events"
 import { InjectTelegram } from "@modules/integrations/telegram"
 import type { TelegramClient } from "@modules/integrations/telegram"
@@ -13,17 +11,16 @@ import type { VideoShareResult } from "./video-sharing.contracts"
 import { VideoWorkbenchReadsService } from "./video-workbench-reads.service"
 
 @Injectable()
-/** Sends an approved video's download link to the owner's Office and connected Telegram chat. */
+/** Sends an approved video's download link to the owner in the team chat and the connected Telegram chat. */
 export class VideoSharingService {
     constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectTelegram() private readonly telegram: TelegramClient,
         private readonly workbench: VideoWorkbenchService,
         private readonly reads: VideoWorkbenchReadsService,
         private readonly media: VideoMediaService,
         private readonly connections: ConnectionsService,
         private readonly secrets: ConnectionSecretReadsService,
-        private readonly messages: MessagesService,
+        private readonly teamChat: TeamChatService,
         private readonly events: EventsService,
     ) {}
 
@@ -37,10 +34,10 @@ export class VideoSharingService {
         if (path === null) throw new VideoError({ code: VideoErrorCode.NotApproved })
         const url = await this.media.shareLink(workspaceId, path)
         const text = `${project.title}\n${url}`
-        const office = await this.messages
-            .postSystem({ manager: this.entityManager, workspaceId, leadId: null, body: text })
+        const office = await this.teamChat
+            .postAsAgent(workspaceId, { agent: "video", toUserId: null, body: text, key: `video-share:${projectId}` })
             .then(
-                () => true,
+                (posted) => posted !== null,
                 () => false,
             )
         const connections = await this.connections.listByProvider(workspaceId, "telegram", {

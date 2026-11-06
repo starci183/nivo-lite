@@ -1,14 +1,13 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock, mockEntityManager } from "@starci/jest-preset"
+import { builder, mock } from "@starci/jest-preset"
 import { ConnectionSecretsErrorCode } from "@modules/domain/connection-secrets"
 import { ConnectionSecretReadsService, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { EventsService } from "@modules/domain/events"
-import { MessagesService } from "@modules/domain/messages"
+import { TeamChatService } from "@modules/domain/team-chat"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { TELEGRAM } from "@modules/integrations/telegram"
 import type { TelegramClient } from "@modules/integrations/telegram"
-import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ok, refused } from "@modules/platform/primitives"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
 import type { StoredProject, StoredRender } from "./video-stored.contracts"
@@ -104,7 +103,6 @@ const connectionOf = builder<ConnectionRecord>({
 const build = async (rows: ReadonlyArray<StoredProject> = [rowOf()], project: WorkbenchProject = projectOf()) => {
     const reads = mock<VideoWorkbenchReadsService>()
     reads.projectsOf.mockResolvedValue([...rows])
-    const em = mockEntityManager()
     const telegram = mock<TelegramClient>()
     telegram.sendMessage.mockResolvedValue(undefined)
     const workbench = mock<VideoWorkbenchService>()
@@ -115,26 +113,24 @@ const build = async (rows: ReadonlyArray<StoredProject> = [rowOf()], project: Wo
     connections.listByProvider.mockResolvedValue([connectionOf()])
     const secrets = mock<ConnectionSecretReadsService>()
     secrets.botToken.mockResolvedValue(ok("bot-token"))
-    const messages = mock<MessagesService>()
-    messages.postSystem.mockResolvedValue(undefined)
+    const messages = mock<TeamChatService>()
+    messages.postAsAgent.mockResolvedValue({ roomId: "room-1", messageId: "message-1", agentId: "agent-1" })
     const events = mock<EventsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             VideoSharingService,
-            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: TELEGRAM, useValue: telegram },
             { provide: VideoWorkbenchService, useValue: workbench },
             { provide: VideoWorkbenchReadsService, useValue: reads },
             { provide: VideoMediaService, useValue: media },
             { provide: ConnectionsService, useValue: connections },
             { provide: ConnectionSecretReadsService, useValue: secrets },
-            { provide: MessagesService, useValue: messages },
+            { provide: TeamChatService, useValue: messages },
             { provide: EventsService, useValue: events },
         ],
     }).compile()
     return {
         sharing: moduleRef.get(VideoSharingService),
-        em,
         reads,
         telegram,
         media,
@@ -147,15 +143,20 @@ const build = async (rows: ReadonlyArray<StoredProject> = [rowOf()], project: Wo
 
 describe("VideoSharingService", () => {
     describe("share", () => {
-        it("posts the download link to Office and the owner's Telegram chat and records the share", async () => {
-            const { sharing, em, reads, telegram, media, connections, messages, events } = await build()
+        it("says the download link to the owner in the team chat and the owner's Telegram chat and records the share", async () => {
+            const { sharing, reads, telegram, media, connections, messages, events } = await build()
 
             await expect(sharing.share("person-1", WS, "project-1")).resolves.toEqual({ office: true, telegram: true })
 
             const text = `Spring offer\n${LINK}`
             expect(reads.projectsOf).toHaveBeenCalledWith(WS, "project-1", true)
             expect(media.shareLink).toHaveBeenCalledWith(WS, OUTPUT)
-            expect(messages.postSystem).toHaveBeenCalledWith({ manager: em, workspaceId: WS, leadId: null, body: text })
+            expect(messages.postAsAgent).toHaveBeenCalledWith(WS, {
+                agent: "video",
+                toUserId: null,
+                body: text,
+                key: "video-share:project-1",
+            })
             expect(connections.listByProvider).toHaveBeenCalledWith(WS, "telegram", { includeDisconnected: false })
             expect(telegram.sendMessage).toHaveBeenCalledWith("bot-token", "chat-1", text)
             expect(events.record).toHaveBeenCalledWith({
@@ -169,7 +170,7 @@ describe("VideoSharingService", () => {
         it("reports each channel that could not be reached", async () => {
             const { sharing, telegram, messages } = await build()
             const failure = new VideoError({ code: VideoErrorCode.StorageFailed, params: { path: "x" } })
-            messages.postSystem.mockRejectedValue(failure)
+            messages.postAsAgent.mockRejectedValue(failure)
             telegram.sendMessage.mockRejectedValue(failure)
 
             await expect(sharing.share("person-1", WS, "project-1")).resolves.toEqual({
@@ -215,5 +216,14 @@ describe("VideoSharingService", () => {
             expect(media.shareLink).not.toHaveBeenCalled()
             expect(events.record).not.toHaveBeenCalled()
         })
+    })
+})
+
+describe("VideoSharingService without a video agent", () => {
+    it("reports no team chat line when the workspace has no video agent", async () => {
+        const { sharing, messages } = await build()
+        messages.postAsAgent.mockResolvedValue(null)
+
+        await expect(sharing.share("person-1", WS, "project-1")).resolves.toEqual({ office: false, telegram: true })
     })
 })

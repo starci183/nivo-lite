@@ -2,8 +2,6 @@ import { Injectable } from "@nestjs/common"
 import { Not } from "typeorm"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { EventsService } from "@modules/domain/events"
-import { InjectAgentDirectory } from "@modules/domain/messages"
-import type { AgentDirectory } from "@modules/domain/messages"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -12,8 +10,8 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { ResponsibilitiesError, ResponsibilitiesErrorCode } from "./errors/responsibilities.error"
 import type { ResolvedOwner } from "./responsibility-owner.policy"
-import { InjectLeadDesk } from "./responsibilities.decorators"
-import type { LeadDesk } from "./responsibilities.port"
+import { InjectLeadDesk, InjectResponsibilityAgents } from "./responsibilities.decorators"
+import type { LeadDesk, ResponsibilityAgents } from "./responsibilities.port"
 import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 import { firstRecordRow } from "./returned-rows.policy"
 import type {
@@ -69,7 +67,7 @@ export class ResponsibilityJournalService {
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectClock() private readonly clock: Clock,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        @InjectAgentDirectory() private readonly agents: AgentDirectory,
+        @InjectResponsibilityAgents() private readonly agents: ResponsibilityAgents,
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
         private readonly owners: ResponsibilityOwnersService,

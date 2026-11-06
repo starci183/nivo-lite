@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
-import { InjectAgentDirectory } from "@modules/domain/messages"
-import type { AgentDirectory } from "@modules/domain/messages"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
@@ -19,8 +17,8 @@ import type {
     ResponsibilityResult,
     StepRow,
 } from "./responsibilities.contracts"
-import { InjectLeadDesk } from "./responsibilities.decorators"
-import type { LeadDesk } from "./responsibilities.port"
+import { InjectLeadDesk, InjectResponsibilityAgents } from "./responsibilities.decorators"
+import type { LeadDesk, ResponsibilityAgents } from "./responsibilities.port"
 import { ResponsibilityOwnersService } from "./responsibility-owners.service"
 import { firstStepRow } from "./returned-rows.policy"
 
@@ -74,7 +72,7 @@ export class ResponsibilitiesService {
         private readonly members: WorkspaceMembersService,
         private readonly events: EventsService,
         private readonly owners: ResponsibilityOwnersService,
-        @InjectAgentDirectory() private readonly agents: AgentDirectory,
+        @InjectResponsibilityAgents() private readonly agents: ResponsibilityAgents,
         @InjectLeadDesk() private readonly leads: LeadDesk,
     ) {}
 

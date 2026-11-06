@@ -18,8 +18,8 @@ import {
 } from "@tests/fixtures/builders/responsibilities.builder"
 import { answerQueryBuilders, fakeQueryBuilder } from "@tests/fixtures/builders/fake-query-builder.builder"
 import { EventsService } from "@modules/domain/events"
-import { AGENT_DIRECTORY } from "@modules/domain/messages"
-import type { AgentDirectory, OptionalAgentIdentity } from "@modules/domain/messages"
+import { RESPONSIBILITY_AGENTS } from "./responsibilities.decorators"
+import type { ResponsibilityAgent, ResponsibilityAgents } from "./responsibilities.port"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
@@ -445,10 +445,10 @@ const answerCustomerLookups = (
     return answerInsert(em, guard ?? undefined, inserted, fakeQueryBuilder({ getRawOne: undefined }))
 }
 
-const build = async (entityManager: MockEntityManager, sales: OptionalAgentIdentity = null) => {
+const build = async (entityManager: MockEntityManager, sales: ResponsibilityAgent | null = null) => {
     const members = mock<WorkspaceMembersService>({ require: jest.fn().mockResolvedValue(memberOf()) })
     const events = mock<EventsService>({ record: jest.fn().mockResolvedValue(undefined) })
-    const directory = mock<AgentDirectory>({ agentOfDepartment: jest.fn().mockResolvedValue(sales) })
+    const directory = mock<ResponsibilityAgents>({ agentOfDepartment: jest.fn().mockResolvedValue(sales) })
     const leadDesk = mock<LeadDesk>()
     leadDesk.hold.mockImplementation(() => Promise.resolve(leadGuard.held))
     leadDesk.cardsOf.mockImplementation(() =>
@@ -470,7 +470,7 @@ const build = async (entityManager: MockEntityManager, sales: OptionalAgentIdent
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: CLOCK, useValue: new FakeClock("2026-10-12T10:00:00.000Z") },
             { provide: MESSAGE_CATALOG, useValue: catalog },
-            { provide: AGENT_DIRECTORY, useValue: directory },
+            { provide: RESPONSIBILITY_AGENTS, useValue: directory },
             { provide: WorkspaceMembersService, useValue: members },
             { provide: EventsService, useValue: events },
             { provide: ResponsibilityOwnersService, useValue: owners },

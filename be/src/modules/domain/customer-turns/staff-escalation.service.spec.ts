@@ -2,8 +2,8 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { Logger } from "@modules/platform/logging"
 import { EventsService } from "@modules/domain/events"
-import { OfficeLinesService } from "@modules/domain/messages"
 import { StaffService } from "@modules/domain/staff"
+import { TeamChatService } from "@modules/domain/team-chat"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -21,7 +21,7 @@ const escalation = { workItemId: "w1", leadId: "l1", customerName: "Lan", questi
 const build = async (staffRows: ReadonlyArray<ReturnType<typeof member>>) => {
     const staff = mock<StaffService>({ list: jest.fn().mockResolvedValue(staffRows) })
     const items = mock<WorkItemsService>({ assign: jest.fn().mockResolvedValue(true) })
-    const office = mock<OfficeLinesService>({ post: jest.fn().mockResolvedValue(undefined) })
+    const office = mock<TeamChatService>({ postAsAgent: jest.fn().mockResolvedValue(null) })
     const events = mock<EventsService>({ record: jest.fn().mockResolvedValue(undefined) })
     const logger = mock<Logger>({ info: jest.fn(), warn: jest.fn(), error: jest.fn() })
     const moduleRef = await Test.createTestingModule({
@@ -29,7 +29,7 @@ const build = async (staffRows: ReadonlyArray<ReturnType<typeof member>>) => {
             StaffEscalationService,
             { provide: StaffService, useValue: staff },
             { provide: WorkItemsService, useValue: items },
-            { provide: OfficeLinesService, useValue: office },
+            { provide: TeamChatService, useValue: office },
             { provide: EventsService, useValue: events },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
@@ -39,18 +39,18 @@ const build = async (staffRows: ReadonlyArray<ReturnType<typeof member>>) => {
 }
 
 describe("StaffEscalationService", () => {
-    it("assigns the advising colleague and tags them in the Office as the Chatbot", async () => {
+    it("assigns the advising colleague and says it in the team chat as the Chatbot", async () => {
         const { service, items, office } = await build([
             member("s1", "Chi Mai", "Ke toan"),
             member("s2", "Anh Minh", "Tu van vien"),
         ])
         await expect(service.escalate(WS, escalation, "vi")).resolves.toBe(true)
         expect(items.assign).toHaveBeenCalledWith(WS, "w1", "s2")
-        expect(office.post).toHaveBeenCalledWith(
-            { workspaceId: WS },
-            expect.objectContaining({ dept: "chatbot", work_item_id: "w1", lead_id: "l1" }),
+        expect(office.postAsAgent).toHaveBeenCalledWith(
+            WS,
+            expect.objectContaining({ agent: "chatbot", toUserId: null, key: "escalation:w1" }),
         )
-        expect(String(office.post.mock.calls[0]?.[1]?.body)).toContain('"handle":"minh"')
+        expect(String(office.postAsAgent.mock.calls[0]?.[1]?.body)).toContain('"handle":"minh"')
     })
 
     it("assigns the oldest active colleague when nobody advises customers", async () => {
@@ -65,29 +65,29 @@ describe("StaffEscalationService", () => {
         expect(events.record).toHaveBeenCalledWith(
             expect.objectContaining({ summary: "→ Chi Mai", kind: "work.assigned" }),
         )
-        expect(String(office.post.mock.calls[0]?.[1]?.body)).toContain("staffCustomerUnknown")
-        expect(String(office.post.mock.calls[0]?.[1]?.body)).not.toContain("staffAskDraft")
+        expect(String(office.postAsAgent.mock.calls[0]?.[1]?.body)).toContain("staffCustomerUnknown")
+        expect(String(office.postAsAgent.mock.calls[0]?.[1]?.body)).not.toContain("staffAskDraft")
     })
 
     it("keeps the item when the assignment does not stick", async () => {
         const { service, items, office } = await build([member("s1", "Mai", "Sales")])
         items.assign.mockResolvedValue(false)
         await expect(service.escalate(WS, { ...escalation, proposed: null }, "vi")).resolves.toBe(false)
-        expect(office.post).not.toHaveBeenCalled()
+        expect(office.postAsAgent).not.toHaveBeenCalled()
     })
 
     it("adds the draft when the agent proposed one", async () => {
         const { service, office } = await build([member("s1", "Mai", "Sales")])
         await expect(service.escalate(WS, escalation, "vi")).resolves.toBe(true)
-        expect(String(office.post.mock.calls[0]?.[1]?.body)).toContain("staffAskDraft")
+        expect(String(office.postAsAgent.mock.calls[0]?.[1]?.body)).toContain("staffAskDraft")
         await service.escalate(WS, { ...escalation, proposed: null }, "vi")
-        expect(String(office.post.mock.calls[1]?.[1]?.body)).not.toContain("staffAskDraft")
+        expect(String(office.postAsAgent.mock.calls[1]?.[1]?.body)).not.toContain("staffAskDraft")
     })
 
     it("answers false and logs when the office cannot be reached", async () => {
         const { service, logger, office } = await build([member("s1", "Mai", "Sales")])
         const cause = new Error("office down")
-        office.post.mockRejectedValue(cause)
+        office.postAsAgent.mockRejectedValue(cause)
         await expect(service.escalate(WS, escalation, "vi")).resolves.toBe(false)
         expect(logger.error).toHaveBeenCalledWith(CustomerTurnsLogEvent.EscalationFailed, cause, { workItemId: "w1" })
     })
