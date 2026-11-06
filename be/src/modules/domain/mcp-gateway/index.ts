@@ -14,6 +14,9 @@ export {
     gatewayToolNameSchema,
 } from "./gateway-tools.schema"
 export { domainNameIn } from "./connector-call.policy"
+export { RoutedNativeAdapter } from "./adapters/routed-native.adapter"
+export type { NativeToolHandler } from "./adapters/routed-native.adapter"
+export { argumentsOf, invalidArguments, unknownTool } from "./native-arguments.policy"
 export { outputStepOf } from "./output-step.policy"
 export type {
     CapabilityRole,

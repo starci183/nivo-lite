@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { BrainDossiersReadService } from "@modules/domain/brain-dossiers"
 import { DossierFindingsService } from "@modules/domain/dossier-review"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
+import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
 import {
     DOSSIER_FINDINGS_LIST_INPUT_SCHEMA,
     DOSSIER_FINDINGS_LIST_SCHEMA,
@@ -10,7 +11,6 @@ import {
 } from "./dossier-native.schema"
 import type { DossierFindingsListInput } from "./dossier-native.schema"
 import { clipped } from "./native-masking.policy"
-import { argumentsOf, unknownTool } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
 
 /** The longest finding title a tool answers, in characters. */
