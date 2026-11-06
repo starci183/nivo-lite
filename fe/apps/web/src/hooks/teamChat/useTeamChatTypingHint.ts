@@ -26,7 +26,7 @@ export const useTeamChatTypingHint = (workspaceId: string, roomId: string | null
                 if (lastSentAt.current === null) return
                 lastSentAt.current = null
             }
-            void trigger({ roomId, typing: isTyping }).then(
+            void trigger({ target: { room: roomId }, typing: isTyping }).then(
                 () => {
                     failed.current = false
                 },
