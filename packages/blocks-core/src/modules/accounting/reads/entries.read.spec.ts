@@ -1,34 +1,31 @@
-import type { ListQuery, ReadDefinition, ReadRunResult } from "@nivo-lite/agent-sdk/block"
-import type { RunContext } from "@nivo-lite/agent-sdk/port"
-import { entriesSource, providerOf } from "../accounting.doubles"
+import type { ListQuery, ListSource, ReadDefinition, ReadRunResult } from "@nivo-lite/agent-sdk/block"
+import type { PortProvider } from "@nivo-lite/agent-sdk/port"
+import type { EntryRow } from "../accounting.types"
 import { ENTRY_COUNTS, ENTRY_ROWS } from "../fixtures/accounting.fixtures"
-import { entriesSourcePort } from "../ports"
+import { ACCOUNTANT_CONTEXT, memoryProvider, memoryWorld } from "../fixtures/accounting.memory"
+import { ENTRIES_LIST } from "../ports"
 import { ENTRIES_SHAPE, ENTRY_KINDS, entriesRead, entryCountsRead } from "./entries.read"
-
-const CONTEXT: RunContext = { workspaceId: "w1", memberId: "m1", now: new Date("2026-11-04T12:00:00.000Z") }
 
 const NOT_RUNNABLE: ReadRunResult = { ok: false, problems: [] }
 
 const harness = () => {
     const queries: Array<ListQuery> = []
-    const provider = providerOf([
-        [
-            entriesSourcePort,
-            entriesSource({
-                page: (_shape, query) => {
-                    queries.push(query)
-                    return Promise.resolve({ rows: ENTRY_ROWS, cursor: null })
-                },
-                counts: (_shape, _by, query) => {
-                    queries.push(query)
-                    return Promise.resolve(ENTRY_COUNTS.counts)
-                },
-            }),
-        ],
-    ])
-    const execute = (read: ReadDefinition, raw: unknown): Promise<ReadRunResult> => {
-        return read.execute?.(provider, raw, CONTEXT) ?? Promise.resolve(NOT_RUNNABLE)
+    const source: ListSource<EntryRow> = {
+        page: (_shape, query) => {
+            queries.push(query)
+            return Promise.resolve({ rows: ENTRY_ROWS, cursor: null })
+        },
+        counts: (_shape, _by, query) => {
+            queries.push(query)
+            return Promise.resolve(ENTRY_COUNTS.counts)
+        },
     }
+    const base = memoryProvider(memoryWorld())
+    const provider: PortProvider = {
+        implementationOf: (port) => (port.id === ENTRIES_LIST.id ? source : base.implementationOf(port)),
+    }
+    const execute = (read: ReadDefinition, raw: unknown): Promise<ReadRunResult> =>
+        read.execute?.(provider, raw, ACCOUNTANT_CONTEXT) ?? Promise.resolve(NOT_RUNNABLE)
     return { queries, execute }
 }
 

@@ -1,61 +1,48 @@
+import { entityPort } from "@nivo-lite/agent-sdk/entity/port"
 import { definePort } from "@nivo-lite/agent-sdk/port"
 import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
 import type { ListSource } from "@nivo-lite/agent-sdk/block"
-import type {
-    AdjustmentStore,
-    BookEntryStore,
-    ClaimStore,
-    ConversationFinder,
-    Door,
-    EntryRow,
-    InvoiceStore,
-    LeadNames,
-    OrderStore,
-    Outbox,
-    QuestionCounter,
-    TransactionStore,
-} from "./accounting.types"
+import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
+import { adjustmentEntity } from "../../entities/accounting/adjustment.entity"
+import { bookEntryEntity } from "../../entities/accounting/book-entry.entity"
+import { invoiceEntity } from "../../entities/accounting/invoice.entity"
+import { conversationEntity } from "../../entities/chat/conversation.entity"
+import { claimEntity } from "../../entities/payment/claim.entity"
+import { transactionEntity } from "../../entities/payment/transaction.entity"
+import { leadEntity } from "../../entities/sales/lead.entity"
+import { orderEntity } from "../../entities/sales/order.entity"
+import type { EntryRow } from "./accounting.types"
 
-/**
- * The ports of the Accounting and payment modules. Each is module-local until CORE-BE lands the engine: the lead swaps the stores
- * for `entityPort(<entity>)` and the outbox and door for the engine ports here, and nothing else changes.
+/*
+ * The data of the Accounting and payment modules is the engine's: every row is a record of an entity read and written through its
+ * entity port, the outbox and the door are the engine's. Only the list source below is the module's own slot, the id every list read
+ * of a module has.
  */
 
-/** The payments (`payment.transaction`). */
-export const transactionsPort: PortDefinition<TransactionStore> =
-    definePort<TransactionStore>("accounting.transactions")
+/** The port of the payments (`payment.transaction`). */
+export const TRANSACTIONS: PortDefinition<EntityApi> = entityPort(transactionEntity)
 
-/** The sales orders (`sales.order`). */
-export const ordersPort: PortDefinition<OrderStore> = definePort<OrderStore>("accounting.orders")
+/** The port of the sales orders (`sales.order`), the Sales module's entity. */
+export const ORDERS: PortDefinition<EntityApi> = entityPort(orderEntity)
 
-/** The customers' payment claims (`payment.claim`). */
-export const claimsPort: PortDefinition<ClaimStore> = definePort<ClaimStore>("accounting.claims")
+/** The port of the customers' payment claims (`payment.claim`). */
+export const CLAIMS: PortDefinition<EntityApi> = entityPort(claimEntity)
 
-/** The invoices (`accounting.invoice`). */
-export const invoicesPort: PortDefinition<InvoiceStore> = definePort<InvoiceStore>("accounting.invoices")
+/** The port of the invoices (`accounting.invoice`). */
+export const INVOICES: PortDefinition<EntityApi> = entityPort(invoiceEntity)
 
-/** The corrections (`accounting.adjustment`). */
-export const adjustmentsPort: PortDefinition<AdjustmentStore> = definePort<AdjustmentStore>("accounting.adjustments")
+/** The port of the corrections (`accounting.adjustment`). */
+export const ADJUSTMENTS: PortDefinition<EntityApi> = entityPort(adjustmentEntity)
 
-/** The customers' names (`sales.lead`). */
-export const leadsPort: PortDefinition<LeadNames> = definePort<LeadNames>("accounting.leads")
+/** The port of the customers (`sales.lead`), the Sales module's entity. */
+export const LEADS: PortDefinition<EntityApi> = entityPort(leadEntity)
 
-/** Where customers wrote (`chat.conversation`). */
-export const conversationsPort: PortDefinition<ConversationFinder> =
-    definePort<ConversationFinder>("accounting.conversations")
+/** The port of the conversations (`chat.conversation`), the Chatbot module's entity. */
+export const CONVERSATIONS: PortDefinition<EntityApi> = entityPort(conversationEntity)
 
-/** The questions that wait for the owner. */
-export const questionsPort: PortDefinition<QuestionCounter> = definePort<QuestionCounter>("accounting.questions")
+/** The port of the books (`accounting.book-entry`, a projection written by declared jobs only). */
+export const BOOK: PortDefinition<EntityApi> = entityPort(bookEntryEntity)
 
-/** The books (`accounting.book-entry`). */
-export const bookEntriesPort: PortDefinition<BookEntryStore> = definePort<BookEntryStore>("accounting.book-entries")
-
-/** The list of book entries a list read pages through. */
-export const entriesSourcePort: PortDefinition<ListSource<EntryRow>> =
+/** The port the entries list runs on: the engine turns a list shape and a query into one query over `accounting.book-entry`. */
+export const ENTRIES_LIST: PortDefinition<ListSource<EntryRow>> =
     definePort<ListSource<EntryRow>>("accounting.entries-list")
-
-/** The outbox: declared jobs enqueued in the transaction of the write that causes them. */
-export const outboxPort: PortDefinition<Outbox> = definePort<Outbox>("accounting.outbox")
-
-/** The NIVO MCP door, for jobs only. */
-export const doorPort: PortDefinition<Door> = definePort<Door>("accounting.door")

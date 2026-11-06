@@ -4,7 +4,8 @@ import { figuresOf } from "../../../rules/accounting/figures"
 import type { AccountingFigures } from "../../../rules/accounting/figures"
 import { periodOf } from "../../../rules/accounting/period"
 import type { PeriodKey } from "../../../rules/accounting/period"
-import { bookEntriesPort, invoicesPort, transactionsPort } from "../ports"
+import { bookTotals, openInvoices, unmatchedIn } from "../accounting-data"
+import { BOOK, INVOICES, TRANSACTIONS } from "../ports"
 import { periodVariables as variables } from "./period-variables"
 
 /** The most open invoices the receivable and the ageing add up. */
@@ -29,19 +30,19 @@ export const figuresRead: ReadDefinition = defineRead({
     paths: {},
     variables,
     permission: "accounting.view",
-    ports: { book: bookEntriesPort, transactions: transactionsPort, invoices: invoicesPort },
+    ports: { book: BOOK, transactions: TRANSACTIONS, invoices: INVOICES },
     run: async ({ book, transactions, invoices }, given, context): Promise<FiguresView> => {
         const period = periodOf(context.now, given.period ?? "this")
-        const [totals, unmatched, openInvoices] = await Promise.all([
-            book.totals(period),
-            transactions.unmatchedIn(period),
-            invoices.open(OPEN_INVOICES_MAX),
+        const [totals, unmatched, open] = await Promise.all([
+            bookTotals(book, period),
+            unmatchedIn(transactions, period),
+            openInvoices(invoices, OPEN_INVOICES_MAX),
         ])
         return {
             periodKey: period.key,
             fromDay: period.fromDay,
             toDay: period.toDay,
-            ...figuresOf({ totals, unmatched, openInvoices, now: context.now }),
+            ...figuresOf({ totals, unmatched, openInvoices: open, now: context.now }),
         }
     },
 })

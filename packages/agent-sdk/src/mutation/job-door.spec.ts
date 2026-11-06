@@ -1,0 +1,36 @@
+import type { DoorCallResult } from "./door-port"
+import { JobRefused, endAfterDoor } from "./job-door"
+import { JobRetry } from "./job-retry"
+
+/** What `endAfterDoor` throws for a call, or null when it throws nothing. */
+const thrownFor = (call: DoorCallResult): unknown => {
+    try {
+        endAfterDoor("a.job", "chat.send", call)
+        return null
+    } catch (cause) {
+        return cause
+    }
+}
+
+describe("endAfterDoor", () => {
+    it("does nothing when the door returned output", () => {
+        expect(thrownFor({ ok: true, output: null })).toBeNull()
+    })
+
+    it("has the queue deliver the job again when the provider was away", () => {
+        expect(thrownFor({ ok: false, reason: "transient", message: "503" })).toBeInstanceOf(JobRetry)
+    })
+
+    it("throws a refusal naming the tool and the reason for any other failure, so the runner parks the job", () => {
+        const thrown = thrownFor({ ok: false, reason: "forbidden", message: "403" })
+        expect(thrown).toBeInstanceOf(JobRefused)
+        expect(thrown).not.toBeInstanceOf(JobRetry)
+        expect(thrown).toMatchObject({
+            code: "JOB_REFUSED",
+            at: "chat.send forbidden",
+            cause: "403",
+            message: "JOB_REFUSED: chat.send forbidden",
+            name: "JobRefused",
+        })
+    })
+})

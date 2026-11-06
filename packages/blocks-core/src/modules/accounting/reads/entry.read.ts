@@ -1,23 +1,29 @@
 import { defineRead } from "@nivo-lite/agent-sdk/block"
 import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import { z } from "zod"
 import type { BookEntryKind, BookEntryRecord } from "../../../rules/accounting/accounting.types"
 import { lineageOf } from "../../../rules/accounting/lineage"
 import type { LineageSources, LineageStep } from "../../../rules/accounting/lineage"
 import { SOURCE_ADJUSTMENT, SOURCE_INVOICE, SOURCE_TRANSACTION } from "../../../rules/accounting/posting"
-import type { AdjustmentStore, InvoiceStore, OrderStore, TransactionStore } from "../accounting.types"
-import { adjustmentsPort, bookEntriesPort, invoicesPort, ordersPort, transactionsPort } from "../ports"
+import {
+    adjustmentById,
+    adjustmentsOf,
+    bookEntryById,
+    invoiceById,
+    orderById,
+    transactionById,
+} from "../accounting-data"
+import { ADJUSTMENTS, BOOK, INVOICES, ORDERS, TRANSACTIONS } from "../ports"
 
-const MAX_ID = 200
-
-const variables: z.ZodObject<{ id: z.ZodString }> = z.object({ id: z.string().min(1).max(MAX_ID) })
+const variables: z.ZodObject<{ id: z.ZodUUID }> = z.object({ id: z.uuid() })
 
 const ports = {
-    book: bookEntriesPort,
-    transactions: transactionsPort,
-    orders: ordersPort,
-    invoices: invoicesPort,
-    adjustments: adjustmentsPort,
+    book: BOOK,
+    transactions: TRANSACTIONS,
+    orders: ORDERS,
+    invoices: INVOICES,
+    adjustments: ADJUSTMENTS,
 }
 
 /** One entry of the books with where it came from. */
@@ -42,12 +48,12 @@ export interface EntryDetail {
     readonly adjustmentCount: number
 }
 
-/** The stores the records behind an entry are read from. */
+/** The ports the records behind an entry are read through. */
 interface Sources {
-    readonly transactions: TransactionStore
-    readonly orders: OrderStore
-    readonly invoices: InvoiceStore
-    readonly adjustments: AdjustmentStore
+    readonly transactions: EntityApi
+    readonly orders: EntityApi
+    readonly invoices: EntityApi
+    readonly adjustments: EntityApi
 }
 
 const NOTHING: LineageSources = { order: null, invoice: null, transaction: null, adjustments: [] }
@@ -55,17 +61,18 @@ const NOTHING: LineageSources = { order: null, invoice: null, transaction: null,
 /** The records an entry came from: a payment with its order, an invoice, or a correction; each with the corrections that point at it. */
 const sourcesOf = async (entry: BookEntryRecord, stores: Sources): Promise<LineageSources> => {
     if (entry.sourceEntity === SOURCE_TRANSACTION) {
-        const transaction = await stores.transactions.get(entry.sourceId)
+        const transaction = await transactionById(stores.transactions, entry.sourceId)
         const orderId = transaction?.orderId ?? null
-        const order = orderId === null ? null : await stores.orders.get(orderId)
-        const adjustments = await stores.adjustments.of("transaction", entry.sourceId)
+        const order = orderId === null ? null : await orderById(stores.orders, orderId)
+        const adjustments = await adjustmentsOf(stores.adjustments, "transaction", entry.sourceId)
         return { ...NOTHING, order, transaction, adjustments }
     }
     if (entry.sourceEntity === SOURCE_INVOICE) {
-        const invoice = await stores.invoices.get(entry.sourceId)
-        return { ...NOTHING, invoice, adjustments: await stores.adjustments.of("invoice", entry.sourceId) }
+        const invoice = await invoiceById(stores.invoices, entry.sourceId)
+        return { ...NOTHING, invoice, adjustments: await adjustmentsOf(stores.adjustments, "invoice", entry.sourceId) }
     }
-    const adjustment = entry.sourceEntity === SOURCE_ADJUSTMENT ? await stores.adjustments.get(entry.sourceId) : null
+    const adjustment =
+        entry.sourceEntity === SOURCE_ADJUSTMENT ? await adjustmentById(stores.adjustments, entry.sourceId) : null
     return { ...NOTHING, adjustments: adjustment === null ? [] : [adjustment] }
 }
 
@@ -80,7 +87,7 @@ export const entryRead: ReadDefinition = defineRead({
     permission: "accounting.view",
     ports,
     run: async ({ book, ...stores }, given): Promise<EntryDetail | null> => {
-        const entry = await book.get(given.id)
+        const entry = await bookEntryById(book, given.id)
         if (entry === null) return null
         const sources = await sourcesOf(entry, stores)
         return {

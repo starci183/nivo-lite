@@ -42,6 +42,7 @@ export const invoiceEntity: EntityDefinition<InvoiceFields> = defineEntity({
         lead: { kind: "toOne", target: "sales.lead" },
     },
     indexes: [
+        { name: "key", on: ["id"] },
         { name: "recent", on: [{ desc: "createdAt" }, { desc: "id" }] },
         { name: "status_recent", on: ["status", { desc: "createdAt" }, { desc: "id" }] },
     ],

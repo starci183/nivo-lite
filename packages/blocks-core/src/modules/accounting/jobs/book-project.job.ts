@@ -1,3 +1,7 @@
+import { defineJob } from "@nivo-lite/agent-sdk/mutation"
+import type { JobDefinition } from "@nivo-lite/agent-sdk/mutation"
+import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
+import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
 import { z } from "zod"
 import type { BookEntryValues } from "../../../rules/accounting/accounting.types"
 import {
@@ -8,11 +12,17 @@ import {
     postInvoice,
     postTransaction,
 } from "../../../rules/accounting/posting"
-import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
-import type { AdjustmentStore, BookEntryStore, InvoiceStore, TransactionStore } from "../accounting.types"
-import { adjustmentsPort, bookEntriesPort, invoicesPort, transactionsPort } from "../ports"
-import { DONE, defineJob } from "./job"
-import type { JobDefinition } from "./job"
+import { adjustmentById, invoiceById, settlesInvoice, transactionById } from "../accounting-data"
+import { ADJUSTMENTS, BOOK, INVOICES, TRANSACTIONS } from "../ports"
+
+/** The name of the job: the outbox enqueues it by this name. */
+const JOB_NAME = "accounting.book-project"
+
+/** How many times the queue delivers the job before it is parked. */
+const ATTEMPTS = 5
+
+/** The unique constraint of a book entry: one entry per source row and kind. */
+const SOURCE_KEY = "source_key"
 
 const input: z.ZodObject<{
     sourceEntity: z.ZodEnum<{
@@ -26,25 +36,30 @@ const input: z.ZodObject<{
     sourceId: z.uuid(),
 })
 
+/** The port definitions of the job, by the name `run` reaches them by. */
 type BookProjectPorts = {
-    readonly transactions: PortDefinition<TransactionStore>
-    readonly invoices: PortDefinition<InvoiceStore>
-    readonly adjustments: PortDefinition<AdjustmentStore>
-    readonly book: PortDefinition<BookEntryStore>
+    /** The payments. */
+    readonly transactions: PortDefinition<EntityApi>
+    /** The invoices. */
+    readonly invoices: PortDefinition<EntityApi>
+    /** The corrections. */
+    readonly adjustments: PortDefinition<EntityApi>
+    /** The books. */
+    readonly book: PortDefinition<EntityApi>
 }
 
 const ports: BookProjectPorts = {
-    transactions: transactionsPort,
-    invoices: invoicesPort,
-    adjustments: adjustmentsPort,
-    book: bookEntriesPort,
+    transactions: TRANSACTIONS,
+    invoices: INVOICES,
+    adjustments: ADJUSTMENTS,
+    book: BOOK,
 }
 
-/** The stores a source row is read from. */
+/** The ports a source row is read through. */
 interface Sources {
-    readonly transactions: TransactionStore
-    readonly invoices: InvoiceStore
-    readonly adjustments: AdjustmentStore
+    readonly transactions: EntityApi
+    readonly invoices: EntityApi
+    readonly adjustments: EntityApi
 }
 
 /** The entries one source row posts, as the posting rules say; none when the row is gone. */
@@ -54,14 +69,14 @@ const entriesOf = async (
     sources: Sources,
 ): Promise<ReadonlyArray<BookEntryValues>> => {
     if (entity === SOURCE_TRANSACTION) {
-        const transaction = await sources.transactions.get(id)
+        const transaction = await transactionById(sources.transactions, id)
         return transaction === null ? [] : postTransaction(transaction)
     }
     if (entity === SOURCE_INVOICE) {
-        const invoice = await sources.invoices.get(id)
-        return invoice === null ? [] : postInvoice(invoice, await sources.transactions.settlesInvoice(id))
+        const invoice = await invoiceById(sources.invoices, id)
+        return invoice === null ? [] : postInvoice(invoice, await settlesInvoice(sources.transactions, id))
     }
-    const adjustment = await sources.adjustments.get(id)
+    const adjustment = await adjustmentById(sources.adjustments, id)
     return adjustment === null ? [] : [postAdjustment(adjustment)]
 }
 
@@ -72,13 +87,12 @@ const entriesOf = async (
  * every source row.
  */
 export const bookProjectJob: JobDefinition<typeof input, BookProjectPorts> = defineJob({
-    name: "accounting.book-project",
+    name: JOB_NAME,
     input,
     ports,
-    attempts: 5,
+    attempts: ATTEMPTS,
     run: async ({ transactions, invoices, adjustments, book }, given) => {
         const entries = await entriesOf(given.sourceEntity, given.sourceId, { transactions, invoices, adjustments })
-        await Promise.all(entries.map((entry) => book.upsert(entry)))
-        return DONE
+        await Promise.all(entries.map((entry) => book.upsert(SOURCE_KEY, { ...entry })))
     },
 })

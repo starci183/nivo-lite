@@ -1,13 +1,20 @@
 import { defineAction } from "@nivo-lite/agent-sdk/block"
 import type { ActionDefinition, ActionResult } from "@nivo-lite/agent-sdk/block"
+import { outboxPort } from "@nivo-lite/agent-sdk/mutation"
 import { z } from "zod"
 import { normalizeAdjustment } from "../../../rules/accounting/adjustment"
 import { SOURCE_ADJUSTMENT } from "../../../rules/accounting/posting"
+import { membersPort } from "../../platform/ports"
+import { targetExists } from "../accounting-data"
+import { bookProjectJob } from "../jobs/book-project.job"
 import { textOf } from "../messages/copy"
-import { adjustmentsPort, outboxPort } from "../ports"
+import { ADJUSTMENTS, INVOICES, TRANSACTIONS } from "../ports"
 
 /** The longest note the door accepts; the rule judges the length it needs. */
 const NOTE_MAX = 2_000
+
+/** Who a correction is written by when no seat of the workspace asked: the system. */
+const SYSTEM = "system"
 
 const input: z.ZodObject<{
     targetType: z.ZodEnum<{ invoice: "invoice"; transaction: "transaction" }>
@@ -21,7 +28,13 @@ const input: z.ZodObject<{
     correctedAmount: z.number().nullable().optional(),
 })
 
-const ports = { adjustments: adjustmentsPort, outbox: outboxPort }
+const ports = {
+    adjustments: ADJUSTMENTS,
+    invoices: INVOICES,
+    transactions: TRANSACTIONS,
+    members: membersPort,
+    outbox: outboxPort,
+}
 
 /**
  * `accounting.adjust`: an accountant records a correction on an invoice or a payment. Corrections are append-only; the note and the
@@ -36,19 +49,25 @@ export const adjustAction: ActionDefinition = defineAction({
     ports,
     transactional: true,
     refreshes: ["accounting.entries", "accounting.entry-counts", "accounting.figures", "accounting.entry"],
-    run: async ({ adjustments, outbox }, given, context): Promise<ActionResult> => {
+    run: async ({ adjustments, invoices, transactions, members, outbox }, given, context): Promise<ActionResult> => {
         const verdict = normalizeAdjustment(given)
         if (!verdict.ok) {
             const message = textOf(verdict.reason === "note_length" ? "adjust_note_length" : "adjust_amount_invalid")
             const field = verdict.reason === "note_length" ? "note" : "correctedAmount"
             return { ok: false, reason: "invalid", message, fields: { [field]: message } }
         }
-        if (!(await adjustments.targetExists(given.targetType, given.targetId)))
+        if (!(await targetExists({ invoices, transactions }, given.targetType, given.targetId)))
             return { ok: false, reason: "refused", message: textOf("adjust_target_missing") }
-        const written = await adjustments.insert(verdict.adjustment, context.memberId ?? "system")
+        const memberId = context.memberId
+        const member = memberId === null ? null : await members.get(memberId)
+        const written = await adjustments.insert({
+            ...verdict.adjustment,
+            createdBy: member?.displayName ?? SYSTEM,
+            createdByUser: member === null ? null : memberId,
+        })
         if (!written.ok) return { ok: false, reason: "failed", message: textOf("adjust_failed") }
         await outbox.enqueue(
-            "accounting.book-project",
+            bookProjectJob,
             { sourceEntity: SOURCE_ADJUSTMENT, sourceId: written.row.id },
             { dedupeKey: `book:${SOURCE_ADJUSTMENT}:${written.row.id}` },
         )
