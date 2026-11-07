@@ -22,7 +22,7 @@
     "@starci/next-i18n": "0.1.0"
   },
   "peerDependencies": {
-    "react": "19.2.3"
+    "react": "^19.3.1"
   },
   "devDependencies": {
     "@types/node": "22.20.4",
