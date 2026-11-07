@@ -6,10 +6,4 @@ export { AgentEventWakesService } from "./agent-event-wakes.service"
 export { AgentProbesService } from "./agent-probes.service"
 export { AgentScheduleFireService } from "./agent-schedule-fire.service"
 export { AgentWorkSweepService } from "./agent-work-sweep.service"
-export type {
-    BackgroundLine,
-    BackgroundVoice,
-    EventClaim,
-    EventTarget,
-    InternalEventFact,
-} from "./agent-schedules.contracts"
+export type { EventClaim, EventTarget, InternalEventFact } from "./agent-schedules.contracts"

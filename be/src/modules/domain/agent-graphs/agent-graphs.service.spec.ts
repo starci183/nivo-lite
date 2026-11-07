@@ -15,7 +15,7 @@ import { EntityEngineService } from "@modules/domain/entity-engine"
 import { AgentGraphRecordsService } from "./agent-graph-records.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import { AgentGraphsService } from "./agent-graphs.service"
-import type { SourceRecord } from "./agent-graphs-records.contracts"
+import type { GraphSourceRecord } from "./agent-graphs-records.contracts"
 
 const { DocumentInvalid, DraftConflict, GraphNotFound, VersionNotFound } = AgentGraphsErrorCode
 
@@ -191,7 +191,7 @@ describe("AgentGraphsService for a job that walks the agents of a workspace", ()
 
     it("reads the Brain rules behind the versions that decide in a workspace", async () => {
         const { service, records } = await build()
-        const source: SourceRecord = {
+        const source: GraphSourceRecord = {
             workspaceId: "ws-1",
             versionId: "version-1",
             agentId: "agent-1",

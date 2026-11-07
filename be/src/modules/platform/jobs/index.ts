@@ -8,7 +8,6 @@ export {
     InjectJobFence,
     InjectParkedJobResumer,
     JOB_CLAIMS,
-    JOB_FENCE,
     JOB_PROCESSOR_REGISTRY,
 } from "./jobs.decorators"
 export { JobsModule } from "./jobs.module"

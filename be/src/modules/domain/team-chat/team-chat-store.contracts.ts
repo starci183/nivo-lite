@@ -12,8 +12,6 @@ import type {
 } from "./team-chat.contracts"
 import type { ThreadPosition } from "./team-chat.policy"
 
-/** An id, or none. */
-export type OptionalId = string | null
 /** A count, or none. */
 export type OptionalCount = number | null
 /** A room kind, or none. */

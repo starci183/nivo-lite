@@ -18,9 +18,4 @@ export type {
     PollSummary,
     PollWindow,
 } from "./connection-poll.contracts"
-export type {
-    PollHotReason,
-    PollScheduleRow,
-    PollSourceDirectory,
-    ScheduledPollSource,
-} from "./poll-schedule.contracts"
+export type { PollScheduleRow, PollSourceDirectory, ScheduledPollSource } from "./poll-schedule.contracts"

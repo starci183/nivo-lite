@@ -6,7 +6,6 @@ export type {
     OAuthState,
     SheetConfig,
     SheetEventIn,
-    SheetEventName,
     SheetCell,
     SheetEventResult,
 } from "./google.contracts"

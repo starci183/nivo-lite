@@ -77,7 +77,7 @@ export interface VersionRecord {
 }
 
 /** One indexed source of one node or branch of a version. */
-export interface SourceRecord {
+export interface GraphSourceRecord {
     /** The workspace. */
     readonly workspaceId: string
     /** The version. */
