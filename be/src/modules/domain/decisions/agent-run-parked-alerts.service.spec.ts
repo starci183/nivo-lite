@@ -104,4 +104,22 @@ describe("AgentRunParkedAlertsService.raise", () => {
         expect(other.engine.runWork).not.toHaveBeenCalled()
         expect(gone.engine.runWork).not.toHaveBeenCalled()
     })
+
+    it("raises nothing for a parked flow that names no workspace", async () => {
+        const { service, engine } = await build()
+        const unscoped: ParkedFlowAlert = {
+            kind: "flow-parked",
+            jobId: "run-1",
+            flowKind: "agent-run",
+            failureClass: "code",
+            reason: "invalid_step_input",
+            correlationId: "wake-1",
+            build: "b2",
+            action: "resume",
+        }
+
+        await service.raise(unscoped)
+
+        expect(engine.runWork).not.toHaveBeenCalled()
+    })
 })

@@ -1,20 +1,33 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager } from "@starci/jest-preset"
-import { advisoryXactLock, callDbFunction, listenOn, notify } from "./database.client"
+import { advisoryXactLock, callDbFunction, findRowsOfIds, listenOn, namesById, notify } from "./database.client"
 import { DatabaseError, DatabaseErrorCode } from "./errors/database.error"
 
 const DATABASE_CLIENT = Symbol("database-client")
 
+/** A row source for the read helpers: any class is a valid target for the stubbed manager. */
+class NamedThing {
+    constructor(
+        readonly id: string,
+        readonly name: string,
+    ) {}
+}
+
 const setup = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
-            { provide: DATABASE_CLIENT, useFactory: () => ({ advisoryXactLock, callDbFunction, listenOn, notify }) },
+            {
+                provide: DATABASE_CLIENT,
+                useFactory: () => ({ advisoryXactLock, callDbFunction, findRowsOfIds, listenOn, namesById, notify }),
+            },
         ],
     }).compile()
     return moduleRef.get<{
         readonly advisoryXactLock: typeof advisoryXactLock
         readonly callDbFunction: typeof callDbFunction
+        readonly findRowsOfIds: typeof findRowsOfIds
         readonly listenOn: typeof listenOn
+        readonly namesById: typeof namesById
         readonly notify: typeof notify
     }>(DATABASE_CLIENT)
 }
@@ -145,5 +158,54 @@ describe("listenOn", () => {
         )
 
         expect(connection.query).not.toHaveBeenCalled()
+    })
+})
+
+describe("namesById", () => {
+    it("maps each id the filter selects to its name, reading no more rows than ids", async () => {
+        const subject = await setup()
+        const manager = mockEntityManager({
+            find: [NamedThing, [new NamedThing("a", "Ann"), new NamedThing("b", "Bo")]],
+        })
+
+        const names = await subject.namesById(manager, NamedThing, { id: "a" }, ["a", "b"])
+
+        expect([...names]).toEqual([
+            ["a", "Ann"],
+            ["b", "Bo"],
+        ])
+        expect(manager.find).toHaveBeenCalledWith(NamedThing, { select: ["id", "name"], where: { id: "a" }, take: 2 })
+    })
+
+    it("reads nothing when there are no ids", async () => {
+        const subject = await setup()
+        const manager = mockEntityManager({ find: [NamedThing, []] })
+
+        const names = await subject.namesById(manager, NamedThing, { id: "a" }, [])
+
+        expect(names.size).toBe(0)
+        expect(manager.find).not.toHaveBeenCalled()
+    })
+})
+
+describe("findRowsOfIds", () => {
+    it("reads the selected columns of the rows among the ids, never more than the ids", async () => {
+        const subject = await setup()
+        const rows = [new NamedThing("a", "Ann")]
+        const manager = mockEntityManager({ find: [NamedThing, rows] })
+
+        const found = await subject.findRowsOfIds(manager, NamedThing, { id: "a" }, { id: true }, ["a"])
+
+        expect(found).toEqual(rows)
+        expect(manager.find).toHaveBeenCalledWith(NamedThing, { select: { id: true }, where: { id: "a" }, take: 1 })
+    })
+
+    it("reads nothing when there are no ids", async () => {
+        const subject = await setup()
+        const manager = mockEntityManager({ find: [NamedThing, []] })
+
+        await expect(subject.findRowsOfIds(manager, NamedThing, { id: "a" }, { id: true }, [])).resolves.toEqual([])
+
+        expect(manager.find).not.toHaveBeenCalled()
     })
 })

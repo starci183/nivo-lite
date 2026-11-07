@@ -64,6 +64,12 @@ describe("readBrainSeeds", () => {
         })
     })
 
+    it("reads an explicit null module as no module", () => {
+        const [read] = policy.readBrainSeeds(envelope(seed([doc({ module: null })])))
+
+        expect(read?.documents[0]?.module).toBeNull()
+    })
+
     it.each([
         ["a wrong schema", envelope(seed([doc()], { schema: "nivo/other@1" })), "schema"],
         ["an origin without the seed: prefix", envelope(seed([doc()], { origin: "tiem-hoa" })), "origin"],
@@ -77,6 +83,10 @@ describe("readBrainSeeds", () => {
         ["an empty content", envelope(seed([doc({ content: "  " })])), "document.content"],
         ["a topic over eighty characters", envelope(seed([doc({ topic: "x".repeat(81) })])), "document.topic"],
         ["an envelope with no documents list", "{}", "input"],
+        ["a seed that is not an object", envelope("seed"), "schema"],
+        ["a seed whose documents are not a list", envelope(seed("none")), "documents"],
+        ["a document that is not an object", envelope(seed(["Intro"])), "document"],
+        ["a module that is not a text", envelope(seed([doc({ module: 7 })])), "document.module"],
     ])("refuses %s, by the name of the field", (_name, text, field) => {
         expect(() => policy.readBrainSeeds(text)).toThrow(refused(field))
     })
