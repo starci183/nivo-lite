@@ -5,8 +5,8 @@ export const customerIdOf = (externalId: string): string => {
         Math.max(
             externalId.lastIndexOf("\n"),
             externalId.lastIndexOf("\r"),
-            externalId.lastIndexOf(" "),
-            externalId.lastIndexOf(" "),
+            externalId.lastIndexOf("\u2028"),
+            externalId.lastIndexOf("\u2029"),
         ) + 1
     const suffix = externalId.indexOf(":", lineStart)
     return suffix < 0 ? externalId : externalId.slice(0, suffix)
