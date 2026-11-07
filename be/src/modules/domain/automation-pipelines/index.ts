@@ -1,6 +1,6 @@
 export { AutomationPipelinesModule } from "./automation-pipelines.module"
 export { AutomationPipelinesService } from "./automation-pipelines.service"
 export { automationPipelinesEntities } from "./persistence/entities"
-export type { PipelineConfig, PipelineRow, PipelineWrite } from "./automation-pipelines.contracts"
+export type { PipelineConfig, PipelineRow } from "./automation-pipelines.contracts"
 export { AUTOMATION_PIPELINES_ERROR_KINDS } from "./errors/automation-pipelines.error"
 export { AUTOMATION_PIPELINES_MESSAGES } from "./messages/automation-pipelines.messages"

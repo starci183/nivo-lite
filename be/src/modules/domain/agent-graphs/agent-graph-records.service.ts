@@ -17,7 +17,7 @@ import type {
     EnsuredGraph,
     GraphRecord,
     ProposalRecord,
-    SourceRecord,
+    GraphSourceRecord,
     VersionRecord,
 } from "./agent-graphs-records.contracts"
 
@@ -249,7 +249,7 @@ export class AgentGraphRecordsService {
         kind: string,
         versionIds: ReadonlyArray<string>,
         limit: number,
-    ): Promise<ReadonlyArray<SourceRecord>> {
+    ): Promise<ReadonlyArray<GraphSourceRecord>> {
         const rows = await this.rows(
             tx,
             SOURCE,

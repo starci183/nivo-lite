@@ -1,5 +1,7 @@
 import type { Provider } from "@nestjs/common"
-import { ChatFileReadsService, ChatFilesModule, ChatFilesService } from "@modules/domain/chat-files"
+import { ChatFilesModule } from "@modules/domain/chat-files"
+import { ChatFileReadsService } from "../../../modules/domain/chat-files/chat-file-reads.service"
+import { ChatFilesService } from "../../../modules/domain/chat-files/chat-files.service"
 
 /** What a provider binds its token to: the token it reuses, the value it holds or the name of the class it builds. */
 const targetOf = (provider: object): unknown => {

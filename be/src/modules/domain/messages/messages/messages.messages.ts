@@ -4,11 +4,8 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const MESSAGES_MESSAGES: MessageBundle = {
     vi: {
         "errors.MESSAGES_CARD_INVALID": "Thẻ kết quả không hợp lệ: {{reason}}.",
-        "errors.MESSAGES_ROOM_INVALID": "Không có phòng {{room}}.",
     },
     en: {
         "errors.MESSAGES_CARD_INVALID": "The result card is invalid: {{reason}}.",
-        "errors.MESSAGES_ROOM_INVALID": "There is no room {{room}}.",
-        "errors.MESSAGES_LINE_NOT_STORED": "The message could not be saved.",
     },
 }

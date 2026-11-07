@@ -1,6 +1,5 @@
 export { AUTHORITY_RULES_ERROR_KINDS } from "./errors/authority-rules.error"
 export { AUTHORITY_RULES_MESSAGES } from "./messages/authority-rules.messages"
-export { assistAsks } from "./operating-mode.policy"
 export type {
     ApprovalPolicy,
     ApprovalSetup,
@@ -26,7 +25,7 @@ export {
 } from "./authority-rules.contracts"
 export { AuthorityRulesModule } from "./authority-rules.module"
 export { AuthorityRulesService } from "./authority-rules.service"
-export { bandOf, evaluateGate, isOverLimit, ruleAmountOf } from "./gate.policy"
+export { bandOf, evaluateGate, isOverLimit } from "./gate.policy"
 export { appliesToAgent } from "./rule-settings.policy"
 export { authorityRulesEntities } from "./persistence/entities"
 export { InjectWorkBranchDecider, WORK_BRANCH_DECIDER } from "./branch-decider.decorators"

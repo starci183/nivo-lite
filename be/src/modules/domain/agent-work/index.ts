@@ -19,7 +19,6 @@ export { AgentWorkSettingsService } from "./agent-work-settings.service"
 export {
     AGENT_BURST_POLICY,
     AGENT_TAG_RIGHTS,
-    AGENT_TAG_VISIBILITY,
     AGENT_TURN_EXECUTOR,
     AGENT_WAKE_INTERRUPTIONS,
 } from "./agent-work.decorators"
@@ -59,5 +58,4 @@ export type {
     AgentWorkHandler,
 } from "./agent-work.port"
 export type { AgentBegin } from "./agent-work-turns.contracts"
-export type { AgentTagNotice } from "./agent-tag.contracts"
-export type { AgentBurstPolicy, AgentBurstSetting, AgentTagVisibilityPort, OptionalSpeaker } from "./agent-work.port"
+export type { AgentBurstPolicy, AgentBurstSetting } from "./agent-work.port"

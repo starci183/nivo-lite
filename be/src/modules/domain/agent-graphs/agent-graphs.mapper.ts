@@ -17,7 +17,7 @@ import type {
     GraphRecord,
     PlainJson,
     ProposalRecord,
-    SourceRecord,
+    GraphSourceRecord,
     VersionRecord,
 } from "./agent-graphs-records.contracts"
 
@@ -158,21 +158,21 @@ export const versionRecordOf = (row: RecordRow): VersionRecord => ({
     ...publishedOf(row.data),
 })
 
-const citedOf = (data: Data): Pick<SourceRecord, "versionId" | "agentId" | "nodeKey" | "branchKey"> => ({
+const citedOf = (data: Data): Pick<GraphSourceRecord, "versionId" | "agentId" | "nodeKey" | "branchKey"> => ({
     versionId: textOf(data, "versionId"),
     agentId: textOf(data, "agentId"),
     nodeKey: textOf(data, "nodeKey"),
     branchKey: textOf(data, "branchKey"),
 })
 
-const backedByOf = (data: Data): Pick<SourceRecord, "kind" | "ref" | "valueHash"> => ({
+const backedByOf = (data: Data): Pick<GraphSourceRecord, "kind" | "ref" | "valueHash"> => ({
     kind: textOf(data, "kind"),
     ref: textOf(data, "ref"),
     valueHash: textOf(data, "valueHash"),
 })
 
 /** A source record read from the engine's row. */
-export const sourceRecordOf = (row: RecordRow): SourceRecord => ({
+export const sourceRecordOf = (row: RecordRow): GraphSourceRecord => ({
     workspaceId: row.workspaceId,
     ...citedOf(row.data),
     ...backedByOf(row.data),

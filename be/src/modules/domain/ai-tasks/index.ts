@@ -9,8 +9,6 @@ export type {
     AiTaskScope,
     ExtractedOrder,
     LeadInput,
-    ProposedCommand,
-    ProposedResponsibility,
     TextRequest,
 } from "./ai-tasks.contracts"
 export { AiTasksModule } from "./ai-tasks.module"

@@ -1,4 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common"
+import type { OptionalId } from "@modules/domain/agents"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
 import type { ChatRoomEntity, ChatRoomMessageEntity } from "./persistence/entities"
 import { InjectTeamChatTags } from "./team-chat.decorators"
@@ -44,7 +45,6 @@ import type {
     OptionalApprovalRequest,
     OptionalApprovalState,
     OptionalCount,
-    OptionalId,
     OptionalKind,
     OptionalLine,
     OptionalReport,

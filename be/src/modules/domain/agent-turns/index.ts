@@ -1,10 +1,8 @@
 export { AGENT_TURNS_MESSAGES } from "./messages/agent-turns.messages"
 export { AgentTurnsModule } from "./agent-turns.module"
 export { parseAgentTurnsConfig } from "./agent-turns.config"
-export { AgentTurnsLogEvent } from "./agent-turns.log-events"
 export { AgentTurnAccessService } from "./agent-turn-access.service"
 export { InternalGatewayToolsService } from "./internal-gateway-tools.service"
-export { runtimeAgentFor } from "./runtime-agent.service"
 export { AgentTurnBriefService } from "./agent-turn-brief.service"
 export { internalTimeoutMsOf, proposalTextOf, stoppedBy } from "./agent-turn.policy"
 export { IntentPipelineService } from "./intent-pipeline.service"
@@ -27,6 +25,4 @@ export type {
     IntentPlanFiles,
     IntentScope,
     IntentTurnPlan,
-    InternalActionResult,
-    InternalTurnInput,
 } from "./agent-turns.contracts"

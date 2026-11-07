@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import { AgentDirectoryService } from "@modules/domain/agents"
+import type { OptionalId } from "@modules/domain/agents"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import type { AgentPostInput, ApprovalPostInput, ChatMemberRef, LineInput, ReportInput } from "./team-chat.contracts"
 import { cardBodyOf, directKeyOf, isUuid } from "./team-chat.policy"
 import { TeamChatAccessService } from "./team-chat-access.service"
 import { TeamChatStoreService } from "./team-chat-store.service"
-import type { OptionalAgentLine, OptionalId, OptionalLine, OptionalReport } from "./team-chat-store.contracts"
+import type { OptionalAgentLine, OptionalLine, OptionalReport } from "./team-chat-store.contracts"
 
 @Injectable()
 /**

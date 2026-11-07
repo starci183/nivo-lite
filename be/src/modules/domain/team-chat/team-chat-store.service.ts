@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import type { OptionalId } from "@modules/domain/agents"
 import { In } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import type { EntityManager } from "typeorm"
@@ -17,7 +18,6 @@ import type {
     NewRoom,
     NewText,
     OptionalCard,
-    OptionalId,
     OptionalPosition,
     RoomFilter,
     UnreadRow,
