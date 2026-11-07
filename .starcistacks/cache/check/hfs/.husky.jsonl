@@ -1,2 +1,2 @@
 {"data":{},"findings":[],"hash":"960b645f70255ed82f1f3fbe93357dcf5c53a39aecdc85ebbbac8913fa4f6ff3","path":".husky/pre-commit","step":"file-rules"}
-{"data":{},"findings":[],"hash":"436d13c46ae9ebd4a838714c00f39604e13a7537a3c47fa34b7250dd192bb96a","path":".husky/pre-push","step":"file-rules"}
+{"data":{},"findings":[],"hash":"4fc793e26db2bcbad94da946eae6a2266608316dd52eba228631843f3e040706","path":".husky/pre-push","step":"file-rules"}

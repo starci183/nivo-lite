@@ -11,7 +11,7 @@
 {"data":{},"findings":[],"hash":"f4735d095e8c0265487f2b5546ed5b731095970da27c5a6d098f5c8bf0999213","path":".starcistacks/dev/secrets/platform.enc.yaml","step":"file-rules"}
 {"data":{},"findings":[],"hash":"1fce1fd9cd1488f4baa1b8e5ba20c7ff97f668037a6fdcb31ab24e416c002c9e","path":".starcistacks/dev/secrets/seeds-nivo-workspace.enc.yaml","step":"file-rules"}
 {"data":{},"findings":[],"hash":"43a3cdd0527147e0c7f51edeb3a2d453a830d2721570bd5d28100347779cff78","path":".starcistacks/dev/secrets/seeds-test-accounts.enc.yaml","step":"file-rules"}
-{"data":{},"findings":[],"hash":"102897dc5306064b80909fb595b9c28de3e2015da1bf9545a8f8108ef5434784","path":".starcistacks/dev/secrets/sonar.enc.yaml","step":"file-rules"}
+{"data":{},"findings":[],"hash":"256a71ff7b319d748009b16f9d65f48dba59b31fc37d26847c745a83c87cfc54","path":".starcistacks/dev/secrets/sonar.enc.yaml","step":"file-rules"}
 {"data":{},"findings":[],"hash":"0d085955e5659446fe39f97078203065c03410d9f072f40c55f776a9a3be43dd","path":".starcistacks/dev/secrets/storage.enc.yaml","step":"file-rules"}
 {"data":{},"findings":[],"hash":"c6b30a5f98dc4e458b98bba039e8d5ba3143eb053ef012614c25fd43972ae834","path":".starcistacks/dev/secrets/telegram.enc.yaml","step":"file-rules"}
 {"data":{},"findings":[],"hash":"0908bede110287ff25bfd206219a7a30d1873ba091d4493129bcdf1cf4615e3c","path":".starcistacks/dev/seeds/data/brain-tiem-hoa.json","step":"file-rules"}

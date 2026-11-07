@@ -1212,6 +1212,7 @@ database:
   migrationsDir: db/migrations
   archiveDir: db/migrations/archive
   baseline: baseline
+  appPassword: {member: postgres, key: APP_BE_DB_PASSWORD}
   # v0.2.1 cutover (owner decision 2026-10-17): production was reset and the whole chain 000000..000600 applied on an empty schema, so nothing is held
   # back. The pre-reset database lives only in the encrypted dump named in infra/swarm/recovery/db-backup-receipt-v0.2.1.md.
   restamp:

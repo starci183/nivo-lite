@@ -1,2 +1,3 @@
 {"data":{},"findings":[],"hash":"be6ab1f80c808f84bc64669ef6e44f5ee6cbfab2d42d33561d160f000d98801b","path":".starciwork/.gitignore","step":"file-rules"}
+{"findings":[{"column":0,"line":0,"message":".starciwork/memory-factors.json: lite .starciwork holds only workspace.yaml and brand/ (plus .gitignore); remove this path or use the full edition","path":".starciwork/memory-factors.json","rule":"HFS_STARCIWORK_LITE_FORBIDDEN"}],"hash":"absent","path":".starciwork/memory-factors.json","step":"hfs"}
 {"data":{},"findings":[],"hash":"f36f201584004a0cdcf472252061041bfac052eff070fd59071d4c4a336ec46e","path":".starciwork/workspace.yaml","step":"file-rules"}
