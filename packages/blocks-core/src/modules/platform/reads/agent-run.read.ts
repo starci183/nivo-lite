@@ -51,7 +51,8 @@ export const agentRunRead: ReadDefinition = defineRead({
     run: async ({ graphs, runs, steps }, { installation, id }): Promise<RunView | null> => {
         const agent = await agentOfInstallation(graphs, installation)
         const run = agent === null ? null : await runs.get(id)
-        if (run === null || run.data["agentId"] !== agent) return null
+        if (run === null) return null
+        if (run.data["agentId"] !== agent) return null
         return runViewOf(run, await stepsOf(steps, id))
     },
 })

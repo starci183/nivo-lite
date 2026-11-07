@@ -227,9 +227,7 @@ describe("the timeline of a run", () => {
     it("offers nothing on a failed run when one of its steps was undone, or when it has no failed step", () => {
         const undone = [record("s1", { status: "compensated" }), ...STEPS.slice(1)]
         expect(runViewOf(record("run-8", { status: "dead" }), undone).steps.some((step) => step.canResume)).toBe(false)
-        expect(
-            runViewOf(record("run-9", { status: "failed" }), [STEPS[0] as RecordRow]).steps[0]?.canResume,
-        ).toBeUndefined()
+        expect(runViewOf(record("run-9", { status: "failed" }), STEPS.slice(0, 1)).steps[0]?.canResume).toBeUndefined()
         expect(runViewOf(record("run-3", { status: "parked" }), STEPS).steps.some((step) => step.canResume)).toBe(false)
     })
 
