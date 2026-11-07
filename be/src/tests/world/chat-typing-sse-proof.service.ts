@@ -36,6 +36,7 @@ import * as realtimeContract from "@modules/platform/realtime"
 import { RealtimeModule } from "@modules/platform/realtime"
 import type { TeamChatIdentity } from "../fixtures/builders/team-chat.builder"
 import { TeamChatProofModule } from "./team-chat-proof.module"
+import { TEAM_CHAT_PROOF_MODULES } from "./team-chat-capabilities.options"
 import type { LiteWorld } from "./lite-world.service"
 import { CHAT_ACTIVITY_PROOF_MODULES } from "./chat-activity-proof.module"
 import { redisProofOptions } from "./redis-capabilities.options"
@@ -177,6 +178,7 @@ const compileReplica = (world: LiteWorld, identity: TeamChatIdentity, prefix: st
         imports: [
             TypingProofDatabaseModule.register(world.db.primary),
             ...platformModules(contracts.retry),
+            ...TEAM_CHAT_PROOF_MODULES,
             IdentityModule.register({ isGlobal: true, verifyAccessToken: verifierFor(identity) }),
             RealtimeModule.register(options),
             ...CHAT_ACTIVITY_PROOF_MODULES,
