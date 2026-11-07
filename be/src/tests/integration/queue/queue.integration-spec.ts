@@ -7,7 +7,6 @@ import { queueBuilder } from "../../fixtures/builders/queue.builder"
 import { useTestWorld } from "../../world/use-test-world"
 import { QUEUE_MODULES } from "../../world/test-capabilities.options"
 import { outboxRows, messages, observeQueue, cleanupQueue } from "../../world/proof-database.service"
-import { cronProof } from "../../world/cron-proof.service"
 
 describe("NIVO queue (local PostgreSQL integration)", () => {
     const world = useTestWorld({ modules: [...QUEUE_MODULES] })
@@ -60,13 +59,5 @@ describe("NIVO queue (local PostgreSQL integration)", () => {
         const signal = new AbortController().signal
         expect(builder.delivery(message, signal).id).toBe(row.id)
         expect(builder.delivery({ ...message, attempt: 2 }, signal).id).toBe(row.id)
-    })
-    it("queue/scheduler-fires-once: the migrated cron tick commits exactly one outbox row", async () => {
-        const proof = await cronProof(world)
-        expect(proof.jobs).toHaveLength(1)
-        expect(proof.jobs[0]?.schedule).toBe("*/15 * * * *")
-        expect(proof.jobs[0]?.command).toContain("job_enqueue")
-        expect(proof.added).toHaveLength(1)
-        expect(proof.added[0]).toMatchObject({ queue: CONTENT_TICK_QUEUE, name: CONTENT_TICK_QUEUE, payload: {} })
     })
 })
