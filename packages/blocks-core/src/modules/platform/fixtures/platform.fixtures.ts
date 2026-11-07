@@ -2,7 +2,8 @@ import type { ConnectionsRegionView, ItemsRegionView, KnowledgeRegionView } from
 import type { ModuleFixtures } from "../../module-fixtures"
 import { RUN_PARKED } from "../../../fixtures/run-timeline.fixtures"
 import type { AgentRunCounts, AgentRunsPage } from "../agent-runs"
-import { PLATFORM_MESSAGES } from "../platform-messages"
+import en from "../messages/en.json"
+import vi from "../messages/vi.json"
 import type { InstallationFacts, InstallationView, ParkedRunsView } from "../platform.types"
 
 /** An installation with one enabled module and one the workspace has not enabled. */
@@ -122,7 +123,19 @@ export const KNOWLEDGE_VIEW: KnowledgeRegionView = {
 export const KNOWLEDGE_NONE: KnowledgeRegionView = { ...KNOWLEDGE_VIEW, gaps: null }
 
 /** The view of two runs the engine parked, about two orders, with the words of one language of the platform messages. */
-const parkedRunsIn = (words: Readonly<Record<string, string>>): ParkedRunsView => ({
+/** The words a parked run is drawn with: its step and its error, in one language. */
+interface ParkedWords {
+    /** The step of the confirm run. */
+    readonly parked_step_confirm: string
+    /** The step of the notify run. */
+    readonly parked_step_notify: string
+    /** The error of a message that could not be sent. */
+    readonly parked_error_delivery_failed: string
+    /** The error of a channel that did not answer. */
+    readonly parked_error_timeout: string
+}
+
+const parkedRunsIn = (words: ParkedWords): ParkedRunsView => ({
     count: "2",
     rows: [
         {
@@ -130,9 +143,9 @@ const parkedRunsIn = (words: Readonly<Record<string, string>>): ParkedRunsView =
             module: "sales",
             subjectKind: "sales.order",
             subjectId: "order-2",
-            step: words["parked_step_confirm"] ?? "",
+            step: words.parked_step_confirm,
             errorCode: "DELIVERY_FAILED",
-            errorWords: words["parked_error_delivery_failed"] ?? "",
+            errorWords: words.parked_error_delivery_failed,
             parkedAt: "2026-11-04T10:30:00.000Z",
         },
         {
@@ -140,19 +153,19 @@ const parkedRunsIn = (words: Readonly<Record<string, string>>): ParkedRunsView =
             module: "sales",
             subjectKind: "sales.order",
             subjectId: "order-1",
-            step: words["parked_step_notify"] ?? "",
+            step: words.parked_step_notify,
             errorCode: "TIMEOUT",
-            errorWords: words["parked_error_timeout"] ?? "",
+            errorWords: words.parked_error_timeout,
             parkedAt: "2026-11-04T09:10:00.000Z",
         },
     ],
 })
 
 /** Two runs the engine parked, in the default language (Vietnamese): the words are those of the platform messages. */
-export const PARKED_RUNS_VIEW: ParkedRunsView = parkedRunsIn(PLATFORM_MESSAGES.vi)
+export const PARKED_RUNS_VIEW: ParkedRunsView = parkedRunsIn(vi)
 
 /** The same two parked runs in English. */
-export const PARKED_RUNS_VIEW_EN: ParkedRunsView = parkedRunsIn(PLATFORM_MESSAGES.en)
+export const PARKED_RUNS_VIEW_EN: ParkedRunsView = parkedRunsIn(en)
 
 /** No run is parked. */
 export const PARKED_RUNS_NONE: ParkedRunsView = {

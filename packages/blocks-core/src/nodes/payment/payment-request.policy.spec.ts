@@ -49,6 +49,10 @@ describe("payment request policy", () => {
         expect(paymentMessageOf({ ...instruction, accountHolder: "" }, order, "DH1", "en")).not.toContain("holder")
     })
 
+    it("writes a dash for an order that lists no items", () => {
+        expect(paymentMessageOf(instruction, { amountVnd: 1_000, lines: [] }, "DH1", "en")).toContain("—")
+    })
+
     it("names the order in the title that tells the owner no payment request could go out", () => {
         expect(noAccountTitleOf("DH-1", "en")).toContain("DH-1")
         expect(noAccountTitleOf("DH-1", "vi")).toContain("SePay")

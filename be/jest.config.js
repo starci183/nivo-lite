@@ -53,6 +53,7 @@ module.exports = require("@starci/jest-preset").starciJestConfig({
             "packages/blocks-core/src/**/index.ts",
             "packages/blocks-core/src/**/*.types.ts",
             "packages/blocks-core/src/**/*-types.ts",
+            "packages/blocks-core/src/grammar-tones.d.ts",
             "packages/blocks-core/src/client/**",
             "packages/plugin-registry/src/**/index.ts",
             "packages/plugin-registry/src/**/*.types.ts",

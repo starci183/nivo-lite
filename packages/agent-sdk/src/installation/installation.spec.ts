@@ -1,5 +1,8 @@
 import { SdkDefinitionError } from "../block/definition-error"
+import { runNode } from "../node/host"
 import { LIST, STACK } from "../spec/spec.fixture"
+import { EXAMPLE_TURN } from "../tests/fixtures/node-examples"
+import { scriptedNodePorts } from "../tests/fixtures/node-ports"
 import { defineInstallation } from "./installation"
 import { entityOf, jobOf, moduleOf, nodeOf } from "./installation.fixture"
 
@@ -87,5 +90,22 @@ describe("defineInstallation", () => {
         const both = (): unknown =>
             defineInstallation([{ jobs: [jobOf("sales.lead")], entities: [entityOf("sales.lead")] }], HASH)
         expect(both).not.toThrow()
+    })
+})
+
+describe("the fixture node", () => {
+    it("does nothing and answers an empty output", async () => {
+        const { ports } = scriptedNodePorts()
+        const request = {
+            node: nodeOf("lead.ensure"),
+            params: {},
+            input: {},
+            turn: EXAMPLE_TURN,
+            grant: { rights: [] },
+            effects: new Map(),
+            tools: new Map(),
+            key: "run-1:step",
+        }
+        await expect(runNode(request, ports)).resolves.toEqual({ output: {}, effects: [] })
     })
 })

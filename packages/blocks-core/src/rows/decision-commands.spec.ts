@@ -1,6 +1,13 @@
 import type { SpecText } from "@nivo-lite/agent-sdk/schema"
 import type { CommandView, DecisionQueueView, DecisionRowView } from "../views/views.types"
-import { COMMAND_INTENTS, declaredQueue, EDIT_COMMAND, editAnswerOf, editFailure } from "./decision-commands"
+import {
+    COMMAND_INTENTS,
+    declaredQueue,
+    EDIT_COMMAND,
+    editAnswerOf,
+    editFailure,
+    queueInputOf,
+} from "./decision-commands"
 
 const words = (text: SpecText): string => ("key" in text ? text.key : text.en)
 const command = (id: string, extra: Partial<CommandView> = {}): CommandView => ({ id, label: `view ${id}`, ...extra })
@@ -116,5 +123,12 @@ describe("the edit constants", () => {
         expect(EDIT_COMMAND).toBe("edit")
         expect(COMMAND_INTENTS).toEqual(["commit", "alternative", "dismiss", "neutral", "danger"])
         expect(editFailure).toEqual({ isDone: false, fields: {}, notice: { key: "slotError" } })
+    })
+})
+
+describe("queueInputOf", () => {
+    it("runs a command on a row with its id alone, and carries the values when it has any", () => {
+        expect(queueInputOf("r1", "approve")).toEqual({ id: "r1", command: "approve" })
+        expect(queueInputOf("r1", "edit", { note: "x" })).toEqual({ id: "r1", command: "edit", values: { note: "x" } })
     })
 })
