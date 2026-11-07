@@ -1,5 +1,5 @@
-{"findings":[],"hash":"a437a09963984768749d21cc8f98fb4c9a6f586df7b3358b1e863fdc4347be35","path":"packages/blocks-core/package.json","step":"prettier"}
-{"findings":[],"hash":"eb2a212a55fa08d879f99947cc308bb8acd9e34af41c9b1adce2a3a5be0b9559","path":"packages/blocks-core/package.json","step":"prettier"}
+{"findings":[],"hash":"df7d88cc37982f5fa727cc46a2e9cb6530bcaef3acd8be337d49cf8593cec330","path":"packages/blocks-core/package.json","step":"prettier"}
+{"findings":[],"hash":"65a6dcb81e1ac5e0d797010a469543f12cc6e565efda4dcbca837229563d3f88","path":"packages/blocks-core/slots.yaml","step":"prettier"}
 {"findings":[],"hash":"68d9a4f77254d026e1f5b42413d260fc0ed5578ecefb81ecb1ee820504ffa81b","path":"packages/blocks-core/tsconfig.build.client.json","step":"prettier"}
 {"findings":[],"hash":"44d4b0254dec07370f85674851dbf19c2dc0ed0c9260d93a0b65a03a4bed7ca9","path":"packages/blocks-core/tsconfig.build.json","step":"prettier"}
 {"findings":[],"hash":"7c6305fa928ac1212c5fd25789aa6ee2fc47052734e17ad884a9367c93e3f6bc","path":"packages/blocks-core/tsconfig.json","step":"prettier"}

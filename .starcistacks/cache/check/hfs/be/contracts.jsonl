@@ -1,3 +1,3 @@
 {"data":{},"findings":[],"hash":"4288089188995b041c6efcad574f8595c3ee47e3cf6adb3fd6034dc6c24dc0e8","path":"be/contracts/api/events.json","step":"file-rules"}
-{"data":{},"findings":[],"hash":"a910bc284fcff3efc9debf63b9be25fab16e65be9aa41286ad1d5fa20a0a0e1a","path":"be/contracts/api/schema.graphql","step":"file-rules"}
+{"data":{},"findings":[],"hash":"f73c40c14043c70710dd00d6875ebf67c9d74ad7975211f34b92bf04a0717a20","path":"be/contracts/api/schema.graphql","step":"file-rules"}
 {"data":{},"findings":[],"hash":"1df8b66dd588063915d8459cb123f378e1eef53108d7878ecdaeb28144f31680","path":"be/contracts/mcp/nivo-mcp@1.tools.json","step":"file-rules"}

@@ -1,2 +1,2 @@
-{"data":{"baseCommit":"2a0277e05bb7606595b63b3c53b1611603449603"},"findings":[],"hash":"2a0277e05bb7606595b63b3c53b1611603449603","path":"base","step":"reference"}
-{"data":{"owner":"codecov.yml","patch":100,"project":100},"findings":[],"hash":"f3d151decf74ec73501859cc7705415db94e3245bb09035ce1bad3f5184090f9","path":"targets","step":"reference"}
+{"data":{"baseContent":"f70c55fc63b2cd7970c187bb4df7308f1708359d457869a51db04163d4941463"},"findings":[],"hash":"f70c55fc63b2cd7970c187bb4df7308f1708359d457869a51db04163d4941463","path":"base","step":"reference"}
+{"data":{"owner":"codecov.yml","patch":100,"project":100},"findings":[],"hash":"b41f56eb0f22c4ca31ca8e15c7044478a94622259b1785227cf2f71ec75f7ced","path":"targets","step":"reference"}

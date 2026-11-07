@@ -1,6 +1,5 @@
 {"findings":[],"hash":"2b4af70582431ef31c8f17eaae2fd7931fb4c49db31a5e3e7bfb63ad32cd1f25","path":".github/workflows/cache-verify.yml","step":"prettier"}
-{"findings":[],"hash":"e002eb99f68fe644a2ee84bc3eb69dd4516f545673c3e9b96716e3c8cc061f9b","path":".github/workflows/ci.yml","step":"prettier"}
-{"findings":[],"hash":"d91957a7bf5ba4096e6ae1abf0163befe361f1fc8d5a85904b68699811a9dad6","path":".github/workflows/ci.yml","step":"prettier"}
+{"findings":[],"hash":"faea016c93cb3e0ecdcd6ffc0f55ff1435add022bcca6bc4cd3262a5220b0ed6","path":".github/workflows/ci.yml","step":"prettier"}
 {"findings":[],"hash":"b36c5479ba9a1eddfdf36f74a3c32defcce7ee5eac01ee2609e0a5094da3cc3e","path":".github/workflows/cli-deploy.yml","step":"prettier"}
 {"findings":[],"hash":"419ae7c6400140c901e15419122b15f8a4fec0603773a582812de3b0198db439","path":".github/workflows/images.yml","step":"prettier"}
 {"findings":[],"hash":"f8ad34ff73f1da4d0a4e6e14883a22c558834f45271a3b050c6c7e67c2c59295","path":".github/workflows/stack-deploy.yml","step":"prettier"}

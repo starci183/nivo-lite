@@ -1,0 +1,10 @@
+{"data":{},"findings":[],"hash":"bab2304a2c29b758e4c05ab1da9b03ed2b7d4890ff1c6841fe5f433bc3e6a493","path":"packages/plugin-registry/package.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"02da07390ce766916a809f86a7a4aac797faf863b0c33c7c8be426a72e5ce9ee","path":"packages/plugin-registry/slots.yaml","step":"file-rules"}
+{"data":{},"findings":[],"hash":"afa3426fdf47e95e057710cf9fb80d323ea8eeba958a8e47d14d32157fb9677d","path":"packages/plugin-registry/src/client/blocks.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"9ac25307db4cc2d0b4ed469ab75d0a07090a65194ecb29297e35cf8d2e3e300f","path":"packages/plugin-registry/src/client/index.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"fe1236d3ba8719e587e568b4e85034f38bbda107d2069d7e2c2513b18ebc7e8b","path":"packages/plugin-registry/src/index.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"4e977b3d9cd186a499b5e9e806b9ba7b314a0a4ae62f4f548476543c21fd76c2","path":"packages/plugin-registry/src/installed.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"2c86b3ff643f82f88e83fe331a229ed9ab5b2b3235ab6d4e07ceaba45d4a68d4","path":"packages/plugin-registry/src/installed.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"e073dc144c9177e9691f467a521a506db87ddac1c708fe91198e8f279e1374d3","path":"packages/plugin-registry/tsconfig.build.client.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"88155c1253c30fe2e918091b7dc8fd06ecf05467ca5a37d77efe062b41ff3c2f","path":"packages/plugin-registry/tsconfig.build.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"97700f24f69aece26bafaddb3f20912d23cf0b06408178e009128325544b0d61","path":"packages/plugin-registry/tsconfig.json","step":"file-rules"}

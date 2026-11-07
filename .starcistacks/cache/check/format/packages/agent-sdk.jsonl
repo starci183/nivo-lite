@@ -1,6 +1,6 @@
-{"findings":[],"hash":"b37118654cd5ad03e7f1edcbc8db31db930abe61aa2a9b37870ec2dd52fab028","path":"packages/agent-sdk/README.md","step":"prettier"}
-{"findings":[],"hash":"991cbed3b7f3ffaf809a39128190bdd9c6d8708453d0f3b67700fbe198871b68","path":"packages/agent-sdk/package.json","step":"prettier"}
-{"findings":[],"hash":"c31eb69607da714018c39a2e84934d7eacad9fe7b918cd7c536defa4b6a33b49","path":"packages/agent-sdk/package.json","step":"prettier"}
+{"findings":[],"hash":"62f05e6300fc61a7ee3d767e548aa494bd4cb8f65e4fcebbbd1021c6891aee19","path":"packages/agent-sdk/README.md","step":"prettier"}
+{"findings":[],"hash":"cf1468f1ac41d3a43462c38acd7c6d3ba6dd65eff429bee46c3f21081fb0aad0","path":"packages/agent-sdk/package.json","step":"prettier"}
+{"findings":[],"hash":"9be23082e61333045834b34c0d4f726d8fa4194b4468686684503e9b49c8d7fc","path":"packages/agent-sdk/slots.yaml","step":"prettier"}
 {"findings":[],"hash":"f8b01f7dfeaf995eb5d512c784087feb6ecf0a2cf58b017e82668a7a3abc20b3","path":"packages/agent-sdk/tsconfig.build.client.json","step":"prettier"}
 {"findings":[],"hash":"6c7443c2394c54304c1468d1c426c5f75282d4b7516c48093866dd357abadf59","path":"packages/agent-sdk/tsconfig.build.json","step":"prettier"}
 {"findings":[],"hash":"7c6305fa928ac1212c5fd25789aa6ee2fc47052734e17ad884a9367c93e3f6bc","path":"packages/agent-sdk/tsconfig.json","step":"prettier"}

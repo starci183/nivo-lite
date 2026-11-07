@@ -6,12 +6,10 @@
 {"findings":[],"hash":"49fb39ee1c0135043dae9e526e28c01ba900c1b269bbe4496e2c4719d22b7ce5","path":".prettierignore","step":"prettier"}
 {"findings":[],"hash":"7940273320387409c9d24de8ad5f964a8fa889424fa4ce47a67efa698c1f2c25","path":".prettierrc","step":"prettier"}
 {"findings":[],"hash":"aff33082b740fc3a8d20bc2ee9a1bb584daada9d6f66cad47b7f7affcdff02b4","path":".sops.yaml","step":"prettier"}
-{"findings":[],"hash":"a8713bbe0657c6dea9e58d677df964f72c19abd8635e8d2124f73e791ffdad85","path":"README.md","step":"prettier"}
-{"findings":[],"hash":"f3d151decf74ec73501859cc7705415db94e3245bb09035ce1bad3f5184090f9","path":"codecov.yml","step":"prettier"}
+{"findings":[],"hash":"7553a7e3454e12a3b179522e9b91129a0909a962b66992affb1d1eba1dcc8dad","path":"README.md","step":"prettier"}
+{"findings":[],"hash":"b41f56eb0f22c4ca31ca8e15c7044478a94622259b1785227cf2f71ec75f7ced","path":"codecov.yml","step":"prettier"}
 {"findings":[],"hash":"f67f0a1223e6b71d428764bf770d24d1525ed3536fb0277c1d3688ca8dd2c1da","path":"eslint.config.mjs","step":"prettier"}
-{"findings":[],"hash":"99d0a07eb2da82ba8e442b16e61881bf55de32df2d433e16eb0a4cc0ced4ffc2","path":"hfs.json","step":"prettier"}
-{"findings":[],"hash":"710ee6838600c2e3ed8d3cd0518cb5bb16b762cf1e4380aba78b68d4bfd78dba","path":"package.json","step":"prettier"}
-{"findings":[],"hash":"5a2f9e20c307122840e7774f97173d7965d169600cf7c264f9e9e3fb25073aeb","path":"hfs.json","step":"prettier"}
-{"findings":[],"hash":"163e3e996ae74420cbc84a8ecb01a7367db6339d1fd30c21c43a22bd71355f98","path":"package.json","step":"prettier"}
-{"findings":[],"hash":"fce8a270d4cc0a1e9ef4626f1bd260b303e55c02971a46c13d090bbc29f32231","path":"sonar-project.properties","step":"prettier"}
+{"findings":[],"hash":"6854186766e0ee614d29967bca715759f296acc6fe149654004e60c1141ee73b","path":"hfs.json","step":"prettier"}
+{"findings":[],"hash":"c7eb5781884da27248182a17caee422f208018eea79a91ff6b594fa6c6076c39","path":"package.json","step":"prettier"}
+{"findings":[],"hash":"7aba560e675d3996714a7945d344e102c8d4c40e6fead7104c5188525a8a25a0","path":"sonar-project.properties","step":"prettier"}
 {"findings":[],"hash":"b249ad2cdb8664438d3833a9e7e856d55adfdc56115486bd441d5ce03ed3810a","path":"turbo.json","step":"prettier"}
