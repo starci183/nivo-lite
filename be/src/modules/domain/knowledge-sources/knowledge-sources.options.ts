@@ -6,6 +6,8 @@ export interface KnowledgeSourcesFullOptions {
     readonly storage: InjectionToken
     /** Absent or false: the full capability. */
     readonly readOnly?: false
+    /** Absent or false: the full capability. */
+    readonly seedOnly?: false
 }
 
 /**
@@ -15,7 +17,21 @@ export interface KnowledgeSourcesFullOptions {
 export interface KnowledgeSourcesReadOnlyOptions {
     /** Registers the read-only mode. */
     readonly readOnly: true
+    /** The seed mode is another mode. */
+    readonly seedOnly?: false
+}
+
+/**
+ * The seed mode (the cli app): the one service that keeps the text documents of a stack seed as knowledge sources and queues their
+ * indexing, with no storage door and none of the pages' services.
+ */
+export interface KnowledgeSourcesSeedOptions {
+    /** Registers the seed mode. */
+    readonly seedOnly: true
+    /** The read-only mode is another mode. */
+    readonly readOnly?: false
 }
 
 /** What the knowledge-sources capability needs from the composition root. */
-export type KnowledgeSourcesOptions = KnowledgeSourcesFullOptions | KnowledgeSourcesReadOnlyOptions
+export type KnowledgeSourcesOptions =
+    KnowledgeSourcesFullOptions | KnowledgeSourcesReadOnlyOptions | KnowledgeSourcesSeedOptions

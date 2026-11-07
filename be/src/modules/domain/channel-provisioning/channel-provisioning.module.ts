@@ -1,7 +1,5 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { KnowledgeQueueModule } from "@modules/queues/knowledge"
-import { ProfileSourcesService } from "@modules/domain/knowledge-sources"
 import { BrainSeedService } from "./brain-seed.service"
 import { ManagementSeedService } from "./management-seed.service"
 import { RecordsSeedService } from "./records-seed.service"
@@ -18,14 +16,12 @@ export class ChannelProvisioningModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            imports: [...(base.imports ?? []), KnowledgeQueueModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 ChannelProvisioningService,
                 ManagementSeedService,
                 TestAccountsSeedService,
                 CatalogueSeedService,
-                ProfileSourcesService,
                 BrainSeedService,
                 RecordsSeedService,
             ],
