@@ -28,18 +28,6 @@ export interface WebhookJobRow {
 export interface WebhookMessageRow {
     message: object
 }
-/** The deployed command and interval of one cron job. */
-export interface CronRow {
-    schedule: string
-    command: string
-}
-/** A committed tick observed through the outbox the relay publishes from. */
-export interface TickRow {
-    id: string
-    queue: string
-    name: string
-    payload: object
-}
 /** The broker-bound envelope reconstructed from an outbox row for observation. */
 export interface ObservedMessage {
     name?: string

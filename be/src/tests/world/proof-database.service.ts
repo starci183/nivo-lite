@@ -2,13 +2,11 @@ import type {
     OutboxRow,
     JobSnapshot,
     ReceiptRow,
-    TickRow,
     WebhookJobRow,
     WebhookMessageRow,
     ObservedMessage,
     ObservedMessageRow,
 } from "../fixtures/persistence/proof.rows"
-import { IsNull } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { metaInboxEntities } from "@modules/domain/meta-inbox"
 import { jobsEntities } from "@modules/platform/jobs"
@@ -88,21 +86,6 @@ export const removeCreditOutbox = async (manager: EntityManager, workspaceId: st
         .delete()
         .where("queue = 'bank_credit_received' AND payload->>'workspaceId' = :workspaceId", { workspaceId })
         .execute()
-}
-
-/** Hides the committed content ticks no relay has sent yet, so a proof sees only its own. */
-export const hideOpenTicks = async (manager: EntityManager): Promise<void> => {
-    await manager.update(JobOutboxEntity, { queue: CONTENT_TICK_QUEUE, sentAt: IsNull() }, { sentAt: new Date() })
-}
-
-/** The unsent content ticks, oldest first. */
-export const openTicks = async (manager: EntityManager): Promise<Array<TickRow>> => {
-    const rows = await manager.find(JobOutboxEntity, {
-        where: { queue: CONTENT_TICK_QUEUE, sentAt: IsNull() },
-        order: { createdAt: "ASC" },
-        take: OUTBOX_ROWS_MAX,
-    })
-    return rows.map((row) => ({ id: row.id, queue: row.queue, name: row.name, payload: row.payload }))
 }
 
 /** The outbox rows the content tick published for one isolated proof. */
