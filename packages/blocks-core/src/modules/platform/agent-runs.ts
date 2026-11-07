@@ -201,7 +201,7 @@ export const callsOf = (value: unknown): ReadonlyArray<RunCallView> => {
 const isFinished = (status: unknown): boolean => status === "done" || status === "compensated"
 
 /** The engine statuses of a run that stopped on a failed step and may be run again from it, as the engine's resume takes them. */
-const RESUMABLE_STATUSES: ReadonlyArray<string> = ["failed", "dead"]
+const RESUMABLE_STATUSES: ReadonlySet<string> = new Set(["failed", "dead"])
 
 /** Whether a step was undone or is being undone: a run with such a step has nothing left to run again from. */
 const isUndone = (status: unknown): boolean => status === "compensated" || status === "compensating"
@@ -222,7 +222,7 @@ export const runViewOf = (run: RecordRow, steps: ReadonlyArray<RecordRow>): RunV
     const status = run.data["status"]
     const parkedAt = status === "parked" ? steps.findIndex((step) => !isFinished(step.data["status"])) : -1
     const resumableAt =
-        RESUMABLE_STATUSES.includes(String(status)) && !steps.some((step) => isUndone(step.data["status"]))
+        RESUMABLE_STATUSES.has(String(status)) && !steps.some((step) => isUndone(step.data["status"]))
             ? steps.findIndex((step) => step.data["status"] === "failed")
             : -1
     const parkReason = run.data["parkReason"]

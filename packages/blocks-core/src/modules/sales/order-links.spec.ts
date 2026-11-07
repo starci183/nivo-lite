@@ -6,10 +6,14 @@ import { cancelFactsOf, openClaimsOf } from "./order-links"
 
 const CATALOG: EntityCatalog = new Map(FLOW_F_ENTITIES.map((entity) => [entity.name, entity]))
 
+/** An entity port that answers a count, with the aggregates it was asked. */
+interface RecordingPort {
+    readonly api: EntityApi
+    readonly asked: Array<Parameters<EntityApi["aggregate"]>[0]>
+}
+
 /** An entity port that answers a count and records the aggregate it was asked. */
-const recording = (
-    count: number | undefined,
-): { readonly api: EntityApi; readonly asked: Array<Parameters<EntityApi["aggregate"]>[0]> } => {
+const recording = (count: number | undefined): RecordingPort => {
     const asked: Array<Parameters<EntityApi["aggregate"]>[0]> = []
     const api: EntityApi = {
         get: () => Promise.resolve(null),
