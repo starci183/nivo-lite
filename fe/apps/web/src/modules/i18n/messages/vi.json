@@ -864,11 +864,6 @@
     "storageTitle": "Dung lượng lưu trữ",
     "storageUsed": "Đã dùng {used} / {quota}",
     "storageUsedOnly": "Đã dùng {used}",
-    "packsTitle": "Mua thêm credit",
-    "packsFact": "Tùy chọn · cộng vào credit của tháng này · mua lại bất cứ lúc nào",
-    "packsRow": "{credits} credit mua thêm",
-    "packsBuy": "Mua",
-    "packsEmpty": "Gói hiện tại chưa có gói credit mua thêm.",
     "comparePlans": "So sánh các gói",
     "closeDrawer": "Đóng"
   },
