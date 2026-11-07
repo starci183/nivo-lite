@@ -1,4 +1,5 @@
 import { SdkError } from "../sdk-error"
+import type { JsonValue } from "../schema/schema.types"
 import type { DoorCallResult, DoorTool } from "./door-port"
 import { retryJob } from "./job-retry"
 
@@ -11,15 +12,11 @@ export class JobRefused extends SdkError<"JOB_REFUSED"> {}
 /**
  * Ends a job that called a door tool the way the call went: nothing to do when it returned output, the queue delivers the job again
  * (with its backoff, and a park with one alert once the attempts are spent) when the provider was away for now, and any other
- * failure is a `JobRefused` the runner parks. `job` names the job. It returns only for a call that returned output, so the call is
- * narrowed to its output afterwards.
+ * failure is a `JobRefused` the runner parks. `job` names the job. It answers the output of a call that returned one, so a job reads
+ * the output from what this returns and never from a call it has not checked.
  */
-export const endAfterDoor: (
-    job: string,
-    tool: DoorTool,
-    call: DoorCallResult,
-) => asserts call is Extract<DoorCallResult, { readonly ok: true }> = (job, tool, call) => {
-    if (call.ok) return
+export const endAfterDoor = (job: string, tool: DoorTool, call: DoorCallResult): JsonValue => {
+    if (call.ok) return call.output
     if (call.reason === "transient") retryJob(job)
     throw new JobRefused("JOB_REFUSED", `${tool} ${call.reason}`, { cause: call.message })
 }

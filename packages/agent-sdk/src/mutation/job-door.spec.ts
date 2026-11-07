@@ -13,8 +13,9 @@ const thrownFor = (call: DoorCallResult): unknown => {
 }
 
 describe("endAfterDoor", () => {
-    it("does nothing when the door returned output", () => {
+    it("does nothing when the door returned output, and answers that output", () => {
         expect(thrownFor({ ok: true, output: null })).toBeNull()
+        expect(endAfterDoor("a.job", "chat.send", { ok: true, output: { ref: "r1" } })).toEqual({ ref: "r1" })
     })
 
     it("has the queue deliver the job again when the provider was away", () => {
