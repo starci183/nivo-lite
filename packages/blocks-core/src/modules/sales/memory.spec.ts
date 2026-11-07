@@ -7,7 +7,17 @@ import { SALES_SETTINGS_DEFAULTS } from "../../rules/sales/settings"
 import { rightsPort } from "../platform/ports"
 import { ORDER_WAITING, sampleState, SAMPLE_NOW } from "./fixtures/sales.data"
 import { memoryProvider } from "./memory"
-import { salesLeads, salesLeadsList, salesOrders, salesOrdersList, salesSettings } from "./ports"
+import type { MemoryState } from "./memory"
+import {
+    salesClaims,
+    salesInvoices,
+    salesLeads,
+    salesLeadsList,
+    salesOrders,
+    salesOrdersList,
+    salesSettings,
+    salesTransactions,
+} from "./ports"
 import { LEADS_LIST } from "./reads/leads.read"
 import { ORDERS_LIST } from "./reads/orders.read"
 import type { LeadRow, OrderRow } from "./sales.types"
@@ -352,5 +362,53 @@ describe("the in-memory engine conditions, aggregates and settings", () => {
 
     it("takes no upsert on the other tables", async () => {
         expect((await orders().upsert("order_no_key", {})).ok).toBe(false)
+    })
+})
+
+describe("the in-memory records that hang on an order", () => {
+    const link = (id: string, orderId: string, status: string): MemoryState["claims"][number] => ({
+        id,
+        orderId,
+        status,
+        version: "1",
+        createdAt: SAMPLE_NOW,
+        updatedAt: SAMPLE_NOW,
+    })
+
+    it("serve the payments, the invoices and the claims of the state, each as its own table", async () => {
+        const state = sampleState([])
+        state.transactions.push(link("t-1", "order-3", "matched"))
+        state.invoices.push(link("i-1", "order-3", "issued"))
+        state.claims.push(link("c-1", "order-3", "open"))
+        const { transactions, invoices, claims } = portsOf(memoryProvider(state), {
+            transactions: salesTransactions,
+            invoices: salesInvoices,
+            claims: salesClaims,
+        })
+        expect(await transactions.get("t-1")).toMatchObject({ data: { orderId: "order-3", status: "matched" } })
+        expect(await invoices.get("i-1")).toMatchObject({ data: { status: "issued" } })
+        expect(await claims.get("c-1")).toMatchObject({ data: { status: "open" } })
+        expect(await claims.get("t-1")).toBeNull()
+    })
+
+    it("join a claim to its order, update it under its version and refuse a write that leaves it without an order", async () => {
+        const state = sampleState([])
+        state.claims.push(link("c-1", "order-3", "open"))
+        const { claims } = portsOf(memoryProvider(state), { claims: salesClaims })
+        const page = await claims.list({
+            select: ["status"],
+            join: { order: [] },
+            where: q.eq("status", "open"),
+            order: [
+                ["createdAt", "desc"],
+                ["id", "desc"],
+            ],
+            page: { size: 10 },
+        })
+        expect(page.rows.map((row) => row.joined["order"]?.id)).toEqual(["order-3"])
+        expect(await claims.update("c-1", "9", { status: "withdrawn" })).toEqual({ ok: false, reason: "stale" })
+        expect(await claims.update("c-1", "1", { orderId: null })).toEqual({ ok: false, reason: "invalid" })
+        expect(await claims.update("c-1", "1", { status: "withdrawn" })).toMatchObject({ ok: true })
+        expect(state.claims[0]?.status).toBe("withdrawn")
     })
 })

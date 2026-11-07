@@ -109,7 +109,7 @@ const windowExpr = (name: string, filter: ListFilter, window: TimeWindow): Filte
     if ("cases" in filter || filter.op !== "within") {
         throw new QueryBuildError("LIST_FILTER_VALUE_UNKNOWN", `${name} is not a window filter`)
     }
-    return q.allOf(q.gte(filter.field, window.from), q.lt(filter.field, window.to)) ?? q.isNull(filter.field)
+    return { op: "and", of: [q.gte(filter.field, window.from), q.lt(filter.field, window.to)] }
 }
 
 const filterOf = (shape: ListShape, name: string): ListFilter => {

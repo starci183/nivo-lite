@@ -5,7 +5,9 @@ slots:
   - { id: bounds, path: src/bounds.ts }
   - { id: json-schema, path: src/json.schema.ts }
   - { id: fixtures-barrel, path: src/fixtures.ts }
-  - { id: grammar-tones, path: src/grammar-tones.d.ts }
+  - id: grammar-tones
+    path: src/grammar-tones.d.ts
+    coverage: { none: "a type declaration: it augments the Grammar tone registry and holds no runtime code to run" }
   - { id: package-specs, path: "src/*.spec.ts" }
   - { id: block, path: src/blocks/** }
   - { id: entity, path: src/entities/** }
