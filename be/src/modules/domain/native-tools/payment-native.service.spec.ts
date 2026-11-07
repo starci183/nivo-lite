@@ -108,13 +108,11 @@ describe("PaymentNativeService on the SePay account of the walk", () => {
             qrUrl: (account, request) => vietQrUrl(account, request.amountVnd, request.transferContent),
         })
 
-        const answer = await moduleRef
-            .get(PaymentNativeService)
-            .invoke("ws-1", "instruction", {
-                orderNo: "DH-20261107-0004",
-                amountVnd: 2000,
-                transferContent: "DH202611070004",
-            })
+        const answer = await moduleRef.get(PaymentNativeService).invoke("ws-1", "instruction", {
+            orderNo: "DH-20261107-0004",
+            amountVnd: 2000,
+            transferContent: "DH202611070004",
+        })
 
         const link = typeof answer === "object" && answer !== null && "qrUrl" in answer ? String(answer.qrUrl) : ""
         expect(answer).toMatchObject({
