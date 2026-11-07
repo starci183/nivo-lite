@@ -74,7 +74,7 @@ describe("platform.agent-run", () => {
         const rows = Array.from({ length: RUN_STEPS_MAX + 50 }, (_, index) =>
             recordRow(`s${String(index)}`, { stepKey: `k${String(index)}`, status: "done" }),
         )
-        const pages = fakeEntity([])
+        const pages = recordedEntity([])
         const steps = {
             ...pages.api,
             list: (query: Parameters<typeof pages.api.list>[0]) => {
@@ -88,7 +88,7 @@ describe("platform.agent-run", () => {
             },
         }
         const result = await agentRunRead.execute?.(
-            runsProvider({ graphs: fakeEntity([GRAPH_ROW]).api, runs: fakeEntity([RUN]).api, steps }),
+            runsProvider({ graphs: recordedEntity([GRAPH_ROW]).api, runs: recordedEntity([RUN]).api, steps }),
             { installation: INSTALLATION_ID, id: "run-3" },
             RUNS_CONTEXT,
         )
