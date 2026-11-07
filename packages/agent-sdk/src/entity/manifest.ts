@@ -10,8 +10,9 @@ import { partitionNameOf } from "./partition-name"
  *       "view": "v_records_sales_lead", "checks": ["records_sales_lead_name_chk", ...], "indexes": ["records_sales_lead_recent_idx", ...] } ] }
  * - `entity` the `records.entity` value; `partition` the partition table, `records_<snake(entity)>` cut at 63 bytes.
  * - `view` present only when the entity declares `view: true`; always `v_<partition>` cut at 63 bytes.
- * - `checks` every CHECK and EXCLUDE constraint name of the partition: `<partition>_<snake(field)>_chk` per field,
- *   `<partition>_<name>` per declared check or noOverlap constraint; present only when not empty.
+ * - `checks` every CHECK and EXCLUDE constraint name of the partition: the three the partition inherits from `records`
+ *   (`records_entity_check`, `records_version_check`, `records_data_check`; the catalog lists them on every partition),
+ *   `<partition>_<snake(field)>_chk` per field, `<partition>_<name>` per declared check or noOverlap constraint.
  * - `indexes` every index name of the partition besides the primary key: `<partition>_<name>` per declared index or unique
  *   constraint, `<partition>_<snake(field)>_trgm_idx`, `<partition>_<snake(field)>_<snake(key)>_idx`, `<partition>_<snake(field)>_gin_idx`;
  *   present only when not empty.
@@ -38,18 +39,25 @@ export interface EntityManifest {
     readonly entities: ReadonlyArray<ManifestEntity>
 }
 
+/** The CHECK constraints of `records` itself: every partition carries them, and the catalog lists them under the partition (R333). */
+const INHERITED_CHECKS: ReadonlyArray<string> = ["records_data_check", "records_entity_check", "records_version_check"]
+
 const sorted = (names: ReadonlyArray<string>): ReadonlyArray<string> =>
     [...names].sort((left, right) => left.localeCompare(right))
 
 const manifestEntityOf = (entity: EntityDefinition): ManifestEntity => {
     const view = expectedView(entity)
-    const checks = sorted([...expectedChecks(entity).map((check) => check.name), ...expectedExcludes(entity)])
+    const checks = sorted([
+        ...INHERITED_CHECKS,
+        ...expectedChecks(entity).map((check) => check.name),
+        ...expectedExcludes(entity),
+    ])
     const indexes = sorted(expectedIndexes(entity).map((index) => index.name))
     return {
         entity: entity.name,
         partition: partitionNameOf(entity.name),
         ...(view === null ? {} : { view: view.name }),
-        ...(checks.length === 0 ? {} : { checks }),
+        checks,
         ...(indexes.length === 0 ? {} : { indexes }),
     }
 }
