@@ -11,10 +11,7 @@
         "records_accounting_adjustment_created_by_user_chk",
         "records_accounting_adjustment_note_chk",
         "records_accounting_adjustment_target_id_chk",
-        "records_accounting_adjustment_target_type_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_accounting_adjustment_target_type_chk"
       ],
       "indexes": ["records_accounting_adjustment_recent", "records_accounting_adjustment_target"]
     },
@@ -30,10 +27,7 @@
         "records_accounting_book_entry_note_chk",
         "records_accounting_book_entry_source_entity_chk",
         "records_accounting_book_entry_source_id_chk",
-        "records_accounting_book_entry_status_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_accounting_book_entry_status_chk"
       ],
       "indexes": [
         "records_accounting_book_entry_amount",
@@ -62,10 +56,7 @@
         "records_accounting_invoice_order_id_chk",
         "records_accounting_invoice_paid_at_chk",
         "records_accounting_invoice_period_ends_on_chk",
-        "records_accounting_invoice_status_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_accounting_invoice_status_chk"
       ],
       "indexes": [
         "records_accounting_invoice_contract_period_key",
@@ -84,10 +75,7 @@
         "records_accounting_question_answered_by_chk",
         "records_accounting_question_source_chk",
         "records_accounting_question_status_chk",
-        "records_accounting_question_text_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_accounting_question_text_chk"
       ],
       "indexes": ["records_accounting_question_source", "records_accounting_question_status_created"]
     },
@@ -101,10 +89,7 @@
         "records_accounting_settings_rematch_days_chk",
         "records_accounting_settings_scope_chk",
         "records_accounting_settings_vat_period_chk",
-        "records_accounting_settings_void_mode_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_accounting_settings_void_mode_chk"
       ],
       "indexes": ["records_accounting_settings_scope", "records_accounting_settings_scope_key"]
     },
@@ -120,10 +105,7 @@
         "records_agent_graph_installation_id_chk",
         "records_agent_graph_mode_chk",
         "records_agent_graph_mode_set_at_chk",
-        "records_agent_graph_mode_set_by_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_agent_graph_mode_set_by_chk"
       ],
       "indexes": ["records_agent_graph_agent", "records_agent_graph_agent_key", "records_agent_graph_installation"]
     },
@@ -153,10 +135,7 @@
         "records_agent_graph_decision_unread_chk",
         "records_agent_graph_decision_version_id_chk",
         "records_agent_graph_decision_wake_id_chk",
-        "records_agent_graph_decision_work_item_id_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_agent_graph_decision_work_item_id_chk"
       ],
       "indexes": [
         "records_agent_graph_decision_agent_recent",
@@ -184,10 +163,7 @@
         "records_agent_graph_proposal_patch_chk",
         "records_agent_graph_proposal_result_version_id_chk",
         "records_agent_graph_proposal_status_chk",
-        "records_agent_graph_proposal_widens_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_agent_graph_proposal_widens_chk"
       ],
       "indexes": [
         "records_agent_graph_proposal_agent_dedupe_key",
@@ -205,10 +181,7 @@
         "records_agent_graph_source_node_key_chk",
         "records_agent_graph_source_ref_chk",
         "records_agent_graph_source_value_hash_chk",
-        "records_agent_graph_source_version_id_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_agent_graph_source_version_id_chk"
       ],
       "indexes": ["records_agent_graph_source_kind_version", "records_agent_graph_source_source_key"]
     },
@@ -225,10 +198,7 @@
         "records_agent_graph_version_note_chk",
         "records_agent_graph_version_number_chk",
         "records_agent_graph_version_published_at_chk",
-        "records_agent_graph_version_published_by_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_agent_graph_version_published_by_chk"
       ],
       "indexes": ["records_agent_graph_version_agent_version", "records_agent_graph_version_agent_version_key"]
     },
@@ -240,10 +210,7 @@
         "records_agent_node_effect_effect_key_chk",
         "records_agent_node_effect_subject_entity_chk",
         "records_agent_node_effect_subject_id_chk",
-        "records_agent_node_effect_undone_at_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_agent_node_effect_undone_at_chk"
       ],
       "indexes": ["records_agent_node_effect_effect_key_key"]
     },
@@ -272,10 +239,7 @@
         "records_agent_run_trigger_chk",
         "records_agent_run_wait_deadline_at_chk",
         "records_agent_run_wait_work_item_id_chk",
-        "records_agent_run_wake_id_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_agent_run_wake_id_chk"
       ],
       "indexes": [
         "records_agent_run_agent_started",
@@ -314,10 +278,7 @@
         "records_agent_run_step_status_chk",
         "records_agent_run_step_step_key_chk",
         "records_agent_run_step_wait_item_id_chk",
-        "records_agent_run_step_work_item_id_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_agent_run_step_work_item_id_chk"
       ],
       "indexes": [
         "records_agent_run_step_kind_work_item",
@@ -338,10 +299,7 @@
         "records_agent_turn_session_key_chk",
         "records_agent_turn_text_chk",
         "records_agent_turn_tool_calls_chk",
-        "records_agent_turn_turn_index_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_agent_turn_turn_index_chk"
       ],
       "indexes": ["records_agent_turn_recent", "records_agent_turn_session_turn_key"]
     },
@@ -369,10 +327,7 @@
         "records_chat_conversation_profile_tried_at_chk",
         "records_chat_conversation_status_chk",
         "records_chat_conversation_unanswered_chk",
-        "records_chat_conversation_waiting_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_chat_conversation_waiting_chk"
       ],
       "indexes": [
         "records_chat_conversation_channel_external_key",
@@ -405,10 +360,7 @@
         "records_chat_message_sent_at_chk",
         "records_chat_message_sent_by_chk",
         "records_chat_message_status_chk",
-        "records_chat_message_text_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_chat_message_text_chk"
       ],
       "indexes": [
         "records_chat_message_channel_ref",
@@ -428,10 +380,7 @@
         "records_chat_settings_holding_message_chk",
         "records_chat_settings_openclaw_timeout_sec_chk",
         "records_chat_settings_scope_chk",
-        "records_chat_settings_updated_by_chk",
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check"
+        "records_chat_settings_updated_by_chk"
       ],
       "indexes": ["records_chat_settings_key", "records_chat_settings_scope", "records_chat_settings_scope_key"]
     },
@@ -439,8 +388,6 @@
       "entity": "loyalty.campaign",
       "partition": "records_loyalty_campaign",
       "checks": [
-        "records_data_check",
-        "records_entity_check",
         "records_loyalty_campaign_created_by_chk",
         "records_loyalty_campaign_draft_chk",
         "records_loyalty_campaign_failed_chk",
@@ -449,8 +396,7 @@
         "records_loyalty_campaign_segment_chk",
         "records_loyalty_campaign_sent_chk",
         "records_loyalty_campaign_status_chk",
-        "records_loyalty_campaign_work_item_id_chk",
-        "records_version_check"
+        "records_loyalty_campaign_work_item_id_chk"
       ],
       "indexes": ["records_loyalty_campaign_recent", "records_loyalty_campaign_status_recent"]
     },
@@ -458,16 +404,13 @@
       "entity": "loyalty.decision",
       "partition": "records_loyalty_decision",
       "checks": [
-        "records_data_check",
-        "records_entity_check",
         "records_loyalty_decision_action_chk",
         "records_loyalty_decision_amount_vnd_chk",
         "records_loyalty_decision_customer_chk",
         "records_loyalty_decision_draft_chk",
         "records_loyalty_decision_reason_chk",
         "records_loyalty_decision_status_chk",
-        "records_loyalty_decision_summary_chk",
-        "records_version_check"
+        "records_loyalty_decision_summary_chk"
       ],
       "indexes": ["records_loyalty_decision_status_created"]
     },
@@ -475,8 +418,6 @@
       "entity": "loyalty.ledger-entry",
       "partition": "records_loyalty_ledger_entry",
       "checks": [
-        "records_data_check",
-        "records_entity_check",
         "records_loyalty_ledger_entry_amount_vnd_chk",
         "records_loyalty_ledger_entry_by_chk",
         "records_loyalty_ledger_entry_evidence_chk",
@@ -486,8 +427,7 @@
         "records_loyalty_ledger_entry_occurred_at_chk",
         "records_loyalty_ledger_entry_points_chk",
         "records_loyalty_ledger_entry_ref_chk",
-        "records_loyalty_ledger_entry_reward_id_chk",
-        "records_version_check"
+        "records_loyalty_ledger_entry_reward_id_chk"
       ],
       "indexes": [
         "records_loyalty_ledger_entry_kind_occurred",
@@ -503,8 +443,6 @@
       "entity": "loyalty.member",
       "partition": "records_loyalty_member",
       "checks": [
-        "records_data_check",
-        "records_entity_check",
         "records_loyalty_member_activity_chk",
         "records_loyalty_member_birthday_chk",
         "records_loyalty_member_contact_chk",
@@ -520,8 +458,7 @@
         "records_loyalty_member_points_chk",
         "records_loyalty_member_tier_chk",
         "records_loyalty_member_tier_key_chk",
-        "records_loyalty_member_visits_chk",
-        "records_version_check"
+        "records_loyalty_member_visits_chk"
       ],
       "indexes": [
         "records_loyalty_member_activity_name",
@@ -549,14 +486,11 @@
       "entity": "loyalty.program",
       "partition": "records_loyalty_program",
       "checks": [
-        "records_data_check",
-        "records_entity_check",
         "records_loyalty_program_config_chk",
         "records_loyalty_program_enabled_chk",
         "records_loyalty_program_name_chk",
         "records_loyalty_program_scope_chk",
-        "records_loyalty_program_slug_chk",
-        "records_version_check"
+        "records_loyalty_program_slug_chk"
       ],
       "indexes": ["records_loyalty_program_scope", "records_loyalty_program_scope_key"]
     },
@@ -564,8 +498,6 @@
       "entity": "loyalty.reward",
       "partition": "records_loyalty_reward",
       "checks": [
-        "records_data_check",
-        "records_entity_check",
         "records_loyalty_reward_active_chk",
         "records_loyalty_reward_key_chk",
         "records_loyalty_reward_kind_chk",
@@ -576,8 +508,7 @@
         "records_loyalty_reward_percent_chk",
         "records_loyalty_reward_points_cost_chk",
         "records_loyalty_reward_stock_chk",
-        "records_loyalty_reward_value_vnd_chk",
-        "records_version_check"
+        "records_loyalty_reward_value_vnd_chk"
       ],
       "indexes": [
         "records_loyalty_reward_active_recent",
@@ -591,8 +522,6 @@
       "entity": "payment.claim",
       "partition": "records_payment_claim",
       "checks": [
-        "records_data_check",
-        "records_entity_check",
         "records_payment_claim_amount_chk",
         "records_payment_claim_amount_vnd_chk",
         "records_payment_claim_body_chk",
@@ -603,8 +532,7 @@
         "records_payment_claim_lead_id_chk",
         "records_payment_claim_names_chk",
         "records_payment_claim_settled_transaction_id_chk",
-        "records_payment_claim_status_chk",
-        "records_version_check"
+        "records_payment_claim_status_chk"
       ],
       "indexes": [
         "records_payment_claim_conversation_claimed",
@@ -620,8 +548,6 @@
       "entity": "payment.transaction",
       "partition": "records_payment_transaction",
       "checks": [
-        "records_data_check",
-        "records_entity_check",
         "records_payment_transaction_account_chk",
         "records_payment_transaction_amount_chk",
         "records_payment_transaction_amount_vnd_chk",
@@ -633,8 +559,7 @@
         "records_payment_transaction_order_id_chk",
         "records_payment_transaction_payer_chk",
         "records_payment_transaction_reference_chk",
-        "records_payment_transaction_status_chk",
-        "records_version_check"
+        "records_payment_transaction_status_chk"
       ],
       "indexes": [
         "records_payment_transaction_amount_recent",
@@ -653,8 +578,6 @@
       "entity": "sales.lead",
       "partition": "records_sales_lead",
       "checks": [
-        "records_data_check",
-        "records_entity_check",
         "records_sales_lead_awaiting_since_chk",
         "records_sales_lead_channel_chk",
         "records_sales_lead_closed_reason_chk",
@@ -671,8 +594,7 @@
         "records_sales_lead_owner_chk",
         "records_sales_lead_phone_chk",
         "records_sales_lead_quote_vnd_chk",
-        "records_sales_lead_stage_chk",
-        "records_version_check"
+        "records_sales_lead_stage_chk"
       ],
       "indexes": [
         "records_sales_lead_awaiting",
@@ -696,8 +618,6 @@
       "entity": "sales.order",
       "partition": "records_sales_order",
       "checks": [
-        "records_data_check",
-        "records_entity_check",
         "records_sales_order_amount_chk",
         "records_sales_order_amount_vnd_chk",
         "records_sales_order_carrier_chk",
@@ -710,8 +630,7 @@
         "records_sales_order_order_no_chk",
         "records_sales_order_shipped_at_chk",
         "records_sales_order_status_chk",
-        "records_sales_order_tracking_code_chk",
-        "records_version_check"
+        "records_sales_order_tracking_code_chk"
       ],
       "indexes": [
         "records_sales_order_amount",
@@ -729,8 +648,6 @@
       "entity": "sales.settings",
       "partition": "records_sales_settings",
       "checks": [
-        "records_data_check",
-        "records_entity_check",
         "records_sales_settings_approval_threshold_vnd_chk",
         "records_sales_settings_auto_won_chk",
         "records_sales_settings_closed_deals_can_flip_chk",
@@ -739,21 +656,14 @@
         "records_sales_settings_max_discount_pct_chk",
         "records_sales_settings_notify_accounting_chk",
         "records_sales_settings_remind_after_days_chk",
-        "records_sales_settings_reopen_needs_approval_chk",
-        "records_version_check"
+        "records_sales_settings_reopen_needs_approval_chk"
       ],
       "indexes": ["records_sales_settings_key", "records_sales_settings_key_key"]
     },
     {
       "entity": "workspace.settings",
       "partition": "records_workspace_settings",
-      "checks": [
-        "records_data_check",
-        "records_entity_check",
-        "records_version_check",
-        "records_workspace_settings_key_chk",
-        "records_workspace_settings_time_zone_chk"
-      ],
+      "checks": ["records_workspace_settings_key_chk", "records_workspace_settings_time_zone_chk"],
       "indexes": ["records_workspace_settings_key_id", "records_workspace_settings_workspace_key"]
     }
   ]
