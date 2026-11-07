@@ -45,6 +45,12 @@ describe("readSeedRecords", () => {
     it.each([
         ["a wrong schema", envelope(document([record()], { schema: "nivo/other@1" })), "schema"],
         ["no records", envelope(document([])), "records"],
+        ["a document that is not an object", envelope("records"), "schema"],
+        ["records that are not a list", envelope(document("none")), "records"],
+        ["a record that is not an object", envelope(document(["sales"])), "record"],
+        ["a constraint name that is not text", envelope(document([record({ on: 5 })])), "record.on"],
+        ["an entity that is not text", envelope(document([record({ entity: 5 })])), "record.entity"],
+        ["values that are not an object", envelope(document([record({ values: "x" })])), "record.values"],
         ["an entity that is not module.name", envelope(document([record({ entity: "Sales" })])), "record.entity"],
         ["a constraint name that is not a name", envelope(document([record({ on: "Key Key" })])), "record.on"],
         ["no values", envelope(document([record({ values: {} })])), "record.values"],

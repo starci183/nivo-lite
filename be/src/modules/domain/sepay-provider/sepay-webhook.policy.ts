@@ -55,8 +55,10 @@ const SEPAY_TIME = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})$/u
 
 /** SePay's booking time (Vietnam time, UTC+7) as ISO text; undefined when it is absent or not in that shape. */
 export const occurredAtOf = (transactionDate: string | undefined): string | undefined => {
-    const match = transactionDate === undefined ? null : SEPAY_TIME.exec(transactionDate)
-    const moment = match === null ? Number.NaN : Date.parse(`${match[1] ?? ""}T${match[2] ?? ""}+07:00`)
+    const moment =
+        transactionDate !== undefined && SEPAY_TIME.test(transactionDate)
+            ? Date.parse(transactionDate.replace(SEPAY_TIME, "$1T$2+07:00"))
+            : Number.NaN
     return Number.isNaN(moment) ? undefined : new Date(moment).toISOString()
 }
 

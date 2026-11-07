@@ -20,5 +20,5 @@ export const inUseOf = (
         const fact = item.factId === null ? undefined : standings.get(item.factId)
         return fact?.status === "active" ? [{ value: fact.value, sourceTitle: item.sourceTitle }] : []
     })
-    return active.length === 1 ? (active[0] ?? null) : null
+    return (active.length === 1 ? active : []).at(0) ?? null
 }

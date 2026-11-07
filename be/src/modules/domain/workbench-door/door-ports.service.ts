@@ -16,6 +16,7 @@ import { MemberGrantsService } from "@modules/domain/member-grants"
 import { ParkedRunsService, PlatformRegionsService } from "@modules/domain/platform-ports"
 import { MemberLookupService } from "@modules/domain/workspace-members"
 import type { RunIn } from "@modules/domain/entity-engine"
+import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { Locale } from "@modules/platform/i18n"
 import { portKindOf } from "./door-port-kind.policy"
@@ -83,7 +84,7 @@ export class DoorPortsService {
         if (kind === "parked-runs") return this.parkedRuns(run, port)
         if (kind === "engine") return this.ports.portsFor(run.runIn, "action", { port })["port"]
         const entity = [...this.engine.catalog.values()].find((declared) => declared.dataKind === run.dataKind)
-        return kind === "list" && entity !== undefined ? this.listSource(run, entity.name) : unprovided(port)
+        return kind === "list" && entity !== undefined ? this.listSource(run, entity) : unprovided(port)
     }
 
     private parkedRuns(run: DoorRun, port: PortDefinition<unknown>): ParkedRuns | never {
@@ -140,8 +141,9 @@ export class DoorPortsService {
      * A list source over one entity: a row carries the fields the READ declares (beyond the shape's row fields), so a block draws a column
      * the shape's row does not name, and a field the read did not declare never leaves the door, whatever the entity holds.
      */
-    private listSource(run: DoorRun, entity: string): ListSource<unknown> {
-        const held = Object.keys(this.engine.catalog.get(entity)?.fields ?? {})
+    private listSource(run: DoorRun, declared: EntityDefinition): ListSource<unknown> {
+        const entity = declared.name
+        const held = Object.keys(declared.fields)
         const select = run.fields.filter((field) => held.includes(field))
         return {
             page: async (shape, query): Promise<ListPage<unknown>> => {
