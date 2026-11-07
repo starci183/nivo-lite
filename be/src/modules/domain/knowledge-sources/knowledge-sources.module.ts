@@ -15,6 +15,7 @@ import { SourceTwinsService } from "./source-twins.service"
 import { KnowledgeSourcesReadableService } from "./knowledge-sources-readable.service"
 import { KnowledgeSourcesAdminReadService } from "./knowledge-sources-admin-read.service"
 import { KnowledgeSourcesReadService } from "./knowledge-sources-read.service"
+import { ProfileSourcesService } from "./profile-sources.service"
 import { PublishedSourcesService } from "./published-sources.service"
 
 @Module({})
@@ -23,6 +24,14 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
     /** Registers the capability once per app; the read-only mode registers the reads only, with no storage and no queue. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        if (options.seedOnly === true) {
+            return {
+                ...base,
+                imports: [...(base.imports ?? []), KnowledgeQueueModule.register({})],
+                providers: [...(base.providers ?? []), ProfileSourcesService],
+                exports: [ProfileSourcesService],
+            }
+        }
         if (options.readOnly === true) {
             return {
                 ...base,

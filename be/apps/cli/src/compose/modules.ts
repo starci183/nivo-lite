@@ -20,7 +20,7 @@ import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
 import { AgentDirectoryService, AgentRecordsService } from "@modules/domain/agents"
-import { ProfileSourcesService } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourcesModule, ProfileSourcesService } from "@modules/domain/knowledge-sources"
 import { ModuleInstallationsModule } from "@modules/domain/module-installations"
 import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
 import { McpGatewayAdminService, McpGatewayModule } from "@modules/domain/mcp-gateway"
@@ -157,6 +157,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
     ChannelConnectionsModule.register({ isGlobal: true }),
     InventoryModule.register({ isGlobal: true, seedOnly: true }),
+    KnowledgeSourcesModule.register({ isGlobal: true, seedOnly: true }),
     ChannelProvisioningModule.register({ isGlobal: true, ...options.channelProvisioning }),
     EntityPlannerModule.register({ isGlobal: true, entities: FLOW_F_ENTITIES }),
     CliModule.register({}),
