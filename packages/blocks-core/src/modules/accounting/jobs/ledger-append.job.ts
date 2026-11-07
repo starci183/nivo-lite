@@ -62,8 +62,7 @@ export const ledgerAppendJob: JobDefinition<typeof input, LedgerAppendPorts> = d
         const probe = await door.call(LEDGER_STATUS_TOOL, {})
         // A status that cannot be asked (no tool plays it, forbidden, unreadable) is a defect, not a workspace with no ledger: the job
         // is delivered again when the provider was away, and parked with its alert otherwise, so a payment never goes unwritten unseen.
-        endAfterDoor(JOB_NAME, LEDGER_STATUS_TOOL, probe)
-        const ledger = status.safeParse(probe.output)
+        const ledger = status.safeParse(endAfterDoor(JOB_NAME, LEDGER_STATUS_TOOL, probe))
         if (!ledger.success)
             endAfterDoor(JOB_NAME, LEDGER_STATUS_TOOL, { ok: false, reason: "failed", message: "unreadable" })
         if (!ledger.success || !ledger.data.connected) return
