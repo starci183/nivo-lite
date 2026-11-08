@@ -6,8 +6,12 @@ import type { WhereExpressionBuilder } from "typeorm"
 export const bracketConditions = (brackets: unknown): ReadonlyArray<ReadonlyArray<unknown>> => {
     const conditions: Array<ReadonlyArray<unknown>> = []
     const scope = mock<WhereExpressionBuilder>()
-    scope.where.mockImplementation((...args: Array<unknown>) => (conditions.push(args), scope))
-    scope.orWhere.mockImplementation((...args: Array<unknown>) => (conditions.push(args), scope))
+    const record = (args: Array<unknown>) => {
+        conditions.push(args)
+        return scope
+    }
+    scope.where.mockImplementation((...args: Array<unknown>) => record(args))
+    scope.orWhere.mockImplementation((...args: Array<unknown>) => record(args))
     if (brackets instanceof Brackets) brackets.whereFactory(scope)
     return conditions
 }

@@ -66,7 +66,8 @@ import { PerformerKitService } from "../../modules/domain/work-performers/perfor
 import { TeamChatProofModule } from "./team-chat-proof.module"
 import { queueOptions } from "./test-capabilities.options"
 import { QUIET_INSTALLATIONS } from "./quiet-peers.options"
-import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
+import { TestWorldErrorCode } from "./test-world.error"
+import { testWorldFailure } from "./test-world-failure"
 
 @Injectable()
 /** No agent or authentication account lookup is needed to admit an API request. */
@@ -80,7 +81,7 @@ export class PublicApiProofDirectory implements AgentDirectory, AccountDirectory
     }
 
     accountOf(): ReturnType<AccountDirectory["accountOf"]> {
-        return Promise.reject(new TestWorldError({ code: TestWorldErrorCode.AccountsUnread }))
+        return Promise.reject(testWorldFailure(TestWorldErrorCode.AccountsUnread))
     }
 }
 

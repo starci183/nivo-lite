@@ -22,6 +22,7 @@ import {
     wakesOfFact,
 } from "../../world/agent-work-database.service"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
+import { testWorldFailure } from "../../world/test-world-failure"
 import { ageWake, flowBurstOf, stampBurst } from "../../world/agent-work-burst.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { useTestWorld } from "../../world/use-test-world"
@@ -227,7 +228,7 @@ describe("agent-work/fence: a lost lease and a poison wake", () => {
         scripted().script = {
             run: (turn) =>
                 turn.eventKey === poison.eventKey
-                    ? Promise.reject(new TestWorldError({ code: TestWorldErrorCode.ProviderDown }))
+                    ? Promise.reject(testWorldFailure(TestWorldErrorCode.ProviderDown))
                     : Promise.resolve({ kind: "proposal", proposal: { reply: "ok" }, usage: null }),
         }
         await post(poison)
