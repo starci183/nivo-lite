@@ -1,9 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
-import { DECISIONS_QUEUE, DecisionsJob, decisionsDedupeKey } from "./decisions.contracts"
-import type { DecideExecutionPayload, DecideWorkPayload, RunWorkPayload } from "./decisions.contracts"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
+import {
+    DECISIONS_QUEUE,
+    DecisionsJob,
+    decisionsDedupeKey,
+    type DecideExecutionPayload,
+    type DecideWorkPayload,
+    type RunWorkPayload,
+} from "./decisions.contracts"
 
 @Injectable()
 /** The typed producer of the decisions queue: the way the back end itself starts a decision (the web app starts them through SQL). */

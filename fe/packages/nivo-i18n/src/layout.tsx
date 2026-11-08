@@ -1,8 +1,6 @@
 import type { ComponentType, ReactElement, ReactNode } from "react"
-import { createReadLocaleSegment } from "@starci/next-i18n/layout"
-import type { ReadLocaleSegment } from "@starci/next-i18n/layout"
-import { i18n } from "./routing"
-import type { AppI18n } from "./routing"
+import { createReadLocaleSegment, type ReadLocaleSegment } from "@starci/next-i18n/layout"
+import { i18n, type AppI18n } from "./routing"
 
 /** Reads the locale, the catalogue and the time zone of a locale route segment. */
 const readLocaleSegment: ReadLocaleSegment<AppI18n["locales"][number]> = createReadLocaleSegment(i18n)

@@ -1,9 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
-import { GENERIC_WEBHOOK_QUEUE, GenericWebhookJob, genericWebhookKey } from "./generic-webhook.contracts"
-import type { GenericWebhookPayload } from "./generic-webhook.contracts"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
+import {
+    GENERIC_WEBHOOK_QUEUE,
+    GenericWebhookJob,
+    genericWebhookKey,
+    type GenericWebhookPayload,
+} from "./generic-webhook.contracts"
 
 @Injectable()
 /** Queues a verified receipt in the intake transaction, preserving its delivery identity through the relay. */

@@ -47,8 +47,7 @@ import {
     WebhookDeliveryModule,
 } from "@modules/integrations/webhook-delivery"
 import { DOCUMENT_FILE_READERS, DOCUMENTS_ERROR_KINDS, DOCUMENTS_MESSAGES } from "@modules/integrations/documents"
-import { TELEGRAM_USER_ERRORS } from "../api.options"
-import type { ApiOptions } from "../api.options"
+import { TELEGRAM_USER_ERRORS, type ApiOptions } from "../api.options"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 /** The connections area of the API, in registration order. */

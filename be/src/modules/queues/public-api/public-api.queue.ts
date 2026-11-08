@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
-import { PublicApiQueueJob, publicApiDedupeKey } from "./public-api.contracts"
-import type { PublicApiRequestPayload } from "./public-api.contracts"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
+import { PublicApiQueueJob, publicApiDedupeKey, type PublicApiRequestPayload } from "./public-api.contracts"
 
 /** The queue name: the contract between this producer and the processor of the public API request job (the durable queue name). */
 export const PUBLIC_API_QUEUE = "public_api"

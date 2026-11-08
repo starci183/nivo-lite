@@ -1,9 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
-import { AGENT_STEP_QUEUE, AgentStepJob, agentStepKey, agentStepSweepKey } from "./agent-step.contracts"
-import type { AgentStepPayload } from "./agent-step.contracts"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
+import {
+    AGENT_STEP_QUEUE,
+    AgentStepJob,
+    agentStepKey,
+    agentStepSweepKey,
+    type AgentStepPayload,
+} from "./agent-step.contracts"
 
 @Injectable()
 /** The typed producer of the agent-step queue: the one way an advance job starts. */

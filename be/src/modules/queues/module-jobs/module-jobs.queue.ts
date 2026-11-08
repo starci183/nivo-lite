@@ -1,9 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
-import { MODULE_JOBS_QUEUE, RUN_MODULE_JOB } from "./module-jobs.contracts"
-import type { ModuleJobEnqueueOptions, ModuleJobPayload } from "./module-jobs.contracts"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
+import {
+    MODULE_JOBS_QUEUE,
+    RUN_MODULE_JOB,
+    type ModuleJobEnqueueOptions,
+    type ModuleJobPayload,
+} from "./module-jobs.contracts"
 
 @Injectable()
 /** The typed producer of the module-jobs queue. */

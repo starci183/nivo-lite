@@ -1,14 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
-import { KnowledgeJob, knowledgeDedupeKey } from "./knowledge.contracts"
-import type {
-    DossierRemedyPayload,
-    DossierReviewPayload,
-    KnowledgeReembedPayload,
-    PublicDraftPayload,
-    KnowledgeSourcePayload,
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
+import {
+    KnowledgeJob,
+    knowledgeDedupeKey,
+    type DossierRemedyPayload,
+    type DossierReviewPayload,
+    type KnowledgeReembedPayload,
+    type PublicDraftPayload,
+    type KnowledgeSourcePayload,
 } from "./knowledge.contracts"
 
 /** The queue name: the contract between these producers, the SQL functions that enqueue knowledge sources, and the processors (the durable queue name). */

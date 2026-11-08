@@ -1,5 +1,4 @@
-import { BaseEvent } from "@modules/platform/event-bus"
-import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
+import { BaseEvent, type EventPayload, type ParsedEvent } from "@modules/platform/event-bus"
 import { envelopeParts, fieldOf, keyOf, numberOf, textOf } from "./event-fields.policy"
 import { isTextOrAbsent, whenPresent } from "./money-event.policy"
 

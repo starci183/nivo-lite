@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { AgentTurnQueue } from "./agent-turn.queue"
 
 /** Token of the agent-turn queue producer, for the capabilities that enqueue a drain. */

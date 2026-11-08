@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { BankFeedDeliveryRecorded } from "./bank-feed-delivery.contracts"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
 
 /** The durable queue of the deferred bank-feed receipt consumer. */
 export const BANK_FEED_DELIVERY_QUEUE = "bank-feed-delivery"

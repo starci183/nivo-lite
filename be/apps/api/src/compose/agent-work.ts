@@ -14,8 +14,12 @@ import {
     AgentRunsModule,
 } from "@modules/domain/agent-runs"
 import { AGENT_WORK_ERROR_KINDS, AGENT_WORK_MESSAGES, AgentWorkModule } from "@modules/domain/agent-work"
-import { GRAPH_NODES_ERROR_KINDS, GRAPH_NODES_MESSAGES, GraphNodesModule } from "@modules/domain/graph-nodes"
-import type { NodeInstall } from "@modules/domain/graph-nodes"
+import {
+    GRAPH_NODES_ERROR_KINDS,
+    GRAPH_NODES_MESSAGES,
+    GraphNodesModule,
+    type NodeInstall,
+} from "@modules/domain/graph-nodes"
 import { AiTasksService } from "@modules/domain/ai-tasks"
 import { NodeToolDoorService } from "@modules/domain/mcp-gateway"
 import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"

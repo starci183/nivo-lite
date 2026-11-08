@@ -1,4 +1,4 @@
-import { ERRORS_MESSAGES } from "@modules/platform/errors"
+import { ERRORS_MESSAGES, type ErrorKind } from "@modules/platform/errors"
 import { HTTP_SECURITY_ERROR_KINDS, HTTP_SECURITY_MESSAGES } from "@modules/platform/http-security"
 import { DATABASE_ERROR_KINDS } from "@modules/platform/database"
 import { EVENT_BUS_ERROR_KINDS, EVENT_BUS_MESSAGES } from "@modules/platform/event-bus"
@@ -16,7 +16,6 @@ import { API_ERROR_KINDS, EVENTS_MESSAGES } from "@modules/events/api"
 import { MCP_ERROR_KINDS, MCP_MESSAGES } from "@modules/integrations/mcp"
 import { MCP_GATEWAY_RECEIPTS_ERROR_KINDS, MCP_GATEWAY_RECEIPTS_MESSAGES } from "@modules/domain/mcp-gateway-receipts"
 import { BOOKING_PORTS_MESSAGES } from "@modules/domain/booking-ports"
-import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 
 /** The error kinds of the capabilities this group registers, in registration order. */
