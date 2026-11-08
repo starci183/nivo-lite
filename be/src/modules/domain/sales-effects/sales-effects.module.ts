@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { LeadEffectsService } from "./lead-effects.service"
 import { OrderEffectsService } from "./order-effects.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./sales-effects.module-definition"

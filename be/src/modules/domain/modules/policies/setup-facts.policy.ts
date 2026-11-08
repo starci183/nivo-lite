@@ -1,5 +1,4 @@
-import { factSlugOf, sameValue } from "@modules/domain/brain-facts"
-import type { FactRecord } from "@modules/domain/brain-facts"
+import { factSlugOf, sameValue, type FactRecord } from "@modules/domain/brain-facts"
 import { ellipsize, withinBudget } from "@modules/platform/primitives"
 import type { ProposedWrite } from "./setup-writes.policy"
 
@@ -38,10 +37,10 @@ export const knownLinesOf = (
     const shown = (fact: FactRecord): boolean => !PRIVATE_SUBJECTS.has(fact.subjectType)
     const hitIds = new Set(hits.map((fact) => fact.id))
     const rest = inForce.filter((fact) => !hitIds.has(fact.id)).sort((a, b) => b.trust - a.trust)
-    const ordered = [...hits, ...rest].filter(shown).slice(0, KNOWN_LINES_MAX)
+    const ordered = [...hits, ...rest].filter((fact) => shown(fact)).slice(0, KNOWN_LINES_MAX)
     const lines = ordered.map((fact) =>
         ellipsize(
-            `- ${fact.subjectLabel} - ${fact.attributeLabel}: ${fact.value}`.replace(/\s+/gu, " "),
+            `- ${fact.subjectLabel} - ${fact.attributeLabel}: ${fact.value}`.replaceAll(/\s+/gu, " "),
             KNOWN_LINE_CHARS,
         ),
     )

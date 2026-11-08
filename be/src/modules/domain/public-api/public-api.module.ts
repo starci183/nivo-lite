@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { PublicApiQueueModule } from "@modules/queues/public-api"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./public-api.module-definition"

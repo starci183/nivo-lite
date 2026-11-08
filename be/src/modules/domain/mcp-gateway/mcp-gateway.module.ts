@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { McpConnectorsModule } from "@modules/domain/mcp-connectors"
 import { McpGatewayReceiptsModule } from "@modules/domain/mcp-gateway-receipts"
 import { McpToolGrantsModule } from "@modules/domain/mcp-tool-grants"

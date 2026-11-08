@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { AgentDirectoryService } from "@modules/domain/agents"
-import type { OptionalId } from "@modules/domain/agents"
+import { AgentDirectoryService, type OptionalId } from "@modules/domain/agents"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import type { AgentPostInput, ApprovalPostInput, ChatMemberRef, LineInput, ReportInput } from "./team-chat.contracts"

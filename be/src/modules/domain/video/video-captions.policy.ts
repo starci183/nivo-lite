@@ -1,5 +1,4 @@
-import { captionCues, VOICE_LEAD } from "./render-plan.policy"
-import type { VoiceClip } from "./render-plan.policy"
+import { captionCues, VOICE_LEAD, type VoiceClip } from "./render-plan.policy"
 import type { VideoSpec } from "./video-spec.policy"
 
 /** A nonempty timed track and the known locale of its spoken content, when available. */
@@ -27,7 +26,7 @@ const timestamp = (milliseconds: number): string => {
 
 const cueText = (text: string): string =>
     text
-        .replace(/\r\n?/gu, "\n")
+        .replaceAll(/\r\n?/gu, "\n")
         .replaceAll(String.fromCodePoint(0), "\uFFFD")
         .split("\n")
         .filter((line) => line.trim() !== "")

@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { WORKBENCH_DOOR_OPTIONS } from "./workbench-door.decorators"
 import { DoorPortsService } from "./door-ports.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workbench-door.module-definition"

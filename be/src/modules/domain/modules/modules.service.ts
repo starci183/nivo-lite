@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AuthorityActionsService } from "@modules/domain/authority-actions"
-import type { AuthorityActionRecord } from "@modules/domain/authority-actions"
+import { AuthorityActionsService, type AuthorityActionRecord } from "@modules/domain/authority-actions"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import { InjectModulesOptions } from "./modules.decorators"
@@ -74,7 +73,7 @@ export class ModulesService {
                 new ModulesError({ code: ModulesErrorCode.CatalogInvalid, params: { problems: problems.join("; ") } }),
             )
         }
-        const actions = this.options.catalog.flatMap(toActionRecords)
+        const actions = this.options.catalog.flatMap((module) => toActionRecords(module))
         const modules = this.options.catalog.map((module) => toModuleRecord(module))
         return this.entityManager.transaction(async (tx) => {
             const upserted = await tx.upsert(ModuleEntity, modules, ["key"])

@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { VideoBrandKitsModule } from "@modules/domain/video-brand-kits"
 import { VideoDelegationsModule } from "@modules/domain/video-delegations"
 import { INBOX, InboxService } from "@modules/platform/inbox"

@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { ModulesOptions } from "./modules.options"
 import type { RecordInstallationSource, SetupGraphPort } from "./modules.port"
 

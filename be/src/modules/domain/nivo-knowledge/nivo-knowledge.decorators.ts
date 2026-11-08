@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { NivoKnowledgeOptions } from "./nivo-knowledge.options"
 
 /** Token of the options of the nivo-knowledge capability, exported so a spec can provide it. */

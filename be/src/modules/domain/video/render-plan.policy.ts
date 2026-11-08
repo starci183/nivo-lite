@@ -1,9 +1,15 @@
 import { frameFilter } from "./brand-frame.policy"
-import { luminance } from "./captions.policy"
-import type { TextCue } from "./captions.policy"
+import { luminance, type TextCue } from "./captions.policy"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
-import { aspectSize, estimateSceneSeconds } from "./video-spec.policy"
-import type { FrameSize, Motion, Scene, Transition, VideoSpec } from "./video-spec.policy"
+import {
+    aspectSize,
+    estimateSceneSeconds,
+    type FrameSize,
+    type Motion,
+    type Scene,
+    type Transition,
+    type VideoSpec,
+} from "./video-spec.policy"
 
 /** Frames per second of every clip. */
 export const FPS = 30

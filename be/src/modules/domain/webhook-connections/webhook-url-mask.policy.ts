@@ -12,6 +12,9 @@ const maskSegment = (segment: string): string =>
  * fragment and any user and password are never shown.
  */
 export const maskedWebhookUrl = (target: URL): string => {
-    const path = target.pathname.split("/").map(maskSegment).join("/")
+    const path = target.pathname
+        .split("/")
+        .map((segment) => maskSegment(segment))
+        .join("/")
     return `${target.protocol}//${target.host}${path === "/" ? "" : path}`
 }

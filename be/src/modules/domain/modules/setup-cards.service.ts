@@ -1,30 +1,25 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AuthorityActionsService, ruleRefusalOf } from "@modules/domain/authority-actions"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
-import { BrainFactsService, factSlugOf, sameValue } from "@modules/domain/brain-facts"
-import type { Evidence, Scope } from "@modules/domain/brain-facts"
+import { AuthorityRulesService, type AuthorityRuleRecord } from "@modules/domain/authority-rules"
+import { BrainFactsService, factSlugOf, sameValue, type Evidence, type Scope } from "@modules/domain/brain-facts"
 import { EventsService } from "@modules/domain/events"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
 import { SetupMessagesService } from "@modules/domain/module-setup-messages"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
-import { SetupWritesService } from "@modules/domain/module-setup-writes"
-import type {
-    CardRecord,
-    BranchCardPayload,
-    FactCardPayload,
-    ProposedCardRecord,
-    RuleCardPayload,
+import {
+    SetupWritesService,
+    type CardRecord,
+    type BranchCardPayload,
+    type FactCardPayload,
+    type ProposedCardRecord,
+    type RuleCardPayload,
 } from "@modules/domain/module-setup-writes"
 import { InstallationChangesService } from "./installation-changes.service"
 import { SetupBranchCardsService } from "./setup-branch-cards.service"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { Locale } from "@modules/platform/i18n"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
@@ -33,8 +28,7 @@ import type { SetupGraphPort } from "./modules.port"
 import type { CardDecision, CurrentFact, CurrentRule, SetupCardView } from "./module-setup.contracts"
 import type { ModuleDefinition } from "./modules.contracts"
 import { ModulesService } from "./modules.service"
-import { cardOf } from "./policies/setup-writes.policy"
-import type { OpenGap, ProposedWrite } from "./policies/setup-writes.policy"
+import { cardOf, type OpenGap, type ProposedWrite } from "./policies/setup-writes.policy"
 
 const GOVERNORS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 const SCOPES: ReadonlySet<Scope> = new Set(["public", "internal", "restricted"])

@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
-import type { NodeIndex } from "@nivo-lite/agent-sdk/node"
+import { nodeIndexOf, type NodeIndex } from "@nivo-lite/agent-sdk/node"
 import {
     AgentBindingsService,
     AgentConnectionsError,
@@ -10,10 +9,8 @@ import {
 import { AgentGraphFlowService } from "@modules/domain/agent-graphs"
 import { MANAGEMENT_CONNECTION_IDS } from "@modules/domain/channel-provisioning"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
-import { ModuleTagGrantsService, ModulesService, defaultRulesOf } from "@modules/domain/modules"
-import type { ModuleDefinition } from "@modules/domain/modules"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
+import { ModuleTagGrantsService, ModulesService, defaultRulesOf, type ModuleDefinition } from "@modules/domain/modules"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"

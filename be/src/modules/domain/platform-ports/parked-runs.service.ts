@@ -2,8 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { ParkedRunFilter, ParkedRunRow, ParkedRuns } from "@nivo-lite/blocks-core/modules"
 import { AgentRunParkStoreService, AgentRunResumeService } from "@modules/domain/agent-runs"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
 import { PARKED_LOOKED_AT, errorKeyOf } from "./parked-runs.policy"
 
 /** Who asks and in which language: the words of the parked runs are theirs, and so is the seat that resumes one. */

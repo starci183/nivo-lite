@@ -1,13 +1,18 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectOpenclawGatewayAdmin } from "@modules/integrations/openclaw"
-import type { GatewayAdminClient } from "@modules/integrations/openclaw"
+import { InjectOpenclawGatewayAdmin, type GatewayAdminClient } from "@modules/integrations/openclaw"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspacesError, WorkspacesErrorCode } from "./errors/workspaces.error"
 import { WorkspaceEntity } from "./persistence/entities"
-import { CONFIRMATION_WORD, NIVO_WORKSPACE_ID } from "./workspaces.contracts"
-import type { PruneConsole, PruneReport, PruneRequest, WorkspaceBrief } from "./workspaces.contracts"
+import {
+    CONFIRMATION_WORD,
+    NIVO_WORKSPACE_ID,
+    type PruneConsole,
+    type PruneReport,
+    type PruneRequest,
+    type WorkspaceBrief,
+} from "./workspaces.contracts"
 
 const NO_PLAN = "no plan"
 

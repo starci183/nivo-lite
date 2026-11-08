@@ -2,8 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { returnedRows, rowShape } from "@modules/platform/database"
 import type { RecordedRequest } from "./public-api.contracts"
-import { PublicApiEntity } from "./persistence/entities"
-import type { PublicApiKind } from "./persistence/entities"
+import { PublicApiEntity, type PublicApiKind } from "./persistence/entities"
 
 /** What recording one request in the ledger needs. */
 export interface LedgerRecord {

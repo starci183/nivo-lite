@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { WorkbenchDoorOptions } from "./workbench-door.options"
 
 /** Token of the workbench door options, exported so a spec can provide it. */

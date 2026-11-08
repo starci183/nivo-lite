@@ -1,9 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import { AgentGraphPublishService, AgentGraphsService, graphDocumentSchema } from "@modules/domain/agent-graphs"
-import { AgentTemplateVersionsService, TemplateRecordsService } from "@modules/domain/agent-templates"
-import type { TemplateInstallView } from "@modules/domain/agent-templates"
-import { applyUnits, instantiate, resolveValues, updateUnits } from "@nivo-lite/agent-sdk/template"
-import type { UpdateOffer } from "@nivo-lite/agent-sdk/template"
+import {
+    AgentTemplateVersionsService,
+    TemplateRecordsService,
+    type TemplateInstallView,
+} from "@modules/domain/agent-templates"
+import { applyUnits, instantiate, resolveValues, updateUnits, type UpdateOffer } from "@nivo-lite/agent-sdk/template"
 import type { OptionalUpdateOffer } from "./template-marketplace.contracts"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"

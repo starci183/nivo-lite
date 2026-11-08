@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { DataRightsGate, NativeAdapter } from "./mcp-gateway.contracts"
 import type { McpGatewayOptions } from "./mcp-gateway.options"
 

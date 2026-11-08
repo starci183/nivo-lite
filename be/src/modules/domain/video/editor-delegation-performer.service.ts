@@ -1,22 +1,19 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectWorkPerformerRegistry } from "@modules/domain/decisions"
-import type {
-    Performed,
-    Prepared,
-    Proposal,
-    WorkContext,
-    WorkItem,
-    WorkPerformer,
-    WorkPerformerRegistry,
+import {
+    InjectWorkPerformerRegistry,
+    type Performed,
+    type Prepared,
+    type Proposal,
+    type WorkContext,
+    type WorkItem,
+    type WorkPerformer,
+    type WorkPerformerRegistry,
 } from "@modules/domain/decisions"
-import { VideoDelegationsService } from "@modules/domain/video-delegations"
-import type { DelegationIdRow } from "@modules/domain/video-delegations"
+import { VideoDelegationsService, type DelegationIdRow } from "@modules/domain/video-delegations"
 import { VideoProjectWorkbenchWriterService } from "@modules/domain/video-projects"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
 import { projectHref, readDelegation, renderingCard } from "./editor-delegation.policy"
 import type { DelegatedScript, RenderingWords } from "./editor-delegation.contracts"

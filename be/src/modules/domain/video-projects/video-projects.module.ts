@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./video-projects.module-definition"
 import { VideoProjectWorkbenchWriterService } from "./video-project-workbench-writer.service"
 import { VideoProjectScriptingService } from "./video-project-scripting.service"

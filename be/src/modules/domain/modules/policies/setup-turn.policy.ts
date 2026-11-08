@@ -3,8 +3,7 @@ import type { DraftSnapshot, GateEvidence, SetupFact } from "@modules/domain/mod
 import type { Locale } from "@modules/platform/i18n"
 import type { ModuleDefinition } from "../modules.contracts"
 import { gateEntry } from "./setup-gates.policy"
-import { GAP_GATE, sanitizeWrites, writeSpecLines } from "./setup-writes.policy"
-import type { OpenGap, ProposedWrite } from "./setup-writes.policy"
+import { GAP_GATE, sanitizeWrites, writeSpecLines, type OpenGap, type ProposedWrite } from "./setup-writes.policy"
 
 /** The words of the chat in the language of the owner, taken from the message catalogue. */
 export interface SetupPromptWords {
@@ -62,7 +61,7 @@ const clean = (value: unknown, max: number): string => (typeof value === "string
 const factKeyOf = (value: unknown): string => {
     const key = clean(value, 60)
         .toLowerCase()
-        .replace(/[^a-z0-9_]+/gu, "_")
+        .replaceAll(/[^a-z0-9_]+/gu, "_")
     let start = 0
     let end = key.length
     while (start < end && key[start] === "_") start += 1

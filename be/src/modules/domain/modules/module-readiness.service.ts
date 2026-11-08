@@ -2,9 +2,13 @@ import { Injectable } from "@nestjs/common"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
 import { ContextVersionsService } from "@modules/domain/module-context-versions"
-import { InstallationRecordsService, lifecycleOf } from "@modules/domain/module-installations"
+import {
+    InstallationRecordsService,
+    lifecycleOf,
+    type InstallationRecord,
+    type InstallationStatus,
+} from "@modules/domain/module-installations"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
-import type { InstallationRecord, InstallationStatus } from "@modules/domain/module-installations"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import type { ConnectionNeed, InstallationView } from "./modules.contracts"
 import { ModulesService } from "./modules.service"
@@ -37,13 +41,14 @@ export class ModuleReadinessService {
 
     /** An installation with its agent, the number of its active version, how far its setup got and what it still needs connected. */
     async withNeeds(record: InstallationRecord): Promise<InstallationView> {
-        const [connectionNeeds, [identity], [version], module, session] = await Promise.all([
-            this.needsOf(record.workspaceId, record.moduleKey),
+        const { moduleKey } = record
+        const [connectionNeeds, [identity], [version], session] = await Promise.all([
+            this.needsOf(record.workspaceId, moduleKey),
             this.agents.identitiesOf(record.workspaceId, record.agentId === null ? [] : [record.agentId]),
             this.versions.numbersOf(record.activeContextVersionId === null ? [] : [record.activeContextVersionId]),
-            this.catalog.find(record.moduleKey),
             this.sessions.latest(record.id),
         ])
+        const module = await this.catalog.find(moduleKey)
         const setupProgress = setupProgressOf(module, session?.gateEvidence ?? {})
         return {
             ...record,

@@ -2,15 +2,11 @@ import { createHash } from "node:crypto"
 import { Injectable, Optional } from "@nestjs/common"
 import { McpCallLogService } from "@modules/domain/mcp-call-log"
 import { McpConnectorsService } from "@modules/domain/mcp-connectors"
-import { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
-import type { GatewayReceiptOperation } from "@modules/domain/mcp-gateway-receipts"
+import { GatewayReceiptsService, type GatewayReceiptOperation } from "@modules/domain/mcp-gateway-receipts"
 import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
-import { InjectMcpRemote } from "@modules/integrations/mcp"
-import type { McpRemote } from "@modules/integrations/mcp"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectMcpRemote, type McpRemote } from "@modules/integrations/mcp"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { argsHashOf, masked, summaryOf } from "./audit-mask.policy"
 import { breakerAfter, breakerGate, CLOSED } from "./circuit-breaker.policy"
 import { failureCodeOf, isTimeout, roleIn, usable, toolVisibleTo } from "./connector-call.policy"
@@ -144,7 +140,7 @@ export class McpGatewayService {
     async connectorsOf(workspaceId: string): Promise<ReadonlyArray<WorkspaceConnector>> {
         const rows = await this.connectors.list(workspaceId)
         const natives = this.natives.map((adapter) => nativeConnectorOf(rows, adapter, this.options.defaultTimeoutMs))
-        const remotes = rows.filter((row) => row.kind === "remote").map(remoteConnectorOf)
+        const remotes = rows.filter((row) => row.kind === "remote").map((row) => remoteConnectorOf(row))
         return [...natives, ...remotes]
     }
 
@@ -189,7 +185,7 @@ export class McpGatewayService {
 
     /** The grants of one agent. */
     async grantsOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<ToolGrant>> {
-        return (await this.grants.listOfAgent(workspaceId, agentId)).map(grantOf)
+        return (await this.grants.listOfAgent(workspaceId, agentId)).map((row) => grantOf(row))
     }
 
     /** The agents of a workspace holding any of the tools (full names or `connector.*`) in a mode other than never, oldest grant first. */

@@ -49,4 +49,9 @@ const scrubToken = (token: string): string => {
  * no need of. Prices, dates and quantities stay.
  */
 export const scrubbed = (text: string): string =>
-    text.replaceAll(HIDDEN, "").split(/(\s+)/u).map(scrubToken).join("").replaceAll(DIGIT_RUN, scrubRun)
+    text
+        .replaceAll(HIDDEN, "")
+        .split(/(\s+)/u)
+        .map((token) => scrubToken(token))
+        .join("")
+        .replaceAll(DIGIT_RUN, scrubRun)

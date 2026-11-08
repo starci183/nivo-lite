@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {

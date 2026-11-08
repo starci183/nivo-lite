@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { AgentsService } from "@modules/domain/agents"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
 import { ModuleInstallService } from "./module-install.service"
 
 const GOVERNORS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]

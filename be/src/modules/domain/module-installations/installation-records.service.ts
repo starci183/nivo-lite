@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull, MoreThan, Not } from "typeorm"
-import type { EntityManager, UpdateResult } from "typeorm"
+import { IsNull, MoreThan, Not, type EntityManager, type UpdateResult } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { isRecord } from "@modules/platform/primitives"
 import type {
@@ -70,7 +69,7 @@ export class InstallationRecordsService {
             order: OLDEST_FIRST,
             take: INSTALLATIONS_LIMIT,
         })
-        return rows.map(toRecord)
+        return rows.map((row) => toRecord(row))
     }
 
     /** A page of installations of every workspace after this id (an empty text for the first page), by id, for a job that walks them all; removed ones are left out. */
@@ -80,7 +79,7 @@ export class InstallationRecordsService {
             order: { id: "ASC" },
             take: limit,
         })
-        return rows.map(toRecord)
+        return rows.map((row) => toRecord(row))
     }
 
     /** One installation of a workspace by id; null when there is none. */

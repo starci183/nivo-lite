@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
-import type { MemberSeat } from "@modules/domain/workspace-members"
+import { WorkspaceMembersReadService, type MemberSeat } from "@modules/domain/workspace-members"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { RoomMemberPreviewView, RoomMembersView, SeatTaken } from "./office-rooms.contracts"
 import { InjectRoomsAgents } from "./office-rooms.decorators"

@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { EngineStatusService } from "@modules/domain/agents"
-import type { EngineStatus } from "@modules/domain/agents"
+import { EngineStatusService, type EngineStatus } from "@modules/domain/agents"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { OptionalCheckTime } from "./openclaw-agent-sync.contracts"
 import { OpenclawAgentSyncEntity } from "./persistence/entities"

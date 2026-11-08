@@ -1,6 +1,5 @@
 import { parseJsonText } from "@modules/platform/primitives"
-import { readScript } from "./video-script.policy"
-import type { ScriptScene } from "./video-script.policy"
+import { readScript, type ScriptScene } from "./video-script.policy"
 import { ASPECTS } from "./video-spec.policy"
 import { workspaceMediaPath } from "./video-workbench.policy"
 import type {

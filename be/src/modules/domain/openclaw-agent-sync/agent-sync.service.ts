@@ -6,19 +6,17 @@ import {
     InjectOpenclawAgentRegistry,
     InjectOpenclawGatewayAdmin,
     InjectOpenclawWorkspaceWriter,
+    type AgentRegistryService,
+    type GatewayAdminClient,
+    type WorkspaceWriterService,
 } from "@modules/integrations/openclaw"
-import type { AgentRegistryService, GatewayAdminClient, WorkspaceWriterService } from "@modules/integrations/openclaw"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectInbox } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectInbox, type Inbox } from "@modules/platform/inbox"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectAgentsQueue, isSyncAgentsPayload } from "@modules/queues/agents"
-import type { AgentsQueue } from "@modules/queues/agents"
+import { InjectAgentsQueue, isSyncAgentsPayload, type AgentsQueue } from "@modules/queues/agents"
 import { INTERNAL_AGENT_MODULE, INTERNAL_AGENT_NAME, INTERNAL_FILES, scopeOf, syncErrorOf } from "./agent-sync.policy"
 import type {
     InboxClaim,
@@ -28,8 +26,16 @@ import type {
     InstallationChange,
     SyncRequest,
 } from "./openclaw-agent-sync.contracts"
-import { InjectInstallations, processorFromSettings, AgentBundleService, PauseClient } from "@modules/domain/agents"
-import type { AgentBundle, Installation, InstallationDirectory, InstallationRef } from "@modules/domain/agents"
+import {
+    InjectInstallations,
+    processorFromSettings,
+    AgentBundleService,
+    PauseClient,
+    type AgentBundle,
+    type Installation,
+    type InstallationDirectory,
+    type InstallationRef,
+} from "@modules/domain/agents"
 import { InjectSyncOptions } from "./openclaw-agent-sync.decorators"
 import { OpenclawAgentSyncLogEvent } from "./openclaw-agent-sync.log-events"
 import type { OpenclawAgentSyncOptions } from "./openclaw-agent-sync.options"

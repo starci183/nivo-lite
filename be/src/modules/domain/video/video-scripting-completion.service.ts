@@ -1,16 +1,17 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AiGenerationsError, GenerationsService } from "@modules/domain/ai-generations"
-import type { GenMessage, GenerationState } from "@modules/domain/ai-generations"
+import {
+    AiGenerationsError,
+    GenerationsService,
+    type GenMessage,
+    type GenerationState,
+} from "@modules/domain/ai-generations"
 import { EventsService } from "@modules/domain/events"
 import { VideoProjectScriptingService } from "@modules/domain/video-projects"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
-import { InjectInbox } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectInbox, type Inbox } from "@modules/platform/inbox"
 import type { InboxClaim } from "./video.contracts"
 import { parseVideoScript } from "./video-scripting.policy"
 import { VIDEO_SCRIPT_RETRY } from "./video-scripting.templates"

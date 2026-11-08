@@ -4,12 +4,13 @@ import { BillingService } from "@modules/domain/billing"
 import { CreditsError, CreditsErrorCode, CreditsService } from "@modules/domain/credits"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { isDomainError } from "@modules/platform/errors"
-import { isPaymentOrderRequestPayload, PAYMENT_ORDER_REQUEST_QUEUE } from "./payment-order-requests.contracts"
-import type {
-    PaymentOrderRequestParams,
-    PaymentOrderRequestStatusLookup,
-    QueuedPaymentOrderRequest,
-    RequestOutcome,
+import {
+    isPaymentOrderRequestPayload,
+    PAYMENT_ORDER_REQUEST_QUEUE,
+    type PaymentOrderRequestParams,
+    type PaymentOrderRequestStatusLookup,
+    type QueuedPaymentOrderRequest,
+    type RequestOutcome,
 } from "./payment-order-requests.contracts"
 import { PaymentOrderRequestsError, PaymentOrderRequestsErrorCode } from "./errors/payment-order-requests.error"
 import { selectionOf, targetOf, toRequestStatus } from "./payment-order-requests.policy"

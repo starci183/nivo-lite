@@ -3,10 +3,14 @@ import { AgentBindingsService, PURPOSES } from "@modules/domain/agent-connection
 import { AgentKnowledgeLensService } from "@modules/domain/agent-knowledge"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
-import { GAPS_SHOWN, regionKey, toneOfStatus } from "./platform-regions.policy"
-import type { ConnectionsRegion, KnowledgeRegion } from "./platform-regions.policy"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
+import {
+    GAPS_SHOWN,
+    regionKey,
+    toneOfStatus,
+    type ConnectionsRegion,
+    type KnowledgeRegion,
+} from "./platform-regions.policy"
 
 @Injectable()
 /**

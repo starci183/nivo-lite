@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceMemberEntity } from "./persistence/entities"
 import type {
@@ -71,7 +70,7 @@ export class WorkspaceMemberSeatsService {
             where: { workspaceId, id: In([...memberIds]) },
             take: limit,
         })
-        return rows.map(toSeat)
+        return rows.map((row) => toSeat(row))
     }
 
     /** One seat of the workspace by seat id, whatever its status; null when there is none. */

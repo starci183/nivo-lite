@@ -9,8 +9,7 @@ import type {
     WorkItem,
     WorkPerformer,
 } from "@modules/domain/decisions"
-import { McpGatewayService } from "@modules/domain/mcp-gateway"
-import type { GatewayCaller, GatewayJson } from "@modules/domain/mcp-gateway"
+import { McpGatewayService, type GatewayCaller, type GatewayJson } from "@modules/domain/mcp-gateway"
 import { eachInOrder, parseJsonText } from "@modules/platform/primitives"
 import { CustomerDeliveryService } from "./customer-delivery.service"
 import { WorkPerformersError, WorkPerformersErrorCode } from "./errors/work-performers.error"

@@ -1,5 +1,4 @@
-import { Injectable } from "@nestjs/common"
-import type { OnApplicationBootstrap } from "@nestjs/common"
+import { Injectable, type OnApplicationBootstrap } from "@nestjs/common"
 import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 

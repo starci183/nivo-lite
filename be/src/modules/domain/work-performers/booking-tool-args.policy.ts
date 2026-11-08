@@ -42,7 +42,7 @@ const partyOf = (value: unknown): number =>
     typeof value === "number" && Number.isFinite(value) ? Math.min(20, Math.max(1, Math.round(value) || 1)) : 1
 
 const serviceText = (value: string): string =>
-    value.trim().normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replaceAll("\u0111", "d")
+    value.trim().normalize("NFD").replaceAll(/\p{M}/gu, "").toLowerCase().replaceAll("\u0111", "d")
 
 /** Reads today's calendar date in the shop's timezone when a slot search omits its date. */
 export const bookingDateIn = (nowMs: number, timezone: string): string => {

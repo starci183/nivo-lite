@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./module-context-versions.module-definition"
 import { ContextVersionsService } from "./context-versions.service"
 import { ContextVersionsAdminReadService } from "./context-versions-admin-read.service"

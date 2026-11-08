@@ -1,12 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { BookingChatLookupService, BookingPublicService, bookingIsoOf, zonedMs } from "@modules/domain/bookings"
-import type { OptionalCancellableBooking } from "@modules/domain/bookings"
-import { WorkEngineService } from "@modules/domain/decisions"
-import type { WorkContext } from "@modules/domain/decisions"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import {
+    BookingChatLookupService,
+    BookingPublicService,
+    bookingIsoOf,
+    zonedMs,
+    type OptionalCancellableBooking,
+} from "@modules/domain/bookings"
+import { WorkEngineService, type WorkContext } from "@modules/domain/decisions"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import type { BookingChatAnswer, BookingChatTurn } from "./booking-chat.contracts"
 
 const LOCALE = "vi"

@@ -1,11 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import type { LeadDraft, LeadWriteResult, LeadWriter, ToolContext } from "@modules/domain/agent-tools"
 import { ChatConversationsService } from "@modules/domain/chat-records"
-import { CommandBusService } from "@modules/domain/decisions"
-import type { WorkContext } from "@modules/domain/decisions"
+import { CommandBusService, type WorkContext } from "@modules/domain/decisions"
 import { InboundEventsService } from "@modules/domain/inbound-events"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 
 /** Who the evidence lines of a tool call name as the actor. */
 const ACTOR = "NIVO engine"

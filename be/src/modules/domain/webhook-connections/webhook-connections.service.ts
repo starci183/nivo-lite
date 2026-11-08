@@ -4,16 +4,18 @@ import {
     ConnectionsErrorCode,
     ConnectionsService,
     cleanConnectionName,
+    type ConnectionActor,
+    type ConnectionRecord,
 } from "@modules/domain/connections"
 import { randomSecret } from "@modules/domain/connection-secrets"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
-import { InjectWebhookDeliveryClient, WebhookDeliveryError } from "@modules/integrations/webhook-delivery"
-import type { WebhookDeliveryClient } from "@modules/integrations/webhook-delivery"
-import { InjectClock } from "@modules/platform/clock"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
+import {
+    InjectWebhookDeliveryClient,
+    WebhookDeliveryError,
+    type WebhookDeliveryClient,
+} from "@modules/integrations/webhook-delivery"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectIds, type Ids } from "@modules/platform/ids"
 import { parseJsonText } from "@modules/platform/primitives"
-import type { Clock } from "@modules/platform/clock"
 import { WebhookConnectionsError, WebhookConnectionsErrorCode } from "./errors/webhook-connections.error"
 import type {
     CreatedWebhook,

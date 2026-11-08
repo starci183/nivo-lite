@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { AppCommandsService } from "@modules/domain/app-commands"
-import type { AppCommand, AppCommandResult } from "@modules/domain/app-commands"
+import { AppCommandsService, type AppCommand, type AppCommandResult } from "@modules/domain/app-commands"
 import { PlatformAuditService } from "@modules/domain/platform-audit"
 import { isDomainError } from "@modules/platform/errors"
 import { QueueErrorCode } from "@modules/platform/queue"

@@ -285,7 +285,7 @@ describe("WorkbenchDoorService.read refusals", () => {
 
     it("reports a port the door does not provide as an internal failure and logs the gap", async () => {
         const unprovided = new SdkDefinitionError("PORT_UNPROVIDED", "sales.pricing")
-        const { door, logger } = await build({ read: () => Promise.reject(unprovided) })
+        const { door, logger } = await build({ read: jest.fn().mockRejectedValue(unprovided) })
 
         await expect(door.read(USER, callOf("sales.leads"))).rejects.toMatchObject({
             code: WorkbenchDoorErrorCode.PortUnprovided,
@@ -299,7 +299,7 @@ describe("WorkbenchDoorService.read refusals", () => {
 
     it("lets any other failure of the read propagate to the error filter", async () => {
         const broken = new Error("boom")
-        const { door } = await build({ read: () => Promise.reject(broken) })
+        const { door } = await build({ read: jest.fn().mockRejectedValue(broken) })
 
         await expect(door.read(USER, callOf("sales.leads"))).rejects.toBe(broken)
     })
@@ -470,7 +470,7 @@ describe("WorkbenchDoorService.act authority and failures", () => {
         ["ENTITY_ENGINE_CONSTRAINT_UNDECLARED", "conflict", WorkbenchDoorErrorCode.ActionConflict, undefined],
         ["ENTITY_ENGINE_UNAVAILABLE", "failed", WorkbenchDoorErrorCode.ActionFailed, { retry: true }],
     ])("answers an engine failure %s as %s", async (code, reason, text, data) => {
-        const { door } = await build({ act: () => Promise.reject(new StandInError({ code })) })
+        const { door } = await build({ act: jest.fn().mockRejectedValue(new StandInError({ code })) })
 
         const answer = await door.act(USER, callOf("sales.move-stage"))
 
@@ -479,7 +479,7 @@ describe("WorkbenchDoorService.act authority and failures", () => {
 
     it("answers failed, with what invokeAction names, for a port the door does not provide", async () => {
         const unprovided = new SdkDefinitionError("PORT_UNPROVIDED", "sales.pricing")
-        const { door } = await build({ act: () => Promise.reject(unprovided) })
+        const { door } = await build({ act: jest.fn().mockRejectedValue(unprovided) })
 
         const answer = await door.act(USER, callOf("sales.move-stage"))
 
@@ -493,7 +493,7 @@ describe("WorkbenchDoorService.act authority and failures", () => {
 
     it("lets a failure the door does not know propagate to the error filter", async () => {
         const broken = new Error("boom")
-        const { door } = await build({ act: () => Promise.reject(broken) })
+        const { door } = await build({ act: jest.fn().mockRejectedValue(broken) })
 
         await expect(door.act(USER, callOf("sales.move-stage"))).rejects.toBe(broken)
     })

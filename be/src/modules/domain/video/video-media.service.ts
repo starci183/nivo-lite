@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectStorageObjects } from "@modules/integrations/object-storage"
-import type { StorageObjectsPort } from "@modules/integrations/object-storage"
+import { InjectStorageObjects, type StorageObjectsPort } from "@modules/integrations/object-storage"
 import { EntitlementsService } from "@modules/domain/billing"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
@@ -66,8 +65,8 @@ export class VideoMediaService {
         const filename =
             file.name
                 .normalize("NFD")
-                .replace(/[\u0300-\u036f]/gu, "")
-                .replace(/[^a-zA-Z0-9.-]+/gu, "-")
+                .replaceAll(/[\u0300-\u036f]/gu, "")
+                .replaceAll(/[^a-zA-Z0-9.-]+/gu, "-")
                 .replace(/^[-.]+/u, "")
                 .slice(-80) || "file"
         const [identity] = await callDbFunction<{ gen_random_uuid: string }>(this.entityManager, "gen_random_uuid", [])
@@ -99,8 +98,8 @@ export class VideoMediaService {
         const download =
             title
                 .normalize("NFD")
-                .replace(/[\u0300-\u036f]/gu, "")
-                .replace(/[^a-zA-Z0-9]+/gu, "-")
+                .replaceAll(/[\u0300-\u036f]/gu, "")
+                .replaceAll(/[^a-zA-Z0-9]+/gu, "-")
                 .slice(0, 80) || "video"
         return {
             id: row.id,

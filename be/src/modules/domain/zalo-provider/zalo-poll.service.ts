@@ -1,15 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionPollLogEvent, ConnectionPollRunService, emptyPollSummary } from "@modules/domain/connection-poll"
-import type { PollSummary } from "@modules/domain/connection-poll"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { HealthCandidate } from "@modules/domain/connections"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import {
+    ConnectionPollLogEvent,
+    ConnectionPollRunService,
+    emptyPollSummary,
+    type PollSummary,
+} from "@modules/domain/connection-poll"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { ConnectionsService, type HealthCandidate } from "@modules/domain/connections"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectTimer } from "@modules/platform/retry"
-import type { Timer } from "@modules/platform/retry"
+import { InjectTimer, type Timer } from "@modules/platform/retry"
 import { isZaloInboxPollPayload } from "@modules/queues/zalo-inbox-poll"
 import { ZaloInboxPollerService } from "./zalo-inbox-poller.service"
 

@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { ToolGraphGate } from "./mcp-gateway.contracts"
 
 /** Token of the graph's gate on write tools: absent until the action graph binds one, and then the grant alone decides. */

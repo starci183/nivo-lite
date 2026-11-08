@@ -121,11 +121,17 @@ const MINUTES_PER_HOUR = 60
 
 /** Lower case, no accents, single spaces: how names and keywords are compared. */
 export const fold = (text: string): string =>
-    text.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replaceAll("\u0111", "d").replace(/\s+/gu, " ").trim()
+    text
+        .toLowerCase()
+        .normalize("NFD")
+        .replaceAll(/\p{M}/gu, "")
+        .replaceAll("\u0111", "d")
+        .replaceAll(/\s+/gu, " ")
+        .trim()
 
 /** The weekdays a day expression names (T2, T2-T6, T2,T4, CN, every day), or null when it is not one. */
 const parseDays = (raw: string): Array<number> | null => {
-    const text = fold(raw).replace(/\s+/gu, "")
+    const text = fold(raw).replaceAll(/\s+/gu, "")
     if (EVERY_DAY.has(text)) return [...WEEK_ALL]
     const days = new Set<number>()
     for (const part of text.split(",")) {
@@ -162,10 +168,10 @@ const parseClock = (captures: ClockCaptures): string | null => {
 
 /** An hourly wage from 30k, 30000 or 30.000 (with an optional currency or per-hour suffix); null when unreadable. */
 export const parseWage = (raw: string): number | null => {
-    const text = raw.toLowerCase().replace(/\s|\u0111|vnd|\/h|\/gio/gu, "")
+    const text = raw.toLowerCase().replaceAll(/\s|\u0111|vnd|\/h|\/gio/gu, "")
     const thousands = /^(\d+(?:[.,]\d+)?)k$/u.exec(text)
     if (thousands !== null) return Math.round(Number(text.slice(0, -1).replace(",", ".")) * THOUSAND)
-    const value = Number(text.replace(/[.,](?=\d{3}\b)/gu, ""))
+    const value = Number(text.replaceAll(/[.,](?=\d{3}\b)/gu, ""))
     return Number.isFinite(value) && value >= 0 ? Math.round(value) : null
 }
 

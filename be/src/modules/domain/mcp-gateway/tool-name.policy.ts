@@ -41,7 +41,7 @@ export const specOf = (manifest: GatewayConnectorManifest, tool: string): Gatewa
 
 const tokensOf = (text: string): ReadonlyArray<string> =>
     text
-        .replace(/([a-z])([A-Z])/gu, "$1 $2")
+        .replaceAll(/([a-z])([A-Z])/gu, "$1 $2")
         .toLowerCase()
         .split(/[^a-z0-9]+/u)
         .filter((token) => token.length > 1)

@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AdminAccessService } from "./admin-access.service"
 import { AdminDirectoryReadsService } from "./admin-directory-reads.service"
 import { AdminDirectoryService } from "./admin-directory.service"

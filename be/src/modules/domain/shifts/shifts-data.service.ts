@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { Between, In, IsNull, LessThanOrEqual, MoreThanOrEqual, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { Between, In, IsNull, LessThanOrEqual, MoreThanOrEqual, Not, type EntityManager } from "typeorm"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { Env, Setup, Shift } from "./shifts.contracts"
@@ -87,9 +86,9 @@ export class ShiftsDataService {
         ])
         const wages = new Map(pay.map((row) => [row.staffId, Number(row.hourlyWageVnd) || 0]))
         return {
-            positions: positions.map(toPosition),
+            positions: positions.map((row) => toPosition(row)),
             staff: staff.map((row) => toStaff(row, wages.get(row.id) ?? 0)),
-            blocks: blocks.map(toBlock),
+            blocks: blocks.map((row) => toBlock(row)),
             settings: toSettings(settings ?? undefined),
         }
     }
@@ -122,8 +121,8 @@ export class ShiftsDataService {
         ])
         return {
             staff: new Map(setup.staff.map((person) => [person.id, person])),
-            avail: availability.map(toAvail),
-            leaves: leaves.map(toLeave),
+            avail: availability.map((row) => toAvail(row)),
+            leaves: leaves.map((row) => toLeave(row)),
             prior: priorOf(prior),
             overtimeHoursWeek: setup.settings.overtimeHoursWeek,
         }
@@ -136,7 +135,7 @@ export class ShiftsDataService {
             order: { shiftDate: "ASC", startTime: "ASC" },
             take: SCHEDULE_SHIFTS_MAX,
         })
-        return rows.map(toShift)
+        return rows.map((row) => toShift(row))
     }
 
     /**
@@ -186,7 +185,7 @@ export class ShiftsDataService {
             },
             take: RANGE_SHIFTS_MAX,
         })
-        return rows.map(toShift)
+        return rows.map((row) => toShift(row))
     }
 
     /** The shifts one person works in a range of days that are in one of the statuses. */
@@ -201,7 +200,7 @@ export class ShiftsDataService {
             where: { workspaceId, staffId, shiftDate: Between(from, to), status: In([...statuses]) },
             take: STAFF_SHIFTS_MAX,
         })
-        return rows.map(toShift)
+        return rows.map((row) => toShift(row))
     }
 
     /** The profile of the member in the shifts of the workspace, or null when the member has none. */

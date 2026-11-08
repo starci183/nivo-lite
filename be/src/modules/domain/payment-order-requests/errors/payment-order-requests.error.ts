@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Stable errors of the payment-order-requests capability. */
 export enum PaymentOrderRequestsErrorCode {

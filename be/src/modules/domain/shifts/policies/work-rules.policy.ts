@@ -166,7 +166,7 @@ export const laborCost = (env: Env, shifts: ReadonlyArray<Shift>): LaborCost => 
     const byStaff = [...shiftsByStaff(shifts)].flatMap(([staffId, list]) => {
         const staff = env.staff.get(staffId)
         if (staff === undefined) return []
-        const segs = list.map(segOf)
+        const segs = list.map((shift) => segOf(shift))
         return [{ staffId, minutes: minutesOf(segs), cost: weekCost(staff, segs, env.overtimeHoursWeek) }]
     })
     return { total: byStaff.reduce((sum, row) => sum + row.cost, 0), byStaff }

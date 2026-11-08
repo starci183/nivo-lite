@@ -3,8 +3,7 @@ import type { PollFailure, PollLimits, PollPage, PollWindow } from "@modules/dom
 import { ConnectionApiTokenService } from "@modules/domain/connection-secrets"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import type { BankFeedPoller, PolledCredit } from "@modules/domain/provider-registry"
-import { InjectSepay, SepayError, SepayErrorCode } from "@modules/integrations/sepay"
-import type { SepayClient } from "@modules/integrations/sepay"
+import { InjectSepay, SepayError, SepayErrorCode, type SepayClient } from "@modules/integrations/sepay"
 import { sepayPolledCredit } from "./sepay-poll.policy"
 
 @Injectable()

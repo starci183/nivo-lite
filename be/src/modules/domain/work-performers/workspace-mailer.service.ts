@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { WorkEngineService } from "@modules/domain/decisions"
 import { EmailMessagesService, WorkspaceMailService, isMailAddress } from "@modules/domain/email-messages"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
 import type { CustomerEmail, MailOutcome, WorkspaceMailer } from "./workspace-mailer.contracts"
 
 /** The language of the owner layout and of the waiting decision. */
@@ -15,7 +14,7 @@ const SUMMARY_SUBJECT_MAX = 120
 /** The subject as one line of at most `max` characters. */
 const oneLine = (text: string, max: number): string =>
     text
-        .replace(/[\r\n]+/gu, " ")
+        .replaceAll(/[\r\n]+/gu, " ")
         .trim()
         .slice(0, max)
 

@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { GraphSeedService } from "./graph-seed.service"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { SEED_OFFICE_AUTHORITY } from "./office-seed.decorators"

@@ -1,11 +1,11 @@
-import { MEMBERS_MAX } from "./team-chat.contracts"
-import type {
-    ApprovalState,
-    ChatMemberRef,
-    MessageView,
-    RoomMemberView,
-    RoomUnread,
-    ChatRoomView,
+import {
+    MEMBERS_MAX,
+    type ApprovalState,
+    type ChatMemberRef,
+    type MessageView,
+    type RoomMemberView,
+    type RoomUnread,
+    type ChatRoomView,
 } from "./team-chat.contracts"
 import type { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity } from "./persistence/entities"
 
@@ -119,7 +119,7 @@ export const roomViewOf = (
         members,
         unreadCount: unread?.unreadCount ?? 0,
         mentionCount: unread?.mentionCount ?? 0,
-        muted: seated.find(isViewer)?.muted ?? false,
+        muted: seated.find((member) => isViewer(member))?.muted ?? false,
         lastMessage: context.lasts.get(room.id) ?? null,
     }
 }

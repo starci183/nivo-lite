@@ -1,14 +1,10 @@
 import { mkdir, stat, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { Injectable } from "@nestjs/common"
-import { InjectFfmpeg } from "@modules/integrations/ffmpeg"
-import type { Ffmpeg } from "@modules/integrations/ffmpeg"
-import { InjectTts, TtsError, TtsErrorCode } from "@modules/integrations/tts"
-import type { Tts } from "@modules/integrations/tts"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectFfmpeg, type Ffmpeg } from "@modules/integrations/ffmpeg"
+import { InjectTts, TtsError, TtsErrorCode, type Tts } from "@modules/integrations/tts"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { eachInOrder } from "@modules/platform/primitives"
 import { videoCaptions } from "./video-captions.policy"
 import { buildAss } from "./captions.policy"
@@ -29,13 +25,12 @@ import {
     sceneArgs,
     sceneLengths,
     startsOf,
+    type VoiceClip,
 } from "./render-plan.policy"
-import type { VoiceClip } from "./render-plan.policy"
 import type { VideoAssets } from "./video.contracts"
 import { InjectVideoAssets, InjectVideoOptions } from "./video.decorators"
 import type { VideoOptions } from "./video.options"
-import { aspectSize, MEDIA_BUCKET, MUSIC_TRACKS, musicObjectPath } from "./video-spec.policy"
-import type { VideoSpec } from "./video-spec.policy"
+import { aspectSize, MEDIA_BUCKET, MUSIC_TRACKS, musicObjectPath, type VideoSpec } from "./video-spec.policy"
 
 /** What the renderer is doing, for the progress bar. */
 export type RenderStage = "tts" | "scenes" | "mix" | "encode" | "poster"

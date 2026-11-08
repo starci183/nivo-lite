@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { MusicStore } from "./video-music.contracts"
 
 /** Token of the file store the beds are written to; the app root binds it to the storage integration. */

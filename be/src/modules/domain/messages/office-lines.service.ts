@@ -1,13 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull, MoreThanOrEqual } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { IsNull, MoreThanOrEqual, type EntityManager } from "typeorm"
 import { ChatActivityService } from "@modules/domain/chat-activity"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { MessagesScope, OfficeLineInput, OptionalAgentIdentity } from "./office-lines.contracts"
 import { InjectAgentDirectory } from "./office-lines.decorators"
 import type { AgentDirectory } from "./office-lines.port"
-import { MessageEntity } from "./persistence/entities"
-import type { MessageAuthorKind } from "./persistence/entities"
+import { MessageEntity, type MessageAuthorKind } from "./persistence/entities"
 
 /** The author name of a plain NIVO Core line. */
 export const CORE_LINE_AUTHOR = "NIVO"

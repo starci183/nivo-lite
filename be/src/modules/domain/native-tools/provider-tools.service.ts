@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionBindingsReadService } from "@modules/domain/connections"
-import type { ConnectionStatusFacts } from "@modules/domain/connections"
-import type { GatewayJson, NativeCaller } from "@modules/domain/mcp-gateway"
-import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
+import { ConnectionBindingsReadService, type ConnectionStatusFacts } from "@modules/domain/connections"
+import { type GatewayJson, type NativeCaller, argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
 import { nativeRefusal } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
 import { PROVIDER_STATUS_SCHEMA } from "./provider-tools.schema"
@@ -39,7 +37,11 @@ export class ProviderToolsService {
         await this.views.internalOf(workspaceId, caller)
         if (tool === "status") {
             argumentsOf(tool, PROVIDER_STATUS_SCHEMA, args)
-            return { connections: (await this.connectionsOf(workspaceId, route.provider)).map(route.line) }
+            return {
+                connections: (await this.connectionsOf(workspaceId, route.provider)).map((connection) =>
+                    route.line(connection),
+                ),
+            }
         }
         throw unknownTool(tool)
     }

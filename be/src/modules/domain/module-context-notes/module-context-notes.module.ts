@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ContextNotesService } from "./context-notes.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./module-context-notes.module-definition"
 

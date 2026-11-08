@@ -10,8 +10,8 @@ export const videoScriptSourcesText = (sources: ReadonlyArray<ScriptSource>): st
     const selected: Array<string> = []
     for (const source of sources) {
         const body = source.content
-            .replace(/[ \t]+/gu, " ")
-            .replace(/\n{3,}/gu, "\n\n")
+            .replaceAll(/[ \t]+/gu, " ")
+            .replaceAll(/\n{3,}/gu, "\n\n")
             .trim()
             .slice(0, Math.min(1600, remaining))
         if (body === "") continue
@@ -43,12 +43,14 @@ export const videoScriptMessages = (
                 : goal.scenes.find((scene) => scene.role === role)?.brief
         return `${index + 1}. ${role.toUpperCase()}: ${brief ?? ""}`
     }).join("\n")
+    const shopName = project.shop_name?.trim()
+    const shop = shopName === undefined || shopName === "" ? project.workspace_name.trim() : shopName
     return [
         { role: "system", content: `${VIDEO_SCRIPT_SYSTEM}\n\nPUBLIC SHOP CONTEXT:\n${publicFacts}` },
         {
             role: "user",
             content: [
-                `SHOP: ${project.shop_name?.trim() || project.workspace_name.trim()}`,
+                `SHOP: ${shop}`,
                 `GOAL: ${goal.label.vi}. ${goal.hint.vi}`,
                 `FORMAT: ${project.aspect}, about ${project.target_seconds} seconds in total.`,
                 `SCENES: exactly ${count}. Each voiceover about ${voiceChars} characters, never above ${voiceChars + 30}.`,

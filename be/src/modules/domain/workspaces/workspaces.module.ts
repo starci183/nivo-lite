@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workspaces.module-definition"
 import { WORKSPACES_OPTIONS } from "./workspaces.port"
 import { WorkspacePruneService } from "./workspace-prune.service"

@@ -1,13 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import { Between, In, IsNull } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { Between, In, IsNull, type EntityManager } from "typeorm"
 import { StaffDirectoryService } from "@modules/domain/staff"
-import { WorkItemsService } from "@modules/domain/work-items"
-import type { WorkItem } from "@modules/domain/work-items"
+import { WorkItemsService, type WorkItem } from "@modules/domain/work-items"
 import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ShiftsError, ShiftsErrorCode } from "./errors/shifts.error"
 import type { Setup, Shift } from "./shifts.contracts"
@@ -158,7 +155,7 @@ export class ShiftsWorkbenchService {
             this.requestsView(workspaceId, setup.positions, isManager ? null : (myProfileId ?? UNLINKED_STAFF)),
             isManager ? this.shopStaff(workspaceId) : Promise.resolve<Array<ShiftsStaffRowView>>([]),
             isManager
-                ? this.availability(workspaceId, null).then((rows) => rows.map(availView))
+                ? this.availability(workspaceId, null).then((rows) => rows.map((row) => availView(row)))
                 : Promise.resolve<Array<ShiftsAvailabilityView>>([]),
             isManager ? this.figures(workspaceId, today) : Promise.resolve<null>(null),
         ])
@@ -207,7 +204,7 @@ export class ShiftsWorkbenchService {
             }),
             this.requestsView(workspaceId, setup.positions, profileId, positions),
         ])
-        const shifts = posted.map(shiftOf)
+        const shifts = posted.map((row) => shiftOf(row))
         const mineIds = shifts.filter((shift) => shift.staffId === profileId).map((shift) => shift.id)
         const attendance = mineIds.length ? await this.attendance(workspaceId, mineIds) : []
         const checked = new Set(attendance.map((row) => row.shiftId))
@@ -338,7 +335,7 @@ export class ShiftsWorkbenchService {
         return {
             leaves: leaves.map((row) => this.leaveView(row, items)),
             swaps: swaps.map((row) => this.swapView(row, items, swapShifts, pos)),
-            availability: availability.map(availView),
+            availability: availability.map((row) => availView(row)),
         }
     }
 

@@ -1,6 +1,5 @@
 import type { CallLogRecord } from "@modules/domain/mcp-call-log"
-import { credentialStateOf } from "@modules/domain/mcp-connectors"
-import type { McpConnectorRow } from "@modules/domain/mcp-connectors"
+import { credentialStateOf, type McpConnectorRow } from "@modules/domain/mcp-connectors"
 import type { ArgConstraint, GrantMode, McpToolGrantView, McpWorkspaceGrantView } from "@modules/domain/mcp-tool-grants"
 import type { McpRemoteTool } from "@modules/integrations/mcp"
 import { parseJsonText } from "@modules/platform/primitives"
@@ -131,7 +130,7 @@ const specOfEntry = (entry: unknown): ReadonlyArray<GatewayToolSpec> => {
 /** A remote connector row as the gateway runs it: its tools are the pinned live catalog, nothing else. */
 export const remoteConnectorOf = (row: McpConnectorRow): WorkspaceConnector => {
     const entries: ReadonlyArray<unknown> = Array.isArray(row.tool_catalog) ? row.tool_catalog : []
-    const tools = entries.flatMap(specOfEntry)
+    const tools = entries.flatMap((entry) => specOfEntry(entry))
     return {
         manifest: {
             key: row.key,

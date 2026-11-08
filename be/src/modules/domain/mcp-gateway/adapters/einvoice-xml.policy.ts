@@ -1,5 +1,4 @@
-import { childrenNamed, findFirst, parseXml, textAt } from "./xml-tree.policy"
-import type { XmlNode } from "./xml-tree.policy"
+import { childrenNamed, findFirst, parseXml, textAt, type XmlNode } from "./xml-tree.policy"
 
 /** One line of an e-invoice (TT78 `HHDVu`). */
 export interface EinvoiceLine {
@@ -94,7 +93,7 @@ export const parseEinvoiceXml = (xml: string): OptionalEinvoiceDraft => {
         sellerTaxCode: textAt(seller, "MST"),
         buyerName: textAt(buyer, "Ten"),
         buyerTaxCode: textAt(buyer, "MST"),
-        lines: childrenNamed(items, "HHDVu").map(lineOf),
+        lines: childrenNamed(items, "HHDVu").map((node) => lineOf(node)),
         subtotalVnd: amountOf(textAt(totals, "TgTCThue")),
         vatVnd: amountOf(textAt(totals, "TgTThue")),
         totalVnd: amountOf(textAt(totals, "TgTTTBSo")),

@@ -2,8 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { ApprovalRequestsService } from "@modules/domain/approval-requests"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { isDomainError } from "@modules/platform/errors"
-import { refusalOfDecision } from "./team-chat-decision.policy"
-import type { DecideOutcome, DecideVerdict } from "./team-chat-decision.policy"
+import { refusalOfDecision, type DecideOutcome, type DecideVerdict } from "./team-chat-decision.policy"
 import { TeamChatRoomsService } from "./team-chat.service"
 
 @Injectable()

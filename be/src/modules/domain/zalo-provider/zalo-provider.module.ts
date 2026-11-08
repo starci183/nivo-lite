@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule, OnModuleInit } from "@nestjs/common"
+import { Module, type DynamicModule, type OnModuleInit } from "@nestjs/common"
 import { MessageInboxPollerRegistryService } from "@modules/domain/provider-registry"
 import { MessageInboxPollSourcesService } from "./message-inbox-poll-sources.service"
 import { ZaloInboxPollerService } from "./zalo-inbox-poller.service"

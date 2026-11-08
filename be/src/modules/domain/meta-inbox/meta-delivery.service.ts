@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { isMetaDeliveryRecorded } from "@modules/queues/meta-delivery"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims } from "@modules/platform/jobs"
 import { InjectMetaReceiptProcessor } from "./meta-inbox.decorators"
 import type { MetaReceiptProcessor } from "./meta-inbox.port"
 

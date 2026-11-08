@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import type { RuleChange } from "@modules/domain/authority-rules"
+import { AuthorityRulesService, type RuleChange } from "@modules/domain/authority-rules"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { MemberGrantChange } from "./member-grants.contracts"
 import type { ResolvedOfficeAuthority } from "./office-authority.contracts"

@@ -55,7 +55,12 @@ export class VideoScriptingContextService {
             rules === "" ? "" : `NIVO BASE RULES:\n${rules}`,
             setup === "" ? "" : `APPROVED VIDEO CONFIGURATION:\n${setup}`,
             house === "" ? "" : `HOUSE VOICE AND CLAIM LIMITS:\n${house}`,
-            facts.length === 0 ? "" : `PUBLIC FACTS:\n${facts.map(factLine).join("\n").slice(0, 1500)}`,
+            facts.length === 0
+                ? ""
+                : `PUBLIC FACTS:\n${facts
+                      .map((fact) => factLine(fact))
+                      .join("\n")
+                      .slice(0, 1500)}`,
             documents === "" ? "" : `PUBLIC BUSINESS KNOWLEDGE:\n${documents}`,
         ]
             .filter((line) => line !== "")

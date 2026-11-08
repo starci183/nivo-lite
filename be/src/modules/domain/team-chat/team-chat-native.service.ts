@@ -1,9 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import { McpGatewayError, McpGatewayErrorCode, RoutedNativeAdapter, argumentsOf } from "@modules/domain/mcp-gateway"
-import type { GatewayJson, NativeConnectorManifest, NativeToolHandler } from "@modules/domain/mcp-gateway"
+import {
+    McpGatewayError,
+    McpGatewayErrorCode,
+    RoutedNativeAdapter,
+    argumentsOf,
+    type GatewayJson,
+    type NativeConnectorManifest,
+    type NativeToolHandler,
+} from "@modules/domain/mcp-gateway"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import {
     POST_APPROVAL_INPUT_SCHEMA,
     POST_APPROVAL_SCHEMA,

@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { EventsService } from "@modules/domain/events"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { DecisionEntry, EvidenceEntry } from "./module-ops.contracts"
 import { ModuleOpsLogEvent } from "./module-ops.log-events"
 import { OfficeLog } from "./office-log.port"

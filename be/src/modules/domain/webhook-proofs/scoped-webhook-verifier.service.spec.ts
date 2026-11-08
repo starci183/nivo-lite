@@ -6,9 +6,19 @@ import type { WebhookProofRegistry } from "@modules/platform/http-security"
 
 const BODY = Buffer.from(JSON.stringify({ eventId: "evt-1", status: "confirmed" }))
 
+/** The refusal the registry answers: the error the platform raises, standing in with its code. */
+const refusal = (code: HttpSecurityErrorCode): HttpSecurityError => {
+    const failure = mock<HttpSecurityError>({ code })
+    Object.setPrototypeOf(failure, HttpSecurityError.prototype)
+    return failure
+}
+
+/** A registry whose proof answers with the refusal of the code. */
+const refusing = (code: HttpSecurityErrorCode): WebhookProofRegistry["verify"] =>
+    jest.fn<Promise<void>, Parameters<WebhookProofRegistry["verify"]>>().mockRejectedValue(refusal(code))
+
 /** The registry answer when no proof is registered for the provider. */
-const unknownProvider: WebhookProofRegistry["verify"] = (provider) =>
-    Promise.reject(new HttpSecurityError({ code: HttpSecurityErrorCode.WebhookProviderUnknown, params: { provider } }))
+const unknownProvider = refusing(HttpSecurityErrorCode.WebhookProviderUnknown)
 
 const build = async (prove: WebhookProofRegistry["verify"] = unknownProvider) => {
     const registry = mock<WebhookProofRegistry>({ verify: prove })
@@ -43,9 +53,7 @@ describe("ScopedWebhookVerifier scoped proofs", () => {
     })
 
     it("refuses a delivery the registered proof rejects", async () => {
-        const service = await build(() =>
-            Promise.reject(new HttpSecurityError({ code: HttpSecurityErrorCode.WebhookSignatureInvalid })),
-        )
+        const service = await build(refusing(HttpSecurityErrorCode.WebhookSignatureInvalid))
 
         await expect(service.verify(scoped)).rejects.toMatchObject({
             code: HttpSecurityErrorCode.WebhookSignatureInvalid,

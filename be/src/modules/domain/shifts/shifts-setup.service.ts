@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { isRecord } from "@modules/platform/primitives"
 import { ShiftsError, ShiftsErrorCode } from "./errors/shifts.error"
@@ -48,6 +47,12 @@ const nameOf = (name: string, max: number): string => {
 }
 
 /** The id a `RETURNING id` answered, or undefined when no row matched. */
+/** The trimmed text, or null when the field is absent or blank. */
+const textOrNull = (value: string | undefined): string | null => {
+    const text = value?.trim()
+    return text === undefined || text === "" ? null : text
+}
+
 const idOf = (raw: unknown): string | undefined => {
     const id = [raw].flat().find(isRecord)?.id
     return typeof id === "string" ? id : undefined
@@ -76,7 +81,7 @@ export class ShiftsSetupService {
     async savePosition(userId: string, workspaceId: string, request: SavePositionParams): Promise<SavePositionOutput> {
         await this.members.require(userId, workspaceId, MANAGER_ROLES)
         const name = nameOf(request.name, 60)
-        const color = request.color?.trim() || DEFAULT_COLOR
+        const color = textOrNull(request.color) ?? DEFAULT_COLOR
         const saved =
             request.id === undefined
                 ? await this.entityManager
@@ -110,10 +115,10 @@ export class ShiftsSetupService {
         const name = nameOf(request.name, 80)
         const fields = {
             name,
-            staffId: request.staffRowId || null,
-            phone: request.phone?.trim() || null,
-            telegramChatId: request.telegramChatId?.trim() || null,
-            zaloUserId: request.zaloUserId?.trim() || null,
+            staffId: request.staffRowId === "" ? null : (request.staffRowId ?? null),
+            phone: textOrNull(request.phone),
+            telegramChatId: textOrNull(request.telegramChatId),
+            zaloUserId: textOrNull(request.zaloUserId),
             positionIds: [...request.positionIds],
             ...(request.maxWeek === undefined ? {} : { maxHoursWeek: String(request.maxWeek) }),
             ...(request.maxDay === undefined ? {} : { maxHoursDay: String(request.maxDay) }),

@@ -1,27 +1,28 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
-import { KnowledgeSourcesReadService, PublishedSourcesService } from "@modules/domain/knowledge-sources"
-import type { SourceState } from "@modules/domain/knowledge-sources"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import {
+    KnowledgeSourcesReadService,
+    PublishedSourcesService,
+    type SourceState,
+} from "@modules/domain/knowledge-sources"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectKnowledgeQueue } from "@modules/queues/knowledge"
-import type { KnowledgeQueue } from "@modules/queues/knowledge"
+import { InjectKnowledgeQueue, type KnowledgeQueue } from "@modules/queues/knowledge"
 import { PublicDocumentsError, PublicDocumentsErrorCode } from "./errors/public-documents.error"
 import { PublicDocumentEntity, PublicDocumentSourceEntity, PublicDocumentApprovalEntity } from "./persistence/entities"
 import { toPublicDocumentView } from "./public-document.mapper"
-import { MAX_BODY_CHARS, MAX_DRAFT_SOURCES, MAX_TITLE_CHARS } from "./public-documents.contracts"
-import type {
-    ApproveRequest,
-    PublicDocumentDraftRequest,
-    PublicDocumentView,
-    SourceRecordRef,
-    UpdateRequest,
-    WriteRequest,
+import {
+    MAX_BODY_CHARS,
+    MAX_DRAFT_SOURCES,
+    MAX_TITLE_CHARS,
+    type ApproveRequest,
+    type PublicDocumentDraftRequest,
+    type PublicDocumentView,
+    type SourceRecordRef,
+    type UpdateRequest,
+    type WriteRequest,
 } from "./public-documents.contracts"
 import { changedSourceIds, changedReviewSourceIds, reviewedSourcesOf } from "./staleness.policy"
 
@@ -76,6 +77,12 @@ const titleOf = (title: string): string => {
     const text = title.trim().slice(0, MAX_TITLE_CHARS)
     if (text === "") throw new PublicDocumentsError({ code: PublicDocumentsErrorCode.TitleRequired })
     return text
+}
+
+/** The trimmed, capped instructions, or null when they are absent or blank. */
+const instructionsOf = (instructions: string | undefined): string | null => {
+    const text = instructions?.trim().slice(0, INSTRUCTIONS_CHARS)
+    return text === undefined || text === "" ? null : text
 }
 
 const bodyOf = (body: string): string => {
@@ -152,7 +159,7 @@ export class PublicDocumentsService {
                 title,
                 kind: "drafted",
                 status: "drafting",
-                instructions: request.instructions?.trim().slice(0, INSTRUCTIONS_CHARS) || null,
+                instructions: instructionsOf(request.instructions),
                 createdBy: userId,
             })
             const documentId = this.idOf(inserted.identifiers)

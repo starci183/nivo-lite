@@ -102,14 +102,15 @@ export const roomWireOf = (view: ChatRoomView): RoomWire => ({
 })
 
 /** The rooms of a list as the wire shows them. */
-export const roomsWireOf = (views: ReadonlyArray<ChatRoomView>): Array<RoomWire> => views.map(roomWireOf)
+export const roomsWireOf = (views: ReadonlyArray<ChatRoomView>): Array<RoomWire> =>
+    views.map((view) => roomWireOf(view))
 
 /** One room that may be absent, as the wire shows it. */
 export const roomOrNullWireOf = (view: OptionalRoomView): OptionalRoomWire => (view === null ? null : roomWireOf(view))
 
 /** A page of a thread as the wire shows it. */
 export const messagePageWireOf = (page: MessagePage): MessagePageWire => ({
-    nodes: page.nodes.map(messageWireOf),
+    nodes: page.nodes.map((view) => messageWireOf(view)),
     pageInfo: { hasNextPage: page.hasNextPage, endCursor: page.endCursor },
 })
 
@@ -166,7 +167,7 @@ export const createRoomRequestOf = (workspaceId: string, input: CreateRoomWireIn
     workspaceId,
     kind: input.kind === "direct" ? "direct" : "group",
     name: input.name,
-    members: input.members.map(memberRefOf),
+    members: input.members.map((input) => memberRefOf(input)),
 })
 
 /** The request that adds or removes a member of a room. */
@@ -182,7 +183,7 @@ export const sendRequestOf = (workspaceId: string, input: SendWireInput): SendWi
     roomId: input.roomId,
     to: input.to === null ? null : memberRefOf(input.to),
     body: input.body,
-    mentions: (input.mentions ?? []).map(memberRefOf),
+    mentions: (input.mentions ?? []).map((input) => memberRefOf(input)),
     fileKeys: input.fileKeys ?? [],
     clientId: input.clientId,
 })

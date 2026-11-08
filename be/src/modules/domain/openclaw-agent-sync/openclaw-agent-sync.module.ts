@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { AgentSyncChecksService } from "./agent-sync-checks.service"
 import { AgentSyncReadService } from "./agent-sync-read.service"

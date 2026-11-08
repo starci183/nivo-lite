@@ -1,5 +1,4 @@
-import { evaluateGate } from "@modules/domain/authority-rules"
-import type { OptionalAuthorityRule } from "@modules/domain/authority-rules"
+import { evaluateGate, type OptionalAuthorityRule } from "@modules/domain/authority-rules"
 import type { ProposalFieldValue } from "@modules/domain/work-items"
 
 /** What the authority rules say about an action a member started: run it, refuse it, or ask a person first. */

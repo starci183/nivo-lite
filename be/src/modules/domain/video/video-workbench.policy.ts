@@ -41,7 +41,7 @@ export const editorScenesOf = (raw: unknown, workspaceId: string): Array<EditorS
     (Array.isArray(raw) ? raw : []).slice(0, 12).flatMap((entry: unknown, index): Array<EditorScene> => {
         const scene = videoRecord(entry)
         const text = (key: string, max: number): string =>
-            typeof scene[key] === "string" ? scene[key].replace(/\s+/gu, " ").trim().slice(0, max) : ""
+            typeof scene[key] === "string" ? scene[key].replaceAll(/\s+/gu, " ").trim().slice(0, max) : ""
         const caption = text("caption", 160)
         const voiceover = text("voiceover", 420)
         if (caption === "" && voiceover === "") return []

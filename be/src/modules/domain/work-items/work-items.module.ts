@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./work-items.module-definition"
 import { WorkItemsService } from "./work-items.service"
 import { WorkItemsActivityService } from "./work-items-activity.service"

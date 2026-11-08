@@ -1,9 +1,7 @@
 import { createHash } from "node:crypto"
-import { InjectEntityInbox } from "@modules/platform/inbox"
-import type { EntityInbox } from "@modules/platform/inbox"
+import { InjectEntityInbox, type EntityInbox } from "@modules/platform/inbox"
 import { Injectable } from "@nestjs/common"
-import { IsNull } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { IsNull, type EntityManager } from "typeorm"
 import { ConnectionsService } from "@modules/domain/connections"
 import { ConversationsService } from "@modules/domain/conversations"
 import { MetaCommentsService } from "@modules/domain/meta-comments"
@@ -12,10 +10,16 @@ import { MetaReceiptPolicy } from "./meta-receipt.policy"
 import type { MetaEvent } from "@modules/integrations/meta"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder, isRecord, parseJsonText } from "@modules/platform/primitives"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
-import { isMetaInboundJob, META_INBOUND_QUEUE, META_DELIVERY_QUEUE } from "./meta-inbox.contracts"
-import type { DeliverySignature, MetaDeliveryRecorded, MetaInboundJob, RawDelivery } from "./meta-inbox.contracts"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
+import {
+    isMetaInboundJob,
+    META_INBOUND_QUEUE,
+    META_DELIVERY_QUEUE,
+    type DeliverySignature,
+    type MetaDeliveryRecorded,
+    type MetaInboundJob,
+    type RawDelivery,
+} from "./meta-inbox.contracts"
 import { MetaInboxEntity } from "./persistence/entities"
 
 @Injectable()

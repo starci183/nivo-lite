@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { DataRecordsReadService } from "@modules/domain/data-records"
-import type { MailAttachments } from "@modules/domain/data-records"
+import { DataRecordsReadService, type MailAttachments } from "@modules/domain/data-records"
 import { McpGatewayError, McpGatewayErrorCode } from "../errors/mcp-gateway.error"
 import type { GatewayJson, NativeAdapter, NativeConnectorManifest } from "../mcp-gateway.contracts"
 import {
@@ -9,8 +8,7 @@ import {
     EinvoiceGetSchema,
     EinvoiceListSchema,
 } from "./einvoice-native.schema"
-import { parseEinvoiceXml } from "./einvoice-xml.policy"
-import type { EinvoiceDraft } from "./einvoice-xml.policy"
+import { parseEinvoiceXml, type EinvoiceDraft } from "./einvoice-xml.policy"
 
 /** The e-invoice native connector: the TT78 XML invoices that arrived in the workspace's invoice mailbox (data-hub IMAP sync). */
 export const EINVOICE_MANIFEST: NativeConnectorManifest = {
@@ -132,7 +130,12 @@ export class EinvoiceNativeService implements NativeAdapter {
         }
         const { since, limit } = parsed.data
         const rows = await this.mails.mailsWithXml(workspaceId, since, MAIL_LIMIT)
-        return { invoices: rows.flatMap(invoicesOf).slice(0, limit).map(summaryOf) }
+        return {
+            invoices: rows
+                .flatMap((row) => invoicesOf(row))
+                .slice(0, limit)
+                .map((entry) => summaryOf(entry)),
+        }
     }
 
     private async get(workspaceId: string, args: GatewayJson): Promise<GatewayJson> {

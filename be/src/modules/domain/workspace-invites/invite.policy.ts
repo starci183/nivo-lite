@@ -1,5 +1,4 @@
-import { ok, refused, hasEmailAddressShape } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { ok, refused, hasEmailAddressShape, type Outcome } from "@modules/platform/primitives"
 import { WorkspaceInvitesErrorCode } from "./errors/workspace-invites.error"
 import type { InviteState } from "./workspace-invites.contracts"
 

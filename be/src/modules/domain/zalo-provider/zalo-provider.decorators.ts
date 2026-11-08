@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { ZaloProviderOptions } from "./zalo-provider.options"
 
 /** Token of the zalo-inbox options, exported so a spec can provide it. */
