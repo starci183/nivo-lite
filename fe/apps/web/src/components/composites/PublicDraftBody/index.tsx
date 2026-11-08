@@ -19,8 +19,8 @@ interface PublicDraftBodyProps {
 export const PublicDraftBody = (props: PublicDraftBodyProps) => {
     const { draft, form, copy } = props
     const isDisabled = form.isBusy || props.isLoading || !draft.canEdit
-    const noteDescription =
-        draft.note === null || draft.note.description === null ? {} : { description: draft.note.description }
+    const description = draft.note?.description ?? null
+    const noteDescription = description === null ? {} : { description }
     return (
         <Form label={copy.titleLabel} onSubmit={props.onSubmit} isPending={form.isBusy}>
             <Stack gap="section">

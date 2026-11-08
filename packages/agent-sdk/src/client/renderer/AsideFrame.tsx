@@ -68,45 +68,38 @@ const AsidePanes = (props: AsidePanesProps): ReactNode => {
     const fact = props.count === "" ? {} : { fact: props.count }
     const status = props.count === "" ? {} : { status: <Badge tone="accent">{props.count}</Badge> }
     return (
-    <PaneGrid
-        label={props.label}
-        areas={{
-            base: ["tabs", "aside", "main"],
-            wide: ["tabs aside", "main aside"],
-        }}
-        columns={{ base: ["fill"], wide: ["fill", "wide"] }}
-        rows={{ base: ["auto", "auto", "fill"], wide: ["auto", "fill"] }}
-    >
-        <Pane area="tabs" surface>
-            <PaneSection align="center">{props.tabs}</PaneSection>
-        </Pane>
-        <Pane area="main" label={props.namespace}>
-            <PaneSection>{props.main}</PaneSection>
-        </Pane>
-        {props.isNarrow ? (
-            <Pane area="aside" label={props.label}>
-                <PaneSection>
-                    <SurfaceCard
-                        label={props.label}
-                        headingLevel={2}
-                        {...fact}
-                    >
-                        {props.aside}
-                    </SurfaceCard>
-                </PaneSection>
+        <PaneGrid
+            label={props.label}
+            areas={{
+                base: ["tabs", "aside", "main"],
+                wide: ["tabs aside", "main aside"],
+            }}
+            columns={{ base: ["fill"], wide: ["fill", "wide"] }}
+            rows={{ base: ["auto", "auto", "fill"], wide: ["auto", "fill"] }}
+        >
+            <Pane area="tabs" surface>
+                <PaneSection align="center">{props.tabs}</PaneSection>
             </Pane>
-        ) : (
-            <Pane area="aside" surface label={props.label}>
-                <PaneSection align="center">
-                    <PaneHeader
-                        title={props.label}
-                        {...status}
-                    />
-                </PaneSection>
-                <PaneSection grow>{props.aside}</PaneSection>
+            <Pane area="main" label={props.namespace}>
+                <PaneSection>{props.main}</PaneSection>
             </Pane>
-        )}
-    </PaneGrid>
+            {props.isNarrow ? (
+                <Pane area="aside" label={props.label}>
+                    <PaneSection>
+                        <SurfaceCard label={props.label} headingLevel={2} {...fact}>
+                            {props.aside}
+                        </SurfaceCard>
+                    </PaneSection>
+                </Pane>
+            ) : (
+                <Pane area="aside" surface label={props.label}>
+                    <PaneSection align="center">
+                        <PaneHeader title={props.label} {...status} />
+                    </PaneSection>
+                    <PaneSection grow>{props.aside}</PaneSection>
+                </Pane>
+            )}
+        </PaneGrid>
     )
 }
 

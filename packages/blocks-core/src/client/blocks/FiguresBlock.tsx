@@ -25,9 +25,7 @@ export const FiguresBlock = (props: RenderOf<typeof figuresBlock>): ReactNode =>
             labels={labels}
             placeholder={{}}
             onRetry={read.retry}
-            {...(ribbon
-                ? { frame: surfaceFrame({ ariaLabel: words(props.props.label) }) }
-                : {})}
+            {...(ribbon ? { frame: surfaceFrame({ ariaLabel: words(props.props.label) }) } : {})}
             render={(record, isLoading) => {
                 const label = words(props.props.label)
                 const caption = textOf(valueAt(record, props.props.captionPath))

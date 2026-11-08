@@ -73,9 +73,7 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
             labels={labels}
             placeholder={RECORD_ROWS_PLACEHOLDER}
             onRetry={read.retry}
-            {...(isCard
-                ? { frame: surfaceFrame({ label, headingLevel: 3 }) }
-                : {})}
+            {...(isCard ? { frame: surfaceFrame({ label, headingLevel: 3 }) } : {})}
             {...clearSearch}
             render={(items, isLoading) =>
                 selectParam === undefined ? (
