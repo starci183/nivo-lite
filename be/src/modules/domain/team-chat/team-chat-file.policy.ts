@@ -42,7 +42,7 @@ export const fileNameOf = (name: string, mimeType: string): string => {
     const bare = name
         .replace(/^.*[\\/]/u, "")
         .replace(/\.[^.]*$/u, "")
-        .replace(/[^\p{L}\p{N}._ -]+/gu, "_")
+        .replaceAll(/[^\p{L}\p{N}._ -]+/gu, "_")
         .trim()
         .slice(0, NAME_MAX)
     return `${bare === "" ? "file" : bare}.${extension}`

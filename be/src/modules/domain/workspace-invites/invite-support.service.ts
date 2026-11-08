@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { WorkspaceInvitesError, WorkspaceInvitesErrorCode } from "./errors/workspace-invites.error"
 import { firstChangedInvite } from "./changed-invite.policy"

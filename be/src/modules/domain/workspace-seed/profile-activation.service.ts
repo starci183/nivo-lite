@@ -1,6 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord, InstallationStatus } from "@modules/domain/module-installations"
+import {
+    InstallationRecordsService,
+    type InstallationRecord,
+    type InstallationStatus,
+} from "@modules/domain/module-installations"
 import { ModuleReadinessService, ModuleTagGrantsService, SetupChatService } from "@modules/domain/modules"
 import type { Locale } from "@modules/platform/i18n"
 import { eachInOrder } from "@modules/platform/primitives"

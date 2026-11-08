@@ -7,11 +7,11 @@ import type {
     OptionalInstallation,
 } from "@modules/domain/agents"
 import { ContextVersionsService } from "@modules/domain/module-context-versions"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type {
-    InstallationRecord,
-    OptionalRowId,
-    OptionalInstallationRecord,
+import {
+    InstallationRecordsService,
+    type InstallationRecord,
+    type OptionalRowId,
+    type OptionalInstallationRecord,
 } from "@modules/domain/module-installations"
 import { ModulesService } from "./modules.service"
 

@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { PAID_ORDER_FULFILMENT } from "@modules/domain/sepay-transactions"
 import { CreatorLedgerService } from "./creator-ledger.service"
 import { FirstPartyTemplatesService } from "./first-party-templates.service"

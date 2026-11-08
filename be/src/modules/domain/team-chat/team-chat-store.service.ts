@@ -1,16 +1,19 @@
 import { Injectable } from "@nestjs/common"
 import type { OptionalId } from "@modules/domain/agents"
-import { In } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
-import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager, returnedIdRows } from "@modules/platform/database"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
+import { InjectIds, type Ids } from "@modules/platform/ids"
 import { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity, ChatRoomPinEntity } from "./persistence/entities"
-import { MEMBERS_MAX, ROOMS_MAX } from "./team-chat.contracts"
-import type { ChatMemberRef, MessageRef, RoomRole, RoomUnread } from "./team-chat.contracts"
-import { isUniqueViolation } from "./team-chat.policy"
-import type { ThreadPosition } from "./team-chat.policy"
+import {
+    MEMBERS_MAX,
+    ROOMS_MAX,
+    type ChatMemberRef,
+    type MessageRef,
+    type RoomRole,
+    type RoomUnread,
+} from "./team-chat.contracts"
+import { isUniqueViolation, type ThreadPosition } from "./team-chat.policy"
 import type {
     CardKind,
     NewCard,

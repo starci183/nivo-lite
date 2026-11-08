@@ -3,16 +3,14 @@ import type { EntityManager } from "typeorm"
 import { DOC_ANSWERS, answers, keywordsOf } from "@modules/domain/knowledge-gaps"
 import { UsageMeterService } from "@modules/domain/knowledge"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { KNOWLEDGE_BLOCKED_CREDITS, isPublicDraftPayload } from "@modules/queues/knowledge"
 import { withoutExcluded } from "./exclusion.policy"
 import { PublicDocumentsErrorCode } from "./errors/public-documents.error"
 import { InternalReaderService } from "./internal-reader.service"
 import { PublicDocumentEntity, PublicDocumentSourceEntity } from "./persistence/entities"
 import { PublicDraftWriterService } from "./public-draft-writer.service"
-import { MAX_DRAFT_SOURCES, MAX_TITLE_CHARS } from "./public-documents.contracts"
-import type { InternalText, LeftOut } from "./public-documents.contracts"
+import { MAX_DRAFT_SOURCES, MAX_TITLE_CHARS, type InternalText, type LeftOut } from "./public-documents.contracts"
 import { PublicDocumentsLogEvent } from "./public-documents.log-events"
 
 /** What the job did with its row. */
@@ -90,7 +88,7 @@ export class PublicDraftRunService {
             return this.stop(row, PublicDocumentsErrorCode.NoInternalRight)
         const texts = reads.flatMap((read): ReadonlyArray<InternalText> => (read.kind === "ok" ? [read.text] : []))
         if (texts.length !== reads.length) return this.stop(row, PublicDocumentsErrorCode.SourceNotReady)
-        const clean = texts.map(cleaned)
+        const clean = texts.map((text) => cleaned(text))
         const written = await this.write(row, clean, null)
         if (written === null) return undefined
         await this.entityManager.transaction(async (tx) => {
@@ -135,7 +133,7 @@ export class PublicDraftRunService {
         const words = keywordsOf(question)
         const covering = reads
             .flatMap((read): ReadonlyArray<InternalText> => (read.kind === "ok" ? [read.text] : []))
-            .map(cleaned)
+            .map((text) => cleaned(text))
             .filter((item) => answers(words, new Set(keywordsOf(item.kept)), DOC_ANSWERS))
         if (covering.length === 0) return this.drop(row, "no_answer", PublicDocumentsErrorCode.NothingLeft)
         const written = await this.write(row, covering, question)

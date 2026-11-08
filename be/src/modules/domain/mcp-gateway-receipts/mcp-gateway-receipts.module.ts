@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { GatewayReceiptsService } from "./gateway-receipts.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./mcp-gateway-receipts.module-definition"

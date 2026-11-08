@@ -1,5 +1,4 @@
-import { refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { refused, type Outcome } from "@modules/platform/primitives"
 import type { DirectoryAccount } from "./workspace-members.contracts"
 import { WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
 

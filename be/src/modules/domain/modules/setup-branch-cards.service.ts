@@ -5,8 +5,7 @@ import { InjectSetupGraph } from "./modules.decorators"
 import type { SetupGraphPort } from "./modules.port"
 import type { CardDecision } from "./module-setup.contracts"
 import { SetupGraphService } from "./setup-graph.service"
-import { cardOf, targetKeyOf } from "./policies/setup-writes.policy"
-import type { ProposedBranch } from "./policies/setup-writes.policy"
+import { cardOf, targetKeyOf, type ProposedBranch } from "./policies/setup-writes.policy"
 
 /** Closes a decided branch card with its resulting payload. */
 type BranchCloser = (

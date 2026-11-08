@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ParkedRunsService } from "./parked-runs.service"
 import { PlatformRegionsService } from "./platform-regions.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./platform-ports.module-definition"

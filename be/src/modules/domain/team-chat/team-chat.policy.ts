@@ -1,6 +1,15 @@
 import { createHash } from "node:crypto"
-import { BODY_MAX, FILES_MAX, MENTIONS_MAX, PAGE_DEFAULT, PAGE_MAX } from "./team-chat.contracts"
-import type { ChatDone, ChatMemberRef, ChatRefused, StoredMention } from "./team-chat.contracts"
+import {
+    BODY_MAX,
+    FILES_MAX,
+    MENTIONS_MAX,
+    PAGE_DEFAULT,
+    PAGE_MAX,
+    type ChatDone,
+    type ChatMemberRef,
+    type ChatRefused,
+    type StoredMention,
+} from "./team-chat.contracts"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
 
 /** The longest client id of a message: the column's CHECK (chat_room_messages_client_id_check) holds 1 to 64 characters. */

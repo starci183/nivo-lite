@@ -4,8 +4,10 @@ import {
     GraphNodesError,
     GraphNodesErrorCode,
     toolFingerprintOf,
+    type NodeRunClaims,
+    type NodeToolCall,
+    type NodeToolDoor,
 } from "@modules/domain/graph-nodes"
-import type { NodeRunClaims, NodeToolCall, NodeToolDoor } from "@modules/domain/graph-nodes"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { gatewayArgumentsSchema } from "./gateway-tools.schema"
 import type { GatewayCallResult, GatewayCaller } from "./mcp-gateway.contracts"

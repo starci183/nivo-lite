@@ -447,9 +447,10 @@ describe("VideoScriptingCompletionService", () => {
                 )
                 const failure = mock<AiGenerationsError>()
                 Object.setPrototypeOf(failure, AiGenerationsError.prototype)
+                const refused = jest.fn<Promise<never>, []>().mockRejectedValue(failure)
                 generations.request.mockImplementationOnce(() => {
                     meta.script_request_id = requestId
-                    return Promise.reject(failure)
+                    return refused()
                 })
 
                 await expect(completion.complete(WS, "generation-1", CLAIM)).resolves.toBeUndefined()

@@ -1,7 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import { WorkspacePaymentAccountService, bankDisplayNameOf } from "@modules/domain/channel-connections"
-import type { GatewayJson, NativeAdapter, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
-import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
+import {
+    type GatewayJson,
+    type NativeAdapter,
+    type NativeConnectorManifest,
+    argumentsOf,
+    unknownTool,
+} from "@modules/domain/mcp-gateway"
 import { PaymentInstructionRegistryService } from "@modules/domain/provider-registry"
 import { nativeRefusal } from "./native-refusal.policy"
 import { PAYMENT_INSTRUCTION_INPUT_SCHEMA, PAYMENT_INSTRUCTION_SCHEMA } from "./payment-native.schema"

@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { MUSIC_STORE } from "./video-music.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./video-music.module-definition"
 import { VideoMusicService } from "./video-music.service"

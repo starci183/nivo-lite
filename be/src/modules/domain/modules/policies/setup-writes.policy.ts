@@ -1,6 +1,5 @@
 import type { RuleMode } from "@modules/domain/authority-rules"
-import { SUBJECT_TYPES, factSlugOf } from "@modules/domain/brain-facts"
-import type { BrainSubjectType, Scope } from "@modules/domain/brain-facts"
+import { SUBJECT_TYPES, factSlugOf, type BrainSubjectType, type Scope } from "@modules/domain/brain-facts"
 import type { BranchCardPayload, FactCardPayload, ProposedCardRecord } from "@modules/domain/module-setup-writes"
 import type { AuthorityActionDefinition, ModuleDefinition, ModuleGate, GateWrite } from "../modules.contracts"
 
@@ -100,14 +99,14 @@ export const vndOf = (value: unknown): number | null => {
     const normalized = value
         .toLowerCase()
         .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
-        .replace(/\s+/g, " ")
+        .replaceAll(/\p{Diacritic}/gu, "")
+        .replaceAll(/\s+/g, " ")
     const found = /^([\d.,]+)\s*(ty|trieu|tr|m|k|nghin|ngan)?/u.exec(normalized)
     if (found === null) return null
     const unit = found[2] ?? ""
     // The successful anchored match guarantees this maximal numeric prefix is nonempty.
     const prefix = found.slice(1, 2).join("")
-    const digits = unit === "" ? prefix.replace(/[.,]/g, "") : prefix.replace(",", ".")
+    const digits = unit === "" ? prefix.replaceAll(/[.,]/g, "") : prefix.replace(",", ".")
     const amount = Number(digits)
     if (!Number.isFinite(amount)) return null
     return Math.round(amount * (UNIT_MULTIPLIER[unit] ?? 1))
@@ -128,8 +127,9 @@ const factOfGap = (
     gaps: ReadonlyArray<OpenGap>,
 ): ProposedFact | null => {
     const gap = gaps.find((candidate) => candidate.id === clean(item.gap, 60))
-    const attributeLabel = clean(item.attribute, 120) || gap?.attributeGuess || ""
-    const subject = subjectLabel || gap?.topic || ""
+    const cleanedAttribute = clean(item.attribute, 120)
+    const attributeLabel = cleanedAttribute === "" ? (gap?.attributeGuess ?? "") : cleanedAttribute
+    const subject = subjectLabel === "" ? (gap?.topic ?? "") : subjectLabel
     if (gap === undefined || attributeLabel === "" || subject === "") return null
     const scope: Scope = module.audience === "customer" ? "public" : "internal"
     return {

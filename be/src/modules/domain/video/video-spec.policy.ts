@@ -177,7 +177,7 @@ const CONTROL = /(?![\t\n])\p{Cc}/gu
 
 /** Text without control characters, trimmed and cut to `max`. */
 const clean = (value: unknown, max: number): string =>
-    typeof value === "string" ? value.replace(CONTROL, "").trim().slice(0, max) : ""
+    typeof value === "string" ? value.replaceAll(CONTROL, "").trim().slice(0, max) : ""
 
 /** #RGB or #RRGGBB (any case) -> #rrggbb lower case, or null. */
 export const normaliseColor = (value: unknown): string | null => {
@@ -193,7 +193,7 @@ const MALFORMED_PERCENT = /%(?![0-9a-f]{2})/iu
 
 /** Decodes percent escapes the way a browser reads a path; bytes that are not UTF-8 become the replacement character, which no asset path has. */
 const decodePath = (text: string): string =>
-    text.replace(PERCENT_RUN, (run) =>
+    text.replaceAll(PERCENT_RUN, (run) =>
         new TextDecoder().decode(
             Uint8Array.from(
                 run

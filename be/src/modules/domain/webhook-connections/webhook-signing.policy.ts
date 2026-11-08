@@ -1,6 +1,5 @@
 import { createHmac } from "node:crypto"
-import { WEBHOOK_EVENTS } from "./webhook-connections.contracts"
-import type { WebhookEvent } from "./webhook-connections.contracts"
+import { WEBHOOK_EVENTS, type WebhookEvent } from "./webhook-connections.contracts"
 
 const webhookEvents: ReadonlyArray<string> = WEBHOOK_EVENTS
 

@@ -20,7 +20,7 @@ export const instanceNameKey = (name: string): string => name.trim().toLowerCase
 
 /** A clean instance name, or null when it is empty or longer than 80 characters after trimming. */
 export const cleanInstanceName = (name: string): string | null => {
-    const clean = name.replace(/\s+/g, " ").trim()
+    const clean = name.replaceAll(/\s+/g, " ").trim()
     return clean.length >= 1 && clean.length <= NAME_MAX ? clean : null
 }
 
@@ -29,7 +29,7 @@ export const cleanInstanceName = (name: string): string | null => {
  * that exist, skipping any name already taken, case-insensitive).
  */
 export const nextInstanceName = (typeName: string, taken: ReadonlyArray<string>): string => {
-    const used = new Set(taken.map(instanceNameKey))
+    const used = new Set(taken.map((name) => instanceNameKey(name)))
     if (taken.length === 0 && !used.has(instanceNameKey(typeName))) return typeName
     for (let n = Math.max(2, taken.length + 1); n < NAME_SEARCH_LIMIT; n += 1) {
         const candidate = `${typeName} ${n}`

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectMetaClient } from "@modules/integrations/meta"
-import type { MetaClient } from "@modules/integrations/meta"
+import { InjectMetaClient, type MetaClient } from "@modules/integrations/meta"
 import type { RawDelivery, DeliverySignature } from "./meta-inbox.contracts"
 import { MetaInboxError, MetaInboxErrorCode } from "./errors/meta-inbox.error"
 

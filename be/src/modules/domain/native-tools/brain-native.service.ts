@@ -1,13 +1,16 @@
 import { Injectable } from "@nestjs/common"
-import { BrainFactsReadService, factSlugOf, inForce, visibleTo } from "@modules/domain/brain-facts"
-import type { FactRecord } from "@modules/domain/brain-facts"
-import { KnowledgeSearchService } from "@modules/domain/knowledge"
+import { BrainFactsReadService, factSlugOf, inForce, visibleTo, type FactRecord } from "@modules/domain/brain-facts"
+import { KnowledgeSearchService, type Passage } from "@modules/domain/knowledge"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
-import type { Passage } from "@modules/domain/knowledge"
-import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
-import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import {
+    type GatewayJson,
+    type NativeAdapter,
+    type NativeCaller,
+    type NativeConnectorManifest,
+    argumentsOf,
+    unknownTool,
+} from "@modules/domain/mcp-gateway"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import {
     BRAIN_DOCUMENTS_READ_INPUT_SCHEMA,
     BRAIN_DOCUMENTS_READ_SCHEMA,
@@ -17,18 +20,15 @@ import {
     BRAIN_FACTS_LIST_SCHEMA,
     BRAIN_SEARCH_INPUT_SCHEMA,
     BRAIN_SEARCH_SCHEMA,
-} from "./brain-native.schema"
-import type {
-    BrainDocumentsReadInput,
-    BrainFactsGetInput,
-    BrainFactsListInput,
-    BrainSearchInput,
+    type BrainDocumentsReadInput,
+    type BrainFactsGetInput,
+    type BrainFactsListInput,
+    type BrainSearchInput,
 } from "./brain-native.schema"
 import { clipped } from "./native-masking.policy"
 import { scrubbed } from "./native-scrub.policy"
 import { nativeRefusal } from "./native-refusal.policy"
-import { evidenceLinesOf, factLineOf, isServed } from "./native-view.policy"
-import type { NativeView } from "./native-view.policy"
+import { evidenceLinesOf, factLineOf, isServed, type NativeView } from "./native-view.policy"
 import { NativeViewService } from "./native-view.service"
 
 /** How long the embedding of a question may take: the database half of the search then has room inside the gateway's limit. */
@@ -185,7 +185,10 @@ export class BrainNativeService implements NativeAdapter {
         ])
         return {
             notice: BRAIN_NOTICE,
-            facts: facts.filter(isServed).slice(0, input.limit).map(factLineOf),
+            facts: facts
+                .filter(isServed)
+                .slice(0, input.limit)
+                .map((fact) => factLineOf(fact)),
             passages: passages
                 .filter((passage) => passage.layer === "business")
                 .map((passage) => ({
@@ -226,7 +229,7 @@ export class BrainNativeService implements NativeAdapter {
         const served = inView.filter(
             (fact) => isServed(fact) && (subject === null || fact.subjectKey.includes(subject)),
         )
-        return { notice: BRAIN_NOTICE, facts: served.slice(0, input.limit).map(factLineOf) }
+        return { notice: BRAIN_NOTICE, facts: served.slice(0, input.limit).map((fact) => factLineOf(fact)) }
     }
 
     /** One fact, only while it is active, in force and inside the view. */

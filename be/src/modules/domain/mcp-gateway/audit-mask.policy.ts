@@ -40,7 +40,7 @@ export const masked = (value: GatewayJson, secretFields: ReadonlyArray<string> =
     )
 
 const canonical = (value: unknown): unknown => {
-    if (Array.isArray(value)) return value.map(canonical)
+    if (Array.isArray(value)) return value.map((value) => canonical(value))
     if (!isObject(value)) return value
     return Object.fromEntries(
         Object.keys(value)

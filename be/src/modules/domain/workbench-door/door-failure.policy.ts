@@ -1,7 +1,6 @@
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { ENTITY_ENGINE_ERROR_KINDS } from "@modules/domain/entity-engine"
-import { isDomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { isDomainError, type ErrorKind } from "@modules/platform/errors"
 import { WorkbenchDoorErrorCode } from "./errors/workbench-door.error"
 
 /** How a failure of an action travels to the screen: the reason of the result, the code its text comes from and what to offer. */

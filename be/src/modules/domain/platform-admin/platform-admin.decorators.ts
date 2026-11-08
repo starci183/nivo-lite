@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { PlatformAdminOptions } from "./platform-admin.options"
 
 /** Token of the platform-admin options, exported so a spec can provide it. */

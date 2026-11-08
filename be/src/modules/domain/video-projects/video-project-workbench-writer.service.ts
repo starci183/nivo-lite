@@ -1,17 +1,20 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectClock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { isRecord } from "@modules/platform/primitives"
-import type { Clock } from "@modules/platform/clock"
 import type {
     DelegatedVideoProjectDraft,
     NewVideoProjectDraft,
     ChangeVideoProjectDraft,
     WrittenVideoProjectId,
 } from "./video-project-workbench.contracts"
-import { VideoProjectEntity } from "./persistence/entities"
-import type { VideoProjectAspect, VideoProjectGoal, VideoProjectJson } from "./persistence/entities"
+import {
+    VideoProjectEntity,
+    type VideoProjectAspect,
+    type VideoProjectGoal,
+    type VideoProjectJson,
+} from "./persistence/entities"
 
 /** The longest title a copy may carry. */
 const TITLE_MAX = 120

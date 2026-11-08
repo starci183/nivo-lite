@@ -12,10 +12,8 @@ import type {
 } from "@modules/domain/agent-tools"
 import { BookingPublicService } from "@modules/domain/bookings"
 import { WorkEngineService } from "@modules/domain/decisions"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import {
     bookingDateIn,
     isPlausibleBookingPhone,

@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { OpenclawAgentSyncOptions } from "./openclaw-agent-sync.options"
 
 /** Token of the openclaw-agent-sync options, exported so a spec can provide it. */

@@ -40,7 +40,7 @@ const fold = (text: string): string =>
         text
             .toLowerCase()
             .normalize("NFD")
-            .replace(/[\u0300-\u036f]/gu, "")
+            .replaceAll(/[\u0300-\u036f]/gu, "")
             .replaceAll("\u0111", "d"),
     )
 

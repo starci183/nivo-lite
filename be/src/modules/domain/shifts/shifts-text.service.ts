@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import type { Setup, Shift, SwapFinding } from "./shifts.contracts"
 import { dayLabel, shiftLine, weekLabel } from "./policies/labels.policy"
 

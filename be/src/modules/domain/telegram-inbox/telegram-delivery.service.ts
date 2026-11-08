@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims } from "@modules/platform/jobs"
 import { isTelegramDeliveryRecorded } from "@modules/queues/telegram-delivery"
 import { InjectTelegramReceiptProcessor } from "./telegram-inbox.decorators"
 import type { TelegramReceiptProcessor } from "./telegram-inbox.port"

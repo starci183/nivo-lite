@@ -1,33 +1,31 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AutomationTemplatesService } from "@modules/domain/automation-templates"
-import { baseGraphOf } from "@modules/domain/agent-graphs"
-import type { SeedRule } from "@modules/domain/agent-graphs"
+import { baseGraphOf, type SeedRule } from "@modules/domain/agent-graphs"
 import {
     AgentTemplatesError,
     AgentTemplatesErrorCode,
     AgentTemplateVersionsService,
     TemplateRecordsService,
 } from "@modules/domain/agent-templates"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
-import { ModulesService } from "@modules/domain/modules"
-import type { ModuleDefinition } from "@modules/domain/modules"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
+import { ModulesService, type ModuleDefinition } from "@modules/domain/modules"
 import { AdminAccessService } from "@modules/domain/platform-admin"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { Principal } from "@modules/platform/cqrs"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
-import { hashOfPackage, previewPackage, TEMPLATE_KEY_PATTERN } from "@nivo-lite/agent-sdk/template"
-import type {
-    AgentTemplatePackage,
-    GraphDocument,
-    PackageDraft,
-    ParameterBinding,
-    TemplateParameter,
-    TemplateVersionView,
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import {
+    hashOfPackage,
+    previewPackage,
+    TEMPLATE_KEY_PATTERN,
+    type AgentTemplatePackage,
+    type GraphDocument,
+    type PackageDraft,
+    type ParameterBinding,
+    type TemplateParameter,
+    type TemplateVersionView,
 } from "@nivo-lite/agent-sdk/template"
 import { TemplateMarketplaceError, TemplateMarketplaceErrorCode } from "./errors/template-marketplace.error"
 import { TemplateListingsService } from "./template-listings.service"

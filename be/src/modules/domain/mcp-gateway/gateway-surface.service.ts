@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AgentViewScopeService } from "@modules/domain/agents"
-import { InjectMcpServer } from "@modules/integrations/mcp"
-import type { McpServedResult, McpServedTool, McpServing } from "@modules/integrations/mcp"
+import { InjectMcpServer, type McpServedResult, type McpServedTool, type McpServing } from "@modules/integrations/mcp"
 import { audienceOfModule } from "./caller-audience.policy"
 import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error"
 import {
@@ -11,8 +10,8 @@ import {
     gatewayCallSchema,
     gatewayDescribeSchema,
     gatewaySearchSchema,
+    type GatewayCall,
 } from "./gateway-tools.schema"
-import type { GatewayCall } from "./gateway-tools.schema"
 import type { GatewayCaller, GatewayJson, SurfaceReply, SurfaceRequest } from "./mcp-gateway.contracts"
 import { McpGatewayService } from "./mcp-gateway.service"
 

@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { OfficeAuthorityPort } from "@modules/domain/member-grants"
 
 /** Token of the authority capability behind an office run. */

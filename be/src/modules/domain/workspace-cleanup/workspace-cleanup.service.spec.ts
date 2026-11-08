@@ -290,8 +290,8 @@ describe("WorkspaceCleanupService execute stops at a failed account", () => {
 
     it.each<[string, () => Promise<CleanupUserDeleted>]>([
         ["an Auth refusal", () => Promise.resolve({ error: { message: "user has rows" } })],
-        ["a thrown error", () => Promise.reject(new Error("user has rows"))],
-        ["a thrown value", () => Promise.reject("user has rows")],
+        ["a thrown error", jest.fn().mockRejectedValue(new Error("user has rows"))],
+        ["a thrown value", jest.fn().mockRejectedValue("user has rows")],
     ])("stops at %s and reports the accounts deleted and remaining", async (_label, failure) => {
         const digest = await digestOf({ users })
         const { cleanup, accounts, print } = await build({ users })

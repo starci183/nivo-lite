@@ -1,6 +1,5 @@
 import { INBOX, InboxService } from "@modules/platform/inbox"
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./telegram-inbox.module-definition"
 import { TELEGRAM_RECEIPT_PROCESSOR } from "./telegram-inbox.decorators"
 import { TelegramDeliveryService } from "./telegram-delivery.service"

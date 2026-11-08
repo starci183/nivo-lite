@@ -1,6 +1,5 @@
 import type { ModuleDefinition } from "../modules.contracts"
-import { vndOf } from "./setup-writes.policy"
-import type { ProposedBranch } from "./setup-writes.policy"
+import { vndOf, type ProposedBranch } from "./setup-writes.policy"
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value)

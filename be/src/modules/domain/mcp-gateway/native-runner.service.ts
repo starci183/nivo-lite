@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectQueueTimeout } from "@modules/platform/queue"
-import type { QueueTimeout } from "@modules/platform/queue"
+import { InjectQueueTimeout, type QueueTimeout } from "@modules/platform/queue"
 import { refusalOf } from "./connector-call.policy"
 import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error"
 import type { GatewayCaller, GatewayJson, NativeAdapter } from "./mcp-gateway.contracts"

@@ -1,20 +1,28 @@
 import { Injectable } from "@nestjs/common"
 import { ChannelsError, ChannelsErrorCode, ZaloCredentialsService } from "@modules/domain/channels"
-import { PollLimiterService } from "@modules/domain/connection-poll"
-import type { PollFailure, PollLimits, PollPage, PollWindow } from "@modules/domain/connection-poll"
+import {
+    PollLimiterService,
+    type PollFailure,
+    type PollLimits,
+    type PollPage,
+    type PollWindow,
+} from "@modules/domain/connection-poll"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import type { MessageInboxPoller } from "@modules/domain/provider-registry"
 import { ZaloInboxService } from "@modules/domain/zalo-inbox"
-import { InjectZalo, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
-import type { ZaloChatMessage, ZaloClient } from "@modules/integrations/zalo"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectZalo, ZaloError, ZaloErrorCode, type ZaloChatMessage, type ZaloClient } from "@modules/integrations/zalo"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectZaloProviderOptions } from "./zalo-provider.decorators"
 import type { ZaloProviderOptions } from "./zalo-provider.options"
 import { ZALO_PLAN_LACKS_READING_NOTICE } from "./messages/zalo-provider.messages"
-import { ZALO_POLL_MAX_PAGES, ZALO_POLL_PAGE_SIZE, isStaleMessage, pollRulesOf } from "./zalo-poll.policy"
-import type { ZaloPollRules } from "./zalo-poll.policy"
+import {
+    ZALO_POLL_MAX_PAGES,
+    ZALO_POLL_PAGE_SIZE,
+    isStaleMessage,
+    pollRulesOf,
+    type ZaloPollRules,
+} from "./zalo-poll.policy"
 
 /** The number Zalo answers when the OA tier package does not include the feature ("The OA needs to upgrade OA Tier Package to use this feature"). */
 const PLAN_LACKS_FEATURE = -224

@@ -17,6 +17,7 @@ import type { ParkedRuns } from "@nivo-lite/blocks-core/modules"
 import { ParkedRunsService, PlatformRegionsService } from "@modules/domain/platform-ports"
 import { DoorPortsService } from "./door-ports.service"
 import type { DoorRun } from "./door-ports.service"
+import { WorkbenchDoorError, WorkbenchDoorErrorCode } from "./errors/workbench-door.error"
 import { WORKBENCH_DOOR_OPTIONS } from "./workbench-door.decorators"
 
 const SHAPE: ListShape = {
@@ -114,6 +115,12 @@ const UNPROVIDED: ReadonlyArray<readonly [string, PortId, string | null]> = [
     ["a port the screen is not given", "engine.door", "lead"],
 ]
 
+/** The answer of a narrowing that found no such port: the door has none to give. */
+const unprovided = (port: string): Promise<never> =>
+    jest
+        .fn<Promise<never>, []>()
+        .mockRejectedValue(new WorkbenchDoorError({ code: WorkbenchDoorErrorCode.PortUnprovided, params: { port } }))()
+
 describe("DoorPortsService", () => {
     it.each(ENGINE_PORTS)("gives the engine port %s the handle the engine provides, bound to the run", async (id) => {
         const { service, ports, run, runIn } = await build()
@@ -132,7 +139,7 @@ describe("DoorPortsService", () => {
         lists.page.mockResolvedValue({ rows: [RECORD], next: "cursor-2" })
         const source = service.providerFor(run).implementationOf(portOf("sales.leads-list"))
 
-        const page = await (isListSource(source) ? source.page(SHAPE, QUERY) : Promise.reject(new Error("no source")))
+        const page = await (isListSource(source) ? source.page(SHAPE, QUERY) : unprovided("no source"))
 
         expect(lists.page).toHaveBeenCalledWith(tx, {
             read: "sales.leads",
@@ -161,9 +168,7 @@ describe("DoorPortsService", () => {
         lists.counts.mockResolvedValue({ new: 2, won: 3 })
         const source = service.providerFor(run).implementationOf(portOf("sales.leads-list"))
 
-        const counts = await (isListSource(source)
-            ? source.counts(SHAPE, "stage", QUERY)
-            : Promise.reject(new Error("no source")))
+        const counts = await (isListSource(source) ? source.counts(SHAPE, "stage", QUERY) : unprovided("no source"))
 
         expect(lists.counts).toHaveBeenCalledWith(tx, { entity: "sales.lead", shape: SHAPE, by: "stage", query: QUERY })
         expect(counts).toEqual({ new: 2, won: 3 })
@@ -177,7 +182,7 @@ describe("DoorPortsService", () => {
         ])
 
         const source = service.providerFor(run).implementationOf(portOf("platform.installation"))
-        const facts = await (isInstallationSource(source) ? source.current() : Promise.reject(new Error("no source")))
+        const facts = await (isInstallationSource(source) ? source.current() : unprovided("no source"))
 
         expect(installations.list).toHaveBeenCalledWith("ws-1")
         expect(facts).toEqual({ registryHash: "hash-1", modules: [], enabled: ["sales", "loyalty"] })
@@ -207,9 +212,7 @@ describe("DoorPortsService members", () => {
         seats.activeSeatById.mockResolvedValue({ displayName: "Lan", isManager: true })
         const directory = service.providerFor(run).implementationOf(portOf("platform.members"))
 
-        const seat = await (isMemberDirectory(directory)
-            ? directory.get("m-1")
-            : Promise.reject(new Error("no directory")))
+        const seat = await (isMemberDirectory(directory) ? directory.get("m-1") : unprovided("no directory"))
 
         expect(seat).toEqual({ displayName: "Lan", isManager: true })
         expect(seats.activeSeatById).toHaveBeenCalledWith("ws-1", "m-1")
@@ -234,9 +237,7 @@ describe("DoorPortsService rights", () => {
         seats.activeSeatById.mockResolvedValue(seat)
         grants.forAction.mockResolvedValue(granted.map((id) => mock<MemberGrant>({ member_id: id })))
         const directory = service.providerFor(run).implementationOf(portOf("platform.rights"))
-        return isRightsDirectory(directory)
-            ? directory.holds(memberId, "sales.approve")
-            : Promise.reject(new Error("no directory"))
+        return isRightsDirectory(directory) ? directory.holds(memberId, "sales.approve") : unprovided("no directory")
     }
 
     it("holds every permission for an owner or a manager without looking at the grants", async () => {
@@ -246,7 +247,7 @@ describe("DoorPortsService rights", () => {
 
         const answer = await (isRightsDirectory(directory)
             ? directory.holds("m-1", "sales.approve")
-            : Promise.reject(new Error("no directory")))
+            : unprovided("no directory"))
 
         expect(answer).toBe(true)
         expect(seats.activeSeatById).toHaveBeenCalledWith("ws-1", "m-1")
@@ -295,14 +296,14 @@ describe("DoorPortsService platform ports", () => {
         const connections = service
             .providerFor({ ...run, locale: "en" })
             .implementationOf(portOf("platform.agent-connections"))
-        await (isRegionPort(connections) ? connections.of("a1") : Promise.reject(new Error("no port")))
-        await (isRegionPort(connections) ? connections.of("a1", "vi") : Promise.reject(new Error("no port")))
+        await (isRegionPort(connections) ? connections.of("a1") : unprovided("no port"))
+        await (isRegionPort(connections) ? connections.of("a1", "vi") : unprovided("no port"))
         expect(regions.connectionsOf.mock.calls).toEqual([
             ["a1", "en"],
             ["a1", "vi"],
         ])
         const knowledge = service.providerFor(run).implementationOf(portOf("platform.agent-knowledge"))
-        await (isRegionPort(knowledge) ? knowledge.of("a2") : Promise.reject(new Error("no port")))
+        await (isRegionPort(knowledge) ? knowledge.of("a2") : unprovided("no port"))
         expect(regions.knowledgeOf.mock.calls).toEqual([["ws-1", "a2", "vi"]])
     })
 

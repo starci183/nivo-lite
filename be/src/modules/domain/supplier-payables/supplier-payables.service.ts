@@ -40,7 +40,7 @@ export class SupplierPayablesService {
         listed: ReadonlyArray<NewSupplierPayable>,
     ): Promise<ReadonlyArray<SupplierPayableRow>> {
         if (listed.length === 0) return []
-        const known = (await this.rowsOf(workspaceId, listed)).map(toRow)
+        const known = (await this.rowsOf(workspaceId, listed)).map((entity) => toRow(entity))
         const byKey = new Map(known.map((row) => [supplierPayableKey(row), row]))
         const fresh = listed.filter((payable) => !byKey.has(supplierPayableKey(payable)))
         const changed = listed.filter((payable) => {
@@ -63,7 +63,7 @@ export class SupplierPayablesService {
         }
         await Promise.all(changed.map((payable) => this.rewrite(workspaceId, payable)))
         if (fresh.length === 0 && changed.length === 0) return known
-        return (await this.rowsOf(workspaceId, listed)).map(toRow)
+        return (await this.rowsOf(workspaceId, listed)).map((entity) => toRow(entity))
     }
 
     /** The invoices still to pay, soonest due first. */
@@ -73,7 +73,7 @@ export class SupplierPayablesService {
             order: { dueOn: "ASC", invoiceNo: "ASC" },
             take: ROWS_MAX,
         })
-        return rows.map(toRow)
+        return rows.map((entity) => toRow(entity))
     }
 
     /** The invoices an outgoing payment settled, latest first. */
@@ -83,7 +83,7 @@ export class SupplierPayablesService {
             order: { paidAt: "DESC", id: "DESC" },
             take: PAID_LIMIT,
         })
-        return rows.map(toRow)
+        return rows.map((entity) => toRow(entity))
     }
 
     /** Remembers the work item that asks whether the payment settled the invoice. */

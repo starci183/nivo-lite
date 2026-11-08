@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import type { Secret } from "@modules/platform/config"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"

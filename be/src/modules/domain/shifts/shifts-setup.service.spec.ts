@@ -213,6 +213,17 @@ describe("ShiftsSetupService saveStaff", () => {
     })
 })
 
+describe("ShiftsSetupService staff without a staff row", () => {
+    it.each([undefined, null, ""])("links no staff row when the request carries %p", async (staffRowId) => {
+        const em = mockEntityManager()
+        const [update] = queueQueryBuilders(em, [saved("profile-1")])
+        const { setup } = await build(em)
+        const request = { id: "profile-1", name: "Lan", positionIds: ["position-1"], staffRowId }
+        await expect(setup.saveStaff("user-1", "ws-1", request)).resolves.toEqual({ id: "profile-1" })
+        expect(update?.callsOf("set")[0]).toEqual([expect.objectContaining({ staffId: null })])
+    })
+})
+
 describe("ShiftsSetupService saveStaff pay and refusals", () => {
     it("leaves the pay alone without a wage and never stores a negative one", async () => {
         const em = mockEntityManager({ upsert: [ShiftsStaffPayEntity, {}] })

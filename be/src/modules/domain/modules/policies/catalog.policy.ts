@@ -36,7 +36,7 @@ const gateProblems = (module: ModuleDefinition): ReadonlyArray<string> => {
     const actions = new Set(module.authorityActions.map((action) => action.action))
     const keys = module.gates.map((gate) => gate.key)
     const blankGate = module.gates.filter((gate) =>
-        [gate.key, gate.label_vi, gate.label_en, gate.hint_vi, gate.hint_en].some(blank),
+        [gate.key, gate.label_vi, gate.label_en, gate.hint_vi, gate.hint_en].some((text) => blank(text)),
     )
     const strayRules = module.gates
         .flatMap((gate) => gate.writes ?? [])

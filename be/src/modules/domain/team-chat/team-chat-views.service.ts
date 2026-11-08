@@ -6,8 +6,15 @@ import type { ChatMemberRef, MessageView, ChatRoomView } from "./team-chat.contr
 import { TeamChatApprovalsService } from "./team-chat-approvals.service"
 import { TeamChatFilesService } from "./team-chat-files.service"
 import { TeamChatStoreService } from "./team-chat-store.service"
-import { decisionIdsOf, messageViewOf, nameKeyOf, refsOfMessages, roomViewOf } from "./team-chat-view.policy"
-import type { MessageViewContext, RoomViewContext } from "./team-chat-view.policy"
+import {
+    decisionIdsOf,
+    messageViewOf,
+    nameKeyOf,
+    refsOfMessages,
+    roomViewOf,
+    type MessageViewContext,
+    type RoomViewContext,
+} from "./team-chat-view.policy"
 
 @Injectable()
 /** Turns the rows of the chat into what a screen shows: names of people and agents, unread counts, pins, file addresses and decision states. */

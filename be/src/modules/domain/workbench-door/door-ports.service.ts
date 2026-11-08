@@ -1,6 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { unprovided } from "@nivo-lite/agent-sdk/port"
-import type { PortDefinition, PortProvider } from "@nivo-lite/agent-sdk/port"
+import { unprovided, type PortDefinition, type PortProvider } from "@nivo-lite/agent-sdk/port"
 import type { ListPage, ListSource } from "@nivo-lite/agent-sdk/block"
 import type {
     AgentConnections,
@@ -11,11 +10,10 @@ import type {
     RightsDirectory,
 } from "@nivo-lite/blocks-core/modules"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import { EntityEngineService, EntityPortsService, ListSourceService } from "@modules/domain/entity-engine"
+import { EntityEngineService, EntityPortsService, ListSourceService, type RunIn } from "@modules/domain/entity-engine"
 import { MemberGrantsService } from "@modules/domain/member-grants"
 import { ParkedRunsService, PlatformRegionsService } from "@modules/domain/platform-ports"
 import { MemberLookupService } from "@modules/domain/workspace-members"
-import type { RunIn } from "@modules/domain/entity-engine"
 import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { Locale } from "@modules/platform/i18n"
@@ -150,7 +148,7 @@ export class DoorPortsService {
                 const found = await run.runIn((tx) =>
                     this.lists.page(tx, { read: run.name, entity, shape, query, select }),
                 )
-                return { rows: found.rows.map(rowOf), cursor: found.next }
+                return { rows: found.rows.map((record) => rowOf(record)), cursor: found.next }
             },
             counts: (shape, by, query) => run.runIn((tx) => this.lists.counts(tx, { entity, shape, by, query })),
         }

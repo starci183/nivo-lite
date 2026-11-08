@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { NivoFolderClient } from "./nivo-folder.client"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./nivo-knowledge.module-definition"
 import { NivoKnowledgeSearchService } from "./nivo-knowledge-search.service"

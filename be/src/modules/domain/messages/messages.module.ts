@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AGENT_DIRECTORY } from "./office-lines.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./messages.module-definition"
 import { MessageCursorsService } from "./message-cursors.service"

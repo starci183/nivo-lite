@@ -1,16 +1,15 @@
-import { InjectEntityInbox } from "@modules/platform/inbox"
-import type { EntityInbox } from "@modules/platform/inbox"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
-import type { TelegramDeliveryRecorded, TelegramRawDelivery } from "./telegram-inbox.contracts"
-import { TELEGRAM_DELIVERY_QUEUE } from "./telegram-inbox.contracts"
+import { InjectEntityInbox, type EntityInbox } from "@modules/platform/inbox"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
+import {
+    type TelegramDeliveryRecorded,
+    type TelegramRawDelivery,
+    TELEGRAM_DELIVERY_QUEUE,
+} from "./telegram-inbox.contracts"
 import { Injectable } from "@nestjs/common"
-import { IsNull } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { IsNull, type EntityManager } from "typeorm"
 import { ConversationsService, readTelegramUpdate } from "@modules/domain/conversations"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { TelegramInboxEntity } from "./persistence/entities"
 
 @Injectable()

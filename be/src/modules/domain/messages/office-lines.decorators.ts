@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { AgentDirectory } from "./office-lines.port"
 
 /** Token of the agent directory port; the app root binds it to the agents capability. */

@@ -1,7 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import type { OnApplicationBootstrap } from "@nestjs/common"
-import { PollSourceRegistryService } from "@modules/domain/connection-poll"
-import type { PollSourceDirectory, ScheduledPollSource } from "@modules/domain/connection-poll"
+import { Injectable, type OnApplicationBootstrap } from "@nestjs/common"
+import {
+    PollSourceRegistryService,
+    type PollSourceDirectory,
+    type ScheduledPollSource,
+} from "@modules/domain/connection-poll"
 import { MessageInboxPollerRegistryService } from "@modules/domain/provider-registry"
 
 @Injectable()

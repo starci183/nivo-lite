@@ -1,6 +1,5 @@
 import { agentTemplatePackageSchema } from "@modules/domain/agent-templates"
-import { canonicalJson, previewPackage } from "@nivo-lite/agent-sdk/template"
-import type { AgentTemplatePackage } from "@nivo-lite/agent-sdk/template"
+import { canonicalJson, previewPackage, type AgentTemplatePackage } from "@nivo-lite/agent-sdk/template"
 import { createHash } from "node:crypto"
 import type { ListingCheck } from "../template-marketplace.contracts"
 

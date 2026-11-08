@@ -72,7 +72,7 @@ export const registryOf = (
         throw new WorkbenchDoorError({ code: WorkbenchDoorErrorCode.RegistryIdInvalid, params: { id: malformed } })
     const lists = new Map(declaredReads.map((read) => [read.id, read]))
     const reads = declaredReads.flatMap((read) => readOf(read, lists))
-    const actions = declaredActions.filter(served)
+    const actions = declaredActions.filter((action) => served(action))
     for (const read of reads) assertPorts(read.definition.id, read.definition.ports, read.dataKind, entities)
     for (const action of actions) assertPorts(action.id, action.ports, null, entities)
     const external = actions.find((action) => action.transactional === true && hasExternalPort(action.ports))

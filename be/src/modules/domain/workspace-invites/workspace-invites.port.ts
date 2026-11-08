@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { InviteDeliveryPort } from "./workspace-invites.contracts"
 import type { WorkspaceInvitesOptions } from "./workspace-invites.options"
 

@@ -1,8 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import { AuthorityService } from "@modules/domain/authority"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { WorkspacesService } from "@modules/domain/workspaces"
-import type { CreatedWorkspace, FirstWorkspace, NamedBusinessType } from "@modules/domain/workspaces"
+import {
+    WorkspacesService,
+    type CreatedWorkspace,
+    type FirstWorkspace,
+    type NamedBusinessType,
+} from "@modules/domain/workspaces"
 import { eachInOrder } from "@modules/platform/primitives"
 import { ModulesService } from "./modules.service"
 import { defaultRulesOf } from "./policies/instance.policy"

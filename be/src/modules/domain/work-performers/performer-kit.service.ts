@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { WorkContext } from "@modules/domain/decisions"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 
 @Injectable()
 /** What every performer reaches for: its texts in the language of the call. */

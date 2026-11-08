@@ -18,6 +18,7 @@ import type { FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-bui
 import { ShiftsSettingsEntity } from "./persistence/entities"
 import type { AlertShiftRead, ReminderWorkspaceRead } from "./persistence/shifts-alerts.contracts"
 import { DEFAULT_SETTINGS } from "./policies/row-mappers.policy"
+import { ShiftsError, ShiftsErrorCode } from "./errors/shifts.error"
 import { ShiftsAlertsService } from "./shifts-alerts.service"
 import type { Setup, ShiftStaff } from "./shifts.contracts"
 import { ShiftsDataService } from "./shifts-data.service"
@@ -63,6 +64,9 @@ const WORKSPACE: ReminderWorkspaceRead = {
     noshow_minutes: 10,
 }
 
+const QUERY_FAILURE = new ShiftsError({ code: ShiftsErrorCode.ScheduleNotSaved })
+const FAILED_QUERY = jest.fn<Promise<never>, []>().mockRejectedValue(QUERY_FAILURE)
+
 /** What the reads of the service answer. */
 interface Answers {
     readonly workspaces?: ReadonlyArray<ReminderWorkspaceRead>
@@ -93,9 +97,8 @@ const answer = (
             getRawMany: (read) => {
                 if (read.callsOf("distinct").length > 0) return Promise.resolve(options.mates ?? [{ name: "Minh" }])
                 const where = read.callsOf("where")[0]?.[1]
-                if (isRecord(where) && where.workspaceId !== undefined && where.workspaceId === options.failFor) {
-                    return Promise.reject(new TypeError("workspace query failed"))
-                }
+                if (isRecord(where) && where.workspaceId !== undefined && where.workspaceId === options.failFor)
+                    return FAILED_QUERY()
                 return Promise.resolve(rows)
             },
             getRawOne: () => Promise.resolve(rows[0]),
@@ -241,7 +244,6 @@ describe("ShiftsAlertsService", () => {
     })
 
     it("logs a failed workspace and queues both alert kinds for the next workspace", async () => {
-        const failure = new TypeError("workspace query failed")
         const { service, outbox, logger } = await prepare(
             [row({ id: "reminder", staff_id: null, start_time: "09:00:00" }), row({ id: "noshow", reminded: true })],
             true,
@@ -255,7 +257,7 @@ describe("ShiftsAlertsService", () => {
             reminders: 1,
             noShows: 1,
         })
-        expect(logger.error).toHaveBeenCalledWith(ShiftsLogEvent.AlertScanFailed, failure, {
+        expect(logger.error).toHaveBeenCalledWith(ShiftsLogEvent.AlertScanFailed, QUERY_FAILURE, {
             workspaceId: "failed",
         })
         expect(outbox.allInTransaction).toBe(true)

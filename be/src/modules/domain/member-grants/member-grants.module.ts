@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./member-grants.module-definition"
 import { MemberGrantsService } from "./member-grants.service"
 import { OfficeAuthorityService } from "./office-authority.service"

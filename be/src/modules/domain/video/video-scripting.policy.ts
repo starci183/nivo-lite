@@ -54,7 +54,7 @@ const quoteState = (character: string, escaped: boolean): VideoScriptQuoteState 
 
 /** Extracts the first complete JSON object, repairing missing nested closers but refusing truncation. */
 export const extractVideoScriptJson = (text: string): string | null => {
-    const body = text.replace(/```(?:json)?/giu, "").trim()
+    const body = text.replaceAll(/```(?:json)?/giu, "").trim()
     const start = body.indexOf("{")
     if (start < 0) return null
     const stack: Array<string> = []
@@ -107,7 +107,7 @@ export const parseVideoScript = (text: string, generationId: string, workspaceId
         media: null,
     }))
     return {
-        title: typeof answer.title === "string" ? answer.title.replace(/\s+/gu, " ").trim().slice(0, 120) : "",
+        title: typeof answer.title === "string" ? answer.title.replaceAll(/\s+/gu, " ").trim().slice(0, 120) : "",
         scenes,
     }
 }

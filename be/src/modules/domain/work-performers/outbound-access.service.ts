@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { AgentBindingsService, PURPOSES } from "@modules/domain/agent-connections"
-import type { BoundAgent } from "@modules/domain/agent-connections"
+import { AgentBindingsService, PURPOSES, type BoundAgent } from "@modules/domain/agent-connections"
 import { AgentsService } from "@modules/domain/agents"
 import { ChatConversationsService } from "@modules/domain/chat-records"
 import type { OutboundAccess, OutboundAccessGate, Proposal, WorkContext, WorkItem } from "@modules/domain/decisions"

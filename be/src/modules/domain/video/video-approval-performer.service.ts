@@ -1,17 +1,16 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { VideoProjectWorkbenchWriterService } from "@modules/domain/video-projects"
 import { VideoRendersService } from "@modules/domain/video-renders"
-import { InjectWorkPerformerRegistry } from "@modules/domain/decisions"
-import type {
-    WorkPerformerRegistry,
-    WorkPerformer,
-    WorkContext,
-    WorkItem,
-    Proposal,
-    Prepared,
-    Performed,
-    PerformedBy,
+import {
+    InjectWorkPerformerRegistry,
+    type WorkPerformerRegistry,
+    type WorkPerformer,
+    type WorkContext,
+    type WorkItem,
+    type Proposal,
+    type Prepared,
+    type Performed,
+    type PerformedBy,
 } from "@modules/domain/decisions"
 import { VideoError, VideoErrorCode } from "./errors/video.error"
 

@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ModuleContextVersionsModule } from "@modules/domain/module-context-versions"
 import { ModuleInstallationsModule } from "@modules/domain/module-installations"
 import { ModuleSetupMessagesModule } from "@modules/domain/module-setup-messages"

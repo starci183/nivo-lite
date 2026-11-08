@@ -61,8 +61,9 @@ export class VideoWorkbenchService {
         const row = await this.reads.brandOf(workspaceId)
         if (row === undefined)
             throw new VideoError({ code: VideoErrorCode.ProjectNotFound, params: { projectId: workspaceId } })
+        const shopName = row.shop_name?.trim()
         return {
-            shopName: row.shop_name?.trim() || row.workspace_name.trim(),
+            shopName: shopName === undefined || shopName === "" ? row.workspace_name.trim() : shopName,
             primary: row.primary_color ?? "#16a34a",
             secondary: row.secondary_color ?? "#0f172a",
             logoPath: row.logo_path,

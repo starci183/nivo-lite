@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { InboundEventStatus, WorkContext } from "@modules/domain/decisions"
-import { InboundEventsService } from "@modules/domain/inbound-events"
-import type { EventStatus, OptionalLeadRef } from "@modules/domain/inbound-events"
+import { InboundEventsService, type EventStatus, type OptionalLeadRef } from "@modules/domain/inbound-events"
 
 @Injectable()
 /** The inbound event status the work engine reports through: where an input stands once the engine worked on it. */

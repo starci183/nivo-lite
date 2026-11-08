@@ -1,15 +1,21 @@
 import { Injectable } from "@nestjs/common"
 import { BrainDossiersReadService } from "@modules/domain/brain-dossiers"
 import { DossierFindingsService } from "@modules/domain/dossier-review"
-import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
-import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
+import {
+    type GatewayJson,
+    type NativeAdapter,
+    type NativeCaller,
+    type NativeConnectorManifest,
+    argumentsOf,
+    unknownTool,
+} from "@modules/domain/mcp-gateway"
 import {
     DOSSIER_FINDINGS_LIST_INPUT_SCHEMA,
     DOSSIER_FINDINGS_LIST_SCHEMA,
     DOSSIER_STATUS_INPUT_SCHEMA,
     DOSSIER_STATUS_SCHEMA,
+    type DossierFindingsListInput,
 } from "./dossier-native.schema"
-import type { DossierFindingsListInput } from "./dossier-native.schema"
 import { clipped } from "./native-masking.policy"
 import { NativeViewService } from "./native-view.service"
 

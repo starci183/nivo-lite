@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { SetupSessionsService } from "@modules/domain/module-setup-sessions"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { NewSetupMessage, OptionalSetupMessageRecord, SetupMessageRecord } from "./module-setup-messages.contracts"
@@ -36,7 +35,7 @@ export class SetupMessagesService {
             order: { createdAt: "ASC", id: "ASC" },
             take: CHAT_LIMIT,
         })
-        return rows.map(toRecord)
+        return rows.map((row) => toRecord(row))
     }
 
     /** The chat of one session, oldest first. */
@@ -46,7 +45,7 @@ export class SetupMessagesService {
             order: { createdAt: "ASC", id: "ASC" },
             take: CHAT_LIMIT,
         })
-        return rows.map(toRecord)
+        return rows.map((row) => toRecord(row))
     }
 
     /** One message of the workspace by id; null when there is none. */

@@ -1,29 +1,26 @@
 import { Injectable } from "@nestjs/common"
-import { In, Like } from "typeorm"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import { In, Like, type EntityManager, type SelectQueryBuilder } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
+import { InjectIds, type Ids } from "@modules/platform/ids"
 import { WorkItemEntity } from "./persistence/entities"
-import { CLAIM_LEASE_SECONDS } from "./work-items.contracts"
-import type {
-    AccountingWork,
-    ClosedClaim,
-    DoneMark,
-    NewWorkItem,
-    OptionalInstallationId,
-    OptionalWorkItem,
-    PreparedSave,
-    Proposal,
-    StillWaitingMark,
-    WaitingMark,
-    WorkItem,
-    WorkItemKey,
-    WorkItemRecord,
-    WorkResult,
+import {
+    CLAIM_LEASE_SECONDS,
+    type AccountingWork,
+    type ClosedClaim,
+    type DoneMark,
+    type NewWorkItem,
+    type OptionalInstallationId,
+    type OptionalWorkItem,
+    type PreparedSave,
+    type Proposal,
+    type StillWaitingMark,
+    type WaitingMark,
+    type WorkItem,
+    type WorkItemKey,
+    type WorkItemRecord,
+    type WorkResult,
 } from "./work-items.contracts"
 import type { InboundWorkState } from "./inbound-work-state.contracts"
 import {

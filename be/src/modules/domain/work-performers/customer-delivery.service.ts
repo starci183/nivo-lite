@@ -1,10 +1,24 @@
 import { Injectable } from "@nestjs/common"
-import { ChannelDeliveryService } from "@modules/domain/channels"
-import type { DeliveryOutcome, DeliveryRequest, DeliveryResult, RenewalNotification } from "@modules/domain/channels"
-import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
-import type { ChatConversationTarget, HumanAuthor } from "@modules/domain/chat-records"
-import { EvidenceService } from "@modules/domain/decisions"
-import type { Performed, PerformedBy, WorkContext, WorkItem } from "@modules/domain/decisions"
+import {
+    ChannelDeliveryService,
+    type DeliveryOutcome,
+    type DeliveryRequest,
+    type DeliveryResult,
+    type RenewalNotification,
+} from "@modules/domain/channels"
+import {
+    ChatConversationsService,
+    ChatMessagesService,
+    type ChatConversationTarget,
+    type HumanAuthor,
+} from "@modules/domain/chat-records"
+import {
+    EvidenceService,
+    type Performed,
+    type PerformedBy,
+    type WorkContext,
+    type WorkItem,
+} from "@modules/domain/decisions"
 import type {
     CustomerDelivery,
     DeliveryContact,

@@ -1,23 +1,21 @@
 import { Injectable } from "@nestjs/common"
-import { In, LessThanOrEqual } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, LessThanOrEqual, type EntityManager } from "typeorm"
 import { VideoProjectsService } from "@modules/domain/video-projects"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { isRecord, parseJsonText } from "@modules/platform/primitives"
 import { VideoRendersError, VideoRendersErrorCode } from "./errors/video-renders.error"
-import { MAX_OPEN_RENDERS } from "./video-renders.contracts"
-import type {
-    CompletedRenderMedia,
-    NewRender,
-    RenderClaim,
-    RenderDone,
-    RenderFacts,
-    OptionalRenderState,
-    OptionalSettledRender,
-    RenderStatus,
+import {
+    MAX_OPEN_RENDERS,
+    type CompletedRenderMedia,
+    type NewRender,
+    type RenderClaim,
+    type RenderDone,
+    type RenderFacts,
+    type OptionalRenderState,
+    type OptionalSettledRender,
+    type RenderStatus,
 } from "./video-renders.contracts"
-import { VideoRenderEntity } from "./persistence/entities"
-import type { VideoRenderState } from "./persistence/entities"
+import { VideoRenderEntity, type VideoRenderState } from "./persistence/entities"
 
 /** Only renderer stage codes may leave the capability. */
 const RENDER_STAGES = new Set(["tts", "scenes", "mix", "encode", "poster", "upload"])

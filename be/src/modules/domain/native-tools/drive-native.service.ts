@@ -1,15 +1,20 @@
 import { Injectable } from "@nestjs/common"
-import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
-import type { OriginSource } from "@modules/domain/knowledge-sources"
-import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
-import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
+import { KnowledgeSourcesReadService, type OriginSource } from "@modules/domain/knowledge-sources"
+import {
+    type GatewayJson,
+    type NativeAdapter,
+    type NativeCaller,
+    type NativeConnectorManifest,
+    argumentsOf,
+    unknownTool,
+} from "@modules/domain/mcp-gateway"
 import {
     DRIVE_SOURCES_LIST_INPUT_SCHEMA,
     DRIVE_SOURCES_LIST_SCHEMA,
     DRIVE_STATUS_INPUT_SCHEMA,
     DRIVE_STATUS_SCHEMA,
+    type DriveSourcesListInput,
 } from "./drive-native.schema"
-import type { DriveSourcesListInput } from "./drive-native.schema"
 import { emailMasked } from "./native-masking.policy"
 import { nativeRefusal } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"

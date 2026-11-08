@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ContextVersionRecord,
@@ -38,7 +37,7 @@ export class ContextVersionsService {
             order: { version: "DESC" },
             take: VERSIONS_LIMIT,
         })
-        return rows.map(toRecord)
+        return rows.map((row) => toRecord(row))
     }
 
     /** One version by id; null when there is none. */

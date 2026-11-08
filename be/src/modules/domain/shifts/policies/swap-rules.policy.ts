@@ -59,7 +59,7 @@ const noticeFindings = (shift: Shift, setup: Setup, now: Date): Array<SwapFindin
 /** The findings about the rules of the person who takes the shift: position and every work rule but the position one. */
 const takerFindings = (check: SwapCheck, shift: Shift, taker: ShiftStaff): Array<SwapFinding> => {
     const position = check.setup.positions.find((item) => item.id === shift.positionId)?.name ?? ""
-    const segs = [...check.mine.map(segOf), segOf(shift)]
+    const segs = [...check.mine.map((other) => segOf(other)), segOf(shift)]
     const kinds = new Set(
         violationsForSegs(check.env, taker.id, segs)
             .flat()
@@ -95,7 +95,9 @@ export const coverCandidates = (
         if (!person.active || exclude.includes(person.id) || !person.positionIds.includes(shift.positionId))
             return false
         const segs = [
-            ...sameWeek.filter((other) => other.staffId === person.id && other.id !== shift.id).map(segOf),
+            ...sameWeek
+                .filter((other) => other.staffId === person.id && other.id !== shift.id)
+                .map((other) => segOf(other)),
             segOf(shift),
         ]
         return !violationsForSegs(env, person.id, segs).some((list) => list.length > 0)

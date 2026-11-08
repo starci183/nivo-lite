@@ -1,14 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import { Like } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { Like, type EntityManager } from "typeorm"
 import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
 import { OfficeLog, OutboundMail } from "@modules/domain/module-ops"
-import { InjectAccountDirectory, WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
-import type { AccountDirectory } from "@modules/domain/workspace-members"
+import {
+    InjectAccountDirectory,
+    WorkspaceMemberDirectoryService,
+    type AccountDirectory,
+} from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import type { Logger } from "@modules/platform/logging"
 import { ShiftsNotificationEntity, ShiftsShiftEntity } from "./persistence/entities"
 import type { AlertShiftRead } from "./persistence/shifts-alerts.contracts"
 import { selectAlertShiftColumns } from "./persistence/shifts-alert-shift.query"
@@ -136,7 +137,10 @@ export class ShiftsMonthCloseService {
                 .limit(MONTH_SHIFTS_MAX)
                 .getRawMany<AlertShiftRead>(),
         ])
-        return monthSummaryOf(setup, rows.map(toAlertShift))
+        return monthSummaryOf(
+            setup,
+            rows.map((row) => toAlertShift(row)),
+        )
     }
 
     /** Mails the summary with its CSV to the owner (an owner-facing notice); true only when the mail left. */

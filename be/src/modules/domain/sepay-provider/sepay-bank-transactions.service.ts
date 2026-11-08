@@ -2,10 +2,8 @@ import { Injectable } from "@nestjs/common"
 import { ConnectionApiTokenService } from "@modules/domain/connection-secrets"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import type { BankTransaction, BankTransactionsPort, BankTransactionsQuery } from "@modules/domain/provider-registry"
-import { InjectSepay } from "@modules/integrations/sepay"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import type { SepayClient } from "@modules/integrations/sepay"
+import { InjectSepay, type SepayClient } from "@modules/integrations/sepay"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { sepayBankTransaction } from "./sepay-poll.policy"
 
 /** How far back a list reaches when the caller names no start. */

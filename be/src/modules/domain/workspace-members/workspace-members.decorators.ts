@@ -1,5 +1,4 @@
-import { createParamDecorator } from "@nestjs/common"
-import type { ExecutionContext } from "@nestjs/common"
+import { createParamDecorator, type ExecutionContext } from "@nestjs/common"
 import { requestOf } from "@modules/platform/http-security"
 import { unwrapOutcome } from "@modules/platform/primitives"
 import { WorkspaceMembersError } from "./errors/workspace-members.error"

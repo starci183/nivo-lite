@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     BranchCardPayload,
@@ -57,7 +56,7 @@ export class SetupWritesService {
             order: { createdAt: "ASC", id: "ASC" },
             take: CARDS_LIMIT,
         })
-        return rows.map(toRecord)
+        return rows.map((row) => toRecord(row))
     }
 
     /** One card of the workspace by id; null when there is none. */

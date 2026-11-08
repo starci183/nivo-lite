@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { MetaReceiptProcessor } from "./meta-inbox.port"
 
 /** The domain processor of committed Meta receipt references. */

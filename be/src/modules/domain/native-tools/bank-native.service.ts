@@ -1,12 +1,19 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionBindingsReadService } from "@modules/domain/connections"
-import type { ConnectionRecord } from "@modules/domain/connections"
-import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
-import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
-import { BankTransactionsRegistryService } from "@modules/domain/provider-registry"
-import type { BankTransactionsPort } from "@modules/domain/provider-registry"
-import { BANK_TRANSACTIONS_INPUT_SCHEMA, BANK_TRANSACTIONS_SCHEMA } from "./payment-native.schema"
-import type { BankTransactionsArgs } from "./payment-native.schema"
+import { ConnectionBindingsReadService, type ConnectionRecord } from "@modules/domain/connections"
+import {
+    type GatewayJson,
+    type NativeAdapter,
+    type NativeCaller,
+    type NativeConnectorManifest,
+    argumentsOf,
+    unknownTool,
+} from "@modules/domain/mcp-gateway"
+import { BankTransactionsRegistryService, type BankTransactionsPort } from "@modules/domain/provider-registry"
+import {
+    BANK_TRANSACTIONS_INPUT_SCHEMA,
+    BANK_TRANSACTIONS_SCHEMA,
+    type BankTransactionsArgs,
+} from "./payment-native.schema"
 import { nativeRefusal } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
 

@@ -25,7 +25,7 @@ export class ModuleTagGrantsService {
             record.agentId === null ? [] : [{ agentId: record.agentId, moduleKey: record.moduleKey }],
         )
         const peerModules = await Promise.all(
-            [...new Set(peers.map((peer) => peer.moduleKey))].map((key) => this.catalog.find(key)),
+            [...new Set(peers.map((peer) => peer.moduleKey))].map(async (key) => await this.catalog.find(key)),
         )
         const tagsOf = (key: string): ReadonlyArray<string> =>
             peerModules.filter((peer) => peer.key === key).flatMap((peer) => peer.tags ?? [])

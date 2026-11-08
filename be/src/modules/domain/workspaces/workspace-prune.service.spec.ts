@@ -150,8 +150,9 @@ describe("WorkspacePruneService", () => {
             find: [WorkspaceEntity, storedOf(NIVO, SPA, BUN)],
             count: [WorkspaceEntity, 2],
         })
+        const failing = jest.fn<Promise<never>, []>().mockRejectedValue(cause)
         em.delete.mockImplementation((_target, criteria) =>
-            isRecord(criteria) && criteria.id === "ws-spa" ? Promise.reject(cause) : Promise.resolve(DELETED),
+            isRecord(criteria) && criteria.id === "ws-spa" ? failing() : Promise.resolve(DELETED),
         )
         const { prune, terminal } = await build(em)
 

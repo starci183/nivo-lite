@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./module-installations.module-definition"
 import { InstallationOperationsService } from "./installation-operations.service"
 import { InstallationRecordsService } from "./installation-records.service"

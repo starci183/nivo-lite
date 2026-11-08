@@ -62,10 +62,13 @@ export const digestMatches = (digest: string, given: string | undefined): boolea
 
 /** JSON with the keys of every object sorted, so one receipt always has one text. */
 export const canonicalJson = (value: unknown): string => {
-    if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`
+    if (Array.isArray(value)) return `[${value.map((value) => canonicalJson(value)).join(",")}]`
     if (isRecord(value)) {
         const entryOf = (key: string): string => `${JSON.stringify(key)}:${canonicalJson(value[key])}`
-        return `{${Object.keys(value).sort(byCodeUnit).map(entryOf).join(",")}}`
+        return `{${Object.keys(value)
+            .sort(byCodeUnit)
+            .map((key) => entryOf(key))
+            .join(",")}}`
     }
     return JSON.stringify(value)
 }
@@ -134,7 +137,7 @@ export const buildReceipt = (facts: ReceiptFacts): CleanupReceipt => {
     return {
         schema: CLEANUP_RECEIPT_SCHEMA,
         keep: keptWorkspacesOf(facts.keep, facts.workspaces),
-        remove: removed.map(footprintOf).sort(byId),
+        remove: removed.map((row) => footprintOf(row)).sort(byId),
         orphanUsers: facts.orphans.map((user) => ({
             id: user.id,
             email: maskEmail(user.email),

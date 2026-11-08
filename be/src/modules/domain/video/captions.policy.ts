@@ -1,5 +1,4 @@
-import { aspectSize } from "./video-spec.policy"
-import type { Aspect } from "./video-spec.policy"
+import { aspectSize, type Aspect } from "./video-spec.policy"
 
 /**
  * Burned-in text as one ASS (Advanced SubStation) file rendered by libass in the final pass. libass does the real line breaking with the
@@ -34,16 +33,16 @@ const FADE_TAG = String.raw`{\fad(220,180)}`
 
 const escaped = (text: string): string =>
     text
-        .replace(/[{}]/gu, (char) => (char === "{" ? "(" : ")"))
+        .replaceAll(/[{}]/gu, (char) => (char === "{" ? "(" : ")"))
         .replaceAll("\\", "/")
-        .replace(/\r?\n+/gu, NEWLINE_TAG)
+        .replaceAll(/\r?\n+/gu, NEWLINE_TAG)
 
 /** How far above the bottom edge the caption sits, as a share of the frame height. */
 const CAPTION_BOTTOM: Record<Aspect, number> = { "9:16": 0.15, "1:1": 0.09, "16:9": 0.08 }
 
 /** Keeps short tails and number+unit pairs on one line; `units` matches the unit words that follow a number. */
 export const keepTogether = (text: string, units: RegExp): string => {
-    const words = text.trim().replace(/\s+/gu, " ").split(" ")
+    const words = text.trim().replaceAll(/\s+/gu, " ").split(" ")
     if (words.length < 2) return words.join(" ")
     return words
         .map((word, index) => {

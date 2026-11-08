@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { SepayBankTransactionsService } from "./sepay-bank-transactions.service"
 import { SepayFeedWebhookService } from "./sepay-feed-webhook.service"
 import { SepayFeedPollerService } from "./sepay-feed-poller.service"

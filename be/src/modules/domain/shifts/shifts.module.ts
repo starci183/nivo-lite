@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ShiftsAlertsService } from "./shifts-alerts.service"
 import { ShiftsCoverService } from "./shifts-cover.service"
 import { ShiftsDataService } from "./shifts-data.service"

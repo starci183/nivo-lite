@@ -1,7 +1,6 @@
 import type { AgentViewScope } from "@modules/domain/agents"
 import type { Evidence, FactRecord } from "@modules/domain/brain-facts"
-import { lensOf } from "@modules/domain/knowledge"
-import type { Audience } from "@modules/domain/knowledge"
+import { lensOf, type Audience } from "@modules/domain/knowledge"
 import { catalogAudienceOf } from "@modules/domain/module-audiences"
 
 /**

@@ -24,6 +24,6 @@ export const gatewayStepsOf = (text: unknown): GatewaySteps => {
     if (!read.ok || !Array.isArray(read.value)) return null
     const list: ReadonlyArray<unknown> = read.value
     if (list.length === 0 || list.length > GATEWAY_STEPS_MAX) return null
-    const steps = list.map(stepOf)
+    const steps = list.map((value) => stepOf(value))
     return steps.every((step): step is GatewayStep => step !== null) ? steps : null
 }

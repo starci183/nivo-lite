@@ -4,20 +4,18 @@ import {
     OFFICE_CARD_SOURCE_LAYERS,
     OFFICE_CARD_TYPES,
     OFFICE_ROOM_KEYS,
-} from "./office-cards.contracts"
-import type {
-    OfficeCard,
-    OfficeCardAction,
-    OfficeCardCaptions,
-    OfficeCardField,
-    OfficeCardLine,
-    OfficeCardLink,
-    OfficeCardMedia,
-    OfficeCardParse,
-    OfficeCardRef,
-    OfficeCardSource,
-    OfficeCardType,
-    OfficeRoomKey,
+    type OfficeCard,
+    type OfficeCardAction,
+    type OfficeCardCaptions,
+    type OfficeCardField,
+    type OfficeCardLine,
+    type OfficeCardLink,
+    type OfficeCardMedia,
+    type OfficeCardParse,
+    type OfficeCardRef,
+    type OfficeCardSource,
+    type OfficeCardType,
+    type OfficeRoomKey,
 } from "./office-cards.contracts"
 
 const KEYS: ReadonlySet<string> = new Set([

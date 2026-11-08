@@ -1,18 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { InjectChatRoomDirectory } from "@modules/domain/chat-room-directory"
-import type { ChatRoomDirectory } from "@modules/domain/chat-room-directory"
-import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
-import type { MemberRow } from "@modules/domain/workspace-members"
+import { InjectChatRoomDirectory, type ChatRoomDirectory } from "@modules/domain/chat-room-directory"
+import { WorkspaceMembersReadService, type MemberRow } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { MemberGrantsError, MemberGrantsErrorCode } from "./errors/member-grants.error"
 import type { DirectoryMember, MemberGrantChange, MemberGrant } from "./member-grants.contracts"
-import { MemberGrantEntity } from "./persistence/entities"
-import type { MemberGrantUnit } from "./persistence/entities"
+import { MemberGrantEntity, type MemberGrantUnit } from "./persistence/entities"
 
 /** The most grants or members one list returns. */
 const LIST_MAX = 500

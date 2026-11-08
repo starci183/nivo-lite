@@ -1,6 +1,5 @@
 import { MODULE_CONTEXT_NOTES_ERROR_KINDS } from "@modules/domain/module-context-notes"
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the modules capability. */
 export enum ModulesErrorCode {

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, MoreThan } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, MoreThan, type EntityManager } from "typeorm"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager, advisoryXactLock } from "@modules/platform/database"
 import { isRecord } from "@modules/platform/primitives"

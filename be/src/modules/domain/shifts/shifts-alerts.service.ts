@@ -1,27 +1,27 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
+import { In, type EntityManager } from "typeorm"
 import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
-import { ActionPerformerRegistry, ApprovalGate, OfficeLog } from "@modules/domain/module-ops"
-import type { PerformContext, PerformResult } from "@modules/domain/module-ops"
+import {
+    ActionPerformerRegistry,
+    ApprovalGate,
+    OfficeLog,
+    type PerformContext,
+    type PerformResult,
+} from "@modules/domain/module-ops"
 import { WorkspacesService } from "@modules/domain/workspaces"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
 import {
     SHIFTS_NOSHOW_JOB,
     SHIFTS_QUEUE,
     SHIFTS_REMIND_JOB,
     noShowDedupeKey,
     remindDedupeKey,
+    type ShiftAlertPayload,
 } from "@modules/queues/shifts"
-import type { ShiftAlertPayload } from "@modules/queues/shifts"
 import { ShiftsShiftEntity, ShiftsSettingsEntity, ShiftsStaffEntity } from "./persistence/entities"
 import type { AlertShiftRead, NameRead, ReminderWorkspaceRead } from "./persistence/shifts-alerts.contracts"
 import { selectAlertShiftColumns } from "./persistence/shifts-alert-shift.query"
@@ -29,8 +29,16 @@ import { PIPELINES_MAX, REMINDER_TEMPLATE, isReminderOn } from "./persistence/sh
 import { fieldText } from "./policies/gate-fields.policy"
 import { nameOf } from "./policies/labels.policy"
 import { shiftsJobOf } from "./policies/shift-jobs.policy"
-import type { AlertKind, AlertMinutes, AlertShift } from "./policies/shift-alerts.policy"
-import { alertMinutesOf, dueAlerts, minutesLate, shiftWindow, toAlertShift } from "./policies/shift-alerts.policy"
+import {
+    type AlertKind,
+    type AlertMinutes,
+    type AlertShift,
+    alertMinutesOf,
+    dueAlerts,
+    minutesLate,
+    shiftWindow,
+    toAlertShift,
+} from "./policies/shift-alerts.policy"
 import { addDays, todayVn } from "./policies/time.policy"
 import { ShiftsDataService } from "./shifts-data.service"
 import { ShiftsMonthCloseService } from "./shifts-month-close.service"
@@ -292,7 +300,11 @@ export class ShiftsAlertsService implements OnModuleInit {
             .addOrderBy("s.start_time", "ASC")
             .limit(ALERT_SHIFTS_MAX)
             .getRawMany<AlertShiftRead>()
-        const due = dueAlerts(rows.map(toAlertShift), minutes, now.getTime())
+        const due = dueAlerts(
+            rows.map((row) => toAlertShift(row)),
+            minutes,
+            now.getTime(),
+        )
         if (due.length === 0) return { reminders: 0, noShows: 0 }
         await this.entityManager.transaction((tx) =>
             eachInOrder(due, async ({ item, kind }) => {

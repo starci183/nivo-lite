@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { IsNull, Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { credentialStateOf } from "./credential-state.policy"
 import type {

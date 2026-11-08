@@ -2,8 +2,12 @@ import { Injectable } from "@nestjs/common"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { ConnectionsService } from "@modules/domain/connections"
 import { ContextVersionsService } from "@modules/domain/module-context-versions"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { AgentSyncState, OptionalAgentSyncStatus, RequirementFacts } from "@modules/domain/module-installations"
+import {
+    InstallationRecordsService,
+    type AgentSyncState,
+    type OptionalAgentSyncStatus,
+    type RequirementFacts,
+} from "@modules/domain/module-installations"
 import { AgentSyncReadService } from "@modules/domain/openclaw-agent-sync"
 import { StaffDirectoryService } from "@modules/domain/staff"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"

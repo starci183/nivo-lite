@@ -3,8 +3,7 @@ import type { EntityManager } from "typeorm"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { FilterExpr } from "@nivo-lite/agent-sdk/query"
 import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import type {
     MovementQuery,
     MovementRow,

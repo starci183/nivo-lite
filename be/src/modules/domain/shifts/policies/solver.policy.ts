@@ -62,7 +62,7 @@ const generator = (seed: number): (() => number) => {
 const withSeg = (list: ReadonlyArray<Seg>, seg: Seg): Array<Seg> => {
     const touching = (o: Seg) => o.date === seg.date && o.pos === seg.pos && o.s <= seg.e && o.e >= seg.s
     const merged = list
-        .filter(touching)
+        .filter((o) => touching(o))
         .reduce<Seg>(
             (cur, o) => ({ date: cur.date, pos: cur.pos, s: Math.min(o.s, cur.s), e: Math.max(o.e, cur.e) }),
             seg,
@@ -213,7 +213,7 @@ const score = (env: Env, staff: ReadonlyArray<ShiftStaff>, slots: ReadonlyArray<
     }
     const worked = staff.map((p) => state.get(p.id) ?? [])
     const cost = staff.reduce((sum, p) => sum + weekCost(p, state.get(p.id) ?? [], env.overtimeHoursWeek), 0)
-    const minutes = worked.filter((segs) => segs.length > 0).map(minutesOf)
+    const minutes = worked.filter((segs) => segs.length > 0).map((segs) => minutesOf(segs))
     const spread = minutes.length > 0 ? Math.max(...minutes) - Math.min(...minutes) : 0
     return { state, short, idealGap, cost, spread }
 }

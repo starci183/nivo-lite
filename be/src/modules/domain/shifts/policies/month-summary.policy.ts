@@ -43,9 +43,9 @@ export const monthCsvOf = (summary: MonthSummary, header: string, totalLabel: st
     [
         header,
         ...summary.rows.map((row) =>
-            [row.name, row.shifts, row.hours, row.checked, row.wage, row.cost].map(cell).join(","),
+            [row.name, row.shifts, row.hours, row.checked, row.wage, row.cost].map((value) => cell(value)).join(","),
         ),
-        [totalLabel, "", oneDecimal(summary.hours), "", "", summary.total].map(cell).join(","),
+        [totalLabel, "", oneDecimal(summary.hours), "", "", summary.total].map((value) => cell(value)).join(","),
     ].join("\n")
 
 /** "09/2026" for "2026-09". */

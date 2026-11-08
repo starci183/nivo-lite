@@ -1,11 +1,21 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    ConnectionsService,
+    type ConnectionActor,
+    type ConnectionRecord,
+} from "@modules/domain/connections"
 import { randomSecret } from "@modules/domain/connection-secrets"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
-import { INSTAGRAM_FIELDS, InjectMetaClient, MetaError, MetaErrorCode, PAGE_FIELDS } from "@modules/integrations/meta"
-import type { MetaClient } from "@modules/integrations/meta"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import {
+    INSTAGRAM_FIELDS,
+    InjectMetaClient,
+    MetaError,
+    MetaErrorCode,
+    PAGE_FIELDS,
+    type MetaClient,
+} from "@modules/integrations/meta"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { MetaConnectionsError, MetaConnectionsErrorCode } from "./errors/meta-connections.error"
 import type {
     MetaAuthorization,

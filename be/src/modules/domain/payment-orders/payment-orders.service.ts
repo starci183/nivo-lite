@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { In, MoreThan } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { In, MoreThan, type EntityManager } from "typeorm"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
 import { newOrderCode } from "./order-code.policy"
 import { PaymentOrdersError, PaymentOrdersErrorCode } from "./errors/payment-orders.error"
@@ -37,7 +35,7 @@ export class PaymentOrdersService {
             order: { createdAt: "DESC" },
             take: LIST_LIMIT,
         })
-        return rows.map(toPaymentOrder)
+        return rows.map((row) => toPaymentOrder(row))
     }
 
     /** The ids among the given ones that are orders of the workspace. */

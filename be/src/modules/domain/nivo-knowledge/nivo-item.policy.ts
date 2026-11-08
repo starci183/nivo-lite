@@ -1,6 +1,5 @@
 import type { NivoItemInput } from "./nivo-knowledge.contracts"
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import { NivoKnowledgeErrorCode } from "./errors/nivo-knowledge.error"
 
 /** The kinds a base knowledge item may have. */
@@ -31,7 +30,7 @@ const metaOf = (block: string): ReadonlyMap<string, string> => {
                 line
                     .slice(colon + 1)
                     .trim()
-                    .replace(/^["']|["']$/g, ""),
+                    .replaceAll(/^["']|["']$/g, ""),
             )
         }
     })

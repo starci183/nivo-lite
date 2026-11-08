@@ -1,5 +1,12 @@
-import { ASPECTS, MUSIC_TRACKS, TTS_VOICES, normaliseColor } from "./video-spec.policy"
-import type { Scene, SceneBackground, TtsVoice } from "./video-spec.policy"
+import {
+    ASPECTS,
+    MUSIC_TRACKS,
+    TTS_VOICES,
+    normaliseColor,
+    type Scene,
+    type SceneBackground,
+    type TtsVoice,
+} from "./video-spec.policy"
 
 /** One scene of the script the owner edited: the words and the file behind them. */
 export interface ScriptScene {
@@ -36,7 +43,7 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
 
 const clip = (value: unknown, max: number): string =>
-    typeof value === "string" ? value.replace(/\s+/gu, " ").trim().slice(0, max) : ""
+    typeof value === "string" ? value.replaceAll(/\s+/gu, " ").trim().slice(0, max) : ""
 
 /** Whatever is stored -> clean scenes (at most 12; a scene with neither caption nor voiceover is dropped). Never throws. */
 export const readScript = (raw: unknown): Array<ScriptScene> => {

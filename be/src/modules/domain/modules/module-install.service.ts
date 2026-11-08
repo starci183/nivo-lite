@@ -3,20 +3,19 @@ import type { EntityManager } from "typeorm"
 import { AgentIdentityService, AgentsService } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { EventsService } from "@modules/domain/events"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type {
-    AgentSyncStatus,
-    InstallationMode,
-    InstallationRecord,
-    InstallationWrite,
-    RecordInstallation,
-    RequirementFacts,
+import {
+    InstallationRecordsService,
+    type AgentSyncStatus,
+    type InstallationMode,
+    type InstallationRecord,
+    type InstallationWrite,
+    type RecordInstallation,
+    type RequirementFacts,
 } from "@modules/domain/module-installations"
 import { InstallationChangesService } from "./installation-changes.service"
 import { InstallationFactsService } from "./installation-facts.service"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
+import { WorkspaceMembersService, type WorkspaceMember, type WorkspaceRole } from "@modules/domain/workspace-members"
 import { ModulesError, ModulesErrorCode } from "./errors/modules.error"
 import type { InstallRequest, InstallResult } from "./module-installs.contracts"
 import { ModuleReadinessService } from "./module-readiness.service"
@@ -34,8 +33,8 @@ import {
     nextInstanceName,
     settingOf,
     withSetting,
+    type SettingValue,
 } from "./policies/instance.policy"
-import type { SettingValue } from "./policies/instance.policy"
 
 const GOVERNORS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 

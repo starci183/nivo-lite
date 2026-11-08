@@ -1,12 +1,17 @@
 import { Injectable } from "@nestjs/common"
 import type { ConnectionStatusFacts } from "@modules/domain/connections"
-import { SEPAY_MANIFEST, SepayNativeService } from "@modules/domain/mcp-gateway"
-import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
+import {
+    SEPAY_MANIFEST,
+    SepayNativeService,
+    type GatewayJson,
+    type NativeAdapter,
+    type NativeCaller,
+    type NativeConnectorManifest,
+} from "@modules/domain/mcp-gateway"
 import { needsAttention } from "./native-masking.policy"
 import { NativeViewService } from "./native-view.service"
 import { providerTools } from "./provider-tools.policy"
-import type { ProviderRoute } from "./provider-tools.service"
-import { ProviderToolsService } from "./provider-tools.service"
+import { type ProviderRoute, ProviderToolsService } from "./provider-tools.service"
 
 /** The SePay connector with its status tool: the two bank tools unchanged, and `status` beside them. */
 export const SEPAY_STATUS_MANIFEST: NativeConnectorManifest = {

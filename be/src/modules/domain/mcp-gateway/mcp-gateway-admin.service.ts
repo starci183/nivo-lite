@@ -1,15 +1,16 @@
 import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor } from "@modules/domain/connections"
+import { ConnectionsService, type ConnectionActor } from "@modules/domain/connections"
 import { McpCallLogService } from "@modules/domain/mcp-call-log"
-import { McpConnectorsService, credentialStateOf } from "@modules/domain/mcp-connectors"
-import type { CheckStatus, McpConnectorRow } from "@modules/domain/mcp-connectors"
+import {
+    McpConnectorsService,
+    credentialStateOf,
+    type CheckStatus,
+    type McpConnectorRow,
+} from "@modules/domain/mcp-connectors"
 import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
-import { InjectMcpRemote } from "@modules/integrations/mcp"
-import type { McpEndpoint, McpRemote } from "@modules/integrations/mcp"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectMcpRemote, type McpEndpoint, type McpRemote } from "@modules/integrations/mcp"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import {
     approvalOf,
     callLogViewOf,
@@ -97,20 +98,22 @@ export class McpGatewayAdminService {
     /** The connectors of the workspace with their tools and which of them may run. */
     async connectors(actor: ConnectionActor): Promise<ReadonlyArray<ConnectorView>> {
         await this.connections.authorize(actor, MANAGER)
-        return (await this.gateway.connectorsOf(actor.workspaceId)).map(viewOf)
+        return (await this.gateway.connectorsOf(actor.workspaceId)).map((connector) => viewOf(connector))
     }
 
     /** Every grant of the workspace. */
     async grants(actor: ConnectionActor): Promise<ReadonlyArray<GrantView>> {
         await this.connections.authorize(actor, MANAGER)
-        return (await this.grantRows.listOfWorkspace(actor.workspaceId)).map(grantViewOf)
+        return (await this.grantRows.listOfWorkspace(actor.workspaceId)).map((row) => grantViewOf(row))
     }
 
     /** The newest audit lines, at most two hundred; no limit means fifty. */
     async callLog(query: CallLogQuery): Promise<ReadonlyArray<CallLogView>> {
         await this.connections.authorize(query.actor, MANAGER)
         const limit = Math.min(LOG_MAX, Math.max(1, Math.round(query.limit ?? LOG_DEFAULT)))
-        return (await this.callLines.latest({ workspaceId: query.actor.workspaceId, limit })).map(callLogViewOf)
+        return (await this.callLines.latest({ workspaceId: query.actor.workspaceId, limit })).map((row) =>
+            callLogViewOf(row),
+        )
     }
 
     /** Sets one grant: a full tool name or `connector.*`, a non-negative limit, well-named constraints, an agent of the workspace. */
@@ -252,7 +255,7 @@ export class McpGatewayAdminService {
                 await this.endpointOf(workspaceId, row),
                 remoteConnectorOf(row).timeoutMs,
             )
-            const catalogJson = JSON.stringify(tools.map(catalogEntryOf))
+            const catalogJson = JSON.stringify(tools.map((tool) => catalogEntryOf(tool)))
             const catalogHash = createHash("sha256").update(catalogJson).digest("hex")
             await this.connectorRows.storeCatalog({ workspaceId, key, catalogJson, catalogHash, status: "active" })
             return tools.length

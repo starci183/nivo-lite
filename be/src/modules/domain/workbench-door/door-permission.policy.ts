@@ -1,5 +1,4 @@
-import { isManagerRole } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
+import { isManagerRole, type WorkspaceRole } from "@modules/domain/workspace-members"
 import type { MemberGrant } from "@modules/domain/member-grants"
 
 /**

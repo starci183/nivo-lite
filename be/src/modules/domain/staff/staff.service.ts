@@ -20,7 +20,7 @@ const rowOf = (staff: StaffEntity): StaffRow => ({
 })
 
 /** A name with its spaces collapsed. */
-const collapsed = (value: string): string => value.trim().replace(/\s+/g, " ")
+const collapsed = (value: string): string => value.trim().replaceAll(/\s+/g, " ")
 
 /** An email with its spaces removed, or null when there is none. */
 const emailOf = (value: string | null | undefined): string | null => {
@@ -41,7 +41,7 @@ export class StaffService {
             order: { active: "DESC", createdAt: "ASC", id: "ASC" },
             take: STAFF_ROWS_MAX,
         })
-        return staff.map(rowOf)
+        return staff.map((staff) => rowOf(staff))
     }
 
     /** The name of one staff row of the workspace, or null when there is none. */

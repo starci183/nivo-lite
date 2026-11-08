@@ -1,13 +1,9 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { InjectChannelSenderRegistry } from "@modules/domain/channels"
-import type { ChannelSender, ChannelSenderRegistry } from "@modules/domain/channels"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
+import { InjectChannelSenderRegistry, type ChannelSender, type ChannelSenderRegistry } from "@modules/domain/channels"
 import type { ChatConversationTarget } from "@modules/domain/chat-records"
 import { ConnectionsService } from "@modules/domain/connections"
-import { InjectMetaClient } from "@modules/integrations/meta"
-import type { MetaClient } from "@modules/integrations/meta"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectMetaClient, type MetaClient } from "@modules/integrations/meta"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { MetaConnectionsLogEvent } from "./meta-connections.log-events"
 import { parseMetaSecret } from "./meta-secret.policy"
 
@@ -46,11 +42,19 @@ export class MetaChannelSender implements ChannelSender, OnModuleInit {
         const platform = conversation.channel === "instagram" ? "instagram" : "facebook"
         if (conversation.connectionId === null || conversation.externalId === null) return false
         const connectionId = conversation.connectionId
+        const workspaceId = conversation.workspaceId
         const unavailable = (cause: unknown): null => {
             this.logger.error(MetaConnectionsLogEvent.SendUnavailable, cause, { connectionId })
             return null
         }
-        const connection = await this.connections.find(conversation.workspaceId, connectionId).catch(unavailable)
+        const found = async () => {
+            try {
+                return await this.connections.find(workspaceId, connectionId)
+            } catch (error) {
+                return unavailable(error)
+            }
+        }
+        const connection = await found()
         const sealed = connection === null ? null : await this.connections.readSecret(connection.id).catch(unavailable)
         const secret = sealed === null ? {} : parseMetaSecret(sealed.plain)
         if (connection === null || secret.pageId === undefined || secret.pageToken === undefined) return false

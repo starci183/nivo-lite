@@ -7,14 +7,15 @@ import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/da
 import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { OFFICE_RECEIPT_PREFIX } from "./messages/workspace-seed.messages"
-import { OFFICE_AGENT_KEYS, OFFICE_PERSON_KEYS } from "./office-seed.contracts"
-import type {
-    OfficeAccountInput,
-    OfficeAgentKey,
-    OfficeCommand,
-    OfficeInput,
-    OfficePersonKey,
-    OfficeReport,
+import {
+    OFFICE_AGENT_KEYS,
+    OFFICE_PERSON_KEYS,
+    type OfficeAccountInput,
+    type OfficeAgentKey,
+    type OfficeCommand,
+    type OfficeInput,
+    type OfficePersonKey,
+    type OfficeReport,
 } from "./office-seed.contracts"
 import { InjectSeedOfficeAuthority } from "./office-seed.decorators"
 import { readOfficeInput } from "./office-seed.policy"

@@ -3,8 +3,7 @@ import type { ConnectionStatusFacts } from "@modules/domain/connections"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
 import { needsAttention } from "./native-masking.policy"
 import { providerTools } from "./provider-tools.policy"
-import type { ProviderRoute } from "./provider-tools.service"
-import { ProviderToolsService } from "./provider-tools.service"
+import { type ProviderRoute, ProviderToolsService } from "./provider-tools.service"
 
 /** The Telegram native connector: the bots of the workspace, for internal use. */
 export const TELEGRAM_MANIFEST: NativeConnectorManifest = {

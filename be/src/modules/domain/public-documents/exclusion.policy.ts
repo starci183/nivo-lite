@@ -1,5 +1,4 @@
-import { EXCLUSION_REASONS } from "./public-documents.contracts"
-import type { ExclusionReason, LeftOut } from "./public-documents.contracts"
+import { EXCLUSION_REASONS, type ExclusionReason, type LeftOut } from "./public-documents.contracts"
 
 /** The longest label of a piece that was left out. */
 const LABEL_CHARS = 60
@@ -23,7 +22,7 @@ export const foldedOf = (text: string): string =>
     text
         .toLowerCase()
         .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
+        .replaceAll(/\p{Diacritic}/gu, "")
         .replaceAll(D_STROKE, "d")
 
 /** The kinds of never-public content a text holds, in the fixed order of the reasons. */
@@ -34,7 +33,7 @@ export const exclusionsOf = (text: string): ReadonlyArray<ExclusionReason> => {
 
 /** A short label of a piece: its first words with long digit runs masked, so a left-out number is not kept whole. */
 const labelOf = (line: string): string => {
-    const masked = line.trim().replace(/\d{4,}/gu, "…")
+    const masked = line.trim().replaceAll(/\d{4,}/gu, "…")
     return masked.length > LABEL_CHARS ? `${masked.slice(0, LABEL_CHARS - 1).trimEnd()}…` : masked
 }
 
@@ -65,7 +64,7 @@ export const withoutExcluded = (text: string): ExclusionSplit => {
     return {
         kept: kept
             .join("\n")
-            .replace(/\n{3,}/gu, "\n\n")
+            .replaceAll(/\n{3,}/gu, "\n\n")
             .trim(),
         leftOut,
     }

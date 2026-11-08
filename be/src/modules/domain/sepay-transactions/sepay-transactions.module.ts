@@ -1,6 +1,5 @@
 import { INBOX, InboxService } from "@modules/platform/inbox"
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./sepay-transactions.module-definition"
 import { SepayReviewService } from "./sepay-review.service"
 import { SepayTransactionsService } from "./sepay-transactions.service"

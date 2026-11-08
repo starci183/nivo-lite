@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import type { Principal } from "@modules/platform/cqrs"
 import { PlatformAuditService } from "@modules/domain/platform-audit"
 import { AdminAccessService } from "./admin-access.service"
@@ -168,13 +167,13 @@ export class AdminDirectoryService {
             },
             credits: creditsFrom(quota, override),
             members: members.map((member) => toMember(member, emails.get(member.user_id) ?? null)),
-            invites: invites.map(toInvite),
-            orders: orders.map(toOrder),
-            transfers: transfers.map(toTransfer),
-            billingEvents: billingEvents.map(toBillingEvent),
+            invites: invites.map((row) => toInvite(row)),
+            orders: orders.map((row) => toOrder(row)),
+            transfers: transfers.map((row) => toTransfer(row)),
+            billingEvents: billingEvents.map((row) => toBillingEvent(row)),
             modules: this.workspaceModules(installs, versions, syncs),
             connections: connections.map((connection) => toConnection(connection, nowMs)),
-            errors: errors.map(toError),
+            errors: errors.map((row) => toError(row)),
             knowledgeTotal: sources.length,
             knowledge: knowledgeByKind(sources),
             activity: {
@@ -208,11 +207,11 @@ export class AdminDirectoryService {
         ]
         const names = referenced.length === 0 ? [] : await this.reads.workspaceNames(referenced)
         return {
-            signups: signups.map(toSignupDay),
-            transfers: transfers.map(toPlatformTransfer),
+            signups: signups.map((row) => toSignupDay(row)),
+            transfers: transfers.map((row) => toPlatformTransfer(row)),
             transferCounts: tally(transfers.map((transfer) => transfer.status)),
-            billingEvents: billingEvents.map(toPlatformBillingEvent),
-            errors: errors.map(toPlatformError),
+            billingEvents: billingEvents.map((row) => toPlatformBillingEvent(row)),
+            errors: errors.map((row) => toPlatformError(row)),
             errorScopes: scopes,
             audits,
             workspaceNames: names,

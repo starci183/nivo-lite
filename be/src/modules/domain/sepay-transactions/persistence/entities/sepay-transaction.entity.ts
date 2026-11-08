@@ -1,5 +1,4 @@
-import { Column, Entity } from "typeorm"
-import type { ValueTransformer } from "typeorm"
+import { Column, Entity, type ValueTransformer } from "typeorm"
 
 import { UuidAbstractEntity } from "@modules/platform/database"
 

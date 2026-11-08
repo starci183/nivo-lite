@@ -2,8 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { OfficeStop } from "./office-lines.contracts"
 import { OfficeLinesService } from "./office-lines.service"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 
 /** The language of the line. */
 const LOCALE = "vi"

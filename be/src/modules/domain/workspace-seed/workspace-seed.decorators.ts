@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { SeedAuth, WorkspaceSeedOptions } from "./workspace-seed.options"
 import type { SeedAgentRecords, SeedConnectors, SeedSources, SeedToolGrants } from "./workspace-seed.port"
 

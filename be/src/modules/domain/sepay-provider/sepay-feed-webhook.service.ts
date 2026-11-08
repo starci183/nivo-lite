@@ -1,11 +1,12 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { SepayConnectionService } from "@modules/domain/channel-connections"
-import { FeedWebhookRegistryService } from "@modules/domain/provider-registry"
-import type { FeedWebhookPort, FeedWebhookReading } from "@modules/domain/provider-registry"
-import { isSepayPing, occurredAtOf, presentedApiKey, readSepayPayload } from "./sepay-webhook.policy"
+import {
+    FeedWebhookRegistryService,
+    type FeedWebhookPort,
+    type FeedWebhookReading,
+} from "@modules/domain/provider-registry"
+import { isSepayPing, occurredAtOf, presentedApiKey, readSepayPayload, type SepayBody } from "./sepay-webhook.policy"
 import type { IntakeRun, OptionalApiKey, OptionalRawBody } from "./sepay-payload.contracts"
-import type { SepayBody } from "./sepay-webhook.policy"
 
 @Injectable()
 /**

@@ -1,7 +1,6 @@
-import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
+import { graphSpecSchema, type GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import type { Access, Purpose } from "@modules/domain/agent-connections"
 import type { MANAGEMENT_CONNECTION_IDS } from "@modules/domain/channel-provisioning"
-import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { parseJsonText } from "@modules/platform/primitives"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 

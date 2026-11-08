@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the provider-registry capability. */
 export enum ProviderRegistryErrorCode {
