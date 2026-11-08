@@ -1,10 +1,8 @@
 import type { ReactNode } from "react"
 import { AlertDialog } from "@starci/grammar/common"
 import type { OpenOrderRow } from "../../rules/accounting/open-orders"
-import { pickedValues } from "../../rows/decision-choices"
-import type { Choice } from "../../rows/decision-choices"
-import { OrderPicker } from "./OrderPicker"
-import type { OrderPickerWords } from "./OrderPicker"
+import { pickedValues, type Choice } from "../../rows/decision-choices"
+import { OrderPicker, type OrderPickerWords } from "./OrderPicker"
 
 /** What the overlays of the choices take. */
 export interface QueueChoicesProps {

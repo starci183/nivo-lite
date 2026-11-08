@@ -15,8 +15,8 @@ export const identOf = (text: string): string => text.slice(0, IDENT_MAX)
 /** Snake case of a name: `sales.lead` is `sales_lead`, `updatedAt` is `updated_at`. */
 export const snakeOf = (text: string): string =>
     text
-        .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
-        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replaceAll(/([a-z0-9])([A-Z])/g, "$1_$2")
+        .replaceAll(/[^a-zA-Z0-9]+/g, "_")
         .toLowerCase()
 
 /** The typed view of a partition: `v_<partition>`. */
@@ -69,16 +69,16 @@ const OPCLASS = /\s(?:gin_trgm_ops|gist_trgm_ops|jsonb_path_ops|jsonb_ops|text_p
 export const normalizeSql = (text: string): string =>
     text
         .toLowerCase()
-        .replace(/(?:public|extensions)\./g, "")
-        .replace(CAST, "")
-        .replace(CAST_WORDS, "")
-        .replaceAll(/\[\]/g, "")
-        .replace(OPCLASS, "")
-        .replace(/["()\s]/g, "")
+        .replaceAll(/(?:public|extensions)\./g, "")
+        .replaceAll(CAST, "")
+        .replaceAll(CAST_WORDS, "")
+        .replaceAll("[]", "")
+        .replaceAll(OPCLASS, "")
+        .replaceAll(/["()\s]/g, "")
 
 /** The quoted literals of a CHECK definition: the values an enum field may take. */
 export const literalsOf = (definition: string): ReadonlyArray<string> =>
-    (definition.match(/'(?:[^']|'')*'/g) ?? []).map((quoted) => quoted.slice(1, -1).replaceAll(/''/g, "'"))
+    (definition.match(/'(?:[^']|'')*'/g) ?? []).map((quoted) => quoted.slice(1, -1).replaceAll("''", "'"))
 
 /** The `<= n` bound of a CHECK definition (a text length), or null. */
 export const limitOf = (definition: string): number | null => {

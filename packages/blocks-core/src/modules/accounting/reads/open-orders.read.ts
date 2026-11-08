@@ -1,8 +1,6 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
-import { openOrdersOf } from "../../../rules/accounting/open-orders"
-import type { OpenOrdersView } from "../../../rules/accounting/open-orders"
+import { openOrdersOf, type OpenOrdersView } from "../../../rules/accounting/open-orders"
 import { openOrders } from "../accounting-data"
 import { ORDERS } from "../ports"
 

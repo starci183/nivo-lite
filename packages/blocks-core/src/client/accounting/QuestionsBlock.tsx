@@ -1,11 +1,16 @@
-import { useState } from "react"
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ActionHandle } from "@nivo-lite/agent-sdk/block"
 import { Badge, Button, Cluster, Divider, Heading, Stack, Text, Textarea } from "@starci/grammar/common"
 import type { accountingQuestionsBlock } from "../../blocks/accounting/questions.block"
-import { answerInputOf, answerOf, questionRowsOf, questionsRecord } from "../../rules/accounting/question-rows"
-import type { QuestionRow, QuestionsRecord } from "../../rules/accounting/question-rows"
+import {
+    answerInputOf,
+    answerOf,
+    questionRowsOf,
+    questionsRecord,
+    type QuestionRow,
+    type QuestionsRecord,
+} from "../../rules/accounting/question-rows"
 import { parsedSlot, rowsSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"

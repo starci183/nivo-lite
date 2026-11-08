@@ -1,5 +1,4 @@
-import { defineEntity, field } from "@nivo-lite/agent-sdk/entity"
-import type { EntityDefinition, FieldDef } from "@nivo-lite/agent-sdk/entity"
+import { defineEntity, field, type EntityDefinition, type FieldDef } from "@nivo-lite/agent-sdk/entity"
 
 /** The one key the settings record of a workspace is saved under. */
 export const SALES_SETTINGS_KEY = "sales"

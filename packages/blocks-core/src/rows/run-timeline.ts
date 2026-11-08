@@ -1,8 +1,6 @@
 import type { PresentationState } from "@starci/grammar/common" with { "resolution-mode": "import" }
-import { formatValue } from "./cell-format"
-import type { CellContext } from "./cell-format"
-import { runStateLook } from "./run-state"
-import type { RunState } from "./run-state"
+import { formatValue, type CellContext } from "./cell-format"
+import { runStateLook, type RunState } from "./run-state"
 import type { RunStepView, RunView } from "./run-timeline-view"
 
 /** One door call of a step as the timeline draws it. */

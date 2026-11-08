@@ -1,5 +1,4 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import type { EntityApi, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { QUERY_BOUNDS, q } from "@nivo-lite/agent-sdk/query"
 import { z } from "zod"

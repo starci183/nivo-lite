@@ -1,10 +1,8 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ListPage, ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ListPage, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { q } from "@nivo-lite/agent-sdk/query"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
-import { threadLineOf } from "../../../rules/chatbot"
-import type { StoredLine, ThreadLine } from "../../../rules/chatbot"
+import { threadLineOf, type StoredLine, type ThreadLine } from "../../../rules/chatbot"
 import { MESSAGE_FIELDS, messageRecordOf, threadRowOf } from "../chatbot-records"
 import { CONVERSATIONS, MESSAGES } from "../ports"
 

@@ -1,5 +1,4 @@
-import { defineModule } from "@nivo-lite/agent-sdk/module"
-import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
+import { defineModule, type ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
 import { answerQuestionAction } from "./actions/answer-question.action"
 import { adjustAction } from "./actions/adjust.action"
 import { resolveUnmatchedPaymentAction } from "./actions/resolve-unmatched-payment.action"

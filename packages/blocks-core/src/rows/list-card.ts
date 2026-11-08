@@ -2,8 +2,7 @@ import type { DataSlot } from "@nivo-lite/agent-sdk/client"
 import type { FooterZone } from "@starci/grammar/common" with {
     "resolution-mode": "import",
 }
-import { EMPTY_TAB_COUNTS } from "./filter-tabs"
-import type { TabCounts } from "./filter-tabs"
+import { EMPTY_TAB_COUNTS, type TabCounts } from "./filter-tabs"
 import type { MoreState } from "./rows"
 
 /** The counts the filter tabs draw for the state of the counts read: its counts, zero for each tab when it settled with nothing, none yet while it loads or after it failed. */

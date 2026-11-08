@@ -1,7 +1,14 @@
 import { burstIsSound } from "./graph-burst"
 import { graphSpecJsonDocument } from "./graph-spec.schema"
-import { BRANCH_FIELD, graphNodeProblems, inputSourcesOf, nodeSagaOf, TRIGGER_SOURCE } from "../node"
-import type { NodeDefinition, NodeIndex } from "../node"
+import {
+    BRANCH_FIELD,
+    graphNodeProblems,
+    inputSourcesOf,
+    nodeSagaOf,
+    TRIGGER_SOURCE,
+    type NodeDefinition,
+    type NodeIndex,
+} from "../node"
 import type { DataRight } from "../rights/rights.types"
 import type { GraphSpec, GraphSpecNode, GraphSpecProblem } from "./graph-spec.types"
 

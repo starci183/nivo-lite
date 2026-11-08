@@ -1,7 +1,5 @@
-import { defineEntity, field } from "@nivo-lite/agent-sdk/entity"
-import type { EntityDefinition, FieldDef } from "@nivo-lite/agent-sdk/entity"
-import { z } from "zod"
-import type { ZodType } from "zod"
+import { defineEntity, field, type EntityDefinition, type FieldDef } from "@nivo-lite/agent-sdk/entity"
+import { z, type ZodType } from "zod"
 
 import { MAX_BODY, MAX_ID, MAX_LINE } from "../../bounds"
 

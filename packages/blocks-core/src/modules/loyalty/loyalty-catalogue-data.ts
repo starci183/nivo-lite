@@ -1,6 +1,5 @@
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
-import { q } from "@nivo-lite/agent-sdk/query"
-import type { FilterExpr } from "@nivo-lite/agent-sdk/query"
+import { q, type FilterExpr } from "@nivo-lite/agent-sdk/query"
 import { campaignSegmentShape } from "../../entities/loyalty/campaign.entity"
 import { PROGRAM_KEY } from "../../entities/loyalty/program.entity"
 import { loyaltyConfigShape } from "../../rules/loyalty/config.schema"

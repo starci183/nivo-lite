@@ -27,7 +27,7 @@ const listOf = (value: unknown): ReadonlyArray<unknown> => (Array.isArray(value)
 
 const toNumber = (value: unknown): number => {
     if (typeof value === "number") return value
-    return typeof value === "string" ? Number(value.replace(/[^\d.-]/gu, "")) : Number.NaN
+    return typeof value === "string" ? Number(value.replaceAll(/[^\d.-]/gu, "")) : Number.NaN
 }
 
 const numberOf = (value: unknown, fallback: number, min: number, max: number): number => {
@@ -43,8 +43,8 @@ const clockOf = (value: unknown, fallback: string): string =>
 
 const slugOf = (name: string): string =>
     fold(name)
-        .replace(/[^a-z0-9]+/gu, "-")
-        .replace(/^-|-$/gu, "")
+        .replaceAll(/[^a-z0-9]+/gu, "-")
+        .replaceAll(/^-|-$/gu, "")
         .slice(0, 24) || "tier"
 
 const round2 = (value: number): number => Math.round(value * 100) / 100

@@ -1,15 +1,19 @@
 import type { ReactNode } from "react"
-import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
+import { SlotView, useBlockHost, type DataSlot, type SlotLabels } from "@nivo-lite/agent-sdk/client"
 import type { ReadHandle } from "@nivo-lite/agent-sdk/block"
-import type { DataSlot, SlotLabels } from "@nivo-lite/agent-sdk/client"
-import { EmptyNotice, Section, Select, Stack, SurfaceCard } from "@starci/grammar/common"
-import type { BadgeData, ListRowData } from "@starci/grammar/common"
+import {
+    EmptyNotice,
+    Section,
+    Select,
+    Stack,
+    SurfaceCard,
+    type BadgeData,
+    type ListRowData,
+} from "@starci/grammar/common"
 import type { loyaltyMembersBlock } from "../../blocks/loyalty/members.block"
-import { cellContextOf, formatValue } from "../../rows/cell-format"
-import type { CellContext } from "../../rows/cell-format"
+import { cellContextOf, formatValue, type CellContext } from "../../rows/cell-format"
 import { countedWords } from "../../rows/counted-words"
-import { ALL_TAB, countsView, moreLabelOf, tabParamValue } from "../../rows/filter-tabs"
-import type { TabCounts } from "../../rows/filter-tabs"
+import { ALL_TAB, countsView, moreLabelOf, tabParamValue, type TabCounts } from "../../rows/filter-tabs"
 import { paneHeadersOf } from "../../rows/pane-headers"
 import { recordsView } from "../../rows/rows"
 import {
@@ -22,8 +26,10 @@ import {
     selectedMemberTab,
     sortKeyOf,
     tiersView,
+    type MemberEntry,
+    type MemberTier,
+    type TabParams,
 } from "../../rules/loyalty/members-view"
-import type { MemberEntry, MemberTier, TabParams } from "../../rules/loyalty/members-view"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
 import { usePaneSearch } from "../composites/usePaneSearch"
 import { LoadMore } from "../composites/SelectableRows"

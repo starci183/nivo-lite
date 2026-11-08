@@ -2,6 +2,6 @@
 export const fold = (text: string): string =>
     text
         .normalize("NFD")
-        .replace(/\p{M}/gu, "")
-        .replace(/\u0111/giu, "d")
+        .replaceAll(/\p{M}/gu, "")
+        .replaceAll(/\u0111/giu, "d")
         .toLowerCase()

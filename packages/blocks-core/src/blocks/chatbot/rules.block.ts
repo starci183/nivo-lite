@@ -1,5 +1,4 @@
-import { defineBlock } from "@nivo-lite/agent-sdk/block"
-import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineBlock, type BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import type { RequiredAction, RequiredRead } from "../schema-types"
 

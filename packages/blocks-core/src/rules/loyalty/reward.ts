@@ -9,7 +9,7 @@ const integer = (value: number, min: number, max = INTEGER_MAX): number =>
 /** A catalogue key safe for the database, with space left for a collision suffix. */
 export const rewardKey = (name: string): string => {
     const normalized = fold(name)
-        .replace(/[^a-z0-9_-]+/gu, "-")
+        .replaceAll(/[^a-z0-9_-]+/gu, "-")
         .slice(0, 30)
     let start = 0
     let end = normalized.length
@@ -17,6 +17,9 @@ export const rewardKey = (name: string): string => {
     while (end > start && (normalized[end - 1] === "-" || normalized[end - 1] === "_")) end -= 1
     return normalized.slice(start, end) || "reward"
 }
+
+/** The trimmed text, or null when it is absent or empty. */
+const textOrNull = (value: string | undefined): string | null => (value === undefined || value === "" ? null : value)
 
 /** The catalogue fields bounded for storage; required name and cost are checked by the action. */
 export const sanitizeReward = (edit: RewardEdit): RewardEdit => ({
@@ -27,7 +30,7 @@ export const sanitizeReward = (edit: RewardEdit): RewardEdit => ({
     pointsCost: integer(edit.pointsCost, 1),
     stock: edit.stock === null ? null : integer(edit.stock, 0),
     perCustomerLimit: edit.perCustomerLimit === null ? null : integer(edit.perCustomerLimit, 1),
-    minTierKey: edit.minTierKey?.trim().slice(0, 40) || null,
+    minTierKey: textOrNull(edit.minTierKey?.trim().slice(0, 40)),
     note: edit.note.trim().slice(0, 200),
 })
 

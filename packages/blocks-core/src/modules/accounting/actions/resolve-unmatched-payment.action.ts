@@ -1,9 +1,12 @@
-import { defineAction } from "@nivo-lite/agent-sdk/block"
-import type { ActionDefinition, ActionResult } from "@nivo-lite/agent-sdk/block"
+import { defineAction, type ActionDefinition, type ActionResult } from "@nivo-lite/agent-sdk/block"
 import { outboxPort } from "@nivo-lite/agent-sdk/mutation"
 import { z } from "zod"
-import { OTHER_INCOME_KIND, RESOLVE_COMMAND, otherIncomeDecision } from "../../../rules/accounting/resolve"
-import type { OtherIncomeRefusal } from "../../../rules/accounting/resolve"
+import {
+    OTHER_INCOME_KIND,
+    RESOLVE_COMMAND,
+    otherIncomeDecision,
+    type OtherIncomeRefusal,
+} from "../../../rules/accounting/resolve"
 import { SOURCE_TRANSACTION } from "../../../rules/accounting/posting"
 import { transactionById } from "../accounting-data"
 import { bookProjectJob } from "../jobs/book-project.job"

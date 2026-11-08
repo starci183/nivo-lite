@@ -1,5 +1,4 @@
-import { Suspense } from "react"
-import type { ReactElement, ReactNode } from "react"
+import { Suspense, type ReactElement, type ReactNode } from "react"
 import { EmptyNotice, Skeleton } from "@starci/grammar/common"
 import type { ActionHandle, ReadHandle } from "../../block/block.types"
 import type { PlanNode } from "../../spec/render-plan"
@@ -37,9 +36,21 @@ const slotEntries = (node: PlanNode): ReadonlyArray<SlotEntry> =>
     })
 
 /** Resolves the slots of a node one after the other, each in a component of its own so every hook list stays stable. */
-const SlotChain = (props: SlotChainProps): ReactElement => {
+const SlotChain = (props: SlotChainProps): ReactNode => {
     const [entry, ...rest] = props.entries
-    if (entry === undefined) return <>{props.done(props.values)}</>
+    return entry === undefined ? props.done(props.values) : <SlotStep {...props} entry={entry} rest={rest} />
+}
+
+interface SlotStepProps extends SlotChainProps {
+    /** The slot this step resolves. */
+    readonly entry: SlotEntry
+    /** The slots that follow it. */
+    readonly rest: ReadonlyArray<SlotEntry>
+}
+
+/** Resolves one slot of a node, then hands the chain on with the value it found. */
+const SlotStep = (props: SlotStepProps): ReactElement => {
+    const { entry, rest } = props
     const next = (value: SlotValue): ReactElement => (
         <SlotChain {...props} entries={rest} values={{ ...props.values, [entry.name]: value }} />
     )

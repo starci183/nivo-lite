@@ -40,7 +40,7 @@ export type AdjustmentVerdict =
 
 /** Normalizes the note and the amount of a correction and refuses an invalid one before it reaches storage. */
 export const normalizeAdjustment = (request: AdjustmentRequest): AdjustmentVerdict => {
-    const note = request.note.trim().replace(/\s+/gu, " ")
+    const note = request.note.trim().replaceAll(/\s+/gu, " ")
     const correctedAmountVnd =
         request.correctedAmount === null || request.correctedAmount === undefined
             ? null

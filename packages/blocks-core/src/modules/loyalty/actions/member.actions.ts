@@ -1,5 +1,4 @@
-import { defineAction } from "@nivo-lite/agent-sdk/block"
-import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineAction, type ActionDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID, MAX_LINE } from "../../../bounds"
 import { tierByKey, tierFor, tierRank } from "../../../rules/loyalty/config"
@@ -24,6 +23,12 @@ import { CONFLICT, refusedWith } from "../refusals"
 const MAX_NOTE = 500
 const MAX_REASON = 300
 const AGENT = "NIVO"
+
+/** The name a new member is filed under: the trimmed name given, the phone when none (or only blanks) was given. */
+const displayName = (name: string | undefined, phone: string): string => {
+    const trimmed = name?.trim()
+    return trimmed === undefined || trimmed === "" ? phone : trimmed
+}
 
 /** The reads that show a customer's points, so every action that moves them refreshes the same ones. */
 const POINT_READS = [
@@ -208,7 +213,7 @@ export const recordPurchaseAction: ActionDefinition = defineAction({
         const normalised = toLoyaltyPhone(phone)
         if (normalised === null) return refusedWith("phone_invalid")
         const config = await configOf(program)
-        const member = await ensureMemberByPhone(members, normalised, name?.trim() || normalised)
+        const member = await ensureMemberByPhone(members, normalised, displayName(name, normalised))
         if (member === null) return CONFLICT
         const tier = tierByKey(config, member.tierKey) ?? tierFor(config, member.lifetimeSpendVnd)
         const calc = pointsFor(config, { amountVnd, items: items ?? "" }, tier)

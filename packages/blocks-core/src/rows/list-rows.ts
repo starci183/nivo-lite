@@ -1,7 +1,15 @@
 import type { SpecText } from "@nivo-lite/agent-sdk/schema"
 import { valueAt } from "../slots/paths"
-import { emptyValueOf, initialValues, validateFields } from "./form-values"
-import type { FormErrors, FormFieldRule, FormKind, FormValue, FormValues } from "./form-values"
+import {
+    emptyValueOf,
+    initialValues,
+    validateFields,
+    type FormErrors,
+    type FormFieldRule,
+    type FormKind,
+    type FormValue,
+    type FormValues,
+} from "./form-values"
 
 /** One kind of field of a row: the kinds of a form that a repeated row can hold. */
 export type ListFieldKind = Extract<FormKind, "text" | "number" | "money" | "choice" | "switch">

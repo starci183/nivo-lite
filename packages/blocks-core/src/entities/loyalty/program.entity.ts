@@ -1,10 +1,8 @@
-import { defineEntity, field } from "@nivo-lite/agent-sdk/entity"
-import type { EntityDefinition, FieldDef } from "@nivo-lite/agent-sdk/entity"
+import { defineEntity, field, type EntityDefinition, type FieldDef } from "@nivo-lite/agent-sdk/entity"
 import type { ZodType } from "zod"
 
 import { MAX_LINE } from "../../bounds"
-import { loyaltyConfigShape } from "../../rules/loyalty/config.schema"
-import type { StoredLoyaltyConfig } from "../../rules/loyalty/config.schema"
+import { loyaltyConfigShape, type StoredLoyaltyConfig } from "../../rules/loyalty/config.schema"
 
 /** The one row every workspace has: the key its programme is found by. */
 export const PROGRAM_KEY = "workspace"

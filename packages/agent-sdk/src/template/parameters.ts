@@ -59,7 +59,7 @@ export const resolveValues = (parameters: ReadonlyArray<TemplateParameter>, give
 }
 
 const fill = (text: string, values: ParameterValues, max: number): string => {
-    const filled = text.replace(/\{\{([a-z]\w*)\}\}/g, (whole, key: string) => {
+    const filled = text.replaceAll(/\{\{([a-z]\w*)\}\}/g, (whole, key: string) => {
         const value = values[key]
         return value === undefined ? whole : String(value)
     })

@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { SurfaceCard } from "@starci/grammar/common"
-import type { SurfaceCardProps } from "@starci/grammar/common"
+import { SurfaceCard, type SurfaceCardProps } from "@starci/grammar/common"
 
 /** The plain card a slot's notice (loading, empty, error) is drawn in: the frame a block gives its SlotView. */
 type FrameCardProps = Extract<SurfaceCardProps, { readonly kind?: "body" }>

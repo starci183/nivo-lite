@@ -1,5 +1,4 @@
-import { linesOf, messageOf } from "../../messages/catalog"
-import type { MessageKey } from "../../messages/catalog"
+import { linesOf, messageOf, type MessageKey } from "../../messages/catalog"
 import type { NodeLocale } from "../node-schema.types"
 import type { AnswerWords, ClaimPhrases, ClaimRule } from "./answer.types"
 

@@ -1,12 +1,9 @@
-import { defineBlock } from "@nivo-lite/agent-sdk/block"
-import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineBlock, type BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
-import { COMMAND_INTENTS } from "../rows/decision-commands"
-import type { CommandIntent } from "../rows/decision-commands"
+import { COMMAND_INTENTS, type CommandIntent } from "../rows/decision-commands"
 import { currencyCode } from "./currency-prop"
-import { FORM_FIELDS_MAX, FORM_NAME_MAX, formField } from "./form.block"
-import type { FormFieldSchema } from "./form.block"
+import { FORM_FIELDS_MAX, FORM_NAME_MAX, formField, type FormFieldSchema } from "./form.block"
 import type { TextSchema, EnumSchema, RequiredRead, OptionalAction, OptionalRead } from "./schema-types"
 
 /** Where a queue stands: a card on a card page, or a section in a pane. */

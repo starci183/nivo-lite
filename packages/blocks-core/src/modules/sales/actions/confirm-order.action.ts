@@ -1,5 +1,4 @@
-import { defineAction } from "@nivo-lite/agent-sdk/block"
-import type { ActionDefinition, ActionResult } from "@nivo-lite/agent-sdk/block"
+import { defineAction, type ActionDefinition, type ActionResult } from "@nivo-lite/agent-sdk/block"
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import type { RunContext } from "@nivo-lite/agent-sdk/port"
 import { z } from "zod"

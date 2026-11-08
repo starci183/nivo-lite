@@ -3,10 +3,15 @@ import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import { surfaceFrame } from "../composites/surfaceFrame"
 import type { accountingBookBlock } from "../../blocks/accounting/book.block"
-import { bookPeriodOf, bookRecords, bookRowsOf, bookSubtitleOf, phoneCardOf } from "../../rules/accounting/book-view"
-import type { BookRow } from "../../rules/accounting/book-view"
-import { ENTRY_STATUSES } from "../../rules/accounting/entry-status"
-import type { EntryStatus } from "../../rules/accounting/entry-status"
+import {
+    bookPeriodOf,
+    bookRecords,
+    bookRowsOf,
+    bookSubtitleOf,
+    phoneCardOf,
+    type BookRow,
+} from "../../rules/accounting/book-view"
+import { ENTRY_STATUSES, type EntryStatus } from "../../rules/accounting/entry-status"
 import {
     EMPTY_TAB_COUNTS,
     countsView,
@@ -14,9 +19,9 @@ import {
     tabEntriesOf,
     tabParamValue,
     TAB_COUNTS_PLACEHOLDER,
+    type TabCounts,
 } from "../../rows/filter-tabs"
 import { queryOf } from "../../rows/search"
-import type { TabCounts } from "../../rows/filter-tabs"
 import { paneHeadersOf } from "../../rows/pane-headers"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
@@ -97,14 +102,16 @@ export const BookBlock = (props: RenderOf<typeof accountingBookBlock>): ReactNod
                     kind="list"
                     {...head}
                     isLoading={isLoading}
-                    items={items.map(phoneCardOf).map((card) => ({
-                        id: card.id,
-                        title: card.title,
-                        description: card.description,
-                        meta: { text: card.amount },
-                        badges: [{ label: card.status, tone: card.tone, isDot: true }],
-                        onPress: () => select(card.id),
-                    }))}
+                    items={items
+                        .map((row) => phoneCardOf(row))
+                        .map((card) => ({
+                            id: card.id,
+                            title: card.title,
+                            description: card.description,
+                            meta: { text: card.amount },
+                            badges: [{ label: card.status, tone: card.tone, isDot: true }],
+                            onPress: () => select(card.id),
+                        }))}
                     empty={<EmptyNotice message={labels.empty} />}
                 />
             )}

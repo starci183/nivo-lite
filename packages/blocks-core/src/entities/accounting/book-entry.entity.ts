@@ -1,5 +1,4 @@
-import { defineEntity, field } from "@nivo-lite/agent-sdk/entity"
-import type { EntityDefinition, FieldDef } from "@nivo-lite/agent-sdk/entity"
+import { defineEntity, field, type EntityDefinition, type FieldDef } from "@nivo-lite/agent-sdk/entity"
 
 /** What a book entry records: money in, money out, an invoice issued, the reversal of a voided one, a correction. */
 export const BOOK_ENTRY_KINDS: readonly [string, ...Array<string>] = [

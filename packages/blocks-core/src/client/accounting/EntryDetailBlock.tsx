@@ -1,5 +1,4 @@
-import { useState } from "react"
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ActionHandle } from "@nivo-lite/agent-sdk/block"
 import {
@@ -15,11 +14,16 @@ import {
     Timeline,
 } from "@starci/grammar/common"
 import type { accountingEntryDetailBlock } from "../../blocks/accounting/entry-detail.block"
-import { adjustTargetOf, entryRecord, entryTitleOf, stagesOf, stateKeyOf } from "../../rules/accounting/entry-stages"
-import type { EntryRecord } from "../../rules/accounting/entry-stages"
+import {
+    adjustTargetOf,
+    entryRecord,
+    entryTitleOf,
+    stagesOf,
+    stateKeyOf,
+    type EntryRecord,
+} from "../../rules/accounting/entry-stages"
 import { parsedSlot } from "../../slots/slots"
-import { FormFieldView } from "../composites/FormFieldView"
-import type { FormFieldData } from "../composites/FormFieldView"
+import { FormFieldView, type FormFieldData } from "../composites/FormFieldView"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import { useFormValues } from "../composites/useFormValues"
 import type { RenderOf } from "../render-props"
@@ -163,7 +167,7 @@ export const EntryDetailBlock = (props: RenderOf<typeof accountingEntryDetailBlo
     const words = useBlockWords()
     const sendRepost = useRepostSender(props.slots.repost)
     const labels = useSlotLabels(props.props.idle)
-    const [isAdjusting, setAdjusting] = useState(false)
+    const [isAdjusting, setIsAdjusting] = useState(false)
     const read = props.slots.record
     const adjust = props.slots.adjust
     const repost = props.slots.repost
@@ -208,7 +212,7 @@ export const EntryDetailBlock = (props: RenderOf<typeof accountingEntryDetailBlo
                                     </Text>
                                 </Stack>
                                 {canAdjust && isAdjusting ? (
-                                    <AdjustForm entry={entry} adjust={adjust} onDone={() => setAdjusting(false)} />
+                                    <AdjustForm entry={entry} adjust={adjust} onDone={() => setIsAdjusting(false)} />
                                 ) : null}
                             </Stack>
                         </SurfaceCard>
@@ -224,7 +228,7 @@ export const EntryDetailBlock = (props: RenderOf<typeof accountingEntryDetailBlo
                                     </Button>
                                 ) : null}
                                 {canAdjust && !isAdjusting ? (
-                                    <Button intent="commit" onPress={() => setAdjusting(true)}>
+                                    <Button intent="commit" onPress={() => setIsAdjusting(true)}>
                                         {words({ key: "adjust_open" })}
                                     </Button>
                                 ) : null}

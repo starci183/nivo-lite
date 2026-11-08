@@ -1,8 +1,6 @@
 import type { ReactNode } from "react"
-import { BarChart, EmptyNotice, Meter, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import type { Figure } from "@starci/grammar/common"
-import { proportionTotal } from "../../rows/figure-format"
-import type { ChartPoint } from "../../rows/figure-format"
+import { BarChart, EmptyNotice, Meter, Section, Stack, SurfaceCard, Text, type Figure } from "@starci/grammar/common"
+import { proportionTotal, type ChartPoint } from "../../rows/figure-format"
 
 /** Props for {@link FiguresStrip}. */
 interface FiguresStripProps {

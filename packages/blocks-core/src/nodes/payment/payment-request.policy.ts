@@ -1,7 +1,6 @@
 import { ORDER_ITEMS_SHAPE } from "../../entities/sales/order.entity"
 import type { PaymentInstruction } from "../../vocabulary"
-import { REQUEST_WORDS } from "./payment-request.messages"
-import type { RequestLocale } from "./payment-request.messages"
+import { REQUEST_WORDS, type RequestLocale } from "./payment-request.messages"
 
 /** A line of a recorded order as the order data port reads it. */
 export interface OrderLine {
@@ -30,7 +29,7 @@ export const orderLinesOf = (items: unknown): ReadonlyArray<OrderLine> => {
 }
 
 /** The transfer content of an order number: letters and digits only, upper case (`DH-20261105-0001` becomes `DH202611050001`). */
-export const transferContentOf = (orderNo: string): string => orderNo.replace(/[^A-Za-z0-9]/g, "").toUpperCase()
+export const transferContentOf = (orderNo: string): string => orderNo.replaceAll(/[^A-Za-z0-9]/g, "").toUpperCase()
 
 /** The items of an order in a few words: `2 x tea, 1 x cake`. */
 export const itemsTextOf = (lines: ReadonlyArray<OrderLine>): string =>

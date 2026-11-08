@@ -1,6 +1,11 @@
 import type { NodeStore } from "@nivo-lite/agent-sdk/node"
-import { scoreCandidates } from "@nivo-lite/agent-sdk/reconcile"
-import type { Arrival, Candidate, Claim, Evidenced } from "@nivo-lite/agent-sdk/reconcile"
+import {
+    scoreCandidates,
+    type Arrival,
+    type Candidate,
+    type Claim,
+    type Evidenced,
+} from "@nivo-lite/agent-sdk/reconcile"
 import type { ClaimRow, ConversationRow, LeadRow, OrderRow, TransactionRow } from "./payment.schemas"
 import { sampleOf } from "../../messages/catalog"
 

@@ -1,8 +1,6 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
-import { dueSoonOf } from "../../../rules/accounting/due-soon"
-import type { DueItem } from "../../../rules/accounting/due-soon"
+import { dueSoonOf, type DueItem } from "../../../rules/accounting/due-soon"
 import { workspaceSettings } from "../accounting-data"
 import { SETTINGS } from "../ports"
 

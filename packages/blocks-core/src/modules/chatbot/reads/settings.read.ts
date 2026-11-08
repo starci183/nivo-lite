@@ -1,10 +1,8 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { q } from "@nivo-lite/agent-sdk/query"
 import { z } from "zod"
 import { CHATBOT_SETTINGS_SCOPE } from "../../../entities/chat/settings.entity"
-import { CHATBOT_SETTINGS_DEFAULTS } from "../../../rules/chatbot/settings"
-import type { ChatbotSettings } from "../../../rules/chatbot/settings"
+import { CHATBOT_SETTINGS_DEFAULTS, type ChatbotSettings } from "../../../rules/chatbot/settings"
 import { SETTINGS_FIELDS, settingsOf } from "../chatbot-records"
 import { SETTINGS } from "../ports"
 

@@ -1,5 +1,4 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { LOYALTY_VIEW } from "../constants"
@@ -34,7 +33,7 @@ export const rewardsRead: ReadDefinition = defineRead({
     permission: LOYALTY_VIEW,
     ports: { rewards: REWARDS },
     run: async ({ rewards }): Promise<{ readonly rows: ReadonlyArray<RewardView> }> => ({
-        rows: (await rewardsList(rewards, false)).map(rewardViewOf),
+        rows: (await rewardsList(rewards, false)).map((reward) => rewardViewOf(reward)),
     }),
 })
 

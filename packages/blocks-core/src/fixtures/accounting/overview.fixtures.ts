@@ -7,8 +7,7 @@ import type { accountingWeeklyBlock } from "../../blocks/accounting/weekly.block
 import type { accountingPeriodFiguresBlock } from "../../blocks/accounting/period-figures.block"
 import type { BookEntryRecord } from "../../rules/accounting/accounting.types"
 import { entryStatusOf } from "../../rules/accounting/entry-status"
-import type { Ledger } from "../../rules/accounting/ledger"
-import { ledgerOf } from "../../rules/accounting/ledger"
+import { type Ledger, ledgerOf } from "../../rules/accounting/ledger"
 import type { DueRecord, FiguresRecord } from "../../rules/accounting/overview-view"
 import type { WeeklyRecord } from "../../rules/accounting/weekly-view"
 

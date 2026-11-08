@@ -23,7 +23,7 @@ export const quoteIdent = (name: string): string => {
 /** A single-quoted literal with quotes doubled; control characters (NUL included) are refused. */
 export const quoteLiteral = (value: string): string => {
     if (/\p{Cc}/u.test(value)) throw new EntityRenderError("ENTITY_RENDER_VALUE_INVALID", "control character")
-    return `'${value.replaceAll(/'/g, "''")}'`
+    return `'${value.replaceAll("'", "''")}'`
 }
 
 /** A data key (a declared field or nested key name), refused unless it is a plain word. */
@@ -84,7 +84,7 @@ const scalar = (value: Scalar | undefined): string => {
 const COMPARE: Readonly<Record<string, string>> = { eq: "=", ne: "<>", lt: "<", lte: "<=", gt: ">", gte: ">=" }
 
 /** Escape the LIKE metacharacters of a search text. */
-const likeEscape = (text: string): string => text.replace(/[\\%_]/g, (char) => `\\${char}`)
+const likeEscape = (text: string): string => text.replaceAll(/[\\%_]/g, (char) => `\\${char}`)
 
 type CompareFilter = Extract<FilterExpr, { readonly op: "eq" | "ne" | "lt" | "lte" | "gt" | "gte" }>
 type ListFilter = Extract<FilterExpr, { readonly op: "in" | "notIn" }>
@@ -105,7 +105,7 @@ const listSql = (entity: EntityDefinition, filter: ListFilter): string => {
         throw new EntityRenderError("ENTITY_RENDER_VALUE_INVALID", "in-list size")
     }
     const word = filter.op === "in" ? "IN" : "NOT IN"
-    return `${exprOf(entity, filter.field)} ${word} (${filter.values.map(scalar).join(", ")})`
+    return `${exprOf(entity, filter.field)} ${word} (${filter.values.map((value) => scalar(value)).join(", ")})`
 }
 
 const searchSql = (filter: SearchFilter): string => {

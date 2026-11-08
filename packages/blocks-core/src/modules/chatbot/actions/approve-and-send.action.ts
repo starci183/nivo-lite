@@ -1,5 +1,4 @@
-import { defineAction } from "@nivo-lite/agent-sdk/block"
-import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineAction, type ActionDefinition } from "@nivo-lite/agent-sdk/block"
 import { outboxPort } from "@nivo-lite/agent-sdk/mutation"
 import { z } from "zod"
 import { MAX_BODY, MAX_ID } from "../../../bounds"

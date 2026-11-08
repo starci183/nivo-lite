@@ -1,5 +1,4 @@
-import { createContext, useContext } from "react"
-import type { ReactNode } from "react"
+import { createContext, useContext, type ReactNode } from "react"
 
 const Scope = createContext(false)
 

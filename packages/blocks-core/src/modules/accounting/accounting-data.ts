@@ -1,6 +1,5 @@
 import type { AggregateRow, EntityApi, EntityQuery, MeasureValue, PageRow } from "@nivo-lite/agent-sdk/entity/port"
-import { q } from "@nivo-lite/agent-sdk/query"
-import type { OrderBy } from "@nivo-lite/agent-sdk/query"
+import { q, type OrderBy } from "@nivo-lite/agent-sdk/query"
 import type {
     AdjustmentRecord,
     AdjustmentTarget,
@@ -14,8 +13,7 @@ import type {
 import type { KindTotal, Measure, OpenInvoice } from "../../rules/accounting/figures"
 import { CASH_KINDS } from "../../rules/accounting/ledger"
 import type { QuestionLine } from "../../rules/accounting/questions"
-import { ACCOUNTING_SETTINGS_DEFAULTS } from "../../rules/accounting/settings"
-import type { AccountingSettings } from "../../rules/accounting/settings"
+import { ACCOUNTING_SETTINGS_DEFAULTS, type AccountingSettings } from "../../rules/accounting/settings"
 import { SETTINGS_KEY } from "../../entities/accounting/settings.entity"
 import type { DayRange, InstantRange, TargetStores } from "./accounting.types"
 import {

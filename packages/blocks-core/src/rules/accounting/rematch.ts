@@ -1,5 +1,10 @@
-import { decideByCode, scoreCandidates } from "@nivo-lite/agent-sdk/reconcile"
-import type { Arrival, Candidate, Evidenced } from "@nivo-lite/agent-sdk/reconcile"
+import {
+    decideByCode,
+    scoreCandidates,
+    type Arrival,
+    type Candidate,
+    type Evidenced,
+} from "@nivo-lite/agent-sdk/reconcile"
 import type { OrderRecord, TransactionRecord } from "./accounting.types"
 import { AWAITING_PAYMENT } from "./settle"
 

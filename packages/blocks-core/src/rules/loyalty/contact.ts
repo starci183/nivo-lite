@@ -3,7 +3,7 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/u
 
 /** A Vietnamese phone as `84` followed by nine or ten digits, or null when it is not a plausible number. */
 export const toLoyaltyPhone = (raw: string | null): string | null => {
-    const digits = (raw ?? "").replace(/\D/gu, "")
+    const digits = (raw ?? "").replaceAll(/\D/gu, "")
     const national = digits.startsWith("00") ? digits.slice(2) : digits
     const full = national.startsWith("0") ? `84${national.slice(1)}` : national
     const withCountry = !full.startsWith("84") && (full.length === 9 || full.length === 10) ? `84${full}` : full

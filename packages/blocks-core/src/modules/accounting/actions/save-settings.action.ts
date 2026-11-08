@@ -1,5 +1,4 @@
-import { defineAction } from "@nivo-lite/agent-sdk/block"
-import type { ActionDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineAction, type ActionDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { REMATCH_DAYS_MAX, REMATCH_DAYS_MIN, VAT_PERIODS, VOID_MODES } from "../../../rules/accounting/settings"

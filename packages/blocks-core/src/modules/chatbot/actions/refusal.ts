@@ -1,7 +1,6 @@
 import type { ActionResult } from "@nivo-lite/agent-sdk/block"
 import type { EngineResult } from "@nivo-lite/agent-sdk/entity/port"
-import { chatbotText } from "../copy"
-import type { ChatbotCopyKey } from "../copy"
+import { chatbotText, type ChatbotCopyKey } from "../copy"
 
 /** A refusal as data: the reason the host acts on and the words the person reads. */
 export const refusal = (

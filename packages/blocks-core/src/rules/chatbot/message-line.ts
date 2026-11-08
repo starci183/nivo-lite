@@ -1,5 +1,4 @@
-import { authorKindOf, deliveryWordOf, markOf, roleOf, sideOf } from "./message"
-import type { DeliveryWord, MessageSide } from "./message"
+import { authorKindOf, deliveryWordOf, markOf, roleOf, sideOf, type DeliveryWord, type MessageSide } from "./message"
 
 /** The name an AI line carries when it has no author name of its own. */
 export const AI_AUTHOR = "AI"

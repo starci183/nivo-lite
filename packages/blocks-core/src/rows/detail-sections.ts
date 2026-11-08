@@ -1,7 +1,6 @@
 import type { SpecText } from "@nivo-lite/agent-sdk/schema"
 import { valueAt } from "../slots/paths"
-import { cellTextOf } from "./cell-format"
-import type { CellContext, CellFormat } from "./cell-format"
+import { cellTextOf, type CellContext, type CellFormat } from "./cell-format"
 
 /** One fact of a record: the words of its term, the path of its value and how the value is drawn. */
 export interface DetailFact {

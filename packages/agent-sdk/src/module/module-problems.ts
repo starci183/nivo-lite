@@ -1,6 +1,5 @@
 import type { BlockDefinition } from "../block/block.types"
-import type { SpecBindings } from "../spec/spec"
-import { specProblems } from "../spec/spec"
+import { type SpecBindings, specProblems } from "../spec/spec"
 import type { ModuleDocument, ModuleProblem } from "./module-document.types"
 import { isRecord } from "../schema/is-record"
 

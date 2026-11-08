@@ -1,5 +1,4 @@
-import { listRead } from "@nivo-lite/agent-sdk/module"
-import type { ListReadDefinition } from "@nivo-lite/agent-sdk/module"
+import { listRead, type ListReadDefinition } from "@nivo-lite/agent-sdk/module"
 import type { ListShape } from "@nivo-lite/agent-sdk/block"
 import { CHATBOT_CHANNELS, INBOX_STATUSES } from "../../../rules/chatbot"
 import type { ThreadRow } from "../chatbot.types"

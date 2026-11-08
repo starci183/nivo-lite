@@ -1,5 +1,4 @@
-import { defineDataKind } from "@nivo-lite/agent-sdk/node"
-import type { DataKindDefinition } from "@nivo-lite/agent-sdk/node"
+import { defineDataKind, type DataKindDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { MAX_BODY, MAX_ENTRIES, MAX_ID, MAX_LINE } from "../bounds"
 

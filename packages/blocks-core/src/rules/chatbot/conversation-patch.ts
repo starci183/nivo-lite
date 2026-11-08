@@ -1,7 +1,5 @@
-import { inboxStatusOf, unansweredOf } from "./conversation-status"
-import type { InboxStatus } from "./conversation-status"
-import { tailAfter } from "./conversation-tail"
-import type { ConversationTail, TailLine } from "./conversation-tail"
+import { inboxStatusOf, unansweredOf, type InboxStatus } from "./conversation-status"
+import { tailAfter, type ConversationTail, type TailLine } from "./conversation-tail"
 
 /** What a conversation stores that the next change starts from. */
 export interface ConversationState extends ConversationTail {

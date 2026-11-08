@@ -3,8 +3,7 @@ import type { SpecText } from "@nivo-lite/agent-sdk/schema"
 import { Input, NumberField, Select, Switch, Textarea } from "@starci/grammar/common"
 import type { z } from "zod"
 import type { formBlock } from "../../blocks/form.block"
-import { numberForField, numberFromField } from "../../rows/form-values"
-import type { FormValue } from "../../rows/form-values"
+import { numberForField, numberFromField, type FormValue } from "../../rows/form-values"
 
 /** The declaration of one field, as the form block and the blocks that edit values take it. */
 export type FormFieldData = z.infer<(typeof formBlock)["props"]>["fields"][number]

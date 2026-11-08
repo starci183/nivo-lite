@@ -1,6 +1,5 @@
 import { wordOf } from "../../messages/catalog"
-import { ASK_WORDS } from "./ask-missing.messages"
-import type { AskLocale } from "./ask-missing.messages"
+import { ASK_WORDS, type AskLocale } from "./ask-missing.messages"
 import type { MissingReason, OrderGap, OrderItem } from "./order.schema"
 
 /** A catalogue row as the data port reads it. */
@@ -19,11 +18,11 @@ export interface CatalogueRow {
 export const nameKey = (name: string): string =>
     name
         .normalize("NFD")
-        .replace(/\p{M}/gu, "")
+        .replaceAll(/\p{M}/gu, "")
         .replaceAll(wordOf("letterD"), "d")
         .replaceAll(wordOf("letterDCapital"), "D")
         .toLowerCase()
-        .replace(/\s+/g, " ")
+        .replaceAll(/\s+/g, " ")
         .trim()
 
 /** The items with equal names merged (their quantities added) and the blank ones dropped. */
@@ -36,7 +35,7 @@ export const mergedItems = (items: ReadonlyArray<OrderItem>): ReadonlyArray<Orde
         merged.set(
             key,
             known === undefined
-                ? { ...item, name: item.name.trim().replace(/\s+/g, " ") }
+                ? { ...item, name: item.name.trim().replaceAll(/\s+/g, " ") }
                 : { ...known, quantity: known.quantity + item.quantity, priceVnd: known.priceVnd ?? item.priceVnd },
         )
     }

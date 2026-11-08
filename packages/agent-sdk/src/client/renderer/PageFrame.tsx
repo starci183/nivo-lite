@@ -5,8 +5,7 @@ import { wordsOf } from "../../schema/namespaced"
 import type { PlanView } from "../../spec/render-plan"
 import { resolveVariables } from "../../spec/spec-value"
 import { useWorkbenchHost } from "../host/WorkbenchHostProvider"
-import type { CountChip, ViewChrome } from "./view-chrome"
-import { countChipOf } from "./view-chrome"
+import { type CountChip, type ViewChrome, countChipOf } from "./view-chrome"
 
 /** What the page frame takes. */
 export interface PageFrameProps {
@@ -62,8 +61,9 @@ interface CountChainProps extends Omit<PageFrameProps, "selected" | "panelId" | 
 /** Reads the counts of the tabs one after the other, each in a component of its own so every hook list stays stable. */
 const CountChain = (props: CountChainProps): ReactNode => {
     const [view, ...rest] = props.rest
-    if (view === undefined) return <>{props.done(props.chips)}</>
-    return (
+    return view === undefined ? (
+        props.done(props.chips)
+    ) : (
         <TabCount
             chrome={props.chrome.find((candidate) => candidate.id === view.id)}
             reads={props.reads}

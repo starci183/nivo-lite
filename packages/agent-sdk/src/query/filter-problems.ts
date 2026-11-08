@@ -1,6 +1,5 @@
 import type { EntityDefinition, FieldKind } from "../entity/entity.types"
-import { kindClassOf, ORDERED_CLASSES, resolveField } from "./field-resolve"
-import type { KindClass, ResolvedField } from "./field-resolve"
+import { kindClassOf, ORDERED_CLASSES, resolveField, type KindClass, type ResolvedField } from "./field-resolve"
 import { ownEntry } from "./own"
 import { QUERY_BOUNDS, QUERY_LIMITS } from "./query-bounds"
 import type { FilterExpr, QueryProblem, Scalar } from "./query.types"

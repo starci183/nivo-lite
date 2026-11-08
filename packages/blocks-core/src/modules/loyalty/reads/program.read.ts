@@ -1,5 +1,4 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { programOf } from "../config-store"
 import { CAMPAIGNS_SHOWN, LOYALTY_VIEW } from "../constants"
@@ -54,6 +53,6 @@ export const campaignsRead: ReadDefinition = defineRead({
     permission: LOYALTY_VIEW,
     ports: { campaigns: CAMPAIGNS },
     run: async ({ campaigns }): Promise<{ readonly rows: ReadonlyArray<CampaignRowView> }> => ({
-        rows: (await campaignsList(campaigns, CAMPAIGNS_SHOWN)).map(campaignViewOf),
+        rows: (await campaignsList(campaigns, CAMPAIGNS_SHOWN)).map((campaign) => campaignViewOf(campaign)),
     }),
 })

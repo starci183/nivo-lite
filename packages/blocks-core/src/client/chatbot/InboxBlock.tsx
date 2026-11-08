@@ -1,5 +1,4 @@
-import { Children, useState } from "react"
-import type { ReactNode } from "react"
+import { Children, useState, type ReactNode } from "react"
 import { Cluster, Heading, IconButton, Pane, PaneGrid, PaneSection } from "@starci/grammar/common"
 import type { inboxBlock } from "../../blocks/chatbot/inbox.block"
 import { conversationLayoutOf } from "../../rows/chatbot/conversation-layout"

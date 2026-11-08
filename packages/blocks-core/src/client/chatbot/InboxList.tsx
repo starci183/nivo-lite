@@ -1,16 +1,23 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
-import { Avatar, Badge, ListBox, RelativeTime, Stack, SurfaceCard } from "@starci/grammar/common"
+import {
+    Avatar,
+    Badge,
+    ListBox,
+    RelativeTime,
+    Stack,
+    SurfaceCard,
+    type BadgeTone,
+    type FilterFields,
+    type ListBoxItem,
+} from "@starci/grammar/common"
 import { surfaceFrame } from "../composites/surfaceFrame"
-import type { BadgeTone, FilterFields, ListBoxItem } from "@starci/grammar/common"
 import type { inboxBlock } from "../../blocks/chatbot/inbox.block"
-import { countsView, tabEntriesOf } from "../../rows/filter-tabs"
-import type { TabSpec } from "../../rows/filter-tabs"
+import { countsView, tabEntriesOf, type TabSpec } from "../../rows/filter-tabs"
 import { footersOf, tabCountsOf } from "../../rows/list-card"
 import { paneHeadersOf } from "../../rows/pane-headers"
 import { tabOf, paramsOfTab } from "../../rows/chatbot/inbox-tabs"
-import { INBOX_TABS, threadRowsOf } from "../../rows/chatbot/thread-rows"
-import type { ThreadListRow, ThreadStatus } from "../../rows/chatbot/thread-rows"
+import { INBOX_TABS, threadRowsOf, type ThreadListRow, type ThreadStatus } from "../../rows/chatbot/thread-rows"
 import { chosenRow, moreStateOf, recordsView, selectionOf } from "../../rows/rows"
 import { queryOf } from "../../rows/search"
 import { derivedSlot, parsedSlot } from "../../slots/slots"

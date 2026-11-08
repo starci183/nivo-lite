@@ -1,5 +1,4 @@
-import { useState } from "react"
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import type { ActionHandle } from "@nivo-lite/agent-sdk/block"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import {
@@ -35,6 +34,11 @@ interface DraftCardProps {
     readonly slots: CardProps["slots"]
     /** Runs an action on the draft; the card tells the person when it did not go through. */
     readonly onRun: (action: ActionHandle, input: DraftRunInput) => void
+}
+
+/** What the card of one waiting draft is given with the most characters a changed draft may hold. */
+interface LimitedDraftCardProps extends DraftCardProps {
+    readonly maxLength: number
 }
 
 /** The card of a draft in the field that changes it. */
@@ -126,7 +130,7 @@ const DraftCommands = (props: DraftCommandProps): ReactNode => {
 }
 
 /** The card of one draft: what the customer asked, the draft in a quote, a line of guidance, and the commands. */
-const DraftCard = (props: DraftCardProps & { readonly maxLength: number }): ReactNode => {
+const DraftCard = (props: LimitedDraftCardProps): ReactNode => {
     const words = useBlockWords()
     const [isEditing, setIsEditing] = useState(false)
     const { proposal } = props

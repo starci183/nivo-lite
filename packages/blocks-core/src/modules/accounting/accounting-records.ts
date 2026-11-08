@@ -18,8 +18,8 @@ import {
     REMATCH_DAYS_MIN,
     VAT_PERIODS,
     VOID_MODES,
+    type AccountingSettings,
 } from "../../rules/accounting/settings"
-import type { AccountingSettings } from "../../rules/accounting/settings"
 
 /** The longest ISO 8601 text the engine writes for a time or a day. */
 const MAX_TIME = 40

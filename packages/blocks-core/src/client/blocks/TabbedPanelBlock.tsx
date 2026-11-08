@@ -1,5 +1,4 @@
-import { Children } from "react"
-import type { ReactNode } from "react"
+import { Children, type ReactNode } from "react"
 import { SurfaceCard } from "@starci/grammar/common"
 import type { tabbedPanelBlock } from "../../blocks/tabbed-panel.block"
 import { selectedTabIndex } from "../../rows/tab-selection"

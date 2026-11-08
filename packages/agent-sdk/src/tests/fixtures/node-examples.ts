@@ -2,8 +2,7 @@ import type { EffectDefinition, ToolDefinition } from "../../node/effect.types"
 import { runNode } from "../../node/host"
 import type { NodeDefinition, NodeExample, NodeExampleEffect, TurnRef } from "../../node/node.types"
 import { canonicalJson } from "../../template/canonical"
-import type { FakeExecuted } from "./node-ports"
-import { scriptedNodePorts } from "./node-ports"
+import { type FakeExecuted, scriptedNodePorts } from "./node-ports"
 
 /** The turn every example runs in. */
 export const EXAMPLE_TURN: TurnRef = { turnId: "turn-1", workspaceId: "workspace-1", agentId: "agent-1", subject: null }

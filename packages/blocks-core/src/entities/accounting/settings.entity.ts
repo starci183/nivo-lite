@@ -1,5 +1,4 @@
-import { defineEntity, field } from "@nivo-lite/agent-sdk/entity"
-import type { EntityDefinition, FieldDef } from "@nivo-lite/agent-sdk/entity"
+import { defineEntity, field, type EntityDefinition, type FieldDef } from "@nivo-lite/agent-sdk/entity"
 
 /** How a voided invoice that was posted is treated in the books. */
 export const VOID_MODE_VALUES: readonly [string, ...Array<string>] = ["reversal", "none"]

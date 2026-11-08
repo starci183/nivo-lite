@@ -1,5 +1,4 @@
-import { defineJob, outboxPort } from "@nivo-lite/agent-sdk/mutation"
-import type { JobDefinition, OutboxApi } from "@nivo-lite/agent-sdk/mutation"
+import { defineJob, outboxPort, type JobDefinition, type OutboxApi } from "@nivo-lite/agent-sdk/mutation"
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
 import { z } from "zod"
