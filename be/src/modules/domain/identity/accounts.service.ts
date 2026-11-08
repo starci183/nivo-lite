@@ -79,7 +79,7 @@ export class IdentityAccountsService {
         const named = [user.meta.full_name, user.meta.name].find((value) => typeof value === "string" && value !== "")
         const email = user.email ?? ""
         const uploaded = httpsOf(user.meta[UPLOADED_AVATAR_KEY])
-        const localPart = email.split("@")[0] ?? ""
+        const localPart = email.split("@", 1).join("")
         const fallbackName = localPart === "" ? "Owner" : localPart
         return ok({
             email,

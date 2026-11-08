@@ -84,7 +84,8 @@ const holdersFindings = (context: ReviewContext, role: RoleKey): ReadonlyArray<F
             .filter((holding) => holding.key === key)
             .map((holding) => holding.from ?? "")
             .sort((a, b) => a.localeCompare(b))
-            .at(-1) ?? ""
+            .slice(-1)
+            .join("")
     const ordered = [...involved].sort(
         (a, b) => latestStart(a.key).localeCompare(latestStart(b.key)) || a.key.localeCompare(b.key),
     )
