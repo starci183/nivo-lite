@@ -185,9 +185,9 @@ export class KnowledgeSourcesService {
             })
             await this.progress.announce(workspaceId, ref.id)
             return ref
-        } catch (failure) {
-            await this.quota.discardRefused(source.storagePath, failure)
-            throw failure
+        } catch (error_) {
+            await this.quota.discardRefused(source.storagePath, error_)
+            throw error_
         }
     }
 

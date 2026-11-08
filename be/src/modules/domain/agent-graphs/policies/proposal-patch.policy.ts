@@ -118,8 +118,7 @@ const raised = (old: number, amounts: ReadonlyArray<number>): number =>
     Math.max(old, Math.ceil(Math.max(...amounts, old) / STEP) * STEP)
 
 const lowered = (old: number, amounts: ReadonlyArray<number>): number => {
-    const floor = Math.floor(Math.min(...amounts, old) / STEP) * STEP
-    return floor < old ? floor : old
+    return Math.min(Math.floor(Math.min(...amounts, old) / STEP) * STEP, old)
 }
 
 /** A backup for an asked branch whose request ran out of time: the owners of the workspace. */

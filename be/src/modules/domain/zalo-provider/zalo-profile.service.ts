@@ -91,7 +91,7 @@ export class ZaloProfileService {
                 counts.push(await this.roundOf({ workspaceId: candidate.workspaceId, connectionId: candidate.id }))
             },
         )
-        const next = counts.reduce(plus, tally)
+        const next = counts.reduce((sum, next) => plus(sum, next), tally)
         return batch.length === SCAN_PAGE ? this.scan(last.id, next) : next
     }
 

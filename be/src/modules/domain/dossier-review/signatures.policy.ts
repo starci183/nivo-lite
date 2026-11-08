@@ -14,9 +14,9 @@ import type { RuleFamily } from "./rule-kit.policy"
 
 /** Blanks left to fill in: runs of ellipses or of dots, an empty, dotted or underscored bracket, a bracketed figure to choose before a per cent sign. */
 const BLANKS: ReadonlyArray<RegExp> = [
-    new RegExp(String.raw`\u2026{2,}`, "gu"),
+    /\u2026{2,}/gu,
     /\.{5,}/gu,
-    new RegExp(String.raw`\[ ?(?:\.{3}|\u2026)? ?\]`, "gu"),
+    /\[ ?(?:\.{3}|\u2026)? ?\]/gu,
     /\[_+\]/gu,
     /\[\d+(?:[.,]\d+)?\] ?%/gu,
 ]

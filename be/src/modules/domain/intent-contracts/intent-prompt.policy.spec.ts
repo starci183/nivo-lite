@@ -91,7 +91,7 @@ describe("buildIntentPrompt > the five parts", () => {
 
         const prompt = subject.buildIntentPrompt(spec(), say)
 
-        expect(prompt.split("- Be brief.").length).toBe(2)
+        expect(prompt.split("- Be brief.")).toHaveLength(2)
         expect(prompt).toContain("reply_customer:\n- Never promise a discount.")
         expect(prompt).toContain("handoff_lead:\n- Ask for a phone.")
     })

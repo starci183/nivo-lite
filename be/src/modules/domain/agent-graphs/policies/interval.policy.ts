@@ -64,7 +64,7 @@ export const intervalOf = (when: Condition | "else", fact: string): Interval | n
         const placed = parts.filter((part): part is Interval => part !== null)
         const [first, ...others] = placed
         if (first === undefined || placed.length !== parts.length) return null
-        return others.reduce(meet, first)
+        return others.reduce((joined, next) => meet(joined, next), first)
     }
     return "any" in when ? null : oneTerm(when, fact)
 }

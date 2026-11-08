@@ -68,7 +68,8 @@ describe("AgentRunItemClosedService.closed", () => {
         expect(verdicts).toEqual(["item-1:true:member-1", "item-2:false:member-2"])
         expect(tx.commits).toBe(2)
         const [first, second] = managers
-        assert(first !== undefined && second !== undefined)
+        assert(first !== undefined)
+        assert(second !== undefined)
         expect(first).not.toBe(em)
         expect(second).not.toBe(first)
         expect(first.queryRunner?.isTransactionActive).toBe(false)

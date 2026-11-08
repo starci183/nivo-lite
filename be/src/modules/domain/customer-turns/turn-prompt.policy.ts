@@ -20,7 +20,7 @@ export interface TurnSystemParts {
 
 /** The name the agent answers under: its own with its handle, or the front agent's name alone after a hand-over. */
 const nameLineOf = (agent: ChatTurnConversation["agent"], speaksAs: ChatTurnConversation["speaksAs"]): string =>
-    speaksAs === null ? agent.name + " (@" + agent.handle + ")" : speaksAs
+    speaksAs ?? agent.name + " (@" + agent.handle + ")"
 
 /**
  * The persona section of a customer-facing agent. After a hand-over the speaker keeps its own role and instructions but answers under

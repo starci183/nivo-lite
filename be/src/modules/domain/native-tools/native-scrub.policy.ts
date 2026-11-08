@@ -1,5 +1,5 @@
 /** Characters that draw nothing yet travel with text: zero-width marks, direction marks and the tag block, a way to hide words from a reader. */
-const HIDDEN = /[​-‏‪-‮⁠-⁤﻿\u{E0000}-\u{E007F}]/gu
+const HIDDEN = /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u{E0000}-\u{E007F}]/gu
 
 /** A run of digits that may hold separators between them, as a phone number, an account or a card is written. */
 const DIGIT_RUN = /\+?\d[\d .-]*/gu

@@ -44,5 +44,5 @@ export const rankPassages = (
 /** The tsquery text of the folded words of a question (`a | b`), or null when it has none. */
 export const tsqueryOf = (folded: string): string | null => {
     const words = folded.replace(/[^a-z0-9]+/g, " ").trim()
-    return words === "" ? null : words.split(/\s+/).join(" | ")
+    return words === "" ? null : words.replaceAll(/\s+/g, " | ")
 }

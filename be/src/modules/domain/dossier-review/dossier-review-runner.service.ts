@@ -89,7 +89,7 @@ interface ModelPass {
 }
 
 /** The rank of a severity, critical first; the rules only hand out the four severities. */
-const rankOf = (severity: string): number => FINDING_SEVERITIES.findIndex((item) => item === severity)
+const rankOf = (severity: string): number => (FINDING_SEVERITIES as ReadonlyArray<string>).indexOf(severity)
 
 const clip = (text: string, max: number): string => text.slice(0, max)
 

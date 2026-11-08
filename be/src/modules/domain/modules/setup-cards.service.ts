@@ -152,7 +152,7 @@ export class SetupCardsService {
         const catalog = await this.modules.catalog()
         const cards: Array<ProposedCardRecord> = []
         const branchCards = await Promise.all(
-            proposed.map((write) => (write.kind === "branch" ? this.branches.cardOf(workspaceId, write) : null)),
+            proposed.map((write) => (write.kind === "branch" ? this.branches.cardOf(workspaceId, write) : Promise.resolve(null))),
         )
         for (const [index, write] of proposed.entries()) {
             if (write.kind === "fact") {

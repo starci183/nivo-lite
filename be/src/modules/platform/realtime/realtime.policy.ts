@@ -8,4 +8,4 @@ export const withConnection = (config: RealtimeConfig, connection: InjectionToke
 
 /** The URL the Postgres hub LISTENs on: the dedicated one when declared, else the primary URL. */
 export const listenUrlOf = (options: PostgresRealtimeOptions): Secret =>
-    options.listenUrl === undefined ? options.url : options.listenUrl
+    options.listenUrl ?? options.url

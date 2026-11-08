@@ -255,7 +255,7 @@ const registerCreditBoundaryCases = () => {
         expect(embeddings.embed).not.toHaveBeenCalled()
         expect(chunks.replace).not.toHaveBeenCalled()
         const drafts = chunks.keep.mock.calls.flatMap(([write]) => write.drafts)
-        expect(drafts.length).toBe(chunkPassages(content).length)
+        expect(drafts).toHaveLength(chunkPassages(content).length)
         expect(drafts.every((draft) => draft.vector === null)).toBe(true)
         expect(sources.blockIndexing).toHaveBeenCalledWith(WS, "s1", StoredNote.NoCreditsForIndex, drafts.length)
         expect(sources.finishIndexing).not.toHaveBeenCalled()

@@ -5,7 +5,6 @@ import type { ChatRoomEntity } from "./persistence/entities"
 import type { ChatMemberRef } from "./team-chat.contracts"
 import { TeamChatStoreService } from "./team-chat-store.service"
 import type { OptionalMessage, OptionalRoom } from "./team-chat-store.service"
-import type {} from "./team-chat-store.contracts"
 
 /** The most active seats one workspace holds that a membership check reads. */
 const SEATS_MAX = 5000

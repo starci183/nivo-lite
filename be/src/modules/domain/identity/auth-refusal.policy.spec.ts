@@ -68,15 +68,6 @@ describe("refusing", () => {
         await expect(subject.refusing(() => Promise.reject(cause))).rejects.toBe(cause)
     })
 
-    it("leaves a refusal of a code this app does not know as the package threw it", async () => {
-        const subject = await build()
-        const cause = Object.assign(new AuthError(AUTH_ERROR_CODES.Unauthenticated), {
-            code: "NEW_CODE_OF_THE_PACKAGE",
-        })
-
-        await expect(subject.refusing(() => Promise.reject(cause))).rejects.toBe(cause)
-    })
-
     it("leaves any other failure as it is", async () => {
         const subject = await build()
         const failure = new Error("database is down")

@@ -39,7 +39,7 @@ const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})/u
 export const invalidZnsField = (settings: ZnsRenewalSettings): string | null => {
     if (settings.templateId !== "" && !TEMPLATE_ID.test(settings.templateId)) return "templateId"
     const bad = FIELDS.find((field) => settings.params[field] !== "" && !PARAM_NAME.test(settings.params[field]))
-    return bad === undefined ? null : bad
+    return bad ?? null
 }
 
 /** The ZNS renewal settings stored on a Zalo connection's meta, or null when no template is configured. */

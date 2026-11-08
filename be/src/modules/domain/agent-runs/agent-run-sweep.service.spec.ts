@@ -392,8 +392,8 @@ describe("AgentRunSweepService timeout owner claims", () => {
 
             await expect(service.sweep()).resolves.toMatchObject({ expired: 1, recovered: 0 })
 
-            expect(timeouts.expire.mock.calls.length).toBe(when === "before" ? 0 : 1)
-            expect(verdictPort.claimTimeout.mock.calls.length).toBe(when === "before" ? 1 : 2)
+            expect(timeouts.expire.mock.calls).toHaveLength(when === "before" ? 0 : 1)
+            expect(verdictPort.claimTimeout.mock.calls).toHaveLength(when === "before" ? 1 : 2)
             expect(runs.resumeWaiting).not.toHaveBeenCalled()
             expect(steps.fail).not.toHaveBeenCalled()
             expect(ledger.commitIn).not.toHaveBeenCalled()

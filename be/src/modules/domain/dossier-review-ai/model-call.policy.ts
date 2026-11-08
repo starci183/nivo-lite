@@ -32,7 +32,7 @@ interface Attempt<T> {
 }
 
 /** The fence a model may wrap its JSON in. */
-const FENCE = new RegExp("`{3}(?:json)?", "gi")
+const FENCE = /`{3}(?:json)?/gi
 
 /** The sum of two token counts where null means not reported. */
 const sumOf = (left: number | null, right: number | null): number | null =>
