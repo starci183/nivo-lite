@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { SurfaceCard } from "@starci/grammar/common"
+import { surfaceFrame } from "../composites/surfaceFrame"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { figuresBlock } from "../../blocks/figures.block"
 import { cellContextOf } from "../../rows/cell-format"
@@ -26,11 +26,7 @@ export const FiguresBlock = (props: RenderOf<typeof figuresBlock>): ReactNode =>
             placeholder={{}}
             onRetry={read.retry}
             {...(ribbon
-                ? {
-                      frame: (notice: ReactNode) => (
-                          <SurfaceCard ariaLabel={words(props.props.label)}>{notice}</SurfaceCard>
-                      ),
-                  }
+                ? { frame: surfaceFrame({ ariaLabel: words(props.props.label) }) }
                 : {})}
             render={(record, isLoading) => {
                 const label = words(props.props.label)

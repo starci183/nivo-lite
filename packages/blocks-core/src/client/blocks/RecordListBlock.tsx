@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import { SurfaceCard } from "@starci/grammar/common"
+import { surfaceFrame } from "../composites/surfaceFrame"
 import type { recordListBlock } from "../../blocks/record-list.block"
 import { RECORD_ROWS_PLACEHOLDER, recordsView, rowsOf } from "../../rows/rows"
 import { queryOf } from "../../rows/search"
@@ -73,13 +74,7 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
             placeholder={RECORD_ROWS_PLACEHOLDER}
             onRetry={read.retry}
             {...(isCard
-                ? {
-                      frame: (notice: ReactNode) => (
-                          <SurfaceCard label={label} headingLevel={3}>
-                              {notice}
-                          </SurfaceCard>
-                      ),
-                  }
+                ? { frame: surfaceFrame({ label, headingLevel: 3 }) }
                 : {})}
             {...clearSearch}
             render={(items, isLoading) =>

@@ -3,6 +3,7 @@ import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot } from "@nivo-lite/agent-sdk/client"
 import type { ActionHandle, ReadHandle } from "@nivo-lite/agent-sdk/block"
 import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
+import { surfaceFrame } from "../composites/surfaceFrame"
 import type { ListRowData } from "@starci/grammar/common"
 import type { salesAttentionCardBlock } from "../../blocks/sales/attention-card.block"
 import { countedWords } from "../../rows/counted-words"
@@ -119,11 +120,7 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
             labels={labels}
             placeholder={PLACEHOLDER}
             onRetry={() => retryReads(props)}
-            frame={(notice) => (
-                <SurfaceCard label={words(props.props.label)} headingLevel={3}>
-                    {notice}
-                </SurfaceCard>
-            )}
+            frame={surfaceFrame({ label: words(props.props.label), headingLevel: 3 })}
             render={(items, isLoading) => (
                 <SurfaceCard
                     kind="list"

@@ -15,12 +15,10 @@ export const MasterDetailBlock = (props: RenderOf<typeof masterDetailBlock>): Re
             kind="main-rail"
             primary={list}
             rail={
-                detail === null ? (
+                detail ?? (
                     <SurfaceCard ariaLabel={title}>
                         <EmptyNotice message={title} description={words(props.props.emptyBody)} />
                     </SurfaceCard>
-                ) : (
-                    detail
                 )
             }
             railWidth="wide"

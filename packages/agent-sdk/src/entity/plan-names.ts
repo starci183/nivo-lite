@@ -72,13 +72,13 @@ export const normalizeSql = (text: string): string =>
         .replace(/(?:public|extensions)\./g, "")
         .replace(CAST, "")
         .replace(CAST_WORDS, "")
-        .replace(/\[\]/g, "")
+        .replaceAll(/\[\]/g, "")
         .replace(OPCLASS, "")
         .replace(/["()\s]/g, "")
 
 /** The quoted literals of a CHECK definition: the values an enum field may take. */
 export const literalsOf = (definition: string): ReadonlyArray<string> =>
-    (definition.match(/'(?:[^']|'')*'/g) ?? []).map((quoted) => quoted.slice(1, -1).replace(/''/g, "'"))
+    (definition.match(/'(?:[^']|'')*'/g) ?? []).map((quoted) => quoted.slice(1, -1).replaceAll(/''/g, "'"))
 
 /** The `<= n` bound of a CHECK definition (a text length), or null. */
 export const limitOf = (definition: string): number | null => {

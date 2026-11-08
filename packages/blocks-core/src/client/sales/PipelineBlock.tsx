@@ -1,7 +1,8 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ReadHandle } from "@nivo-lite/agent-sdk/block"
-import { Board, EmptyNotice, Section, SurfaceCard, Text } from "@starci/grammar/common"
+import { Board, EmptyNotice, Section, Text } from "@starci/grammar/common"
+import { surfaceFrame } from "../composites/surfaceFrame"
 import type { BoardColumn, BoardMove } from "@starci/grammar/common"
 import type { salesPipelineBlock } from "../../blocks/sales/pipeline.block"
 import { announceOf, boardColumnsOf } from "../../rows/board-rows"
@@ -129,7 +130,7 @@ export const PipelineBlock = (props: Props): ReactNode => {
         >
             <SlotView
                 slot={cards}
-                frame={(notice) => <SurfaceCard headers={headers}>{notice}</SurfaceCard>}
+                frame={surfaceFrame({ headers })}
                 labels={labels}
                 placeholder={NO_CARDS}
                 onRetry={props.slots.rows.retry}

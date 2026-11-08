@@ -13,7 +13,7 @@ export const foldText = (text: string): string =>
         .replace(/[^a-z0-9]+/gu, " ")
         .trim()
 
-const compact = (text: string): string => foldText(text).replace(/ /gu, "")
+const compact = (text: string): string => foldText(text).replaceAll(/ /gu, "")
 
 /** Whether the folded text names the folded name as whole words; a name shorter than two letters is never named. */
 export const mentionsName = (text: string, name: string | null | undefined): boolean => {

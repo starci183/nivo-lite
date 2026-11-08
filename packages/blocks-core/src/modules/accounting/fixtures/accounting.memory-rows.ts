@@ -33,11 +33,11 @@ export const matches = (row: RecordRow, where: FilterExpr | undefined): boolean 
 export const compareBy =
     (order: OrderBy) =>
     (a: RecordRow, b: RecordRow): number =>
-        order.reduce(
-            (decided, [field, direction]) =>
-                decided !== 0 ? decided : signOf(valueOf(a, field), valueOf(b, field)) * (direction === "asc" ? 1 : -1),
-            0,
-        )
+        order.reduce((decided, [field, direction]) => {
+            if (decided !== 0) return decided
+            const sign = direction === "asc" ? 1 : -1
+            return signOf(valueOf(a, field), valueOf(b, field)) * sign
+        }, 0)
 
 /** The fields of a record of data limited to the selected ones. */
 export const pick = (data: Readonly<Record<string, unknown>>, select: ReadonlyArray<string>): Record<string, unknown> =>

@@ -64,7 +64,10 @@ interface AsidePanesProps {
  * aside runs the whole height at the end, with a divider on its start edge), and only the main pane is the well, where the blocks float.
  * Below the wide breakpoint there is no aside column: its content is the first block of the well, under the tabs.
  */
-const AsidePanes = (props: AsidePanesProps): ReactNode => (
+const AsidePanes = (props: AsidePanesProps): ReactNode => {
+    const fact = props.count === "" ? {} : { fact: props.count }
+    const status = props.count === "" ? {} : { status: <Badge tone="accent">{props.count}</Badge> }
+    return (
     <PaneGrid
         label={props.label}
         areas={{
@@ -86,7 +89,7 @@ const AsidePanes = (props: AsidePanesProps): ReactNode => (
                     <SurfaceCard
                         label={props.label}
                         headingLevel={2}
-                        {...(props.count === "" ? {} : { fact: props.count })}
+                        {...fact}
                     >
                         {props.aside}
                     </SurfaceCard>
@@ -97,14 +100,15 @@ const AsidePanes = (props: AsidePanesProps): ReactNode => (
                 <PaneSection align="center">
                     <PaneHeader
                         title={props.label}
-                        {...(props.count === "" ? {} : { status: <Badge tone="accent">{props.count}</Badge> })}
+                        {...status}
                     />
                 </PaneSection>
                 <PaneSection grow>{props.aside}</PaneSection>
             </Pane>
         )}
     </PaneGrid>
-)
+    )
+}
 
 /** What the frame takes: the three regions, and what the aside count reads. */
 export interface AsideFrameProps {

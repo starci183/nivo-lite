@@ -5,8 +5,8 @@ import { plainOf } from "./claims.policy"
 const NOT_LETTER = String.raw`(?![\p{L}\p{N}])`
 /** A number with an optional decimal part, then the unit word. */
 const AMOUNT = String.raw`(\d+(?:[.,]\d+)?)\s*`
-const MILLION_WORDS = String.raw`(?:${wordListOf("unitMillion").join("|")})`
-const THOUSAND_WORDS = String.raw`(?:${wordListOf("unitThousand").join("|")})`
+const MILLION_WORDS = `(?:${wordListOf("unitMillion").join("|")})`
+const THOUSAND_WORDS = `(?:${wordListOf("unitThousand").join("|")})`
 const MILLION = new RegExp(`${AMOUNT}${MILLION_WORDS}${NOT_LETTER}`, "gu")
 const THOUSAND = new RegExp(`${AMOUNT}${THOUSAND_WORDS}${NOT_LETTER}`, "gu")
 const PLAIN = /\d{1,3}(?:[.,]\d{3})+(?!\d)|\d{4,}/gu

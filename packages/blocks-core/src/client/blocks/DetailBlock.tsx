@@ -16,6 +16,7 @@ import {
     Text,
     Timeline,
 } from "@starci/grammar/common"
+import { surfaceFrame } from "../composites/surfaceFrame"
 import type { detailBlock } from "../../blocks/detail.block"
 import { cellContextOf } from "../../rows/cell-format"
 import type { CellContext } from "../../rows/cell-format"
@@ -301,11 +302,7 @@ export const DetailBlock = (props: RenderOf<typeof detailBlock>): ReactNode => {
             labels={labels}
             placeholder={{}}
             onRetry={read.retry}
-            frame={(notice) => (
-                <SurfaceCard label={words(props.props.label)} headingLevel={2}>
-                    {notice}
-                </SurfaceCard>
-            )}
+            frame={surfaceFrame({ label: words(props.props.label), headingLevel: 2 })}
             render={(record, isLoading) => (
                 <DetailBody
                     record={record}

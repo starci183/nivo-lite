@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import { Avatar, Badge, ListBox, RelativeTime, Stack, SurfaceCard } from "@starci/grammar/common"
+import { surfaceFrame } from "../composites/surfaceFrame"
 import type { BadgeTone, FilterFields, ListBoxItem } from "@starci/grammar/common"
 import type { inboxBlock } from "../../blocks/chatbot/inbox.block"
 import { countsView, tabEntriesOf } from "../../rows/filter-tabs"
@@ -118,11 +119,7 @@ export const InboxList = (props: InboxListProps): ReactNode => {
             labels={labels}
             placeholder={[]}
             onRetry={read.retry}
-            frame={(notice: ReactNode) => (
-                <SurfaceCard ariaLabel={label} headers={headers}>
-                    {notice}
-                </SurfaceCard>
-            )}
+            frame={surfaceFrame({ ariaLabel: label, headers })}
             {...(searched === null
                 ? {}
                 : {
