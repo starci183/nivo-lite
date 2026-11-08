@@ -54,16 +54,14 @@ export const TeamChatRoomHead = (props: TeamChatRoomHeadProps) => {
             {...(props.canGoBack ? { back: { label: props.copy.back, onPress: props.onBack } } : {})}
             isLoading={props.isWaiting}
             actions={
-                <>
-                    {props.isMuted === null ? null : (
-                        <IconButton
-                            intent="neutral"
-                            source={nivoIconSource(props.isMuted ? "muted" : "unmuted", "leading")}
-                            label={props.isMuted ? props.copy.unmute : props.copy.mute}
-                            onPress={props.onToggleMute}
-                        />
-                    )}
-                </>
+                props.isMuted === null ? null : (
+                    <IconButton
+                        intent="neutral"
+                        source={nivoIconSource(props.isMuted ? "muted" : "unmuted", "leading")}
+                        label={props.isMuted ? props.copy.unmute : props.copy.mute}
+                        onPress={props.onToggleMute}
+                    />
+                )
             }
         />
     )

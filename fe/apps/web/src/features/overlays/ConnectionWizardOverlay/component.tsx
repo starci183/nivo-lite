@@ -169,7 +169,7 @@ interface WizardBodyProps {
     readonly wizard: KindWizardProps | null
 }
 const WizardBody = (props: WizardBodyProps) =>
-    props.wizard === null ? null : <>{KIND_WIZARDS[props.wizard.target.kind](props.wizard)}</>
+    props.wizard === null ? null : KIND_WIZARDS[props.wizard.target.kind](props.wizard)
 
 /** The wizard drawer of every provider: one Drawer, one wizard chosen by the provider's kind. */
 export const ConnectionWizardOverlayBase = (props: ConnectionWizardOverlayBaseProps) => {

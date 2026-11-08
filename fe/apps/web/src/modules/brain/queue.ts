@@ -117,8 +117,10 @@ export const queueEntryOfFinding = (
                           title: words.inUseTitle(card.inUse.value),
                           description: card.inUse.sourceTitle === null ? "" : words.inUseSource(card.inUse.sourceTitle),
                       },
-            actions: card.actions.filter((action) => !MENU_ACTIONS.has(action.id)).map(actionOfCard),
-            menu: card.actions.filter((action) => MENU_ACTIONS.has(action.id)).map(actionOfCard),
+            actions: card.actions
+                .filter((action) => !MENU_ACTIONS.has(action.id))
+                .map((action) => actionOfCard(action)),
+            menu: card.actions.filter((action) => MENU_ACTIONS.has(action.id)).map((action) => actionOfCard(action)),
             footnote: null,
         },
         aside,

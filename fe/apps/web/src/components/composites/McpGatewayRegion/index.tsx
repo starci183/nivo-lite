@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import {
     Button,
     Cluster,
@@ -168,17 +169,14 @@ const gatewayItemOf = (row: McpGatewayRow, isLoading: boolean): ListRowData => {
  * The workspace's MCP gateway: its connectors with their pinned tools and the approve and check commands, each agent's grants,
  * and the masked audit log.
  */
-export const McpGatewayRegion = (props: McpGatewayRegionProps) => (
-    <>
-        {props.view.cards.map((card) => (
-            <SurfaceCard
-                kind="list"
-                key={card.label}
-                label={card.label}
-                isLoading={props.isLoading}
-                empty={<EmptyNotice message={card.emptyMessage} description={card.emptyDescription} />}
-                items={card.rows.map((row) => gatewayItemOf(row, props.isLoading))}
-            />
-        ))}
-    </>
-)
+export const McpGatewayRegion = (props: McpGatewayRegionProps): ReactNode =>
+    props.view.cards.map((card) => (
+        <SurfaceCard
+            kind="list"
+            key={card.label}
+            label={card.label}
+            isLoading={props.isLoading}
+            empty={<EmptyNotice message={card.emptyMessage} description={card.emptyDescription} />}
+            items={card.rows.map((row) => gatewayItemOf(row, props.isLoading))}
+        />
+    ))

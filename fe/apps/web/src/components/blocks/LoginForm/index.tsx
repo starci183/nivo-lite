@@ -62,7 +62,7 @@ export const LoginForm = (props: LoginFormProps) => {
         }),
         info: initialInfo(props.notice, t("noticeReset"), t("noticeConfirmed")),
     }))
-    const [isGooglePending, setGooglePending] = useState(false)
+    const [isGooglePending, setIsGooglePending] = useState(false)
     const [isPasswordPending, startPassword] = useTransition()
     const [, startResend] = useTransition()
     const invite = inviteOfNext(props.next)
@@ -89,14 +89,14 @@ export const LoginForm = (props: LoginFormProps) => {
     })
     const google = () => {
         setFeedback({ canResend: false })
-        setGooglePending(true)
+        setIsGooglePending(true)
         void auth.startOAuth(props.next).then((outcome) => {
             if (outcome.success && outcome.data !== undefined) {
                 window.location.assign(outcome.data.url)
                 return
             }
             setFeedback({ error: a("errGeneric"), canResend: false })
-            setGooglePending(false)
+            setIsGooglePending(false)
         })
     }
     const resend = async () => {

@@ -36,37 +36,33 @@ const previewOf = (tile: Pick<VideoMediaTile, "url" | "kind" | "name">) => {
 }
 
 const sourcesOf = (props: VideoInputsFormProps) => {
-    return (
-        <>
-            {props.sources.length === 0 ? (
-                <Section
-                    isLoading={props.isLoading}
-                    title={props.sourcesHeading}
-                    description={props.sourcesHint}
-                    headingLevel={3}
-                >
-                    {props.isLoading ? null : <EmptyNotice message={props.sourcesEmpty} />}
-                </Section>
-            ) : (
-                <CheckboxGroup
-                    isLoading={props.isLoading}
-                    label={props.sourcesHeading}
-                    description={props.sourcesHint}
-                    isDisabled={!props.canEdit}
-                    value={props.sourceIds}
-                    options={props.sources.map((source) => ({
-                        value: source.value,
-                        label: source.label,
-                        description: (
-                            <Text isLoading={props.isLoading} as="span" size="xs" tone="muted" overflow="clamp-2">
-                                {source.excerpt}
-                            </Text>
-                        ),
-                    }))}
-                    onValueChange={props.on.sourceIds}
-                />
-            )}
-        </>
+    return props.sources.length === 0 ? (
+        <Section
+            isLoading={props.isLoading}
+            title={props.sourcesHeading}
+            description={props.sourcesHint}
+            headingLevel={3}
+        >
+            {props.isLoading ? null : <EmptyNotice message={props.sourcesEmpty} />}
+        </Section>
+    ) : (
+        <CheckboxGroup
+            isLoading={props.isLoading}
+            label={props.sourcesHeading}
+            description={props.sourcesHint}
+            isDisabled={!props.canEdit}
+            value={props.sourceIds}
+            options={props.sources.map((source) => ({
+                value: source.value,
+                label: source.label,
+                description: (
+                    <Text isLoading={props.isLoading} as="span" size="xs" tone="muted" overflow="clamp-2">
+                        {source.excerpt}
+                    </Text>
+                ),
+            }))}
+            onValueChange={props.on.sourceIds}
+        />
     )
 }
 

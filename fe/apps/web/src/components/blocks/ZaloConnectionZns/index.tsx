@@ -17,7 +17,7 @@ export const ZaloConnectionZns = (props: ZaloConnectionZnsProps) => {
     const t = useTranslations("zaloConnection")
     const slotLabels = useSlotLabels()
     const zns = useZnsRenewal(props.connectionId)
-    const [isOpen, setOpen] = useState(false)
+    const [isOpen, setIsOpen] = useState(false)
     const templateId = ("items" in zns.slot ? zns.slot.items : undefined)?.templateId ?? ""
     const refusal = useConnectionRefusal()
     if (refusal !== undefined) return null
@@ -45,7 +45,7 @@ export const ZaloConnectionZns = (props: ZaloConnectionZnsProps) => {
                 canEdit: zns.canEdit,
                 isPending: zns.isSaving,
             }}
-            on={{ retry: zns.reload, change: zns.change, save: () => void zns.save(), toggle: setOpen }}
+            on={{ retry: zns.reload, change: zns.change, save: () => void zns.save(), toggle: setIsOpen }}
         />
     )
 }

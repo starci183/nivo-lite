@@ -74,7 +74,7 @@ const isProposal = (doc: PublicDocument): boolean =>
 
 /** The proposals waiting for the owner. */
 export const proposalsOf = (docs: ReadonlyArray<PublicDocument>): ReadonlyArray<PublicDocument> =>
-    docs.filter(isProposal)
+    docs.filter((doc) => isProposal(doc))
 
 /** The documents the Public documents tab lists: everything not archived and not still a proposal in the queue. */
 export const listedPublicDocs = (docs: ReadonlyArray<PublicDocument>): ReadonlyArray<PublicDocument> =>

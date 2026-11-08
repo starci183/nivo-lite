@@ -26,7 +26,7 @@ export const AuthoritySectionsBase = (props: AuthoritySectionsBaseProps) => (
         selectionIndicator="none"
         selectedIds={props.props.selectedId === null ? [] : [props.props.selectedId]}
         onAction={props.on.select}
-        onSelectionChange={(ids) => ids.slice(0, 1).forEach(props.on.select)}
+        onSelectionChange={(ids) => ids.slice(0, 1).forEach((id) => props.on.select(id))}
         items={props.props.rows.map((row) => ({ id: row.id, label: row.title, description: row.description }))}
     />
 )

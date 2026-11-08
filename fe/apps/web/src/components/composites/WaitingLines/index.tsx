@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { Text } from "@starci/grammar/common"
 
 /** One waiting line, with the id that keys it. */
@@ -13,12 +14,9 @@ type WaitingLinesProps = {
 }
 
 /** Draws waiting lines while a redirect target is found. */
-export const WaitingLines = (props: WaitingLinesProps) => (
-    <>
-        {props.rows.map((row) => (
-            <Text key={row.id} isLoading={props.isLoading}>
-                {row.text}
-            </Text>
-        ))}
-    </>
-)
+export const WaitingLines = (props: WaitingLinesProps): ReactNode =>
+    props.rows.map((row) => (
+        <Text key={row.id} isLoading={props.isLoading}>
+            {row.text}
+        </Text>
+    ))

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { Badge } from "@starci/grammar/common"
 import type { AdminBadgeView } from "@/hooks/admin"
 
@@ -9,17 +10,14 @@ type AdminBadgesProps = {
 }
 
 /** Draws a run of badges, each in the tone of its status. */
-export const AdminBadges = (props: AdminBadgesProps) => (
-    <>
-        {props.badges.map((entry) => (
-            <Badge
-                key={entry.id}
-                tone={entry.tone}
-                isLoading={props.isLoading === true}
-                {...(entry.isDot === undefined ? {} : { isDot: entry.isDot })}
-            >
-                {entry.label}
-            </Badge>
-        ))}
-    </>
-)
+export const AdminBadges = (props: AdminBadgesProps): ReactNode =>
+    props.badges.map((entry) => (
+        <Badge
+            key={entry.id}
+            tone={entry.tone}
+            isLoading={props.isLoading === true}
+            {...(entry.isDot === undefined ? {} : { isDot: entry.isDot })}
+        >
+            {entry.label}
+        </Badge>
+    ))
