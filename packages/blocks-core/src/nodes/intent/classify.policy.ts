@@ -29,7 +29,7 @@ const WITH_UNIT = new RegExp(
     "u",
 )
 const CURRENCY_TAIL = new RegExp(String.raw`(?:${alternation("currencyTail")})\s*$`, "u")
-const MILLION_UNIT = new RegExp(String.raw`(?:${alternation("unitMillion")})$`, "u")
+const MILLION_UNIT = new RegExp(`(?:${alternation("unitMillion")})$`, "u")
 
 /** The pending messages of a batch: one per non-blank line. */
 export const messagesOf = (text: string): ReadonlyArray<string> => text.split("\n").filter((line) => line.trim() !== "")

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { SurfaceCard } from "@starci/grammar/common"
+import { surfaceFrame } from "../composites/surfaceFrame"
 import type { FilterFields } from "@starci/grammar/common"
 import type { listCardBlock } from "../../blocks/list-card.block"
 import { countsView, moreLabelOf, selectedTab, tabEntriesOf, tabParamValue } from "../../rows/filter-tabs"
@@ -61,11 +62,7 @@ export const ListCardBlock = (props: RenderOf<typeof listCardBlock>): ReactNode 
             labels={labels}
             placeholder={RECORD_ROWS_PLACEHOLDER}
             onRetry={read.retry}
-            frame={(notice: ReactNode) => (
-                <SurfaceCard {...name} headers={headers}>
-                    {notice}
-                </SurfaceCard>
-            )}
+            frame={surfaceFrame({ ...name, headers })}
             {...(searched === null
                 ? {}
                 : {

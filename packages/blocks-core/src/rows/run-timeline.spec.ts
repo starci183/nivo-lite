@@ -150,7 +150,7 @@ describe("runStepsOf", () => {
 
 describe("RUN_PLACEHOLDER and runWithSteps", () => {
     it("holds steps with the geometry of settled ones", () => {
-        expect(RUN_PLACEHOLDER.steps.length).toBe(3)
+        expect(RUN_PLACEHOLDER.steps).toHaveLength(3)
         expect(runStepsOf(RUN_PLACEHOLDER, CONTEXT).every((row) => row.title !== "")).toBe(true)
     })
 

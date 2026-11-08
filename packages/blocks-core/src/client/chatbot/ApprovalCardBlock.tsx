@@ -33,13 +33,14 @@ interface DraftRunInput {
 interface DraftCardProps {
     readonly proposal: ProposalRow
     readonly slots: CardProps["slots"]
-    readonly maxLength: number
     /** Runs an action on the draft; the card tells the person when it did not go through. */
     readonly onRun: (action: ActionHandle, input: DraftRunInput) => void
 }
 
 /** The card of a draft in the field that changes it. */
 interface DraftEditProps extends DraftCardProps {
+    /** The most characters the changed draft may hold. */
+    readonly maxLength: number
     /** Leaves the field. */
     readonly onClose: () => void
 }
@@ -125,7 +126,7 @@ const DraftCommands = (props: DraftCommandProps): ReactNode => {
 }
 
 /** The card of one draft: what the customer asked, the draft in a quote, a line of guidance, and the commands. */
-const DraftCard = (props: DraftCardProps): ReactNode => {
+const DraftCard = (props: DraftCardProps & { readonly maxLength: number }): ReactNode => {
     const words = useBlockWords()
     const [isEditing, setIsEditing] = useState(false)
     const { proposal } = props
@@ -139,7 +140,7 @@ const DraftCard = (props: DraftCardProps): ReactNode => {
                     </Text>
                 )}
                 {isEditing ? (
-                    <DraftEditForm {...props} onClose={() => setIsEditing(false)} />
+                    <DraftEditForm {...props} maxLength={props.maxLength} onClose={() => setIsEditing(false)} />
                 ) : (
                     <>
                         <Quote text={proposal.text} />

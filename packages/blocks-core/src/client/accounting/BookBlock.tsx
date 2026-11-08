@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
+import { surfaceFrame } from "../composites/surfaceFrame"
 import type { accountingBookBlock } from "../../blocks/accounting/book.block"
 import { bookPeriodOf, bookRecords, bookRowsOf, bookSubtitleOf, phoneCardOf } from "../../rules/accounting/book-view"
 import type { BookRow } from "../../rules/accounting/book-view"
@@ -90,7 +91,7 @@ export const BookBlock = (props: RenderOf<typeof accountingBookBlock>): ReactNod
             labels={labels}
             placeholder={PLACEHOLDER}
             onRetry={props.slots.rows.retry}
-            frame={(notice) => <SurfaceCard {...head}>{notice}</SurfaceCard>}
+            frame={surfaceFrame(head)}
             render={(items, isLoading) => (
                 <SurfaceCard
                     kind="list"

@@ -23,7 +23,7 @@ export const quoteIdent = (name: string): string => {
 /** A single-quoted literal with quotes doubled; control characters (NUL included) are refused. */
 export const quoteLiteral = (value: string): string => {
     if (/\p{Cc}/u.test(value)) throw new EntityRenderError("ENTITY_RENDER_VALUE_INVALID", "control character")
-    return `'${value.replace(/'/g, "''")}'`
+    return `'${value.replaceAll(/'/g, "''")}'`
 }
 
 /** A data key (a declared field or nested key name), refused unless it is a plain word. */

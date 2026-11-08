@@ -88,7 +88,7 @@ describe("moreLabelOf", () => {
 describe("EMPTY_TAB_COUNTS", () => {
     it("keeps every tab with a count of zero", () => {
         const entries = tabEntriesOf("All", SPECS, EMPTY_TAB_COUNTS)
-        expect(entries.length).toBe(SPECS.length + 1)
+        expect(entries).toHaveLength(SPECS.length + 1)
         expect(entries.every((entry) => entry.count === 0)).toBe(true)
     })
 })

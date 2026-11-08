@@ -63,23 +63,15 @@ const errorNotice = (
     retryLabel: string,
     retry: (() => void) | undefined,
     layout: "auto" | "band" | undefined,
-) =>
-    layout === "band" ? (
-        <Alert
-            tone="negative"
-            title={message}
-            {...(description === undefined ? {} : { description })}
-            {...(retry === undefined ? {} : { action: { label: retryLabel, onAction: retry } })}
-        />
-    ) : (
-        <EmptyNotice
-            isError
-            message={message}
-            {...(description === undefined ? {} : { description })}
-            actionLabel={retryLabel}
-            {...(retry === undefined ? {} : { onAction: retry })}
-        />
-    )
+) => {
+    const detail = description === undefined ? {} : { description }
+    if (layout === "band") {
+        const action = retry === undefined ? {} : { action: { label: retryLabel, onAction: retry } }
+        return <Alert tone="negative" title={message} {...detail} {...action} />
+    }
+    const onAction = retry === undefined ? {} : { onAction: retry }
+    return <EmptyNotice isError message={message} {...detail} actionLabel={retryLabel} {...onAction} />
+}
 
 /**
  * Composite: the ONE recipe for a slot's data status. No block writes its own

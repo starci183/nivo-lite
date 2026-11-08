@@ -67,9 +67,10 @@ export const dueSoonOf = (
         const dueMonth = ((month % 12) + 12) % 12
         const twentieth = new Date(Date.UTC(year, month, TAX_DUE_DAY))
         const before = dueMonth === 0 ? 12 : dueMonth
+        const quarter = dueMonth === 0 ? 4 : dueMonth / 3
         const quarterly =
             vatPeriod === "quarterly" && dueMonth % 3 === 0
-                ? item("vat", "quarter", dueMonth === 0 ? 4 : dueMonth / 3, new Date(Date.UTC(year, month + 1, 0)))
+                ? item("vat", "quarter", quarter, new Date(Date.UTC(year, month + 1, 0)))
                 : []
         const vat = vatPeriod === "monthly" ? item("vat", "month", before, twentieth) : quarterly
         return [...vat, ...item("pit", "month", before, twentieth)]
