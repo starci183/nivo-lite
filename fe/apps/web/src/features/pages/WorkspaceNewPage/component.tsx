@@ -1,6 +1,7 @@
 import { Mascot, Page } from "@starci/grammar/common"
 import { WorkspaceCreate } from "@/components/blocks/WorkspaceCreate"
 import { FirstRunStep } from "@/components/frames/FirstRunStep"
+import type { FirstRunRail } from "@/components/frames/FirstRunStep"
 
 /** Copy the /workspaces/new page supplies. */
 export interface WorkspaceNewPageBaseProps {
@@ -8,6 +9,8 @@ export interface WorkspaceNewPageBaseProps {
         /** The accessible name of the first-run steps and their labels, in order. */
         readonly stepsLabel: string
         readonly steps: ReadonlyArray<string>
+        /** The words of the step rail. */
+        readonly rail: FirstRunRail
     }
 }
 
@@ -17,11 +20,12 @@ export const WorkspaceNewPageBase = (props: WorkspaceNewPageBaseProps) => (
         <FirstRunStep
             stepsLabel={props.props.stepsLabel}
             steps={props.props.steps}
+            rail={props.props.rail}
             currentStepId="s0"
             artwork={
                 <Mascot
                     src="/images/entry/onboarding-business.webp"
-                    size="md"
+                    size="sm"
                     loading="eager"
                     assetSlot="onboarding-business"
                     assetSha256="b1bad1b482e9dca0e140479816678846fa4e4c896d4d3532e090f417ea5e11be"

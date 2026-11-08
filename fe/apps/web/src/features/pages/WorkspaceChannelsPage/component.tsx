@@ -1,6 +1,7 @@
 import { Mascot, Page } from "@starci/grammar/common"
 import { OnboardingChannels } from "@/components/blocks/OnboardingChannels"
 import { FirstRunStep } from "@/components/frames/FirstRunStep"
+import type { FirstRunRail } from "@/components/frames/FirstRunStep"
 import { ConnectionWizardOverlay } from "@/features/overlays/ConnectionWizardOverlay"
 
 /** Copy the /workspaces/new/channels page supplies. */
@@ -9,6 +10,8 @@ export interface WorkspaceChannelsPageBaseProps {
         /** The accessible name of the first-run steps and their labels, in order. */
         readonly stepsLabel: string
         readonly steps: ReadonlyArray<string>
+        /** The words of the step rail. */
+        readonly rail: FirstRunRail
     }
 }
 
@@ -18,11 +21,12 @@ export const WorkspaceChannelsPageBase = (props: WorkspaceChannelsPageBaseProps)
         <FirstRunStep
             stepsLabel={props.props.stepsLabel}
             steps={props.props.steps}
+            rail={props.props.rail}
             currentStepId="s1"
             artwork={
                 <Mascot
                     src="/images/entry/onboarding-channels.webp"
-                    size="md"
+                    size="sm"
                     loading="eager"
                     assetSlot="onboarding-channels"
                     assetSha256="e0153ebab0414d8c75209691cb02a5c755ba4b6a75283894d10f04c8b2b4d88e"

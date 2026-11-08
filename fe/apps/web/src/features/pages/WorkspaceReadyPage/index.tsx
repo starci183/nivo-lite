@@ -17,6 +17,12 @@ export const WorkspaceReadyPage = async (): Promise<ReactElement> => {
             props={{
                 stepsLabel: t("welcomeStepsLabel"),
                 steps: [t("trackStep1"), t("trackStep2"), t("trackStep3")],
+                rail: {
+                    title: t("railTitle"),
+                    text: t("railText"),
+                    descriptions: [t("trackStep1Text"), t("trackStep2Text"), t("trackStep3Text")],
+                    hint: t("railHint"),
+                },
             }}
         />
     )

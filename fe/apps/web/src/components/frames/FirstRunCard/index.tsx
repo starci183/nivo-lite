@@ -34,23 +34,21 @@ export const FirstRunCard = (props: FirstRunCardProps) => {
     )
     if (props.collection !== undefined) {
         return (
-            <Stack gap="section" measure="form">
-                <SurfaceCard
-                    ariaLabel={props.title}
-                    headers={[{ kind: "custom", children: head }]}
-                    footers={[{ kind: "custom", children: actions }]}
-                    {...props.collection}
-                />
-            </Stack>
+            <SurfaceCard
+                ariaLabel={props.title}
+                headers={[{ kind: "custom", children: head }]}
+                footers={[{ kind: "custom", children: actions }]}
+                {...props.collection}
+            />
         )
     }
     return (
-        <SurfaceCard ariaLabel={props.title} measure="form">
-            <Stack gap="section">
-                {head}
-                {props.children}
-                {actions}
-            </Stack>
+        <SurfaceCard
+            ariaLabel={props.title}
+            headers={[{ kind: "custom", children: head }]}
+            footers={[{ kind: "custom", children: actions }]}
+        >
+            {props.children}
         </SurfaceCard>
     )
 }

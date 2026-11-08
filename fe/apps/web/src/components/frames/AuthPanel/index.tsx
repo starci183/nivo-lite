@@ -5,7 +5,7 @@ import { Heading, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 interface AuthPanelProps {
     readonly label: string
     readonly title: string
-    /** The heading level: 2 under a page heading (default), 1 when the card holds the page subject. */
+    /** The heading level: 1 when the card holds the page subject (default, the centred entry page has no other heading), 2 under a page heading. */
     readonly level?: 1 | 2
     readonly text?: string
     readonly children: ReactNode
@@ -18,7 +18,7 @@ export const AuthPanel = (props: AuthPanelProps) => (
     <SurfaceCard ariaLabel={props.label}>
         <Stack gap="region">
             <Stack gap="inline">
-                <Heading level={props.level ?? 2} {...(props.isLoading === true ? { isLoading: true } : {})}>
+                <Heading level={props.level ?? 1} {...(props.isLoading === true ? { isLoading: true } : {})}>
                     {props.title}
                 </Heading>
                 {props.text === undefined ? null : (
