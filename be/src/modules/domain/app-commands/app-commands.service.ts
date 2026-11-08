@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { AppCommandResult, OptionalAppCommand } from "./app-commands.contracts"
 import { AppCommandEntity } from "./persistence/entities"

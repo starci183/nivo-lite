@@ -1,12 +1,12 @@
 import type { AgentHandlerEnding } from "@modules/domain/agent-work"
 import type { AgentWakeInbound } from "@modules/domain/agent-wake-rules"
-import { isIntentTrigger } from "@modules/domain/intent-contracts"
-import type {
-    InboundTrust,
-    IntentContract,
-    IntentInputPart,
-    IntentTrigger,
-    TurnContracts,
+import {
+    isIntentTrigger,
+    type InboundTrust,
+    type IntentContract,
+    type IntentInputPart,
+    type IntentTrigger,
+    type TurnContracts,
 } from "@modules/domain/intent-contracts"
 
 /** The longest event text a turn is shown; the rest of a payload is left out, never summarized by code. */

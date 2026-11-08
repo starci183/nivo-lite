@@ -2,7 +2,7 @@ import type { GatewayPayable, PayableMatches, PayablePayment } from "./accountin
 import type { PaymentCredit } from "./accounting-gateway.port"
 
 /** Letters and digits only, upper case: how an invoice number is looked for inside a transfer memo. */
-const compact = (text: string): string => text.toUpperCase().replace(/[^0-9A-Z]/gu, "")
+const compact = (text: string): string => text.toUpperCase().replaceAll(/[^0-9A-Z]/gu, "")
 
 /** Whether the memo of an outgoing payment names the invoice number (punctuation and spacing ignored). */
 const namesInvoice = (debit: PaymentCredit, payable: GatewayPayable): boolean => {

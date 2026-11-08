@@ -1,8 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { McpGatewayService } from "@modules/domain/mcp-gateway"
-import type { CapabilityRole, GatewayCaller, GatewayJson } from "@modules/domain/mcp-gateway"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import {
+    McpGatewayService,
+    type CapabilityRole,
+    type GatewayCaller,
+    type GatewayJson,
+} from "@modules/domain/mcp-gateway"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import type { DeskConnections, GatewayPayable } from "./accounting-desk.contracts"
 import type {
     AccountingGateway,

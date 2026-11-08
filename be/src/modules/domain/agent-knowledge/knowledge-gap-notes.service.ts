@@ -1,11 +1,15 @@
 import { Injectable } from "@nestjs/common"
 import { factSlugOf } from "@modules/domain/brain-facts"
 import { KnowledgeSearchService } from "@modules/domain/knowledge"
-import { FACT_ANSWERS, KnowledgeGapsService, answers, keywordsOf } from "@modules/domain/knowledge-gaps"
-import type { MaybeGapRecorded } from "@modules/domain/knowledge-gaps"
+import {
+    FACT_ANSWERS,
+    KnowledgeGapsService,
+    answers,
+    keywordsOf,
+    type MaybeGapRecorded,
+} from "@modules/domain/knowledge-gaps"
 import { GapProposalsService } from "@modules/domain/public-documents"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentKnowledgeLogEvent } from "./agent-knowledge.log-events"
 import type { GapNote, KnowledgeView } from "./agent-knowledge.contracts"
 import { KnowledgeRecallService } from "./knowledge-recall.service"

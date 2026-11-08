@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { ApprovalRequestsService } from "@modules/domain/approval-requests"
-import type { BranchApproval, OpenApprovalParams } from "@modules/domain/approval-requests"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
-import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
-import type { DecisionView } from "./agent-graph-decisions.service"
+import {
+    ApprovalRequestsService,
+    type BranchApproval,
+    type OpenApprovalParams,
+} from "@modules/domain/approval-requests"
+import { InjectIds, type Ids } from "@modules/platform/ids"
+import { AgentGraphDecisionsService, type DecisionView } from "./agent-graph-decisions.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import type { BranchApprover } from "./agent-graphs.contracts"
 import { branchApprovalOf } from "./policies/branch-approver.policy"

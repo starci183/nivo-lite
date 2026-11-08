@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { AgentTurnsOptions } from "./agent-turns.options"
 import type { AgentTurnRunner, IntentFiles } from "./agent-turns.port"
 

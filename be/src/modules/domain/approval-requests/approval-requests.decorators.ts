@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { ApprovalAgentOwners } from "./approval-requests.port"
 
 /** Token of the agent owners port; the app root binds it to the agents capability. */

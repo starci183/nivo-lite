@@ -1,9 +1,7 @@
 import { randomBytes } from "node:crypto"
 import { Injectable } from "@nestjs/common"
-import { IsNull } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { IsNull, type EntityManager } from "typeorm"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { EventsService } from "@modules/domain/events"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
@@ -145,7 +143,7 @@ export class ApiKeysService {
             order: { createdAt: "DESC" },
             take: 100,
         })
-        return rows.map(toView)
+        return rows.map((item) => toView(item))
     }
 
     /**

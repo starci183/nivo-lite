@@ -1,29 +1,21 @@
 import { Injectable } from "@nestjs/common"
-import { InjectInstallations } from "@modules/domain/agents"
-import type { InstallationDirectory } from "@modules/domain/agents"
+import { InjectInstallations, type InstallationDirectory } from "@modules/domain/agents"
 import { DirectGenerationService } from "@modules/domain/ai-generations"
 import { BrainFactsService } from "@modules/domain/brain-facts"
-import { IntentRegistryService, dataTagOf } from "@modules/domain/intent-contracts"
-import type { FrameAction } from "@modules/domain/intent-contracts"
+import { IntentRegistryService, dataTagOf, type FrameAction } from "@modules/domain/intent-contracts"
 import { wakeSources } from "@modules/domain/agent-work"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import { ModulesService } from "@modules/domain/modules"
-import type { SetupApplier } from "@modules/domain/modules"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { ModulesService, type SetupApplier } from "@modules/domain/modules"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { parseJsonText } from "@modules/platform/primitives"
 import { setupContractsSchema } from "./agent-graph-contract-setup.schema"
 import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
-import { AgentGraphsService } from "./agent-graphs.service"
-import type { GraphState } from "./agent-graphs.service"
+import { AgentGraphsService, type GraphState } from "./agent-graphs.service"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
 import { applyContract } from "./policies/contract-patch.policy"
-import { contractsFromSetup, factLineOf } from "./policies/contract-setup.policy"
-import type { ContractSetupFact } from "./policies/contract-setup.policy"
-import { eventTypesOf, reachableIntents } from "./policies/intent-of-step.policy"
-import type { ReachedIntent } from "./policies/intent-of-step.policy"
+import { contractsFromSetup, factLineOf, type ContractSetupFact } from "./policies/contract-setup.policy"
+import { eventTypesOf, reachableIntents, type ReachedIntent } from "./policies/intent-of-step.policy"
 import { unheldRulesOf } from "./policies/unheld-rules.policy"
 
 /** The language the proposals are written in, as the graph is seeded. */
@@ -113,7 +105,7 @@ export class AgentGraphContractSetupService {
                         this.catalog.get("intentContracts.setup.intents", {}, LOCALE),
                         ...offered.map((entry) => `- ${entry.intent}: ${entry.label}`),
                         this.catalog.get("intentContracts.setup.facts", {}, LOCALE),
-                        dataTagOf("brain_facts", known.map(factLineOf).join("\n")),
+                        dataTagOf("brain_facts", known.map((item) => factLineOf(item)).join("\n")),
                     ].join("\n"),
                 },
             ],

@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { Performed, Prepared, Proposal, WorkContext, WorkItem, WorkPerformer } from "@modules/domain/decisions"
 import { SupplierPayablesService } from "@modules/domain/supplier-payables"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { AccountingError, AccountingErrorCode } from "./errors/accounting.error"
 
 const textOf = (value: unknown): string => (typeof value === "string" ? value : "")

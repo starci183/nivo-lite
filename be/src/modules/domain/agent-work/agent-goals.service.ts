@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { In, type EntityManager } from "typeorm"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AgentWorkAccessService } from "./agent-work-access.service"
 import { toGoalRecord } from "./agent-work.mapper"
@@ -29,7 +27,7 @@ export class AgentGoalsService {
             order: { createdAt: "DESC" },
             take: GOALS_MAX,
         })
-        return rows.map(toGoalRecord)
+        return rows.map((item) => toGoalRecord(item))
     }
 
     /**

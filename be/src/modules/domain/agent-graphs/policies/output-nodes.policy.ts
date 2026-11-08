@@ -1,5 +1,4 @@
-import { GATEWAY_CALL_ACTION } from "@modules/domain/authority-rules"
-import type { OutputNodes } from "@modules/domain/authority-rules"
+import { GATEWAY_CALL_ACTION, type OutputNodes } from "@modules/domain/authority-rules"
 import type { GraphDocument, GraphNode } from "../agent-graphs.contracts"
 
 /** The action a customer reply is. */
@@ -15,5 +14,9 @@ export const outputNodesOf = (document: GraphDocument): OutputNodes => {
     const output = document.nodes.find((node) => node.step === "write" && node.action === GATEWAY_CALL_ACTION)
     const key = output?.key ?? ""
     const approval = document.nodes.find((node) => node.step === "approval" && node.next.includes(key))
-    return { output: key, approval: approval?.key ?? "", reply: document.nodes.find(isReply)?.key ?? "" }
+    return {
+        output: key,
+        approval: approval?.key ?? "",
+        reply: document.nodes.find((item) => isReply(item))?.key ?? "",
+    }
 }

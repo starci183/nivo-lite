@@ -1,9 +1,7 @@
 import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
-import { EntityEngineService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { EntityEngineService, type ScopedTx } from "@modules/domain/entity-engine"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentGraphRecordsService } from "./agent-graph-records.service"
 import { chunksOf, jsonOf } from "./agent-graphs.mapper"
@@ -243,7 +241,7 @@ export class AgentGraphsService {
     /** The versions of the agent, newest first. */
     versionsOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<GraphVersionView>> {
         return this.engine.scoped(workspaceId, async (tx) =>
-            (await this.records.versionsOf(tx, agentId, VERSION_LIMIT)).map(viewOf),
+            (await this.records.versionsOf(tx, agentId, VERSION_LIMIT)).map((item) => viewOf(item)),
         )
     }
 

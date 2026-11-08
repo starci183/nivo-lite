@@ -1,5 +1,13 @@
-import { MAX_CONDITION_DEPTH, MAX_CONDITION_TERMS } from "../agent-graphs.contracts"
-import type { Condition, FactRegistry, FactSpec, FactValue, FactValues, Say } from "../agent-graphs.contracts"
+import {
+    MAX_CONDITION_DEPTH,
+    MAX_CONDITION_TERMS,
+    type Condition,
+    type FactRegistry,
+    type FactSpec,
+    type FactValue,
+    type FactValues,
+    type Say,
+} from "../agent-graphs.contracts"
 
 type Comparison = Extract<Condition, { readonly fact: string }>
 type Group = Exclude<Condition, Comparison>
@@ -15,7 +23,7 @@ export const termCount = (condition: Condition): number =>
 
 /** How deep the groups nest: a bare comparison is 0, a group of comparisons is 1. */
 export const conditionDepth = (condition: Condition): number =>
-    isGroup(condition) ? 1 + Math.max(0, ...membersOf(condition).map(conditionDepth)) : 0
+    isGroup(condition) ? 1 + Math.max(0, ...membersOf(condition).map((item) => conditionDepth(item))) : 0
 
 const typeOf = (value: FactValue): FactSpec["type"] => {
     if (typeof value === "number") return "number"
@@ -43,7 +51,7 @@ const comparisonProblem = (term: Comparison, registry: FactRegistry): string | n
 }
 
 const termsOf = (condition: Condition): ReadonlyArray<Comparison> =>
-    "fact" in condition ? [condition] : membersOf(condition).flatMap(termsOf)
+    "fact" in condition ? [condition] : membersOf(condition).flatMap((item) => termsOf(item))
 
 /**
  * Everything wrong with a condition against the registry: depth and term limits, a fact nobody declared, a value of the wrong

@@ -1,9 +1,17 @@
 import { graphVocabulary } from "@modules/domain/intent-contracts"
-import { dataKindOfTool } from "@modules/domain/mcp-gateway"
-import type { DataRight } from "@modules/domain/mcp-gateway"
+import { dataKindOfTool, type DataRight } from "@modules/domain/mcp-gateway"
 import type { Locale } from "@modules/platform/i18n"
-import { MAX_DOES_LENGTH, MAX_TITLE_LENGTH, kindOfStep } from "../agent-graphs.contracts"
-import type { GraphDocument, GraphNode, GraphSource, NodeAnswerKey, Say, ToolUse } from "../agent-graphs.contracts"
+import {
+    MAX_DOES_LENGTH,
+    MAX_TITLE_LENGTH,
+    kindOfStep,
+    type GraphDocument,
+    type GraphNode,
+    type GraphSource,
+    type NodeAnswerKey,
+    type Say,
+    type ToolUse,
+} from "../agent-graphs.contracts"
 import type { SeedAction, SeedModule, SeedRule, SeedTemplate } from "../agent-graphs-seed.contracts"
 import { approverOfRule, branchesFromRule } from "./seed-from-rules.policy"
 

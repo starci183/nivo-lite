@@ -1,7 +1,6 @@
-import { Module } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AGENT_TAG_RIGHTS } from "@modules/domain/agent-work"
 import { AgentTagEffectService } from "./agent-tag-effect.service"
-import type { DynamicModule } from "@nestjs/common"
 import { AgentsQueueModule } from "@modules/queues/agents"
 import { AgentBundleService } from "./agent-bundle.service"
 import { OFFICE_ROOMS_AGENTS } from "@modules/domain/office-rooms"

@@ -1,6 +1,5 @@
-import type { AgentWakeSource, AgentWorkState } from "@modules/domain/agent-work"
+import { type AgentWakeSource, type AgentWorkState, wakeSources } from "@modules/domain/agent-work"
 import { backgroundCapSpent, breakerOpen } from "@modules/domain/agent-wake-rules"
-import { wakeSources } from "@modules/domain/agent-work"
 import type {
     AgentTurnBlock,
     OptionalReadiness,

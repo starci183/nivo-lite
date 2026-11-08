@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { EntityEngineService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { EntityEngineService, type ScopedTx } from "@modules/domain/entity-engine"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { MutationValues } from "@nivo-lite/agent-sdk/mutation"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
@@ -246,13 +244,13 @@ export class AgentRunStoreService {
     /** The steps of a run in order, read through `manager` when the caller routes inside a transaction. */
     stepsOf(workspaceId: string, runId: string, manager?: EntityManager): Promise<ReadonlyArray<RunStepView>> {
         return this.at(workspaceId, manager, async (scoped) =>
-            (await this.records.stepsOf(scoped, runId)).map(stepViewOf),
+            (await this.records.stepsOf(scoped, runId)).map((item) => stepViewOf(item)),
         )
     }
 
     /** The steps of a run as the failure route reads them. */
     async routeStepsOf(workspaceId: string, runId: string, manager?: EntityManager): Promise<ReadonlyArray<RouteStep>> {
-        return (await this.stepsOf(workspaceId, runId, manager)).map(routeStepOf)
+        return (await this.stepsOf(workspaceId, runId, manager)).map((item) => routeStepOf(item))
     }
 
     /** One step of a run, or null. */
@@ -279,7 +277,7 @@ export class AgentRunStoreService {
                 ],
                 limit,
             )
-            return steps.map(stepViewOf)
+            return steps.map((item) => stepViewOf(item))
         })
     }
 

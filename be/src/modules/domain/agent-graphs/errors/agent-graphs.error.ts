@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the agent-graphs capability. */
 export enum AgentGraphsErrorCode {
@@ -25,6 +24,8 @@ export enum AgentGraphsErrorCode {
     BranchNotApplicable = "AGENT_GRAPHS_BRANCH_NOT_APPLICABLE",
     /** A stored record is not the shape its entity declares. */
     RecordUnreadable = "AGENT_GRAPHS_RECORD_UNREADABLE",
+    /** A fact reader did not answer within its time limit. */
+    FactReadTimedOut = "AGENT_GRAPHS_FACT_READ_TIMED_OUT",
 }
 
 /** How each agent-graphs code travels. */
@@ -40,6 +41,7 @@ export const AGENT_GRAPHS_ERROR_KINDS: Record<AgentGraphsErrorCode, ErrorKind> =
     [AgentGraphsErrorCode.RunNotFound]: "not-found",
     [AgentGraphsErrorCode.BranchNotApplicable]: "invalid",
     [AgentGraphsErrorCode.RecordUnreadable]: "internal",
+    [AgentGraphsErrorCode.FactReadTimedOut]: "internal",
 }
 
 /** The one error class of the agent-graphs capability. */

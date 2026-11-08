@@ -8,8 +8,7 @@ import { AgentGraphContractSetupService } from "./agent-graph-contract-setup.ser
 import { AgentGraphPublishService } from "./agent-graph-publish.service"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
-import { AgentGraphsService } from "./agent-graphs.service"
-import type { GraphState } from "./agent-graphs.service"
+import { AgentGraphsService, type GraphState } from "./agent-graphs.service"
 import { applyBranchSetup } from "./policies/branch-setup.policy"
 import { firstGapOf } from "./policies/graph-gaps.policy"
 
@@ -20,9 +19,9 @@ const SEED_LOCALE = "vi"
 const nameKey = (name: string): string =>
     name
         .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
+        .replaceAll(/\p{Diacritic}/gu, "")
         .toLowerCase()
-        .replace(/\s+/g, " ")
+        .replaceAll(/\s+/g, " ")
         .trim()
 
 @Injectable()

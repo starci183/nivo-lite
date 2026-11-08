@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AiTasksService } from "./ai-tasks.service"
 import { NodeImagesService } from "./node-images.service"
 import { NotesService } from "./notes.service"

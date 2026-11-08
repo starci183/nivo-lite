@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectOpenclawGateway } from "@modules/integrations/openclaw"
-import type { GatewayClient } from "@modules/integrations/openclaw"
+import { InjectOpenclawGateway, type GatewayClient } from "@modules/integrations/openclaw"
 import { ABORT_GRACE_MS } from "./agent-turn.policy"
 import type { AgentTurnRequest, AgentTurnResult } from "./agent-turns.contracts"
 import type { AgentTurnRunner } from "./agent-turns.port"

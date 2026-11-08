@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { ModuleProfiles, OptionalAgentText } from "@modules/domain/agents"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
 import { knowledgeFolderOf } from "./knowledge-view.policy"
 
 /** The language the contracts are embedded in, like the rest of the bundle. */

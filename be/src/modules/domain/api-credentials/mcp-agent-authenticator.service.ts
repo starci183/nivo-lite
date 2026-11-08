@@ -1,7 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import { ApiKeysService } from "@modules/domain/api-keys"
-import { IdentityError, IdentityErrorCode } from "@modules/domain/identity"
-import type { CredentialAuthenticator, CredentialMetadata, CredentialPrincipal } from "@modules/domain/identity"
+import {
+    IdentityError,
+    IdentityErrorCode,
+    type CredentialAuthenticator,
+    type CredentialMetadata,
+    type CredentialPrincipal,
+} from "@modules/domain/identity"
 
 @Injectable()
 /**

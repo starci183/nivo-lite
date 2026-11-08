@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { resolveApprovers } from "@modules/domain/approval-requests"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import type { ApproverGroup } from "@modules/domain/authority-rules"
+import { AuthorityRulesService, type ApproverGroup } from "@modules/domain/authority-rules"
 import { McpGatewayService } from "@modules/domain/mcp-gateway"
-import { MemberGrantsService } from "@modules/domain/member-grants"
-import type { DirectoryMember, MemberGrant } from "@modules/domain/member-grants"
+import { MemberGrantsService, type DirectoryMember, type MemberGrant } from "@modules/domain/member-grants"
 import { IntentRegistryService } from "@modules/domain/intent-contracts"
 import { ModulesService } from "@modules/domain/modules"
 import type { CeilingRule, GraphContext, GraphDocument } from "./agent-graphs.contracts"
@@ -63,7 +61,7 @@ export class AgentGraphContextService {
     async contextOf(scope: ContextScope, graph: GraphDocument): Promise<GraphContext> {
         const actions = graph.nodes.flatMap((node) => (node.decide === undefined ? [] : [node.decide.intent]))
         const [catalog, grants, directory] = await Promise.all([
-            this.modules.find(scope.moduleKey),
+            this.modules.find(String(scope.moduleKey)),
             this.gateway.grantsOf(scope.workspaceId, scope.agentId),
             this.members.directory(scope.workspaceId),
         ])

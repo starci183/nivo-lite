@@ -19,7 +19,7 @@ const WHITESPACE = /\s/u
 /** The text without markdown headings and bold marks. */
 export const stripMarkdown = (text: string): string =>
     text
-        .replace(/^#{1,6}\s*/gmu, "")
+        .replaceAll(/^#{1,6}\s*/gmu, "")
         .replaceAll("**", "")
         .trim()
 

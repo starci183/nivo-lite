@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AgentPluginsService } from "./agent-plugins.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-plugins.module-definition"
 

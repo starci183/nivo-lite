@@ -1,7 +1,11 @@
 import { z } from "zod"
 import { graphDocumentSchema, graphRightSchema } from "@modules/domain/agent-graphs"
-import { MAX_PARAMETERS, TEMPLATE_FORMAT, TEMPLATE_KEY_PATTERN } from "./agent-templates.contracts"
-import type { AgentTemplatePackage } from "./agent-templates.contracts"
+import {
+    MAX_PARAMETERS,
+    TEMPLATE_FORMAT,
+    TEMPLATE_KEY_PATTERN,
+    type AgentTemplatePackage,
+} from "./agent-templates.contracts"
 
 const textSchema = z.object({ vi: z.string().max(400), en: z.string().max(400) }).strict()
 

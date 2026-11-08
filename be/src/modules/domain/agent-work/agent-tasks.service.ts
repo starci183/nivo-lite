@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { In, type EntityManager } from "typeorm"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentWorkAccessService } from "./agent-work-access.service"
@@ -37,7 +35,7 @@ export class AgentTasksService {
             order: { nextActionAt: { direction: "ASC", nulls: "LAST" }, createdAt: "ASC" },
             take: TASKS_MAX,
         })
-        return rows.map(toTaskRecord)
+        return rows.map((item) => toTaskRecord(item))
     }
 
     /** Applies the operations of a proposal in order. A wake time the agent asks for is kept between five minutes and seven days ahead. */

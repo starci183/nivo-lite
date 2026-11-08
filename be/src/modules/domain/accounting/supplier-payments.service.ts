@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { WorkItemsService } from "@modules/domain/work-items"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { SupplierPayablesService, supplierPayableKey } from "@modules/domain/supplier-payables"
-import type { SupplierPayableRow } from "@modules/domain/supplier-payables"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { SupplierPayablesService, supplierPayableKey, type SupplierPayableRow } from "@modules/domain/supplier-payables"
 import { eachInOrder } from "@modules/platform/primitives"
 import type {
     GatewayPayable,

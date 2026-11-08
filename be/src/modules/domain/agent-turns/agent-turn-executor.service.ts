@@ -1,11 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { AgentWorkSettingsService } from "@modules/domain/agent-work"
-import type { AgentTurnExecutor, AgentTurnPlan, AgentTurnRun, AgentTurnView } from "@modules/domain/agent-work"
+import {
+    AgentWorkSettingsService,
+    type AgentTurnExecutor,
+    type AgentTurnPlan,
+    type AgentTurnRun,
+    type AgentTurnView,
+} from "@modules/domain/agent-work"
 import { UsageGateService } from "@modules/domain/ai-usage-events"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { InjectAgentTurnRunner } from "./agent-turns.decorators"
 import { stateBlockOf, storedProposalOf, usageKindFor } from "./agent-turn.policy"
 import { AgentTurnsLogEvent } from "./agent-turns.log-events"

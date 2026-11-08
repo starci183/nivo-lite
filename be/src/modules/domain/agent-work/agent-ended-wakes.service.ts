@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AgentWorkLogEvent } from "./agent-work.log-events"

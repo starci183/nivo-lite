@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { EventsService } from "@modules/domain/events"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
 import type { ApprovalReminder, ApprovalResolved } from "./approval-requests.contracts"
 
 /** Who the lines of the tick are written as, and the language they are written in: no person is reading when they are written. */

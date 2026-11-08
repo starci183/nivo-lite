@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AgentKnowledgeLensService } from "./agent-knowledge-lens.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-knowledge.module-definition"
 import { KnowledgeGapNotesService } from "./knowledge-gap-notes.service"

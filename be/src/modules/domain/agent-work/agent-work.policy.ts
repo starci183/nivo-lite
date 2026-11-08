@@ -1,6 +1,5 @@
 import { wakeSources } from "./agent-wake-source.policy"
-import { wakeOriginOf } from "./wake-origin.policy"
-import type { WakeOrigin, WakeOriginInput } from "./wake-origin.policy"
+import { wakeOriginOf, type WakeOrigin, type WakeOriginInput } from "./wake-origin.policy"
 import type { AgentBurstSetting, AgentBurstWindow } from "./agent-work.port"
 import type { AgentWorkOptions } from "./agent-work.options"
 import type { AgentWakeContext, AgentWakeSource, AgentWakeStatus } from "./agent-work.contracts"

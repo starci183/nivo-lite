@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { WorkEngineService } from "@modules/domain/decisions"
-import type { WorkContext } from "@modules/domain/decisions"
+import { WorkEngineService, type WorkContext } from "@modules/domain/decisions"
 import type {
     GatewayPayable,
     HubCardRef,

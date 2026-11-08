@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { AiTasksService } from "./ai-tasks.service"
 import type { AiTasksOptions } from "./ai-tasks.options"
 import type { AiTaskMeter, AiTaskRecall, AiTaskTextGenerator } from "./ai-tasks.port"

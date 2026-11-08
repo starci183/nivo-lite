@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { Installation } from "@modules/domain/agents"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
-import { InjectOpenclawAgentRegistry, agentIdFor } from "@modules/integrations/openclaw"
-import type { AgentRegistryService } from "@modules/integrations/openclaw"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectOpenclawAgentRegistry, agentIdFor, type AgentRegistryService } from "@modules/integrations/openclaw"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentTurnsLogEvent } from "./agent-turns.log-events"
 
 /** What picking the runtime agent needs, so a caller that is not a Nest provider can use it as well. */

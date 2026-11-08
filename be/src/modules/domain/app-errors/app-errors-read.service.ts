@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull, MoreThanOrEqual, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { IsNull, MoreThanOrEqual, Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AppErrorEntity } from "./persistence/entities"
 
@@ -59,7 +58,7 @@ export class AppErrorsReadService {
             order: { createdAt: "DESC" },
             take: limit,
         })
-        return rows.map(toRow)
+        return rows.map((item) => toRow(item))
     }
 
     /** The newest errors of every workspace, newest first. */
@@ -69,7 +68,7 @@ export class AppErrorsReadService {
             order: { createdAt: "DESC" },
             take: limit,
         })
-        return rows.map(toRow)
+        return rows.map((item) => toRow(item))
     }
 
     /** The errors captured since an instant counted by scope, most first, then by scope. */

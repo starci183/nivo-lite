@@ -2,8 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { ModuleReadinessService } from "@modules/domain/modules"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
 import type {
     DailyOutcome,

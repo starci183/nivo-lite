@@ -7,16 +7,13 @@ import {
     AgentTurnsService,
     AgentWakeRetentionService,
     AgentWakeService,
+    type AgentWorkDue,
 } from "@modules/domain/agent-work"
-import type { AgentWorkDue } from "@modules/domain/agent-work"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectAgentTurnQueue } from "@modules/queues/agent-turn"
-import type { AgentTurnQueue } from "@modules/queues/agent-turn"
+import { InjectAgentTurnQueue, type AgentTurnQueue } from "@modules/queues/agent-turn"
 import { AgentSchedulesLogEvent } from "./agent-schedules.log-events"
 import { RETENTION_BATCH, SWEEP_LIMIT, isMissed, latestMissedSlot } from "./agent-schedules.policy"
 import { AgentTriggerSyncService } from "./agent-trigger-sync.service"

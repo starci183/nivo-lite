@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { BackgroundWorkHandlerService } from "./background-work-handler.service"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { AgentEventWakesService } from "./agent-event-wakes.service"

@@ -1,5 +1,4 @@
-import { AMOUNT_EVIDENCE } from "@modules/domain/work-items"
-import type { GraphEvidence } from "@modules/domain/work-items"
+import { AMOUNT_EVIDENCE, type GraphEvidence } from "@modules/domain/work-items"
 import type { FactValues } from "../agent-graphs.contracts"
 
 /** The one amount a branch reads, with where it came from: `source` is claimed or received, `via` is the road that brought it. */

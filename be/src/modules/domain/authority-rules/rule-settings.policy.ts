@@ -1,13 +1,14 @@
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
-import { APPROVAL_POLICIES, MAX_TIMEOUT_MINUTES, RULE_UNITS } from "./authority-rules.contracts"
-import type {
-    JudgedChange,
-    OptionalRuleAgent,
-    RuleAgentList,
-    RuleChange,
-    RuleMode,
-    RuleSettingsPatch,
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
+import {
+    APPROVAL_POLICIES,
+    MAX_TIMEOUT_MINUTES,
+    RULE_UNITS,
+    type JudgedChange,
+    type OptionalRuleAgent,
+    type RuleAgentList,
+    type RuleChange,
+    type RuleMode,
+    type RuleSettingsPatch,
 } from "./authority-rules.contracts"
 import { AuthorityRulesErrorCode } from "./errors/authority-rules.error"
 

@@ -1,15 +1,16 @@
-import { IdentityError, IdentityErrorCode } from "@modules/domain/identity"
+import {
+    IdentityError,
+    IdentityErrorCode,
+    type CredentialAuthenticator,
+    type CredentialMetadata,
+    type CredentialPrincipal,
+    type CredentialResourceId,
+} from "@modules/domain/identity"
 import { HiringOffersService, HiringInterviewsService, HiringPostingService } from "@modules/domain/hiring"
 import { WorkspaceInvitesService } from "@modules/domain/workspace-invites"
 import { Injectable } from "@nestjs/common"
 import { AgentToolsService } from "@modules/domain/agent-tools"
 import { ApiKeysService } from "@modules/domain/api-keys"
-import type {
-    CredentialAuthenticator,
-    CredentialMetadata,
-    CredentialPrincipal,
-    CredentialResourceId,
-} from "@modules/domain/identity"
 
 @Injectable()
 /** Composes credential admission with the existing owners; operations retain scope checks and call accounting. */

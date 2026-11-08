@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { ModuleTextGenerator } from "@modules/domain/module-ops"
-import type { ModuleTextRequest, TextResult } from "@modules/domain/module-ops"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { ModuleTextGenerator, type ModuleTextRequest, type TextResult } from "@modules/domain/module-ops"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
 import { GenerationsService } from "./generations.service"
 

@@ -1,6 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectAgentWorkOptions } from "./agent-work.decorators"
 import {

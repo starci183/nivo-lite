@@ -1,10 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { InjectAi } from "@modules/integrations/ai"
-import type { AiService } from "@modules/integrations/ai"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { InjectAi, type AiService } from "@modules/integrations/ai"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
 import type {
     AgentInput,
     AuthorityChange,
@@ -35,16 +32,14 @@ import {
     LEAD_TURN_SCHEMA,
     ORDER_SCHEMA,
     RESPONSIBILITY_SCHEMA,
+    type TaskSchema,
 } from "./ai-tasks.schema"
-import type { TaskSchema } from "./ai-tasks.schema"
 import { AiTasksError, AiTasksErrorCode } from "./errors/ai-tasks.error"
 import { NodeImagesService } from "./node-images.service"
 import { NotesService } from "./notes.service"
-import { embeddedObject, isJsonRecord, unfenced } from "./json.mapper"
+import { embeddedObject, isJsonRecord, unfenced, type JsonRecord, type OptionalJsonRecord } from "./json.mapper"
 import { nodeMessagesOf, nodeMetaOf } from "./node-prompt.policy"
-import type { JsonRecord, OptionalJsonRecord } from "./json.mapper"
-import { leadTurnPrompt } from "./lead-turn-prompt.policy"
-import type { LeadTurnInput } from "./lead-turn-prompt.policy"
+import { leadTurnPrompt, type LeadTurnInput } from "./lead-turn-prompt.policy"
 import { commandProposalPrompt, langFor, NIVO, personaOf, toMessages } from "./prompts.policy"
 import {
     authorityChangeOf,

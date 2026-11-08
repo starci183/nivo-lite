@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { In, IsNull, LessThan, Like } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { In, IsNull, LessThan, Like, type EntityManager } from "typeorm"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import {
     CONVERSATION_SCOPE_PREFIX,

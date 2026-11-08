@@ -1,5 +1,9 @@
-import { InjectOpenclawAgentRegistry, InjectOpenclawGateway } from "@modules/integrations/openclaw"
-import type { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
+import {
+    InjectOpenclawAgentRegistry,
+    InjectOpenclawGateway,
+    type AgentRegistryService,
+    type GatewayClient,
+} from "@modules/integrations/openclaw"
 import type { EngineAvailability } from "./agents.contracts"
 
 /** Any agent id works for the probe: only whether a config directory is set matters. */

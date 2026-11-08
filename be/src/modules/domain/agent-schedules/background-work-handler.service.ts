@@ -1,5 +1,4 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import {
     InternalProposalSettlerService,
     InternalTurnContextService,
@@ -7,25 +6,28 @@ import {
     internalTimeoutMsOf,
     stoppedBy,
 } from "@modules/domain/agent-turns"
-import { AgentTriggersService, AgentWorkHandlersService } from "@modules/domain/agent-work"
-import type {
-    AgentHandlerEnding,
-    AgentTurnPrep,
-    AgentTurnView,
-    AgentWakeSource,
-    AgentWakeView,
-    AgentWorkHandler,
+import {
+    AgentTriggersService,
+    AgentWorkHandlersService,
+    type AgentHandlerEnding,
+    type AgentTurnPrep,
+    type AgentTurnView,
+    type AgentWakeSource,
+    type AgentWakeView,
+    type AgentWorkHandler,
 } from "@modules/domain/agent-work"
-import { AgentDirectoryService, AgentsService, InjectInstallations } from "@modules/domain/agents"
-import type { Installation, InstallationDirectory } from "@modules/domain/agents"
+import {
+    AgentDirectoryService,
+    AgentsService,
+    InjectInstallations,
+    type Installation,
+    type InstallationDirectory,
+} from "@modules/domain/agents"
 import { ModuleReadinessService } from "@modules/domain/modules"
 import { threadKeyFor } from "@modules/integrations/openclaw"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentProbesService } from "./agent-probes.service"
 import { InjectBackgroundVoice } from "./agent-schedules.decorators"
 import { AgentSchedulesLogEvent } from "./agent-schedules.log-events"

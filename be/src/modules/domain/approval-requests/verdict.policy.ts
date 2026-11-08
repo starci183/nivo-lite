@@ -1,7 +1,6 @@
 import type { ApprovalPolicy } from "@modules/domain/authority-rules"
 import type { ApproverRef } from "@modules/domain/member-grants"
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import type { ApprovalOutcome, ApprovalVerdict, GivenVerdict } from "./approval-requests.contracts"
 import { ApprovalRequestsErrorCode } from "./errors/approval-requests.error"
 

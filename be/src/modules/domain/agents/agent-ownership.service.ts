@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager, UpdateResult } from "typeorm"
+import { In, type EntityManager, type UpdateResult } from "typeorm"
 import {
     WorkspaceMemberDirectoryService,
     WorkspaceMemberSeatsService,

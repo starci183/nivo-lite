@@ -1,5 +1,4 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { AgentRunHandlersService } from "@modules/domain/agent-runs"
 import { IntentRequestDoorService } from "./intent-request-door.service"
 import { INTENT_STEP_KIND } from "./intent-turn.policy"

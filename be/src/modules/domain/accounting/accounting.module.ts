@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ACCOUNTING_GATEWAY } from "./accounting-gateway.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./accounting.module-definition"
 import { AccountingFactReaderService } from "./accounting-fact-reader.service"

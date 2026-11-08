@@ -1,11 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AuthorityRulesService, appliesToAgent, bandOf } from "@modules/domain/authority-rules"
-import type { ApprovalSetup } from "@modules/domain/authority-rules"
+import { AuthorityRulesService, appliesToAgent, bandOf, type ApprovalSetup } from "@modules/domain/authority-rules"
 import { MemberGrantsService } from "@modules/domain/member-grants"
 import { POST_APPROVAL_JOB } from "@nivo-lite/blocks-core/modules"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { ModuleJobsQueue } from "@modules/queues/module-jobs"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {

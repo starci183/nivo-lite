@@ -2,9 +2,18 @@ import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
 import { z } from "zod"
 import { graphVocabulary } from "@modules/domain/intent-contracts"
 import { MAX_LIMITS, MAX_LIMIT_LENGTH, MAX_TASK_LENGTH } from "./agent-graphs-contract.contracts"
-import { MAX_CONDITION_TERMS, MAX_DOES_LENGTH, MAX_GRAPH_NODES, MAX_TITLE_LENGTH } from "./agent-graphs.contracts"
+import {
+    MAX_CONDITION_TERMS,
+    MAX_DOES_LENGTH,
+    MAX_GRAPH_NODES,
+    MAX_TITLE_LENGTH,
+    type Condition,
+    type GraphDocument,
+    type GraphNodeKind,
+    type GraphNodeStep,
+    type ToolUse,
+} from "./agent-graphs.contracts"
 import type { DataRight } from "@modules/domain/mcp-gateway"
-import type { Condition, GraphDocument, GraphNodeKind, GraphNodeStep, ToolUse } from "./agent-graphs.contracts"
 
 const factValueSchema = z.union([z.string().max(200), z.number(), z.boolean()])
 

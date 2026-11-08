@@ -1,20 +1,27 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import { nodeSagaOf } from "@nivo-lite/agent-sdk/node"
-import { AgentRunsService } from "@modules/domain/agent-runs"
-import type { StepSpec } from "@modules/domain/agent-runs"
-import { AgentWorkHandlersService } from "@modules/domain/agent-work"
-import type { AgentHandlerEnding, AgentTurnView, AgentWorkFlow } from "@modules/domain/agent-work"
+import { AgentRunsService, type StepSpec } from "@modules/domain/agent-runs"
+import {
+    AgentWorkHandlersService,
+    type AgentHandlerEnding,
+    type AgentTurnView,
+    type AgentWorkFlow,
+} from "@modules/domain/agent-work"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { FlowTriggerScope } from "./agent-graphs.contracts"
 import { InjectFlowTriggerMessages } from "./agent-graphs.decorators"
 import type { FlowTriggerMessages } from "./agent-graphs.port"
 import { AgentGraphsService } from "./agent-graphs.service"
-import { GRAPH_FLOW_TRIGGER, graphNodeStepOf, tagSourceOf, triggerScopeOf } from "./policies/graph-flow.policy"
-import type { GraphNodeStepInput } from "./policies/graph-flow.policy"
+import {
+    GRAPH_FLOW_TRIGGER,
+    graphNodeStepOf,
+    tagSourceOf,
+    triggerScopeOf,
+    type GraphNodeStepInput,
+} from "./policies/graph-flow.policy"
 
 /** What joins the customer messages of a burst into one text. */
 const LINE = "\n"

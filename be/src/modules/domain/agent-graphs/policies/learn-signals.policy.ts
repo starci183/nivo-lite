@@ -1,5 +1,4 @@
-import { TRUST_THRESHOLD } from "../agent-graphs.contracts"
-import type { ClosedDecision, LearnedProposal } from "../agent-graphs.contracts"
+import { TRUST_THRESHOLD, type ClosedDecision, type LearnedProposal } from "../agent-graphs.contracts"
 
 /** How many of the latest decisions on one branch are looked at for a rejection or a timeout, and how many hits make a signal. */
 export const WINDOW = 10
@@ -38,7 +37,7 @@ const trailingRun = (history: ReadonlyArray<ClosedDecision>): ReadonlyArray<Clos
 const signalsOf = (history: ReadonlyArray<ClosedDecision>, branchKey: string): ReadonlyArray<LearnedProposal> => {
     const run = trailingRun(history)
     const recent = history.slice(-WINDOW)
-    const rejected = recent.filter(disliked)
+    const rejected = recent.filter((item) => disliked(item))
     const expired = recent.filter((decision) => decision.closedAs === "expired")
     return [
         ...run

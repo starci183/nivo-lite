@@ -4,8 +4,7 @@ import type { BridgeTurn, JsonResult, ToolArgs } from "./agent-tools.contracts"
 import { InjectBridgeTurns, InjectInternalTools } from "./agent-tools.decorators"
 import type { BridgeTurns, InternalTools } from "./agent-tools.port"
 import { AgentToolsError, AgentToolsErrorCode } from "./errors/agent-tools.error"
-import { isGatewayTool } from "./tool-manifest.policy"
-import type { ToolName } from "./tool-manifest.policy"
+import { isGatewayTool, type ToolName } from "./tool-manifest.policy"
 
 /** Who the evidence lines of a bridge call name as the actor. */
 const ACTOR = "NIVO engine"

@@ -1,12 +1,9 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { Not } from "typeorm"
-import type { EntityManager, UpdateResult } from "typeorm"
+import { Not, type EntityManager, type UpdateResult } from "typeorm"
 import { WorkspaceMembersService, isManagerRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type {
     AgentDashboardData,
     AgentOwners,
@@ -92,7 +89,7 @@ export class AgentsService {
             order: OLDEST_FIRST,
             take: AGENT_LIMIT,
         })
-        return rows.map(summaryOf)
+        return rows.map((item) => summaryOf(item))
     }
 
     /**
