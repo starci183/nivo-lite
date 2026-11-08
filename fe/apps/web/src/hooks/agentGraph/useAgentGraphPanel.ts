@@ -21,8 +21,7 @@ import type {
     AgentGraphSideTab,
     AgentGraphPhoneView,
 } from "@/modules/types"
-import { performAgentGraphAction } from "./agentGraph.shared"
-import type { AgentGraphSetup } from "./agentGraph.shared"
+import { performAgentGraphAction, type AgentGraphSetup } from "./agentGraph.shared"
 import { useAgentGraphCommands } from "./useAgentGraphCommands"
 import { useAgentGraphRead } from "./useAgentGraphRead"
 import { useAgentGraphUi } from "./useAgentGraphUi"

@@ -1,18 +1,19 @@
 import type { MutateDecideSetupCardRequest } from "@/hooks/swr"
 import { isActionKey } from "@/modules/catalog"
-import { FACT_SCOPES, FACT_SUBJECT_TYPES } from "@/modules/types"
-import type {
-    FactScope,
-    FactSubjectType,
-    FlowRuleMode,
-    SetupFactWrite,
-    SetupResolution,
-    SetupRuleWrite,
-    SetupWrite,
-    SetupWriteDecision,
-    SetupWriteDecided,
-    SetupWriteWords,
-    SetupWriteStatus,
+import {
+    FACT_SCOPES,
+    FACT_SUBJECT_TYPES,
+    type FactScope,
+    type FactSubjectType,
+    type FlowRuleMode,
+    type SetupFactWrite,
+    type SetupResolution,
+    type SetupRuleWrite,
+    type SetupWrite,
+    type SetupWriteDecision,
+    type SetupWriteDecided,
+    type SetupWriteWords,
+    type SetupWriteStatus,
 } from "@/modules/types"
 
 const WRITE_STATUSES: ReadonlyArray<SetupWriteStatus> = ["proposed", "applied", "rejected", "superseded"]

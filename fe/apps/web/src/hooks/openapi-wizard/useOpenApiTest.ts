@@ -1,11 +1,9 @@
 "use client"
 
 import type { OpenApiTestType, QueryTestOpenApiOperationRequest } from "@/hooks/swr"
-import { useMemo, useState } from "react"
-import { isOpenApiPullable } from "@/modules/openapi-spec"
-import type { OpenApiOp, OpenApiPullDef } from "@/modules/openapi-spec"
+import { useMemo, useState, type SetStateAction, type Dispatch } from "react"
+import { isOpenApiPullable, type OpenApiOp, type OpenApiPullDef } from "@/modules/openapi-spec"
 import type { OpenApiCommands } from "./useOpenApiCommands"
-import type { SetStateAction, Dispatch } from "react"
 
 /** What the test step reads of the wizard around it. */
 interface OpenApiTestInput {

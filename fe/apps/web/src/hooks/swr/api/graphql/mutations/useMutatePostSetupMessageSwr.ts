@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutatePostSetupMessage,
     type MutatePostSetupMessageRequest,
 } from "@/modules/api/graphql/mutations/mutation-post-setup-message"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { PostSetupMessageMutation } from "@/modules/api"
 
 /** What the PostSetupMessage mutation is triggered with. */

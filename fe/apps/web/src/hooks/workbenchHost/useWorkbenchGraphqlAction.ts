@@ -2,8 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import type { ActionInput, ActionOutcome } from "@nivo-lite/agent-sdk/block"
-import { actionPayloadOf, outcomeOf } from "@nivo-lite/agent-sdk/block"
+import { type ActionInput, type ActionOutcome, actionPayloadOf, outcomeOf } from "@nivo-lite/agent-sdk/block"
 import type { HostAction, HostActionOptions } from "@nivo-lite/agent-sdk/client"
 import { useMutateWorkbenchActionSwr } from "@/hooks/swr"
 import { isForbiddenFailure } from "@/modules/failure"

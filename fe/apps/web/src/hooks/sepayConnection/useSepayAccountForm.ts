@@ -21,7 +21,7 @@ export const useSepayAccountForm = (
     saveAccount: (view: SepayConnectionView, form: SepayAccountForm) => Promise<Settled<true>>,
 ): UseSepayAccountFormResult => {
     const [draft, setDraft] = useState<Partial<SepayAccountForm>>({})
-    const [isPending, setPending] = useState(false)
+    const [isPending, setIsPending] = useState(false)
     const form: SepayAccountForm = {
         bank: draft.bank ?? connection?.bankCode ?? "",
         account: draft.account ?? "",
@@ -36,9 +36,9 @@ export const useSepayAccountForm = (
             holder: (holder: string): void => setDraft((current) => ({ ...current, holder })),
             save: (): void => {
                 if (connection === undefined) return
-                setPending(true)
+                setIsPending(true)
                 void saveAccount(connection, form).then((settled) => {
-                    setPending(false)
+                    setIsPending(false)
                     if (settled.kind === "ok") setDraft({})
                 })
             },

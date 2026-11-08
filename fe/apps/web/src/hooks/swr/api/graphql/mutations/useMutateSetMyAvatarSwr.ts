@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSetMyAvatar,
     type MutateSetMyAvatarRequest,
 } from "@/modules/api/graphql/mutations/mutation-set-my-avatar"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SetMyAvatarMutation } from "@/modules/api"
 
 /** What the SetMyAvatar mutation is triggered with. */

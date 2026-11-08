@@ -4,9 +4,8 @@ import {
     mutateSubmitTelegramCode,
     type mutateSubmitTelegramCode as MutateSubmitTelegramCodeOperation,
 } from "@/modules/api/graphql/mutations/mutation-submit-telegram-code"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SubmitTelegramCodeMutation } from "@/modules/api"
 
 /** The SWR key of the submitTelegramCode mutation. */

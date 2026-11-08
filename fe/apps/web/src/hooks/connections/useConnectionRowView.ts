@@ -15,14 +15,12 @@ import {
 import type { AgentOption, Connection, RowPrimary, RowView } from "@/modules/types"
 import { useTranslations } from "next-intl"
 import { connectionPageHref, rowState, statusKey, statusTone } from "./connections.shared"
-import { useAgentAccess } from "./useAgentAccess"
-import type { AgentAccess } from "./useAgentAccess"
+import { useAgentAccess, type AgentAccess } from "./useAgentAccess"
 import { useConnectionOverlays } from "./useConnectionOverlays"
 import { useConnectionsRole } from "./useConnectionsRole"
 import { useConnectionRowActions } from "./useConnectionRowActions"
 import { useSetConnectionGrant } from "./useSetConnectionGrant"
-import { useSmtpRowPanel } from "./useSmtpRowPanel"
-import type { SmtpRowPanel } from "./useSmtpRowPanel"
+import { useSmtpRowPanel, type SmtpRowPanel } from "./useSmtpRowPanel"
 import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** What a connection row is given by the page that read it. */

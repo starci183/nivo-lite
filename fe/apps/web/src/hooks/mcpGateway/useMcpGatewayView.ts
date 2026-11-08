@@ -8,20 +8,19 @@ import {
 } from "@/hooks/swr"
 import { useFormatter, useTranslations } from "next-intl"
 import { slotOfReads, useSlotLabels } from "@/hooks/slot"
-import { connectorRowsOf } from "./mcpGateway.shared"
-import { argsWordsOf, constraintBadgesOf, modeWordOf, outcomeWordOf, toolNameOf } from "@/modules/mcpGateway"
-import type {
-    McpBadgeView,
-    McpFormatter,
-    McpTone,
-    McpToolRowView,
-    McpTranslator,
-    McpConnectorRowView,
+import {
+    connectorRowsOf,
+    type McpBadgeView,
+    type McpFormatter,
+    type McpTone,
+    type McpToolRowView,
+    type McpTranslator,
+    type McpConnectorRowView,
 } from "./mcpGateway.shared"
+import { argsWordsOf, constraintBadgesOf, modeWordOf, outcomeWordOf, toolNameOf } from "@/modules/mcpGateway"
 import { useMcpConnectorCommands } from "./useMcpConnectorCommands"
 import { useMcpConnectorForms } from "./useMcpConnectorForms"
-import { grantKeyOf, useMcpGrantCommands } from "@/hooks/mcpGrants"
-import type { McpToolAgentsOf } from "@/hooks/mcpGrants"
+import { grantKeyOf, useMcpGrantCommands, type McpToolAgentsOf } from "@/hooks/mcpGrants"
 
 import type { DataSlot } from "@/modules/types"
 

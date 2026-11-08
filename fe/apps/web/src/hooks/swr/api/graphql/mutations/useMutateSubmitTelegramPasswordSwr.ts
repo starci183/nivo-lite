@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSubmitTelegramPassword,
     type MutateSubmitTelegramPasswordRequest,
 } from "@/modules/api/graphql/mutations/mutation-submit-telegram-password"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SubmitTelegramPasswordMutation } from "@/modules/api"
 
 /** What the submitTelegramPassword mutation is triggered with. */

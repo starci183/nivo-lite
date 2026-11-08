@@ -2,8 +2,7 @@
 
 import { useMemo } from "react"
 import { useQueryKnowledgeSuggestionsSwr } from "@/hooks/swr"
-import { toSuggestionContext } from "@/modules/documents"
-import type { SuggestionContext } from "@/modules/documents"
+import { toSuggestionContext, type SuggestionContext } from "@/modules/documents"
 import { readError } from "@/hooks/workspaceread"
 
 /** The view `useKnowledgeSuggestions` returns. */

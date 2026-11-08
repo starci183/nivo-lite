@@ -1,8 +1,7 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useState, type SetStateAction, type Dispatch } from "react"
 import type { OpenApiOp } from "@/modules/openapi-spec"
-import type { SetStateAction, Dispatch } from "react"
 
 /** What a saved connection brings back to the spec step. */
 export interface OpenApiSourceRestore {

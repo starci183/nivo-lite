@@ -9,9 +9,7 @@ import { editorHref, estimateScriptSeconds, VIDEO_MAX_SECONDS } from "@/modules/
 
 import { navigation } from "@/modules/i18n"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { shapeOf, videoOwnerOf } from "./videoWorkbench.shared"
-
-import type { VideoViewInput } from "./videoWorkbench.shared"
+import { shapeOf, videoOwnerOf, type VideoViewInput } from "./videoWorkbench.shared"
 
 /** The actions the preview step card offers: go back, start a render, dismiss an error. */
 export type VideoPreviewCardActions = VideoProductionActions["preview"]

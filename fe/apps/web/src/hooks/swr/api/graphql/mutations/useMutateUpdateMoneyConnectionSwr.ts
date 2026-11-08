@@ -4,9 +4,8 @@ import {
     mutateUpdateMoneyConnection,
     type mutateUpdateMoneyConnection as MutateUpdateMoneyConnectionOperation,
 } from "@/modules/api/graphql/mutations/mutation-update-money-connection"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { UpdateMoneyConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the updateMoneyConnection mutation. */

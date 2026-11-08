@@ -1,7 +1,6 @@
 "use client"
 
-import useSWR from "swr"
-import type { SWRConfiguration } from "swr"
+import useSWR, { type SWRConfiguration } from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryWorkspaceAgentWork } from "@/modules/api/graphql/queries/query-workspace-agent-work"
 import type { ReadResponse } from "@/hooks/workspaceread"

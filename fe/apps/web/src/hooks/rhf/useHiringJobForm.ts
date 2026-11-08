@@ -3,12 +3,11 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, type UseFormReturn } from "react-hook-form"
 import { z } from "zod"
 import { JOB_TITLE_MIN, jobDefaults } from "@/hooks/hiringJobs"
 import type { HiringJobValues } from "@/modules/types"
 import type { JobView } from "@/hooks/hiringWire"
-import type { UseFormReturn } from "react-hook-form"
 
 /**
  * The job editor form: a zod schema whose message comes from the `hiring` catalog, validated as the owner types. The values follow

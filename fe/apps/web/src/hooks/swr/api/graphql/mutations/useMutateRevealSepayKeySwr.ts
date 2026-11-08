@@ -4,9 +4,8 @@ import {
     mutateRevealSepayKey,
     type mutateRevealSepayKey as MutateRevealSepayKeyOperation,
 } from "@/modules/api/graphql/mutations/mutation-reveal-sepay-key"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RevealSepayKeyMutation } from "@/modules/api"
 
 /** The SWR key of the revealSepayKey mutation. */

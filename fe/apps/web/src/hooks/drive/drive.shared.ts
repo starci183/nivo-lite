@@ -88,7 +88,7 @@ export interface DriveListing {
 
 /** The files of a listing NIVO can read: the ones that can be ticked. */
 export const readableFilesOf = (listing: DriveListing): ReadonlyArray<DriveFileRow> =>
-    listing.files.filter(isReadableDriveFile)
+    listing.files.filter((item) => isReadableDriveFile(item))
 
 /** The line under a file in the choose step: where it is, how big and when it changed, or why it cannot be read. */
 export const driveFileNoteOf = (

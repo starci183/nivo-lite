@@ -1,8 +1,7 @@
 "use client"
 
 import { sessionUser } from "@/modules/auth-session"
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { useViewerKey } from "@/hooks/workspaceKey"
 
 /** The SWR key of the signed-in user. */

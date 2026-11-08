@@ -37,7 +37,7 @@ interface CsvImportActionsInput extends Pick<
     CsvImportWorkflowInput,
     "patch" | "entity" | "connectionId" | "fields" | "t" | "source" | "link" | "gridState" | "commands"
 > {
-    readonly setPending: Dispatch<SetStateAction<boolean>>
+    readonly setIsPending: Dispatch<SetStateAction<boolean>>
 }
 
 /** The commands the wizard steps run: report a failure, read the source, move to a step, read a preview. */
@@ -57,7 +57,7 @@ const createCsvImportWizardActions = ({
     source,
     link,
     gridState,
-    setPending,
+    setIsPending,
     commands,
 }: CsvImportActionsInput): CsvImportActions => {
     const fail = (text: string) => patch({ note: { tone: "negative", text } })
@@ -83,9 +83,9 @@ const createCsvImportWizardActions = ({
     const read = async (sheet?: string) => {
         const arg = sourceArg(sheet)
         if (!arg) return
-        setPending(true)
+        setIsPending(true)
         const answer = await commands.preview(arg)
-        setPending(false)
+        setIsPending(false)
         if (answer.kind !== "ok") return fail(answer.message)
         patch({ preview: answer.value, mapping: answer.value.mapping, note: null, index: 2 })
     }
@@ -94,15 +94,15 @@ const createCsvImportWizardActions = ({
 
 const createCsvImportRunner =
     (
-        setPending: (value: boolean) => void,
+        setIsPending: (value: boolean) => void,
         importNow: ReturnType<typeof csvImportNowOf>,
         fail: (message: string) => void,
         patch: (next: Partial<CsvImportFields>) => void,
     ): (() => Promise<void>) =>
     async () => {
-        setPending(true)
+        setIsPending(true)
         const answer = await importNow()
-        setPending(false)
+        setIsPending(false)
         if (answer === undefined) return
         if (answer.kind !== "ok") return fail(answer.message)
         patch({ result: answer.value, note: null })
@@ -151,7 +151,7 @@ export const useCsvImportWorkflow = ({
     setAgentsOf,
     agentIds,
 }: CsvImportWorkflowInput): CsvImportWorkflowView => {
-    const [isPending, setPending] = useState(false)
+    const [isPending, setIsPending] = useState(false)
     const { fail, sourceArg, go, read } = createCsvImportWizardActions({
         patch,
         entity,
@@ -161,7 +161,7 @@ export const useCsvImportWorkflow = ({
         source,
         link,
         gridState,
-        setPending,
+        setIsPending,
         commands,
     })
     const importNow = csvImportNowOf({
@@ -176,13 +176,13 @@ export const useCsvImportWorkflow = ({
         sourceArg,
         schedule,
     })
-    const runImport = createCsvImportRunner(setPending, importNow, fail, patch)
+    const runImport = createCsvImportRunner(setIsPending, importNow, fail, patch)
     const finish = async () => {
         const id = fields.result?.connectionId ?? input.resumeId
         if (!id) return input.onClose(false)
-        setPending(true)
+        setIsPending(true)
         const answer = await setAgentsOf(id, agentIds)
-        setPending(false)
+        setIsPending(false)
         if (answer.kind !== "ok") return fail(answer.message)
         input.onClose(true)
     }

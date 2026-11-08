@@ -7,12 +7,10 @@ import {
     useMutateRedraftPublicDocumentSwr,
     useMutateUpdatePublicDocumentSwr,
     useMutateWritePublicDocumentSwr,
-} from "@/hooks/swr"
-import type {
-    MutateApprovePublicDocumentRequest,
-    MutateDraftPublicDocumentRequest,
-    MutateUpdatePublicDocumentRequest,
-    MutateWritePublicDocumentRequest,
+    type MutateApprovePublicDocumentRequest,
+    type MutateDraftPublicDocumentRequest,
+    type MutateUpdatePublicDocumentRequest,
+    type MutateWritePublicDocumentRequest,
 } from "@/hooks/swr"
 import { documentCommandOf } from "./brain.shared"
 import { usePublicDocRunner } from "./usePublicDocRunner"

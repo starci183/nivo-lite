@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateAssignBrainDossier,
     type MutateAssignBrainDossierRequest,
 } from "@/modules/api/graphql/mutations/mutation-assign-brain-dossier"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { AssignBrainDossierMutation } from "@/modules/api"
 
 /** What the AssignBrainDossier mutation is triggered with. */

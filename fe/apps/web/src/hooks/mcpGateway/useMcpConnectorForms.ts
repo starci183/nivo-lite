@@ -1,8 +1,11 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useMcpConnectorFormsState } from "./useMcpConnectorFormsState"
-import type { McpConnectorFormsState, McpRegisterField } from "./useMcpConnectorFormsState"
+import {
+    useMcpConnectorFormsState,
+    type McpConnectorFormsState,
+    type McpRegisterField,
+} from "./useMcpConnectorFormsState"
 import type { useQueryMcpConnectorsSwr } from "@/hooks/swr"
 import type { McpTranslator } from "@/modules/mcpGateway"
 

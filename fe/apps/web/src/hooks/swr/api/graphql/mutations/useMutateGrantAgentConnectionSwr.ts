@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateGrantAgentConnection,
     type MutateGrantAgentConnectionRequest,
 } from "@/modules/api/graphql/mutations/mutation-grant-agent-connection"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { GrantAgentConnectionMutation } from "@/modules/api"
 
 /** What the GrantAgentConnection mutation is triggered with. */

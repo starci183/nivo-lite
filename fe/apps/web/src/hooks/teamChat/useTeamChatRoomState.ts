@@ -2,14 +2,10 @@
 
 import { useMemo, useState } from "react"
 import { partiesOf } from "./teamChat.shared"
-import { useTeamChatCards } from "./useTeamChatCards"
-import type { TeamChatCardsView } from "./useTeamChatCards"
-import { useTeamChatComposer } from "./useTeamChatComposer"
-import type { TeamChatComposerView } from "./useTeamChatComposer"
-import { useTeamChatRooms } from "./useTeamChatRooms"
-import type { TeamChatRoomsView, TeamChatTarget } from "./useTeamChatRooms"
-import { useTeamChatThread } from "./useTeamChatThread"
-import type { TeamChatTab, TeamChatThreadView } from "./useTeamChatThread"
+import { useTeamChatCards, type TeamChatCardsView } from "./useTeamChatCards"
+import { useTeamChatComposer, type TeamChatComposerView } from "./useTeamChatComposer"
+import { useTeamChatRooms, type TeamChatRoomsView, type TeamChatTarget } from "./useTeamChatRooms"
+import { useTeamChatThread, type TeamChatTab, type TeamChatThreadView } from "./useTeamChatThread"
 
 /** The whole state of one open room: the room, its thread and cards, and the composer. */
 export interface TeamChatRoomState {

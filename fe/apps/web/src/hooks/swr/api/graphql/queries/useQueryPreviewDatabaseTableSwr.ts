@@ -4,8 +4,7 @@ import {
     queryPreviewDatabaseTable,
     type queryPreviewDatabaseTable as QueryPreviewDatabaseTableOperation,
 } from "@/modules/api/graphql/queries/query-preview-database-table"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { PreviewDatabaseTableQuery } from "@/modules/api"
 
 /** The SWR key of the previewDatabaseTable query. */

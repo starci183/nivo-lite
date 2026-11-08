@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateImportBrainDossiers,
     type MutateImportBrainDossiersRequest,
 } from "@/modules/api/graphql/mutations/mutation-import-brain-dossiers"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { ImportBrainDossiersMutation } from "@/modules/api"
 
 /** What the ImportBrainDossiers mutation is triggered with. */

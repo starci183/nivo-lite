@@ -27,7 +27,7 @@ export const useDrivePageHead = (enabled: boolean): DrivePageHeadView => {
     const workspaceId = useWorkspaceId()
     const { head, notices, grant, isGranting, disconnect, isDisconnecting, isOwner, standing } = useDriveHead(enabled)
     const [isAsking, setIsAsking] = useState(false)
-    const [isRailOpen, setRailOpen] = useState(false)
+    const [isRailOpen, setIsRailOpen] = useState(false)
     const failure = readFailureNotice(head, slotLabels(""), () => router.refresh())
     const canDisconnect = isOwner && standing !== undefined && standing !== "none"
     const view: ConnectionPageHeadView = {
@@ -70,7 +70,7 @@ export const useDrivePageHead = (enabled: boolean): DrivePageHeadView => {
         askDisconnect: () => setIsAsking(true),
         confirmDisconnect: () => void disconnect(),
         dismiss: () => setIsAsking(false),
-        openRail: setRailOpen,
+        openRail: setIsRailOpen,
         retry: () => router.refresh(),
     }
     return { view, on }

@@ -1,10 +1,11 @@
 "use client"
 
-import { mutateSetLedgerSheet } from "@/modules/api/graphql/mutations/mutation-set-ledger-sheet"
-import type { mutateSetLedgerSheet as MutateSetLedgerSheetOperation } from "@/modules/api/graphql/mutations/mutation-set-ledger-sheet"
+import {
+    mutateSetLedgerSheet,
+    type mutateSetLedgerSheet as MutateSetLedgerSheetOperation,
+} from "@/modules/api/graphql/mutations/mutation-set-ledger-sheet"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { SetLedgerSheetMutation } from "@/modules/api"
 
 /** The SWR key of the setLedgerSheet mutation. */

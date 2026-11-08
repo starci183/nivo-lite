@@ -4,8 +4,7 @@ import { useTranslations } from "next-intl"
 import { useCallback } from "react"
 import { useMutateChangeMemberRoleSwr, useMutateRemoveMemberSwr, useMutateSetMemberStatusSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { refreshTeam } from "./team.shared"
-import type { TeamRole } from "./team.shared"
+import { refreshTeam, type TeamRole } from "./team.shared"
 
 /** The commands on a member of the workspace. Each answers whether it worked; a failure was toasted with the back end words. */
 export interface MemberCommands {

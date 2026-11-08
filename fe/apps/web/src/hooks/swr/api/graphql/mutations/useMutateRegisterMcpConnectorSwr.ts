@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateRegisterMcpConnector,
     type MutateRegisterMcpConnectorRequest,
 } from "@/modules/api/graphql/mutations/mutation-register-mcp-connector"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RegisterMcpConnectorMutation } from "@/modules/api"
 
 /** What the RegisterMcpConnector mutation is triggered with. */

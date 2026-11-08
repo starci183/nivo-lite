@@ -2,8 +2,7 @@
 
 import { answeredData, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { queryMarketingWeeklyReport } from "@/modules/api/graphql/queries/query-marketing-weekly-report"
 import type { MarketingWeeklyReportQuery } from "@/modules/api"
 

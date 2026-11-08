@@ -1,7 +1,6 @@
 "use client"
 
-import { QUERY_AUTHORITY_SWR_KEY, useMutateUpdateAuthoritySwr } from "@/hooks/swr"
-import type { MutateUpdateAuthorityRequest } from "@/hooks/swr"
+import { QUERY_AUTHORITY_SWR_KEY, useMutateUpdateAuthoritySwr, type MutateUpdateAuthorityRequest } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"
 import { useTranslations } from "next-intl"

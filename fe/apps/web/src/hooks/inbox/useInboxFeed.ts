@@ -104,7 +104,7 @@ export const useInboxFeed = (): InboxFeedView => {
             duplicates: event.duplicateCount,
         }
     }
-    const slot = mapSlot(slotOfSwr(swrRead), (events) => events.map(rowOf))
+    const slot = mapSlot(slotOfSwr(swrRead), (events) => events.map((item) => rowOf(item)))
     return {
         slot,
         isWaiting: isWaitingOf(slot),

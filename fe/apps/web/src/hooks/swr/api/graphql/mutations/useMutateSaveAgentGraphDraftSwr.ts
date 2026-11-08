@@ -5,8 +5,7 @@ import {
     type mutateSaveAgentGraphDraft as MutateSaveAgentGraphDraftOperation,
 } from "@/modules/api/graphql/mutations/mutation-save-agent-graph-draft"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { SaveAgentGraphDraftMutation } from "@/modules/api"
 
 /** The SWR key of the saveAgentGraphDraft mutation. */

@@ -2,8 +2,7 @@
 
 import { answeredData, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceRequestKey } from "@/hooks/workspaceKey"
-import useSWR from "swr"
-import type { SWRConfiguration, SWRResponse } from "swr"
+import useSWR, { type SWRConfiguration, type SWRResponse } from "swr"
 import type { AgentTemplatePreviewQuery } from "@/modules/api"
 import {
     queryAgentTemplatePreview,

@@ -2,8 +2,7 @@
 
 import { useLocale } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
-import { pickCopy } from "@/modules/catalog"
-import type { ModuleKey } from "@/modules/catalog"
+import { pickCopy, type ModuleKey } from "@/modules/catalog"
 
 /** The name of an agent type in the reader language. */
 export const useModuleName = (module: ModuleKey | null, kind: "name" | "shortName" = "name"): string => {

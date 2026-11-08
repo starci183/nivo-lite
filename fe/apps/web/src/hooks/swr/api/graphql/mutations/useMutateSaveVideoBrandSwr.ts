@@ -4,9 +4,8 @@ import {
     mutateSaveVideoBrand,
     type mutateSaveVideoBrand as MutateSaveVideoBrandOperation,
 } from "@/modules/api/graphql/mutations/mutation-save-video-brand"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SaveVideoBrandMutation } from "@/modules/api"
 
 /** The SWR key of the saveVideoBrand mutation. */

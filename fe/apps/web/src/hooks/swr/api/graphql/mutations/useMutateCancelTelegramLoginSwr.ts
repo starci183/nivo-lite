@@ -5,8 +5,7 @@ import {
     type mutateCancelTelegramLogin as MutateCancelTelegramLoginOperation,
 } from "@/modules/api/graphql/mutations/mutation-cancel-telegram-login"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { CancelTelegramLoginMutation } from "@/modules/api"
 
 /** The SWR key of the cancelTelegramLogin mutation. */

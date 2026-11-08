@@ -2,8 +2,7 @@
 
 import { useQueryLoadTelegramUserSetupSwr, useQueryTelegramUserReadySwr } from "@/hooks/swr"
 import type { SlotRead } from "@/hooks/slot"
-import { BLANK_INITIAL, chatKindOf, sinceDaysOf } from "@/hooks/telegram-chats"
-import type { TelegramInitial } from "@/hooks/telegram-chats"
+import { BLANK_INITIAL, chatKindOf, sinceDaysOf, type TelegramInitial } from "@/hooks/telegram-chats"
 
 /** Revalidates on open while settled cached content remains visible. */
 const FRESH = { revalidateOnFocus: false, revalidateOnReconnect: false, shouldRetryOnError: false } as const

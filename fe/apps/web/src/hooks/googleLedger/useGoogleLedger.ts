@@ -3,8 +3,7 @@
 import { useState, useTransition } from "react"
 import { useAuthorizeGoogle } from "@/hooks/connections"
 import { useMutateSetLedgerSheetSwr, useQueryGoogleStateSwr } from "@/hooks/swr"
-import { ledgerStateOf } from "./googleLedger.shared"
-import type { LedgerState } from "./googleLedger.shared"
+import { ledgerStateOf, type LedgerState } from "./googleLedger.shared"
 
 /** What the ledger kept in a Google spreadsheet reads and does. */
 interface GoogleLedger {

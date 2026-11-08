@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSaveReplyTimeout,
     type MutateSaveReplyTimeoutRequest,
 } from "@/modules/api/graphql/mutations/mutation-save-reply-timeout"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SaveReplyTimeoutMutation } from "@/modules/api"
 
 /** What the SaveReplyTimeout mutation is triggered with. */

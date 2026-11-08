@@ -1,9 +1,8 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateRemoveBookingWaitlistEntry } from "@/modules/api/graphql/mutations/mutation-remove-booking-waitlist-entry"
 import type { MutateRemoveBookingWaitlistEntryRequest } from "@/modules/api/graphql/mutations/types/remove-booking-waitlist-entry"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RemoveBookingWaitlistEntryMutation } from "@/modules/api"
 
 /** The SWR key of the `removeBookingWaitlistEntry` mutation. */

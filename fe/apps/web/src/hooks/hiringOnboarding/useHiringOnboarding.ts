@@ -1,5 +1,4 @@
-import type { HiringOwner } from "@/hooks/hiring"
-import { useHiringRun } from "@/hooks/hiring"
+import { type HiringOwner, useHiringRun } from "@/hooks/hiring"
 import { useMutateLinkHiringStaffSwr, useMutateToggleHiringOnboardingSwr } from "@/hooks/swr"
 
 /** The view `useHiringOnboarding` returns. */

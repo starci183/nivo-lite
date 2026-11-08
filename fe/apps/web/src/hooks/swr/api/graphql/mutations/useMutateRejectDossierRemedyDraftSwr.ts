@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateRejectDossierRemedyDraft,
     type MutateRejectDossierRemedyDraftRequest,
 } from "@/modules/api/graphql/mutations/mutation-reject-dossier-remedy-draft"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RejectDossierRemedyDraftMutation } from "@/modules/api"
 
 /** What the RejectDossierRemedyDraft mutation is triggered with. */

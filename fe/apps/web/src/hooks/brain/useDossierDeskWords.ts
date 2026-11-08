@@ -1,13 +1,14 @@
 import { useTranslations } from "next-intl"
-import { DOSSIER_STATUS_TONE, statusCountsOf } from "@/modules/brain"
-import type {
-    CategoryView,
-    DossierDeskView,
-    DossierDocumentView,
-    DossierRowView,
-    DossierSource,
-    DossierView,
-    Standing,
+import {
+    DOSSIER_STATUS_TONE,
+    statusCountsOf,
+    type CategoryView,
+    type DossierDeskView,
+    type DossierDocumentView,
+    type DossierRowView,
+    type DossierSource,
+    type DossierView,
+    type Standing,
 } from "@/modules/brain"
 import { knowledgeSourceHref, workspaceHref } from "@/modules/routes"
 import { useWorkspaceId } from "@/hooks/workspaces"

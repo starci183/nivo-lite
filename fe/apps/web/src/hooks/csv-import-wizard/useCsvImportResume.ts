@@ -3,8 +3,7 @@
 import { useCallback, useMemo } from "react"
 import { useQueryLoadCsvImportSwr } from "@/hooks/swr"
 import type { SlotRead } from "@/hooks/slot"
-import { parseConfig } from "./csv-import-wizard.shared"
-import type { CsvSavedImport } from "./csv-import-wizard.shared"
+import { parseConfig, type CsvSavedImport } from "./csv-import-wizard.shared"
 import { readError } from "@/hooks/workspaceread"
 
 /** What loading the saved import of a resume answers: the import, still loading, or the reason it failed. */

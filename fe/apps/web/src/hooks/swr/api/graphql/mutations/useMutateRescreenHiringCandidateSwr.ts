@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateRescreenHiringCandidate,
     type MutateRescreenHiringCandidateRequest,
 } from "@/modules/api/graphql/mutations/mutation-rescreen-hiring-candidate"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RescreenHiringCandidateMutation } from "@/modules/api"
 
 /** What the rescreenHiringCandidate mutation is triggered with. */

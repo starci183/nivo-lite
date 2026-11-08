@@ -1,9 +1,15 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
-import { matchesOpenApiOp, newOpenApiPull, OPEN_API_SHOWN, openApiEntityOf } from "@/modules/openapi-spec"
-import type { OpenApiOp, OpenApiPullDef, OpenApiPullField } from "@/modules/openapi-spec"
-import type { SetStateAction, Dispatch } from "react"
+import { useCallback, useMemo, useState, type SetStateAction, type Dispatch } from "react"
+import {
+    matchesOpenApiOp,
+    newOpenApiPull,
+    OPEN_API_SHOWN,
+    openApiEntityOf,
+    type OpenApiOp,
+    type OpenApiPullDef,
+    type OpenApiPullField,
+} from "@/modules/openapi-spec"
 
 /** What a saved connection brings back to the pull, tool and schedule steps. */
 export interface OpenApiPicksRestore {

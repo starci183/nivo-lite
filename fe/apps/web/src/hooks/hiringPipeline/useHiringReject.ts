@@ -1,10 +1,9 @@
 "use client"
 
 import { useFeatureReset, useFeatureLifetime } from "@/hooks/reuseables"
-import type { HiringOwner } from "@/hooks/hiring"
+import { type HiringOwner, useHiringRun } from "@/hooks/hiring"
 
 import { useState, type Dispatch, type SetStateAction } from "react"
-import { useHiringRun } from "@/hooks/hiring"
 import { REASON_MIN } from "./hiringPipeline.shared"
 import { useHiringMove } from "./useHiringMove"
 

@@ -1,8 +1,7 @@
 "use client"
 
 import { answeredData, argumentKey } from "@/hooks/workspaceread"
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import {
     queryPublicHiringInterview,
     type QueryPublicHiringInterviewRequest,

@@ -1,8 +1,13 @@
 "use client"
 
 import { useQueryAuthUserSwr } from "@/hooks/auth"
-import { isLocalOnly, useConnectionRowView, useConnectionsData, useConnectionsRole } from "@/hooks/connections"
-import type { ConnectionRowHandlers } from "@/hooks/connections"
+import {
+    isLocalOnly,
+    useConnectionRowView,
+    useConnectionsData,
+    useConnectionsRole,
+    type ConnectionRowHandlers,
+} from "@/hooks/connections"
 import { slotOfReads } from "@/hooks/slot"
 import { webSiteOrigin } from "@/modules/config"
 import type { Connection, DataSlot, RowView } from "@/modules/types"

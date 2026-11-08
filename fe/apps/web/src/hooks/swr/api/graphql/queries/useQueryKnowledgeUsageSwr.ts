@@ -1,7 +1,6 @@
 "use client"
 
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import { queryKnowledgeUsage } from "@/modules/api/graphql/queries/query-knowledge-usage"
 import type { KnowledgeUsageQuery } from "@/modules/api"

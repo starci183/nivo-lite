@@ -1,8 +1,7 @@
 "use client"
 
 import { answeredData, argumentKey, type ReadResponse } from "@/hooks/workspaceread"
-import useSWR from "swr"
-import type { SWRConfiguration } from "swr"
+import useSWR, { type SWRConfiguration } from "swr"
 import { queryMoneyConnection } from "@/modules/api/graphql/queries/query-money-connection"
 import type { MoneyConnectionQuery } from "@/modules/api"
 

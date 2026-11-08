@@ -1,8 +1,13 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { decideFormOf, documentWithDecide, documentWithDecidePoint, formWithChange } from "@/modules/agent-graph"
-import type { AgentGraphNodeTexts } from "@/modules/agent-graph"
+import {
+    decideFormOf,
+    documentWithDecide,
+    documentWithDecidePoint,
+    formWithChange,
+    type AgentGraphNodeTexts,
+} from "@/modules/agent-graph"
 import type { AgentGraphCommands } from "@/modules/types"
 import type { AgentGraphSetup } from "./agentGraph.shared"
 import type { AgentGraphRead } from "./useAgentGraphRead"

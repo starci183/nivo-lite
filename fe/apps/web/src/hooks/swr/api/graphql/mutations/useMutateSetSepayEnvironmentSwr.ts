@@ -4,9 +4,8 @@ import {
     mutateSetSepayEnvironment,
     type mutateSetSepayEnvironment as MutateSetSepayEnvironmentOperation,
 } from "@/modules/api/graphql/mutations/mutation-set-sepay-environment"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SetSepayEnvironmentMutation } from "@/modules/api"
 
 /** The SWR key of the setSepayEnvironment mutation. */

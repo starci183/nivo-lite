@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateReopenDossierFinding,
     type MutateReopenDossierFindingRequest,
 } from "@/modules/api/graphql/mutations/mutation-reopen-dossier-finding"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { ReopenDossierFindingMutation } from "@/modules/api"
 
 /** What the ReopenDossierFinding mutation is triggered with. */

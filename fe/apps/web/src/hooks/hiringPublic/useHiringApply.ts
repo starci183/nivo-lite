@@ -5,9 +5,15 @@ import { useState, type Dispatch, type SetStateAction } from "react"
 import type { UseFormReturn } from "react-hook-form"
 import { useMutateApplyToHiringJobSwr, useMutateCreateHiringCvUploadSwr, usePutPresignedSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { CV_MAX_BYTES, NO_PUBLIC_JOB, answerGroups, availabilityOf, cvUploadUrl } from "./hiringPublic.shared"
+import {
+    CV_MAX_BYTES,
+    NO_PUBLIC_JOB,
+    answerGroups,
+    availabilityOf,
+    cvUploadUrl,
+    type PublicJobView,
+} from "./hiringPublic.shared"
 import type { ApplyValues, FieldOf } from "@/modules/types"
-import type { PublicJobView } from "./hiringPublic.shared"
 
 /** The workspace slug and the job slug of the public link. */
 interface ApplyTarget {
@@ -57,9 +63,9 @@ export const useHiringApply = (
     const { trigger: createUpload } = useMutateCreateHiringCvUploadSwr()
     const { trigger: apply } = useMutateApplyToHiringJobSwr()
     const [cv, setCv] = useState<File | null>(null)
-    const [isPending, setPending] = useState(false)
+    const [isPending, setIsPending] = useState(false)
     const [done, setDone] = useState<ApplyDone | null>(null)
-    const [isFailed, setFailed] = useState(false)
+    const [isFailed, setIsFailed] = useState(false)
     const values = form.watch()
     const cvError = cv !== null && cv.size > CV_MAX_BYTES ? t("applyCvTooBig") : undefined
     const store = async (file: File): Promise<StoredCv | null> => {
@@ -82,8 +88,8 @@ export const useHiringApply = (
         return sent ? { path: upload.path, name: file.name } : null
     }
     const submit = form.handleSubmit(async (submitted) => {
-        setPending(true)
-        setFailed(false)
+        setIsPending(true)
+        setIsFailed(false)
         const stored = cv === null ? null : await store(cv)
         const result = await runGraphQL(
             () =>
@@ -102,8 +108,8 @@ export const useHiringApply = (
                 }),
             { showSuccessToast: false },
         )
-        setPending(false)
-        if (result === undefined) setFailed(true)
+        setIsPending(false)
+        if (result === undefined) setIsFailed(true)
         else setDone({ duplicate: result.duplicate, cvSkipped: cv !== null && stored === null })
     })
     return {

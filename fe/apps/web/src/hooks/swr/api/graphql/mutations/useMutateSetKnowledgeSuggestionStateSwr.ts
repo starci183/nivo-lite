@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSetKnowledgeSuggestionState,
     type MutateSetKnowledgeSuggestionStateRequest,
 } from "@/modules/api/graphql/mutations/mutation-set-knowledge-suggestion-state"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SetKnowledgeSuggestionStateMutation } from "@/modules/api"
 
 /** What the SetKnowledgeSuggestionState mutation is triggered with. */

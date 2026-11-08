@@ -4,9 +4,8 @@ import {
     mutateStartSmtpConnection,
     type mutateStartSmtpConnection as MutateStartSmtpConnectionOperation,
 } from "@/modules/api/graphql/mutations/mutation-start-smtp-connection"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { StartSmtpConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the startSmtpConnection mutation. */

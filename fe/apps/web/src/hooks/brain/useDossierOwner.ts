@@ -4,8 +4,14 @@ import { useState } from "react"
 import { useFormatter, useTranslations } from "next-intl"
 import { useMutateAssignBrainDossierSwr, useQueryWorkspaceMembersSwr } from "@/hooks/swr"
 import { useWorkspaceId } from "@/hooks/workspaces"
-import { NO_ASSIGNEE, memberOptionsOf } from "@/modules/brain"
-import type { DossierView, FindingDialogValues, FindingDialogView, MemberOption } from "@/modules/brain"
+import {
+    NO_ASSIGNEE,
+    memberOptionsOf,
+    type DossierView,
+    type FindingDialogValues,
+    type FindingDialogView,
+    type MemberOption,
+} from "@/modules/brain"
 import { toast } from "@/modules/toast"
 
 /** No members yet: the read has not answered. */
@@ -43,7 +49,7 @@ export const useDossierOwner = (input: DossierOwnerInput): DossierOwner => {
     const workspaceId = useWorkspaceId()
     const people = useQueryWorkspaceMembersSwr(workspaceId)
     const save = useMutateAssignBrainDossierSwr()
-    const [isOpen, setOpen] = useState(false)
+    const [isOpen, setIsOpen] = useState(false)
     const options = people.data === undefined ? NO_OPTIONS : memberOptionsOf(people.data)
     const { dossier } = input
     const dialog: FindingDialogView | null =
@@ -68,8 +74,8 @@ export const useDossierOwner = (input: DossierOwnerInput): DossierOwner => {
               }
     return {
         dialog,
-        open: () => setOpen(true),
-        close: () => setOpen(false),
+        open: () => setIsOpen(true),
+        close: () => setIsOpen(false),
         submit: (values) => {
             if (dossier === null) return
             save.trigger({
@@ -78,7 +84,7 @@ export const useDossierOwner = (input: DossierOwnerInput): DossierOwner => {
                 dueAt: values.dueAt === "" ? null : values.dueAt,
             }).then(
                 () => {
-                    setOpen(false)
+                    setIsOpen(false)
                     input.onSaved()
                 },
                 () => {

@@ -1,8 +1,7 @@
 "use client"
 
 import { OPEN_API_EDIT_STEPS, OPEN_API_STEPS } from "@/modules/openapi-spec"
-import { openApiAuthInputOf, viewOf } from "./openapi-wizard.shared"
-import type { OpenApiWizardView } from "./openapi-wizard.shared"
+import { openApiAuthInputOf, viewOf, type OpenApiWizardView } from "./openapi-wizard.shared"
 import { useOpenApiWizardCommands } from "./useOpenApiWizardCommands"
 import { useOpenApiAuthForm } from "@/hooks/rhf"
 import { useState } from "react"

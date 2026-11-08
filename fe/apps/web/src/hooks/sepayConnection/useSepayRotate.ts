@@ -13,18 +13,18 @@ type UseSepayRotateResult = {
 
 /** The new-key flow of the Setup tab: the confirmation that is open or not, and the command that runs once it is confirmed. */
 export const useSepayRotate = (rotateKey: () => Promise<Settled<true>>): UseSepayRotateResult => {
-    const [isAsking, setAsking] = useState(false)
-    const [isRotating, setRotating] = useState(false)
+    const [isAsking, setIsAsking] = useState(false)
+    const [isRotating, setIsRotating] = useState(false)
     return {
         isAsking,
         isRotating,
-        ask: (): void => setAsking(true),
-        dismiss: (): void => setAsking(false),
+        ask: (): void => setIsAsking(true),
+        dismiss: (): void => setIsAsking(false),
         confirm: (): void => {
-            setRotating(true)
+            setIsRotating(true)
             void rotateKey().then(() => {
-                setRotating(false)
-                setAsking(false)
+                setIsRotating(false)
+                setIsAsking(false)
             })
         },
     }

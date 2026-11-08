@@ -1,6 +1,6 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { useSWRConfig } from "swr"
 import { matchesSwrKey } from "@/modules/utils"
 import { QUERY_CHAT_ROOMS_SWR_KEY } from "../queries/useQueryChatRoomsSwr"
@@ -9,7 +9,6 @@ import {
     mutateSendChatMessage,
     type mutateSendChatMessage as SendChatMessageOperation,
 } from "@/modules/api/graphql/mutations/mutation-send-chat-message"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SendChatMessageMutation } from "@/modules/api"
 
 /** What the SendChatMessage mutation is triggered with. */

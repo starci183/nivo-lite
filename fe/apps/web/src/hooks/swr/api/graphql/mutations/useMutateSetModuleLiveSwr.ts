@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSetModuleLive,
     type MutateSetModuleLiveRequest,
 } from "@/modules/api/graphql/mutations/mutation-set-module-live"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SetModuleLiveMutation } from "@/modules/api"
 
 /** What the SetModuleLive mutation is triggered with. */

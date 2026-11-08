@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateRequestAgentSync,
     type MutateRequestAgentSyncRequest,
 } from "@/modules/api/graphql/mutations/mutation-request-agent-sync"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RequestAgentSyncMutation } from "@/modules/api"
 
 /** What the RequestAgentSync mutation is triggered with. */

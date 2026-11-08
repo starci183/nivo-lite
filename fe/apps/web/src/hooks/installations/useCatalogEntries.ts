@@ -4,10 +4,11 @@ import { useLocale } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { slotOfReads } from "@/hooks/slot"
-import { MODULE_KEYS, MODULE_REGISTRY, pickCopy, pickCopyList } from "@/modules/catalog"
-import type { ModuleKey } from "@/modules/catalog"
-import type { AgentLifecycle, Installation, SetupProgress } from "@/modules/installations"
+import { MODULE_KEYS, MODULE_REGISTRY, pickCopy, pickCopyList, type ModuleKey } from "@/modules/catalog"
 import {
+    type AgentLifecycle,
+    type Installation,
+    type SetupProgress,
     installationPersonName,
     agentHref,
     agentLifecycleOf,

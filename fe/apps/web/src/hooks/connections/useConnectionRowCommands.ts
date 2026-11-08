@@ -2,8 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
-import type { Settled } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, type Settled } from "@/hooks/connection-wizard"
 import {
     useMutateCheckConnectionSwr,
     useMutateCheckMetaSwr,

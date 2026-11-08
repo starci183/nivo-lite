@@ -6,8 +6,7 @@ import { useSettledGraphQL } from "@/hooks/connection-wizard"
 import { mapSlot } from "@/hooks/slot"
 import { useMutateRecheckZaloConnectionSwr } from "@/hooks/swr"
 import type { DataSlot, ZaloCheckLineView } from "@/modules/types"
-import { useZaloPage } from "./useZaloPage"
-import type { ZaloPageData } from "./useZaloPage"
+import { useZaloPage, type ZaloPageData } from "./useZaloPage"
 
 type CheckRow = ZaloPageData["checks"][number]
 

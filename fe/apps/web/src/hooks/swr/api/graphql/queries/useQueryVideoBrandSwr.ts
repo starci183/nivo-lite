@@ -1,8 +1,7 @@
 "use client"
 
 import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { answeredData } from "@/hooks/workspaceread"
 import { queryVideoBrand } from "@/modules/api/graphql/queries/query-video-brand"
 import type { VideoBrandQuery } from "@/modules/api"

@@ -4,9 +4,8 @@ import {
     mutateRecheckZaloConnection,
     type mutateRecheckZaloConnection as MutateRecheckZaloConnectionOperation,
 } from "@/modules/api/graphql/mutations/mutation-recheck-zalo-connection"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RecheckZaloConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the recheckZaloConnection mutation. */

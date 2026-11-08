@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateDecideSetupCard,
     type MutateDecideSetupCardRequest,
 } from "@/modules/api/graphql/mutations/mutation-decide-setup-card"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { DecideSetupCardMutation } from "@/modules/api"
 
 /** What the DecideSetupCard mutation is triggered with. */

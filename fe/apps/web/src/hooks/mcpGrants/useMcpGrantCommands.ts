@@ -1,7 +1,6 @@
 "use client"
 
-import { useMutateSetMcpToolGrantSwr } from "@/hooks/swr"
-import type { useQueryMcpToolGrantsSwr } from "@/hooks/swr"
+import { useMutateSetMcpToolGrantSwr, type useQueryMcpToolGrantsSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"

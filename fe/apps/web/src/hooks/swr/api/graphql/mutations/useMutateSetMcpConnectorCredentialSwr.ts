@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSetMcpConnectorCredential,
     type MutateSetMcpConnectorCredentialRequest,
 } from "@/modules/api/graphql/mutations/mutation-set-mcp-connector-credential"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SetMcpConnectorCredentialMutation } from "@/modules/api"
 
 /** What the SetMcpConnectorCredential mutation is triggered with. */

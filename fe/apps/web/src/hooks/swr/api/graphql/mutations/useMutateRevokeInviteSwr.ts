@@ -4,9 +4,8 @@ import {
     mutateRevokeInvite,
     type mutateRevokeInvite as MutateRevokeInviteOperation,
 } from "@/modules/api/graphql/mutations/mutation-revoke-invite"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RevokeInviteMutation } from "@/modules/api"
 
 /** The SWR key of the revokeInvite mutation. */

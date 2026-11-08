@@ -2,8 +2,7 @@ import { currentTime } from "@/modules/brain"
 import { loadingSlot } from "@/hooks/slot"
 import { useWorkspaceMember } from "@/hooks/knowledge"
 import type { BrainExtraction, BrainFact, BrainGap, BrainLens, BrainLesson, DataSlot } from "@/modules/types"
-import { useBrain } from "./useBrain"
-import type { BrainView } from "./useBrain"
+import { useBrain, type BrainView } from "./useBrain"
 
 /** What a list of the Second Brain draws: its rows, whether the member may write, and whether it is still loading. */
 export interface BrainBoard {

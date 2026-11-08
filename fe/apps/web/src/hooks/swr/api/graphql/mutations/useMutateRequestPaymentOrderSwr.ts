@@ -5,8 +5,7 @@ import {
     type MutateRequestPaymentOrderRequest,
 } from "@/modules/api/graphql/mutations/mutation-request-payment-order"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { RequestPaymentOrderMutation } from "@/modules/api"
 
 /** The SWR key of the requestPaymentOrder mutation. */

@@ -4,8 +4,7 @@ import {
     queryTestOpenApiOperation,
     type QueryTestOpenApiOperationRequest,
 } from "@/modules/api/graphql/queries/query-test-open-api-operation"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { TestOpenApiOperationQuery } from "@/modules/api"
 
 /** The SWR key of the testOpenApiOperation query. */

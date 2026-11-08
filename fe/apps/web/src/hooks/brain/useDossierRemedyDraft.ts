@@ -2,8 +2,7 @@
 
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryDossierRemedyDraftSwr } from "@/hooks/swr"
-import { draftViewOf } from "@/modules/brain"
-import type { DraftView } from "@/modules/brain"
+import { draftViewOf, type DraftView } from "@/modules/brain"
 import type { DataSlot } from "@/modules/types"
 
 /** What one remedy draft gives the drawer that shows it. */

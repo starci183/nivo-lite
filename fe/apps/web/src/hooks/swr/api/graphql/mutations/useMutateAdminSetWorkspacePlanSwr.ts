@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateAdminSetWorkspacePlan,
     type MutateAdminSetWorkspacePlanRequest,
 } from "@/modules/api/graphql/mutations/mutation-admin-set-workspace-plan"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { AdminSetWorkspacePlanMutation } from "@/modules/api"
 
 /** What the admin set workspace plan mutation is triggered with. */

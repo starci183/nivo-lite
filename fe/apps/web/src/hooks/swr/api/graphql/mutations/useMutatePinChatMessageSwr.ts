@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutatePinChatMessage,
     type mutatePinChatMessage as PinChatMessageOperation,
 } from "@/modules/api/graphql/mutations/mutation-pin-chat-message"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { PinChatMessageMutation } from "@/modules/api"
 
 /** What the PinChatMessage mutation is triggered with. */

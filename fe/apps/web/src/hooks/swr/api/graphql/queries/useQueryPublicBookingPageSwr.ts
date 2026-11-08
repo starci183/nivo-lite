@@ -5,8 +5,7 @@ import {
     queryPublicBookingPage,
     type queryPublicBookingPage as QueryPublicBookingPageOperation,
 } from "@/modules/api/graphql/queries/query-public-booking-page"
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import type { PublicBookingPageQuery } from "@/modules/api"
 
 /** The input of the anonymous public booking page query. */

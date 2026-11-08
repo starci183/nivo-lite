@@ -8,8 +8,8 @@ import {
     QUERY_MEMBER_GRANTS_SWR_KEY,
     useMutateSaveAuthorityRuleSwr,
     useMutateSaveMemberGrantsSwr,
+    type MutateSaveMemberGrantsRequest,
 } from "@/hooks/swr"
-import type { MutateSaveMemberGrantsRequest } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { matchesSwrKey } from "@/modules/utils"
 import type { PermissionChange } from "@/modules/permissions"

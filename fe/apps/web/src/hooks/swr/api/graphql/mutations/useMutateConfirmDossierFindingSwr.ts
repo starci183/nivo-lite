@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateConfirmDossierFinding,
     type MutateConfirmDossierFindingRequest,
 } from "@/modules/api/graphql/mutations/mutation-confirm-dossier-finding"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { ConfirmDossierFindingMutation } from "@/modules/api"
 
 /** What the ConfirmDossierFinding mutation is triggered with. */

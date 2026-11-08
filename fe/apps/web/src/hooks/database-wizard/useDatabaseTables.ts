@@ -107,7 +107,7 @@ export const useDatabaseTables = ({
         return [
             {
                 key,
-                id: `db-${key.replace(/\W/g, "-")}`,
+                id: `db-${key.replaceAll(/\W/g, "-")}`,
                 table: mapping.table,
                 entity: mapping.entity,
                 idColumn: mapping.idColumn || null,

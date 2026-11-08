@@ -1,9 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import type { ClipboardEvent } from "react"
-import { linkProblemOf, nextId, splitLinks } from "@/modules/documents"
-import type { LinkInput } from "@/modules/documents"
+import { useState, type ClipboardEvent } from "react"
+import { linkProblemOf, nextId, splitLinks, type LinkInput } from "@/modules/documents"
 import type { LinkRows } from "@/hooks/knowledgeAddTypes"
 
 const newRow = (value = ""): LinkInput => ({ id: nextId(), value })

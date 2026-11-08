@@ -4,18 +4,16 @@ import type { VideoEditorActions, VideoEditorViews } from "@/modules/types"
 type VideoInputsFormFields = VideoEditorViews["inputs"]
 /** Handlers the inputs step form calls. */
 export type VideoInputsFormActions = VideoEditorActions["inputs"]
-import type { MediaItem, ProjectInputs } from "@/modules/video"
+import { type MediaItem, type ProjectInputs, editorHref } from "@/modules/video"
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useVideoActions, useVideoUpload } from "@/hooks/video"
 import { useVideoInputsForm } from "@/hooks/rhf"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
-import { editorHref } from "@/modules/video"
 
 import { navigation } from "@/modules/i18n"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { videoOwnerOf } from "./videoWorkbench.shared"
-import type { VideoViewInput } from "./videoWorkbench.shared"
+import { videoOwnerOf, type VideoViewInput } from "./videoWorkbench.shared"
 interface InputsProjection {
     readonly input: VideoViewInput
     readonly inputs: ProjectInputs

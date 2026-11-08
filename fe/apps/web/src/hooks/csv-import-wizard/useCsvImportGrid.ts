@@ -3,8 +3,7 @@
 import { useTranslations } from "next-intl"
 import Papa from "papaparse"
 import { useState, type Dispatch, type SetStateAction } from "react"
-import { MAX_GRID_ROWS } from "./csv-import-wizard.shared"
-import type { CsvEntity, Grid } from "./csv-import-wizard.shared"
+import { MAX_GRID_ROWS, type CsvEntity, type Grid } from "./csv-import-wizard.shared"
 
 /** The catalog key of the starter columns of the typed grid for each kind of rows (column names joined by a bar). */
 const STARTER_KEY = {

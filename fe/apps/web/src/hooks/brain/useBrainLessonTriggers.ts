@@ -1,5 +1,10 @@
-import { useMutateDecideBrainLessonSwr, useMutateMaintainBrainSwr, useMutateSaveBrainLessonSwr } from "@/hooks/swr"
-import type { MutateDecideBrainLessonRequest, MutateSaveBrainLessonRequest } from "@/hooks/swr"
+import {
+    useMutateDecideBrainLessonSwr,
+    useMutateMaintainBrainSwr,
+    useMutateSaveBrainLessonSwr,
+    type MutateDecideBrainLessonRequest,
+    type MutateSaveBrainLessonRequest,
+} from "@/hooks/swr"
 
 /** The requests of the commands about lessons and upkeep, by the kind a card names. */
 export interface BrainLessonRequests {

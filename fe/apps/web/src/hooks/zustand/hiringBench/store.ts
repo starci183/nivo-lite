@@ -1,7 +1,6 @@
 "use client"
 
-import { create } from "zustand"
-import type { UseBoundStore, StoreApi } from "zustand"
+import { create, type UseBoundStore, type StoreApi } from "zustand"
 
 /** Feature-local state shared by the Hiring tabs: the job the candidates tab filters on and the candidate whose drawer is open. */
 interface HiringBenchState {

@@ -1,7 +1,6 @@
 "use client"
 
-import useSWR from "swr"
-import type { SWRConfiguration } from "swr"
+import useSWR, { type SWRConfiguration } from "swr"
 import { queryTelegramUserReady } from "@/modules/api/graphql/queries/query-telegram-user-ready"
 import type { ReadResponse } from "@/hooks/workspaceread"
 import type { TelegramUserReadyQuery } from "@/modules/api"

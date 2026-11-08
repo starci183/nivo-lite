@@ -1,8 +1,7 @@
 "use client"
 
 import { argumentKey, type ReadResponse } from "@/hooks/workspaceread"
-import useSWR from "swr"
-import type { SWRConfiguration } from "swr"
+import useSWR, { type SWRConfiguration } from "swr"
 import { queryLoadImapConnection } from "@/modules/api/graphql/queries/query-load-imap-connection"
 import type { LoadImapConnectionQuery } from "@/modules/api"
 

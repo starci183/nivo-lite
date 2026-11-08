@@ -13,8 +13,12 @@ import {
     mapGraphOf,
     reviewedStatusOf,
     selectionOf,
+    type CategoryView,
+    type MapContent,
+    type MapStatusFilter,
+    type MapStatusOf,
+    type MapView,
 } from "@/modules/brain"
-import type { CategoryView, MapContent, MapStatusFilter, MapStatusOf, MapView } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref, workspaceHref } from "@/modules/routes"
 import { useBrainDossiers } from "./useBrainDossiers"

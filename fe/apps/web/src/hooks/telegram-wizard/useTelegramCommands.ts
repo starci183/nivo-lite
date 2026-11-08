@@ -1,8 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
-import type { Settled } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, type Settled } from "@/hooks/connection-wizard"
 import { connectionCheckOf } from "@/hooks/connection-wire"
 import { useConnectionsRefresh } from "@/hooks/connections"
 import { useMutateCheckConnectionSwr, useMutateConnectTelegramSwr } from "@/hooks/swr"

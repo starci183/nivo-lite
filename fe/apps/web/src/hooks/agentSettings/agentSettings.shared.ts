@@ -1,5 +1,4 @@
-import { agentHref, isSetupPending } from "@/modules/installations"
-import type { Installation, InstallationLifecycle } from "@/modules/installations"
+import { agentHref, isSetupPending, type Installation, type InstallationLifecycle } from "@/modules/installations"
 import { workspaceHref } from "@/modules/routes"
 import type { ConnectionStatus } from "@/modules/types"
 

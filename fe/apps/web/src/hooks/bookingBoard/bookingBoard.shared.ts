@@ -85,7 +85,7 @@ export const toBookingBoard = (data: BookingBoardType): BookingBoard => ({
         end: row.end ?? null,
         note: row.note,
     })),
-    bookings: data.bookings.map(bookingRowOf),
+    bookings: data.bookings.map((item) => bookingRowOf(item)),
     waitlist: data.waitlist.map((item) => ({
         id: item.id,
         customer: item.customer,

@@ -1,9 +1,7 @@
 "use client"
 
-import { useDraftCommands } from "./useDraftCommands"
-import type { DraftCommands } from "./useDraftCommands"
-import { useFindingCommands } from "./useFindingCommands"
-import type { FindingCommands } from "./useFindingCommands"
+import { useDraftCommands, type DraftCommands } from "./useDraftCommands"
+import { useFindingCommands, type FindingCommands } from "./useFindingCommands"
 
 /** Every write of the dossier review: the findings and the remedy drafts. */
 export type DossierReviewCommands = FindingCommands & DraftCommands

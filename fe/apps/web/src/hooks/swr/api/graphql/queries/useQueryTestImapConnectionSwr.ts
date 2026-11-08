@@ -4,8 +4,7 @@ import {
     queryTestImapConnection,
     type QueryTestImapConnectionRequest,
 } from "@/modules/api/graphql/queries/query-test-imap-connection"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { TestImapConnectionQuery } from "@/modules/api"
 
 /** The SWR key of the testImapConnection query. */

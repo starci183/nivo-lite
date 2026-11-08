@@ -5,8 +5,7 @@ import {
     type mutateConnectTelegram as MutateConnectTelegramOperation,
 } from "@/modules/api/graphql/mutations/mutation-connect-telegram"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { ConnectTelegramMutation } from "@/modules/api"
 
 /** The SWR key of the connectTelegram mutation. */

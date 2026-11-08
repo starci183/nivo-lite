@@ -1,11 +1,9 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { SEVERITY_TONE, needsDocumentOf, quotesOf } from "@/modules/brain"
-import type { FindingCardView, FindingView } from "@/modules/brain"
+import { SEVERITY_TONE, needsDocumentOf, quotesOf, type FindingCardView, type FindingView } from "@/modules/brain"
 import { brainDossierHref, workspaceHref } from "@/modules/routes"
-import { cardActionsOf, ownerPartOf, placeWordsOf, statusPartOf } from "./brain.shared"
-import type { FindingCardContext } from "./brain.shared"
+import { cardActionsOf, ownerPartOf, placeWordsOf, statusPartOf, type FindingCardContext } from "./brain.shared"
 import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The view `useFindingCards` returns. */

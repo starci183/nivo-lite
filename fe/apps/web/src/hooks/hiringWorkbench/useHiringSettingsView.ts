@@ -1,12 +1,17 @@
 "use client"
 import { useTranslations } from "next-intl"
-import { RETENTION_MAX_DAYS, RETENTION_MIN_DAYS, settingsDefaults, useHiringSettings } from "@/hooks/hiringSettings"
+import {
+    RETENTION_MAX_DAYS,
+    RETENTION_MIN_DAYS,
+    settingsDefaults,
+    useHiringSettings,
+    type SettingsValues,
+} from "@/hooks/hiringSettings"
 import { useHiringSettingsForm } from "@/hooks/rhf"
 import type { HiringViewInput } from "./hiringWorkbench.shared"
 import type { FieldOf, HiringWorkbenchCopy } from "@/modules/types"
 
 import { useFeatureReset } from "@/hooks/reuseables"
-import type { SettingsValues } from "@/hooks/hiringSettings"
 
 type ResolvedActions = {
     readonly text: (name: FieldOf<SettingsValues, string>, value: string) => void

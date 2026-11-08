@@ -1,8 +1,7 @@
 "use client"
 
 import { tenantParamsKey } from "@starci/next-data"
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import type { ReadVariables } from "@nivo-lite/agent-sdk/block"
 import { answeredData } from "@/hooks/workspaceread"
 import { queryWorkbenchRead } from "@/modules/api/graphql/queries/query-workbench-read"

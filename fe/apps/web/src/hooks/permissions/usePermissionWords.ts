@@ -2,8 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import type { StoredRule } from "@/hooks/authority"
-import { bandsOf, modeKindOf } from "@/modules/permissions"
-import type { Approver } from "@/modules/permissions"
+import { bandsOf, modeKindOf, type Approver } from "@/modules/permissions"
 import { useBoundFormatter } from "./useBoundFormatter"
 
 /** A choice of a list, already worded. */

@@ -1,10 +1,9 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { useForm, type UseFormReturn } from "react-hook-form"
 import { z } from "zod"
 import type { InterviewValues } from "@/hooks/hiringCandidate"
-import type { UseFormReturn } from "react-hook-form"
 
 const schema = z.object({
     interviewerUserId: z.string(),

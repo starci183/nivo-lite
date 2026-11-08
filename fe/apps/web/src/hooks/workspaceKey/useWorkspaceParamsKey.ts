@@ -1,5 +1,4 @@
-import { tenantParamsKey } from "@starci/next-data"
-import type { KeyOrWait } from "@starci/next-data"
+import { tenantParamsKey, type KeyOrWait } from "@starci/next-data"
 import { useOpenWorkspaceId } from "./useOpenWorkspaceId"
 
 /** Keys a workspace query by its ordered parameters, pausing absent parameters or an empty workspace. */

@@ -5,8 +5,7 @@ import {
     type mutateDeleteConnection as MutateDeleteConnectionOperation,
 } from "@/modules/api/graphql/mutations/mutation-delete-connection"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { DeleteConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the deleteConnection mutation. */

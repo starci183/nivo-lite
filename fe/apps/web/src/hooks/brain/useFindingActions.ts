@@ -1,12 +1,10 @@
 "use client"
 
-import { DIALOG_OF_ACTION } from "@/modules/brain"
-import type { FindingCardActionView, FindingView, MemberOption } from "@/modules/brain"
+import { DIALOG_OF_ACTION, type FindingCardActionView, type FindingView, type MemberOption } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
 import { brainDossierHref, workspaceHref } from "@/modules/routes"
 import { useDossierReviewCommands } from "./useDossierReviewCommands"
-import { useFindingDialog } from "./useFindingDialog"
-import type { FindingDialog } from "./useFindingDialog"
+import { useFindingDialog, type FindingDialog } from "./useFindingDialog"
 import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The view `useFindingActions` returns. */

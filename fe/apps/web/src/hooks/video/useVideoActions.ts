@@ -6,12 +6,12 @@ import {
     useMutateCreateVideoProjectSwr,
     useMutateDuplicateVideoProjectSwr,
     useMutateUpdateVideoProjectSwr,
+    type MutateCreateVideoProjectRequest,
+    type MutateUpdateVideoProjectRequest,
 } from "@/hooks/swr"
-import type { MutateCreateVideoProjectRequest, MutateUpdateVideoProjectRequest } from "@/hooks/swr"
 import type { ProjectInputs, ScriptScene } from "@/modules/video"
 import { projectCommandOf } from "./video.shared"
-import { useVideoRefresh } from "./useVideoRefresh"
-import type { VideoOwner } from "./useVideoRefresh"
+import { useVideoRefresh, type VideoOwner } from "./useVideoRefresh"
 
 /** The edits one update sends: the inputs and the scenes arrive as the editor holds them, read-only. */
 interface VideoProjectPatch extends Omit<MutateUpdateVideoProjectRequest, "projectId" | "inputs" | "script"> {

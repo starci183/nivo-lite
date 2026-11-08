@@ -8,8 +8,7 @@ import { MODULE_KEYS, pickCopy } from "@/modules/catalog"
 import { dayjs, productCalendarDay } from "@/modules/dayjs"
 import { navigation } from "@/modules/i18n"
 import { creditsPath, workspaceHref } from "@/modules/routes"
-import { alertOf, dailyOf, factsOf, metersOf } from "./usageCard.shared"
-import type { UsageCardData, UsageCardView } from "./usageCard.shared"
+import { alertOf, dailyOf, factsOf, metersOf, type UsageCardData, type UsageCardView } from "./usageCard.shared"
 
 /** Reads usage and resolves every display label, calculation and navigation action outside the drawing. */
 export const useUsageCard = (workspaceId: string | undefined): UsageCardView => {

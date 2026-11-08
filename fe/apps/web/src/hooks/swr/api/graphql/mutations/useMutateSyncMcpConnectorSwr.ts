@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSyncMcpConnector,
     type MutateSyncMcpConnectorRequest,
 } from "@/modules/api/graphql/mutations/mutation-sync-mcp-connector"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SyncMcpConnectorMutation } from "@/modules/api"
 
 /** What the SyncMcpConnector mutation is triggered with. */

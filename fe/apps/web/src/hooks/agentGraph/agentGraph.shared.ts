@@ -1,6 +1,5 @@
 import type { useQueryAgentGraphRunSwr, useQueryAgentGraphSwr, useQueryApproverDirectorySwr } from "@/hooks/swr"
-import { parseAgentGraphTrace } from "@/modules/agent-graph"
-import type { AgentGraphSetupState, AgentGraphWire } from "@/modules/agent-graph"
+import { parseAgentGraphTrace, type AgentGraphSetupState, type AgentGraphWire } from "@/modules/agent-graph"
 import type {
     AgentGraphAction,
     AgentGraphCommands,

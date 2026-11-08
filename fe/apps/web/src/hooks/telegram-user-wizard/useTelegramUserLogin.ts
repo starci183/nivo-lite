@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import type { SetStateAction, Dispatch, TransitionStartFunction } from "react"
+import { useState, type SetStateAction, type Dispatch, type TransitionStartFunction } from "react"
 import type { useTelegramUserForm } from "@/hooks/rhf"
 import type { LoginStage, SentVia } from "@/hooks/telegram-chats"
 import type { TelegramUserCommands } from "./useTelegramUserCommands"

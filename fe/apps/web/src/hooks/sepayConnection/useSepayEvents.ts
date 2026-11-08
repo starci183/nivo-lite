@@ -15,7 +15,7 @@ type UseSepayEventsResult = {
 /** The newest webhook deliveries of one SePay connection, newest first, polled while the page is open. */
 export const useSepayEvents = (connectionId: string): UseSepayEventsResult => {
     const query = useQuerySepayConnectionEventsSwr(connectionId, { refreshInterval: SEPAY_POLL_MS })
-    const data = useMemo(() => query.data?.map(sepayEventOf), [query.data])
+    const data = useMemo(() => query.data?.map((item) => sepayEventOf(item)), [query.data])
     return {
         slot: slotOfSwr({ data, error: query.error, isLoading: query.isLoading }),
         retry: (): void => {

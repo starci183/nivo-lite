@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateReturnZaloAuthorization,
     type MutateReturnZaloAuthorizationRequest,
 } from "@/modules/api/graphql/mutations/mutation-return-zalo-authorization"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { ReturnZaloAuthorizationMutation } from "@/modules/api"
 
 /** What the returnZaloAuthorization mutation is triggered with. */

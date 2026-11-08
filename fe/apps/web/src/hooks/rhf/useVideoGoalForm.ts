@@ -3,11 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, type UseFormReturn } from "react-hook-form"
 import { z } from "zod"
-import { ASPECTS, TARGET_SECONDS_MAX, TARGET_SECONDS_MIN } from "@/modules/video"
-import type { Aspect, Goal } from "@/modules/video"
-import type { UseFormReturn } from "react-hook-form"
+import { ASPECTS, TARGET_SECONDS_MAX, TARGET_SECONDS_MIN, type Aspect, type Goal } from "@/modules/video"
 
 /** The choices that create or update a video's goal. */
 export interface VideoGoalValues {

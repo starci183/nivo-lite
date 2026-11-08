@@ -5,8 +5,7 @@ import { useWorkspaceMember } from "@/hooks/knowledge"
 import { slotOfSwr } from "@/hooks/slot"
 import { useQueryPublicDocumentsSwr } from "@/hooks/swr"
 import { readError } from "@/hooks/workspaceread"
-import { toPublicDocument } from "@/modules/brain"
-import type { PublicDocument } from "@/modules/brain"
+import { toPublicDocument, type PublicDocument } from "@/modules/brain"
 import type { DataSlot } from "@/modules/types"
 
 /** No documents: one array, so a read that has not answered does not change between renders. */
@@ -31,7 +30,7 @@ export const usePublicDocuments = (): PublicDocumentsView => {
     const swrRead = useQueryPublicDocumentsSwr(member.canWrite)
     const { data, isLoading } = swrRead
     const error = readError(swrRead)
-    const documents = useMemo(() => (data === undefined ? NONE : data.map(toPublicDocument)), [data])
+    const documents = useMemo(() => (data === undefined ? NONE : data.map((item) => toPublicDocument(item))), [data])
     const slot = slotOfSwr({ data: data === undefined ? undefined : documents, error: swrRead.error, isLoading })
     const reload = () => void swrRead.mutate()
     return { documents, error, isLoading, slot, reload, canWrite: member.canWrite }

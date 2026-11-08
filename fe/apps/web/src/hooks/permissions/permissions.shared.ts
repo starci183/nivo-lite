@@ -1,6 +1,12 @@
 import { approvalPolicyOf, approverRoleOf, ruleUnitOf } from "@/modules/authority"
-import { TIMEOUT_CHOICES, orderedPick } from "@/modules/permissions"
-import type { GrantCandidate, GrantDraft, PermissionDraft, Strategy } from "@/modules/permissions"
+import {
+    TIMEOUT_CHOICES,
+    orderedPick,
+    type GrantCandidate,
+    type GrantDraft,
+    type PermissionDraft,
+    type Strategy,
+} from "@/modules/permissions"
 
 const STRATEGIES: ReadonlyArray<Strategy> = ["auto", "bands", "ask", "never"]
 

@@ -1,10 +1,16 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { APPROVER_ROLES, POLICIES, UNITS } from "@/modules/authority"
-import type { ApprovalPolicy, ApproverRole, RuleUnit, StoredRule } from "@/modules/authority"
-import { SLIDER_MAX, TIMEOUT_CHOICES } from "@/modules/permissions"
-import type { PermissionDraft } from "@/modules/permissions"
+import {
+    APPROVER_ROLES,
+    POLICIES,
+    UNITS,
+    type ApprovalPolicy,
+    type ApproverRole,
+    type RuleUnit,
+    type StoredRule,
+} from "@/modules/authority"
+import { SLIDER_MAX, TIMEOUT_CHOICES, type PermissionDraft } from "@/modules/permissions"
 import { useBoundFormatter } from "./useBoundFormatter"
 import { usePermissionDrawerCopy } from "./usePermissionDrawerCopy"
 import { actionWordOf } from "@/hooks/actionWord"

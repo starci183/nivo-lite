@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateRedraftPublicDocument,
     type MutateRedraftPublicDocumentRequest,
 } from "@/modules/api/graphql/mutations/mutation-redraft-public-document"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RedraftPublicDocumentMutation } from "@/modules/api"
 
 /** What the RedraftPublicDocument mutation is triggered with. */

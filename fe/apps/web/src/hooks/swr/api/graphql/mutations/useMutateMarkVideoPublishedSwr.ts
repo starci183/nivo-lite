@@ -5,8 +5,7 @@ import {
     type mutateMarkVideoPublished as MutateMarkVideoPublishedOperation,
 } from "@/modules/api/graphql/mutations/mutation-mark-video-published"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { MarkVideoPublishedMutation } from "@/modules/api"
 
 /** The SWR key of the markVideoPublished mutation. */

@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSetWorkspaceAgentWork,
     type MutateSetWorkspaceAgentWorkRequest,
 } from "@/modules/api/graphql/mutations/mutation-set-workspace-agent-work"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SetWorkspaceAgentWorkMutation } from "@/modules/api"
 
 /** What the SetWorkspaceAgentWork mutation is triggered with. */

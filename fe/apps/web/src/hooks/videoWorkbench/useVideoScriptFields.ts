@@ -1,9 +1,7 @@
-import type { ScriptScene } from "@/modules/video"
+import { type ScriptScene, estimateScriptSeconds, VIDEO_MAX_SECONDS, SCRIPT_MAX_SCENES } from "@/modules/video"
 import { useTranslations, useFormatter } from "next-intl"
 import type { useVideoScriptForm } from "@/hooks/rhf"
-import { useVideoFailure } from "@/hooks/video"
-import type { useVideoScript } from "@/hooks/video"
-import { estimateScriptSeconds, VIDEO_MAX_SECONDS, SCRIPT_MAX_SCENES } from "@/modules/video"
+import { useVideoFailure, type useVideoScript } from "@/hooks/video"
 import type { VideoViewInput } from "./videoWorkbench.shared"
 
 interface ScriptProjection {

@@ -21,10 +21,10 @@ export const useHiringOfferReply = (token: string): HiringOfferReplyView => {
     const t = useTranslations("hiring")
     const runGraphQL = useGraphQLWithToast()
     const { trigger } = useMutateRespondHiringOfferSwr()
-    const [isPending, setPending] = useState(false)
+    const [isPending, setIsPending] = useState(false)
     const [outcome, setOutcome] = useState<ReplyOutcome | null>(null)
     const answer = async (accept: boolean) => {
-        setPending(true)
+        setIsPending(true)
         const result = await runGraphQL(
             async () => {
                 try {
@@ -36,7 +36,7 @@ export const useHiringOfferReply = (token: string): HiringOfferReplyView => {
             },
             { showSuccessToast: false },
         )
-        setPending(false)
+        setIsPending(false)
         if (result !== undefined) {
             setOutcome({ isOk: ANSWERED_OUTCOMES.has(result.outcome), text: t(`replyOffer_${result.outcome}`) })
         }

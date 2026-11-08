@@ -3,10 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, type UseFormReturn } from "react-hook-form"
 import { z } from "zod"
 import type { ProjectInputs } from "@/modules/video"
-import type { UseFormReturn } from "react-hook-form"
 
 /** The editable sources, notes and media used by the script writer. */
 export interface VideoInputsValues {

@@ -28,10 +28,10 @@ export const useHiringInterviewReply = (token: string): HiringInterviewReplyView
     const format = useHiringFormat()
     const runGraphQL = useGraphQLWithToast()
     const { trigger } = useMutateRespondHiringInterviewSwr()
-    const [isPending, setPending] = useState(false)
+    const [isPending, setIsPending] = useState(false)
     const [outcome, setOutcome] = useState<ReplyOutcome | null>(null)
     const pick = async (start: string | null) => {
-        setPending(true)
+        setIsPending(true)
         const result = await runGraphQL(
             async () => {
                 try {
@@ -44,7 +44,7 @@ export const useHiringInterviewReply = (token: string): HiringInterviewReplyView
             },
             { showSuccessToast: false },
         )
-        setPending(false)
+        setIsPending(false)
         if (result === undefined) return
         setOutcome({
             isOk: PICKED_OUTCOMES.has(result.outcome),

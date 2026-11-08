@@ -1,6 +1,5 @@
 import { foldText } from "@/modules/installations"
-import { useCatalogFilters } from "./useCatalogFilters"
-import type { CatalogFilters } from "./useCatalogFilters"
+import { useCatalogFilters, type CatalogFilters } from "./useCatalogFilters"
 import { ALL_CATEGORIES } from "./modules.shared"
 
 /** One role of the catalogue as the page prepared it; `card` is what the block draws. */

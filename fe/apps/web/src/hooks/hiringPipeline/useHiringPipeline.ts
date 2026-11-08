@@ -1,10 +1,9 @@
 "use client"
 
 import { useFeatureReset } from "@/hooks/reuseables"
-import type { HiringOwner } from "@/hooks/hiring"
+import { type HiringOwner, useHiringRun } from "@/hooks/hiring"
 
 import { useMemo, useState } from "react"
-import { useHiringRun } from "@/hooks/hiring"
 import type { HiringWorkbenchData, CandidateView } from "@/hooks/hiringWire"
 import { pipelineLanes, withdrawnCount, type PipelineLane } from "./hiringPipeline.shared"
 import { useHiringMove } from "./useHiringMove"

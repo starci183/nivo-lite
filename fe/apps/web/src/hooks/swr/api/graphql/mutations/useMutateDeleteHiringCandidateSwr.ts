@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateDeleteHiringCandidate,
     type MutateDeleteHiringCandidateRequest,
 } from "@/modules/api/graphql/mutations/mutation-delete-hiring-candidate"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { DeleteHiringCandidateMutation } from "@/modules/api"
 
 /** What the deleteHiringCandidate mutation is triggered with. */

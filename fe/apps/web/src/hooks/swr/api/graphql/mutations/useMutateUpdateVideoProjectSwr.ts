@@ -4,9 +4,8 @@ import {
     mutateUpdateVideoProject,
     type MutateUpdateVideoProjectRequest,
 } from "@/modules/api/graphql/mutations/mutation-update-video-project"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { UpdateVideoProjectMutation } from "@/modules/api"
 
 /** The SWR key of the updateVideoProject mutation. */

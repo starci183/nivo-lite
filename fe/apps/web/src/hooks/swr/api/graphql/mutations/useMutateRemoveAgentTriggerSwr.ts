@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateRemoveAgentTrigger,
     type MutateRemoveAgentTriggerRequest,
 } from "@/modules/api/graphql/mutations/mutation-remove-agent-trigger"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RemoveAgentTriggerMutation } from "@/modules/api"
 
 /** What the RemoveAgentTrigger mutation is triggered with. */

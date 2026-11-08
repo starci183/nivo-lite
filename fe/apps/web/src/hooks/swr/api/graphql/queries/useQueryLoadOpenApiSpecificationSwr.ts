@@ -4,8 +4,7 @@ import {
     queryLoadOpenApiSpec,
     type queryLoadOpenApiSpec as QueryLoadOpenApiSpecOperation,
 } from "@/modules/api/graphql/queries/query-load-open-api-specification"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { LoadOpenApiSpecQuery } from "@/modules/api"
 
 /** What the loadOpenApiSpec query is triggered with. */

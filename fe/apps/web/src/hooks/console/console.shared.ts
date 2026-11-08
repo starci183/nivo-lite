@@ -1,7 +1,13 @@
 import type { DropdownMenuEntry, DropdownMenuSection } from "@starci/grammar/common"
 import { APP_ROUTES, workspaceHref } from "@/modules/routes"
-import { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
-import type { ConsoleIconName, ConsoleSessionView, ConsoleWorkspace } from "@/modules/types"
+import {
+    ACCOUNT_ITEM,
+    PROFILE_ITEM,
+    SIGN_OUT_ITEM,
+    type ConsoleIconName,
+    type ConsoleSessionView,
+    type ConsoleWorkspace,
+} from "@/modules/types"
 
 /** The catalog key that names each role. */
 export const ROLE_LABELS = { owner: "roleOwner", manager: "roleManager", staff: "roleStaff" } as const

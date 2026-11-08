@@ -2,8 +2,7 @@
 
 import { useCallback, useState, type Dispatch, type SetStateAction } from "react"
 import { useAddQueue, useQueueActions } from "@/hooks/knowledge"
-import { DRIVE_ORIGIN, isReadableDriveFile } from "./drive.shared"
-import type { DriveListing } from "./drive.shared"
+import { DRIVE_ORIGIN, isReadableDriveFile, type DriveListing } from "./drive.shared"
 import { useDriveListing } from "./useDriveListing"
 
 /** What one add needs from the listing the owner ticked. */
@@ -20,13 +19,13 @@ interface DriveAddInput {
  */
 const useDriveAdd = (input: DriveAddInput) => {
     const queue = useAddQueue(useQueueActions())
-    const [isAdding, setAdding] = useState(false)
+    const [isAdding, setIsAdding] = useState(false)
     const [added, setAdded] = useState(0)
     const { listing, selected, onSent } = input
     const add = useCallback(async (): Promise<void> => {
         if (listing === null) return
         const chosen = listing.files.filter((file) => selected.includes(file.id) && isReadableDriveFile(file))
-        setAdding(true)
+        setIsAdding(true)
         const items = queue.addChosenLinks(
             chosen.map((file) => ({ url: file.url, title: file.name })),
             DRIVE_ORIGIN,
@@ -38,7 +37,7 @@ const useDriveAdd = (input: DriveAddInput) => {
             installationId: null,
         })
         queue.reset()
-        setAdding(false)
+        setIsAdding(false)
         setAdded(sent)
         onSent()
     }, [listing, selected, queue, onSent])

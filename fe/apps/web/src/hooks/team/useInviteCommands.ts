@@ -9,8 +9,7 @@ import {
     useMutateRevokeInviteSwr,
 } from "@/hooks/swr"
 import { toast, useGraphQLWithToast } from "@/modules/toast"
-import { inviteSentOf, refreshTeam } from "./team.shared"
-import type { InviteSentView } from "./team.shared"
+import { inviteSentOf, refreshTeam, type InviteSentView } from "./team.shared"
 
 const SENT_KEYS = { invited: "sentEmail", existing: "sentNoticeExisting", none: "sentNoEmail" } as const
 

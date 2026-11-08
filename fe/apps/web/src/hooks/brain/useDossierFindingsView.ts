@@ -33,8 +33,7 @@ import { useDossierRecord } from "./useDossierRecord"
 import { useDossierReviewCommands } from "./useDossierReviewCommands"
 import { useDossierReviewSummary } from "./useDossierReviewSummary"
 import { useFindingDialog } from "./useFindingDialog"
-import { useFindingRows } from "./useFindingRows"
-import type { UploadTarget } from "./useFindingRows"
+import { useFindingRows, type UploadTarget } from "./useFindingRows"
 import { useWorkspaceRouter } from "@/hooks/workspaces"
 
 /** The real read and its resolved inputs, before the pane's atom projection. */

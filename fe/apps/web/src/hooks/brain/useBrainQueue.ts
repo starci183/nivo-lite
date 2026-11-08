@@ -4,8 +4,7 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useSlotLabels } from "@/hooks/slot"
 import { usePanePhone } from "@/hooks/paneFrame"
-import { brainGridOf } from "@/modules/brain"
-import type { FindingDialogValues, TodoFilter } from "@/modules/brain"
+import { brainGridOf, type FindingDialogValues, type TodoFilter } from "@/modules/brain"
 import type { DataSlot, QueueEntryView, QueueFilterView, QueueView } from "@/modules/types"
 import { useFailureToast } from "./useFailureToast"
 import { useQueueEntries } from "./useQueueEntries"
@@ -45,8 +44,8 @@ const slotOf = (
     entries: ReadonlyArray<QueueEntryView>,
     shown: ReadonlyArray<QueueEntryView>,
 ): DataSlot<ReadonlyArray<QueueEntryView>> => {
-    if (regions.some(isWaiting)) return { isLoading: true }
-    if (regions.every(hasFailed)) return { isError: true }
+    if (regions.some((slot) => isWaiting(slot))) return { isLoading: true }
+    if (regions.every((slot) => hasFailed(slot))) return { isError: true }
     return entries.length === 0 ? { isEmpty: true } : { items: shown }
 }
 
@@ -70,7 +69,7 @@ export const useBrainQueue = (): BrainQueue => {
     const shown = data.entries
         .filter((entry) => filter === "all" || entry.filter === filter)
         .filter((entry) => needle === "" || `${entry.title} ${entry.line}`.toLowerCase().includes(needle))
-    const waiting = data.regions.some(isWaiting)
+    const waiting = data.regions.some((slot) => isWaiting(slot))
     const selected = shown.find((entry) => entry.id === chosen) ?? (phone.phone === "main" ? null : (shown[0] ?? null))
     const labelOf = (id: TodoFilter): string =>
         t(id === "all" || id === "facts" || id === "ask" ? FILTER_KEY[id] : `kind_${id}`)
@@ -91,7 +90,10 @@ export const useBrainQueue = (): BrainQueue => {
         query,
         selectedId: selected?.id ?? null,
         grid: brainGridOf({ hasAside: true, phone: phone.phone, isWhole: !("items" in slot) && !waiting }),
-        partialFailure: data.regions.some(hasFailed) && !data.regions.every(hasFailed) ? q("partialFailure") : null,
+        partialFailure:
+            data.regions.some((slot) => hasFailed(slot)) && !data.regions.every((slot) => hasFailed(slot))
+                ? q("partialFailure")
+                : null,
         hasNextPage: data.paging.hasNextPage,
     }
     const on: BrainQueueCommands = {

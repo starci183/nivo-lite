@@ -1,13 +1,12 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
+import { useState, useTransition, type SetStateAction, type Dispatch } from "react"
 import { allAgentIds } from "@/hooks/connection-wizard"
 import { useSetConnectionAgents } from "@/hooks/connections"
 import type { AgentOption, WizardNote } from "@/modules/types"
 import { checkNoteOf, TELEGRAM_STEPS } from "./telegram-wizard.shared"
 import { useTelegramCommands } from "./useTelegramCommands"
-import type { SetStateAction, Dispatch } from "react"
 
 /** What the Telegram wizard needs from its drawer. */
 interface TelegramWizardInput {

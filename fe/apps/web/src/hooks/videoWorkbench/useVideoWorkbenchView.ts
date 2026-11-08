@@ -4,12 +4,11 @@ import { VIDEO_TABS, type VideoWorkbenchViews } from "@/modules/types"
 type VideoWorkbenchInput = VideoWorkbenchViews["input"]
 type VideoWorkbenchView = VideoWorkbenchViews["view"]
 import { useTranslations } from "next-intl"
-import type { VideoWorkbenchCopy } from "@/modules/video"
+import { type VideoWorkbenchCopy, editorHref } from "@/modules/video"
 import { useAgentDashboardFrame, useAgentWorkbenchTabs } from "@/hooks/agentDashboard"
 import { useVideoEditor, useVideoLibrary } from "@/hooks/video"
 import { mapSlot, slotOfReads, useSlotLabels } from "@/hooks/slot"
 import { useWorkspaceId } from "@/hooks/workspaces"
-import { editorHref } from "@/modules/video"
 
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useVideoWorkbenchCopy } from "./useVideoWorkbenchCopy"

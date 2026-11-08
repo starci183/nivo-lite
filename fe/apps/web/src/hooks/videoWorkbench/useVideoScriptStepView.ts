@@ -7,13 +7,11 @@ import { useEffect, useState } from "react"
 import { useVideoActions, useVideoScript, useVideoFailure, type VideoJobRead } from "@/hooks/video"
 import { useVideoScriptForm } from "@/hooks/rhf"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
-import { editorHref, newScene } from "@/modules/video"
-import type { ScriptScene, EditorStep } from "@/modules/video"
+import { editorHref, newScene, type ScriptScene, type EditorStep } from "@/modules/video"
 import { navigation } from "@/modules/i18n"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { videoOwnerOf, swapped } from "./videoWorkbench.shared"
+import { videoOwnerOf, swapped, type VideoViewInput } from "./videoWorkbench.shared"
 import { useVideoScriptFields } from "./useVideoScriptFields"
-import type { VideoViewInput } from "./videoWorkbench.shared"
 const sceneChangesOf = (form: ReturnType<typeof useVideoScriptForm>, scenes: ReadonlyArray<ScriptScene>) => {
     const change = (next: ReadonlyArray<ScriptScene>) => {
         form.setValue(

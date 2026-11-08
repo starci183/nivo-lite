@@ -1,11 +1,10 @@
 "use client"
 
 import { useFeatureReset } from "@/hooks/reuseables"
-import type { HiringOwner } from "@/hooks/hiring"
+import { type HiringOwner, useHiringRun } from "@/hooks/hiring"
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useHiringRun } from "@/hooks/hiring"
 import type { HiringMemberView } from "@/hooks/hiringWire"
 import { useMutateSaveHiringAvailabilitySwr } from "@/hooks/swr"
 import { WEEKDAYS, memberTexts, parseWindows } from "./hiringAvailability.shared"

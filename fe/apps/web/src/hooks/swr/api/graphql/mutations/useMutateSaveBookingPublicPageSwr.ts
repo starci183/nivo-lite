@@ -1,9 +1,8 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateSaveBookingPublicPage } from "@/modules/api/graphql/mutations/mutation-save-booking-public-page"
 import type { MutateSaveBookingPublicPageRequest } from "@/modules/api/graphql/mutations/types/save-booking-public-page"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SaveBookingPublicPageMutation } from "@/modules/api"
 
 /** The SWR key of the `saveBookingPublicPage` mutation. */

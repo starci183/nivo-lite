@@ -1,9 +1,17 @@
 import type { ModuleIconName } from "@/modules/types"
-import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
-import type { ModuleKey } from "@/modules/catalog"
-import { agentHref, agentListHref, displayNameOf, installationLifecycleOf, instancesOf } from "@/modules/installations"
+import { MODULE_REGISTRY, isModuleKey, type ModuleKey } from "@/modules/catalog"
+import {
+    agentHref,
+    agentListHref,
+    displayNameOf,
+    installationLifecycleOf,
+    instancesOf,
+    type AgentTab,
+    type Installation,
+    type InstallationStatus,
+    type OperatingMode,
+} from "@/modules/installations"
 import { AGENTS_ROUTE } from "@/modules/routes"
-import type { AgentTab, Installation, InstallationStatus, OperatingMode } from "@/modules/installations"
 
 /** The wire row of the back end `moduleInstallations` query (text fields; the closed sets are checked here). */
 interface InstallationWire {
@@ -78,7 +86,7 @@ const toInstallation = (row: InstallationWire): Installation | null =>
 /** The installed agents of the wire rows, oldest first. */
 export const toInstallations = (rows: ReadonlyArray<InstallationWire>): ReadonlyArray<Installation> =>
     rows
-        .map(toInstallation)
+        .map((item) => toInstallation(item))
         .filter((installation): installation is Installation => installation !== null)
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 

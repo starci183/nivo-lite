@@ -58,7 +58,7 @@ export const useAdminHeader = (): AdminHeaderView => {
     const language = useLocaleSwitch()
     const theme = useThemeSwitch()
     const signOut = useSignOut(authActionsOf().endSession)
-    const [isMenuOpen, setMenuOpen] = useState(false)
+    const [isMenuOpen, setIsMenuOpen] = useState(false)
     if (session.isMissing) notFound()
     return {
         props: {
@@ -95,7 +95,7 @@ export const useAdminHeader = (): AdminHeaderView => {
             chooseLocale: language.choose,
             chooseDark: theme.choose,
             signOut: signOut.signOut,
-            setMenuOpen,
+            setMenuOpen: setIsMenuOpen,
         },
     }
 }

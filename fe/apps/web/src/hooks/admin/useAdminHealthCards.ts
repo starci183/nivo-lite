@@ -2,8 +2,15 @@
 
 import { useMemo } from "react"
 import { adminWorkspacePath } from "@/modules/routes"
-import { badgeOf, flowTone } from "./admin.shared"
-import type { AdminCardView, AdminFormat, AdminPlatformHealth, AdminRowView, AdminText } from "./admin.shared"
+import {
+    badgeOf,
+    flowTone,
+    type AdminCardView,
+    type AdminFormat,
+    type AdminPlatformHealth,
+    type AdminRowView,
+    type AdminText,
+} from "./admin.shared"
 import { useAdminFormat } from "./useAdminFormat"
 
 /** The most characters of a raw error text a row shows. */

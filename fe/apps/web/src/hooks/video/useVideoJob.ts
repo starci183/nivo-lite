@@ -6,8 +6,7 @@ import type { SlotRead } from "@/modules/types"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
 import { useVideoJobReport } from "./useVideoJobReport"
-import { useVideoRefresh } from "./useVideoRefresh"
-import type { VideoOwner } from "./useVideoRefresh"
+import { useVideoRefresh, type VideoOwner } from "./useVideoRefresh"
 interface VideoJobStatusView {
     readonly id: string
     readonly status: string

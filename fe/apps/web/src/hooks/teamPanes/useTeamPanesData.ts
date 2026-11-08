@@ -3,8 +3,7 @@
 import { useFormatter, useTranslations } from "next-intl"
 import { useState } from "react"
 import { useMember } from "@/hooks/member"
-import { isTeamManager, teamSlotOf, useTeam } from "@/hooks/team"
-import type { TeamRole, useInviteInteraction } from "@/hooks/team"
+import { isTeamManager, teamSlotOf, useTeam, type TeamRole, type useInviteInteraction } from "@/hooks/team"
 import { inviteDetailOf, listRowsOf, memberDetailOf, panesDataOf } from "./teamPanes.shared"
 import type { DataSlot, TeamPanesBaseProps } from "@/modules/types"
 

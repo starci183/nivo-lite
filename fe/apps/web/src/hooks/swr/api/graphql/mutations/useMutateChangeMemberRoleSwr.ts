@@ -5,8 +5,7 @@ import {
     type mutateChangeMemberRole as MutateChangeMemberRoleOperation,
 } from "@/modules/api/graphql/mutations/mutation-change-member-role"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { ChangeMemberRoleMutation } from "@/modules/api"
 
 /** The SWR key of the changeMemberRole mutation. */

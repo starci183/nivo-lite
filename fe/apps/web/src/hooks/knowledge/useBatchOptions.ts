@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { AGENT_MODULES } from "@/modules/documents"
-import type { InstanceOption } from "@/modules/documents"
+import { AGENT_MODULES, type InstanceOption } from "@/modules/documents"
 import type { AddPreset, BatchOptionFields, BatchOptions } from "@/hooks/knowledgeAddTypes"
 
 /** The module value of the "For" select: a type, or one instance of a type. */

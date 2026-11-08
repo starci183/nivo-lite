@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateRevokeApiKey,
     type MutateRevokeApiKeyRequest,
 } from "@/modules/api/graphql/mutations/mutation-revoke-api-key"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RevokeApiKeyMutation } from "@/modules/api"
 
 /** What the revoke API key mutation is triggered with. */

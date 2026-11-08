@@ -5,8 +5,7 @@ import { useEffect } from "react"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { loadingSlot, slotOfReads } from "@/hooks/slot"
 import { useWorkspaceId } from "@/hooks/workspaces"
-import { MODULE_REGISTRY, pickCopy } from "@/modules/catalog"
-import type { ModuleKey } from "@/modules/catalog"
+import { MODULE_REGISTRY, pickCopy, type ModuleKey } from "@/modules/catalog"
 import {
     agentHref,
     agentLifecycleOf,

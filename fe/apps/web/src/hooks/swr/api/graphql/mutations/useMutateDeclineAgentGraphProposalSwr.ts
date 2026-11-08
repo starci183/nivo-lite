@@ -5,8 +5,7 @@ import {
     type mutateDeclineAgentGraphProposal as MutateDeclineAgentGraphProposalOperation,
 } from "@/modules/api/graphql/mutations/mutation-decline-agent-graph-proposal"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { DeclineAgentGraphProposalMutation } from "@/modules/api"
 
 /** The SWR key of the declineAgentGraphProposal mutation. */

@@ -1,13 +1,9 @@
-import { useVideoGoalStepView } from "./useVideoGoalStepView"
-import { useVideoInputsStepView } from "./useVideoInputsStepView"
-import { useVideoBrandCardView } from "./useVideoBrandCardView"
-import { useVideoEditorStepperView } from "./useVideoEditorStepperView"
+import { useVideoGoalStepView, type VideoGoalFormActions } from "./useVideoGoalStepView"
+import { useVideoInputsStepView, type VideoInputsFormActions } from "./useVideoInputsStepView"
+import { useVideoBrandCardView, type VideoBrandSettingsActions } from "./useVideoBrandCardView"
+import { useVideoEditorStepperView, type VideoEditStepsActions } from "./useVideoEditorStepperView"
 import type { VideoViewInput } from "./videoWorkbench.shared"
 import type { EditorStep, MediaItem, Goal } from "@/modules/video"
-import type { VideoEditStepsActions } from "./useVideoEditorStepperView"
-import type { VideoGoalFormActions } from "./useVideoGoalStepView"
-import type { VideoInputsFormActions } from "./useVideoInputsStepView"
-import type { VideoBrandSettingsActions } from "./useVideoBrandCardView"
 type UseVideoSourceViewsResult = {
     ui: {
         stepper: {

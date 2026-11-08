@@ -1,8 +1,7 @@
 "use client"
 
 import { argumentKey } from "@/hooks/workspaceread"
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { queryWorkspaceMembers } from "@/modules/api/graphql/queries/query-workspace-members"
 import type { WorkspaceMembersQuery } from "@/modules/api"
 

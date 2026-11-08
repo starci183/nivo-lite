@@ -5,8 +5,7 @@ import { useMutateSendChatMessageSwr } from "@/hooks/swr"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { mentionsOfDraft } from "@/modules/teamChat"
 import type { ChatParty } from "@/modules/types"
-import { useTeamChatFile } from "./useTeamChatFile"
-import type { TeamChatFilePicker } from "./useTeamChatFile"
+import { useTeamChatFile, type TeamChatFilePicker } from "./useTeamChatFile"
 import { useTeamChatTypingHint } from "./useTeamChatTypingHint"
 
 /** Where a message goes: the open room, or (the panel of an agent with no room yet) the agent, which opens the room on the write. */

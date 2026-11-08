@@ -1,8 +1,7 @@
 "use client"
 
-import useSWR from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRResponse } from "swr"
 import { useWorkspaceKey } from "@/hooks/workspaceKey"
 import type { TemplateUpdateOffersQuery } from "@/modules/api"
 import { queryTemplateUpdateOffers } from "@/modules/api/graphql/queries/query-template-update-offers"

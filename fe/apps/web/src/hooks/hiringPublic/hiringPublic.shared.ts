@@ -114,7 +114,7 @@ export const toPublicJob = (wire: PublicJobType): PublicJobView => ({
     open: wire.open,
     consentText: wire.consentText,
     requirements: requirementsOf(wire.requirements),
-    questions: wire.questions.map(questionOf),
+    questions: wire.questions.map((item) => questionOf(item)),
 })
 
 /** The public interview with its times flattened. */

@@ -1,8 +1,7 @@
 "use client"
 import { useMemo } from "react"
 import { useQueryVideoProjectSwr } from "@/hooks/swr"
-import { isUuid, projectViewOf, stepFor } from "./video.shared"
-import type { EditorStep, ProjectView } from "./video.shared"
+import { isUuid, projectViewOf, stepFor, type EditorStep, type ProjectView } from "./video.shared"
 
 import type { SWRResponse } from "swr"
 const STEPS: ReadonlyArray<EditorStep> = ["goal", "inputs", "script", "preview", "result"]

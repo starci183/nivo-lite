@@ -4,17 +4,15 @@ import type { VideoLibraryActions, VideoLibraryViews } from "@/modules/types"
 type VideoBrandSettingsFields = VideoLibraryViews["brand"]
 /** Handlers the brand settings card calls. */
 export type VideoBrandSettingsActions = VideoLibraryActions["brand"]
-import type { Brand, MediaItem } from "@/modules/video"
+import { type Brand, type MediaItem, MUSIC_TRACKS, TTS_VOICES } from "@/modules/video"
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useVideoRelease, useVideoUpload } from "@/hooks/video"
 import { useVideoBrandForm } from "@/hooks/rhf"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
-import { MUSIC_TRACKS, TTS_VOICES } from "@/modules/video"
 
 import { useGraphQLWithToast } from "@/modules/toast"
-import { videoOwnerOf } from "./videoWorkbench.shared"
-import type { VideoViewInput } from "./videoWorkbench.shared"
+import { videoOwnerOf, type VideoViewInput } from "./videoWorkbench.shared"
 interface BrandProjection {
     readonly input: VideoViewInput
     readonly t: ReturnType<typeof useTranslations<"video">>

@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateAdminResendWorkspaceInvite,
     type MutateAdminResendWorkspaceInviteRequest,
 } from "@/modules/api/graphql/mutations/mutation-admin-resend-workspace-invite"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { AdminResendWorkspaceInviteMutation } from "@/modules/api"
 
 /** What the admin resend workspace invite mutation is triggered with. */

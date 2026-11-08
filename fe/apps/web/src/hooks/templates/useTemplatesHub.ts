@@ -12,8 +12,13 @@ import {
     useQueryTemplateUpdateOffersSwr,
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { acceptInputOf, safeUnitIds, valuesOfText } from "./templates.shared"
-import type { MyAgentTemplatesData, TemplateUpdateOffersData } from "./templates.shared"
+import {
+    acceptInputOf,
+    safeUnitIds,
+    valuesOfText,
+    type MyAgentTemplatesData,
+    type TemplateUpdateOffersData,
+} from "./templates.shared"
 
 /** What the hub of templates reads and does. */
 export interface TemplatesHubController {

@@ -2,8 +2,7 @@
 
 import { answeredData, type WorkspaceReadKey } from "@/hooks/workspaceread"
 import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { queryBrandProposals } from "@/modules/api/graphql/queries/query-brand-proposals"
 import type { BrandProposalsQuery } from "@/modules/api"
 

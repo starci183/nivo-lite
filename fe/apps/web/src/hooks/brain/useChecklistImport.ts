@@ -49,11 +49,11 @@ export const useChecklistImport = (onImported: () => void, canWrite: boolean): C
     const t = useTranslations("dossierReview")
     const run = useReviewRefresh()
     const importer = useMutateImportBrainDossiersSwr()
-    const [isOpen, setOpen] = useState(false)
+    const [isOpen, setIsOpen] = useState(false)
     const [file, setFile] = useState<File | null>(null)
     const close = () => {
         if (importer.isMutating) return
-        setOpen(false)
+        setIsOpen(false)
         setFile(null)
     }
     const confirm = async () => {
@@ -62,7 +62,7 @@ export const useChecklistImport = (onImported: () => void, canWrite: boolean): C
         const done = await run(() => importer.trigger({ name: file.name, contentBase64 }), t("importDone"))
         if (done === undefined) return
         onImported()
-        setOpen(false)
+        setIsOpen(false)
         setFile(null)
     }
     return {
@@ -87,7 +87,7 @@ export const useChecklistImport = (onImported: () => void, canWrite: boolean): C
               }
             : null,
         on: {
-            openImport: () => setOpen(true),
+            openImport: () => setIsOpen(true),
             pickImport: (files) => setFile(files[0] ?? null),
             confirmImport: () => void confirm(),
             closeImport: close,
