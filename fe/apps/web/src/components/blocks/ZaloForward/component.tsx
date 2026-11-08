@@ -7,5 +7,5 @@ export interface ZaloForwardBaseProps {
 
 /** Draws an announced busy region: the page forwards at once and has nothing of its own to show. */
 export const ZaloForwardBase = (props: ZaloForwardBaseProps) => (
-    <div role="status" aria-busy="true" aria-label={props.props.label} />
+    <output aria-busy="true" aria-label={props.props.label} />
 )

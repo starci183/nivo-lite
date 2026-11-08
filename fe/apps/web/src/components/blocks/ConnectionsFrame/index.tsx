@@ -94,7 +94,8 @@ export const ConnectionsFrame = (props: ConnectionsFrameProps) => {
                     setFilter("all")
                 },
             }}
-            children={props.children}
-        />
+        >
+            {props.children}
+        </ConnectionsFrameBase>
     )
 }

@@ -41,16 +41,14 @@ export interface DriveListingBandProps {
 /** Presents selectable folder files and the action to add the selected files. */
 export const DriveListingBand = (props: DriveListingBandProps) => {
     const { listing } = props
+    const loading = props.isLoading === undefined ? {} : { isLoading: props.isLoading }
+    const disabledReason =
+        listing.add.disabledReason === undefined ? {} : { disabledReason: listing.add.disabledReason }
     return (
-        <Section
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-            title={listing.title}
-            meta={listing.count}
-            headingLevel={3}
-        >
+        <Section {...loading} title={listing.title} meta={listing.count} headingLevel={3}>
             {listing.empty === undefined ? (
                 <CheckboxGroup
-                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                    {...loading}
                     label={listing.filesLabel}
                     isLabelHidden
                     name="drive-files"
@@ -68,7 +66,7 @@ export const DriveListingBand = (props: DriveListingBandProps) => {
             )}
             {listing.notices.map((notice) => (
                 <Alert
-                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                    {...loading}
                     key={notice.id}
                     tone={notice.tone}
 
@@ -76,20 +74,16 @@ export const DriveListingBand = (props: DriveListingBandProps) => {
                 />
             ))}
             {listing.empty === undefined ? (
-                <>
-                    <Button
-                        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                        intent="commit"
-                        isPending={listing.add.isPending}
-                        isDisabled={listing.add.isDisabled}
-                        {...(listing.add.disabledReason === undefined
-                            ? {}
-                            : { disabledReason: listing.add.disabledReason })}
-                        onPress={props.on.add}
-                    >
-                        {listing.add.label}
-                    </Button>
-                </>
+                <Button
+                    {...loading}
+                    intent="commit"
+                    isPending={listing.add.isPending}
+                    isDisabled={listing.add.isDisabled}
+                    {...disabledReason}
+                    onPress={props.on.add}
+                >
+                    {listing.add.label}
+                </Button>
             ) : null}
         </Section>
     )

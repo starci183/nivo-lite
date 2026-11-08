@@ -122,58 +122,56 @@ const Team = (props: TeamProps) => (
 )
 
 /** The roles that can be added: the heading with the search, the group filter chips, the compact role cards. */
-const Roles = (props: CatalogSectionProps) => (
-    <Section
-        title={props.props.addTitle}
-        isLoading={props.isLoading}
-        action={
-            <SearchField
-                label={props.props.searchLabel}
-                isLabelHidden
-                placeholder={props.props.searchPlaceholder}
-                clearLabel={props.props.clearLabel}
-                value={props.props.query}
-                onValueChange={props.on.query}
-                isLoading={props.isLoading}
+const Roles = (props: CatalogSectionProps) => {
+    const emptyAction =
+        props.props.emptyAction === undefined ? {} : { actionLabel: props.props.emptyAction, onAction: props.on.clear }
+    return (
+        <Section
+            title={props.props.addTitle}
+            isLoading={props.isLoading}
+            action={
+                <SearchField
+                    label={props.props.searchLabel}
+                    isLabelHidden
+                    placeholder={props.props.searchPlaceholder}
+                    clearLabel={props.props.clearLabel}
+                    value={props.props.query}
+                    onValueChange={props.on.query}
+                    isLoading={props.isLoading}
+                />
+            }
+            id={props.props.addId}
+        >
+            <Tabs
+                kind="filter"
+                label={props.props.categoryLabel}
+                items={props.props.categoryOptions.map((option) => ({
+                    id: option.value,
+                    label: option.label,
+                    count: option.count,
+                }))}
+                selectedKey={props.props.category}
+                onSelect={props.on.category}
             />
-        }
-        id={props.props.addId}
-    >
-        <Tabs
-            kind="filter"
-            label={props.props.categoryLabel}
-            items={props.props.categoryOptions.map((option) => ({
-                id: option.value,
-                label: option.label,
-                count: option.count,
-            }))}
-            selectedKey={props.props.category}
-            onSelect={props.on.category}
-        />
-        {props.data.roles.length === 0 ? (
-            <EmptyNotice
-                message={props.props.emptyTitle}
-                description={props.props.emptyHint}
-                {...(props.props.emptyAction === undefined
-                    ? {}
-                    : { actionLabel: props.props.emptyAction, onAction: props.on.clear })}
-            />
-        ) : (
-            <Grid kind="cards" columns={3}>
-                {props.data.roles.map((entry) => (
-                    <AgentCatalogCard
-                        key={entry.key}
-                        {...entry.card}
-                        isLoading={props.isLoading}
-                        isInstalling={props.props.busyKey === entry.key}
-                        isBlocked={props.props.busyKey !== null}
-                        onInstall={() => props.on.install(entry.key)}
-                    />
-                ))}
-            </Grid>
-        )}
-    </Section>
-)
+            {props.data.roles.length === 0 ? (
+                <EmptyNotice message={props.props.emptyTitle} description={props.props.emptyHint} {...emptyAction} />
+            ) : (
+                <Grid kind="cards" columns={3}>
+                    {props.data.roles.map((entry) => (
+                        <AgentCatalogCard
+                            key={entry.key}
+                            {...entry.card}
+                            isLoading={props.isLoading}
+                            isInstalling={props.props.busyKey === entry.key}
+                            isBlocked={props.props.busyKey !== null}
+                            onInstall={() => props.on.install(entry.key)}
+                        />
+                    ))}
+                </Grid>
+            )}
+        </Section>
+    )
+}
 
 /**
  * Draws the catalogue as the Page body's own regions (a fragment, so the page's region step spaces them): the installed

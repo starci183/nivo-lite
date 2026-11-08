@@ -192,19 +192,17 @@ const GuideMessages = (props: GuideBubbleBaseProps) => {
                             <Stack gap="inline">
                                 <Text size="sm">{message.text}</Text>
                                 {message.steps.length === 0 ? null : (
-                                    <>
-                                        <Section
-                                            kind="list"
-                                            title={props.props.stepsLabel}
-                                            headingLevel={3}
-                                            items={message.steps.map((step, position) => ({
-                                                id: `${message.id}-${position}`,
-                                                title: step,
-                                                leading: { position: position + 1 },
-                                            }))}
-                                            empty={<EmptyNotice message={props.props.greeting} />}
-                                        />
-                                    </>
+                                    <Section
+                                        kind="list"
+                                        title={props.props.stepsLabel}
+                                        headingLevel={3}
+                                        items={message.steps.map((step, position) => ({
+                                            id: `${message.id}-${position}`,
+                                            title: step,
+                                            leading: { position: position + 1 },
+                                        }))}
+                                        empty={<EmptyNotice message={props.props.greeting} />}
+                                    />
                                 )}
                                 {message.links.length === 0 ? null : (
                                     <Cluster gap="inline">
