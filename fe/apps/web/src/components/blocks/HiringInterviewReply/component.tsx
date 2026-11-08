@@ -95,8 +95,11 @@ const inviteBand = (props: InviteCardProps): HeaderZone => ({
     ),
 })
 
+/** Props of the times to pick from: the card without its shape, which only the answer switches on. */
+type InviteSlotsProps = Omit<InviteCardProps, "shape">
+
 /** The times as one choice, then the quiet way to say none fits (asks first) and the one primary command. */
-const InviteSlots = (props: InviteCardProps) => {
+const InviteSlots = (props: InviteSlotsProps) => {
     const { say, isBusy, selected, isMissing } = props.props
     const { on } = props
     return (

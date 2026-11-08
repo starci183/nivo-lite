@@ -53,7 +53,7 @@
 {"findings":[],"hash":"70829b25d0098a4b3b52d8a9eb2f83ff95748fd8553a7bb6ee1d32e951aa6958","path":"fe/apps/landing/src/components/blocks/LandingNavBrand/index.tsx","step":"prettier"}
 {"findings":[],"hash":"f28f9ee99770574353867297cf7bee03e2e93954875676fa88585d3216e46c65","path":"fe/apps/landing/src/components/blocks/LandingNavDrawer/classNames.ts","step":"prettier"}
 {"findings":[],"hash":"1c00ed25c279e10284e02594298f0e82c2bd64e8663743297a5c098b61828ae1","path":"fe/apps/landing/src/components/blocks/LandingNavDrawer/component.tsx","step":"prettier"}
-{"findings":[],"hash":"1f580e4486df7101e1bac85da9b8b211145ea37bc897afab8d7016d8ba775dc6","path":"fe/apps/landing/src/components/blocks/LandingNavDrawer/index.tsx","step":"prettier"}
+{"findings":[],"hash":"d47e9067746d5cf76e976cd7d572e94bf6151e1cd263fac85c4b2e31a04912a4","path":"fe/apps/landing/src/components/blocks/LandingNavDrawer/index.tsx","step":"prettier"}
 {"findings":[],"hash":"a0487e2f26a61584b80afa2c4f3f3581b2083b852d4fc45af70064c61d08e50d","path":"fe/apps/landing/src/components/blocks/LandingNavLinks/classNames.ts","step":"prettier"}
 {"findings":[],"hash":"111fe038d6d37e33d0faeb68a84c55b178f9c6f11d1ef79db54be0864b9d91b4","path":"fe/apps/landing/src/components/blocks/LandingNavLinks/component.tsx","step":"prettier"}
 {"findings":[],"hash":"bac896895cb066707ed29f2bca695b6616d38562b28ff03070639a5455564ec0","path":"fe/apps/landing/src/components/blocks/LandingNavLinks/index.tsx","step":"prettier"}

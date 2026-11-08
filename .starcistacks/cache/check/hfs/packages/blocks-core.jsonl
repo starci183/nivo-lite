@@ -1,8 +1,7 @@
 {"data":{},"findings":[],"hash":"f39be8ccd977ac866c5457a439cb98411eb67856e52e83c6dde6ff56402aa8eb","path":"packages/blocks-core/package.json","step":"file-rules"}
-{"data":{},"findings":[],"hash":"8bf62a311aa98249d0af0722efa30dc2c57cf45e6a5cf67cd819d801cd2febc5","path":"packages/blocks-core/slots.yaml","step":"file-rules"}
+{"data":{},"findings":[],"hash":"71175020cc16cfa9344d4bb66d07c3273d4c3e6024f5a3fe682cb50c57c7b85a","path":"packages/blocks-core/slots.yaml","step":"file-rules"}
 {"data":{},"findings":[],"hash":"f5741574b80d88adb9b9e4272412316afbb9d9adb6b39ad6d6de107611283e91","path":"packages/blocks-core/src/blocks-error.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"ba1bfbae513fa864ab4af838be2f0726f014e02105e997172981cccb4968766a","path":"packages/blocks-core/src/blocks-error.ts","step":"file-rules"}
-{"findings":[{"column":0,"line":0,"message":"packages/blocks-core/src/blocks-error.ts belongs to no slot of packages/blocks-core/slots.yaml; place it in a declared slot or declare the slot (R382)","path":"packages/blocks-core/src/blocks-error.ts","rule":"HFS_PACKAGE_SLOT_UNPLACED"}],"hash":"1611fc8968860f3eeab1f8d29ac52bb50ef78f2d4ba7e171c4df62044079b80c","path":"packages/blocks-core/src/blocks-error.ts","step":"hfs"}
+{"data":{},"findings":[],"hash":"0dae218ee4f21276d4966c95b01ef41cb099e190301ae437ec82e99c73bc6b27","path":"packages/blocks-core/src/blocks-error.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"1142f9c39e5cbd43915415c6efd2c468fc333edbb00936fb92f996d90a3612ad","path":"packages/blocks-core/src/blocks/accounting/accounting-blocks.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"6cd5bd71795a0d3fc6c9cd8e3202c85fbbfb395f7333775ce18780e93f9a0cdd","path":"packages/blocks-core/src/blocks/accounting/accounting-blocks.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"752da00cfb58d28ccc06f4d028c4b5e2cea95e70526f9693f0218b62a54e835a","path":"packages/blocks-core/src/blocks/accounting/ageing.block.ts","step":"file-rules"}
@@ -224,18 +223,18 @@
 {"data":{},"findings":[],"hash":"a23c0ab28e2320066daf3c89976831d047aff4d8207b935c7df2317d43789f07","path":"packages/blocks-core/src/modules/accounting/accounting-records.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"2bdb07fc20de7d264bfc9ed7a52f88d6ba9420076257ab0ca0a0b15e836bca8e","path":"packages/blocks-core/src/modules/accounting/accounting-records.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"be5860bbb4a689eecc00c01bdfc0e35fa498d0f6a41a9eeb269df1dd72666c03","path":"packages/blocks-core/src/modules/accounting/accounting.types.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"87caa7180feca87df14d8723f9690244a5398d2a6712dd80ace087d157fb6b99","path":"packages/blocks-core/src/modules/accounting/actions/adjust.action.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"72ef3dcdc35241c235da4dfa06a26a66cb186d0edb56d36a01feb6644ee163af","path":"packages/blocks-core/src/modules/accounting/actions/adjust.action.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"0cb6022323a52dda033520e46d3ba2261815e61fedd2284a6fc597d9198fae15","path":"packages/blocks-core/src/modules/accounting/actions/adjust.action.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"6ced3518c5a1e974dc441be4dfa8a081267ef4d93563398a26da8182f26bdd13","path":"packages/blocks-core/src/modules/accounting/actions/answer-question.action.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"7caf7cbaead590df5cf661747a3d6de3d52cb16e1fce6b5565ddd49846f60bdf","path":"packages/blocks-core/src/modules/accounting/actions/answer-question.action.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"b11c70ea8b64706040d47d009fb6c4ee335297f8565e1df1a058fb8abbdb8412","path":"packages/blocks-core/src/modules/accounting/actions/answer-question.action.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"d8d33efb67d8712c730202a634b93e8418859fc9bfdc31dedf131061fe0adb5a","path":"packages/blocks-core/src/modules/accounting/actions/renderer-payloads.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"1bdeec94f795fbd80e6ec789d69c559e400a7f5c85063f517a9b0d334d7abdab","path":"packages/blocks-core/src/modules/accounting/actions/repost-ledger.action.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"15a2276a1f7e3c38788d503a000b2b49ea42d648ede3b17edc548c5dcac9855f","path":"packages/blocks-core/src/modules/accounting/actions/repost-ledger.action.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"d7be396bed83d7ad7b533b08f4e04a888fb481509f0e9fe2ad17702c4bdf193a","path":"packages/blocks-core/src/modules/accounting/actions/repost-ledger.action.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"960c1737754d91e0e5f03d7ed69742da062acf43abe7b759d957774947fc1bf6","path":"packages/blocks-core/src/modules/accounting/actions/resolve-unmatched-payment.action.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"793d773c6a06a42272b7e39d22bb532bb19daaaf3f73f2de66b0fe117c586484","path":"packages/blocks-core/src/modules/accounting/actions/resolve-unmatched-payment.action.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"a9bac56801bfcc6b171a054b4bcf2494b04a4cc70c4a4b4408260705d34e5db6","path":"packages/blocks-core/src/modules/accounting/actions/resolve-unmatched-payment.action.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"4dc38721404c826cab6165432e3826e097fdd5f774132d8ecc64ff9f34cfe3ac","path":"packages/blocks-core/src/modules/accounting/actions/save-settings.action.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"13f36c8109c8d9f53749da68a92e223308aa001f6ae1ea00d6e98771913845a0","path":"packages/blocks-core/src/modules/accounting/actions/save-settings.action.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3d0b92c1215adef94f30c57063f53a5681a529f3323c11893b7671f35a041001","path":"packages/blocks-core/src/modules/accounting/actions/save-settings.action.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"4192faeb51b205b2aef7a44e3e2af968a39283e4d52a6b11460d13b59314abca","path":"packages/blocks-core/src/modules/accounting/actions/settle.action.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"92a8d11567a6edb2022370ab0f9438fea2645893e26284c51962c37f4a87398c","path":"packages/blocks-core/src/modules/accounting/actions/settle.action.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"bd9f9355fc7645da4fcb522447b2f33915ce0bd1db3ad534e97b7e5811187047","path":"packages/blocks-core/src/modules/accounting/actions/settle.action.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"7d81c7581e105becea1cf65018c915b58add51e02de16ab53ccbf217a4ceb39f","path":"packages/blocks-core/src/modules/accounting/declaration.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"b7d979edaf258479b6cca171256d231f24a3bfb0665ede81e4dd2f9622422d60","path":"packages/blocks-core/src/modules/accounting/declaration.ts","step":"file-rules"}
@@ -254,7 +253,7 @@
 {"data":{},"findings":[],"hash":"56a80ae3419312b8de505d102d9a6fd374ee27d3a4883b232709393b9a2df35d","path":"packages/blocks-core/src/modules/accounting/jobs/confirm-notice.job.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"c9a6b84846b6cde49a84ff60ce02679fbd1a672ffa3430ba5f2f453ce466766d","path":"packages/blocks-core/src/modules/accounting/jobs/ledger-append.job.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"c6afde321870a49b33dc18b7aeadff3535a8f98e91d1a395c206b42325498379","path":"packages/blocks-core/src/modules/accounting/jobs/ledger-append.job.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"ac43b2ea0cfabb79debac6a79d273f94750075167904032036fb2d6b939ef18f","path":"packages/blocks-core/src/modules/accounting/jobs/rematch.job.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"e7760538dfb2b4ea632fcee555fab0281482945dcdfc42008d76aa40cf307310","path":"packages/blocks-core/src/modules/accounting/jobs/rematch.job.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"c735b3326e2a5db16c7d0ecc03ac0e464dba5286f60ba10e1e5f8a09fbba51c4","path":"packages/blocks-core/src/modules/accounting/jobs/rematch.job.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"b0c181d56e94e9af7533b2b875b7072a92a94957db41b39c99e4f885508ff2d2","path":"packages/blocks-core/src/modules/accounting/messages/copy.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"f63e472cbc24f291e534ad65b123f4632bf62a2ff282ad8550d143bbad20fea3","path":"packages/blocks-core/src/modules/accounting/messages/copy.ts","step":"file-rules"}
@@ -354,7 +353,7 @@
 {"data":{},"findings":[],"hash":"619ab0e1ae0db6dedb24620872b2cd78c34b4eee8431da558e9cc45812fe3c8a","path":"packages/blocks-core/src/modules/loyalty/declaration.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"72f62f88c109dbd2840d87093d31a1a4716abdad1f03a3737bf69bb4b3ecacf8","path":"packages/blocks-core/src/modules/loyalty/declaration.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"a7e255d88c9427bdac46b0ed99a1fffad8c3792cc5172250e5d4276fe4465a18","path":"packages/blocks-core/src/modules/loyalty/fixtures/loyalty.data.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"e1a60fa2f0f34cc504783a2795df3ad4b62542203fa58eb2a85c6bffe8ced1be","path":"packages/blocks-core/src/modules/loyalty/fixtures/loyalty.fixtures.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"e9cfa62c5d3774a65b1bb022c71b546136a04ac814cc0cf5b081402eba1ef530","path":"packages/blocks-core/src/modules/loyalty/fixtures/loyalty.fixtures.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e4dd856c0ff07cedcbd4a1ab53d572ea6f12cfc443dbac4e41f9130c4f420fab","path":"packages/blocks-core/src/modules/loyalty/fixtures/loyalty.memory.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"b517cf0da913b7321f21f7bf16f810167321140625e34ed7969d5e5bd2bab6e2","path":"packages/blocks-core/src/modules/loyalty/fixtures/loyalty.memory.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"9954db015258efb3d4f68f4b3065e614ff18edabf7752f7786337fa311221982","path":"packages/blocks-core/src/modules/loyalty/fixtures/loyalty.memory.types.ts","step":"file-rules"}
@@ -402,8 +401,8 @@
 {"data":{},"findings":[],"hash":"073466eaa469b8cd8ea43922b8ddc4c2f7e3b2577893b1656290739911417852","path":"packages/blocks-core/src/modules/platform/constants.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3b984e2fb8236f8d7ec72553f9a15dfb42db828a693af2fb3942930a768f812c","path":"packages/blocks-core/src/modules/platform/declaration.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3a8aef78a790b4fe4dd769a52dcb5ef7230d27d3d493adfe350bb73665fdb846","path":"packages/blocks-core/src/modules/platform/declaration.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"6f6982e39f8e027b07763a331264e61ec3cd0c1f49e0b506a8382689df468f67","path":"packages/blocks-core/src/modules/platform/fixtures/agent-runs.ports.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"836731706373b1a42c546f2f6fe263868c7d3c9a5bb3a84bd812b557866fe994","path":"packages/blocks-core/src/modules/platform/fixtures/agent-runs.ports.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"b576986293d3c7b26509393799fed0d7cff60d7a39deea2f951dbd546dbb3175","path":"packages/blocks-core/src/modules/platform/fixtures/agent-runs.ports.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"0537fead8d61c96c24815d3e2fdc4c86d1c80d54d9a87f8cd91097b100e357e6","path":"packages/blocks-core/src/modules/platform/fixtures/agent-runs.ports.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"c45224647923af38702aa3dd4d0a4c6d13fbe521610498334a5f8de4d4d8a186","path":"packages/blocks-core/src/modules/platform/fixtures/platform.fixtures.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"975c22a0bc716cf67b078e4bf00cca21c7ac381576d64990148f0d8055908960","path":"packages/blocks-core/src/modules/platform/fixtures/platform.fixtures.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"622a55dce7039904610ddbbcb37da2274b97cb044ee3e11973aadc415c9667a7","path":"packages/blocks-core/src/modules/platform/index.ts","step":"file-rules"}
@@ -419,7 +418,7 @@
 {"data":{},"findings":[],"hash":"b2b97883acbc8a5d30b357be3571e901b79efe5e18acab26ac17e3ea51a3be3e","path":"packages/blocks-core/src/modules/platform/ports.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"4804484032d73abe7fc179fd92f7fb12031705ea312f4c05adda4172eebbe10c","path":"packages/blocks-core/src/modules/platform/reads/agent-connections.read.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"0218d9288e4b40cfc082f79819317f2c78922a9f365de66d90211a86097d7553","path":"packages/blocks-core/src/modules/platform/reads/agent-connections.read.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"e971b9e56bd56eca6974d788c98a3e3ee765cf402f419336ef7a6d0b2f250e11","path":"packages/blocks-core/src/modules/platform/reads/agent-done.read.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"a7da82c0d3e086f5b0efd6aeccb407147fce60e802343ab878f57311a43a84f2","path":"packages/blocks-core/src/modules/platform/reads/agent-done.read.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"8c77baaa9a0a93097070863b12cb3ec0adff48147f5de41da08975ca0ed4acac","path":"packages/blocks-core/src/modules/platform/reads/agent-done.read.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"86cc7612c0b683bc0c1c9b833a452a0524a2dfdb877ce11d7d654f97723f9ce0","path":"packages/blocks-core/src/modules/platform/reads/agent-knowledge.read.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"02e4d4a496a173144883081dcdebacbcd12b35899e16ec8fd5eb5e1cd1dfeb7a","path":"packages/blocks-core/src/modules/platform/reads/agent-knowledge.read.ts","step":"file-rules"}
@@ -430,7 +429,7 @@
 {"data":{},"findings":[],"hash":"f76ac675cdaa276487af1a1ef2724166b7d7885707c2838c7b03b5b78eb12392","path":"packages/blocks-core/src/modules/platform/reads/agent-run.read.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"bdc1e2c3cbacc81890b7ee4f97057fed281d0b22666c71edd7ae2ac32da95b9a","path":"packages/blocks-core/src/modules/platform/reads/agent-runs.read.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"2a151454eac1065ac0d5e4dd60467c48b524b778fb4839f43a751a1faacbd04e","path":"packages/blocks-core/src/modules/platform/reads/agent-runs.read.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"fed6b91d3fa3331d358c00df8eafb2ed42a98daaddd4424f42b6162ba4f8fca0","path":"packages/blocks-core/src/modules/platform/reads/installation.read.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"8bc1ff15da423aed8242858d51bdd4d95fab6466b8dc4e60bd6729c35e05037a","path":"packages/blocks-core/src/modules/platform/reads/installation.read.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"2ff63f9878a5aa36b50053e7b3383976eb3a68ad0e9d236e6114849f19480485","path":"packages/blocks-core/src/modules/platform/reads/installation.read.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"c71fa3330a73d868673f19b195a380a053adefd05f7551617ef8733ee7b9f01e","path":"packages/blocks-core/src/modules/platform/reads/parked-runs.read.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"232dc6ae30d6d18ab3dee57c7825ca6578eedef2ebf09cfbe9947ad4f84481a8","path":"packages/blocks-core/src/modules/platform/reads/parked-runs.read.ts","step":"file-rules"}
@@ -469,7 +468,7 @@
 {"data":{},"findings":[],"hash":"e06a4f2fba182215d6c0035c478e2df0a3fbd32e7ee02838b84189a709516599","path":"packages/blocks-core/src/modules/sales/memory.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"68b4703573d24b44aaa12dd5bc6871dc671333b23d0998fbc0cb20d50f6484c5","path":"packages/blocks-core/src/modules/sales/messages/en.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"06a76948f52e09ebb46ff628fc39b3c20b89a13f4f9361b48431313bf08e2741","path":"packages/blocks-core/src/modules/sales/messages/vi.json","step":"file-rules"}
-{"data":{},"findings":[],"hash":"f24b4d873be7980c6c8105bde36fbfd34f29072624b5fc1357f5a4c4414d0ed2","path":"packages/blocks-core/src/modules/sales/order-links.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"7c196beb6dda3fe6de2d773e578b79a0270d01701fd0185bb3caa733c8eec9d0","path":"packages/blocks-core/src/modules/sales/order-links.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"83456cdeee2772daac1af6699cb51537f3f94fc1465af1d78dadac9220ea8555","path":"packages/blocks-core/src/modules/sales/order-links.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"a22126788d6df9bcaa36c1b283c8afe10fd444f385f7a016ef24dee50481dd79","path":"packages/blocks-core/src/modules/sales/ports.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"549380ff4c685a3d9cad740c449bbc5c3a3dac997a5d875acc10f2b6e064b7e0","path":"packages/blocks-core/src/modules/sales/ports.ts","step":"file-rules"}
@@ -502,7 +501,7 @@
 {"data":{},"findings":[],"hash":"ab7f01b64df5e4ffae4882a08356af6bf024696268f7c6afce3c2cebf6919b38","path":"packages/blocks-core/src/nodes/accounting/ledger-ready.node.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e62ca392e847e5a2d278aa730b97f49dc9b36cf669c657a65a60a8190579d588","path":"packages/blocks-core/src/nodes/accounting/ledger.policy.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"97b03f414a16f277f0cf58a9ecc992e6557df51393eb5f4de786c8743c797841","path":"packages/blocks-core/src/nodes/accounting/ledger.policy.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"3f2bb0288a4500e2d34e40abd329db2f2cd1135cb697dece7430f6c8761a1666","path":"packages/blocks-core/src/nodes/accounting/post-payment.node.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"ea881866455e853665741d250fc753c1dd945921cfdf147b99c03dbc59ae9c50","path":"packages/blocks-core/src/nodes/accounting/post-payment.node.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"4f2828204e3225542aab6cd77d92165ac06240c1b706441da831f6b3bc439317","path":"packages/blocks-core/src/nodes/accounting/post-payment.node.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e64c49efdd800a74dca57dd4874e50229864ab147f7cdca349752feacd86271a","path":"packages/blocks-core/src/nodes/chatbot/draft-reply.node.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"74c29c43c88c7296a77aa171fc8f06bdd193dea8d9b03712d404f6e5c1e9c51e","path":"packages/blocks-core/src/nodes/chatbot/draft-reply.node.ts","step":"file-rules"}
@@ -523,7 +522,7 @@
 {"data":{},"findings":[],"hash":"3dbf477a9609eafe6c1acf4efa5cd40ec31b7de75a792e36e9976336d740d79c","path":"packages/blocks-core/src/nodes/core/reply.policy.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"97a082b99ad68e411648455d9ac1e10e12287148887bebfdb69d0c876ed07b58","path":"packages/blocks-core/src/nodes/core/reply.types.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"43da9d2396b56a799b14b9f836da6078632422180e3687ab9b04481f651d7790","path":"packages/blocks-core/src/nodes/intent/classify.messages.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"eaa981c7f7d39441310fba31817fff2f8b13bf1c64f7f7d3a0aeb2df34ccc131","path":"packages/blocks-core/src/nodes/intent/classify.node.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"7330fdd7f42b84e1bca4699eb003ac2c4aa286651076e167a7a62549cc4d390f","path":"packages/blocks-core/src/nodes/intent/classify.node.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"28eb3fee90dede21c72586989867f28ad8208594e63e00946568b61fc4a8e5a3","path":"packages/blocks-core/src/nodes/intent/classify.node.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"7061b36a0fba090dc597d72e3eb448b4d66f6f2be2bd34c2aaac956ecb215072","path":"packages/blocks-core/src/nodes/intent/classify.policy.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3320d2c3c87264208b169b728fd4cb7ecb6fa8cc29365469c054dbd79cb17fe4","path":"packages/blocks-core/src/nodes/intent/classify.schema.ts","step":"file-rules"}
@@ -539,7 +538,7 @@
 {"data":{},"findings":[],"hash":"7f4d9e8441f71e19852681a7401ed21bdd5578eea483d87d82b729d457dd1462","path":"packages/blocks-core/src/nodes/knowledge/claims.policy.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"f4782de73dbf52927e5e03277b99a181237ba9b6925b3ebc06f5c903c67dc2fc","path":"packages/blocks-core/src/nodes/knowledge/figures.policy.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"5ad674ffb400bea493b5c97b63890baa63953ac6c2916f64012fd88217d2978a","path":"packages/blocks-core/src/nodes/node-schema.types.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"8459d40e3c7ea4dd2b95aa98e711b8031e35daf9e7cc1df3fac0f03ea5227aaf","path":"packages/blocks-core/src/nodes/nodes.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"d6452efd6e9f93de686de55ebee14bfbc5c3f52bbf0920b9a401466b808ae3bd","path":"packages/blocks-core/src/nodes/nodes.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3cc1fc0e166e38cb1b02a56f1ba41fe66498fd03ca07b9774f2d42c4688f828c","path":"packages/blocks-core/src/nodes/order/ask-missing.messages.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"a62dc0717ef5e8c5f3660ec6c3d8b279d9260f4879fb959c4be197e4efd74671","path":"packages/blocks-core/src/nodes/order/ask-missing.node.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"a9dfb335545ebdd252b4e7b4836ac8da133ef991a497e8a57f205f71ad30c976","path":"packages/blocks-core/src/nodes/order/complete.node.ts","step":"file-rules"}
@@ -583,7 +582,7 @@
 {"data":{},"findings":[],"hash":"a25118649f66bee3e06311e2f425751946ce1265c9ee93fb45a24ca3d6fd745f","path":"packages/blocks-core/src/rows/chatbot/conversation-layout.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"a8aca4908fd31ccd2369fb3bbec4e314ebf4e52e441c1ecdc36b89492c3df6b8","path":"packages/blocks-core/src/rows/chatbot/conversation-layout.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"76e23a64a176ecfa45f4469d2c3cecafdf3bf80b68af8fd2200795c203c9f733","path":"packages/blocks-core/src/rows/chatbot/conversation-pending.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"a983ed0d653c7835388c0a350f2ba9c78d7e5fe6f53dd53a01882eeabb27db8c","path":"packages/blocks-core/src/rows/chatbot/conversation-pending.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"52399668ba02b8667412f95b41eb1bddac6437254a4f9845d642419889723c55","path":"packages/blocks-core/src/rows/chatbot/conversation-pending.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"bb5c4e81cc298a6c6042def692ca69ce7493c204df1e7365ccd2564067cd65a1","path":"packages/blocks-core/src/rows/chatbot/conversation-view.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"8daebf56c933fb0bebd19375432c60d1e915db4f191e0737b2e37bb4e7afe0ba","path":"packages/blocks-core/src/rows/chatbot/conversation-view.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"11bea3a2a5e05ac264fc628e2cfb089b3fe66b292011b22f80f7959dea59aa93","path":"packages/blocks-core/src/rows/chatbot/conversation.spec.ts","step":"file-rules"}
@@ -655,7 +654,7 @@
 {"data":{},"findings":[],"hash":"d498e174002ab8f81e3bc2087465b0999a792c796dfb51a4268a6fcedba47fbe","path":"packages/blocks-core/src/rules/accounting/book-view.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"cf7d2eefb02a15987e6dab0ab740c946ebde8d72a2b7c505ac11e09edc4525da","path":"packages/blocks-core/src/rules/accounting/book-view.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"15fb0049b437de153df88c6535e6fe77c233988af8dbc7e03058f22b3c029cf5","path":"packages/blocks-core/src/rules/accounting/decisions.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"f534a55e2789c0720680b3b21898df6946bcb4a1f59cb1faa60b0b0d1fd68f20","path":"packages/blocks-core/src/rules/accounting/decisions.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"26e5b53eb89d1556b6e5bb8982353ed672abef77841229e189e3703cf60abede","path":"packages/blocks-core/src/rules/accounting/decisions.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"834b66931cff40ea4767b5e2a3c62ee492e28108dea745868ed111817020f4be","path":"packages/blocks-core/src/rules/accounting/due-soon.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"60f5e8af409e62633eab228b7e87f90f2f7b5f8557fa1e917c8dc9f3bf611733","path":"packages/blocks-core/src/rules/accounting/due-soon.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"154aa59ad9e9fb5490eb3414bb42070e12607fbaf2ba1a7d6b3e17cadeb8518c","path":"packages/blocks-core/src/rules/accounting/entry-stages.spec.ts","step":"file-rules"}
@@ -687,7 +686,7 @@
 {"data":{},"findings":[],"hash":"8be5d780af48e33bf23e5494489162a3991c5e2826b0936a80273f083b5eea98","path":"packages/blocks-core/src/rules/accounting/question-rows.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"445fc1a64d225f4ffdc2d8405e2c2616081dabd83a90f177ccfa6172c85d7b29","path":"packages/blocks-core/src/rules/accounting/question-rows.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"d4a1d78137c94a12aa484ee0d945c13defb3778b4408000200c23f24824e56c5","path":"packages/blocks-core/src/rules/accounting/questions.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"037de1683a1f50831aefb9b5fd740c618b6e77f46d48f5f611d4fec08612b8d4","path":"packages/blocks-core/src/rules/accounting/questions.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"9aa9e44b8645bfcf0b1eefe159426f8147632c1fb84d3d8151083e9b685dc71d","path":"packages/blocks-core/src/rules/accounting/questions.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"d3cef072048fed176d59979f13da4210da618fc5f6291ae91aae035ea0c2e009","path":"packages/blocks-core/src/rules/accounting/rematch.fixtures.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"65196f9973ede14f3406e01637ca56ea8e0a8f0a88a13db93e7f5350d3ab36e5","path":"packages/blocks-core/src/rules/accounting/rematch.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"5f98a38fc202cadb4cff913bcead3dfb0e15441be7a1f9e1a6a5fd63c60506c2","path":"packages/blocks-core/src/rules/accounting/rematch.ts","step":"file-rules"}
@@ -714,7 +713,7 @@
 {"data":{},"findings":[],"hash":"3306360640de5b8ded42a07d6996a2c3ecba2f6dd4114425da4eb707c7aa7b53","path":"packages/blocks-core/src/rules/chatbot/conversation-tail.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"ef915711eee8244fd48dc244673ab8ba974ad4c6efd18d42c5dcece8142db70f","path":"packages/blocks-core/src/rules/chatbot/conversation-tail.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"89be821a0753879e6be8f55a7add2aed83d28fb7973009526d79188335a4bc90","path":"packages/blocks-core/src/rules/chatbot/decisions.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"736cb8203d2b36e0948494b0c73d6b87993650300f17b86da14da01f1eb77c9a","path":"packages/blocks-core/src/rules/chatbot/decisions.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"a08829324b51caf2c5aaee27ced57669ac793c59239a666fbaa519d6e85cbbda","path":"packages/blocks-core/src/rules/chatbot/decisions.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"95fb8d4b8f0cb8196f7e1e049965cf743469b000ae0226ecc56436b52c0efe92","path":"packages/blocks-core/src/rules/chatbot/figures.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"b925f62b004bbcd9045bc386877ba263d76b041f958ad175133346dc8ecbfdb8","path":"packages/blocks-core/src/rules/chatbot/figures.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e2cccac9ea43e871963cfed981adae68521d49fea4458502f7cad20a5bf7ed58","path":"packages/blocks-core/src/rules/chatbot/handling.spec.ts","step":"file-rules"}
@@ -770,7 +769,7 @@
 {"data":{},"findings":[],"hash":"03d3c509baae2cbffe123c487150e77bd276099e75ea156fbefdd3a94118eaee","path":"packages/blocks-core/src/rules/sales/contact.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"0ff2569e6ba64ce5b169a3cf224419e0368d5f9f42ae326333df53ff9a6ae287","path":"packages/blocks-core/src/rules/sales/contact.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"369af1a7dd7a7a8dd95f4575b1f6afe269c124f703fc0c7f83e248a9f55e7acf","path":"packages/blocks-core/src/rules/sales/decisions.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"308413ef72094fff72af8a9d9ece48650b3c2db375a46f239c49baaadbc2d58c","path":"packages/blocks-core/src/rules/sales/decisions.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"ab753b0c055c947b48f568ac4c8847fa96cb2f19d1c1b6dd74ca925a8dc8eed6","path":"packages/blocks-core/src/rules/sales/decisions.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"c75c4a2a57f9a4b2da7109d80a875c02056fe08dc88543da3cddadb90bcf4a70","path":"packages/blocks-core/src/rules/sales/figures.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"35b5108348b01004a46b7ac41f00abf0d991207f7c7c154fb996b1605490b513","path":"packages/blocks-core/src/rules/sales/figures.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"99752654b004e4db3ab2beebd064a13ab95e1d5d2b806ec6b46d8a0864a80acb","path":"packages/blocks-core/src/rules/sales/follow.spec.ts","step":"file-rules"}

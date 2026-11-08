@@ -7579,7 +7579,7 @@
 {"data":{},"findings":[],"hash":"1e162ebfe142859ac40d8b1d617729d66470bdeb55eb8a70024e159a10ab7174","path":"be/src/modules/domain/agent-graphs/agent-graph-contracts.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"0aa60a59b53311c4b8e92aabd9767f4ac7fe7865fad26dd932a09cc4da5bf842","path":"be/src/modules/domain/agent-graphs/agent-graph-contracts.service.ts","step":"file-rules"}
 {"findings":[],"hash":"d2a251a78f9b9bfa326b1b1f3933f2fd365a446fd59d08e69634d631750d8650","path":"be/src/modules/domain/agent-graphs/agent-graph-contracts.service.ts","step":"unit:recurring-observations"}
-{"data":{},"findings":[],"hash":"8f21ed10ea2ea597eaea8c624abdd915689d96e1da05ddb845eb1f55b45b009b","path":"be/src/modules/domain/agent-graphs/agent-graph-decider.service.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"8a0f96d034c143708c9d0a57c1f3e029a98abebebcd83fcf91bc1524fec91607","path":"be/src/modules/domain/agent-graphs/agent-graph-decider.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"c5b39b7a244c5382d9a7e1938f04f7b4e2f4f8e7b75aa65e29f3c9d6a169fa04","path":"be/src/modules/domain/agent-graphs/agent-graph-decider.service.ts","step":"file-rules"}
 {"findings":[],"hash":"ddcf841b5a520ee3e155a8966c0e852bab44f412d746ca18f5a6ed9ecc983dbe","path":"be/src/modules/domain/agent-graphs/agent-graph-decider.service.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"579fbe0bbf68a9bf8c1025e7a9f1a09a675b03a7b745d0a02661ea7cdb5287ab","path":"be/src/modules/domain/agent-graphs/agent-graph-decisions.service.spec.ts","step":"file-rules"}
@@ -7646,8 +7646,8 @@
 {"data":{},"findings":[],"hash":"ae81c96fc0707e2d5095300ec41b227be385e6fe78b853617633c9451d980e85","path":"be/src/modules/domain/agent-graphs/agent-graphs.log-events.ts","step":"file-rules"}
 {"findings":[],"hash":"68c14e9555b89b1d88c31d6ee4593f4c66a045855a71a03b859e9ce72e4b777f","path":"be/src/modules/domain/agent-graphs/agent-graphs.log-events.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"92721383f9177564aa617a8371f44c94b888b9ec61e37c390f1ce92efba709a3","path":"be/src/modules/domain/agent-graphs/agent-graphs.mapper.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"b7fd07d5d2e79e91c27f339b5eeb4aa6cbe7a18b60359732deaf9a26b1066908","path":"be/src/modules/domain/agent-graphs/agent-graphs.mapper.ts","step":"file-rules"}
-{"findings":[],"hash":"4dfe4812c7f0987c2ab4811107d7135fb560a11e42a478471a0f904b35fa3829","path":"be/src/modules/domain/agent-graphs/agent-graphs.mapper.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"c7870601947e5ab754be0304b6fe24c15a8e10ab2abd68daec3dd0d53b8884b3","path":"be/src/modules/domain/agent-graphs/agent-graphs.mapper.ts","step":"file-rules"}
+{"findings":[],"hash":"0ffd0d0bab2ef42a5b68e0fe1907a92291ca558dc3b544de2d0e059a7a156276","path":"be/src/modules/domain/agent-graphs/agent-graphs.mapper.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"e8a71346eaf8ed977a0b7b28385f65f526e64f8ea6311b6a28d1d225e3fdf705","path":"be/src/modules/domain/agent-graphs/agent-graphs.module-definition.ts","step":"file-rules"}
 {"findings":[],"hash":"c95ab50883d20713aae4252bee549b016268690ed62c79289241a559e13c56d4","path":"be/src/modules/domain/agent-graphs/agent-graphs.module-definition.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"6c362d6fdfc5f80701fd936b99bb1ace640aaf219071a583f35ea13c5ba6625a","path":"be/src/modules/domain/agent-graphs/agent-graphs.module.ts","step":"file-rules"}
@@ -7704,8 +7704,8 @@
 {"data":{},"findings":[],"hash":"9373089aa2a46cadbb1623f0cceda57af66889aabe865cd564e4da049d5de6ca","path":"be/src/modules/domain/agent-graphs/policies/contract-problems.policy.ts","step":"file-rules"}
 {"findings":[],"hash":"881e234fa0bc047ccbba33c6af997e79d12339f96cdc86fb4837b2b920234691","path":"be/src/modules/domain/agent-graphs/policies/contract-problems.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"5811d3edfe5ad06cd49001e3cdd8142b17ba817b28def77e221f3cfafcc7556b","path":"be/src/modules/domain/agent-graphs/policies/contract-setup.policy.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"19788777e2ad2dc96f4b993459133d530bdf07d26a49e2c6e42a3ad6fd1354f4","path":"be/src/modules/domain/agent-graphs/policies/contract-setup.policy.ts","step":"file-rules"}
-{"findings":[],"hash":"f212e5c2e679ddfc28bf39334f4d9d1cdee15debe672671213db13b8fe9248fe","path":"be/src/modules/domain/agent-graphs/policies/contract-setup.policy.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"d3c0b9528f4f19659fda9e7895abca98dccd847117748e9758e81de165f7e31d","path":"be/src/modules/domain/agent-graphs/policies/contract-setup.policy.ts","step":"file-rules"}
+{"findings":[],"hash":"15416ee74db733ed0dda563a967f195ac1683ea7169f6c2778dde4ecb85f3dc2","path":"be/src/modules/domain/agent-graphs/policies/contract-setup.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"8e9486541cffb314e534ba0a6f8bbd687df8f9a9a08bcc697f401b8f232c0ceb","path":"be/src/modules/domain/agent-graphs/policies/evidence.policy.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"d6a7a0e8866837c1ccf49ad0b2f5b56a049e59131a525879579f4cf0f14e913d","path":"be/src/modules/domain/agent-graphs/policies/evidence.policy.ts","step":"file-rules"}
 {"findings":[],"hash":"02ca03c72ce02e81d9a526d3e9f640fce3798f262fe9aa8401c2865b78910ae5","path":"be/src/modules/domain/agent-graphs/policies/evidence.policy.ts","step":"unit:recurring-observations"}
@@ -7713,8 +7713,8 @@
 {"data":{},"findings":[],"hash":"97fcfe858e3e1dce86c05fc222e4c962f57e08a6646aa4afb832491fa80f806f","path":"be/src/modules/domain/agent-graphs/policies/flow.policy.ts","step":"file-rules"}
 {"findings":[],"hash":"5d2d2601c00061347cc5f19380337d2c6b7c852ce782467f5ffd19927d8d0888","path":"be/src/modules/domain/agent-graphs/policies/flow.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"d284b3f86ce99ac5c0a8bcfeefa4f62e17351d788c3d9245376cea512eab3ff7","path":"be/src/modules/domain/agent-graphs/policies/graph-behaviour.policy.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"e637be32f648eb8d40165432f167c7a4a93a8a25cbb68239790671131f3382ab","path":"be/src/modules/domain/agent-graphs/policies/graph-behaviour.policy.ts","step":"file-rules"}
-{"findings":[],"hash":"5521f94ae51273f2ebdff00c499dfc8f92e002367d521fa9ebf0c5e8e7e97c55","path":"be/src/modules/domain/agent-graphs/policies/graph-behaviour.policy.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"a8e775460813b1ba3e28edbcd1d7cace52ee71c8c108ab792ee110e58182bb07","path":"be/src/modules/domain/agent-graphs/policies/graph-behaviour.policy.ts","step":"file-rules"}
+{"findings":[],"hash":"32fedddb27a12f023860003934bac85afa1158e197a706a4f5a35a01284c2d1d","path":"be/src/modules/domain/agent-graphs/policies/graph-behaviour.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"26898a584bd91f3c7fbf8da3a8b8f9dc941c2cb7a78df3f7efefbb897b7ea2ad","path":"be/src/modules/domain/agent-graphs/policies/graph-diff.policy.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"2c38512a5e9db811128793e262e35d0b9b7d0ba1765104a1375ff21018613fe7","path":"be/src/modules/domain/agent-graphs/policies/graph-diff.policy.ts","step":"file-rules"}
 {"findings":[],"hash":"ebd2e0b248edfd8b8ac9df121272dead073f28ee9106dfbb98c895f8a6267d68","path":"be/src/modules/domain/agent-graphs/policies/graph-diff.policy.ts","step":"unit:recurring-observations"}
@@ -7773,17 +7773,17 @@
 {"data":{},"findings":[],"hash":"0a6733aaa0ef27e57d0214d277b997e073ec12cdd70a448191df8d265be2af0e","path":"be/src/modules/domain/agent-graphs/policies/sources-index.policy.ts","step":"file-rules"}
 {"findings":[],"hash":"feb91813e0f8b0077a7424ec6950294ec83aee4f3461c23faf877aabed1e5844","path":"be/src/modules/domain/agent-graphs/policies/sources-index.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"3d296c595202639104c35af48b39152a4a306f4637bb2eaa9e6b7161d4b9f4a5","path":"be/src/modules/domain/agent-graphs/policies/stray-stops.policy.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"f27e6faf80ab563ff4f031641671a7ba3fd1ac00f5c02814527ef5d2579229b4","path":"be/src/modules/domain/agent-graphs/policies/stray-stops.policy.ts","step":"file-rules"}
-{"findings":[],"hash":"4d844bda6c078155d3272c0497664dfac86d6a4cf3f13ca5590065fee9e04b66","path":"be/src/modules/domain/agent-graphs/policies/stray-stops.policy.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"ef7eee7939a7ebfcc6bb4d1bdf0cb0f511302b3bc9aa0bf08a9f55bbe5444e0b","path":"be/src/modules/domain/agent-graphs/policies/stray-stops.policy.ts","step":"file-rules"}
+{"findings":[],"hash":"9ab44fad6e72eb5168e6f43be915a87bc25676e40a18e30b281d394e38560545","path":"be/src/modules/domain/agent-graphs/policies/stray-stops.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"bc6d840349984e31912da832adeaf0f825952110e23275dd1284364e088d4161","path":"be/src/modules/domain/agent-graphs/policies/strictest.policy.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"77ded13ed96e972a69912073bb9cb3d1b3f375ba37ede6b7f219088ef2155349","path":"be/src/modules/domain/agent-graphs/policies/strictest.policy.ts","step":"file-rules"}
 {"findings":[],"hash":"78706f074fdaca335fc122bfbd923f3d5d11f4d5d7cd8da561e45b4575c7abff","path":"be/src/modules/domain/agent-graphs/policies/strictest.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"d6507bd089f7d9aba9defe674ae861de0542836ca9bd692d92a9fbea3fa519f1","path":"be/src/modules/domain/agent-graphs/policies/unheld-rules.policy.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"c4b479459b39c9796a7d92d1ec103676c89d4d339014f65c062b4ad5a9c36a4d","path":"be/src/modules/domain/agent-graphs/policies/unheld-rules.policy.ts","step":"file-rules"}
-{"findings":[],"hash":"2becad50b35d487c40927b3fc0c24dbf3f71a98e5832c111a052181dfb669f3c","path":"be/src/modules/domain/agent-graphs/policies/unheld-rules.policy.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"1de72809759dff2e7b6b09ac0b8e9c6eea671fb40176eb29b81e18db46bd19b5","path":"be/src/modules/domain/agent-graphs/policies/unheld-rules.policy.ts","step":"file-rules"}
+{"findings":[],"hash":"0258cf6c48ab84a0766e311c38d25f2836e3ebc3cd4b221d1070a92ddb8f5823","path":"be/src/modules/domain/agent-graphs/policies/unheld-rules.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"faa0ad813a98ab994a0e4ab87ab760d129c264843ae23ec1a32aef3d2d17d2c4","path":"be/src/modules/domain/agent-graphs/work-amount-fact-reader.service.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"fbd9cfd696bf7d12cd39eb5411038ee22101e575e343b000a08977c3f669ded0","path":"be/src/modules/domain/agent-graphs/work-amount-fact-reader.service.ts","step":"file-rules"}
-{"findings":[],"hash":"11ddd3e55b10b918c0300623c4f4976e229b3d7ebd275ad3b3f7ff749b545f8d","path":"be/src/modules/domain/agent-graphs/work-amount-fact-reader.service.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"4489e502e8f5801faaf1166c4c912a884d79292a4bdcae004c4d69df540471cd","path":"be/src/modules/domain/agent-graphs/work-amount-fact-reader.service.ts","step":"file-rules"}
+{"findings":[],"hash":"58e268f55406129a6cba13c6ea8f82ee96ac21bb754203613f60b3da580ae58e","path":"be/src/modules/domain/agent-graphs/work-amount-fact-reader.service.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"cc9cd967af2445b9ddc56ab572e813647e26b4782dc04f0128204711cdf39b1e","path":"be/src/modules/domain/agent-inbound/agent-inbound-door.contracts.ts","step":"file-rules"}
 {"findings":[],"hash":"cf594ee2817eb6a6b4b5fb4a94e8cb989275e3f828bc94a48c996f5158ec88f0","path":"be/src/modules/domain/agent-inbound/agent-inbound-door.contracts.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"d840eb5b42afef4fad40cc763a7e8bb74f2f6471c6a4da22f102d09ab6c15f40","path":"be/src/modules/domain/agent-inbound/agent-inbound.contracts.ts","step":"file-rules"}
@@ -7922,10 +7922,10 @@
 {"data":{},"findings":[],"hash":"f1e51932ada53638b653e4e876ad823447a64bf98e04b59ae6357e84b52ae004","path":"be/src/modules/domain/agent-runs/agent-run-alerts.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"02fb52e8a25ce9df32b2ca757eb57ea11950283200b964d629bec49311b68d3c","path":"be/src/modules/domain/agent-runs/agent-run-alerts.service.ts","step":"file-rules"}
 {"findings":[],"hash":"f522b8823de780ac4bc6e4fa1a68068f4d577233d50cce7f6acffdf5bc4eba95","path":"be/src/modules/domain/agent-runs/agent-run-alerts.service.ts","step":"unit:recurring-observations"}
-{"data":{},"findings":[],"hash":"e2b087c7ab70401ab346b774ee705637fa42ae482cd4067d57c686110a6dbbf3","path":"be/src/modules/domain/agent-runs/agent-run-compensation.service.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"7e567e9a21f66fc335ecca506c83ed8d417d44eaa8f23c4ddf6c17aad6096cd0","path":"be/src/modules/domain/agent-runs/agent-run-compensation.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"0de010cd1794442f50f0aaacb7f0e08e2283a03cba5f753a0a375969e1654e8a","path":"be/src/modules/domain/agent-runs/agent-run-compensation.service.ts","step":"file-rules"}
 {"findings":[],"hash":"0d4903d768c1caa21e8c63541cbefc28ce9ee59228b135a44deab6f15333ee20","path":"be/src/modules/domain/agent-runs/agent-run-compensation.service.ts","step":"unit:recurring-observations"}
-{"data":{},"findings":[],"hash":"0469c21144508b2b47c854aa68a2df9a151e57bd704453c3976cdc34e2884412","path":"be/src/modules/domain/agent-runs/agent-run-dead-letter.service.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"a834df451392b3ce13c3956e69ff85c95822ce1a5ad8a20dfd22c256c485d6f1","path":"be/src/modules/domain/agent-runs/agent-run-dead-letter.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"476611f597745aa4d1c2b87e1bd7708c2f5f7194884161ef5dcab1dbfadf1125","path":"be/src/modules/domain/agent-runs/agent-run-dead-letter.service.ts","step":"file-rules"}
 {"findings":[],"hash":"8d301cb54ca3d4df4b289f6abeb492e3946918bf1135961c9ba355d37fa40d3c","path":"be/src/modules/domain/agent-runs/agent-run-dead-letter.service.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"c642ba3c7640e330c3493fd02ca571f477066d3d438060331e0b69fb2a087df5","path":"be/src/modules/domain/agent-runs/agent-run-due.service.spec.ts","step":"file-rules"}
@@ -8013,8 +8013,8 @@
 {"data":{},"findings":[],"hash":"33c948137abd9b344641d1aa1f51159204113094030195498ddbfa31bd4362e4","path":"be/src/modules/domain/agent-runs/policies/agent-runs.policy.ts","step":"file-rules"}
 {"findings":[],"hash":"648c9cd7baaefff8d7a35bf2cf6260d5e175e0cf966062709ac05e32a41ff318","path":"be/src/modules/domain/agent-runs/policies/agent-runs.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"c8c861e76d47a864476b4f89a224fb9542727245b51935445a5ec96f4213001d","path":"be/src/modules/domain/agent-runs/policies/failure-route.policy.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"25cf5975077b9ca6e691ea9780cec0ba15c3a25d7759e324f5d8d72cb6798051","path":"be/src/modules/domain/agent-runs/policies/failure-route.policy.ts","step":"file-rules"}
-{"findings":[],"hash":"4edb47bda0b2003cc7eceb95987d9b5a97b6c0c3088cd5230bf00714f5e5daec","path":"be/src/modules/domain/agent-runs/policies/failure-route.policy.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"878db391b29546321db8816640dd81f958345de3559afe54daaf11836844b5e3","path":"be/src/modules/domain/agent-runs/policies/failure-route.policy.ts","step":"file-rules"}
+{"findings":[],"hash":"0872335f184325afc7a86f40d22d3ba680246df0222b968501d9df897e197b77","path":"be/src/modules/domain/agent-runs/policies/failure-route.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"45be4bb63316476f1a399168871ac270c8c799f581650dc66b5e4d1cdcaf9f20","path":"be/src/modules/domain/agent-runs/policies/json-value.policy.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3ad7419012840917f1d5dc9bfdc672857e4fc152a4fc42eb7c83ca35cf01f854","path":"be/src/modules/domain/agent-runs/policies/json-value.policy.ts","step":"file-rules"}
 {"findings":[],"hash":"c29d8729cd8fa8f0b4847c5872057e8b9816708de199f7b2faa045bae5896923","path":"be/src/modules/domain/agent-runs/policies/json-value.policy.ts","step":"unit:recurring-observations"}
@@ -8033,7 +8033,7 @@
 {"data":{},"findings":[],"hash":"9a9c80c2d0cc5035d5ebc3a7ef5fe9ed0920bc3cef1491bb4282db15a6da7288","path":"be/src/modules/domain/agent-schedules/agent-event-wakes.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"25113c6845e8d7d0602ce7f09c9793a77390fcb17ebd190b139d55789867d8ef","path":"be/src/modules/domain/agent-schedules/agent-event-wakes.service.ts","step":"file-rules"}
 {"findings":[],"hash":"a5721d40e220d089284c03c3213fa2dcec26141ac57aa52e7c7d5d73ec618540","path":"be/src/modules/domain/agent-schedules/agent-event-wakes.service.ts","step":"unit:recurring-observations"}
-{"data":{},"findings":[],"hash":"5ee86c98d50f640284bdd9cd87a9ee52a5ecc82b500b29df12f4d3d0a9c98361","path":"be/src/modules/domain/agent-schedules/agent-probes.service.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"d8c40967c7d9b3397f70878b951471a582c4e53b877ac1e853b4785e3c9fc473","path":"be/src/modules/domain/agent-schedules/agent-probes.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"d79dac4fb696d3363ab76cdcac4cabf6583c100230188c903d05c5c7b0035bcc","path":"be/src/modules/domain/agent-schedules/agent-probes.service.ts","step":"file-rules"}
 {"findings":[],"hash":"778968a11134f68537e66590e6a7c86ac50168ca38b1cd2d63f2c579f878a888","path":"be/src/modules/domain/agent-schedules/agent-probes.service.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"1fc10f2205a03a4c14de4ae1f18edc62a984dc9f1cb348bb5408abf71d69767b","path":"be/src/modules/domain/agent-schedules/agent-schedule-fire.service.spec.ts","step":"file-rules"}
@@ -8082,8 +8082,8 @@
 {"data":{},"findings":[],"hash":"39ee0da8c787b1d7a04a3b0a7e477b14a96a6467c29cea821217477492641153","path":"be/src/modules/domain/agent-schedules/probes/new-documents-probe.service.ts","step":"file-rules"}
 {"findings":[],"hash":"0adcb767e0083d59d2dde15de41b01a1454b799050953348d8565b2b67c9b175","path":"be/src/modules/domain/agent-schedules/probes/new-documents-probe.service.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"4a1f50f74489054cecea67401836b6ea1f60755c55501cfef05000caf0f18c71","path":"be/src/modules/domain/agent-schedules/probes/probe-brief.policy.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"c88308c53dabd384b9e431acc3ff20cb9bd9bc9e151ad3c47ac3f190f412e9d2","path":"be/src/modules/domain/agent-schedules/probes/probe-brief.policy.ts","step":"file-rules"}
-{"findings":[],"hash":"02898d5be05cd8872becaf530663a9e2a08c92aeac50cc70e779ef0d918736f0","path":"be/src/modules/domain/agent-schedules/probes/probe-brief.policy.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"b15d7026c48f05dd96f9c4c2a98c2ebadbc25e380264f5f07ca91f747cfdd895","path":"be/src/modules/domain/agent-schedules/probes/probe-brief.policy.ts","step":"file-rules"}
+{"findings":[],"hash":"5e14b9dd93d2b0129d56012d4f585667bb5dd5b4cd97d105bbfe8514364d930f","path":"be/src/modules/domain/agent-schedules/probes/probe-brief.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"98ec9eb10975b481dc10e167a720cb7686cff9a5ba58b20fc25d19bf9e516962","path":"be/src/modules/domain/agent-schedules/probes/tasks-due-probe.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"148e7f6b7ebbe83190fd876ea44f5b3a2b8b64d28afd4c75ec65e3fe45f7c6ff","path":"be/src/modules/domain/agent-schedules/probes/tasks-due-probe.service.ts","step":"file-rules"}
 {"findings":[],"hash":"8ed639466bdb2d1bdbbc917ab9d7538544003066857d800ad59918c88bb8b363","path":"be/src/modules/domain/agent-schedules/probes/tasks-due-probe.service.ts","step":"unit:recurring-observations"}
@@ -8237,8 +8237,8 @@
 {"data":{},"findings":[],"hash":"204398b3c9d3ea12cd95e7aec60f2840be1bd9f5592b7b70cc806f325ef523fa","path":"be/src/modules/domain/agent-turns/intent-wake.policy.ts","step":"file-rules"}
 {"findings":[],"hash":"4bf8c45eca146c3ea1440b58e68e55a1379577c4a5c48d3103fcafa506dbeb73","path":"be/src/modules/domain/agent-turns/intent-wake.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"a5e6d192a44b60d872c45f4ea4f6ebc3f071ecd4d83bda71ca0c671b530a0626","path":"be/src/modules/domain/agent-turns/internal-contract.policy.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"13f803c958102aa2344d2c3f2646ca5b344c307a193cb10c5e86ec6d9c4eb0c0","path":"be/src/modules/domain/agent-turns/internal-contract.policy.ts","step":"file-rules"}
-{"findings":[],"hash":"2b228e3679d86118ec0b4d3b2b0da33ecd25af306a1fd50ddb086cc71a51c93b","path":"be/src/modules/domain/agent-turns/internal-contract.policy.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"2e894691576fd961d28d1b4fba83cb89ac39334727fc181621905651410ff3ec","path":"be/src/modules/domain/agent-turns/internal-contract.policy.ts","step":"file-rules"}
+{"findings":[],"hash":"49394e22cf6cc728e7efbaa5e37f9c7f388be2a8f8ee1dbed2ef3c8add585ca2","path":"be/src/modules/domain/agent-turns/internal-contract.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"ff9a60dee3f07d6eb3a716d2cbc2170880faad5e6a955e909dcfa83442574725","path":"be/src/modules/domain/agent-turns/internal-contract.schema.ts","step":"file-rules"}
 {"findings":[],"hash":"31953d1fc287a6e65111e739b0ca7f9a193987dcde31bbe8c446a1bc12c595d2","path":"be/src/modules/domain/agent-turns/internal-contract.schema.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"45e57bafbf3b754dba0041a761349d567e1175cab67164d6ba5dab096d418963","path":"be/src/modules/domain/agent-turns/internal-gateway-tools.schema.ts","step":"file-rules"}
@@ -8249,12 +8249,12 @@
 {"data":{},"findings":[],"hash":"a4bef4611a924b2ac8a01c6886ef55944cf36e7dce4236321ff39f249d681d94","path":"be/src/modules/domain/agent-turns/internal-proposal-settler.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e736003faeb33877a72e3a91fdad546ff7615a8cd8f39ddfc8da02a69f3cfeb6","path":"be/src/modules/domain/agent-turns/internal-proposal-settler.service.ts","step":"file-rules"}
 {"findings":[],"hash":"1d2910d29e4e1f8c65431c8e8bd1cd051ee78069f64a0b901a9be48a1179a2d0","path":"be/src/modules/domain/agent-turns/internal-proposal-settler.service.ts","step":"unit:recurring-observations"}
-{"data":{},"findings":[],"hash":"78a187f417a29dc58aaefcc602aa1fc3d2f61b87ad63e4465775cde6d045c877","path":"be/src/modules/domain/agent-turns/internal-turn-context.service.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"e12f8e43a4b349844f730fcee1c5ac20cbd53a3264e59f71b9976cd33cd6e81c","path":"be/src/modules/domain/agent-turns/internal-turn-context.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"9fdc882d588dc1e0ec33801a05ee115542add05a1d4698e7e0204af055501d83","path":"be/src/modules/domain/agent-turns/internal-turn-context.service.ts","step":"file-rules"}
 {"findings":[],"hash":"ef6986baa17817161d323957135ff961322edca16695e062245aaeed06d9fbfd","path":"be/src/modules/domain/agent-turns/internal-turn-context.service.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"35458c3f9d68b9326382c6013f84ee18794360933c19af1c9d73e2a7173ced40","path":"be/src/modules/domain/agent-turns/internal-turn-prompt.policy.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"1b6d23522f158974b85928fceb83ddbe87007233fd6ef9e96a6015e0c1b1872a","path":"be/src/modules/domain/agent-turns/internal-turn-prompt.policy.ts","step":"file-rules"}
-{"findings":[],"hash":"18a7e5aee1dd4181e2d14a4535564ad73d4b827adc3b092941970ba9c7d36a4e","path":"be/src/modules/domain/agent-turns/internal-turn-prompt.policy.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"38008902246d42e22f3d88744559fb1fff8b7b51e184b2a86706e6e497b0a642","path":"be/src/modules/domain/agent-turns/internal-turn-prompt.policy.ts","step":"file-rules"}
+{"findings":[],"hash":"5942944a9e80d48cd8c4d307ec9d902fed13d5793593b45657b762fb6770fb06","path":"be/src/modules/domain/agent-turns/internal-turn-prompt.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"8f10fbea71e6e331adc0b52a80c72aecf317823c6787901da42c175fb483f32e","path":"be/src/modules/domain/agent-turns/messages/agent-turns.messages.ts","step":"file-rules"}
 {"findings":[],"hash":"3a1d5329fa84a268adaa87c12dd93be88f8da480841401ce8acef96cfb9c2de4","path":"be/src/modules/domain/agent-turns/messages/agent-turns.messages.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"a2e7e6ef7e4aa6f84ac408b5e2bde57d58bf76309f3d79d15bd4b9c5fb26bfd1","path":"be/src/modules/domain/agent-turns/openclaw-turn-runner.service.spec.ts","step":"file-rules"}
@@ -8339,8 +8339,8 @@
 {"data":{},"findings":[],"hash":"bbcbc8aa2328f4e218e9624fa24a74b5f7094f60df4760787556ac5c595a7883","path":"be/src/modules/domain/agent-work/agent-work-read.service.ts","step":"file-rules"}
 {"findings":[],"hash":"ff2e9315f2e0ff1c3e7777491f72fdb9bc0c92a6c56d7ca16672b973c3ac8a70","path":"be/src/modules/domain/agent-work/agent-work-read.service.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"bc2be66745e6d426c3e6775b889f6d5088ec6369c866d2cb3887fa86326419ac","path":"be/src/modules/domain/agent-work/agent-work-results.policy.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"5c0c95dcc25a79e5598c8f5f43d6597ed620981d0d1be56f78afda6ab5181f6e","path":"be/src/modules/domain/agent-work/agent-work-results.policy.ts","step":"file-rules"}
-{"findings":[],"hash":"4c98f1651d19fbea57b21932b4e5c69212c158fe18a184b913a0b2ec37e9caf6","path":"be/src/modules/domain/agent-work/agent-work-results.policy.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"08ad0b30c66364b7abe0f7eff94438f19a61d0cd7cb547bb99a3a271299c2fff","path":"be/src/modules/domain/agent-work/agent-work-results.policy.ts","step":"file-rules"}
+{"findings":[],"hash":"3d0a5b06d61f4fa563f4075706e19a0f5bf6f9ca5f40b542e01d1a031f2ba6e1","path":"be/src/modules/domain/agent-work/agent-work-results.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"fa67c302dc84c0fa0a638e4aca3245bd8ff040e5ebb595590b3b944b376f6bbe","path":"be/src/modules/domain/agent-work/agent-work-settings.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"70ae1a5a92560c15e0dd8675a3269e537bf2e51d7e13eaf33b5de696c0bd6cb2","path":"be/src/modules/domain/agent-work/agent-work-settings.service.ts","step":"file-rules"}
 {"findings":[],"hash":"f166e1a2df8210924bb0c5f46173973afd89bc35ea2195db01402a823f6f4e74","path":"be/src/modules/domain/agent-work/agent-work-settings.service.ts","step":"unit:recurring-observations"}
@@ -8405,7 +8405,7 @@
 {"data":{},"findings":[],"hash":"01f954ce186923bc24a261b66b1247dde790599d1b05a5d9b0bd7c911bc7f849","path":"be/src/modules/domain/agents/agent-bundle.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"2813f66bfe5241d9db73ab3bccf92de68e0214f0468e95f40ddee3bc23e56ba2","path":"be/src/modules/domain/agents/agent-bundle.service.ts","step":"file-rules"}
 {"findings":[],"hash":"c79ff5c2d0e55ebec552d6596ce44ac22c202b6d93f7d25fc8406b113c2ca6c5","path":"be/src/modules/domain/agents/agent-bundle.service.ts","step":"unit:recurring-observations"}
-{"data":{},"findings":[],"hash":"53c9d553e4516904198c1707e904927a6fbda90171fe11466d25b5fa8761f6ee","path":"be/src/modules/domain/agents/agent-creation.service.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"be9f73ec9208d155807d6eeb7b48cbb2fe1d20413e29bda62d7b1d30348b2e11","path":"be/src/modules/domain/agents/agent-creation.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e115a2239b4f47c31da5e4cdd0c2c5c7c209d598efb56a58f1b50092a062f8d9","path":"be/src/modules/domain/agents/agent-creation.service.ts","step":"file-rules"}
 {"findings":[],"hash":"cf69519b861f4e76a83f7f71f73880bed04cdee618c69b0ddd3e5252c68bf354","path":"be/src/modules/domain/agents/agent-creation.service.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"4f029c93ba6035dfb5311e359c149bdfa03d85c2aa57ca16786c54526e0f74e5","path":"be/src/modules/domain/agents/agent-directory.contracts.ts","step":"file-rules"}
@@ -8516,14 +8516,14 @@
 {"data":{},"findings":[],"hash":"34f34bd7744d944a9b3cae151240eb3599822af590a07d07e98c1b2992f4599d","path":"be/src/modules/domain/ai-generations/direct-generation.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"919534e5c5b4d01e872516e2c79037d5d7d336e3221a2d971934e07320ee196b","path":"be/src/modules/domain/ai-generations/direct-generation.service.ts","step":"file-rules"}
 {"findings":[],"hash":"a9616ec342e98b94783962a2cbbd6f8bc0304c7f4c2110669c5c39a9dc893f0e","path":"be/src/modules/domain/ai-generations/direct-generation.service.ts","step":"unit:recurring-observations"}
-{"data":{},"findings":[],"hash":"e616b5aab245d167f2a1837732b162a29a42d2a9aaa1d05f4300a19769980d60","path":"be/src/modules/domain/ai-generations/errors/ai-generations.error.ts","step":"file-rules"}
-{"findings":[],"hash":"616ed31425b77c27f51675519a99695e476391392cf89a43e9e9193f51f05cc6","path":"be/src/modules/domain/ai-generations/errors/ai-generations.error.ts","step":"unit:recurring-observations"}
-{"data":{},"findings":[],"hash":"3ab66acacd9122f125174a59ef871c9dc717bc3e2ee633e06aea5966dbeb9bd2","path":"be/src/modules/domain/ai-generations/generation-runner.service.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"1ff4417d22946f7ea6683445e4c8a0fefcb035bd3197bb6018766ae1050130dc","path":"be/src/modules/domain/ai-generations/errors/ai-generations.error.ts","step":"file-rules"}
+{"findings":[],"hash":"30550c9e73dad27b2ce337ddbd6186f18d16e30de9cbcb77ed73324e7f8f3e86","path":"be/src/modules/domain/ai-generations/errors/ai-generations.error.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"c2f67565a974bb0cb005fffff62fc13816c254b32da4bf208171c45d7487b981","path":"be/src/modules/domain/ai-generations/generation-runner.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e479e61ffa97dda6708b5cf6338f414f5dd1856d3ea024eeaa1af607ae3c11f9","path":"be/src/modules/domain/ai-generations/generation-runner.service.ts","step":"file-rules"}
 {"findings":[],"hash":"d701c9d989ca8d12dccd702fe66ba6eda8b895154c61083bfc9ead617ca45bf2","path":"be/src/modules/domain/ai-generations/generation-runner.service.ts","step":"unit:recurring-observations"}
-{"data":{},"findings":[],"hash":"f07845294677b653ef3235202822d8ed42d06d2c3cd3b3c3a938c86b185d36d6","path":"be/src/modules/domain/ai-generations/generation.policy.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"fb458da45e592bfe0419d851fce1dfacc12a66bd5065b9200eac7fecff24bf3d","path":"be/src/modules/domain/ai-generations/generation.policy.ts","step":"file-rules"}
-{"findings":[],"hash":"a946e08b123e571cd9955a0a2abcc5cc0450f12d212356b4b1fe057442bebf4c","path":"be/src/modules/domain/ai-generations/generation.policy.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"3db1d49406675b314542518b730072e3844bd2dd9f584eed80853f2d7ade72a2","path":"be/src/modules/domain/ai-generations/generation.policy.spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"243ca061dc01fbf5b9b7d18a5667b80ce81c64013d745a3a83e9319873bc9b70","path":"be/src/modules/domain/ai-generations/generation.policy.ts","step":"file-rules"}
+{"findings":[],"hash":"db3bf6bfdc9a1b19c95d0842eaa4ef22a75ad4bd744a4dea04fad2101bbfc342","path":"be/src/modules/domain/ai-generations/generation.policy.ts","step":"unit:recurring-observations"}
 {"data":{"size-soft":[{"code":"HFS_SIZE_SOFT_BACKLOG","level":"info","lines":501,"message":"src/modules/domain/ai-generations/generations.service.spec.ts has 501 lines, above the soft size 500; report only","path":"src/modules/domain/ai-generations/generations.service.spec.ts","soft":500}]},"findings":[{"column":0,"line":0,"message":"src/modules/domain/ai-generations/generations.service.spec.ts has 501 lines, above the soft size 500; report only","path":"src/modules/domain/ai-generations/generations.service.spec.ts","rule":"HFS_SIZE_SOFT_BACKLOG"}],"hash":"968a2ea7287ed697537bcd753b13a3e2da0d47311541f9f9399201fdd18290ae","path":"be/src/modules/domain/ai-generations/generations.service.spec.ts","step":"file-rules"}
 {"findings":[{"column":0,"line":0,"message":"be/src/modules/domain/ai-generations/generations.service.spec.ts has 501 lines, above the soft size 500; report only","path":"be/src/modules/domain/ai-generations/generations.service.spec.ts","rule":"HFS_SIZE_SOFT_BACKLOG"}],"hash":"526377ca1902253e6ff91c760664ae3dfb9c78a70f68d66c65246f2fb10515c8","path":"be/src/modules/domain/ai-generations/generations.service.spec.ts","step":"hfs"}
 {"data":{},"findings":[],"hash":"05a96e6946f5738dbd9f17fc9be8d8098b861670f57dd21d4df640b20f888dfd","path":"be/src/modules/domain/ai-generations/generations.service.ts","step":"file-rules"}
@@ -8536,8 +8536,8 @@
 {"findings":[],"hash":"ce15e647adafec53d8f00337c8c787ac153ee4064e3d1d29bb25c87d3688cca1","path":"be/src/modules/domain/ai-generations/guide.service.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"f3ed20693c5cb92e8466a1bf999ca78159a3d975ba2484be3f15276bdb0b3cc9","path":"be/src/modules/domain/ai-generations/index.ts","step":"file-rules"}
 {"findings":[],"hash":"20bd938593dbb196651fe72ce9d737665613ad5af9a191a7083ff71b6db5e50c","path":"be/src/modules/domain/ai-generations/index.ts","step":"unit:recurring-observations"}
-{"data":{},"findings":[],"hash":"c76ccb619afb452517a0ff57759fcd860a526105993487c5110f172c62a584c2","path":"be/src/modules/domain/ai-generations/messages/ai-generations.messages.ts","step":"file-rules"}
-{"findings":[],"hash":"88b58225bdd084e42809d78e31c88c566e067c9970e5459252f0147f53cc498c","path":"be/src/modules/domain/ai-generations/messages/ai-generations.messages.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"702322733836540e8fc29f4ed9715c76307de88bd9c8235de35cfbc2749dd02d","path":"be/src/modules/domain/ai-generations/messages/ai-generations.messages.ts","step":"file-rules"}
+{"findings":[],"hash":"fae1902e915e091afe53ca4766556f2fd9a99f1ad483f22362342daff688d81e","path":"be/src/modules/domain/ai-generations/messages/ai-generations.messages.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"165aa20df0c436ebac11e43aad32484f268cc03a316d09f772469b7be24f9f29","path":"be/src/modules/domain/ai-generations/module-text-generator.service.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"ce253b4b9e6593a34b703d060a0b0dfc1927c607fd54670a58529f8ae68d5bbb","path":"be/src/modules/domain/ai-generations/module-text-generator.service.ts","step":"file-rules"}
 {"findings":[],"hash":"d60daac47cf0f40f0b8b5872dcafb13ff55fa2f11f4009e041f468ffa7b22f43","path":"be/src/modules/domain/ai-generations/module-text-generator.service.ts","step":"unit:recurring-observations"}
@@ -8649,8 +8649,8 @@
 {"data":{},"findings":[],"hash":"e61c149e9bc068cc5f043dc595b7b18fa690abfd0e9aed1ce85994095d0150bf","path":"be/src/modules/domain/ai-usage-events/persistence/entities/index.ts","step":"file-rules"}
 {"findings":[],"hash":"10f2eb91b92435ea5188fdcc3702c1cb81ddf884ba9b60edab14533cd083a481","path":"be/src/modules/domain/ai-usage-events/persistence/entities/index.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"612a948591e1a83978665bef7c083efbf3e88388f6316f2095c17fb2cb8aeb96","path":"be/src/modules/domain/ai-usage-events/quota.policy.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"6cf5802aecb180ca5d8e509fdb5fb9a42bc0f98a39ede893af9dc853c2fa5afe","path":"be/src/modules/domain/ai-usage-events/quota.policy.ts","step":"file-rules"}
-{"findings":[],"hash":"70016f0b7c487869b23b305dbb7658b3e6b112bfa26fb387a8fedeaa3e8a8df6","path":"be/src/modules/domain/ai-usage-events/quota.policy.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"e87ec770cea3c087bb2576370538595b9e08513ae036fcd000f4840417ce0d4e","path":"be/src/modules/domain/ai-usage-events/quota.policy.ts","step":"file-rules"}
+{"findings":[],"hash":"9ab2214f093ec530c14926ddb7467341261b43692ade9dcf36120024840346ce","path":"be/src/modules/domain/ai-usage-events/quota.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"d0b04faeebb9f8dce73bd9133705bff6e367eea97b24e88b5c96b1e7905b04ae","path":"be/src/modules/domain/ai-usage-events/usage-cost.policy.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"52ae3996d4f50f0468b9391fd14d8b6d6322c6d59b428e98b224596ce45937c5","path":"be/src/modules/domain/ai-usage-events/usage-cost.policy.ts","step":"file-rules"}
 {"findings":[],"hash":"5130f0d263c18b4b3cbfe466245498c18a80474fdec11663b41b844dc651a614","path":"be/src/modules/domain/ai-usage-events/usage-cost.policy.ts","step":"unit:recurring-observations"}
@@ -8844,8 +8844,8 @@
 {"data":{},"findings":[],"hash":"b16a183bae39b4c8a6e1c9ba216448d6d1a71e665812fd18fdb7e4907b973ee9","path":"be/src/modules/domain/authority-rules/authority-rules.options.ts","step":"file-rules"}
 {"findings":[],"hash":"335b5cee885b80499bb2f5ddcbcb27dbd5f40431a9834bc00506baa069f5e388","path":"be/src/modules/domain/authority-rules/authority-rules.options.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"a65945703be82ec36f45a95788d51433c95b388fd4809b615210af8984fcb620","path":"be/src/modules/domain/authority-rules/authority-rules.service.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"593963f46181aa99d33f2561d03bbbf801eec949fe2351598a6914441ee32452","path":"be/src/modules/domain/authority-rules/authority-rules.service.ts","step":"file-rules"}
-{"findings":[],"hash":"a9a03610b8c47e029c86afbe15e93513f1fc645cfe778d267d72dfa2215bafdc","path":"be/src/modules/domain/authority-rules/authority-rules.service.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"52da2bb6615582338d53766f6ee88d6a8ee7cd411f3d8fec698913a8cb6964f3","path":"be/src/modules/domain/authority-rules/authority-rules.service.ts","step":"file-rules"}
+{"findings":[],"hash":"ef2a4d2952a25f03c5fb66c279e454b1443b0c49f998355c5b65208836bf80ff","path":"be/src/modules/domain/authority-rules/authority-rules.service.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"82a77a95c76115b48c75e9013001f1b9b462b7287079f74bdb15c020dbeb1574","path":"be/src/modules/domain/authority-rules/branch-decider.decorators.ts","step":"file-rules"}
 {"findings":[],"hash":"7f1c0e8bb6eb60a1ef5946437879d4a12f730892fd57fc9622688bb8fd7dffde","path":"be/src/modules/domain/authority-rules/branch-decider.decorators.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"b5785608d67669ab3e326245d47a96d10a62ddf4b9f929865f90d218b7e39e88","path":"be/src/modules/domain/authority-rules/branch-decider.port.ts","step":"file-rules"}
@@ -8908,8 +8908,8 @@
 {"data":{},"findings":[],"hash":"b43eab70d56df9336a7769b2b3e259bdc757086d67192ffda7a21ab010400c29","path":"be/src/modules/domain/automation-pipelines/automation-pipelines.options.ts","step":"file-rules"}
 {"findings":[],"hash":"7137e8abe1bec36d70425d514d2535c90f82f8c55418689549b801afad009a16","path":"be/src/modules/domain/automation-pipelines/automation-pipelines.options.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"ee2d58f49bb2bea66c74fab7e7614bead5e1417c2013a8edce7c33d329c1c86f","path":"be/src/modules/domain/automation-pipelines/automation-pipelines.service.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"bab3fd72e10b6e629c73cc53e471b4152906fcbc7b1ce213e451a69751b98d3c","path":"be/src/modules/domain/automation-pipelines/automation-pipelines.service.ts","step":"file-rules"}
-{"findings":[],"hash":"b20bfaaec14be491492657ef4bf67751e8fc48a52010afadb5c7c0d393521949","path":"be/src/modules/domain/automation-pipelines/automation-pipelines.service.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"2ee4275cf99559340b092f5788c67798d58519cd9e047fc1ab9db0bea1298f67","path":"be/src/modules/domain/automation-pipelines/automation-pipelines.service.ts","step":"file-rules"}
+{"findings":[],"hash":"08fe4d431cd0b3546ef9cffded2bb83f9876d83cb0a44ac824eb65d70c95fb11","path":"be/src/modules/domain/automation-pipelines/automation-pipelines.service.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"0ab83503e8271ca015e291f5ccf935ad81de1e6b7398c9578ec2048c4d23b47f","path":"be/src/modules/domain/automation-pipelines/errors/automation-pipelines.error.ts","step":"file-rules"}
 {"findings":[],"hash":"d9f95a455dde5398032d2b7aec18bdf98ef300079e16acbaafba2f5eedf6b4ad","path":"be/src/modules/domain/automation-pipelines/errors/automation-pipelines.error.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"cda04fe6da8226194ce9962df72c19d655f32861be76f989304f71324e234f5a","path":"be/src/modules/domain/automation-pipelines/index.ts","step":"file-rules"}
@@ -8975,8 +8975,8 @@
 {"data":{},"findings":[],"hash":"58994ac137e0fc94b71e1840d056dfca26c1d7420ad032a7a3089c349f403e57","path":"be/src/modules/domain/automation-templates/policies/catalog-text.policy.ts","step":"file-rules"}
 {"findings":[],"hash":"9303a787129b32a28fe822e8f24f40dce95a536e0afdd1bee2a5e469e927927b","path":"be/src/modules/domain/automation-templates/policies/catalog-text.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"d55b494c742bc2ae4e12011833bc0ddc0a0c6580ae90727617004a711abc6885","path":"be/src/modules/domain/automation-templates/policies/template-definition.policy.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"d4ab8f4ba52adbb96c72739b8566866ed07abfd3b24a053c79af43b8c37761da","path":"be/src/modules/domain/automation-templates/policies/template-definition.policy.ts","step":"file-rules"}
-{"findings":[],"hash":"204ecda7cd996e66d927095b2503ee3c6bee6ad883c13d6081df6c92aafe81d5","path":"be/src/modules/domain/automation-templates/policies/template-definition.policy.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"a8b1c07988b0bfee2f89afd14c7634bb4a23a97d3021d7ed89ce6130b2b2ba77","path":"be/src/modules/domain/automation-templates/policies/template-definition.policy.ts","step":"file-rules"}
+{"findings":[],"hash":"907ac907e1a6fcb1f53f275b1b521a371a11e50ab83ed7d368a64337e73fe1fa","path":"be/src/modules/domain/automation-templates/policies/template-definition.policy.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"b9d79f5698ebdffe6496878efa71a04f2d047e9d4ace6204595281ca944a63c5","path":"be/src/modules/domain/automation-templates/shifts.templates.ts","step":"file-rules"}
 {"findings":[],"hash":"79a88da77b0b0f6c5ce33660d653700783558be52797cab8ed151ed0a7018733","path":"be/src/modules/domain/automation-templates/shifts.templates.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"e4dcf6a30ad5527962f9dd5417bc9d8263d980a9f2f8a890d7f61991bccf037d","path":"be/src/modules/domain/avatars/avatars.contracts.ts","step":"file-rules"}
@@ -13423,8 +13423,8 @@
 {"data":{},"findings":[],"hash":"9a41b8a1d889653707dcf97195feb2d22b1772ecbada586aeb53471eb7086adb","path":"be/src/modules/domain/openclaw-agent-sync/agent-sync.policy.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"41d95fc9b6cc4c72c99da7038ab5f71978620967e86ac4ec29df87fd09bf24f7","path":"be/src/modules/domain/openclaw-agent-sync/agent-sync.policy.ts","step":"file-rules"}
 {"findings":[],"hash":"a1f2cc577152c0ca4cd6308db43025f1fb156b06d2d38f6289feb8fd5e7c0842","path":"be/src/modules/domain/openclaw-agent-sync/agent-sync.policy.ts","step":"unit:recurring-observations"}
-{"data":{"size-soft":[{"code":"HFS_SIZE_SOFT_BACKLOG","level":"info","lines":501,"message":"src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts has 501 lines, above the soft size 500; report only","path":"src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts","soft":500}]},"findings":[{"column":0,"line":0,"message":"src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts has 501 lines, above the soft size 500; report only","path":"src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts","rule":"HFS_SIZE_SOFT_BACKLOG"}],"hash":"39ad7b23fc2863e533cff6677d830c002deeb574540ab616ffca3921354cd7f8","path":"be/src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts","step":"file-rules"}
-{"findings":[{"column":0,"line":0,"message":"be/src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts has 501 lines, above the soft size 500; report only","path":"be/src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts","rule":"HFS_SIZE_SOFT_BACKLOG"}],"hash":"d264ecb605a4a5324556c9d302ae72ea36d2a5cc46ac8b6303caa18ce1ba59a1","path":"be/src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts","step":"hfs"}
+{"data":{"size-soft":[{"code":"HFS_SIZE_SOFT_BACKLOG","level":"info","lines":501,"message":"src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts has 501 lines, above the soft size 500; report only","path":"src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts","soft":500}]},"findings":[{"column":0,"line":0,"message":"src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts has 501 lines, above the soft size 500; report only","path":"src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts","rule":"HFS_SIZE_SOFT_BACKLOG"}],"hash":"d19bc0d91e51b658d2a43adfec0712bdf8db0b4810064a38f2c65bb27c6184df","path":"be/src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts","step":"file-rules"}
+{"findings":[{"column":0,"line":0,"message":"be/src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts has 501 lines, above the soft size 500; report only","path":"be/src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts","rule":"HFS_SIZE_SOFT_BACKLOG"}],"hash":"5d1af22ffecebd3a56e347a4fe4f931da39f532bfff03bb2b6e93a7bd82fa666","path":"be/src/modules/domain/openclaw-agent-sync/agent-sync.service.spec.ts","step":"hfs"}
 {"data":{},"findings":[],"hash":"1d7fbca78351fd55abb3d432caf745c0f9d8f7dfb9b393d5a6a54d8dab410caa","path":"be/src/modules/domain/openclaw-agent-sync/agent-sync.service.ts","step":"file-rules"}
 {"findings":[],"hash":"2f866d449ed4f2e554abf69bea40fffdd82ecf8de340c6a96c0af3c56e09b091","path":"be/src/modules/domain/openclaw-agent-sync/agent-sync.service.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"f6774022344ce3a97039d4fdadfc9323af115a53a59d8e04be91ea759ecae61d","path":"be/src/modules/domain/openclaw-agent-sync/errors/openclaw-agent-sync.error.ts","step":"file-rules"}
@@ -15867,8 +15867,8 @@
 {"data":{},"findings":[],"hash":"967997e57030ce98ae006264249bc836c1846e284f998b61344cdeedc1f81534","path":"be/src/modules/platform/database/customer-sessions.contracts.ts","step":"file-rules"}
 {"findings":[],"hash":"ea4d75dd5d69e4ee87f8c305ae86bbf5c57867f270a131654fc765872ca92b9e","path":"be/src/modules/platform/database/customer-sessions.contracts.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"b161b038af390147f650081c25d406623abbd028c82f0c7f8209b7e88a5e8f78","path":"be/src/modules/platform/database/database.client.spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"9e90093c86028c0c3160d39d13ea4f39cf6b715ec25e4c9da4247dab969e306c","path":"be/src/modules/platform/database/database.client.ts","step":"file-rules"}
-{"findings":[],"hash":"50d04657bcb379987c0758f76892ccd3936e2edc2602d7d224a682226f4e15d8","path":"be/src/modules/platform/database/database.client.ts","step":"unit:recurring-observations"}
+{"data":{},"findings":[],"hash":"3782a68b53c9cb42ec6969c9d61ebb50e592033ca00744a31c66998f236ab68f","path":"be/src/modules/platform/database/database.client.ts","step":"file-rules"}
+{"findings":[],"hash":"f694cc09df6a2a52e5ea8a4a8d05e23a23b82d1e2c40e1b034aa6402aab41366","path":"be/src/modules/platform/database/database.client.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"cb7774d51b28948c040cb65dcee36cd1d80001aa58e1c90d998b9b12270f3e0a","path":"be/src/modules/platform/database/database.module-definition.ts","step":"file-rules"}
 {"findings":[],"hash":"745f838a91c1f4ad090d7441d523f3857acafe0f6e305974c536cfcc31ef2823","path":"be/src/modules/platform/database/database.module-definition.ts","step":"unit:recurring-observations"}
 {"data":{},"findings":[],"hash":"ec4ef2becbcba121001dd5d635d501ec4e5c114ea6222df98e2abfa7284415ac","path":"be/src/modules/platform/database/database.module.ts","step":"file-rules"}
@@ -16778,7 +16778,7 @@
 {"data":{},"findings":[],"hash":"860edf1113672e85f6950424a93dba85b99cec9d7a054c003ae2981eb5249b61","path":"be/src/tests/fixtures/builders/entity-row.builder.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"aafafaaaafb24d72daea6806fc9bc155d14bd53e073515d8ed04edaf780cd8c0","path":"be/src/tests/fixtures/builders/entity.builder.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"2a31fd2ae7007cd69072bc868e80b1e6a76e0e626c15bbb594e029b28a98cbe1","path":"be/src/tests/fixtures/builders/evaluated-calls.builder.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"821863fa82309b3af85ee1e67cd08b27e1429b5dbb24282a5af49bb51abc3275","path":"be/src/tests/fixtures/builders/fake-query-builder.builder.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"2db74d6a5f970706a7a2d5e4d2b78d1851e149e049d2267db7dca8d1c83d6774","path":"be/src/tests/fixtures/builders/fake-query-builder.builder.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"be67be2088e73ea1fde827cc640055385723f8fb51390be115c34435b8423083","path":"be/src/tests/fixtures/builders/flow-f-world.builder.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e0721e7e75276eb33299619b13023f098b9cceaeb238d0c17156a578c06b42ad","path":"be/src/tests/fixtures/builders/google-connections.builder.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3a439a7ae3bc6f8d830434949536c6725fddc82c3c0e7b1e88a5dded164dd68e","path":"be/src/tests/fixtures/builders/google-tokens.builder.ts","step":"file-rules"}
@@ -16833,7 +16833,7 @@
 {"data":{},"findings":[],"hash":"acc47d2100f9fd18a4f0a42b33cec26adb5d945767e6536e0d287dfcf2723897","path":"be/src/tests/fixtures/builders/platform-admin-detail.builder.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"d8a7b289032d18a5013a0f7821f03f0b5bcbf1e473944abd7809b9bf3d281912","path":"be/src/tests/fixtures/builders/platform-admin-reads.builder.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"dc809013eeae4bf7124b68307200072cbbed76998fae90e4acec1db458f2ca59","path":"be/src/tests/fixtures/builders/platform-admin.builder.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"1991efe91359d8cc090d50d2b991811497a40ba39432a905ce2ae47187c49562","path":"be/src/tests/fixtures/builders/proof-card.builder.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"0fc6acac8850df029623a8c0a0cf70aec6481eb0abaadaeca7449c9ee47d41d2","path":"be/src/tests/fixtures/builders/proof-card.builder.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"8a76cadb9ccbc141e990f932cc3562bd98926f37d64e405ee84d41568c0311df","path":"be/src/tests/fixtures/builders/public-api-ledger.builder.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"880bb935a625c99572b6b53bb976bb6c3eae372175537b4fafb35ca4ab58154e","path":"be/src/tests/fixtures/builders/public-api.builder.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"6a8bfbad253282133e093e37967bf18b0f49d2467d2ec74f4a40aac27607e180","path":"be/src/tests/fixtures/builders/public-documents-lifecycle.builder.ts","step":"file-rules"}
@@ -16903,9 +16903,9 @@
 {"data":{},"findings":[],"hash":"f3e4d902440c0031808591e9105494fe981cc7b93997e5ee5bdf393b3f5f08fa","path":"be/src/tests/integration/agent-runs/agent-runs-waits.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"6551d6da595bcdb50dc8865c3ce3c077441c3bd05d27dfe81dc6c32010dd4a0e","path":"be/src/tests/integration/agent-runs/output-approval.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"467ee43a93762de70e8e28061ceb4b2b08f70dc1de118dba738f92e62c175488","path":"be/src/tests/integration/agent-work/agent-work-bridge.integration-spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"156228c1422467e39262accf2384ebd1656b07da7e502b6d111e6d6b9f335315","path":"be/src/tests/integration/agent-work/agent-work-failures.integration-spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"9cecd9c6e97497b36c3d3f121f10409034c5d96a33d250e389def8d523a88512","path":"be/src/tests/integration/agent-work/agent-work-failures.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"bb012f674526d7fbca6b89f7ef67ca4162f14c35117f91243fa5260dd43ca269","path":"be/src/tests/integration/agent-work/agent-work-road.integration-spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"22675cf542b631e9c8f6080a5b027f035d94a1dd5d400aa680f458131b624ee9","path":"be/src/tests/integration/agent-work/agent-work-store.integration-spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"d28d9c6c9221f0a4fccab4e6ed9b096836d556a946f4c2f47d8d0258578b9934","path":"be/src/tests/integration/agent-work/agent-work-store.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"619404d1d4d2332014d80017eab44113f1ea3b32ea8960b7b40aed54de80808e","path":"be/src/tests/integration/api/app-boot.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"1ca5d9aafcadf45600cb4cf08cbf21a952b60eed7772a3b3de928b32c73786ae","path":"be/src/tests/integration/backbone/backbone-failures.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"c6513313e3f0dee50871415035d2926ab649ea204129c1741777384def0450c1","path":"be/src/tests/integration/backbone/backbone-inbound.integration-spec.ts","step":"file-rules"}
@@ -16921,7 +16921,7 @@
 {"data":{},"findings":[],"hash":"2323b2bc2f8096eeadca0c502e949ee0d70f233da80f365687858758421fdc38","path":"be/src/tests/integration/generic-webhook/generic-webhook-queue.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"41774b29075045d593bf48923a41faac5ed7da60b9d8a115a2db2d9fd2c79cc0","path":"be/src/tests/integration/http-security/rate-limit.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"8f1836ca09dbe541044ecc34dd2e2fad5255b1eae669aea089edfbda8df2bb6b","path":"be/src/tests/integration/identity/identity.integration-spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"50b3f465022f04ba6cb202dc7a2f856b4627801ed2426fd714daca7f16f94c5a","path":"be/src/tests/integration/inbox/inbound-input.integration-spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"73a406ee0048cc51495333a172702e16db96b7c0831f2df869ca6a044fa3ba7f","path":"be/src/tests/integration/inbox/inbound-input.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"0ab03ccccd9ab2baadba0dd0a49f94fbc74f015bd58da7bfee878629990c70ee","path":"be/src/tests/integration/inbox/inbox-dedupe.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"8edc1fad9936e08e8d30b4ac31cb19b3d68d9b74d7a497c2d1de005526027594","path":"be/src/tests/integration/jobs/bank-feed-delivery.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"55a49e3c933cde7eea7bb664ca7310d755f08d122f6bc957d019e74031ef33d3","path":"be/src/tests/integration/jobs/jobs.integration-spec.ts","step":"file-rules"}
@@ -16954,7 +16954,7 @@
 {"data":{},"findings":[],"hash":"30c3f881e24fb9fa57d214401cf4c08216b48db15b1af3cbc7202996ca8edb49","path":"be/src/tests/integration/queue/queue-scheduler.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3600b3d3e10119284b616b91af3a6ff7447f5685fead7c9a0519ba24418451e9","path":"be/src/tests/integration/queue/queue.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"9ca63f52d15ea878e0da8a9182e242228053da7696d66a6d81c472147662170d","path":"be/src/tests/integration/queue/telegram-delivery.integration-spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"e8ac65b86734395cdbbdf11445a798377a40f83b3ab7985c306b5f651a45ae80","path":"be/src/tests/integration/realtime/chat-typing-sse.integration-spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"21008177f374550eed465e0fb56c72650fd3aefec08145c841840605f8979e55","path":"be/src/tests/integration/realtime/chat-typing-sse.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"5fd0dde8a615c1e087de0b2de008c4a1eb772f82a4f064f6099935136a006b64","path":"be/src/tests/integration/sales-effects/sales-door.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"111432b191a89d65a934f030f78191df61c04d9b42eedef2785940a11e6e51fb","path":"be/src/tests/integration/seeds/seed-tiem-hoa.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"07c952dbe8286f411504d0b79e96e007441d38ce35b314b319525b7d06d9fb3d","path":"be/src/tests/integration/sepay-delivery/sepay-delivery-queue.module.integration-spec.ts","step":"file-rules"}
@@ -16962,7 +16962,7 @@
 {"data":{},"findings":[],"hash":"f3049bbb67aff9580c0a772fdf24368b812c2306d41ac25b1372c70805dfcecf","path":"be/src/tests/integration/sepay-delivery/sepay-delivery.queue.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"0db430d40bfcd837889849b8ce4a1e249cb701781852c726981fff693fe84fab","path":"be/src/tests/integration/team-chat/team-chat-cards.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"169de87add6cd00e6472da0d7b546754e0478737839f5bcc26a1f47697713a3f","path":"be/src/tests/integration/team-chat/team-chat-decide.integration-spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"f9f08cbe7040f5abab377a7cf9c12a2fe07ea465f5ea5571d21c5886b6eba66b","path":"be/src/tests/integration/team-chat/team-chat-engine.integration-spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"cbb60cc3a1dd78b5922bf91b28d5186d0817987cf0e935acf0d7fa70027f2bca","path":"be/src/tests/integration/team-chat/team-chat-engine.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"03b015ca39b6694cdece145c5235b56db1ef62f40dbde52a0863e223d993b65f","path":"be/src/tests/integration/team-chat/team-chat.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"a5b012e62b2ec19962adea4b69776f9009c09b926d960a34c95c4a147c4a1a03","path":"be/src/tests/integration/telegram-delivery/telegram-delivery.processor.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"b233402d8939e4366c8c8e4c3ddd83eda1195c9ef9affe04a89e198dcce9c63f","path":"be/src/tests/integration/webhooks/meta-webhook.integration-spec.ts","step":"file-rules"}
@@ -16970,7 +16970,7 @@
 {"data":{},"findings":[],"hash":"cc204fb922719e5cde3557f3cca0c61723927810e199b4501243a9a53acb7734","path":"be/src/tests/integration/workbench-door/workspace-time-zone.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"2fc5ed7dbb9a8f846408727c4bd23caade27446f993d8fb4865d4181eef11e53","path":"be/src/tests/integration/zalo-delivery/zalo-delivery.processor.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3e6f488df26ea9f7c01db1cbbc56c8f3731dd7413dc99b36db742e4fe5903d0e","path":"be/src/tests/integration/zalo-delivery/zalo-delivery.queue.integration-spec.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"0f84b5f8f17d224fd2126ff61863bb43612ea9b536f51626b5e35ee9d493d3c8","path":"be/src/tests/integration/zalo-profile/zalo-profile.integration-spec.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"0175c37a61cd0be2ad8991e075729900f555580c3d5eedbba79f456b36ca8514","path":"be/src/tests/integration/zalo-profile/zalo-profile.integration-spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"d1e93d14e6594118a0f836181c3024cfb7a4abf162506e6e39227af56a49aacb","path":"be/src/tests/tsconfig.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"0755a2a5976519d5d62292c1f4f8ee02d1b3df11d62387b6a7bcbd558a64d335","path":"be/src/tests/world/agent-graph-decider-capabilities.options.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"b300ea79bc62f58a38f7a0aebbd6b7c25203ce427eb94f5c95654ac0b119f2d2","path":"be/src/tests/world/agent-graph-proposals-proof.module.ts","step":"file-rules"}
@@ -17026,16 +17026,16 @@
 {"data":{},"findings":[],"hash":"d1ad2a98755b8a080d3b35cf787e01be06f2b6a79263bc3a693a0795c5030dfb","path":"be/src/tests/world/mcp-sealed-credential-capabilities.options.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"cb9102c12004b861ec2307978d271e26f697f2f6f22dbcf8c479633c0b1cc054","path":"be/src/tests/world/native-tools-capabilities.options.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"2ae02e222e00e121d94fb7c3bd37b665b3878f0db584bb469ccf15b0f7a62a72","path":"be/src/tests/world/nivo-door-proof.service.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"79d6b06ea9b1c24122f0fc1aad151a6c2d3759499302f5b5f8b417e6bb6b46a7","path":"be/src/tests/world/office-chain-capabilities.options.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"9f78ae99a8ae5d3a0cb1015107c6efe789dfe1f8cbc5f153aa9ed42894840bd5","path":"be/src/tests/world/office-chain-capabilities.options.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"a2dd189384a9554bb3887eea64af8e28e624ef26bcfbe8b88007b3dc1ecc6872","path":"be/src/tests/world/office-chain-queue-proof.module.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e3579480c177adfb6f70dc2c008e269bf63ed7c4a34f49aeb5024afe541bf5b8","path":"be/src/tests/world/office-room-members-proof.module.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"9e1cef8b4079e942899cec548adde48793f08269de2c14e2725fc990b16d2dd6","path":"be/src/tests/world/output-approval-proof.service.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"702de8c0901d41ae64d5f7ff60f65996728cc5f0e9679e18ab3a8280f5ac5d98","path":"be/src/tests/world/output-proof-sandbox.service.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"4cd78d2639e9001e6cb1e2003853776bc7769ffb036b07686e83d634ecea5edb","path":"be/src/tests/world/payment-feed-database.service.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"6f5ab42b61a492a9c2417d4d2a974f07f93770da812a41dce9352767218b2b91","path":"be/src/tests/world/proof-accounts.service.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"49ef759c0fa8d1244d8fd6b9a39e6b1f46ca7ba358dbf87d623d8b09a9576a1d","path":"be/src/tests/world/proof-database.service.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"26aaf341e70468a7916b0c5cebff3418614d8c26f608ada08305950450f7dcbf","path":"be/src/tests/world/proof-database.service.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"0e11b587e401482c3134711457d9cafc44bcbf3772296d99b99d1a89ae0b2bbd","path":"be/src/tests/world/proof-target.service.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"f9016d48750d4699d5d49c988ecd95dea0ea50815a509c63247ab67bd704bda2","path":"be/src/tests/world/public-api-capabilities.options.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"b15f226930ecb8d79465045a6f4499a97b7a1749c63032245a6deb2cb0ea234c","path":"be/src/tests/world/public-api-capabilities.options.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"9fc958117f6c8c5789e0401aa6d4ca2ef30aa5ba42f0eaecae69193c949f62f2","path":"be/src/tests/world/public-api-database.service.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"6d28ce747af86908d4e81d4da28970ff9dfa04977870ce74bd167c65f1b0218b","path":"be/src/tests/world/public-api-proof.service.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"6c6e003c0bd9bf0025ec950554f8e5f461f71f38bdaa703e44439b3e1c1414d4","path":"be/src/tests/world/public-api-registration.service.ts","step":"file-rules"}
@@ -17044,11 +17044,11 @@
 {"data":{},"findings":[],"hash":"0e314e6c71a17f75a2445ea14e1bfd239a5819487586f399ed49a0353d281883","path":"be/src/tests/world/public-documents-model.service.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"449c6d27c50532b5c30f6c4d767d42612975f742f6aa0549c9b20d9018191446","path":"be/src/tests/world/queue-reconciliation-proof.service.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"cdb737de4e13c9b3839250843bc5c2c6e6fc9a94e296eb28b17c59570aaa5afc","path":"be/src/tests/world/quiet-peers.options.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"39edb24e80c0b2ede5d1799977bf07ef0ef99bfc0ee2cb41c679a0af8d15a7a1","path":"be/src/tests/world/rate-limit-database.service.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"8ac68c37676d20c5adc08e5f580660327c8f9e610869917a4144ee280d2ad06d","path":"be/src/tests/world/rate-limit-database.service.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"722e37b3f16fe377412682dffc3fcbd13133cb84cfc1c77ccdcde1585a94cc4a","path":"be/src/tests/world/rate-limit-proof.module.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"e7b44908ce13210e5d89bf482f4861c88a1b15186e2a42e42e8d64309ca48cd3","path":"be/src/tests/world/realtime-stream-proof.service.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"24a4137c08756a4f6762be53dcbecc0caf58252571f86d3f92ed93a6bbb9c5df","path":"be/src/tests/world/receipt-domain-proof.module.ts","step":"file-rules"}
-{"data":{},"findings":[],"hash":"17627fc6be1e09eaa64bd15808602adf7456299fc7e463f5356e0e664642b87f","path":"be/src/tests/world/receipts-database.service.ts","step":"file-rules"}
+{"data":{},"findings":[],"hash":"a5442323ba91cf231bf35fee0d0078243e9d4e4fa668ad1327deaf4757c98601","path":"be/src/tests/world/receipts-database.service.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"3a1174b516fca5a65c9b58123fc6e51a95a765c89836f4355e5862c815a64280","path":"be/src/tests/world/redis-capabilities.options.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"d2004913d1d191b25b32e881d97b587c4b26e758a5f9a5d0d0769868f2433a86","path":"be/src/tests/world/redis-proof.service.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"f90f3e80b4c97f9abceec058c8364f62f58c0622053920a96c7912c82c48f60b","path":"be/src/tests/world/sales-door-world.service.ts","step":"file-rules"}
