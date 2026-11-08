@@ -19,7 +19,7 @@ const webhookLineOf = (meta: Readonly<Record<string, string>>, eventLabel: (even
             .split(",")
             .map((event) => event.trim())
             .filter((event) => event !== "")
-            .map(eventLabel)
+            .map((event) => eventLabel(event))
             .join(", "),
     ]
         .filter((part) => part !== "")

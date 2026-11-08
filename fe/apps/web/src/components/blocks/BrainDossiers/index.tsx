@@ -53,7 +53,7 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
         dossierId: props.dossier,
         findingId: props.finding,
     })
-    const [isAsideOpen, setAsideOpen] = useState(false)
+    const [isAsideOpen, setIsAsideOpen] = useState(false)
     return (
         <BrainDossiersBase
             props={{
@@ -85,7 +85,7 @@ export const BrainDossiers = (props: BrainDossiersProps) => {
                 back: desk.on.back,
                 retry: desk.on.retry,
                 closeAside: desk.on.closeAside,
-                asideOpenChange: setAsideOpen,
+                asideOpenChange: setIsAsideOpen,
                 openMap: () => {
                     if (desk.openId !== null)
                         router.push(workspaceHref(workspaceId, brainTabHref("map", { node: desk.openId })))

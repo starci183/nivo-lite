@@ -31,7 +31,7 @@ export const BrainTodo = (props: BrainTodoProps) => {
     const header = useBrainPageHeader("todo", props.header)
     const queue = useBrainQueue()
     const factDrawer = useFactDrawer({ tab: "todo", fact: props.fact, edit: props.edit, answer: props.answer })
-    const [isAsideOpen, setAsideOpen] = useState(false)
+    const [isAsideOpen, setIsAsideOpen] = useState(false)
     return (
         <BrainTodoBase
             props={{
@@ -68,7 +68,7 @@ export const BrainTodo = (props: BrainTodoProps) => {
                 selectTab: header.on.selectTab,
                 ...queue.on,
                 openSources: () => router.push(workspaceHref(workspaceId, brainTabHref("sources"))),
-                asideOpenChange: setAsideOpen,
+                asideOpenChange: setIsAsideOpen,
             }}
         />
     )

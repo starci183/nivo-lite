@@ -92,18 +92,16 @@ const Figures = (props: FiguresProps) => (
     />
 )
 
-/** The body of the side pane: an opened record, else the explanation of a decision, else the decisions with the three collapsed rows. */
+/** The body of the side pane: the explanation of a decision, else the decisions with the three collapsed rows. */
 interface AsideBodyProps {
     readonly view: WorkbenchOverviewView
     readonly on: WorkbenchOverviewActions
-    readonly detail: WorkbenchOverviewProps["detail"] | undefined
     readonly decisions: WorkbenchOverviewProps["decisions"] | undefined
     readonly waiting: ReactNode | undefined
 }
 
 const AsideBody = (props: AsideBodyProps) => {
     const { view } = props
-    if (props.detail !== undefined) return <>{props.detail.body}</>
     if (view.why.workItemId !== null) {
         return (
             <WorkbenchWhy
@@ -187,13 +185,11 @@ export const WorkbenchOverview = (props: WorkbenchOverviewProps) => {
                 )}
             </Pane>
             <Pane area="aside" surface label={view.regions.waiting.label}>
-                <AsideBody
-                    view={view}
-                    on={props.on}
-                    detail={props.detail}
-                    decisions={props.decisions}
-                    waiting={props.waiting}
-                />
+                {props.detail === undefined ? (
+                    <AsideBody view={view} on={props.on} decisions={props.decisions} waiting={props.waiting} />
+                ) : (
+                    props.detail.body
+                )}
             </Pane>
         </PaneGrid>
     )

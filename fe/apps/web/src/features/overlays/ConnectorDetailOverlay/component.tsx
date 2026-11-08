@@ -191,4 +191,4 @@ interface OverlayHostProps {
 }
 
 /** A pure host for the connection drawers; the feature owns their registration and lifecycle. */
-export const OverlayHost = (props: OverlayHostProps) => <>{props.active ? props.candidate : null}</>
+export const OverlayHost = (props: OverlayHostProps): ReactNode => (props.active ? props.candidate : null)

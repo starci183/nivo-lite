@@ -6,4 +6,4 @@ export interface SideEffectsLayoutBaseProps {
 }
 
 /** Draws nothing of its own: mounts the app-wide side effects of the signed-in session it is handed. */
-export const SideEffectsLayoutBase = (props: SideEffectsLayoutBaseProps) => <>{props.children}</>
+export const SideEffectsLayoutBase = (props: SideEffectsLayoutBaseProps): ReactNode => props.children

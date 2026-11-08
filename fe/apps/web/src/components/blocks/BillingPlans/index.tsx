@@ -44,19 +44,21 @@ const buildBillingPlansState = (
             id: "individual",
             title: t("groupIndividual"),
             text: t("groupIndividualText"),
-            cards: plans.filter((plan) => plan.individual).map(cardOf),
+            cards: plans.filter((plan) => plan.individual).map((plan) => cardOf(plan)),
         },
         {
             id: "team",
             title: t("groupTeam"),
             text: t("groupTeamText"),
-            cards: plans.filter((plan) => plan.perSeat && !plan.individual && !plan.isCustom).map(cardOf),
+            cards: plans
+                .filter((plan) => plan.perSeat && !plan.individual && !plan.isCustom)
+                .map((plan) => cardOf(plan)),
         },
         {
             id: "enterprise",
             title: t("groupEnterprise"),
             text: t("groupEnterpriseText"),
-            cards: plans.filter((plan) => plan.isCustom).map(cardOf),
+            cards: plans.filter((plan) => plan.isCustom).map((plan) => cardOf(plan)),
         },
     ].filter((group) => group.cards.length > 0)
     const storage = choices.storage

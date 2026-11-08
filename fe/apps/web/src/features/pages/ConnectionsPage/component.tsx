@@ -14,26 +14,27 @@ export interface ConnectionsPageBaseProps {
     }
 }
 
+/** The body beside the list of connections: the connector library with the MCP gateway, the connection the address opens, or the overview. */
+const ConnectionsBody = (props: ConnectionsPageBaseProps) => {
+    if (props.props.tab === "library") {
+        return (
+            <>
+                <ConnectionLibrary />
+                <McpGatewaySection isEnabled />
+            </>
+        )
+    }
+    if (props.props.open === undefined) return <ConnectionsHome />
+    return <ConnectionOpen connectionId={props.props.open} />
+}
+
 /**
  * Draws the page beside the list of connections: the overview, or the connector library with the MCP gateway under it, and the
  * wizard and connector drawers the address opens.
  */
 export const ConnectionsPageBase = (props: ConnectionsPageBaseProps) => (
     <>
-        {props.props.tab === "library" ? (
-            <>
-                <ConnectionLibrary />
-                <McpGatewaySection isEnabled />
-            </>
-        ) : (
-            <>
-                {props.props.open === undefined ? (
-                    <ConnectionsHome />
-                ) : (
-                    <ConnectionOpen connectionId={props.props.open} />
-                )}
-            </>
-        )}
+        <ConnectionsBody {...props} />
         <ConnectionsOverlayHost
             candidate={
                 <>

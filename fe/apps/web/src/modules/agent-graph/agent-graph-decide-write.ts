@@ -101,7 +101,7 @@ const factsOfWhen = (when: unknown): ReadonlyArray<string> => {
     if (typeof when !== "object" || when === null) return []
     if ("fact" in when && typeof when.fact === "string") return [when.fact]
     const members = membersOfWhen(when)
-    return Array.isArray(members) ? members.flatMap(factsOfWhen) : []
+    return Array.isArray(members) ? members.flatMap((member) => factsOfWhen(member)) : []
 }
 
 /** The keys a node leads to, for a decision point its branches' and for the others its `next`. */

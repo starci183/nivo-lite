@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { Input, Select } from "@starci/grammar/common"
 import type { TextFieldItem } from "@/modules/types"
 
@@ -24,43 +25,39 @@ interface FormFieldListProps {
 }
 
 /** Draws the ordered fields of a form without adding a group, grid or other DOM; each caller keeps its own ordering and policy. */
-export const FormFieldList = (props: FormFieldListProps) => {
+export const FormFieldList = (props: FormFieldListProps): ReactNode => {
     const loading = props.isLoading === undefined ? {} : { isLoading: props.isLoading }
     const required = props.isRequired === undefined ? {} : { isRequired: props.isRequired }
-    return (
-        <>
-            {props.fields.map((field) => {
-                if (field.kind === "choice") {
-                    return (
-                        <Select
-                            key={field.name}
-                            label={field.label}
-                            isDisabled={props.isDisabled}
-                            value={field.value}
-                            options={field.options}
-                            onValueChange={field.change}
-                            {...loading}
-                        />
-                    )
-                }
-                const secret = field.isSecret === true ? { kind: "password" as const } : {}
-                const description = field.description === undefined ? {} : { description: field.description }
-                return (
-                    <Input
-                        key={field.name}
-                        id={`${props.idPrefix}-${field.name}`}
-                        name={field.name}
-                        label={field.label}
-                        value={field.value}
-                        {...secret}
-                        {...description}
-                        {...required}
-                        isDisabled={props.isDisabled}
-                        {...loading}
-                        onValueChange={field.change}
-                    />
-                )
-            })}
-        </>
-    )
+    return props.fields.map((field) => {
+        if (field.kind === "choice") {
+            return (
+                <Select
+                    key={field.name}
+                    label={field.label}
+                    isDisabled={props.isDisabled}
+                    value={field.value}
+                    options={field.options}
+                    onValueChange={field.change}
+                    {...loading}
+                />
+            )
+        }
+        const secret = field.isSecret === true ? { kind: "password" as const } : {}
+        const description = field.description === undefined ? {} : { description: field.description }
+        return (
+            <Input
+                key={field.name}
+                id={`${props.idPrefix}-${field.name}`}
+                name={field.name}
+                label={field.label}
+                value={field.value}
+                {...secret}
+                {...description}
+                {...required}
+                isDisabled={props.isDisabled}
+                {...loading}
+                onValueChange={field.change}
+            />
+        )
+    })
 }

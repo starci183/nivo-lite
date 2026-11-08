@@ -31,26 +31,23 @@ const sceneActionsOf = (props: VideoScriptFormProps, index: number) => ({
     media: (value: string | null) => props.on.media(index, value),
 })
 
-const scenesOf = (props: VideoScriptFormProps) => (
-    <>
-        {props.scenes.map((scene, index) => (
-            <VideoSceneCard
-                key={scene.id}
-                scene={scene}
-                locked={props.locked}
-                isLoading={props.isLoading}
-                mediaOptions={props.mediaOptions}
-                captionLabel={props.captionLabel}
-                voiceLabel={props.voiceLabel}
-                mediaLabel={props.mediaLabel}
-                moveUpLabel={props.moveUpLabel}
-                moveDownLabel={props.moveDownLabel}
-                removeLabel={props.removeLabel}
-                on={sceneActionsOf(props, index)}
-            />
-        ))}
-    </>
-)
+const scenesOf = (props: VideoScriptFormProps) =>
+    props.scenes.map((scene, index) => (
+        <VideoSceneCard
+            key={scene.id}
+            scene={scene}
+            locked={props.locked}
+            isLoading={props.isLoading}
+            mediaOptions={props.mediaOptions}
+            captionLabel={props.captionLabel}
+            voiceLabel={props.voiceLabel}
+            mediaLabel={props.mediaLabel}
+            moveUpLabel={props.moveUpLabel}
+            moveDownLabel={props.moveDownLabel}
+            removeLabel={props.removeLabel}
+            on={sceneActionsOf(props, index)}
+        />
+    ))
 
 /** Draws step three: ask NIVO to write the script, then edit it scene by scene. */
 export const VideoScriptForm = (props: VideoScriptFormProps) => (

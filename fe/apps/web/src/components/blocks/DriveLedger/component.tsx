@@ -97,7 +97,7 @@ const NameSheet = (props: LedgerBodyProps) => (
 
 /** The ready ledger: the sheet it writes to, with the way to open it and to change it. */
 const ReadySheet = (props: LedgerBodyProps) => {
-    const [isChanging, setChanging] = useState(false)
+    const [isChanging, setIsChanging] = useState(false)
     if (isChanging) return <NameSheet base={props.base} view={props.view} />
     return (
         <Stack gap="row">
@@ -109,7 +109,7 @@ const ReadySheet = (props: LedgerBodyProps) => {
                 <Link kind="external" href={props.view.sheetUrl}>
                     {props.base.props.copy.open}
                 </Link>
-                <Button intent="neutral" onPress={() => setChanging(true)}>
+                <Button intent="neutral" onPress={() => setIsChanging(true)}>
                     {props.base.props.copy.change}
                 </Button>
             </Cluster>

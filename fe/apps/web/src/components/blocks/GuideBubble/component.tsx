@@ -172,57 +172,53 @@ const GuideComposer = (props: GuideBubbleBaseProps) => {
 
 /** Conversation replies with their ordered steps and navigation links. */
 const GuideMessages = (props: GuideBubbleBaseProps) => {
-    return (
-        <>
-            {props.props.messages.map((message) =>
-                message.isUser ? (
-                    <MessageBubble key={message.id} side="outgoing" body={<Text size="sm">{message.text}</Text>} />
-                ) : (
-                    <MessageBubble
-                        key={message.id}
-                        side="incoming"
-                        footer={
-                            message.note === null ? undefined : (
-                                <Text size="xs" tone="muted">
-                                    {message.note}
-                                </Text>
-                            )
-                        }
-                        body={
-                            <Stack gap="inline">
-                                <Text size="sm">{message.text}</Text>
-                                {message.steps.length === 0 ? null : (
-                                    <Section
-                                        kind="list"
-                                        title={props.props.stepsLabel}
-                                        headingLevel={3}
-                                        items={message.steps.map((step, position) => ({
-                                            id: `${message.id}-${position}`,
-                                            title: step,
-                                            leading: { position: position + 1 },
-                                        }))}
-                                        empty={<EmptyNotice message={props.props.greeting} />}
-                                    />
-                                )}
-                                {message.links.length === 0 ? null : (
-                                    <Cluster gap="inline">
-                                        {message.links.map((link) => (
-                                            <Button
-                                                key={link.id}
-                                                intent="neutral"
-                                                size="sm"
-                                                onPress={() => props.on.go(message.id, link.id)}
-                                            >
-                                                {link.label}
-                                            </Button>
-                                        ))}
-                                    </Cluster>
-                                )}
-                            </Stack>
-                        }
-                    />
-                ),
-            )}
-        </>
+    return props.props.messages.map((message) =>
+        message.isUser ? (
+            <MessageBubble key={message.id} side="outgoing" body={<Text size="sm">{message.text}</Text>} />
+        ) : (
+            <MessageBubble
+                key={message.id}
+                side="incoming"
+                footer={
+                    message.note === null ? undefined : (
+                        <Text size="xs" tone="muted">
+                            {message.note}
+                        </Text>
+                    )
+                }
+                body={
+                    <Stack gap="inline">
+                        <Text size="sm">{message.text}</Text>
+                        {message.steps.length === 0 ? null : (
+                            <Section
+                                kind="list"
+                                title={props.props.stepsLabel}
+                                headingLevel={3}
+                                items={message.steps.map((step, position) => ({
+                                    id: `${message.id}-${position}`,
+                                    title: step,
+                                    leading: { position: position + 1 },
+                                }))}
+                                empty={<EmptyNotice message={props.props.greeting} />}
+                            />
+                        )}
+                        {message.links.length === 0 ? null : (
+                            <Cluster gap="inline">
+                                {message.links.map((link) => (
+                                    <Button
+                                        key={link.id}
+                                        intent="neutral"
+                                        size="sm"
+                                        onPress={() => props.on.go(message.id, link.id)}
+                                    >
+                                        {link.label}
+                                    </Button>
+                                ))}
+                            </Cluster>
+                        )}
+                    </Stack>
+                }
+            />
+        ),
     )
 }
