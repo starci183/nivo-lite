@@ -109,6 +109,7 @@ export const publicDraftOf = (
     format: PublicFormat,
 ): PublicDraftView => {
     const badge = publicBadgeOf(doc)
+    const approveKey = doc.needsReview ? "approveAgain" : "approveAndPublish"
     return {
         id: doc.id,
         title: doc.title,
