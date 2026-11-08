@@ -103,7 +103,7 @@ const raised = (state: GraphState): GraphDocument => ({
                           branchOf({
                               key: "middle",
                               when: { all: [amountIs("gte", 6_000_000), amountIs("lt", 20_000_000)] },
-                              then: "ask",
+                              outcome: "ask",
                               next: "ask",
                               approver: approverOf(),
                           }),

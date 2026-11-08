@@ -46,7 +46,7 @@ describe("agent-graphs.schema", () => {
         const branch = {
             key: "b1",
             when: "else",
-            then: "ask",
+            outcome: "ask",
             next: "n2",
             approver: { group, policy: "any", timeoutMinutes: 60, onTimeout: { kind: "backup", group } },
             sources: [{ kind: "chat", messageId: "m1", quote: "ask me" }],

@@ -43,8 +43,8 @@ const branchChanges = (
         after.approver?.group.members.includes(context.actorMemberId) === true &&
         before?.approver?.group.members.includes(context.actorMemberId) !== true
     const selfChange = selfApprover ? [change("self_approver", nodeKey, after.key)] : []
-    if (after.then !== "auto") return selfChange
-    if (before?.then !== "auto") return [...selfChange, change("branch_more_auto", nodeKey, after.key)]
+    if (after.outcome !== "auto") return selfChange
+    if (before?.outcome !== "auto") return [...selfChange, change("branch_more_auto", nodeKey, after.key)]
     const raised = topWord(after, amountFact) > topWord(before, amountFact)
     return raised ? [...selfChange, change("boundary_raised", nodeKey, after.key)] : selfChange
 }

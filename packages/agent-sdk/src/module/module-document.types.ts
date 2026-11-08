@@ -200,7 +200,7 @@ export type OutcomeSpec = "act" | "reask_then_person" | "person" | "decline" | {
 /** Ordered rules; the first whose `when` holds decides. */
 export interface OutcomeRulesSpec {
     /** The rules in the order they are tried, each a condition and what the engine does when it holds. */
-    readonly rules: ReadonlyArray<{ readonly when: OutcomeCondition; readonly then: OutcomeSpec }>
+    readonly rules: ReadonlyArray<{ readonly when: OutcomeCondition; readonly outcome: OutcomeSpec }>
     /** What the engine does when no rule holds. */
     readonly otherwise: OutcomeSpec
 }

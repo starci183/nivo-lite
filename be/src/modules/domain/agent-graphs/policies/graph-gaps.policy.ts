@@ -24,7 +24,7 @@ const gapsOfNode = (node: GraphNode, context: GraphContext): ReadonlyArray<Graph
     const boundaries = numericFactsOf(decide, context.facts).flatMap((fact) =>
         boundaryFindings(decide, fact).map((finding) => gap("boundary", node.key, finding.after.key)),
     )
-    const asked = decide.branches.filter((branch) => branch.then === "ask")
+    const asked = decide.branches.filter((branch) => branch.outcome === "ask")
     const approvers = asked.flatMap((branch) =>
         branch.approver === null ? [] : [{ branch, approver: branch.approver }],
     )

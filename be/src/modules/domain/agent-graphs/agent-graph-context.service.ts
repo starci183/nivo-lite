@@ -128,7 +128,7 @@ export class AgentGraphContextService {
                 decide === undefined
                     ? []
                     : decide.branches.flatMap((branch) =>
-                          branch.approver === null || branch.then !== "ask"
+                          branch.approver === null || branch.outcome !== "ask"
                               ? []
                               : [
                                     {

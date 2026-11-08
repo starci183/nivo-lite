@@ -69,7 +69,7 @@ const branchesAnswerOf = (
                   kind: "lines",
                   lines: node.branches.map((branch) => ({
                       label: branch.when,
-                      note: `${thenWordOf(t, branch.then)} · ${nodes.find((entry) => entry.key === branch.next)?.title ?? ""}`,
+                      note: `${thenWordOf(t, branch.outcome)} · ${nodes.find((entry) => entry.key === branch.next)?.title ?? ""}`,
                   })),
               },
           ]

@@ -46,7 +46,7 @@ describe("graph-diff.policy", () => {
     it("counts a raised boundary as a widening", async () => {
         const subject = await build()
         const raised = withBranches([
-            branchOf({ key: "small", when: amountIs("lt", 6_000_000), then: "auto", next: "act" }),
+            branchOf({ key: "small", when: amountIs("lt", 6_000_000), outcome: "auto", next: "act" }),
             ...OWNER_EXAMPLE.slice(1),
         ])
 
@@ -57,7 +57,7 @@ describe("graph-diff.policy", () => {
     it("counts a boundary that became unbounded as a raise", async () => {
         const subject = await build()
         const free = withBranches([
-            branchOf({ key: "small", when: { fact: AMOUNT_FACT, op: "known" }, then: "auto", next: "act" }),
+            branchOf({ key: "small", when: { fact: AMOUNT_FACT, op: "known" }, outcome: "auto", next: "act" }),
             ...OWNER_EXAMPLE.slice(1),
         ])
 
@@ -67,14 +67,14 @@ describe("graph-diff.policy", () => {
     it("does not count a lowered boundary or a branch that now asks as a widening", async () => {
         const subject = await build()
         const lowered = withBranches([
-            branchOf({ key: "small", when: amountIs("lt", 4_000_000), then: "auto", next: "act" }),
+            branchOf({ key: "small", when: amountIs("lt", 4_000_000), outcome: "auto", next: "act" }),
             ...OWNER_EXAMPLE.slice(1),
         ])
         const asking = withBranches([
             branchOf({
                 key: "small",
                 when: amountIs("lt", 5_000_000),
-                then: "ask",
+                outcome: "ask",
                 next: "ask",
                 approver: approverOf(),
             }),
@@ -91,12 +91,12 @@ describe("graph-diff.policy (continued)", () => {
         const subject = await build()
         const nowAuto = withBranches([
             OWNER_EXAMPLE[0] ?? branchOf(),
-            branchOf({ ...OWNER_EXAMPLE[1], then: "auto", approver: null }),
+            branchOf({ ...OWNER_EXAMPLE[1], outcome: "auto", approver: null }),
             OWNER_EXAMPLE[2] ?? branchOf(),
         ])
         const extra = withBranches([
             ...OWNER_EXAMPLE,
-            branchOf({ key: "extra", when: amountIs("lt", 1), then: "auto" }),
+            branchOf({ key: "extra", when: amountIs("lt", 1), outcome: "auto" }),
         ])
 
         expect(kinds(subject.graphDiff(BASE, nowAuto, BY))).toEqual(["branch_more_auto"])
@@ -110,7 +110,7 @@ describe("graph-diff.policy (continued)", () => {
             branchOf({
                 key: "else",
                 when: "else",
-                then: "ask",
+                outcome: "ask",
                 next: "ask",
                 approver: approverOf({ group: { roles: [], rooms: [], members: ["boss"] } }),
             }),

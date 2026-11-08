@@ -117,7 +117,7 @@ const cycles = (graph: GraphDocument, byKey: ReadonlyMap<string, GraphNode>): Re
 const elseProblems = (nodeKey: string, decide: DecidePoint): ReadonlyArray<GraphProblem> => {
     const last = decide.branches.at(-1)
     if (last?.when !== "else") return [problem("no_else", nodeKey)]
-    return last.then === "auto" ? [problem("else_auto", nodeKey, last.key)] : []
+    return last.outcome === "auto" ? [problem("else_auto", nodeKey, last.key)] : []
 }
 
 const approverProblems = (
@@ -126,7 +126,7 @@ const approverProblems = (
     branch: GraphBranch,
     context: GraphContext,
 ): ReadonlyArray<GraphProblem> => {
-    if (branch.then !== "ask") return []
+    if (branch.outcome !== "ask") return []
     if (branch.approver === null) return [problem("approver_missing", nodeKey, branch.key)]
     const covered = context.approverCovers(decide.intent, branch.approver.group, topOfBranch(decide, branch, context))
     return [
@@ -169,7 +169,7 @@ const decideProblems = (node: GraphNode, context: GraphContext): ReadonlyArray<G
 
 /** True when the branch lets an amount run alone that the rule does not: the branch's stretch reaches past the rule's own. */
 const exceedsRule = (branch: GraphBranch, interval: Interval | null, rule: CeilingRule): boolean => {
-    if (branch.then !== "auto") return false
+    if (branch.outcome !== "auto") return false
     if (rule.mode !== "auto" || rule.maxMode !== null) return true
     const top = interval === null ? null : topOf(interval)
     if (rule.autoMax !== null) return top === null || top > rule.autoMax

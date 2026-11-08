@@ -16,7 +16,7 @@ const behaviourOfNode = (node: GraphNode): unknown => ({
                   branches: node.decide.branches.map((branch) => ({
                       key: branch.key,
                       when: branch.when,
-                      then: branch.then,
+                      outcome: branch.outcome,
                       next: branch.next,
                       approver: branch.approver,
                   })),

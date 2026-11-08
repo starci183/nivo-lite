@@ -72,7 +72,7 @@ describe("graph-walk.policy walkGraph entering the graph", () => {
         const subject = await build()
         const document = graphOf([
             branchOf({ key: "small", when: amountIs("lt", 5_000_000) }),
-            branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: null }),
+            branchOf({ key: "else", when: "else", outcome: "ask", next: "ask", approver: null }),
         ])
 
         expect(subject.walkGraph(document, PAY, AMOUNT, FACTS)).toMatchObject({
@@ -86,7 +86,7 @@ describe("graph-walk.policy walkGraph entering the graph", () => {
         const subject = await build()
         const document = graphOf([
             ...OWNER_EXAMPLE.slice(0, 2),
-            branchOf({ key: "else", when: "else", then: "stop", next: "stop", approver: null }),
+            branchOf({ key: "else", when: "else", outcome: "stop", next: "stop", approver: null }),
         ])
 
         expect(subject.walkGraph(document, PAY, { [AMOUNT_FACT]: 30_000_000 }, FACTS)).toMatchObject({
@@ -104,7 +104,7 @@ describe("graph-walk.policy walkGraph entering the graph", () => {
         const subject = await build()
         const direct = documentOf(
             TRIGGER,
-            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), then: "auto", next: "stop" })]),
+            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), outcome: "auto", next: "stop" })]),
             STOP,
         )
 
@@ -191,7 +191,7 @@ describe("graph-walk.policy walkGraph the act of another action", () => {
         const subject = await build()
         const direct = documentOf(
             TRIGGER,
-            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), then: "auto", next: "hand" })]),
+            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), outcome: "auto", next: "hand" })]),
             HAND,
         )
         expect(subject.walkGraph(direct, PAY, AMOUNT, FACTS)).toMatchObject({
@@ -211,7 +211,7 @@ describe("graph-walk.policy walkGraph the act of another action", () => {
         const document = documentOf(
             TRIGGER,
             decideOf([
-                branchOf({ key: "big", when: amountIs("gt", 1), then: "ask", next: "ask", approver: approverOf() }),
+                branchOf({ key: "big", when: amountIs("gt", 1), outcome: "ask", next: "ask", approver: approverOf() }),
             ]),
             stepOf("ask", "approval", ["hand"], { approver: approverOf() }),
             bare,
@@ -230,7 +230,7 @@ describe("graph-walk.policy walkGraph the act of another action", () => {
         const reply = stepOf("reply", "reply", [])
         const document = documentOf(
             TRIGGER,
-            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), then: "auto", next: "reply" })]),
+            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), outcome: "auto", next: "reply" })]),
             reply,
         )
 
@@ -252,12 +252,12 @@ describe("graph-walk.policy walkGraph pipelines and writes that name no action",
         const unnamed = stepOf("unnamed", "write", ["act"])
         const viaPipeline = documentOf(
             TRIGGER,
-            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), then: "auto", next: "piped" })]),
+            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), outcome: "auto", next: "piped" })]),
             piped,
         )
         const viaUnnamed = documentOf(
             TRIGGER,
-            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), then: "auto", next: "unnamed" })]),
+            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), outcome: "auto", next: "unnamed" })]),
             unnamed,
             ACT,
         )
@@ -278,7 +278,7 @@ describe("graph-walk.policy walkGraph the safe branch", () => {
         const subject = await build()
         const document = graphOf([
             branchOf({ key: "small", when: amountIs("lt", 5_000_000) }),
-            branchOf({ key: "else", when: "else", then: "auto", next: "act" }),
+            branchOf({ key: "else", when: "else", outcome: "auto", next: "act" }),
         ])
 
         expect(subject.walkGraph(document, PAY, {}, FACTS)).toMatchObject({
@@ -313,7 +313,7 @@ describe("graph-walk.policy walkGraph the safe branch when the path is lost", ()
         const lost = (next: string) =>
             documentOf(
                 TRIGGER,
-                decideOf([branchOf({ key: "big", when: amountIs("gt", 1), then: "auto", next })]),
+                decideOf([branchOf({ key: "big", when: amountIs("gt", 1), outcome: "auto", next })]),
                 dead,
                 missing,
                 ACT,
@@ -337,7 +337,7 @@ describe("graph-walk.policy walkGraph the safe branch when the path is lost", ()
         const back = stepOf("back", "call", ["there"])
         const document = documentOf(
             TRIGGER,
-            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), then: "auto", next: "there" })]),
+            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), outcome: "auto", next: "there" })]),
             there,
             back,
             ACT,
@@ -355,7 +355,7 @@ describe("graph-walk.policy walkGraph the safe branch when the path is lost", ()
         const dead = stepOf("dead", "call", [])
         const document = documentOf(
             TRIGGER,
-            decideOf([branchOf({ key: "else", when: "else", then: "auto", next: "dead" })]),
+            decideOf([branchOf({ key: "else", when: "else", outcome: "auto", next: "dead" })]),
             dead,
             ACT,
         )
@@ -370,15 +370,15 @@ describe("graph-walk.policy walkGraph the safe branch when the path is lost", ()
 
 describe("graph-walk.policy walkGraph a path of several steps", () => {
     const SECOND = decideOf([
-        branchOf({ key: "urgent", when: { fact: URGENT, op: "eq", value: true }, then: "stop", next: "stop" }),
-        branchOf({ key: "later", when: { fact: URGENT, op: "eq", value: false }, then: "auto", next: "act" }),
-        branchOf({ key: "else", when: "else", then: "ask", next: "act" }),
+        branchOf({ key: "urgent", when: { fact: URGENT, op: "eq", value: true }, outcome: "stop", next: "stop" }),
+        branchOf({ key: "later", when: { fact: URGENT, op: "eq", value: false }, outcome: "auto", next: "act" }),
+        branchOf({ key: "else", when: "else", outcome: "ask", next: "act" }),
     ])
     const chained = documentOf(
         TRIGGER,
         decideOf([
-            branchOf({ key: "big", when: amountIs("gt", 1), then: "auto", next: "second" }),
-            branchOf({ key: "else", when: "else", then: "ask", next: "second" }),
+            branchOf({ key: "big", when: amountIs("gt", 1), outcome: "auto", next: "second" }),
+            branchOf({ key: "else", when: "else", outcome: "ask", next: "second" }),
         ]),
         {
             ...SECOND,
@@ -423,7 +423,7 @@ describe("graph-walk.policy walkGraph approvals and forks on the path", () => {
         const subject = await build()
         const document = documentOf(
             TRIGGER,
-            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), then: "auto", next: "ask" })]),
+            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), outcome: "auto", next: "ask" })]),
             ASK,
             ACT,
         )
@@ -442,7 +442,7 @@ describe("graph-walk.policy walkGraph approvals and forks on the path", () => {
         const through = (middle: Node) =>
             documentOf(
                 TRIGGER,
-                decideOf([branchOf({ key: "big", when: amountIs("gt", 1), then: "auto", next: middle.key })]),
+                decideOf([branchOf({ key: "big", when: amountIs("gt", 1), outcome: "auto", next: middle.key })]),
                 middle,
                 stepOf("dead", "call", []),
                 ACT,
@@ -467,10 +467,10 @@ describe("graph-walk.policy walkGraph approvals and forks on the path", () => {
 describe("graph-walk.policy factsOfWalk", () => {
     it("lists the facts of every decide point the action can reach, once each", async () => {
         const subject = await build()
-        const SECOND = decideOf([branchOf({ key: "else", when: "else", then: "auto", next: "act" })])
+        const SECOND = decideOf([branchOf({ key: "else", when: "else", outcome: "auto", next: "act" })])
         const document = documentOf(
             TRIGGER,
-            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), then: "auto", next: "second" })]),
+            decideOf([branchOf({ key: "big", when: amountIs("gt", 1), outcome: "auto", next: "second" })]),
             {
                 ...SECOND,
                 key: "second",

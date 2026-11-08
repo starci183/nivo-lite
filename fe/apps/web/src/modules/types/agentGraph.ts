@@ -65,7 +65,7 @@ export interface AgentGraphBranchData {
     readonly when: string
     /** The same with the name of the fact, "the order amount from 5 million to under 20 million". */
     readonly whenFull: string
-    readonly then: AgentGraphThen
+    readonly outcome: AgentGraphThen
     /** The node the branch goes to. */
     readonly next: string
     readonly approver: AgentGraphApproverData | null
@@ -255,7 +255,7 @@ export interface AgentGraphRowForm {
     readonly isLocked: boolean
     /** The terms, all of which must hold. */
     readonly terms: ReadonlyArray<AgentGraphTermForm>
-    readonly then: AgentGraphThen
+    readonly outcome: AgentGraphThen
     readonly approverId: string
     readonly timeoutHours: number
     readonly onTimeout: AgentGraphOnTimeout
@@ -269,7 +269,7 @@ export interface AgentGraphDecideForm {
 }
 
 /** A field of a branch the form changes. */
-export type AgentGraphRowField = "then" | "approverId" | "timeoutHours" | "onTimeout" | "backupId"
+export type AgentGraphRowField = "outcome" | "approverId" | "timeoutHours" | "onTimeout" | "backupId"
 
 /** A field of a term the form changes. */
 export type AgentGraphTermField = "fact" | "op" | "amount" | "text"

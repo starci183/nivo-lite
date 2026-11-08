@@ -108,14 +108,14 @@ export const persistWaitsFixture = async (manager: EntityManager, who: WaitsFixt
         branchOf({
             key: "silence",
             when: amountIs("lt", 5_000_000),
-            then: "ask",
+            outcome: "ask",
             next: "ask",
             approver: approverOf({ group, onTimeout: { kind: "unset" } }),
         }),
         branchOf({
             key: "backup",
             when: "else",
-            then: "ask",
+            outcome: "ask",
             next: "ask",
             approver: approverOf({ group, onTimeout: { kind: "backup", group } }),
         }),

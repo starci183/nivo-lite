@@ -105,9 +105,9 @@ describe("strictest.policy pickBranch", () => {
 
     it("never lets an else run alone, even one a draft left as auto", async () => {
         const subject = await build()
-        const loose = { ...decide, branches: [branchOf({ key: "else", when: "else", then: "auto" })] }
+        const loose = { ...decide, branches: [branchOf({ key: "else", when: "else", outcome: "auto" })] }
 
-        expect(subject.pickBranch(loose, { [AMOUNT_FACT]: 1 }, FACTS)).toMatchObject({ key: "else", then: "ask" })
+        expect(subject.pickBranch(loose, { [AMOUNT_FACT]: 1 }, FACTS)).toMatchObject({ key: "else", outcome: "ask" })
     })
 
     it("answers nothing for a decide point with no else that no branch matches", async () => {

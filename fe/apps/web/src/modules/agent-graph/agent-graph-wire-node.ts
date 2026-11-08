@@ -23,7 +23,7 @@ type BranchSchemaShape = z.ZodObject<
     {
         key: z.ZodString
         when: z.ZodUnknown
-        then: z.ZodEnum<{
+        outcome: z.ZodEnum<{
             stop: "stop"
             auto: "auto"
             ask: "ask"
@@ -101,7 +101,7 @@ type BranchSchemaShape = z.ZodObject<
 export const branchSchema: BranchSchemaShape = z.looseObject({
     key: z.string(),
     when: z.unknown(),
-    then: z.enum(["auto", "ask", "stop"]),
+    outcome: z.enum(["auto", "ask", "stop"]),
     next: z.string(),
     approver: approverSchema.nullable(),
     sources: z.array(sourceSchema),
@@ -239,7 +239,7 @@ type NodeSchemaShape = z.ZodObject<
                             {
                                 key: z.ZodString
                                 when: z.ZodUnknown
-                                then: z.ZodEnum<{
+                                outcome: z.ZodEnum<{
                                     stop: "stop"
                                     auto: "auto"
                                     ask: "ask"

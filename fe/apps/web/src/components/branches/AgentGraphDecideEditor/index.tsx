@@ -116,14 +116,14 @@ const RowCard = (props: RowProps) => {
                     </Cluster>
                 ) : null}
                 <ChoiceChips
-                    label={view.labels.then}
-                    empty={view.labels.then}
+                    label={view.labels.outcome}
+                    empty={view.labels.outcome}
                     options={thenOptionsOf(props)}
-                    value={row.then}
+                    value={row.outcome}
                     isLoading={props.isLoading}
-                    onValueChange={(value) => props.onChange({ kind: "setRow", row: row.index, field: "then", value })}
+                    onValueChange={(value) => props.onChange({ kind: "setRow", row: row.index, field: "outcome", value })}
                 />
-                {row.then === "ask" ? (
+                {row.outcome === "ask" ? (
                     <AgentGraphAskFields
                         row={row}
                         labels={view.labels}

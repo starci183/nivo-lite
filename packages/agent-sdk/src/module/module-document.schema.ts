@@ -221,7 +221,7 @@ const outcomeSchema: z.ZodType<OutcomeSpec> = z.union([
 
 const outcomeRulesSchema: z.ZodType<OutcomeRulesSpec> = z
     .object({
-        rules: z.array(z.object({ when: conditionSchema, then: outcomeSchema }).strict()).max(LIST_MAX),
+        rules: z.array(z.object({ when: conditionSchema, outcome: outcomeSchema }).strict()).max(LIST_MAX),
         otherwise: outcomeSchema,
     })
     .strict()

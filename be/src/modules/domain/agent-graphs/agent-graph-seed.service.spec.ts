@@ -159,7 +159,7 @@ describe("AgentGraphSeedService.ensureFor", () => {
         expect([workspaceId, agentId, installationId]).toEqual(["ws-1", "agent-1", "inst-1"])
         expect(seed?.nodes.map((node) => node.key)).toContain("decide:pay_supplier")
         const decide = seed?.nodes.find((node) => node.key === "decide:pay_supplier")?.decide
-        expect(decide?.branches.map((branch) => [branch.key, branch.then])).toEqual([
+        expect(decide?.branches.map((branch) => [branch.key, branch.outcome])).toEqual([
             ["auto", "auto"],
             ["ask", "ask"],
             ["else", "stop"],

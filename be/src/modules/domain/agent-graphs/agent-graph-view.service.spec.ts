@@ -119,7 +119,7 @@ describe("AgentGraphViewService.viewOf", () => {
     })
 
     it("names the person who approves on the card, in the catalog words of the language asked", async () => {
-        const ask = graphOf([branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: approverOf() })])
+        const ask = graphOf([branchOf({ key: "else", when: "else", outcome: "ask", next: "ask", approver: approverOf() })])
         const { service } = await build(stateOf({ draft: ask }))
 
         const view = await service.viewOf("ws-1", "agent-1", "vi")
@@ -130,7 +130,7 @@ describe("AgentGraphViewService.viewOf", () => {
 
     it("says the draft has something to publish when it differs from the version that decides", async () => {
         const edited = graphOf([
-            branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: approverOf() }),
+            branchOf({ key: "else", when: "else", outcome: "ask", next: "ask", approver: approverOf() }),
         ])
         const { service } = await build(stateOf({ draft: edited }))
 
@@ -140,7 +140,7 @@ describe("AgentGraphViewService.viewOf", () => {
     })
 
     it("lists what is wrong and what is vague in the draft", async () => {
-        const vague = graphOf([branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: null })])
+        const vague = graphOf([branchOf({ key: "else", when: "else", outcome: "ask", next: "ask", approver: null })])
         const { service } = await build(stateOf({ draft: vague }))
 
         const view = await service.viewOf("ws-1", "agent-1", "en")

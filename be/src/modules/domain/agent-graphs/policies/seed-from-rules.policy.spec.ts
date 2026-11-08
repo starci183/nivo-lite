@@ -40,7 +40,7 @@ const shape = (rule: SeedRule) =>
     branchesFromRule(rule, AMOUNT_FACT, TARGETS).map((entry) => ({
         key: entry.key,
         when: entry.when,
-        then: entry.then,
+        outcome: entry.outcome,
         next: entry.next,
     }))
 
@@ -60,8 +60,8 @@ describe("seed-from-rules.policy", () => {
         const subject = await build()
 
         expect(shape(ruleOf({ limit_vnd: 5_000_000 }))).toEqual([
-            { key: "auto", when: amountIs("lt", 5_000_000), then: "auto", next: "act" },
-            { key: "else", when: "else", then: "ask", next: "ask" },
+            { key: "auto", when: amountIs("lt", 5_000_000), outcome: "auto", next: "act" },
+            { key: "else", when: "else", outcome: "ask", next: "ask" },
         ])
         expect(
             subject.branchesFromRule(ruleOf({ limit_vnd: 5_000_000 }), AMOUNT_FACT, TARGETS)[1]?.approver,
@@ -74,14 +74,14 @@ describe("seed-from-rules.policy", () => {
         expect(
             subject.branchesFromRule(ruleOf({ auto_max: 5_000_000, ask_max: 20_000_000 }), AMOUNT_FACT, TARGETS),
         ).toMatchObject([
-            { key: "auto", when: amountIs("lte", 5_000_000), then: "auto", approver: null },
+            { key: "auto", when: amountIs("lte", 5_000_000), outcome: "auto", approver: null },
             {
                 key: "ask",
                 when: { all: [amountIs("gt", 5_000_000), amountIs("lte", 20_000_000)] },
-                then: "ask",
+                outcome: "ask",
                 next: "ask",
             },
-            { key: "else", when: "else", then: "stop", next: "stop", approver: null },
+            { key: "else", when: "else", outcome: "stop", next: "stop", approver: null },
         ])
     })
 })
@@ -91,8 +91,8 @@ describe("seed-from-rules.policy (continued)", () => {
         const subject = await build()
 
         expect(shape(ruleOf({ auto_max: 5_000_000 }))).toEqual([
-            { key: "auto", when: amountIs("lte", 5_000_000), then: "auto", next: "act" },
-            { key: "else", when: "else", then: "ask", next: "ask" },
+            { key: "auto", when: amountIs("lte", 5_000_000), outcome: "auto", next: "act" },
+            { key: "else", when: "else", outcome: "ask", next: "ask" },
         ])
         expect(
             subject.branchesFromRule(ruleOf({ ask_max: 9 }), AMOUNT_FACT, TARGETS).map((entry) => entry.key),
@@ -103,10 +103,10 @@ describe("seed-from-rules.policy (continued)", () => {
     it("answers a rule that asks with one else that asks, and a rule that never allows with one that stops", async () => {
         const subject = await build()
 
-        expect(shape(ruleOf({ mode: "ask" }))).toEqual([{ key: "else", when: "else", then: "ask", next: "ask" }])
-        expect(shape(ruleOf({ mode: "never" }))).toEqual([{ key: "else", when: "else", then: "stop", next: "stop" }])
+        expect(shape(ruleOf({ mode: "ask" }))).toEqual([{ key: "else", when: "else", outcome: "ask", next: "ask" }])
+        expect(shape(ruleOf({ mode: "never" }))).toEqual([{ key: "else", when: "else", outcome: "stop", next: "stop" }])
         expect(shape(ruleOf({ mode: "never", auto_max: 9 }))).toEqual([
-            { key: "else", when: "else", then: "stop", next: "stop" },
+            { key: "else", when: "else", outcome: "stop", next: "stop" },
         ])
         expect(subject.branchesFromRule(ruleOf({ mode: "never" }), AMOUNT_FACT, TARGETS)[0]?.sources).toEqual([
             { kind: "rule", action: "pay_supplier" },
@@ -117,13 +117,13 @@ describe("seed-from-rules.policy (continued)", () => {
         const subject = await build()
 
         expect(shape(ruleOf())).toEqual([
-            { key: "auto", when: { fact: AMOUNT_FACT, op: "known" }, then: "auto", next: "act" },
-            { key: "else", when: "else", then: "ask", next: "ask" },
+            { key: "auto", when: { fact: AMOUNT_FACT, op: "known" }, outcome: "auto", next: "act" },
+            { key: "else", when: "else", outcome: "ask", next: "ask" },
         ])
         expect(
             subject
                 .branchesFromRule(ruleOf(), AMOUNT_FACT, TARGETS)
-                .every((entry) => entry.when !== "else" || entry.then !== "auto"),
+                .every((entry) => entry.when !== "else" || entry.outcome !== "auto"),
         ).toBe(true)
     })
 })

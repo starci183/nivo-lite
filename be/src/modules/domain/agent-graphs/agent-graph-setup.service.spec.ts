@@ -125,7 +125,7 @@ describe("AgentGraphSetupService.applyBranch", () => {
     it("refuses a graph that cannot be opened or belongs to another workspace, and an action with no bands", async () => {
         const none = await build({ state: null, seeded: null })
         const other = await build({ state: stateOf({ workspaceId: "ws-2" }) })
-        const lone = graphOf([branchOf({ key: "all", when: amountIs("lt", 1), then: "auto", next: "act" })])
+        const lone = graphOf([branchOf({ key: "all", when: amountIs("lt", 1), outcome: "auto", next: "act" })])
         const bare = await build({ state: stateOf({ draft: lone }) })
 
         await expect(none.service.applyBranch(CHANGE)).rejects.toMatchObject({
@@ -206,7 +206,7 @@ describe("AgentGraphSetupService.seatNamed", () => {
 
 describe("AgentGraphSetupService.publish", () => {
     it("publishes under the seat that applies, with the context version and the number the setup became", async () => {
-        const active = graphOf([branchOf({ key: "else", when: "else", then: "ask", next: "ask" })])
+        const active = graphOf([branchOf({ key: "else", when: "else", outcome: "ask", next: "ask" })])
         const { service, publishing } = await build({ state: stateOf({ active }) })
 
         await service.publish(APPLIER)

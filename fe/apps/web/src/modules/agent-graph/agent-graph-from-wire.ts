@@ -174,7 +174,7 @@ const branchOf = (
         key: branch.key,
         when: sentence(ctx.isOneFact !== true),
         whenFull: sentence(true),
-        then: branch.then,
+        outcome: branch.outcome,
         next: branch.next,
         approver: approverOf(branch.approver, members, words.t, coverageWordsOf(row, words.t)),
         sources: branch.sources.map((source) => sourceOf(source, words, ctx.input)),
