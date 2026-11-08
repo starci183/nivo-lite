@@ -1,5 +1,4 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { MutateParams } from "../types"
 import type { DisconnectDriveMutation } from "../__generated__/graphql"

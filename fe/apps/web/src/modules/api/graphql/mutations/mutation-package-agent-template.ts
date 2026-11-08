@@ -1,5 +1,4 @@
-import { gql } from "@apollo/client"
-import type { ApolloClient, TypedDocumentNode } from "@apollo/client"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, MutateParams, WireInput } from "../types"
 import type { PackageAgentTemplateMutation, PackageAgentTemplateMutationVariables } from "../__generated__/graphql"
