@@ -115,14 +115,14 @@ export class StorageObjectsService implements StorageObjectsPort {
     private async guard<T>(bucket: string, run: () => Promise<T>): Promise<Outcome<T, StorageFailureCode>> {
         try {
             return ok(await run())
-        } catch (failure) {
+        } catch (error_) {
             if (
-                failure instanceof ObjectStorageError ||
-                (failure instanceof StoreFailure && failure.kind !== "unavailable")
+                error_ instanceof ObjectStorageError ||
+                (error_ instanceof StoreFailure && error_.kind !== "unavailable")
             ) {
                 return refused(OBJECT_STORAGE_ERROR_CODES.ObjectNotFound)
             }
-            this.logger.error(StorageLogEvent.Failed, failure, { bucket })
+            this.logger.error(StorageLogEvent.Failed, error_, { bucket })
             return refused(OBJECT_STORAGE_ERROR_CODES.Unavailable)
         }
     }

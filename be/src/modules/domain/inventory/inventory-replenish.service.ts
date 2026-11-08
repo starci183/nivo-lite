@@ -143,7 +143,7 @@ export class InventoryReplenishService {
         // A null supplier means "the draft of no supplier": a null in a where object would match every draft.
         const existing = await this.entityManager.findOne(InventoryPurchaseOrderEntity, {
             select: { id: true },
-            where: { workspaceId, status: "draft", supplierId: supplierId === null ? IsNull() : supplierId },
+            where: { workspaceId, status: "draft", supplierId: supplierId ?? IsNull() },
             order: { createdAt: "ASC" },
         })
         let poId: string

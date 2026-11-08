@@ -164,7 +164,7 @@ export class DossierReviewRunsService {
                 where: {
                     workspaceId: ask.workspaceId,
                     status: "queued",
-                    dossierId: ask.dossierId === null ? IsNull() : ask.dossierId,
+                    dossierId: ask.dossierId ?? IsNull(),
                 },
             })
             if (queued.id === id) await this.queue.enqueueDossierReview({ runId: id, workspaceId: ask.workspaceId }, tx)

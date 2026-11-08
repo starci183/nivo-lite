@@ -126,8 +126,8 @@ export class AgentDrainService {
         try {
             const ending = await handler.holdOver(turn, "error")
             return immediate ? { ...endingOf(ending, null), errorCode: failed.errorCode } : failed
-        } catch (holdCause) {
-            this.logger.error(AgentWorkLogEvent.TurnFailed, holdCause, { agentId: turn.agentId, wakeId: turn.wakeId })
+        } catch (error_) {
+            this.logger.error(AgentWorkLogEvent.TurnFailed, error_, { agentId: turn.agentId, wakeId: turn.wakeId })
             return failed
         }
     }

@@ -342,7 +342,7 @@ describe("ChatConversationsService: conversations by id and by lead", () => {
             cursors.push(query.page.after)
             return { ...(await list(query)), next: `page-${String(cursors.length)}` }
         }
-        expect((await service.ofLeads(CHAT_WORKSPACE, [LEAD])).length).toBe(20)
+        expect(await service.ofLeads(CHAT_WORKSPACE, [LEAD])).toHaveLength(20)
         expect(cursors).toHaveLength(20)
         expect(cursors.slice(0, 3)).toEqual([undefined, "page-1", "page-2"])
     })

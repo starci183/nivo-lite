@@ -74,7 +74,8 @@ const build = async () => {
     moduleRef.get(LeadEffectsService).onModuleInit()
     const executor = registry.addExecutor.mock.calls[0]?.[0]
     const resolver = registry.addSubjectResolver.mock.calls[0]?.[0]
-    assert(executor !== undefined && resolver !== undefined, "The service must register an executor and a resolver")
+    assert(executor !== undefined, "The service must register an executor")
+    assert(resolver !== undefined, "The service must register a resolver")
     return { engine, registry, api, executor, resolver }
 }
 

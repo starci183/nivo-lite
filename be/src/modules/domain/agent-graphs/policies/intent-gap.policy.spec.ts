@@ -32,6 +32,6 @@ describe("gapKeyOf", () => {
     it("bounds the key", async () => {
         const subject = await build()
 
-        expect(subject.gapKeyOf("a".repeat(500)).length).toBe("gap:".length + 160)
+        expect(subject.gapKeyOf("a".repeat(500))).toHaveLength("gap:".length + 160)
     })
 })

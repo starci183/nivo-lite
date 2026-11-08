@@ -49,7 +49,7 @@ export const returnedFacts = (raw: unknown): Array<BrainFactEntity> =>
 
 /** The scope of an installation in a condition: a null installation means the workspace-wide facts, which is IS NULL and never "any". */
 export const scopeOf = (installationId: InstallationScope): string | FindOperator<string> =>
-    installationId === null ? IsNull() : installationId
+    installationId ?? IsNull()
 
 /** The condition that selects the facts of one key. */
 export interface FactKeyCondition {

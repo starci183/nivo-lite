@@ -28,7 +28,7 @@ const branchesOf = (node: GraphNode | undefined): ReadonlyArray<GraphBranch> => 
 const topWord = (branch: GraphBranch, fact: string): number => {
     const interval = intervalOf(branch.when, fact)
     const top = interval === null ? null : topOf(interval)
-    return top === null ? Number.POSITIVE_INFINITY : top
+    return top ?? Number.POSITIVE_INFINITY
 }
 
 const branchChanges = (

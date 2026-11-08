@@ -12,7 +12,7 @@ const GROUP_MAX = 500
 const REF_EXPRESSION = String.raw`COALESCE((SELECT substring(t FROM '^dossier:0*([0-9]+)$') FROM unnest(s.tags) AS t WHERE substring(t FROM '^dossier:0*([0-9]+)$') IS NOT NULL LIMIT 1), substring(s.title FROM '^\s*0*([0-9]+)\.\s'))`
 
 /** The number of the top folder of a document, from its folder:<n> tag; null for a document without one. */
-const FOLDER_EXPRESSION = String.raw`(SELECT CAST(substring(t FROM '^folder:([0-9]{1,4})$') AS integer) FROM unnest(s.tags) AS t WHERE substring(t FROM '^folder:([0-9]{1,4})$') IS NOT NULL LIMIT 1)`
+const FOLDER_EXPRESSION = `(SELECT CAST(substring(t FROM '^folder:([0-9]{1,4})$') AS integer) FROM unnest(s.tags) AS t WHERE substring(t FROM '^folder:([0-9]{1,4})$') IS NOT NULL LIMIT 1)`
 
 const isCategoryRow = (row: unknown): row is { topic: string; documents: string; bytes: string; folder: unknown } =>
     typeof row === "object" &&
