@@ -1,14 +1,16 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { AuthorityRulesService, evaluateGate } from "@modules/domain/authority-rules"
-import type { BranchDivert, GraphAnswer, GraphCheck } from "@modules/domain/authority-rules"
-import { WorkItemsService } from "@modules/domain/work-items"
-import type { OptionalWorkItem } from "@modules/domain/work-items"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import {
+    AuthorityRulesService,
+    evaluateGate,
+    type BranchDivert,
+    type GraphAnswer,
+    type GraphCheck,
+} from "@modules/domain/authority-rules"
+import { WorkItemsService, type OptionalWorkItem } from "@modules/domain/work-items"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type {
     Decider,
     GateVerdict,
@@ -54,11 +56,9 @@ import {
 } from "./work-engine.policy"
 import type { OutboundAccessGate } from "./work-engine.port"
 import { WorkIntakeService } from "./work-intake.service"
-import { InjectWorkPerformerRegistry } from "./work-performer.port"
-import type { WorkPerformerRegistry } from "./work-performer.port"
+import { InjectWorkPerformerRegistry, type WorkPerformerRegistry } from "./work-performer.port"
 import { WorkRecorderService } from "./work-recorder.service"
-import { divertSpecOf } from "./work-divert.policy"
-import type { DivertSource } from "./work-divert.policy"
+import { divertSpecOf, type DivertSource } from "./work-divert.policy"
 import { processOptionsOf, proposalWithOptions } from "./work-options.policy"
 
 /** The decider of every automatic path. */

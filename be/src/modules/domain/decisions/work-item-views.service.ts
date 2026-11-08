@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { WorkItemsViewsReadService } from "@modules/domain/work-items"
-import type { WorkItemWithCursor } from "@modules/domain/work-items"
+import { WorkItemsViewsReadService, type WorkItemWithCursor } from "@modules/domain/work-items"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { DecisionEntity } from "./persistence/entities"
 import type { WorkItemViewRow } from "./work-item-views.rows"

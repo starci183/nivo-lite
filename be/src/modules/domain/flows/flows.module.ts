@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { FLOW_GATE } from "./flows.decorators"
 import { FlowsService } from "./flows.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./flows.module-definition"

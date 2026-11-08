@@ -1,6 +1,5 @@
 import { fieldTextOrNullOf, isRecord } from "@modules/platform/primitives"
-import { partitionNameOf } from "@nivo-lite/agent-sdk/entity"
-import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
+import { partitionNameOf, type EntityDefinition } from "@nivo-lite/agent-sdk/entity"
 
 /** The longest identifier PostgreSQL keeps: the planner names a partition constraint `<partition>_<name>` cut to this. */
 const IDENTIFIER_MAX = 63

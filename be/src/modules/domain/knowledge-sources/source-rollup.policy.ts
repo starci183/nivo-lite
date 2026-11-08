@@ -34,7 +34,9 @@ const mergedOf = (first: SourceSummary, later: ReadonlyArray<SourceSummary>): So
         stageTotal: lead.stageTotal,
         chunkCount: all.reduce((sum, one) => sum + one.chunkCount, 0),
         sizeBytes: all.reduce((sum, one) => sum + one.sizeBytes, 0),
-        updatedAt: all.reduce((newest, one) => (one.updatedAt > newest ? one.updatedAt : newest), first.updatedAt),
+        updatedAt:
+            [first.updatedAt, ...all.map((one) => one.updatedAt)].sort((a, b) => a.localeCompare(b)).at(-1) ??
+            first.updatedAt,
         partCount: all.length,
     }
 }

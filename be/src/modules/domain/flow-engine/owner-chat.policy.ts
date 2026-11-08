@@ -96,12 +96,12 @@ export const fold = (text: string): string =>
     text
         .toLowerCase()
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
+        .replaceAll(/[\u0300-\u036f]/g, "")
         .replaceAll("\u0111", "d")
-        .replace(/\s+/g, " ")
+        .replaceAll(/\s+/g, " ")
         .trim()
 
-const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
+const escapeRegExp = (text: string): string => text.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 
 /** Whole-word containment on folded text ("minh" is in "don cua anh minh", not in "minhanh"). */
 export const hasWord = (hay: string, needle: string): boolean =>
@@ -111,7 +111,7 @@ export const hasWord = (hay: string, needle: string): boolean =>
 export const isAddressed = (text: string): boolean => ADDRESSED.test(text)
 
 /** The message without the "@nivo" address. */
-export const withoutAddress = (text: string): string => text.replace(ADDRESS_TOKEN, "").trim()
+export const withoutAddress = (text: string): string => text.replaceAll(ADDRESS_TOKEN, "").trim()
 
 /** Whether the message names another agent's handle. */
 export const namesOtherHandle = (body: string): boolean => OTHER_HANDLE.test(body)
@@ -136,7 +136,7 @@ export const parseVnd = (text: string): number | null => {
         }
     }
     const plain = /(\d{1,3}(?:[.,]\d{3})+|\d{5,})/.exec(folded)
-    if (plain?.[1] !== undefined) return Number(plain[1].replace(/[.,]/g, ""))
+    if (plain?.[1] !== undefined) return Number(plain[1].replaceAll(/[.,]/g, ""))
     return null
 }
 
@@ -209,15 +209,15 @@ export const matchWaiting = (text: string, waiting: ReadonlyArray<WaitingView>):
         const ref = fold(view.ref)
         return ref !== "" && (refTokens.includes(ref.replaceAll("-", "")) || hasWord(folded, ref))
     }
-    const refNamed = refTokens.length > 0 || waiting.some(refHit)
-    const amount = parseVnd(text.replace(REF_RE, " "))
+    const refNamed = refTokens.length > 0 || waiting.some((view) => refHit(view))
+    const amount = parseVnd(text.replaceAll(REF_RE, " "))
     const action = ACTION_HINTS.find(([pattern]) => pattern.test(folded))?.[1] ?? null
     const identified = nameHits.size > 0 || refNamed
     let pool = waiting
     if (nameHits.size > 0) pool = pool.filter((view) => nameHits.has(view.item.id))
     if (mentions.size > 0)
         pool = pool.filter((view) => [...mentions].every((name) => hasWord(fold(view.customer), name)))
-    if (refNamed) pool = pool.filter(refHit)
+    if (refNamed) pool = pool.filter((view) => refHit(view))
     if (amount !== null)
         pool = pool.filter(
             (view) =>

@@ -12,8 +12,8 @@ import {
     passageEvidence,
     quoteAround,
     titlesOf,
+    type RuleFamily,
 } from "./rule-kit.policy"
-import type { RuleFamily } from "./rule-kit.policy"
 
 /** The attribute slugs of a citizen identity number. */
 const ID_ATTRIBUTES: ReadonlyArray<string> = [
@@ -23,7 +23,7 @@ const ID_ATTRIBUTES: ReadonlyArray<string> = [
     "so can cuoc",
     "can cuoc cong dan",
     "so cmnd",
-].map(factSlugOf)
+].map((text) => factSlugOf(text))
 
 /** One kind of identifier: how passages write it, which of its digits are compared, and the attributes of its canonical facts. */
 interface IdentifierKind {

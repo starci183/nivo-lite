@@ -6,8 +6,7 @@ import type {
     FindingCandidate,
     ReviewContext,
 } from "./dossier-inputs.contracts"
-import { currentHolders, holdingsOf } from "./roles.policy"
-import type { Holding } from "./roles.policy"
+import { currentHolders, holdingsOf, type Holding } from "./roles.policy"
 import {
     candidateOf,
     datesOf,
@@ -19,8 +18,8 @@ import {
     hasAnyWord,
     remedyActionOf,
     titlesOf,
+    type RuleFamily,
 } from "./rule-kit.policy"
-import type { RuleFamily } from "./rule-kit.policy"
 
 /** Whether a document meets an expectation: its title carries one of the title words or a passage one of the text words. */
 export const meets = (doc: DocumentInput, expectation: Expectation): boolean =>

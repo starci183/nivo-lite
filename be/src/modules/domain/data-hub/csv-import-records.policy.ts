@@ -1,5 +1,4 @@
-import { DOCUMENT_MAX_TEXT } from "@modules/integrations/data-sources"
-import type { Table, UploadedDocumentText } from "@modules/integrations/data-sources"
+import { DOCUMENT_MAX_TEXT, type Table, type UploadedDocumentText } from "@modules/integrations/data-sources"
 import type { DataRecordInput } from "./data-hub.contracts"
 import type { CsvMapping } from "./csv-import.contracts"
 import { CSV_COPY } from "./messages/csv-import.messages"
@@ -100,7 +99,7 @@ export const buildRecords = (table: Pick<Table, "headers" | "rows">, mapping: Cs
 }
 
 const clip = (text: string): ClippedText => {
-    const clean = text.replace(/\r\n?/gu, "\n").replaceAll(String.fromCodePoint(0), "").trim()
+    const clean = text.replaceAll(/\r\n?/gu, "\n").replaceAll(String.fromCodePoint(0), "").trim()
     return clean.length > DOCUMENT_MAX_TEXT
         ? { text: clean.slice(0, DOCUMENT_MAX_TEXT), truncated: true }
         : { text: clean, truncated: false }

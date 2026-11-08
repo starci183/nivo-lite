@@ -284,7 +284,7 @@ export const buildInventoryWorkbench = (
         canManage: context.canManage,
         defaultLocationId: context.defaultLocationId,
         locations: [...rows.locations],
-        suppliers: rows.suppliers.map(toSupplier),
+        suppliers: rows.suppliers.map((supplier) => toSupplier(supplier)),
         items,
         recipes: recipesOf(rows, byId),
         pos,

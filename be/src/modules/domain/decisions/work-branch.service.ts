@@ -1,6 +1,10 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { InjectWorkBranchDecider } from "@modules/domain/authority-rules"
-import type { GraphAnswer, GraphCheck, WorkBranchDecider } from "@modules/domain/authority-rules"
+import {
+    InjectWorkBranchDecider,
+    type GraphAnswer,
+    type GraphCheck,
+    type WorkBranchDecider,
+} from "@modules/domain/authority-rules"
 import type { BranchConsult, BranchOutcome } from "./work-branch.contracts"
 
 /** The answer with no graph bound: nothing narrows what leaves. */

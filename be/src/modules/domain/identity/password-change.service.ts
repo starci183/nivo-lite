@@ -1,9 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { isAcceptablePassword, isPresentablePassword, normalizeEmail } from "@modules/integrations/passport"
-import type { AuthPasswords, SignInBudget } from "@modules/integrations/passport"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import {
+    isAcceptablePassword,
+    isPresentablePassword,
+    normalizeEmail,
+    type AuthPasswords,
+    type SignInBudget,
+} from "@modules/integrations/passport"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import type { Principal } from "@modules/platform/cqrs"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { refusing } from "./auth-refusal.policy"

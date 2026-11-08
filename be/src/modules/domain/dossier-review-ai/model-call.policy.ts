@@ -112,7 +112,7 @@ export abstract class ModelCallPolicy {
 
     /** The first object found in a text a model wrapped in prose or a markdown fence, or null when none parses. */
     private jsonOf(text: string): unknown {
-        const body = text.replace(FENCE, "")
+        const body = text.replaceAll(FENCE, "")
         const from = body.indexOf("{")
         const to = body.lastIndexOf("}")
         if (from < 0 || to <= from) return null

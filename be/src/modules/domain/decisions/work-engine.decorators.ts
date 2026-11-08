@@ -1,6 +1,5 @@
 import { WORK_ITEM_CLOSED } from "@modules/domain/work-items"
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type {
     InboundEventStatus,
     ModuleCatalogSource,

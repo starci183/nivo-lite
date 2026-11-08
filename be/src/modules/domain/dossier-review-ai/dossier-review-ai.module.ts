@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { DossierReasonerService } from "./dossier-reasoner.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./dossier-review-ai.module-definition"
 import { RemedyWriterService } from "./remedy-writer.service"

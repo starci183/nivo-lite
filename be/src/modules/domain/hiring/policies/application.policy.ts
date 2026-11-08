@@ -76,7 +76,7 @@ const missingAnswer = (job: Pick<JobRecord, "questions">, input: ApplicationInpu
 /** Checks the contact details and the answers of an application and cleans them. The job must already be known to take applications. */
 export const checkApplication = (job: Pick<JobRecord, "questions">, input: ApplicationInput): ApplicationCheck => {
     if (!input.consent) return refuse(HiringErrorCode.ConsentRequired)
-    const name = input.name.replace(/\s+/gu, " ").trim()
+    const name = input.name.replaceAll(/\s+/gu, " ").trim()
     if (name.length < NAME_MIN || name.length > NAME_MAX) return refuse(HiringErrorCode.NameInvalid)
     const typedPhone = input.phone.trim()
     const phone = typedPhone === "" ? "" : normalizePhone(typedPhone)

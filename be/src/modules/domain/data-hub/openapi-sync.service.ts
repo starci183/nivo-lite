@@ -5,13 +5,11 @@ import {
     itemsOf,
     openApiFailure,
     parseJsonBody,
-} from "@modules/integrations/data-sources"
-import type {
-    OpenApiAuth,
-    OpenApiClient,
-    OpenApiConfig,
-    OpenApiOperation,
-    OpenApiPull,
+    type OpenApiAuth,
+    type OpenApiClient,
+    type OpenApiConfig,
+    type OpenApiOperation,
+    type OpenApiPull,
 } from "@modules/integrations/data-sources"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { DataConnector, DataRecordInput, DataSyncContext, DataSyncResult } from "./data-hub.contracts"
@@ -28,8 +26,8 @@ import {
     pagingOf,
     parseCursor,
     toRecord,
+    type PullPaging,
 } from "./openapi-pull.policy"
-import type { PullPaging } from "./openapi-pull.policy"
 
 /** The state of one operation being pulled, page after page. */
 interface PullRun {

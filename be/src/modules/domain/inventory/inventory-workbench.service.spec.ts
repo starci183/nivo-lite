@@ -105,8 +105,9 @@ describe("InventoryWorkbenchService", () => {
     it("answers a member who cannot manage, and no stock-out figure when that history cannot be read", async () => {
         const failure = new Error("stock outs unavailable")
         const { em } = workbenchReads([])
+        const stockOutsDown = jest.fn<Promise<Array<never>>, []>().mockRejectedValue(failure)
         em.find.mockImplementation((_entity, options) =>
-            options?.take === 5000 ? Promise.reject(failure) : Promise.resolve([]),
+            options?.take === 5000 ? stockOutsDown() : Promise.resolve([]),
         )
         const { service, logger } = await build(em, "staff")
 

@@ -1,11 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import { In, Like } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { In, Like, type EntityManager } from "typeorm"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectInbox } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
+import { InjectInbox, type Inbox } from "@modules/platform/inbox"
 import { InboundEventsError, InboundEventsErrorCode } from "./errors/inbound-events.error"
 import { bankDedupeKey, eventDedupeKey } from "./inbound-dedupe.policy"
 import { returnedIdOf } from "./inbound-returned-id.policy"
@@ -177,7 +174,7 @@ export class InboundEventsService {
         if (wanted.length === 0) return []
         const where = { workspaceId, id: In(wanted) }
         const events = await this.entityManager.find(InboundEventEntity, { where, take: wanted.length })
-        return events.map(toDetail)
+        return events.map((event) => toDetail(event))
     }
 
     /** Sets where an event stands (null keeps it) and links the customer the engine found (null keeps it). */

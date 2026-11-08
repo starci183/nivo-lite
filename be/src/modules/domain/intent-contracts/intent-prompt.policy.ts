@@ -8,11 +8,11 @@ const TOOL_RESULT_MAX = 20_000
 const KIND_MAX = 40
 
 /** The words with the opening of any data mark defused (`<data`, `</data>`, spaced or in capitals), so they cannot close the block they sit in. */
-const defused = (text: string): string => text.replace(/<(?=\s{0,8}\/?\s{0,8}data)/giu, "< ")
+const defused = (text: string): string => text.replaceAll(/<(?=\s{0,8}\/?\s{0,8}data)/giu, "< ")
 
 /** One piece of data, wrapped and marked: whatever it says, it stays data. */
 export const dataTagOf = (kind: string, text: string): string => {
-    const name = kind.replace(/[^a-z0-9_]/giu, "_").slice(0, KIND_MAX)
+    const name = kind.replaceAll(/[^a-z0-9_]/giu, "_").slice(0, KIND_MAX)
     return `<data kind="${name}">\n${defused(text.trim())}\n</data>`
 }
 
@@ -55,9 +55,9 @@ const limitsOf = (active: ReadonlyArray<IntentContract>, say: IntentSay): string
     )
     const apart = active.flatMap((contract) => {
         const own = contract.limits.filter((limit) => !common.includes(limit))
-        return own.length === 0 ? [] : [`${contract.intent}:`, ...own.map(bullet)]
+        return own.length === 0 ? [] : [`${contract.intent}:`, ...own.map((line) => bullet(line))]
     })
-    return [say("intentContracts.prompt.limits"), ...common.map(bullet), ...apart].join("\n")
+    return [say("intentContracts.prompt.limits"), ...common.map((line) => bullet(line)), ...apart].join("\n")
 }
 
 /** Intents that answer the same way are written together, so the shape of a result is not repeated for each. */

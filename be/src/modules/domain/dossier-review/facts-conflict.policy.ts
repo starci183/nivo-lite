@@ -1,6 +1,13 @@
 import type { FindingCandidate } from "./dossier-inputs.contracts"
-import { candidateOf, dossierOfFact, dossierOfSources, factEvidence, factsOfContext, titlesOf } from "./rule-kit.policy"
-import type { RuleFamily } from "./rule-kit.policy"
+import {
+    candidateOf,
+    dossierOfFact,
+    dossierOfSources,
+    factEvidence,
+    factsOfContext,
+    titlesOf,
+    type RuleFamily,
+} from "./rule-kit.policy"
 
 /** facts.conflict: two document facts of the pass the Second Brain marked as disagreeing; the owner's decision in Brain > Review ends it. */
 export const factConflictRules: RuleFamily = (context) => {

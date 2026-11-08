@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { BrainFactsReadService } from "@modules/domain/brain-facts"
 import type { FindingInUse } from "./dossier-review.contracts"
-import { inUseOf } from "./in-use-fact.policy"
-import type { FactStanding } from "./in-use-fact.policy"
+import { inUseOf, type FactStanding } from "./in-use-fact.policy"
 import type { DossierFindingEntity } from "./persistence/entities"
 
 @Injectable()

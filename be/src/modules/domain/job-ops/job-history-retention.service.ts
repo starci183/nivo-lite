@@ -1,8 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { MAX_SWEEP_BATCHES, retentionWindowOf } from "./job-history-retention.policy"
-import type { HistoryRetentionWindow, SweepFence } from "./job-history-retention.policy"
+import {
+    MAX_SWEEP_BATCHES,
+    retentionWindowOf,
+    type HistoryRetentionWindow,
+    type SweepFence,
+} from "./job-history-retention.policy"
 import type { HistorySweepRow } from "./persistence/job-ops.rows"
 
 @Injectable()

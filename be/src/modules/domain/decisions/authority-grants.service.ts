@@ -1,10 +1,13 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
-import { MemberGrantsService } from "@modules/domain/member-grants"
-import type { DirectoryMember, MemberGrant, MemberGrantChange } from "@modules/domain/member-grants"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
+import {
+    MemberGrantsService,
+    type DirectoryMember,
+    type MemberGrant,
+    type MemberGrantChange,
+} from "@modules/domain/member-grants"
+import { WorkspaceMembersService, type WorkspaceMember, type WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { WorkContext } from "./decisions.contracts"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"

@@ -38,7 +38,7 @@ const MONTHS_PER_YEAR = 12
 const PERCENT = 100
 const TENTH = 10
 
-const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`)
+const escapeRegExp = (text: string): string => text.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`)
 
 /** True when the folded haystack contains the folded needle at a word start. */
 const has = (haystack: string, needle: string): boolean => {

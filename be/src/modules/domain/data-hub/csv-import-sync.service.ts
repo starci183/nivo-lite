@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectTable } from "@modules/integrations/data-sources"
-import type { TableClient } from "@modules/integrations/data-sources"
+import { InjectTable, type TableClient } from "@modules/integrations/data-sources"
 import type { DataConnector, DataSyncContext, DataSyncResult } from "./data-hub.contracts"
 import { DataRecordsService } from "@modules/domain/data-records"
 import { CSV_COPY } from "./messages/csv-import.messages"

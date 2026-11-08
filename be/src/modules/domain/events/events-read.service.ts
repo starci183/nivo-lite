@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { Between, In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { Between, In, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { ApiEvent, LeadFirstEvent, OptionalInstant } from "./events-read.contracts"
 import { EventEntity } from "./persistence/entities"

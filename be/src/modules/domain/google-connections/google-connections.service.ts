@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService } from "@modules/domain/connections"
+import { ConnectionsService, type ConnectionActor, type ConnectionRecord } from "@modules/domain/connections"
 import { randomSecret } from "@modules/domain/connection-secrets"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
 import {
     DRIVE_PURPOSE,
     GOOGLE_SCOPE,
@@ -10,10 +9,10 @@ import {
     SHEETS_PURPOSE,
     safeReturnTo,
     withResult,
+    type GoogleClient,
+    type OAuthState,
 } from "@modules/integrations/google"
-import type { GoogleClient, OAuthState } from "@modules/integrations/google"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DriveGrantService } from "./drive-grant.service"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 import type {
@@ -99,7 +98,10 @@ export class GoogleConnectionsService {
     async state(actor: ConnectionActor): Promise<GoogleSetup> {
         await this.connections.authorize(actor, MANAGER)
         const rows = await this.connections.listByProvider(actor.workspaceId, "google", { includeDisconnected: false })
-        return { configured: this.google.isConfigured(), consentNeeded: rows.some(waitsForConsent) }
+        return {
+            configured: this.google.isConfigured(),
+            consentNeeded: rows.some((connection) => waitsForConsent(connection)),
+        }
     }
 
     /** The live Google accounts of the workspace, for an automation account picker (owner or manager). */
@@ -202,7 +204,7 @@ export class GoogleConnectionsService {
     /** The oldest live Google connection of the workspace. */
     private async oldestLive(workspaceId: string): Promise<ConnectionRecord | null> {
         const rows = await this.connections.listByProvider(workspaceId, "google", { includeDisconnected: false })
-        return rows.find(isLive) ?? null
+        return rows.find((connection) => isLive(connection)) ?? null
     }
 
     /** Records a refused consent; a failure to record is logged and never changes where the browser goes. */

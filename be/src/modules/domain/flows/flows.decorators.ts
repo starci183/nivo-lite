@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { FlowGate } from "./flows.contracts"
 
 /** Token of the operating-flow engine the decisions capability binds. */

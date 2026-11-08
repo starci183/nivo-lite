@@ -1,22 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import { In, IsNull, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, IsNull, Not, type EntityManager } from "typeorm"
 import { EntitlementsService } from "@modules/domain/billing"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord } from "@modules/domain/module-installations"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InstallationRecordsService, type InstallationRecord } from "@modules/domain/module-installations"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { unwrapOutcome } from "@modules/platform/primitives"
-import { uploadContentTypeOf } from "@modules/integrations/object-storage"
-import type { StorageObjectsPort } from "@modules/integrations/object-storage"
+import { uploadContentTypeOf, type StorageObjectsPort } from "@modules/integrations/object-storage"
 import { KnowledgeSourceIndexedEvent } from "@modules/events/api"
-import { InjectEventBus } from "@modules/platform/event-bus"
-import type { EventBus } from "@modules/platform/event-bus"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
+import { InjectEventBus, type EventBus } from "@modules/platform/event-bus"
+import { InjectIds, type Ids } from "@modules/platform/ids"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import type { ProgressChange } from "./knowledge-progress.contracts"
@@ -26,21 +19,19 @@ import {
     KNOWLEDGE_UPLOAD_MIME,
     STORAGE_OBJECT_MISSING,
     PUBLIC_DOCUMENT_ORIGIN,
-} from "./knowledge-sources.contracts"
-import type {
-    AddSourceInput,
-    DeletedSource,
-    MaybeNote,
-    MaybeSource,
-    MaybeUploadedFile,
-    ReindexInput,
-    SourceDetail,
-    SourceRef,
-    SourceStatus,
-    SourceSummary,
-    StoredNote,
-    UpdateSourceInput,
-    UploadAddress,
+    type AddSourceInput,
+    type DeletedSource,
+    type MaybeNote,
+    type MaybeSource,
+    type MaybeUploadedFile,
+    type ReindexInput,
+    type SourceDetail,
+    type SourceRef,
+    type SourceStatus,
+    type SourceSummary,
+    type StoredNote,
+    type UpdateSourceInput,
+    type UploadAddress,
 } from "./knowledge-sources.contracts"
 import { InjectKnowledgeStorage } from "./knowledge-sources.decorators"
 import { KnowledgeSourceEntity } from "./persistence/entities"

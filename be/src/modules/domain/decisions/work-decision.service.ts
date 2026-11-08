@@ -1,10 +1,12 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { InjectWorkBranchDecider } from "@modules/domain/authority-rules"
-import type { WorkBranchDecider } from "@modules/domain/authority-rules"
-import { WorkspaceMembersService, canDecide } from "@modules/domain/workspace-members"
-import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { InjectWorkBranchDecider, type WorkBranchDecider } from "@modules/domain/authority-rules"
+import {
+    WorkspaceMembersService,
+    canDecide,
+    type WorkspaceMember,
+    type WorkspaceRole,
+} from "@modules/domain/workspace-members"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
 import { CLAIM_LEASE_SECONDS } from "@modules/domain/work-items"
 import { CommandBusService } from "./command-bus.service"
 import type { CommandResult, WorkContext, WorkItem } from "./decisions.contracts"

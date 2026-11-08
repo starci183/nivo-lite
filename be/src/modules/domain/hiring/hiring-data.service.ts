@@ -1,7 +1,6 @@
 import { randomBytes } from "node:crypto"
 import { Injectable } from "@nestjs/common"
-import { Between, In, IsNull, LessThan } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { Between, In, IsNull, LessThan, type EntityManager } from "typeorm"
 import { WorkItemsDecisionsReadService } from "@modules/domain/work-items"
 import { MemberRosterService, WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
@@ -119,7 +118,7 @@ export class HiringDataService {
             .orderBy("job.createdAt", "ASC")
             .take(CHAT_JOBS_LIMIT)
             .getMany()
-        return rows.map(toJob)
+        return rows.map((row) => toJob(row))
     }
 
     /** The ids of the open and paused jobs. */
@@ -189,7 +188,7 @@ export class HiringDataService {
             order: { slotStart: "ASC" },
             take: REMINDERS_LIMIT,
         })
-        return rows.map(toInterview)
+        return rows.map((row) => toInterview(row))
     }
 
     /** The times an interviewer is taken: confirmed times and the times offered to candidates. */

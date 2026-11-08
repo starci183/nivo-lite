@@ -28,6 +28,6 @@ export class DecisionCorrectionsService implements CorrectionSource {
             .orderBy("d.createdAt", "DESC")
             .limit(limit)
             .getRawMany<CorrectionRow>()
-        return rows.map(toCorrection)
+        return rows.map((row) => toCorrection(row))
     }
 }

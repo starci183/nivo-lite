@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { KnowledgeQueueModule } from "@modules/queues/knowledge"
 import { ApiKnowledgeSourcesService } from "./api-knowledge-sources.service"
 import { KnowledgeProgressService } from "./knowledge-progress.service"

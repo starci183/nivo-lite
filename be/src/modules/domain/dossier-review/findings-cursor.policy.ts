@@ -1,9 +1,8 @@
 import { createHash } from "node:crypto"
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@modules/platform/pagination"
 import { isRecord, parseJsonText } from "@modules/platform/primitives"
-import { FINDING_SEVERITIES } from "./dossier-review.contracts"
+import { FINDING_SEVERITIES, type FindingFilter, type FindingSeverity } from "./dossier-review.contracts"
 import { DossierReviewError, DossierReviewErrorCode } from "./errors/dossier-review.error"
-import type { FindingFilter, FindingSeverity } from "./dossier-review.contracts"
 
 /** Where a page of findings ends: the severity rank, the last time the finding was seen and its id. */
 export interface FindingPosition {

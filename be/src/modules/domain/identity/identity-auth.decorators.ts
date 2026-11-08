@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { IdentityAuthOptions } from "./identity-auth.options"
 
 /** Token of the sign-in options of identity. */

@@ -1,5 +1,4 @@
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import { IdentityErrorCode } from "./errors/identity.error"
 import type { Principal } from "@modules/platform/cqrs"
 import type { IdentityAdmission, PublicMetadata } from "./identity.contracts"

@@ -25,7 +25,7 @@ export const assigneeOf = (item: Pick<WorkItem, "assigned_staff_id">): DecisionA
 })
 
 /** The basis the person wrote with its spaces collapsed; empty when none. */
-export const cleanBasis = (raw: OptionalNote): string => (raw ?? "").trim().replace(/\s+/g, " ")
+export const cleanBasis = (raw: OptionalNote): string => (raw ?? "").trim().replaceAll(/\s+/g, " ")
 
 /** True when the action needs a written basis to be approved and the one given is too short. */
 export const basisMissing = (action: string, basis: string): boolean =>

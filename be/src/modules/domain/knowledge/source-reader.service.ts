@@ -1,8 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { MAX_UPLOAD_BYTES, StoredNote, KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
-import type { SourceRecord } from "@modules/domain/knowledge-sources"
-import { DocumentsErrorCode, InjectDocuments } from "@modules/integrations/documents"
-import type { DocumentsPort } from "@modules/integrations/documents"
+import {
+    MAX_UPLOAD_BYTES,
+    StoredNote,
+    KnowledgeSourcesService,
+    type SourceRecord,
+} from "@modules/domain/knowledge-sources"
+import { DocumentsErrorCode, InjectDocuments, type DocumentsPort } from "@modules/integrations/documents"
 import { ok, refused } from "@modules/platform/primitives"
 import { InjectDriveAccessSource } from "./knowledge.decorators"
 import { needsOcr } from "./scanned-pdf.policy"

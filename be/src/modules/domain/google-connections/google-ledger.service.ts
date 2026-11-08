@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionRecord } from "@modules/domain/connections"
-import { ProviderRegistryError, ProviderRegistryErrorCode } from "@modules/domain/provider-registry"
-import type { BusinessLedgerEntry, LedgerPort } from "@modules/domain/provider-registry"
-import { GoogleError, InjectGoogleClient } from "@modules/integrations/google"
-import type { GoogleClient, SheetCell } from "@modules/integrations/google"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { ConnectionsService, type ConnectionRecord } from "@modules/domain/connections"
+import {
+    ProviderRegistryError,
+    ProviderRegistryErrorCode,
+    type BusinessLedgerEntry,
+    type LedgerPort,
+} from "@modules/domain/provider-registry"
+import { GoogleError, InjectGoogleClient, type GoogleClient, type SheetCell } from "@modules/integrations/google"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { GoogleTokensService } from "./google-tokens.service"
 import {
     dayOf,

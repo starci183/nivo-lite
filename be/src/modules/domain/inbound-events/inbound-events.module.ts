@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { InboundEventRecordsModule } from "./inbound-event-records.module"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./inbound-events.module-definition"
 import { InboxFeedService } from "./inbox-feed.service"

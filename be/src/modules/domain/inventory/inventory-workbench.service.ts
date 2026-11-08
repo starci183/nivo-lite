@@ -1,12 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { LessThan, LessThanOrEqual, MoreThanOrEqual } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { LessThan, LessThanOrEqual, MoreThanOrEqual, type EntityManager } from "typeorm"
 import { WorkspaceMembersService, isManagerRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { InventoryLogEvent } from "./inventory.log-events"
 import type { InventoryWorkbenchView } from "./inventory-workbench.contracts"
 import {
@@ -71,14 +68,14 @@ export class InventoryWorkbenchService {
         return buildInventoryWorkbench(
             {
                 locations,
-                suppliers: suppliers.map(supplierInputOf),
-                items: items.map(itemRowOf),
-                levels: levels.map(levelInputOf),
-                recipes: recipes.map(recipeInputOf),
-                recipeLines: recipeLines.map(recipeLineInputOf),
+                suppliers: suppliers.map((supplier) => supplierInputOf(supplier)),
+                items: items.map((item) => itemRowOf(item)),
+                levels: levels.map((level) => levelInputOf(level)),
+                recipes: recipes.map((recipe) => recipeInputOf(recipe)),
+                recipeLines: recipeLines.map((line) => recipeLineInputOf(line)),
                 pos,
-                poLines: poLines.map(poLineInputOf),
-                movements: movements.map(movementInputOf),
+                poLines: poLines.map((line) => poLineInputOf(line)),
+                movements: movements.map((movement) => movementInputOf(movement)),
                 work,
                 stockOutItemIds: drops === null ? null : drops.map((row) => row.itemId),
             },

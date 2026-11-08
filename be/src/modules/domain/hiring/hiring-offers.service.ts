@@ -2,11 +2,15 @@ import { hiringLinkPrincipal, requireHiringLinkBinding } from "./policies/link-c
 import type { CredentialPrincipal } from "@modules/domain/identity"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ApprovalGate, OfficeLog, ModuleTextGenerator } from "@modules/domain/module-ops"
-import type { PerformContext, PerformResult } from "@modules/domain/module-ops"
+import {
+    ApprovalGate,
+    OfficeLog,
+    ModuleTextGenerator,
+    type PerformContext,
+    type PerformResult,
+} from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { HiringError, HiringErrorCode } from "./errors/hiring.error"
 import type { JobRecord, OfferRecord, OfferTerms } from "./hiring.contracts"

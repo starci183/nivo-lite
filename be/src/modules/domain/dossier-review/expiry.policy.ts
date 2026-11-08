@@ -15,8 +15,8 @@ import {
     factsOfContext,
     isAttribute,
     titlesOf,
+    type RuleFamily,
 } from "./rule-kit.policy"
-import type { RuleFamily } from "./rule-kit.policy"
 
 /** The expiry date a fact gives: the date of an expiry attribute, or the end of validity of a fact of a dossier that tracks expiry. */
 export const expiryOf = (fact: ReviewFact, tracksExpiry: boolean): string | null => {
@@ -74,4 +74,7 @@ const untracked = (inputs: DossierInputs): ReadonlyArray<FindingCandidate> => {
 }
 
 /** expiry.dates: an expiry passed (high) or within 60 days (medium); expiry.untracked: a dossier that tracks expiry records none. */
-export const expiryRules: RuleFamily = (context) => [...dated(context), ...context.dossiers.flatMap(untracked)]
+export const expiryRules: RuleFamily = (context) => [
+    ...dated(context),
+    ...context.dossiers.flatMap((dossier) => untracked(dossier)),
+]

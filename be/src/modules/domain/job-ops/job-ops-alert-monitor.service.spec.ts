@@ -257,7 +257,7 @@ describe("JobOpsAlertMonitorService / checks", () => {
     })
     it.each([
         ["stats-unavailable", () => Promise.resolve(null)],
-        ["stats-error", () => Promise.reject(new Error("driver error with private details"))],
+        ["stats-error", jest.fn().mockRejectedValue(new Error("driver error with private details"))],
     ] as const)("only warns for %s and leaves both cooldowns available", async (reason, readStats) => {
         const { service, jobs, logger, reporter } = await build()
         jobs.stats.mockImplementationOnce(readStats)

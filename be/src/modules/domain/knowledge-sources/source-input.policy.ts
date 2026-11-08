@@ -1,9 +1,13 @@
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import { KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
-import { MAX_SOURCE_CHARS, SOURCE_KINDS } from "./knowledge-sources.contracts"
-import type { AddSourceInput, SourceKind, UpdateSourceInput } from "./knowledge-sources.contracts"
+import {
+    MAX_SOURCE_CHARS,
+    SOURCE_KINDS,
+    type AddSourceInput,
+    type SourceKind,
+    type UpdateSourceInput,
+} from "./knowledge-sources.contracts"
 import type { KnowledgeSourceEntity } from "./persistence/entities"
 
 /** A new source after its input was checked and tidied. */
@@ -194,10 +198,10 @@ export const safeFileName = (name: string): string => {
     const base = name
         .replace(/^.*[\\/]/u, "")
         .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
+        .replaceAll(/\p{Diacritic}/gu, "")
         .replaceAll(D_STROKE, "d")
         .replaceAll(CAPITAL_D_STROKE, "D")
-        .replace(/[^\w.-]+/gu, "_")
+        .replaceAll(/[^\w.-]+/gu, "_")
     let start = 0
     let end = base.length
     while (start < end && base[start] === "_") start += 1

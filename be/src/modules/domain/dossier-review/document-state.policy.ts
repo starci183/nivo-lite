@@ -8,7 +8,7 @@ export const foldKeepLength = (text: string): string =>
         .join("")
 
 /** The folded form of any text: NFC, accents removed, lower case, whitespace collapsed to single spaces. */
-export const foldText = (text: string): string => foldKeepLength(text.normalize("NFC")).replace(/\s+/gu, " ").trim()
+export const foldText = (text: string): string => foldKeepLength(text.normalize("NFC")).replaceAll(/\s+/gu, " ").trim()
 
 /** What names the dossier of a source: its tags and its title. */
 export interface SourceNaming {

@@ -1,5 +1,10 @@
-import { AI_SEVERITIES, DOSSIER_REVIEW_CAPS, FINDING_SEVERITIES, isFindingKind } from "./dossier-review.contracts"
-import type { FindingEvidence } from "./dossier-review.contracts"
+import {
+    AI_SEVERITIES,
+    DOSSIER_REVIEW_CAPS,
+    FINDING_SEVERITIES,
+    isFindingKind,
+    type FindingEvidence,
+} from "./dossier-review.contracts"
 import type { FindingCandidate } from "./dossier-inputs.contracts"
 import { citedIds } from "./fingerprint.policy"
 
@@ -36,7 +41,8 @@ export interface GuardOutcome {
 const SHORT_QUOTE = 8
 
 /** A text compared without composition, case or repeated whitespace. */
-export const normalizeQuote = (text: string): string => text.normalize("NFC").replace(/\s+/gu, " ").trim().toLowerCase()
+export const normalizeQuote = (text: string): string =>
+    text.normalize("NFC").replaceAll(/\s+/gu, " ").trim().toLowerCase()
 
 const isCitation = (item: FindingEvidence): boolean =>
     item.sourceId !== null || item.factId !== null || item.passageId !== null
@@ -65,7 +71,9 @@ export const itemHolds = (item: FindingEvidence, corpus: EvidenceCorpus): boolea
 
 const unitsOf = (evidence: ReadonlyArray<FindingEvidence>): number =>
     new Set(
-        evidence.filter(isCitation).map((item) => (item.factId === null ? `s:${item.sourceId}` : `f:${item.factId}`)),
+        evidence
+            .filter((item) => isCitation(item))
+            .map((item) => (item.factId === null ? `s:${item.sourceId}` : `f:${item.factId}`)),
     ).size
 
 const dropReasonOf = (
@@ -76,7 +84,7 @@ const dropReasonOf = (
     const severities: ReadonlyArray<string> = candidate.origin === "ai" ? AI_SEVERITIES : FINDING_SEVERITIES
     if (!isFindingKind(candidate.kind)) return "bad_kind"
     if (!severities.includes(candidate.severity)) return "bad_severity"
-    const cited = evidence.filter(isCitation).length
+    const cited = evidence.filter((item) => isCitation(item)).length
     if (candidate.origin === "ai" ? cited === 0 : evidence.length === 0) return "no_evidence"
     if (candidate.kind === "contradiction" && unitsOf(evidence) < 2) return "single_source_contradiction"
     const ids = citedIds(evidence)

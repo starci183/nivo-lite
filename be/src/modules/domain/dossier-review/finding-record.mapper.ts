@@ -1,6 +1,13 @@
-import { isFindingKind, isFindingSeverity, isRemedyAction } from "./dossier-review.contracts"
+import {
+    isFindingKind,
+    isFindingSeverity,
+    isRemedyAction,
+    type DossierReviewRecord,
+    type FindingRecord,
+    type RemedyDraftRecord,
+    type ReviewRunRecord,
+} from "./dossier-review.contracts"
 import type { DossierRef } from "./dossier-inputs.contracts"
-import type { DossierReviewRecord, FindingRecord, RemedyDraftRecord, ReviewRunRecord } from "./dossier-review.contracts"
 import type {
     DossierFindingEntity,
     DossierRemedyDraftEntity,

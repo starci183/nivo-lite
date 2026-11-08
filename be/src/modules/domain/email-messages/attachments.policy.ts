@@ -10,7 +10,7 @@ const FILENAME_MAX = 80
 /** The files in the shape the mail integration sends, at most three, with names a mail client reads safely. */
 export const mailAttachmentsOf = (list: ReadonlyArray<EmailAttachment>): ReadonlyArray<MailAttachment> =>
     list.slice(0, MAX_ATTACHMENTS).map((attachment) => ({
-        filename: attachment.filename.replace(/[^\w.\- ]+/gu, "_").slice(0, FILENAME_MAX) || "attachment",
+        filename: attachment.filename.replaceAll(/[^\w.\- ]+/gu, "_").slice(0, FILENAME_MAX) || "attachment",
         content: Buffer.from(attachment.content, attachment.encoding === "base64" ? "base64" : "utf8"),
         ...(attachment.contentType === undefined ? {} : { contentType: attachment.contentType }),
     }))

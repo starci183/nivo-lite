@@ -47,13 +47,13 @@ export const amountOf = (fact: ReviewFact): number | null => {
     if (match === null) return null
     const digits = match[0].trim()
     const grouped = /^\d{1,3}(?:[.,\s]\d{3})+$/u.test(digits)
-    const base = grouped ? Number(digits.replace(/[.,\s]/gu, "")) : Number(digits.replace(",", "."))
+    const base = grouped ? Number(digits.replaceAll(/[.,\s]/gu, "")) : Number(digits.replace(",", "."))
     const scale = MULTIPLIERS.find(([pattern]) => pattern.test(folded))?.[1] ?? 1
     return base * scale
 }
 
 /** The digits of an identifier a fact gives. */
-export const digitsOf = (value: string): string => value.replace(/\D/gu, "")
+export const digitsOf = (value: string): string => value.replaceAll(/\D/gu, "")
 
 /** The date a fact's value gives, else the start of its validity; null when it gives none. */
 export const dateOfFact = (fact: ReviewFact): string | null => dateIn(fact.value) ?? fact.validFrom

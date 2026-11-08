@@ -1,10 +1,8 @@
 import { foldKeepLength } from "./document-state.policy"
-import { REPEALED_CITATIONS } from "./pack-vocabulary.policy"
-import type { RepealedCitation } from "./pack-vocabulary.policy"
+import { REPEALED_CITATIONS, type RepealedCitation } from "./pack-vocabulary.policy"
 import type { FindingEvidence } from "./dossier-review.contracts"
 import type { DossierInputs, FindingCandidate } from "./dossier-inputs.contracts"
-import { candidateOf, displayDate, documentsIn, passageEvidence, quoteAround } from "./rule-kit.policy"
-import type { RuleFamily } from "./rule-kit.policy"
+import { candidateOf, displayDate, documentsIn, passageEvidence, quoteAround, type RuleFamily } from "./rule-kit.policy"
 
 const citationsOf = (inputs: DossierInputs, citation: RepealedCitation): ReadonlyArray<FindingCandidate> => {
     const evidence: Array<FindingEvidence> = []

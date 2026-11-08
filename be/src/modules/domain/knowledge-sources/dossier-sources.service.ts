@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { ArrayContains, In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { ArrayContains, In, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { DOSSIER_SOURCES_MAX } from "./dossier-sources.contracts"
-import type { DossierSource, MaybeDossierSource } from "./dossier-sources.contracts"
+import { DOSSIER_SOURCES_MAX, type DossierSource, type MaybeDossierSource } from "./dossier-sources.contracts"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 
 /** The columns the review reads: everything but the text. */
@@ -53,7 +51,7 @@ export class DossierSourcesService {
             order: { createdAt: "ASC", id: "ASC" },
             take: Math.min(limit, DOSSIER_SOURCES_MAX),
         })
-        return rows.map(toDossierSource)
+        return rows.map((row) => toDossierSource(row))
     }
 
     /** Every document of the workspace that was read (ready), oldest first, at most `limit` and never more than the read bound: the review files them under dossiers or reads them on their own. */
@@ -64,7 +62,7 @@ export class DossierSourcesService {
             order: { createdAt: "ASC", id: "ASC" },
             take: Math.min(limit, DOSSIER_SOURCES_MAX),
         })
-        return rows.map(toDossierSource)
+        return rows.map((row) => toDossierSource(row))
     }
 
     /** Files a document under a dossier: its topic becomes the dossier's category and its tags the given ones. */

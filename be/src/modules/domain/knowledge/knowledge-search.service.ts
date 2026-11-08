@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { KnowledgeChunksService, toVector } from "@modules/domain/knowledge-chunks"
-import type { ChunkHit } from "@modules/domain/knowledge-chunks"
+import { KnowledgeChunksService, toVector, type ChunkHit } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import { catalogAudienceOf } from "@modules/domain/module-audiences"
 import { NivoKnowledgeSearchService } from "@modules/domain/nivo-knowledge"

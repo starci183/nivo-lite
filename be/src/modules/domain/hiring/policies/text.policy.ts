@@ -21,7 +21,7 @@ export const clip = (value: string, max: number): string => value.trim().slice(0
 
 /** Lower case, no accents, the letter d with a stroke as d. */
 export const fold = (text: string): string =>
-    text.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(D_WITH_STROKE, "d")
+    text.toLowerCase().normalize("NFD").replaceAll(/\p{M}/gu, "").replaceAll(D_WITH_STROKE, "d")
 
 /** Removes boundary dashes in one pass. */
 const trimDashes = (text: string): string => {
@@ -34,7 +34,7 @@ const trimDashes = (text: string): string => {
 
 /** The URL slug of a title: ascii, lower case, dashes, cut to `max` characters. */
 export const slugify = (text: string, max = 60): string =>
-    trimDashes(trimDashes(fold(text).replace(/[^a-z0-9]+/gu, "-")).slice(0, max))
+    trimDashes(trimDashes(fold(text).replaceAll(/[^a-z0-9]+/gu, "-")).slice(0, max))
 
 /** True for the token shape of an interview or offer link. */
 export const isToken = (value: string): boolean => TOKEN_PATTERN.test(value)
@@ -51,11 +51,11 @@ export const isEmailAddress = (value: string): boolean => {
 
 /** A Vietnamese phone number as digits with a leading zero (+84 and 84 are rewritten); null when it cannot be one. */
 export const normalizePhone = (raw: string): string | null => {
-    const kept = raw.replace(/[^\d+]/gu, "")
+    const kept = raw.replaceAll(/[^\d+]/gu, "")
     let digits = kept
     if (kept.startsWith("+84")) digits = `0${kept.slice(3)}`
     else if (kept.startsWith("84") && kept.length >= 11) digits = `0${kept.slice(2)}`
-    const plain = digits.replace(/\D/gu, "")
+    const plain = digits.replaceAll(/\D/gu, "")
     return PHONE_PATTERN.test(plain) ? plain : null
 }
 

@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AuthorityChatService } from "./authority-chat.service"
 import { FlowEngineService } from "./flow-engine.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./flow-engine.module-definition"

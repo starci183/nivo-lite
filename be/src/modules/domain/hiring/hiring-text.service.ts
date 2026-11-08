@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import type { TextOf } from "./hiring.contracts"
 import { vnClockText } from "./policies/vn-time.policy"
 

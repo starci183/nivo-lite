@@ -1,19 +1,19 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { In, type EntityManager } from "typeorm"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { unwrapOutcome } from "@modules/platform/primitives"
-import { InjectKnowledgeQueue } from "@modules/queues/knowledge"
-import type { KnowledgeQueue } from "@modules/queues/knowledge"
+import { InjectKnowledgeQueue, type KnowledgeQueue } from "@modules/queues/knowledge"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import { KnowledgeProgressService } from "./knowledge-progress.service"
-import { PUBLIC_DOCUMENT_ORIGIN } from "./knowledge-sources.contracts"
-import type { PublishedSourceInput, SourceRef, SourceStatus } from "./knowledge-sources.contracts"
+import {
+    PUBLIC_DOCUMENT_ORIGIN,
+    type PublishedSourceInput,
+    type SourceRef,
+    type SourceStatus,
+} from "./knowledge-sources.contracts"
 import { KnowledgeSourceEntity } from "./persistence/entities"
-import { normalizeSource, requeued } from "./source-input.policy"
-import type { NormalizedSource } from "./source-input.policy"
+import { normalizeSource, requeued, type NormalizedSource } from "./source-input.policy"
 import { SourceQuotaService } from "./source-quota.service"
 
 /** The statuses of a source no worker is on: only such a source is read again. */

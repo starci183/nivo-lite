@@ -1,12 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AuthorityService } from "@modules/domain/authority"
-import type { AuthorityPatch, AuthorityProfile } from "@modules/domain/authority"
+import { AuthorityService, type AuthorityPatch, type AuthorityProfile } from "@modules/domain/authority"
 import { AuthorityActionsService, ruleRefusalOf } from "@modules/domain/authority-actions"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import type { AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
+import { AuthorityRulesService, type AuthorityRuleRecord, type RuleChange } from "@modules/domain/authority-rules"
+import { WorkspaceMembersService, type WorkspaceMember, type WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { WorkContext, WorkItem } from "./decisions.contracts"
 import type { AuthoritySheet, ListWorkItemsQuery, WorkItemPage } from "./decisions-views.contracts"
@@ -48,7 +45,7 @@ export class DecisionsService {
             limit: size + 1,
         })
         const page = splitPage(fetched, size)
-        return { items: page.rows.map(withoutCursor), next: page.next }
+        return { items: page.rows.map((row) => withoutCursor(row)), next: page.next }
     }
 
     /** One work item of the workspace; any member may read. */

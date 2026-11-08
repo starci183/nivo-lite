@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ModuleJobsQueueModule } from "@modules/queues/module-jobs"
 import { ENGINE_FAILURE_ALERTS, ENTITY_ENGINE_OPTIONS } from "./entity-engine.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./entity-engine.module-definition"

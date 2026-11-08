@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { HiringOptions } from "./hiring.options"
 
 /** Token of the options of the hiring capability, exported so a spec can provide it. */

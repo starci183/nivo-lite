@@ -6,8 +6,8 @@ import {
     MEMBER_CAPITAL_ATTRIBUTES,
     REGISTRATION_ATTRIBUTES,
     SHARE_ATTRIBUTES,
+    type Invariant,
 } from "./pack-vocabulary.policy"
-import type { Invariant } from "./pack-vocabulary.policy"
 import { DOSSIER_REVIEW_CAPS } from "./dossier-review.contracts"
 import type { DossierInputs, FindingCandidate, ReviewContext, ReviewFact } from "./dossier-inputs.contracts"
 import {
@@ -23,8 +23,8 @@ import {
     factsOfContext,
     isAttribute,
     titlesOf,
+    type RuleFamily,
 } from "./rule-kit.policy"
-import type { RuleFamily } from "./rule-kit.policy"
 
 /** The tolerance between a member's capital and its share of the charter capital, in VND. */
 const CAPITAL_TOLERANCE = 1_000

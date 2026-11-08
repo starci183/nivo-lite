@@ -1,5 +1,4 @@
-import { z } from "zod"
-import type { ZodType } from "zod"
+import { z, type ZodType } from "zod"
 
 /** A quote the model cites: the key of a passage or fact of the bundle and the words copied from it. */
 const citedQuote = z.object({ key: z.string().max(16), quote: z.string().max(300) })

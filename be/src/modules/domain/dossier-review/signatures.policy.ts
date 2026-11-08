@@ -9,8 +9,8 @@ import {
     expectedEvidence,
     passageEvidence,
     quoteAround,
+    type RuleFamily,
 } from "./rule-kit.policy"
-import type { RuleFamily } from "./rule-kit.policy"
 
 /** Blanks left to fill in: runs of ellipses or of dots, an empty, dotted or underscored bracket, a bracketed figure to choose before a per cent sign. */
 const BLANKS: ReadonlyArray<RegExp> = [

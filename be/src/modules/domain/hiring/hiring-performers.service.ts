@@ -1,5 +1,4 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { ActionPerformerRegistry } from "@modules/domain/module-ops"
 import { HiringInterviewsService } from "./hiring-interviews.service"
 import { HiringOffersService } from "./hiring-offers.service"

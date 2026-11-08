@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { LessThan } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { LessThan, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { CashInvoice, InvoicedPeriod } from "./invoices-cash-read.contracts"
 import { InvoiceEntity } from "./persistence/entities"
@@ -55,7 +54,7 @@ export class InvoicesCashReadService {
             .addOrderBy("i.invoiceNo", "ASC")
             .limit(limit)
             .getMany()
-        return rows.map(toCash)
+        return rows.map((row) => toCash(row))
     }
 
     /** The contract-bound invoices paid in the period, the earliest payment first. */
@@ -71,7 +70,7 @@ export class InvoicesCashReadService {
             .addOrderBy("i.invoiceNo", "ASC")
             .limit(limit)
             .getMany()
-        return rows.map(toCash)
+        return rows.map((row) => toCash(row))
     }
 
     /** The issued invoices that fall due before an instant, the earliest due date first. */
@@ -82,7 +81,7 @@ export class InvoicesCashReadService {
             order: { dueAt: "ASC", invoiceNo: "ASC" },
             take: limit,
         })
-        return rows.map(toCash)
+        return rows.map((row) => toCash(row))
     }
 
     /** The periods the given contracts were already invoiced for, cancelled invoices left out. */

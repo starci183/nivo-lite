@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { EngineFailureAlerts } from "./entity-engine.contracts"
 import type { EntityEngineOptions } from "./entity-engine.options"
 

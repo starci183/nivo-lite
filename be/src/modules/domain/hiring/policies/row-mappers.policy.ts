@@ -1,16 +1,16 @@
-import type {
-    EmploymentType,
-    HiringSettings,
-    JobQuestion,
-    JobRecord,
-    JobRequirements,
-    JobStatus,
-    PayUnit,
-    QuestionExpect,
-    QuestionType,
-    Stage,
+import {
+    type EmploymentType,
+    type HiringSettings,
+    type JobQuestion,
+    type JobRecord,
+    type JobRequirements,
+    type JobStatus,
+    type PayUnit,
+    type QuestionExpect,
+    type QuestionType,
+    type Stage,
+    STAGES,
 } from "../hiring.contracts"
-import { STAGES } from "../hiring.contracts"
 import type {
     HiringJobEntity,
     HiringJobQuestion,
@@ -117,7 +117,7 @@ export const toJob = (row: HiringJobEntity): JobRecord => ({
     headcount: row.headcount,
     description: row.description,
     requirements: toRequirements(row.requirements),
-    questions: (row.questions ?? []).map(toQuestion),
+    questions: (row.questions ?? []).map((question) => toQuestion(question)),
     status: pick(JOB_STATUSES, row.status, "draft"),
     channels: row.channels,
     closesAt: isoOrNull(row.closesAt),

@@ -19,8 +19,8 @@ import {
     isAttribute,
     remedyActionOf,
     titlesOf,
+    type RuleFamily,
 } from "./rule-kit.policy"
-import type { RuleFamily } from "./rule-kit.policy"
 
 /** The latest past occurrence of an event among the facts: the fact and its date. */
 export const latestEvent = (

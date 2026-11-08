@@ -1,7 +1,7 @@
 import { factSlugOf } from "@modules/domain/brain-facts"
 import type { EventKey, RoleKey } from "./dossier-inputs.contracts"
 
-const slugs = (aliases: ReadonlyArray<string>): ReadonlyArray<string> => aliases.map(factSlugOf)
+const slugs = (aliases: ReadonlyArray<string>): ReadonlyArray<string> => aliases.map((alias) => factSlugOf(alias))
 
 /** A value every document must agree on, the aliases of its attribute, and the dossier its finding is filed under. */
 export interface Invariant {

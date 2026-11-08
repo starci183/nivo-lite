@@ -1,13 +1,18 @@
 import { Injectable } from "@nestjs/common"
 import type { ConnectionActor } from "@modules/domain/connections"
-import { InjectDatabase } from "@modules/integrations/data-sources"
-import type { DatabaseClient, DatabasePreview, DatabaseTable, DatabaseTarget } from "@modules/integrations/data-sources"
-import { DATABASE_SCHEDULES } from "./database-config.contracts"
-import type {
-    DatabasePreviewDraft,
-    DatabaseSaveDraft,
-    DatabaseTestDraft,
-    SavedDatabase,
+import {
+    InjectDatabase,
+    type DatabaseClient,
+    type DatabasePreview,
+    type DatabaseTable,
+    type DatabaseTarget,
+} from "@modules/integrations/data-sources"
+import {
+    DATABASE_SCHEDULES,
+    type DatabasePreviewDraft,
+    type DatabaseSaveDraft,
+    type DatabaseTestDraft,
+    type SavedDatabase,
 } from "./database-config.contracts"
 import {
     checkTarget,

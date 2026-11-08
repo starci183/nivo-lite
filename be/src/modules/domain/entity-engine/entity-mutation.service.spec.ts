@@ -189,7 +189,7 @@ describe("EntityMutationService insert", () => {
 describe("EntityMutationService database failures", () => {
     const failing = async (error: Error) => {
         const built = await build(mockEntityManager())
-        queueQueryBuilders(built.em, [{ execute: () => Promise.reject(error) }])
+        queueQueryBuilders(built.em, [{ execute: jest.fn().mockRejectedValue(error) }])
         return built
     }
 
@@ -419,7 +419,7 @@ describe("EntityMutationService link and unlink", () => {
         const { mutations, em } = await build(mockEntityManager({ findOne: [RecordEntity, storedLead] }))
         queueQueryBuilders(em, [
             { execute: {} },
-            { execute: () => Promise.reject(pgError("23503", "record_links_to_fkey")) },
+            { execute: jest.fn().mockRejectedValue(pgError("23503", "record_links_to_fkey")) },
         ])
 
         await expect(mutations.mutate(txOf(em), LINK, "action")).resolves.toEqual({
