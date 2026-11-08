@@ -78,7 +78,7 @@ describe("node examples", () => {
     })
 
     it("names a thrown value that is no error", async () => {
-        const throws = trusted<NodeDefinition>({ ...greet, run: () => Promise.reject("raw") })
+        const throws = trusted<NodeDefinition>({ ...greet, run: jest.fn().mockRejectedValue("raw") })
         await expect(nodeExampleMismatches(throws, { ...greets, model: [] }, [send])).resolves.toEqual(["threw raw"])
     })
 })
