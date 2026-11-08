@@ -20,6 +20,7 @@ type SmtpAccountStepProps = {
 export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
     const { account, text } = props
     const locked = props.isLocked || props.isPending
+    const loading = props.isLoading === undefined ? {} : { isLoading: props.isLoading }
     return (
         <>
             <Stack gap="section">
@@ -44,7 +45,7 @@ export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
                 {account.showHost ? renderSmtpAccountStepServerFields(text, locked, account, props) : null}
                 {account.showUser ? (
                     <Input
-                        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                        {...loading}
                         id="smtp-user"
                         name="user"
                         label={text.fieldUser}
@@ -57,12 +58,12 @@ export const SmtpAccountStep = (props: SmtpAccountStepProps) => {
                 {account.showPassword ? renderSmtpAccountStepPassword(account, locked, props) : null}
             </Stack>
             {account.fixedUserNote === null ? null : (
-                <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="xs" tone="muted">
+                <Text {...loading} size="xs" tone="muted">
                     {account.fixedUserNote}
                 </Text>
             )}
             {account.prefilledNote === null ? null : (
-                <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="xs" tone="muted">
+                <Text {...loading} size="xs" tone="muted">
                     {account.prefilledNote}
                 </Text>
             )}

@@ -87,16 +87,13 @@ interface DatabaseTablePreviewProps {
 /** One picked table: what its rows are, the id / title / updated-at columns, the columns to bring, and a 5-row preview. */
 export const DatabaseTableMapper = (props: DatabaseTableMapperProps) => {
     const { props: view, on } = props
+    const loading = view.isLoading === undefined ? {} : { isLoading: view.isLoading }
     return (
-        <Section
-            {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
-            title={view.title}
-            headingLevel={4}
-        >
+        <Section {...loading} title={view.title} headingLevel={4}>
             <Stack gap="section">
                 <DatabaseMappingColumns {...props} />
                 <CheckboxGroup
-                    {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
+                    {...loading}
                     label={view.text.columns}
                     isDisabled={view.isDisabled}
                     options={view.names.map((name) => ({ value: name.id, label: name.label }))}
@@ -110,7 +107,7 @@ export const DatabaseTableMapper = (props: DatabaseTableMapperProps) => {
                 )}
                 <Cluster gap="inline">
                     <Button
-                        {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
+                        {...loading}
                         intent="neutral"
                         isPending={view.isPreviewing}
                         isDisabled={!view.canPreview}
@@ -119,16 +116,10 @@ export const DatabaseTableMapper = (props: DatabaseTableMapperProps) => {
                         {view.text.preview}
                     </Button>
                 </Cluster>
-                {view.error === null ? null : (
-                    <Alert
-                        {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
-                        tone="negative"
-                        title={view.error}
-                    />
-                )}
+                {view.error === null ? null : <Alert {...loading} tone="negative" title={view.error} />}
                 {view.lines === null ? null : (
                     <DatabaseTablePreviewView
-                        {...(view.isLoading === undefined ? {} : { isLoading: view.isLoading })}
+                        {...loading}
                         id={view.id}
                         title={view.previewTitle}
                         empty={view.text.previewEmpty}

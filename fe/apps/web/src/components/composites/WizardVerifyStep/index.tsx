@@ -15,42 +15,41 @@ type WizardVerifyStepProps = {
 }
 
 /** Waits for the first event of a connection and says plainly what the owner should do meanwhile. */
-export const WizardVerifyStep = (props: WizardVerifyStepProps) => (
-    <>
-        {props.help === undefined ? null : (
-            <Stack gap="inline">
-                {props.help.steps.length === 0 ? (
-                    <Text size="sm">{props.help.intro}</Text>
-                ) : (
-                    <Section
-                        kind="list"
-                        title={props.help.intro}
-                        headingLevel={4}
-                        empty={<Text>{props.waiting}</Text>}
-                        items={props.help.steps.map((step, index) => ({
-                            id: String(index),
-                            title: step,
-                            leading: { position: index + 1 },
-                        }))}
-                    />
-                )}
-            </Stack>
-        )}
-        {props.received === null ? (
-            <Text size="sm" isStrong live="polite">
-                {props.waiting}
-            </Text>
-        ) : (
-            <Alert
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                tone="affirmative"
-                title={props.received}
-            />
-        )}
-        {props.failed !== null && props.received === null ? (
-            <Text size="xs" tone="muted">
-                {props.failed}
-            </Text>
-        ) : null}
-    </>
-)
+export const WizardVerifyStep = (props: WizardVerifyStepProps) => {
+    const loading = props.isLoading === undefined ? {} : { isLoading: props.isLoading }
+    return (
+        <>
+            {props.help === undefined ? null : (
+                <Stack gap="inline">
+                    {props.help.steps.length === 0 ? (
+                        <Text size="sm">{props.help.intro}</Text>
+                    ) : (
+                        <Section
+                            kind="list"
+                            title={props.help.intro}
+                            headingLevel={4}
+                            empty={<Text>{props.waiting}</Text>}
+                            items={props.help.steps.map((step, index) => ({
+                                id: String(index),
+                                title: step,
+                                leading: { position: index + 1 },
+                            }))}
+                        />
+                    )}
+                </Stack>
+            )}
+            {props.received === null ? (
+                <Text size="sm" isStrong live="polite">
+                    {props.waiting}
+                </Text>
+            ) : (
+                <Alert {...loading} tone="affirmative" title={props.received} />
+            )}
+            {props.failed !== null && props.received === null ? (
+                <Text size="xs" tone="muted">
+                    {props.failed}
+                </Text>
+            ) : null}
+        </>
+    )
+}

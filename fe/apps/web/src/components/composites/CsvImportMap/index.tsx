@@ -40,66 +40,63 @@ interface CsvImportMapProps extends CsvImportMapView {
 }
 
 /** The mapping step: which column is the id, the title and the date, what is read automatically, and the first rows. */
-export const CsvImportMap = (props: CsvImportMapProps) => (
-    <>
-        {props.missing === null ? null : (
-            <Alert
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                tone="cautionary"
-                title={props.missing}
-            />
-        )}
-        <Text size="sm" tone="muted">
-            {props.intro}
-        </Text>
-        {props.sheet === null ? null : (
-            <Select
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                label={props.text.sheetLabel}
-                isDisabled={props.isDisabled}
-                value={props.sheet.value}
-                options={[...props.sheet.options]}
-                onValueChange={(value) => {
-                    if (value) props.on.sheet(value)
-                }}
-            />
-        )}
-        <Grid kind="form" columns={2}>
-            {csvColumnsOf(props).map((column) => (
-                <Select
-                    key={column.name}
-                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                    label={column.label}
-                    isDisabled={props.isDisabled}
-                    value={props.values[column.name]}
-                    options={column.options}
-                    onValueChange={(value) => props.on.column(column.name, value)}
-                />
-            ))}
-        </Grid>
-        <Text size="xs" tone="muted">
-            {props.text.mapIdHint}
-        </Text>
-        {props.kinds === null ? null : (
-            <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="xs" tone="muted">
-                {props.kinds}
+export const CsvImportMap = (props: CsvImportMapProps) => {
+    const loading = props.isLoading === undefined ? {} : { isLoading: props.isLoading }
+    return (
+        <>
+            {props.missing === null ? null : <Alert {...loading} tone="cautionary" title={props.missing} />}
+            <Text size="sm" tone="muted">
+                {props.intro}
             </Text>
-        )}
-        <DataTable
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-            label={props.text.previewLabel}
-            columns={props.headers.map((header, at) => ({ id: String(at), label: header, isRowHeader: at === 0 }))}
-            rows={props.sample.map((cells, at) => ({ id: String(at), cells }))}
-            renderCell={(row, column) => row.cells[Number(column)] ?? ""}
-            maxBlockSize="20rem"
-            emptyContent={
-                <Text size="sm" tone="muted">
-                    {props.text.previewEmpty}
+            {props.sheet === null ? null : (
+                <Select
+                    {...loading}
+                    label={props.text.sheetLabel}
+                    isDisabled={props.isDisabled}
+                    value={props.sheet.value}
+                    options={[...props.sheet.options]}
+                    onValueChange={(value) => {
+                        if (value) props.on.sheet(value)
+                    }}
+                />
+            )}
+            <Grid kind="form" columns={2}>
+                {csvColumnsOf(props).map((column) => (
+                    <Select
+                        key={column.name}
+                        {...loading}
+                        label={column.label}
+                        isDisabled={props.isDisabled}
+                        value={props.values[column.name]}
+                        options={column.options}
+                        onValueChange={(value) => props.on.column(column.name, value)}
+                    />
+                ))}
+            </Grid>
+            <Text size="xs" tone="muted">
+                {props.text.mapIdHint}
+            </Text>
+            {props.kinds === null ? null : (
+                <Text {...loading} size="xs" tone="muted">
+                    {props.kinds}
                 </Text>
-            }
-        />
-    </>
-)
+            )}
+            <DataTable
+                {...loading}
+                label={props.text.previewLabel}
+                columns={props.headers.map((header, at) => ({ id: String(at), label: header, isRowHeader: at === 0 }))}
+                rows={props.sample.map((cells, at) => ({ id: String(at), cells }))}
+                renderCell={(row, column) => row.cells[Number(column)] ?? ""}
+                maxBlockSize="20rem"
+                emptyContent={
+                    <Text size="sm" tone="muted">
+                        {props.text.previewEmpty}
+                    </Text>
+                }
+            />
+        </>
+    )
+}
 
 interface CsvColumnChoice {
     readonly name: CsvMapColumn

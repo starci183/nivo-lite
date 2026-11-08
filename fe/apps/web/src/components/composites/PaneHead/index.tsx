@@ -35,6 +35,7 @@ interface PaneHeadProps extends PaneHeaderProps {
  */
 export const PaneHead = (props: PaneHeadProps) => {
     const { primary, secondary, close, primaryOnPhone, actions, ...head } = props
+    const secondaryStart = secondary?.startContent === undefined ? {} : { startContent: secondary.startContent }
     return (
         <PaneSection align="center">
             <PaneHeader
@@ -51,9 +52,7 @@ export const PaneHead = (props: PaneHeadProps) => {
                                               intent="alternative"
                                               size="sm"
                                               onPress={secondary.onPress}
-                                              {...(secondary.startContent === undefined
-                                                  ? {}
-                                                  : { startContent: secondary.startContent })}
+                                              {...secondaryStart}
                                           >
                                               {secondary.label}
                                           </Button>

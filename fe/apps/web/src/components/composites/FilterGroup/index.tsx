@@ -43,6 +43,7 @@ export const FilterGroup = (props: FilterGroupProps) => {
     const template = props.choice?.moreLabel
     const moreLabel =
         template === undefined ? undefined : (count: number): string => template.replace("{count}", String(count))
+    const more = moreLabel === undefined ? {} : { moreLabel }
     return (
         <Stack gap="row">
             {props.search === undefined ? null : (
@@ -68,7 +69,7 @@ export const FilterGroup = (props: FilterGroupProps) => {
                         label: option.label,
                         ...(option.count === undefined ? {} : { count: option.count }),
                     }))}
-                    {...(moreLabel === undefined ? {} : { moreLabel })}
+                    {...more}
                 />
             )}
         </Stack>

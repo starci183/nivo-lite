@@ -31,11 +31,12 @@ type OpenApiAuthStepProps = {
 /** Step "auth" of the OpenAPI wizard: base URL, auth type and the key, token or user and password. */
 export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
     const { values, text, isDisabled, onField } = props
+    const loading = props.isLoading === undefined ? {} : { isLoading: props.isLoading }
     const keyed = values.authType === "header" || values.authType === "query"
     return (
         <Stack gap="section">
             <Input
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                {...loading}
                 id="oa-base"
                 name="baseUrl"
                 label={text.baseUrl}
@@ -45,7 +46,7 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
                 onValueChange={(value) => onField("baseUrl", value)}
             />
             <Select
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                {...loading}
                 label={text.auth}
                 options={props.options}
                 value={values.authType}
@@ -53,7 +54,7 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
             />
             {keyed ? (
                 <Input
-                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                    {...loading}
                     id="oa-auth-name"
                     name="authName"
                     label={text.authName}
@@ -65,7 +66,7 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
             ) : null}
             {keyed || values.authType === "bearer" ? (
                 <Input
-                    {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                    {...loading}
                     id="oa-auth-value"
                     name="authValue"
                     label={text.authValue}
@@ -79,7 +80,7 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
             {values.authType === "basic" ? (
                 <>
                     <Input
-                        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                        {...loading}
                         id="oa-auth-user"
                         name="authUser"
                         label={text.user}
@@ -88,7 +89,7 @@ export const OpenApiAuthStep = (props: OpenApiAuthStepProps) => {
                         onValueChange={(value) => onField("authUser", value)}
                     />
                     <Input
-                        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+                        {...loading}
                         id="oa-auth-pass"
                         name="authPass"
                         label={text.password}

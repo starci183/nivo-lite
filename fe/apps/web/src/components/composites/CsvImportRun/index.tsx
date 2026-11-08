@@ -18,33 +18,25 @@ interface CsvImportRunProps {
 }
 
 /** The import step: what will be imported, the refresh schedule of a sheet, and the outcome once it ran. */
-export const CsvImportRun = (props: CsvImportRunProps) => (
-    <>
-        <Text size="sm">{props.intro}</Text>
-        {props.schedule === null ? null : (
-            <Select
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                label={props.schedule.label}
-                isDisabled={props.isDisabled || props.done !== null}
-                value={props.schedule.value}
-                options={[...props.schedule.options]}
-                onValueChange={props.onSchedule}
-            />
-        )}
-        {props.done === null ? null : (
-            <Alert
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                tone="affirmative"
-                title={props.done.title}
-                description={props.done.description}
-            />
-        )}
-        {props.done?.skipped ? (
-            <Alert
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                tone="informative"
-                title={props.done.skipped}
-            />
-        ) : null}
-    </>
-)
+export const CsvImportRun = (props: CsvImportRunProps) => {
+    const loading = props.isLoading === undefined ? {} : { isLoading: props.isLoading }
+    return (
+        <>
+            <Text size="sm">{props.intro}</Text>
+            {props.schedule === null ? null : (
+                <Select
+                    {...loading}
+                    label={props.schedule.label}
+                    isDisabled={props.isDisabled || props.done !== null}
+                    value={props.schedule.value}
+                    options={[...props.schedule.options]}
+                    onValueChange={props.onSchedule}
+                />
+            )}
+            {props.done === null ? null : (
+                <Alert {...loading} tone="affirmative" title={props.done.title} description={props.done.description} />
+            )}
+            {props.done?.skipped ? <Alert {...loading} tone="informative" title={props.done.skipped} /> : null}
+        </>
+    )
+}

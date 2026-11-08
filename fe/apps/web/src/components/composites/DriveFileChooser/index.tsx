@@ -37,20 +37,17 @@ type DriveFileChooserProps = {
  */
 export const DriveFileChooser = (props: DriveFileChooserProps) => {
     const { link, listing } = props.props
+    const loading = props.props.isLoading === undefined ? {} : { isLoading: props.props.isLoading }
     return (
         <>
             {props.props.pickLabel === undefined ? null : (
-                <Button
-                    {...(props.props.isLoading === undefined ? {} : { isLoading: props.props.isLoading })}
-                    intent="neutral"
-                    onPress={props.on.pick}
-                >
+                <Button {...loading} intent="neutral" onPress={props.on.pick}>
                     {props.props.pickLabel}
                 </Button>
             )}
             <Grid kind="form" columns={1}>
                 <Input
-                    {...(props.props.isLoading === undefined ? {} : { isLoading: props.props.isLoading })}
+                    {...loading}
                     id="drive-folder-link"
                     name="driveFolderLink"
                     label={link.label}
@@ -61,7 +58,7 @@ export const DriveFileChooser = (props: DriveFileChooserProps) => {
                 />
             </Grid>
             <Button
-                {...(props.props.isLoading === undefined ? {} : { isLoading: props.props.isLoading })}
+                {...loading}
                 intent="neutral"
                 isPending={link.isReading}
                 isDisabled={link.value.trim() === ""}
@@ -71,7 +68,7 @@ export const DriveFileChooser = (props: DriveFileChooserProps) => {
             </Button>
             {props.props.error === "" ? null : (
                 <Alert
-                    {...(props.props.isLoading === undefined ? {} : { isLoading: props.props.isLoading })}
+                    {...loading}
                     tone="negative"
 
                     title={props.props.error}
@@ -79,19 +76,13 @@ export const DriveFileChooser = (props: DriveFileChooserProps) => {
             )}
             {props.props.added === "" ? null : (
                 <Alert
-                    {...(props.props.isLoading === undefined ? {} : { isLoading: props.props.isLoading })}
+                    {...loading}
                     tone="affirmative"
 
                     title={props.props.added}
                 />
             )}
-            {listing === undefined ? null : (
-                <DriveListingBand
-                    {...(props.props.isLoading === undefined ? {} : { isLoading: props.props.isLoading })}
-                    listing={listing}
-                    on={props.on}
-                />
-            )}
+            {listing === undefined ? null : <DriveListingBand {...loading} listing={listing} on={props.on} />}
         </>
     )
 }
