@@ -381,7 +381,7 @@
 {"findings":[],"hash":"799f3490c11db5d5905809df89cea657155c41568d945ca5a70ca7f8d808130f","path":"fe/apps/web/src/components/blocks/HiringApplyForm/classNames.ts","step":"prettier"}
 {"findings":[],"hash":"16b1fb823985b63aa4b61a82402f43e17350bf0cac5ebd5089e7039b2fe856f1","path":"fe/apps/web/src/components/blocks/HiringApplyForm/component.tsx","step":"prettier"}
 {"findings":[],"hash":"baf269d33d8277108eaf5b7a0ffab281f1a6e2f97a935edf7ecdcf4c408f69e5","path":"fe/apps/web/src/components/blocks/HiringApplyForm/index.tsx","step":"prettier"}
-{"findings":[],"hash":"93776daab4cd3170ad69f34750cb3994ca27f8b5112d795fb7f975a11984404b","path":"fe/apps/web/src/components/blocks/HiringInterviewReply/component.tsx","step":"prettier"}
+{"findings":[],"hash":"2e28a0122fa4e0ebd583da026178fec6dcab2feb9054bf72989c464dabb2c34f","path":"fe/apps/web/src/components/blocks/HiringInterviewReply/component.tsx","step":"prettier"}
 {"findings":[],"hash":"61f3952b286c5ff541527c8d476b67669e32541e2003e97be6a88ea9652dfaba","path":"fe/apps/web/src/components/blocks/HiringInterviewReply/index.tsx","step":"prettier"}
 {"findings":[],"hash":"567ea39a6de93814a115a23219c326c1e2a4dbc133f7b06e41ca3979f7606963","path":"fe/apps/web/src/components/blocks/HiringOfferReply/classNames.ts","step":"prettier"}
 {"findings":[],"hash":"f1820b5e78cd15494bd1d4ad4b13e02c4a5435b674bb1a89558e2146514a4c45","path":"fe/apps/web/src/components/blocks/HiringOfferReply/component.tsx","step":"prettier"}
