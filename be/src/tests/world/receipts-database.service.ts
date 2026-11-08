@@ -44,16 +44,16 @@ export const receiptsOf = async (
             where: { sepayId: Number(deliveryId) },
             take: RECEIPTS_MAX,
         })
-        return rows.map(receiptOf)
+        return rows.map((row) => receiptOf(row))
     }
     if (provider === "meta") {
         const rows = await manager.find(MetaInboxEntity, { where: { provider, deliveryId }, take: RECEIPTS_MAX })
-        return rows.map(receiptOf)
+        return rows.map((row) => receiptOf(row))
     }
     const where = { provider, deliveryId }
     if (provider === "telegram")
-        return (await manager.find(TelegramInboxEntity, { where, take: RECEIPTS_MAX })).map(receiptOf)
-    return (await manager.find(ZaloInboxEntity, { where, take: RECEIPTS_MAX })).map(receiptOf)
+        return (await manager.find(TelegramInboxEntity, { where, take: RECEIPTS_MAX })).map((row) => receiptOf(row))
+    return (await manager.find(ZaloInboxEntity, { where, take: RECEIPTS_MAX })).map((row) => receiptOf(row))
 }
 
 /** Removes the durable receipt one proof delivery of `provider` created. */

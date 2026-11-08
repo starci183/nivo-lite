@@ -1,9 +1,11 @@
 import type { MockEntityManager } from "@starci/jest-preset"
+import { DatabaseError, DatabaseErrorCode } from "@modules/platform/database"
+import { DomainError } from "@modules/platform/errors"
 import { builderOf } from "./entity-query-builder-fake.builder"
 
 export { ANY_FUNCTION } from "./any-function.builder"
 
-/** The answers of the terminal calls of a query builder; an `Error` answer rejects and a function answer is called when the terminal runs. */
+/** The answers of the terminal calls of a query builder; a `DomainError` answer rejects and a function answer is called when the terminal runs. */
 export interface QueryBuilderAnswers {
     /** `getMany()`. */
     readonly getMany?: ReadonlyArray<unknown>
@@ -73,11 +75,11 @@ export const fakeQueryBuilder = (
                     const answers = typeof answering === "function" ? answering(calls) : answering
                     if (!Object.hasOwn(answers, terminal)) {
                         return Promise.reject(
-                            new Error(`fake query builder: ${terminal}() was not answered by the spec`),
+                            new DatabaseError({ code: DatabaseErrorCode.ReturningRowRejected, params: { terminal } }),
                         )
                     }
                     const answer = answers[terminal]
-                    if (answer instanceof Error) return Promise.reject(answer)
+                    if (answer instanceof DomainError) return Promise.reject(answer)
                     return Promise.resolve(typeof answer === "function" ? Reflect.apply(answer, undefined, []) : answer)
                 }
             },

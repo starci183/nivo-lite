@@ -56,7 +56,7 @@ export const deliveryPublications = async (
     manager: EntityManager,
     queue: string,
     deliveryId: string,
-): Promise<Array<WebhookJobRow>> => (await deliveryRows(manager, queue, deliveryId)).map(publicationOf)
+): Promise<Array<WebhookJobRow>> => (await deliveryRows(manager, queue, deliveryId)).map((row) => publicationOf(row))
 
 /** The broker-bound envelopes one delivery committed to `queue`, reconstructed from the outbox. */
 export const deliveryEnvelopes = async (
@@ -197,7 +197,7 @@ export const receipts = (manager: EntityManager, id: string): Promise<ReadonlyAr
     receiptsOf(manager, "meta", id)
 /** Finds the work published by one provider event. */
 export const webhookJobs = async (manager: EntityManager, id: string): Promise<Array<WebhookJobRow>> =>
-    (await webhookRows(manager, id)).map(publicationOf)
+    (await webhookRows(manager, id)).map((row) => publicationOf(row))
 /** Reads the actual queue handoff of one provider event. */
 export const webhookMessages = async (manager: EntityManager, id: string): Promise<Array<WebhookMessageRow>> =>
     (await webhookRows(manager, id)).map((row) => ({ message: envelopeOf(row) }))

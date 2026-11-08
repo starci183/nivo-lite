@@ -25,10 +25,11 @@ import { OPENCLAW_AGENT_SYNC_OPTIONS } from "./openclaw-agent-sync.decorators"
 import { OpenclawAgentSyncLogEvent } from "./openclaw-agent-sync.log-events"
 import type { OpenclawAgentSyncOptions } from "./openclaw-agent-sync.options"
 import type { Installation, InstallationDirectory } from "@modules/domain/agents"
-import { OpenclawAgentSyncErrorCode } from "./errors/openclaw-agent-sync.error"
+import { OpenclawAgentSyncError, OpenclawAgentSyncErrorCode } from "./errors/openclaw-agent-sync.error"
 import { OpenclawAgentSyncEntity } from "./persistence/entities"
 
 const OPTIONS: OpenclawAgentSyncOptions = { reloadSettleMs: 2000 }
+const RECORD_FAILURE = new OpenclawAgentSyncError({ code: OpenclawAgentSyncErrorCode.WorkspaceUnavailable })
 
 const WORKSPACE = "12345678-aaaa-bbbb-cccc-000000000000"
 const AT = "2026-10-12T10:00:00.000Z"
@@ -107,7 +108,7 @@ const build = async (setup: Setup = {}) => {
             ],
         }),
     )
-    const recorder = fakeQueryBuilder({ execute: setup.recordFails === true ? new Error("table locked") : {} })
+    const recorder = fakeQueryBuilder({ execute: setup.recordFails === true ? RECORD_FAILURE : {} })
     answerQueryBuilders(tx.em, recorder)
     const installations = mock<InstallationDirectory>({
         byId: jest.fn(() => Promise.resolve(setup.installation === undefined ? installationOf() : setup.installation)),
@@ -418,12 +419,11 @@ describe("AgentSyncService syncInstallation", () => {
     it("still rethrows the original failure when it cannot be recorded", async () => {
         const { service, bundles, logger } = await build({ recordFails: true })
         const failure = new Error("bundle failed")
-        const recordFailure = new Error("table locked")
         bundles.build.mockRejectedValue(failure)
 
         await expect(service.syncInstallation(WORKSPACE, "i1", false)).rejects.toBe(failure)
 
-        expect(logger.error).toHaveBeenCalledWith(OpenclawAgentSyncLogEvent.SyncFailureNotRecorded, recordFailure, {
+        expect(logger.error).toHaveBeenCalledWith(OpenclawAgentSyncLogEvent.SyncFailureNotRecorded, RECORD_FAILURE, {
             installationId: "i1",
         })
     })
