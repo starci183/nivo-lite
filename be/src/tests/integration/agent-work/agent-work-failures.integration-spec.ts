@@ -15,7 +15,8 @@ import {
     turnsOfWake,
     wakeOfFact,
 } from "../../world/agent-work-database.service"
-import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
+import { TestWorldErrorCode } from "../../world/test-world.error"
+import { testWorldFailure } from "../../world/test-world-failure"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { useTestWorld } from "../../world/use-test-world"
 
@@ -54,7 +55,7 @@ const rowOf = (wake: AgentWake) => wakeOfFact(em(), wake.agentId, wake.source, w
 
 const failures = async () => (await world.resolve(AgentWorkSettingsService).stateOf(AGENT)).failures
 
-const down = () => Promise.reject(new TestWorldError({ code: TestWorldErrorCode.ProviderDown }))
+const down = () => Promise.reject(testWorldFailure(TestWorldErrorCode.ProviderDown))
 
 beforeAll(async () => {
     world.cleanup(async () => {

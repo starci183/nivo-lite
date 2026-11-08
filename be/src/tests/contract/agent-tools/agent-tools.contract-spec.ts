@@ -21,10 +21,14 @@ import { AgentToolsController } from "../../../features/api/agent-tools/transpor
 /** Doors carrying exactly the decorators under test: the metadata a controller method must (or must not) share with them. */
 class DoorProbe {
     @Credential({ kind: "tool-token" })
-    toolDoor(): void {}
+    toolDoor(): void {
+        return undefined
+    }
 
     @Public({ reason: PublicReason.Health })
-    publicDoor(): void {}
+    publicDoor(): void {
+        return undefined
+    }
 }
 
 /** The metadata entries a decorated probe method carries. */

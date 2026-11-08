@@ -200,7 +200,7 @@ const cleanInbound = async (world: World, who: InboundIdentity, deliveryIds: Rea
     await removeStepJobs(world.db.primary, who.workspaceId)
     await world.db.primary.delete(JobOutboxEntity, {
         queue: "generic_webhook",
-        dedupeKey: In([...deliveryIds].map(genericWebhookKey)),
+        dedupeKey: In([...deliveryIds].map((deliveryId) => genericWebhookKey(deliveryId))),
     })
     await world.db.primary.delete(InboxEntity, { source: "generic_webhook", deliveryId: In([...deliveryIds]) })
     await removeWorkspace(world.db.primary, who.workspaceId)
@@ -278,7 +278,7 @@ const webhooksOf = (
         ): Promise<InboundEvent | null> => deliverWebhook(world, eventOf, state, key, valid, claims),
         receipts: (): Promise<Array<JobOutboxEntity>> =>
             world.db.primary.find(JobOutboxEntity, {
-                where: { queue: "generic_webhook", dedupeKey: In([...state.deliveryIds].map(genericWebhookKey)) },
+                where: { queue: "generic_webhook", dedupeKey: In([...state.deliveryIds].map((deliveryId) => genericWebhookKey(deliveryId))) },
                 take: ROWS_MAX,
             }),
     }
