@@ -14,6 +14,7 @@ import { generationRow } from "@tests/fixtures/builders/ai-generations.builder"
 import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder.builder"
 import { AI_GENERATIONS_USAGE } from "./ai-generations.decorators"
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
+import { AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import type { UsageGate } from "./ai-generations.port"
 import { GenerationRunnerService } from "./generation-runner.service"
 import { AiGenerationEntity } from "./persistence/entities"
@@ -382,11 +383,12 @@ describe("GenerationRunnerService", () => {
         expect(em.findOne.mock.calls).toEqual([[AiGenerationEntity, FIND_OPTIONS]])
         expect(em.update.mock.calls).toEqual([STARTED, cancelledAt("2026-10-12T10:00:00.000Z")])
         expect(bus.writes).toEqual([completedAs("cancelled")])
-        expect(logger.error).toHaveBeenCalledWith(
-            AiGenerationsLogEvent.GenerationFailed,
-            expect.objectContaining({ name: "TimeoutError" }),
-            { purpose: "relay" },
-        )
+        const [event, failure, context] = logger.error.mock.calls[0] ?? []
+        expect(event).toBe(AiGenerationsLogEvent.GenerationFailed)
+        expect(failure).toBeInstanceOf(AiGenerationsError)
+        expect(failure).toHaveProperty("code", AiGenerationsErrorCode.DeadlinePassed)
+        expect(failure).toHaveProperty("cause.name", "TimeoutError")
+        expect(context).toEqual({ purpose: "relay" })
     })
 
     it.each(["TimeoutError", "AbortError"])("cancels a generation when the turn rejects with %s", async (name) => {
