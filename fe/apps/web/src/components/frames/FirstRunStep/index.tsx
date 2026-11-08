@@ -63,6 +63,7 @@ const WideStep = (props: FirstRunStepFormProps) => {
                 <Stepper
                     label={step.stepsLabel}
                     currentStepId={step.currentStepId}
+                    completeMarker="check"
                     steps={step.steps.map((label, index) => ({
                         id: `s${index}`,
                         label,
@@ -116,6 +117,7 @@ const RailCard = (props: RailCardProps) => {
             <Stepper
                 label={step.stepsLabel}
                 orientation="vertical"
+                completeMarker="check"
                 currentStepId={step.currentStepId}
                 steps={props.steps}
             />

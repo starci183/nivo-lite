@@ -18,7 +18,7 @@ export interface OnboardingPlanCard {
     readonly id: string
     readonly name: string
     readonly price: string
-    /** The plan the step recommends: a soft card, a badge and the commit button. */
+    /** The plan the step recommends: the accent ring, a badge and the commit button. */
     readonly isPopular: boolean
     readonly features: ReadonlyArray<string>
     readonly action:
@@ -83,7 +83,7 @@ const PlanCard = (props: PlanCardProps) => {
                 <Heading level={2}>{card.name}</Heading>
                 {card.isPopular ? <Badge tone="accent">{base.props.popularLabel}</Badge> : null}
             </Cluster>
-            <Text isStrong>{card.price}</Text>
+            <Text size="figure">{card.price}</Text>
             {action}
         </Stack>
     )
@@ -100,12 +100,12 @@ const PlanCard = (props: PlanCardProps) => {
             ))}
         </Stack>
     )
-    return card.isPopular ? (
-        <SurfaceCard ariaLabel={card.name} treatment="soft" headers={[{ kind: "custom", children: head }]}>
-            {body}
-        </SurfaceCard>
-    ) : (
-        <SurfaceCard ariaLabel={card.name} headers={[{ kind: "custom", children: head }]}>
+    return (
+        <SurfaceCard
+            ariaLabel={card.name}
+            {...(card.isPopular ? { emphasis: "accent" as const } : {})}
+            headers={[{ kind: "custom", children: head }]}
+        >
             {body}
         </SurfaceCard>
     )
