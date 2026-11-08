@@ -35,18 +35,42 @@ export interface WorkspaceCreateBaseProps {
     }
 }
 
-/** Draws the form that names a new workspace: the card opens with the page's question, then the name and the actions. */
+/** Draws the form that names a new workspace: the question in the card's header zone, the fields in its body, the actions in its footer zone. */
 export const WorkspaceCreateBase = (props: WorkspaceCreateBaseProps) => {
     const { props: form, on } = props
 
     return (
-        <SurfaceCard ariaLabel={form.title} measure="form">
-            <Form label={form.title} onSubmit={on.submit} isPending={form.isPending}>
+        <Form label={form.title} onSubmit={on.submit} isPending={form.isPending}>
+            <SurfaceCard
+                ariaLabel={form.title}
+                headers={[
+                    {
+                        kind: "custom",
+                        children: (
+                            <Stack gap="identity">
+                                <Heading level={1}>{form.heading}</Heading>
+                                <Text tone="muted">{form.description}</Text>
+                            </Stack>
+                        ),
+                    },
+                ]}
+                footers={[
+                    {
+                        kind: "custom",
+                        children: (
+                            <Cluster gap="row" justify="between">
+                                <Button intent="neutral" href={form.cancelHref} isDisabled={form.isPending}>
+                                    {form.cancelLabel}
+                                </Button>
+                                <Button type="submit" intent="commit" isPending={form.isPending}>
+                                    {form.submitLabel}
+                                </Button>
+                            </Cluster>
+                        ),
+                    },
+                ]}
+            >
                 <Stack gap="section">
-                    <Stack gap="identity">
-                        <Heading level={1}>{form.heading}</Heading>
-                        <Text tone="muted">{form.description}</Text>
-                    </Stack>
                     <Input
                         id="workspace-name"
                         name="name"
@@ -79,16 +103,8 @@ export const WorkspaceCreateBase = (props: WorkspaceCreateBaseProps) => {
                         />
                     ) : null}
                     <FormNotice failTitle={form.failTitle} error={form.error} />
-                    <Cluster gap="row" justify="between">
-                        <Button intent="neutral" href={form.cancelHref} isDisabled={form.isPending}>
-                            {form.cancelLabel}
-                        </Button>
-                        <Button type="submit" intent="commit" isPending={form.isPending}>
-                            {form.submitLabel}
-                        </Button>
-                    </Cluster>
                 </Stack>
-            </Form>
-        </SurfaceCard>
+            </SurfaceCard>
+        </Form>
     )
 }

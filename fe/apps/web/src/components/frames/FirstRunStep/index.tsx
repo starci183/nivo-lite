@@ -1,6 +1,13 @@
 import type { ReactNode } from "react"
 import { Cluster, Stack, Stepper, SurfaceCard, Text } from "@starci/grammar/common"
-import { STEP_ART_CLASS_NAME, STEP_CARD_CLASS_NAME, STEP_CLASS_NAME, STEP_DONE_CLASS_NAME } from "./classNames"
+import {
+    STEP_ART_CLASS_NAME,
+    STEP_BAR_CLASS_NAME,
+    STEP_CARD_CLASS_NAME,
+    STEP_CLASS_NAME,
+    STEP_DONE_CLASS_NAME,
+    STEP_RAIL_CLASS_NAME,
+} from "./classNames"
 
 /** The words of the step rail: its name, the line under it, a line per step and the closing hint. */
 export interface FirstRunRail {
@@ -39,52 +46,58 @@ export const FirstRunStep = (props: FirstRunStepProps) => {
             </div>
         )
     }
+    const steps = props.steps.map((label, index) => {
+        const description = props.rail.descriptions[index]
+        return {
+            id: `s${index}`,
+            label,
+            ...(description === undefined ? {} : { description }),
+            ...(index < current ? { state: "complete" as const } : {}),
+        }
+    })
     return (
         <div className={STEP_CLASS_NAME}>
-            <SurfaceCard
-                ariaLabel={props.rail.title}
-                headers={[
-                    {
-                        kind: "custom",
-                        children: (
-                            <Stack gap="identity">
-                                <Text isStrong>{props.rail.title}</Text>
-                                <Text tone="muted" size="sm">
-                                    {props.rail.text}
-                                </Text>
-                            </Stack>
-                        ),
-                    },
-                ]}
-                footers={[
-                    {
-                        kind: "custom",
-                        children: (
-                            <Cluster gap="row" wrap={false}>
-                                <div className={STEP_ART_CLASS_NAME}>{props.artwork}</div>
-                                <Text tone="muted" size="sm">
-                                    {props.rail.hint}
-                                </Text>
-                            </Cluster>
-                        ),
-                    },
-                ]}
-            >
-                <Stepper
-                    label={props.stepsLabel}
-                    orientation="vertical"
-                    currentStepId={props.currentStepId}
-                    steps={props.steps.map((label, index) => {
-                        const description = props.rail.descriptions[index]
-                        return {
-                            id: `s${index}`,
-                            label,
-                            ...(description === undefined ? {} : { description }),
-                            ...(index < current ? { state: "complete" as const } : {}),
-                        }
-                    })}
-                />
-            </SurfaceCard>
+            <div className={STEP_BAR_CLASS_NAME}>
+                <Stepper kind="bar" label={props.stepsLabel} currentStepId={props.currentStepId} steps={steps} />
+            </div>
+            <div className={STEP_RAIL_CLASS_NAME}>
+                <SurfaceCard
+                    ariaLabel={props.rail.title}
+                    headers={[
+                        {
+                            kind: "custom",
+                            children: (
+                                <Stack gap="identity">
+                                    <Text isStrong>{props.rail.title}</Text>
+                                    <Text tone="muted" size="sm">
+                                        {props.rail.text}
+                                    </Text>
+                                </Stack>
+                            ),
+                        },
+                    ]}
+                    footers={[
+                        {
+                            kind: "custom",
+                            children: (
+                                <Cluster gap="row" wrap={false}>
+                                    <div className={STEP_ART_CLASS_NAME}>{props.artwork}</div>
+                                    <Text tone="muted" size="sm">
+                                        {props.rail.hint}
+                                    </Text>
+                                </Cluster>
+                            ),
+                        },
+                    ]}
+                >
+                    <Stepper
+                        label={props.stepsLabel}
+                        orientation="vertical"
+                        currentStepId={props.currentStepId}
+                        steps={steps}
+                    />
+                </SurfaceCard>
+            </div>
             <div className={STEP_CARD_CLASS_NAME}>{props.children}</div>
         </div>
     )
