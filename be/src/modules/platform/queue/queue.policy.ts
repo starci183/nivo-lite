@@ -94,6 +94,9 @@ export const reasonOf = (cause: unknown): string => {
     return cause instanceof Error ? cause.message : String(cause)
 }
 
+/** A rejected promise of the failure: BullMQ's own signals (UnrecoverableError, DelayedError) and a settled cause travel as the rejection, not as a throw. */
+export const rejectionOf = (reason: unknown): Promise<never> => Promise.reject(reason)
+
 /** The workspace a payload names (`workspaceId`, a uuid), or null: only those jobs count against the workspace limit. */
 export const workspaceOf = (payload: object): string | null => {
     const value = "workspaceId" in payload ? payload.workspaceId : undefined

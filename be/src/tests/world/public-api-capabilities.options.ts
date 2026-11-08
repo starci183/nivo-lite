@@ -67,7 +67,7 @@ import { TeamChatProofModule } from "./team-chat-proof.module"
 import { queueOptions } from "./test-capabilities.options"
 import { QUIET_INSTALLATIONS } from "./quiet-peers.options"
 import { TestWorldErrorCode } from "./test-world.error"
-import { testWorldFailure } from "./test-world-failure"
+import { testWorldFailure } from "./test-world-failure.policy"
 
 @Injectable()
 /** No agent or authentication account lookup is needed to admit an API request. */
