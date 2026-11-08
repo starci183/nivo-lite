@@ -21,7 +21,7 @@ export const WorkspaceReadyPageBase = (props: WorkspaceReadyPageBaseProps) => (
             stepsLabel={props.props.stepsLabel}
             steps={props.props.steps}
             rail={props.props.rail}
-            currentStepId="s3"
+            currentStepId="s4"
             artwork={
                 <Mascot
                     src="/images/entry/onboarding-done-3d.webp"

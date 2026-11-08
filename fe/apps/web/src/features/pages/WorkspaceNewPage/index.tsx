@@ -16,11 +16,11 @@ export const WorkspaceNewPage = async (): Promise<ReactElement> => {
         <WorkspaceNewPageBase
             props={{
                 stepsLabel: t("welcomeStepsLabel"),
-                steps: [t("trackStep1"), t("trackStep2"), t("trackStep3")],
+                steps: [t("trackStep1"), t("trackStep2"), t("trackStep3"), t("trackStep4")],
                 rail: {
                     title: t("railTitle"),
                     text: t("railText"),
-                    descriptions: [t("trackStep1Text"), t("trackStep2Text"), t("trackStep3Text")],
+                    descriptions: [t("trackStep1Text"), t("trackStep2Text"), t("trackStep3Text"), t("trackStep4Text")],
                     hint: t("railHint"),
                 },
             }}

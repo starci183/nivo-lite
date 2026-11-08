@@ -10,6 +10,10 @@ export const workspaceChannelsPath = (workspaceId: string, wizardQuery = ""): st
 export const workspaceHandoverPath = (workspaceId: string): string =>
     `/workspaces/new/ai?ws=${encodeURIComponent(workspaceId)}`
 
+/** The plan step of the first-run wizard of one workspace: pay for a plan or start on the free one. */
+export const workspacePlanPath = (workspaceId: string): string =>
+    `/workspaces/new/plan?ws=${encodeURIComponent(workspaceId)}`
+
 /** The last step of the first-run wizard of one workspace. */
 export const workspaceReadyPath = (workspaceId: string): string =>
     `/workspaces/new/done?ws=${encodeURIComponent(workspaceId)}`

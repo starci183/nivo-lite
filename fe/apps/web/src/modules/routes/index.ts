@@ -27,6 +27,7 @@ export {
     workspaceChannelsPath,
     workspaceHandoverPath,
     workspacePaymentPath,
+    workspacePlanPath,
     workspaceReadyPath,
     workspaceRenewalPaymentPath,
 } from "./workspace-routes"

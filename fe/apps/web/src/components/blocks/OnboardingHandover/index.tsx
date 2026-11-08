@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useOnboardingHandover } from "@/hooks/onboardingHandover"
 import { useWorkspaceId } from "@/hooks/workspaces"
-import { workspaceChannelsPath, workspaceReadyPath } from "@/modules/routes"
+import { workspaceChannelsPath, workspacePlanPath } from "@/modules/routes"
 import { OnboardingHandoverBase } from "./component"
 
 /** Who holds new customers as the row reads: "…" while unread, "You" for the signed-in owner, else the owner's name. */
@@ -46,8 +46,8 @@ export const OnboardingHandover = () => {
                 emptyRules: t("handoverEmpty"),
                 backLabel: t("back"),
                 backHref: workspaceChannelsPath(workspaceId),
-                finishLabel: t("finish"),
-                finishHref: workspaceReadyPath(workspaceId),
+                finishLabel: t("continue"),
+                finishHref: workspacePlanPath(workspaceId),
             }}
             on={{ toggle: (_ruleId, on) => handover.setApproval(on) }}
         />
