@@ -46,14 +46,18 @@ describe("workspace-scoped atomic inbound inputs over PostgreSQL", () => {
         expect(left.duplicate).toBe(false)
         expect(right.duplicate).toBe(false)
         expect(left.inboundEventId).not.toBe(right.inboundEventId)
-        await expect(events.find(first.workspaceId, left.inboundEventId)).resolves.toMatchObject({
-            id: left.inboundEventId,
-            event_id: eventId,
-        })
-        await expect(events.find(second.workspaceId, right.inboundEventId)).resolves.toMatchObject({
-            id: right.inboundEventId,
-            event_id: eventId,
-        })
+        await expect(events.findMany(first.workspaceId, [left.inboundEventId])).resolves.toMatchObject([
+            {
+                id: left.inboundEventId,
+                event_id: eventId,
+            },
+        ])
+        await expect(events.findMany(second.workspaceId, [right.inboundEventId])).resolves.toMatchObject([
+            {
+                id: right.inboundEventId,
+                event_id: eventId,
+            },
+        ])
         expect(await claimOf(first.workspaceId, "message", eventId)).toHaveLength(1)
         expect(await claimOf(second.workspaceId, "message", eventId)).toHaveLength(1)
     })

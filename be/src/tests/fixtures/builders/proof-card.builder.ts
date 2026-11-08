@@ -36,5 +36,5 @@ export const insertProofCard = async (
         .returning("card")
         .execute()
     const raw: unknown = result.raw
-    return Array.isArray(raw) ? raw.map(cardRowOf) : []
+    return Array.isArray(raw) ? raw.map((row) => cardRowOf(row)) : []
 }
