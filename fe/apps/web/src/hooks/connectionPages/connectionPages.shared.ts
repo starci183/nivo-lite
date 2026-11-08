@@ -1,5 +1,4 @@
-import { type SWRInfiniteKeyedMutator } from "swr/infinite"
-import type { SWRInfiniteResponse } from "swr/infinite"
+import { type SWRInfiniteKeyedMutator, type SWRInfiniteResponse } from "swr/infinite"
 
 /** One forward page of a workspace list. */
 export interface ConnectionPage<Node> {

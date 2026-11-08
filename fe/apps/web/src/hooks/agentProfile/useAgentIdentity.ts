@@ -3,8 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from "react"
 import { mutate } from "@/modules/viewer-cache"
-import { useAvatarUpload, type AvatarProblem } from "@/hooks/avatar"
-import type { AvatarDoors } from "@/hooks/avatar"
+import { useAvatarUpload, type AvatarProblem, type AvatarDoors } from "@/hooks/avatar"
 import {
     QUERY_MODULE_INSTALLATIONS_SWR_KEY,
     useMutateRenameAgentSwr,

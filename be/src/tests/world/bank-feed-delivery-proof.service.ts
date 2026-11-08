@@ -1,11 +1,7 @@
-import type { AdvanceWrite } from "@modules/platform/jobs"
-import { bankFeedDomainBuilder } from "../fixtures/builders/bank-feed-delivery.builder"
-import assert from "node:assert/strict"
-import { Test } from "@nestjs/testing"
-import { BankFeedService, BankFeedDeliveryService } from "@modules/domain/billing"
 import {
     JOB_CLAIMS,
     JOB_PROCESSOR_REGISTRY,
+    type AdvanceWrite,
     type FencedProcessor,
     type ClaimedJob,
     type JobsLogEvent,
@@ -13,6 +9,10 @@ import {
     type JobClaimService,
     type JobClaimResult,
 } from "@modules/platform/jobs"
+import { bankFeedDomainBuilder } from "../fixtures/builders/bank-feed-delivery.builder"
+import assert from "node:assert/strict"
+import { Test } from "@nestjs/testing"
+import { BankFeedService, BankFeedDeliveryService } from "@modules/domain/billing"
 import { BANK_FEED_DELIVERY_QUEUE } from "@modules/queues/bank-feed-delivery"
 import { BankFeedDeliveryQueueModule } from "@features/jobs/bank-feed-delivery"
 import type { LiteWorld } from "@tests/world/lite-world.service"
