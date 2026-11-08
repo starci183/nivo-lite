@@ -131,8 +131,8 @@ const stepDecide = (decide: DecidePoint, walking: Walking, scope: WalkScope): St
     const branch = pickBranch(decide, scope.facts, scope.registry)
     if (branch === null) return lost(seen, "no_else")
     const taken = { ...seen, branchKey: branch.key }
-    if (branch.then === "stop") return ended(taken, "stop")
-    if (branch.then === "auto") return { walking: taken, next: branch.next }
+    if (branch.outcome === "stop") return ended(taken, "stop")
+    if (branch.outcome === "auto") return { walking: taken, next: branch.next }
     return {
         walking: { ...taken, asked: true, approver: branch.approver ?? taken.approver },
         next: branch.next,

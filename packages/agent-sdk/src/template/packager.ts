@@ -74,7 +74,7 @@ const sourcesOf = (
 const branchOf = (branch: GraphBranch, draft: PackageDraft, tally: Tally): GraphBranch => ({
     key: branch.key,
     when: branch.when,
-    then: branch.then,
+    outcome: branch.outcome,
     next: branch.next,
     approver: approverOf(branch.approver, tally),
     sources: sourcesOf(branch.sources, draft, tally),

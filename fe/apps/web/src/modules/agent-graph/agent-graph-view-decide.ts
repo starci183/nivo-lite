@@ -78,10 +78,10 @@ const termViewOf = (
 
 /** What the form itself finds wrong with a row, before anything is saved. */
 const approverErrorOf = (row: AgentGraphRowForm, t: AgentGraphT): string =>
-    row.then === "ask" && row.approverId === "" ? t("errApprover") : ""
+    row.outcome === "ask" && row.approverId === "" ? t("errApprover") : ""
 
 const backupErrorOf = (row: AgentGraphRowForm, t: AgentGraphT): string =>
-    row.then === "ask" && row.onTimeout === "backup" && row.backupId === "" ? t("errBackup") : ""
+    row.outcome === "ask" && row.onTimeout === "backup" && row.backupId === "" ? t("errBackup") : ""
 
 /** One row of the editor. */
 const rowViewOf = (
@@ -120,7 +120,7 @@ const rowViewOf = (
         sentence,
         terms: row.terms.map((term, at) => termViewOf(term, `${id}-${at}`, row.terms.length, words, row.isLocked)),
         canAddTerm: !row.isElse && !row.isLocked && row.terms.length < MAX_TERMS,
-        then: row.then,
+        outcome: row.outcome,
         approverId: row.approverId,
         approverOptions:
             row.approverId === KEEP_GROUP
@@ -171,7 +171,7 @@ export const decideEditorViewOf = (
             op: t("fieldOp"),
             value: t("fieldValue"),
             amount: t("fieldAmount"),
-            then: t("fieldThen"),
+            outcome: t("fieldThen"),
             approver: t("fieldApprover"),
             hours: t("fieldHours"),
             onTimeout: t("fieldOnTimeout"),

@@ -152,8 +152,8 @@ export interface GraphBranch {
     readonly key: string
     /** The when. */
     readonly when: Condition | "else"
-    /** The then. */
-    readonly then: BranchAction
+    /** What the branch does: run on its own, ask, or stop. */
+    readonly outcome: BranchAction
     /** The next. */
     readonly next: string
     /** The approver. */

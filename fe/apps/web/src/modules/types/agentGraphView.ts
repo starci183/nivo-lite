@@ -126,7 +126,7 @@ export interface AgentGraphRowView {
     readonly sentence: string
     readonly terms: ReadonlyArray<AgentGraphTermView>
     readonly canAddTerm: boolean
-    readonly then: AgentGraphThen
+    readonly outcome: AgentGraphThen
     readonly approverId: string
     /** The people who may be asked; a row that keeps the group of roles it had offers that group first. */
     readonly approverOptions: ReadonlyArray<AgentGraphOptionView>
@@ -152,7 +152,7 @@ export interface AgentGraphDecideEditorView {
         readonly op: string
         readonly value: string
         readonly amount: string
-        readonly then: string
+        readonly outcome: string
         readonly approver: string
         readonly hours: string
         readonly onTimeout: string

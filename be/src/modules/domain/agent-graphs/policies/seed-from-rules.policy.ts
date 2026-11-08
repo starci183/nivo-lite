@@ -22,7 +22,7 @@ export const approverOfRule = (rule: SeedRule): BranchApprover => ({
 const branch = (
     key: string,
     when: Condition | "else",
-    then: GraphBranch["then"],
+    outcome: GraphBranch["outcome"],
     targets: SeedTargets,
     rule: SeedRule,
 ): GraphBranch => {
@@ -30,9 +30,9 @@ const branch = (
     return {
         key,
         when,
-        then,
-        next: targets[then],
-        approver: then === "ask" ? approverOfRule(rule) : null,
+        outcome,
+        next: targets[outcome],
+        approver: outcome === "ask" ? approverOfRule(rule) : null,
         sources,
     }
 }

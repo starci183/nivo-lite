@@ -59,7 +59,7 @@ const autoBelow = (
     fact: string,
 ): { readonly auto: GraphBranch; readonly from: number } | undefined =>
     branches.flatMap((branch) => {
-        if (branch.then !== "auto" || branch.when === "else") return []
+        if (branch.outcome !== "auto" || branch.when === "else") return []
         const interval = intervalOf(branch.when, fact)
         const top = interval === null ? null : topOf(interval)
         return top !== null && top === lower.lo ? [{ auto: branch, from: top }] : []

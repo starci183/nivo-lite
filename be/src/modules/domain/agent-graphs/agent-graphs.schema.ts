@@ -79,7 +79,7 @@ const branchSchema = z
     .object({
         key: z.string().min(1).max(60),
         when: z.union([conditionSchema, z.literal("else")]),
-        then: z.enum(["auto", "ask", "stop"]),
+        outcome: z.enum(["auto", "ask", "stop"]),
         next: z.string().min(1).max(60),
         approver: approverSchema.nullable(),
         sources: z.array(sourceSchema).max(10),

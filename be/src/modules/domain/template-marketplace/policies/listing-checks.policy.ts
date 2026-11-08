@@ -60,7 +60,7 @@ export const runListingChecks = (
     const relaxed = pkg.graph.nodes.flatMap((node) =>
         node.decide !== undefined &&
         context.askOnlyActions.has(node.decide.intent) &&
-        node.decide.branches.some((branch) => branch.then === "auto")
+        node.decide.branches.some((branch) => branch.outcome === "auto")
             ? [node.decide.intent]
             : [],
     )

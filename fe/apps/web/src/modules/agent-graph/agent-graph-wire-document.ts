@@ -135,7 +135,7 @@ type DocumentSchemaShape = z.ZodObject<
                                         {
                                             key: z.ZodString
                                             when: z.ZodUnknown
-                                            then: z.ZodEnum<{
+                                            outcome: z.ZodEnum<{
                                                 stop: "stop"
                                                 auto: "auto"
                                                 ask: "ask"

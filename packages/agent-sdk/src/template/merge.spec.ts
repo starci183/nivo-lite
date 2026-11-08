@@ -54,7 +54,7 @@ describe("updateUnits", () => {
     })
 
     it("offers a branch both changed as a conflict, so it stays the buyer own until they take it", () => {
-        const edited = editBranch(v1(), "middle", (branch) => ({ ...branch, then: "stop" }))
+        const edited = editBranch(v1(), "middle", (branch) => ({ ...branch, outcome: "stop" }))
 
         const units = updateUnits({ base: v1(), current: edited, next: v2() })
 

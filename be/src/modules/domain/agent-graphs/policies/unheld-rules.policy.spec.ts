@@ -51,7 +51,7 @@ describe("unheld-rules.policy unheldRulesOf", () => {
             }),
             branchOf({ key: "known", when: { fact: "supplier_payment.amount_vnd", op: "known" }, next: "act" }),
             branchOf({ key: "kinds", when: { fact: "supplier_payment.kind", op: "in", value: ["rent"] }, next: "act" }),
-            branchOf({ key: "else", when: "else", then: "ask", next: "ask" }),
+            branchOf({ key: "else", when: "else", outcome: "ask", next: "ask" }),
         ])
 
         expect(subject.unheldRulesOf(["Tren 5 trieu phai duyet", "Tren 20 trieu phai duyet"], GRAPH)).toEqual([])

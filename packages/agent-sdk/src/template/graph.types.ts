@@ -115,7 +115,7 @@ export interface GraphBranch {
     /** The condition, or the else. */
     readonly when: Condition | "else"
     /** What it does. */
-    readonly then: "auto" | "ask" | "stop"
+    readonly outcome: "auto" | "ask" | "stop"
     /** The next node. */
     readonly next: string
     /** The approver. */

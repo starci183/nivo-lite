@@ -70,13 +70,13 @@ export const sourceWordOf = (t: AgentGraphT, kind: AgentGraphSourceData["kind"])
 }
 
 /** The word of what a branch does. */
-export const thenWordOf = (t: AgentGraphT, then: AgentGraphThen): string => {
+export const thenWordOf = (t: AgentGraphT, outcome: AgentGraphThen): string => {
     const words: Readonly<Record<AgentGraphThen, string>> = {
         auto: t("then_auto"),
         ask: t("then_ask"),
         stop: t("then_stop"),
     }
-    return words[then]
+    return words[outcome]
 }
 
 /** The word of what happens when nobody answers in time. */

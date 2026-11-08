@@ -189,7 +189,7 @@ describe("updateUnits: the remaining edges", () => {
                           decide: {
                               ...node.decide,
                               branches: node.decide.branches.map((branch) =>
-                                  branch.key === "small" ? { ...branch, then: "stop" as const } : branch,
+                                  branch.key === "small" ? { ...branch, outcome: "stop" as const } : branch,
                               ),
                           },
                       },

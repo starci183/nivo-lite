@@ -34,14 +34,14 @@ const VAGUE = graphOf([
     branchOf({
         key: "above",
         when: { all: [amountIs("gt", 5_000_000), amountIs("lte", 9_000_000)] },
-        then: "ask",
+        outcome: "ask",
         next: "ask",
         approver: null,
     }),
     branchOf({
         key: "wait",
         when: amountIs("gt", 9_000_000),
-        then: "ask",
+        outcome: "ask",
         next: "ask",
         approver: approverOf({ onTimeout: { kind: "unset" } }),
     }),
@@ -97,11 +97,11 @@ describe("graph-gaps.policy", () => {
             branchOf({
                 key: "kind",
                 when: { fact: "supplier_payment.kind", op: "eq", value: "rent" },
-                then: "ask",
+                outcome: "ask",
                 next: "ask",
                 approver: approverOf(),
             }),
-            branchOf({ key: "else", when: "else", then: "stop", next: "stop" }),
+            branchOf({ key: "else", when: "else", outcome: "stop", next: "stop" }),
         ])
 
         expect(subject.graphGapsOf({ nodes: [nodeOf()], rights: [] }, contextOf())).toEqual([])

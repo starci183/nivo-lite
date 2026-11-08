@@ -19,9 +19,9 @@ const asking = (gate: GateVerdict, reason: ReasonCode): GateVerdict => ({
  * harder one (missing data, not allowed, unclear), else it is `branch_ask` too, so the named approver is the one asked. A branch
  * `stop` asks with the reason `not_allowed`, as a closed rule answers.
  */
-export const strictest = (gate: GateVerdict, then: BranchAction): GateVerdict => {
-    if (then === "stop") return asking(gate, "not_allowed")
-    if (then === "auto") return gate
+export const strictest = (gate: GateVerdict, outcome: BranchAction): GateVerdict => {
+    if (outcome === "stop") return asking(gate, "not_allowed")
+    if (outcome === "auto") return gate
     const hard = gate.verdict === "ask" && gate.reason !== "over_authority"
     return asking(gate, hard ? gate.reason : "branch_ask")
 }
@@ -35,5 +35,5 @@ export const pickBranch = (decide: DecidePoint, facts: FactValues, registry: Fac
         : (decide.branches.find((branch) => branch.when !== "else" && evaluate(branch.when, facts, registry)) ??
           fallback)
     if (matched === null) return null
-    return matched.when === "else" && matched.then === "auto" ? { ...matched, then: "ask" } : matched
+    return matched.when === "else" && matched.outcome === "auto" ? { ...matched, outcome: "ask" } : matched
 }

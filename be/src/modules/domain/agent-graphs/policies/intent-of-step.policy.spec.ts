@@ -38,7 +38,7 @@ const GRAPH: GraphDocument = {
             decide: {
                 intent: "give_discount",
                 facts: [],
-                branches: [{ key: "a", when: "else", then: "ask", next: "discount", approver: null, sources: [] }],
+                branches: [{ key: "a", when: "else", outcome: "ask", next: "discount", approver: null, sources: [] }],
             },
         }),
         nodeOf({ key: "discount", step: "write", action: "give_discount", title: "Discount", next: ["end"] }),

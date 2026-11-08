@@ -37,7 +37,7 @@ type Term =
 interface Branch {
     readonly key: string
     readonly when: Term | "else"
-    readonly then: "auto" | "ask" | "stop"
+    readonly outcome: "auto" | "ask" | "stop"
     readonly next: string
     readonly approver: Approver | null
     readonly sources: ReadonlyArray<
@@ -156,8 +156,11 @@ export const FACTS: FactsShape = {
 } as const
 
 /** A catalog lookup that answers the key with its parameters, so a spec reads which sentence a policy asked for. */
-export const say = (key: string, params?: Readonly<Record<string, string | number>>): string =>
-    key === "agentGraphs.unit.million" ? "tr" : `${key}${params === undefined ? "" : JSON.stringify(params)}`
+export const say = (key: string, params?: Readonly<Record<string, string | number>>): string => {
+    if (key === "agentGraphs.unit.million") return "tr"
+    const suffix = params === undefined ? "" : JSON.stringify(params)
+    return `${key}${suffix}`
+}
 
 /** The approver of a branch: a manager group, asked as a group, with a day to answer and the owner of the agent after. */
 export const approverOf: (overrides?: Partial<Approver>) => Approver = builder<Approver>({
@@ -178,7 +181,7 @@ export const amountIs = (op: "lt" | "lte" | "gt" | "gte" | "eq", value: number):
 export const branchOf: (overrides?: Partial<Branch>) => Branch = builder<Branch>({
     key: "small",
     when: amountIs("lt", 5_000_000),
-    then: "auto",
+    outcome: "auto",
     next: "act",
     approver: null,
     sources: [],
@@ -255,18 +258,18 @@ export const graphOf = (branches: ReadonlyArray<Branch>): GraphDocument => {
 
 /** The three branches of the owner example: under 5tr alone, up to 20tr Dinh, above it Mr Nam. */
 export const OWNER_EXAMPLE: ReadonlyArray<Branch> = [
-    branchOf({ key: "small", when: amountIs("lt", 5_000_000), then: "auto", next: "act" }),
+    branchOf({ key: "small", when: amountIs("lt", 5_000_000), outcome: "auto", next: "act" }),
     branchOf({
         key: "middle",
         when: { all: [amountIs("gte", 5_000_000), amountIs("lt", 20_000_000)] },
-        then: "ask",
+        outcome: "ask",
         next: "ask",
         approver: approverOf(),
     }),
     branchOf({
         key: "else",
         when: "else",
-        then: "ask",
+        outcome: "ask",
         next: "ask",
         approver: approverOf({ group: { roles: [], rooms: [], members: ["nam"] } }),
     }),
@@ -399,11 +402,13 @@ const rowOfDecision = (
     ...overrides,
 })
 
+const DEFAULT_DECISION_FACTS: GraphDecisionRecord["facts"] = { [AMOUNT_FACT]: 7_200_000 }
+
 /** One stored decision of a graph. */
 export const decisionRow = (
     id = "decision-1",
     closedAs: GraphDecisionRecord["closedAs"] = null,
-    facts: GraphDecisionRecord["facts"] = { [AMOUNT_FACT]: 7_200_000 },
+    facts: GraphDecisionRecord["facts"] = DEFAULT_DECISION_FACTS,
 ): GraphDecisionRecord => rowOfDecision(id, closedAs, facts, {})
 
 /** A stored run that left no work item: a reply the graph judged, keyed on the digest of its text. */

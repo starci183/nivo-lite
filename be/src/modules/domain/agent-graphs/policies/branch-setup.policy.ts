@@ -40,7 +40,7 @@ const nodeOf = (document: GraphDocument, action: string): GraphNode | undefined 
  */
 export const applyBranchSetup = (document: GraphDocument, setup: BranchSetup): GraphDocument | null => {
     const node = nodeOf(document, setup.action)
-    const askedKey = node?.decide?.branches.find((branch) => branch.then === "ask")?.key
+    const askedKey = node?.decide?.branches.find((branch) => branch.outcome === "ask")?.key
     const line = askedKey === undefined ? null : boundaryOf(document, askedKey)
     if (line === null || node?.decide === undefined) return null
     const lower = setup.belongsTo === "lower"

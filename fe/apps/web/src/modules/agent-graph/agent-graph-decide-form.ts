@@ -31,7 +31,7 @@ const newRowOf = (term: AgentGraphTermForm): AgentGraphRowForm => ({
     isElse: false,
     isLocked: false,
     terms: [term],
-    then: "ask",
+    outcome: "ask",
     approverId: "",
     timeoutHours: DEFAULT_HOURS,
     onTimeout: "agent_owner",
@@ -55,7 +55,7 @@ export const decideFormOf = (node: AgentGraphWireNode): AgentGraphDecideForm | n
                 isElse,
                 isLocked: terms === null,
                 terms: terms ?? [],
-                then: branch.then,
+                outcome: branch.outcome,
                 approverId: member ?? (isGroup ? KEEP_GROUP : ""),
                 timeoutHours: approver === null ? DEFAULT_HOURS : Math.max(1, Math.round(approver.timeoutMinutes / 60)),
                 onTimeout: approver?.onTimeout.kind ?? "agent_owner",
@@ -76,14 +76,14 @@ const replaceAt = <T>(items: ReadonlyArray<T>, index: number, change: (item: T) 
 
 const rowWithField = (
     row: AgentGraphRowForm,
-    field: "then" | "approverId" | "timeoutHours" | "onTimeout" | "backupId",
+    field: "outcome" | "approverId" | "timeoutHours" | "onTimeout" | "backupId",
     value: string | number,
 ): AgentGraphRowForm => {
     if (typeof value === "number") return field === "timeoutHours" ? { ...row, timeoutHours: Math.max(1, value) } : row
     if (field === "approverId") return { ...row, approverId: value }
     if (field === "backupId") return { ...row, backupId: value }
-    const then = THENS.find((entry) => entry === value)
-    if (field === "then" && then !== undefined) return { ...row, then }
+    const outcome = THENS.find((entry) => entry === value)
+    if (field === "outcome" && outcome !== undefined) return { ...row, outcome }
     const onTimeout = TIMEOUTS.find((entry) => entry === value)
     return field === "onTimeout" && onTimeout !== undefined ? { ...row, onTimeout } : row
 }

@@ -665,7 +665,7 @@ interface DecidePoint {
 interface GraphBranch {
   readonly key: string
   readonly when: Condition | "else" // condition
-  readonly then: "auto" | "ask" | "stop" // action
+  readonly outcome: "auto" | "ask" | "stop" // action
   readonly next: string // the node it goes to
   readonly approver: BranchApprover | null // approver, required when `ask`
   readonly sources: ReadonlyArray<GraphSource> // source

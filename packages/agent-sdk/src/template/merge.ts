@@ -14,7 +14,7 @@ export interface MergeInput {
 
 /** What a branch does, without where it came from. */
 const branchSignature = (branch: GraphBranch): string =>
-    canonicalJson({ when: branch.when, then: branch.then, next: branch.next, approver: branch.approver })
+    canonicalJson({ when: branch.when, outcome: branch.outcome, next: branch.next, approver: branch.approver })
 
 /** What a node is apart from its branches and where it came from. */
 const nodeSignature = (node: GraphNode): string =>

@@ -55,18 +55,18 @@ describe("proposal-patch.policy a raised boundary", () => {
             branchOf({
                 key: "middle",
                 when: amountIs("gte", 5_000_000),
-                then: "ask",
+                outcome: "ask",
                 next: "ask",
                 approver: approverOf(),
             }),
-            branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: approverOf() }),
+            branchOf({ key: "else", when: "else", outcome: "ask", next: "ask", approver: approverOf() }),
         ])
         const asKnown = graphOf([
             branchOf({ key: "small", when: amountIs("lt", 5_000_000) }),
             branchOf({
                 key: "middle",
                 when: { fact: "supplier_payment.amount_vnd", op: "known" },
-                then: "ask",
+                outcome: "ask",
                 next: "ask",
                 approver: approverOf(),
             }),
@@ -77,14 +77,14 @@ describe("proposal-patch.policy a raised boundary", () => {
             branchOf({
                 key: "middle",
                 when: { any: [amountIs("gte", 5_000_000), amountIs("lt", 0)] },
-                then: "ask",
+                outcome: "ask",
                 next: "ask",
                 approver: approverOf(),
             }),
         ])
         const nothingSaid = graphOf([
             branchOf({ key: "small", when: amountIs("lt", 5_000_000) }),
-            branchOf({ key: "middle", when: { all: [] }, then: "ask", next: "ask", approver: approverOf() }),
+            branchOf({ key: "middle", when: { all: [] }, outcome: "ask", next: "ask", approver: approverOf() }),
         ])
 
         expect(subject.applyLearned(apart, { signal: "trust", branchKey: "middle", amounts: [9_000_000] })).toBeNull()
@@ -108,7 +108,7 @@ describe("proposal-patch.policy a lowered boundary", () => {
             branchOf({
                 key: "middle",
                 when: amountIs("gte", 5_000_000),
-                then: "ask",
+                outcome: "ask",
                 next: "ask",
                 approver: approverOf(),
             }),

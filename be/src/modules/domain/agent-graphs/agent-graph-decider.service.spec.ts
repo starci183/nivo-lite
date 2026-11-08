@@ -300,7 +300,7 @@ describe("AgentGraphDeciderService.decide enforced", () => {
     it("stops a branch that stops, as a closed rule would, and closes the run as stopped", async () => {
         const stopping = graphOf([
             ...OWNER_EXAMPLE.slice(0, 2),
-            branchOf({ key: "else", when: "else", then: "stop", approver: null, next: "stop" }),
+            branchOf({ key: "else", when: "else", outcome: "stop", approver: null, next: "stop" }),
         ])
         const built = await build(stateOf({ mode: "enforced", active: stopping }), {
             facts: { [AMOUNT_FACT]: 30_000_000 },

@@ -178,8 +178,8 @@ describe("graph-problems.policy conditions", () => {
     it("wants every branch to reach an output, even through steps in between", async () => {
         const subject = await build()
         const looping = graphOf([
-            branchOf({ key: "small", when: amountIs("lt", 5_000_000), then: "auto", next: "spin" }),
-            branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: approverOf() }),
+            branchOf({ key: "small", when: amountIs("lt", 5_000_000), outcome: "auto", next: "spin" }),
+            branchOf({ key: "else", when: "else", outcome: "ask", next: "ask", approver: approverOf() }),
         ])
         const withLoop: GraphDocument = {
             ...looping,
@@ -198,7 +198,7 @@ describe("graph-problems.policy decide points", () => {
     it("asks for an else, and refuses an else that runs alone", async () => {
         const subject = await build()
         const noElse = graphOf([branchOf({ key: "all", when: { fact: AMOUNT_FACT, op: "known" } })])
-        const autoElse = graphOf([branchOf({ key: "else", when: "else", then: "auto" })])
+        const autoElse = graphOf([branchOf({ key: "else", when: "else", outcome: "auto" })])
 
         expect(codes(subject.graphProblems(noElse, contextOf()))).toContain("no_else")
         expect(codes(subject.graphProblems(autoElse, contextOf()))).toContain("else_auto")
@@ -208,13 +208,13 @@ describe("graph-problems.policy decide points", () => {
         const subject = await build()
         const gap = graphOf([
             branchOf({ key: "under", when: amountIs("lt", 5_000_000) }),
-            branchOf({ key: "above", when: amountIs("gt", 5_000_000), then: "stop", next: "stop" }),
-            branchOf({ key: "else", when: "else", then: "stop", next: "stop" }),
+            branchOf({ key: "above", when: amountIs("gt", 5_000_000), outcome: "stop", next: "stop" }),
+            branchOf({ key: "else", when: "else", outcome: "stop", next: "stop" }),
         ])
         const overlap = graphOf([
             branchOf({ key: "up", when: amountIs("lte", 5_000_000) }),
-            branchOf({ key: "from", when: amountIs("gte", 5_000_000), then: "stop", next: "stop" }),
-            branchOf({ key: "else", when: "else", then: "stop", next: "stop" }),
+            branchOf({ key: "from", when: amountIs("gte", 5_000_000), outcome: "stop", next: "stop" }),
+            branchOf({ key: "else", when: "else", outcome: "stop", next: "stop" }),
         ])
 
         expect(codes(subject.graphProblems(gap, contextOf()))).toEqual(["gap"])
@@ -225,7 +225,7 @@ describe("graph-problems.policy decide points", () => {
         const subject = await build()
         const graph = graphOf([
             branchOf({ key: "bad", when: { fact: "nothing", op: "known" } }),
-            branchOf({ key: "else", when: "else", then: "stop", next: "stop" }),
+            branchOf({ key: "else", when: "else", outcome: "stop", next: "stop" }),
         ])
 
         expect(subject.graphProblems(graph, contextOf())).toContainEqual({
@@ -240,18 +240,18 @@ describe("graph-problems.policy decide points", () => {
 describe("graph-problems.policy decide points (continued)", () => {
     it("needs an approver on an ask, a timeout that is set, and an approver with a grant", async () => {
         const subject = await build()
-        const missing = graphOf([branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: null })])
+        const missing = graphOf([branchOf({ key: "else", when: "else", outcome: "ask", next: "ask", approver: null })])
         const unset = graphOf([
             branchOf({
                 key: "else",
                 when: "else",
-                then: "ask",
+                outcome: "ask",
                 next: "ask",
                 approver: approverOf({ onTimeout: { kind: "unset" } }),
             }),
         ])
         const asking = graphOf([
-            branchOf({ key: "else", when: "else", then: "ask", next: "ask", approver: approverOf() }),
+            branchOf({ key: "else", when: "else", outcome: "ask", next: "ask", approver: approverOf() }),
         ])
 
         expect(codes(subject.graphProblems(missing, contextOf()))).toEqual(["approver_missing"])
@@ -285,11 +285,11 @@ describe("graph-problems.policy decide points (continued)", () => {
             branchOf({
                 key: "kind",
                 when: { fact: "supplier_payment.kind", op: "eq", value: "rent" },
-                then: "ask",
+                outcome: "ask",
                 next: "ask",
                 approver: approverOf(),
             }),
-            branchOf({ key: "else", when: "else", then: "stop", next: "stop" }),
+            branchOf({ key: "else", when: "else", outcome: "stop", next: "stop" }),
         ])
         const tops: Array<number | null> = []
 
@@ -332,15 +332,15 @@ describe("graph-problems.policy ceilingProblems", () => {
         const subject = await build()
         const inside = graphOf([
             branchOf({ key: "small", when: amountIs("lte", 20_000_000) }),
-            branchOf({ key: "else", when: "else", then: "stop", next: "stop" }),
+            branchOf({ key: "else", when: "else", outcome: "stop", next: "stop" }),
         ])
         const past = graphOf([
             branchOf({ key: "small", when: amountIs("lt", 25_000_000) }),
-            branchOf({ key: "else", when: "else", then: "stop", next: "stop" }),
+            branchOf({ key: "else", when: "else", outcome: "stop", next: "stop" }),
         ])
         const unbounded = graphOf([
             branchOf({ key: "small", when: { fact: AMOUNT_FACT, op: "known" } }),
-            branchOf({ key: "else", when: "else", then: "stop", next: "stop" }),
+            branchOf({ key: "else", when: "else", outcome: "stop", next: "stop" }),
         ])
         const context = contextOf({ ceilings: [OPEN_RULE] })
 
@@ -398,11 +398,11 @@ describe("graph-problems.policy ceilingProblems (continued)", () => {
             branchOf({
                 key: "ask",
                 when: amountIs("lt", 99_000_000),
-                then: "ask",
+                outcome: "ask",
                 next: "ask",
                 approver: approverOf(),
             }),
-            branchOf({ key: "else", when: "else", then: "stop", next: "stop" }),
+            branchOf({ key: "else", when: "else", outcome: "stop", next: "stop" }),
         ])
 
         expect(subject.ceilingProblems(graph, contextOf({ ceilings: [{ ...OPEN_RULE, mode: "never" }] }))).toEqual([])

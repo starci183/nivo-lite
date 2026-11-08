@@ -307,7 +307,7 @@ describe("AgentGraphChecksService.check on an enforced graph that ends the work"
     it("stops, closes the run as stopped and answers no divert", async () => {
         const stopping = graphOf([
             ...OWNER_EXAMPLE.slice(0, 2),
-            branchOf({ key: "else", when: "else", then: "stop", next: "stop", approver: null }),
+            branchOf({ key: "else", when: "else", outcome: "stop", next: "stop", approver: null }),
         ])
         const { service, decisions } = await build(stateOf({ mode: "enforced", active: stopping }), {
             [AMOUNT_FACT]: 30_000_000,
@@ -327,7 +327,7 @@ describe("AgentGraphChecksService.check on an enforced graph that ends the work"
 
     it("diverts to the action the path leads to and says which", async () => {
         const base = graphOf([
-            branchOf({ key: "else", when: "else", then: "ask", next: "hand", approver: approverOf() }),
+            branchOf({ key: "else", when: "else", outcome: "ask", next: "hand", approver: approverOf() }),
         ])
         const diverting = {
             ...base,
