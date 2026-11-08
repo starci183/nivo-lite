@@ -63,7 +63,7 @@ const topupExpiryOf = (topup: number, lots: ReadonlyArray<CreditTopupLotType>, n
 
 /** Computes every figure the credits page shows from the rows the page read. */
 export const creditsDataOf = (input: CreditsInput): CreditsData => {
-    const views = input.plans.map(planViewOf)
+    const views = input.plans.map((item) => planViewOf(item))
     const plan = input.current ? planViewOf(input.current) : null
     const upgradable = views.filter((view) => !view.isCustom && !view.perSeat)
     const next =

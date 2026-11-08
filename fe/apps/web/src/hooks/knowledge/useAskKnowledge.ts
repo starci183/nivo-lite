@@ -58,7 +58,7 @@ export const useAskKnowledge = (agents: ReadonlyArray<AgentLens>, fixedAudience?
                     audience,
                     ...(installationId === null ? {} : { installationId }),
                 })
-                setResults(passages.map(toRetrievedPassage))
+                setResults(passages.map((item) => toRetrievedPassage(item)))
             } catch (error_) {
                 setResults(null)
                 setError(error_ instanceof Error ? error_.message : null)

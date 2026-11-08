@@ -8,8 +8,7 @@ import { useFeatureLifetime } from "@/hooks/reuseables"
 import { editorHref } from "@/modules/video"
 
 import { navigation } from "@/modules/i18n"
-import { videoOwnerOf } from "./videoWorkbench.shared"
-import type { VideoViewInput } from "./videoWorkbench.shared"
+import { videoOwnerOf, type VideoViewInput } from "./videoWorkbench.shared"
 type UseVideoEditorStepperViewResult = {
     ui: {
         toLibrary: string

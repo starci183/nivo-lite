@@ -5,8 +5,7 @@ import {
     type mutateCheckConnection as MutateCheckConnectionOperation,
 } from "@/modules/api/graphql/mutations/mutation-check-connection"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { CheckConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the checkConnection mutation. */

@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateFinishWebhookConnection,
     type MutateFinishWebhookConnectionRequest,
 } from "@/modules/api/graphql/mutations/mutation-finish-webhook-connection"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { FinishWebhookConnectionMutation } from "@/modules/api"
 
 /** What the finishWebhookConnection mutation is triggered with. */

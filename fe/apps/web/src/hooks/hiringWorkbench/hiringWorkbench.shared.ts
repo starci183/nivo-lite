@@ -146,7 +146,7 @@ export const pipelineLaneOf = (
     stage: lane.stage,
     label: t(`stage_${lane.stage}`),
     count: String(lane.candidates.length),
-    cards: lane.candidates.map(cardOf),
+    cards: lane.candidates.map((item) => cardOf(item)),
 })
 
 /** Locale and current job context used to resolve one candidate's display facts. */

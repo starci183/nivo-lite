@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateRequestDossierReview,
     type MutateRequestDossierReviewRequest,
 } from "@/modules/api/graphql/mutations/mutation-request-dossier-review"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RequestDossierReviewMutation } from "@/modules/api"
 
 /** What the RequestDossierReview mutation is triggered with. */

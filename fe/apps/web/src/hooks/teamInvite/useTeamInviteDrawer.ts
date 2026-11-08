@@ -3,8 +3,7 @@
 import { useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useInviteForm } from "@/hooks/rhf"
-import { NO_STAFF, useInviteCommands } from "@/hooks/team"
-import type { InviteSentView } from "@/hooks/team"
+import { NO_STAFF, useInviteCommands, type InviteSentView } from "@/hooks/team"
 
 /** The invite drawer's state and commands: open or closed, the form, the invitation just made and the copy mark. */
 export interface TeamInviteDrawerState {
@@ -25,14 +24,14 @@ export const useTeamInviteDrawer = (): TeamInviteDrawerState => {
     const form = useInviteForm()
     const params = useSearchParams()
     const staffParam = params.get("invite_staff")
-    const [isOpen, setOpen] = useState(() => params.has("invite") || staffParam !== null)
+    const [isOpen, setIsOpen] = useState(() => params.has("invite") || staffParam !== null)
     const [sent, setSent] = useState<InviteSentView>()
-    const [isCopied, setCopied] = useState(false)
+    const [isCopied, setIsCopied] = useState(false)
     useEffect(() => {
         if (staffParam !== null) form.setValue("staffId", staffParam)
     }, [form, staffParam])
     const send = form.handleSubmit(async (values) => {
-        setCopied(false)
+        setIsCopied(false)
         const result = await commands.create({
             email: values.email,
             role: values.role,
@@ -48,13 +47,13 @@ export const useTeamInviteDrawer = (): TeamInviteDrawerState => {
         sent,
         isCopied,
         isPending: commands.isPending,
-        open: () => setOpen(true),
+        open: () => setIsOpen(true),
         close: () => {
-            setOpen(false)
+            setIsOpen(false)
             setSent(undefined)
-            setCopied(false)
+            setIsCopied(false)
         },
         submit: () => void send(),
-        markCopied: () => setCopied(true),
+        markCopied: () => setIsCopied(true),
     }
 }

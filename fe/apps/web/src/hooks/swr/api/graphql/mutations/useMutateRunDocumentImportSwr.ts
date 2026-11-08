@@ -4,9 +4,8 @@ import {
     mutateRunDocumentImport,
     type mutateRunDocumentImport as MutateRunDocumentImportOperation,
 } from "@/modules/api/graphql/mutations/mutation-run-document-import"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RunDocumentImportMutation } from "@/modules/api"
 
 /** The SWR key of the runDocumentImport mutation. */

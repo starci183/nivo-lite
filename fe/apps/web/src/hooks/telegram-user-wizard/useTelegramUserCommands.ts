@@ -1,8 +1,7 @@
 "use client"
 
 import { useCallback, useMemo } from "react"
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
-import type { Settled } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, type Settled } from "@/hooks/connection-wizard"
 import { useConnectionsRefresh } from "@/hooks/connections"
 import {
     useMutateCancelTelegramLoginSwr,

@@ -1,9 +1,7 @@
 "use client"
 
-import { useTeamChatNewChat } from "./useTeamChatNewChat"
-import type { TeamChatNewChatView } from "./useTeamChatNewChat"
-import { useTeamChatRooms } from "./useTeamChatRooms"
-import type { TeamChatRoomsView } from "./useTeamChatRooms"
+import { useTeamChatNewChat, type TeamChatNewChatView } from "./useTeamChatNewChat"
+import { useTeamChatRooms, type TeamChatRoomsView } from "./useTeamChatRooms"
 
 /** The state of the list of rooms: the rooms with the open one marked, and the new-chat form. */
 export interface TeamChatListState {

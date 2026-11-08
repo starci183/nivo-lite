@@ -3,14 +3,12 @@
 import { useEffect } from "react"
 import type { ModuleKey } from "@/modules/catalog"
 import { navigation } from "@/modules/i18n"
-import { agentListHref, instancesOf } from "@/modules/installations"
+import { agentListHref, instancesOf, type AgentTab, type Installation } from "@/modules/installations"
 import { AGENTS_ROUTE, workspaceHref } from "@/modules/routes"
-import type { AgentTab, Installation } from "@/modules/installations"
 import type { DataSlot } from "@/modules/types"
 import { loadingSlot, slotOfReads } from "@/hooks/slot"
 import { useWorkspaceId } from "@/hooks/workspaces"
-import { typeTargetOf } from "./installations.shared"
-import type { TypeRouteMode } from "./installations.shared"
+import { typeTargetOf, type TypeRouteMode } from "./installations.shared"
 import { useInstallations } from "./useInstallations"
 
 /** The instances of one agent type, or where the url of the type leads instead. */

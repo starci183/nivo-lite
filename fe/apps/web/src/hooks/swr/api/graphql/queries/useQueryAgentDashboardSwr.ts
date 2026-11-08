@@ -1,8 +1,7 @@
 "use client"
 
 import { noData, workspaceArgumentKey, type WorkspaceReadKey } from "@/hooks/workspaceread"
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import {
     queryAgentDashboard,
     type QueryAgentDashboardRequest,

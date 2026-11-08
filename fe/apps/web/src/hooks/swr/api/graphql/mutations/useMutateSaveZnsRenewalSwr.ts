@@ -4,9 +4,8 @@ import {
     mutateSaveZnsRenewal,
     type mutateSaveZnsRenewal as MutateSaveZnsRenewalOperation,
 } from "@/modules/api/graphql/mutations/mutation-save-zns-renewal"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SaveZnsRenewalMutation } from "@/modules/api"
 
 /** The SWR key of the saveZnsRenewal mutation. */

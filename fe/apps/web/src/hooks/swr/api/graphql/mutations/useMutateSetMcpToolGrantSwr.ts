@@ -5,8 +5,7 @@ import {
     type mutateSetMcpToolGrant as MutateSetMcpToolGrantOperation,
 } from "@/modules/api/graphql/mutations/mutation-set-mcp-tool-grant"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { SetMcpToolGrantMutation } from "@/modules/api"
 
 /** The SWR key of the setMcpToolGrant mutation. */

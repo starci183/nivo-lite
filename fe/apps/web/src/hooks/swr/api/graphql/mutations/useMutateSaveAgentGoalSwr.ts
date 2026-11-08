@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSaveAgentGoal,
     type MutateSaveAgentGoalRequest,
 } from "@/modules/api/graphql/mutations/mutation-save-agent-goal"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SaveAgentGoalMutation } from "@/modules/api"
 
 /** What the SaveAgentGoal mutation is triggered with. */

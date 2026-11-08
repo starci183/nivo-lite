@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateRevokeAgentConnection,
     type MutateRevokeAgentConnectionRequest,
 } from "@/modules/api/graphql/mutations/mutation-revoke-agent-connection"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RevokeAgentConnectionMutation } from "@/modules/api"
 
 /** What the RevokeAgentConnection mutation is triggered with. */

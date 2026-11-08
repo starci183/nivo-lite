@@ -77,8 +77,8 @@ export const useBrainGaps = (board: ReturnType<typeof useBrainBoard>, options: G
         isPending: command.isPending,
         slot:
             options.gaps === undefined
-                ? mapSlot(board.slot, (brain) => brain.gaps.map(rowOf))
-                : slotOfSwr({ data: options.gaps.map(rowOf), error: undefined, isLoading: false }),
+                ? mapSlot(board.slot, (brain) => brain.gaps.map((item) => rowOf(item)))
+                : slotOfSwr({ data: options.gaps.map((item) => rowOf(item)), error: undefined, isLoading: false }),
         slotLabels: labels(t("gapsEmpty")),
     }
     return { list, dispatch, retry: board.reload }

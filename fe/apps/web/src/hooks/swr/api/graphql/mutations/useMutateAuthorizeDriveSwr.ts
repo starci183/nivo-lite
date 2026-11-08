@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateAuthorizeDrive,
     type MutateAuthorizeDriveRequest,
 } from "@/modules/api/graphql/mutations/mutation-authorize-drive"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { AuthorizeDriveMutation } from "@/modules/api"
 
 /** What the authorizeDrive mutation is triggered with. */

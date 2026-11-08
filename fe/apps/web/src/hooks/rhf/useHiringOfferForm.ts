@@ -3,10 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, type UseFormReturn } from "react-hook-form"
 import { z } from "zod"
 import type { OfferValues } from "@/hooks/hiringCandidate"
-import type { UseFormReturn } from "react-hook-form"
 
 /** The offer request form: the terms of the letter, the pay being the one required line. */
 export const useHiringOfferForm = (defaults: OfferValues): UseFormReturn<OfferValues> => {

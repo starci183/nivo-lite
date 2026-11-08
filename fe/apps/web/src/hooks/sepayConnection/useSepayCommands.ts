@@ -3,8 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useCallback, useMemo } from "react"
 import { mutate } from "@/modules/viewer-cache"
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
-import type { Settled } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, type Settled } from "@/hooks/connection-wizard"
 import { useConnectionsRefresh } from "@/hooks/connections"
 import {
     QUERY_SEPAY_CONNECTION_SWR_KEY,

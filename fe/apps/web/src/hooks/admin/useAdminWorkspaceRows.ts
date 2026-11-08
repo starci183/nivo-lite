@@ -2,8 +2,18 @@
 
 import { useMemo } from "react"
 import { adminWorkspacePath } from "@/modules/routes"
-import { billingTone, billingWord, healthTone, moduleTone, planWord } from "./admin.shared"
-import type { AdminBadgeView, AdminFormat, AdminText, AdminWorkspaceItem, AdminWorkspaceRowView } from "./admin.shared"
+import {
+    billingTone,
+    billingWord,
+    healthTone,
+    moduleTone,
+    planWord,
+    type AdminBadgeView,
+    type AdminFormat,
+    type AdminText,
+    type AdminWorkspaceItem,
+    type AdminWorkspaceRowView,
+} from "./admin.shared"
 import { useAdminFormat } from "./useAdminFormat"
 
 const warningOf = (provider: string, error: number, silent: number, text: AdminText): AdminBadgeView => ({

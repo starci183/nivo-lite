@@ -1,12 +1,11 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
 import {
     queryDrivePickedFolder,
     type QueryDrivePickedFolderRequest,
 } from "@/modules/api/graphql/queries/query-drive-picked-folder"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { DrivePickedFolderQuery } from "@/modules/api"
 
 /** The SWR key of the drivePickedFolder read. */

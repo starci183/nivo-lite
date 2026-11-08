@@ -1,10 +1,9 @@
 "use client"
 
 import { useFeatureReset } from "@/hooks/reuseables"
-import type { HiringOwner } from "@/hooks/hiring"
+import { type HiringOwner, useHiringCopy, useHiringRun } from "@/hooks/hiring"
 
 import { useState, type Dispatch, type SetStateAction } from "react"
-import { useHiringCopy, useHiringRun } from "@/hooks/hiring"
 import type { HiringWorkbenchData, JobView } from "@/hooks/hiringWire"
 import { useHiringJobCommands } from "./useHiringJobCommands"
 

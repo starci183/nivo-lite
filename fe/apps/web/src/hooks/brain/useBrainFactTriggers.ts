@@ -3,12 +3,10 @@ import {
     useMutateDismissKnowledgeGapSwr,
     useMutateKeepCurrentBrainFactSwr,
     useMutateSaveBrainFactSwr,
-} from "@/hooks/swr"
-import type {
-    MutateDecideBrainFactRequest,
-    MutateDismissKnowledgeGapRequest,
-    MutateKeepCurrentBrainFactRequest,
-    MutateSaveBrainFactRequest,
+    type MutateDecideBrainFactRequest,
+    type MutateDismissKnowledgeGapRequest,
+    type MutateKeepCurrentBrainFactRequest,
+    type MutateSaveBrainFactRequest,
 } from "@/hooks/swr"
 
 /** The requests of the commands about facts and questions, by the kind a card names. */

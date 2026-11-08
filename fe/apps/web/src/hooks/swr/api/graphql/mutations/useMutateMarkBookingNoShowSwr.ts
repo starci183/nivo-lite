@@ -1,9 +1,8 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateMarkBookingNoShow } from "@/modules/api/graphql/mutations/mutation-mark-booking-no-show"
 import type { MutateMarkBookingNoShowRequest } from "@/modules/api/graphql/mutations/types/mark-booking-no-show"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { MarkBookingNoShowMutation } from "@/modules/api"
 
 /** The SWR key of the `markBookingNoShow` mutation. */

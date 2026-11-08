@@ -4,9 +4,8 @@ import {
     mutateSaveZaloOaSecret,
     type mutateSaveZaloOaSecret as MutateSaveZaloOaSecretOperation,
 } from "@/modules/api/graphql/mutations/mutation-save-zalo-oa-secret"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SaveZaloOaSecretMutation } from "@/modules/api"
 
 /** The SWR key of the saveZaloOaSecret mutation. */

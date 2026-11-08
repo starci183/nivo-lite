@@ -10,8 +10,7 @@ import { useMutateAuthorizeDriveSwr, useMutateDisconnectDriveSwr } from "@/hooks
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import type { ConnectionHeadView, ConnectionNotice, ConnectionTone, DataSlot } from "@/modules/types"
-import { DRIVE_PAGE_PATH, driveFailureKeyOf } from "./drive.shared"
-import type { DriveGrantStanding } from "./drive.shared"
+import { DRIVE_PAGE_PATH, driveFailureKeyOf, type DriveGrantStanding } from "./drive.shared"
 import { useDrivePage } from "./useDrivePage"
 import { useWorkspaceId } from "@/hooks/workspaces"
 

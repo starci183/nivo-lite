@@ -1,8 +1,15 @@
 "use client"
 
 import { useMemo } from "react"
-import { billingTone, billingWord, planWord } from "./admin.shared"
-import type { AdminFactView, AdminFormat, AdminText, AdminWorkspaceDetail } from "./admin.shared"
+import {
+    billingTone,
+    billingWord,
+    planWord,
+    type AdminFactView,
+    type AdminFormat,
+    type AdminText,
+    type AdminWorkspaceDetail,
+} from "./admin.shared"
 import { useAdminFormat } from "./useAdminFormat"
 
 /** The id and message key of each term, so the terms stay real text while the facts load. */

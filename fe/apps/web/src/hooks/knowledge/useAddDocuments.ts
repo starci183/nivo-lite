@@ -43,7 +43,7 @@ export const useAddDocuments = (input: AddDocumentsInput): AddDocumentsView => {
     const note = useNoteDraft()
     const options = useBatchOptions(preset, instances)
     const [mode, setMode] = useState<AddMode>(preset === null ? "files" : (preset.mode ?? "write"))
-    const [isBusy, setBusy] = useState(false)
+    const [isBusy, setIsBusy] = useState(false)
     const [failure, setFailure] = useState<string | null>(null)
     const [queuedCount, setQueuedCount] = useState(0)
     const queued = useQueuedDocs(queue.items)
@@ -57,11 +57,11 @@ export const useAddDocuments = (input: AddDocumentsInput): AddDocumentsView => {
     const runBatch = createDocumentBatchRunner(queue, linkRows, retryable, options)
     const batch = {
         begin: () => {
-            setBusy(true)
+            setIsBusy(true)
             setFailure(null)
         },
         end: (queued: number) => {
-            setBusy(false)
+            setIsBusy(false)
             setQueuedCount((now) => now + queued)
             if (queued > 0) input.onAdded()
         },

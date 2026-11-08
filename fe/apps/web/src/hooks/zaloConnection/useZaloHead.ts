@@ -9,11 +9,9 @@ import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { LocalStorage, StorageId } from "@/modules/storage"
 import type { DataSlot, ZaloHeadView } from "@/modules/types"
-import { chipToneOf, zaloStatusKindOf } from "./zaloConnection.shared"
+import { chipToneOf, zaloStatusKindOf, type ZaloStatusKind } from "./zaloConnection.shared"
 import { useConnectionsRole } from "@/hooks/connections"
-import { useZaloPage } from "./useZaloPage"
-import type { ZaloPageData } from "./useZaloPage"
-import type { ZaloStatusKind } from "./zaloConnection.shared"
+import { useZaloPage, type ZaloPageData } from "./useZaloPage"
 import { useWorkspaceId } from "@/hooks/workspaces"
 
 const CHIP_KEYS = { ok: "chipOk", waiting: "chipWaiting", check: "chipCheck" } as const

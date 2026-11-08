@@ -5,14 +5,23 @@ import { useWorkspaceMember } from "@/hooks/knowledge"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { loadingSlot, mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useQueryKnowledgeSourcesSwr } from "@/hooks/swr"
-import { brainGridOf, dossierDocumentsOf, dossierSectionsOf, findOpened, reviewedStatusOf } from "@/modules/brain"
-import type { CategoryView, DossierDeskView, DossierSource, DossierView, Standing } from "@/modules/brain"
+import {
+    brainGridOf,
+    dossierDocumentsOf,
+    dossierSectionsOf,
+    findOpened,
+    reviewedStatusOf,
+    type CategoryView,
+    type DossierDeskView,
+    type DossierSource,
+    type DossierView,
+    type Standing,
+} from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
 import { brainDossierHref, brainTabHref, workspaceHref } from "@/modules/routes"
 import { useDossierAsideWords } from "./useDossierAsideWords"
 import { useDossierDeskWords } from "./useDossierDeskWords"
-import { useDossierOwner } from "./useDossierOwner"
-import type { DossierOwner } from "./useDossierOwner"
+import { useDossierOwner, type DossierOwner } from "./useDossierOwner"
 import { useBrainDossiers } from "./useBrainDossiers"
 import { useDossierReviewSummary } from "./useDossierReviewSummary"
 import { useWorkspaceId } from "@/hooks/workspaces"
@@ -91,7 +100,9 @@ export const useBrainDossierDesk = (input: DossierDeskInput): DossierDesk => {
     const isAsideShown = opened !== null && hiddenId !== opened.dossier.id
     const isWhole = !waiting && !("items" in listSlot)
     const documents =
-        opened === null ? [] : dossierDocumentsOf(sources.data ?? NO_SOURCES, opened.dossier.ref).map(w.documentOf)
+        opened === null
+            ? []
+            : dossierDocumentsOf(sources.data ?? NO_SOURCES, opened.dossier.ref).map((item) => w.documentOf(item))
     const view: DossierDeskView = {
         list: {
             slot: listSlot,

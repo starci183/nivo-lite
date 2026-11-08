@@ -1,9 +1,8 @@
 "use client"
 import { slotOfReads } from "@/hooks/slot"
 import { useQueryVideoBrandSwr, useQueryVideoMediaSwr, useQueryVideoScopeSwr } from "@/hooks/swr"
-import { brandOf, mediaItemOf } from "./video.shared"
+import { brandOf, mediaItemOf, type Brand, type MediaItem } from "./video.shared"
 
-import type { Brand, MediaItem } from "./video.shared"
 import type { DataSlot } from "@/modules/types"
 import type { SWRResponse } from "swr"
 
@@ -91,7 +90,11 @@ export const useVideoBrandKit = (isActive = true): UseVideoBrandKitResult => {
     const slot = slotOfReads(reads, () => {
         if (scope.data === undefined || brand.data === undefined || media.data === undefined)
             throw new Error("A ready brand kit requires all three settled reads")
-        return { brand: brandOf(brand.data), media: media.data.map(mediaItemOf), canEdit: scope.data.canEdit }
+        return {
+            brand: brandOf(brand.data),
+            media: media.data.map((item) => mediaItemOf(item)),
+            canEdit: scope.data.canEdit,
+        }
     })
     return {
         slot,

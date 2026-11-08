@@ -4,9 +4,8 @@ import {
     mutateSaveImapConnection,
     type MutateSaveImapConnectionRequest,
 } from "@/modules/api/graphql/mutations/mutation-save-imap-connection"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SaveImapConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the saveImapConnection mutation. */

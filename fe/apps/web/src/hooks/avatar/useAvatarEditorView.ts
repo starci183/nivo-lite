@@ -1,8 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { AVATAR_ACCEPT } from "./avatar.shared"
-import type { AvatarProblem } from "./avatar.shared"
+import { AVATAR_ACCEPT, type AvatarProblem } from "./avatar.shared"
 
 /** Where an upload stands, as the editor shows it. */
 interface AvatarUploadState {

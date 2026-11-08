@@ -1,7 +1,6 @@
 import { useQueryMyWorkspacesSwr } from "@/hooks/swr"
 import { readError } from "@/hooks/workspaceread"
-import { workspaceRoleOf, workspaceStateOf } from "./workspaces.shared"
-import type { WorkspaceCardView } from "./workspaces.shared"
+import { workspaceRoleOf, workspaceStateOf, type WorkspaceCardView } from "./workspaces.shared"
 
 /** Where the workspaces list stands: still loading, failed, loaded empty, or loaded with workspaces. */
 export type WorkspacesStatus = "loading" | "error" | "empty" | "ready"

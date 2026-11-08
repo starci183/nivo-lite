@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateCancelHiringOffer,
     type MutateCancelHiringOfferRequest,
 } from "@/modules/api/graphql/mutations/mutation-cancel-hiring-offer"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { CancelHiringOfferMutation } from "@/modules/api"
 
 /** What the cancelHiringOffer mutation is triggered with. */

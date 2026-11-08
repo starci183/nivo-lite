@@ -2,8 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useCallback } from "react"
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
-import type { Settled } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, type Settled } from "@/hooks/connection-wizard"
 import { useMutateSetConnectionAgentsSwr } from "@/hooks/swr"
 import type { Access } from "@/modules/types"
 import { useConnectionsRefresh } from "./useConnectionsRefresh"
@@ -25,7 +24,7 @@ export const useSetConnectionAgents = (): ((
     return useCallback(
         async (connectionId: string, wanted: ReadonlyArray<AgentWish>): Promise<Settled<true>> => {
             const settled = await settle(
-                () => trigger({ connectionId, agents: wanted.map(wishOf) }),
+                () => trigger({ connectionId, agents: wanted.map((item) => wishOf(item)) }),
                 t("toastAgentsSaved"),
             )
             if (settled.kind !== "ok") return settled

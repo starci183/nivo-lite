@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateKeepCurrentBrainFact,
     type MutateKeepCurrentBrainFactRequest,
 } from "@/modules/api/graphql/mutations/mutation-keep-current-brain-fact"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { KeepCurrentBrainFactMutation } from "@/modules/api"
 
 /** What the KeepCurrentBrainFact mutation is triggered with. */

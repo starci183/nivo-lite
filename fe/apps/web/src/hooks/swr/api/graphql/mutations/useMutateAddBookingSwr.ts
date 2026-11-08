@@ -1,9 +1,8 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateAddBooking } from "@/modules/api/graphql/mutations/mutation-add-booking"
 import type { MutateAddBookingRequest } from "@/modules/api/graphql/mutations/types/add-booking"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { AddBookingMutation } from "@/modules/api"
 
 /** The SWR key of the `addBooking` mutation. */

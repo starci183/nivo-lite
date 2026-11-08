@@ -1,11 +1,9 @@
 "use client"
 
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { useForm, type UseFormReturn } from "react-hook-form"
 import { z } from "zod"
-import { RETENTION_MAX_DAYS, RETENTION_MIN_DAYS } from "@/hooks/hiringSettings"
-import type { SettingsValues } from "@/hooks/hiringSettings"
-import type { UseFormReturn } from "react-hook-form"
+import { RETENTION_MAX_DAYS, RETENTION_MIN_DAYS, type SettingsValues } from "@/hooks/hiringSettings"
 
 const schema = z.object({
     publicSlug: z.string(),

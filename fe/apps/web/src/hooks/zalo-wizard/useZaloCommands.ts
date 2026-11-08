@@ -1,8 +1,7 @@
 "use client"
 
 import { useCallback, useMemo } from "react"
-import { useSettledGraphQL, useZaloFailureLabel } from "@/hooks/connection-wizard"
-import type { Settled } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, useZaloFailureLabel, type Settled } from "@/hooks/connection-wizard"
 import { zaloWizardOf } from "@/hooks/connection-wire"
 import { useConnectionsRefresh } from "@/hooks/connections"
 import { useMutateAuthorizeZaloSwr, useMutateSaveZaloOaSecretSwr, useMutateStartZaloConnectionSwr } from "@/hooks/swr"

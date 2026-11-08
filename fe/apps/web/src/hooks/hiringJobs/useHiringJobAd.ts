@@ -1,11 +1,10 @@
 "use client"
 
 import { useFeatureReset, useFeatureLifetime } from "@/hooks/reuseables"
-import type { HiringOwner } from "@/hooks/hiring"
+import { type HiringOwner, useHiringCopy, useHiringRun } from "@/hooks/hiring"
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useHiringCopy, useHiringRun } from "@/hooks/hiring"
 import type { AdView, JobView } from "@/hooks/hiringWire"
 import { useHiringJobCommands } from "./useHiringJobCommands"
 

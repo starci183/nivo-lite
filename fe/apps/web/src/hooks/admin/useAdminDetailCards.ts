@@ -1,25 +1,28 @@
 "use client"
 
 import { useMemo } from "react"
-import { adminCard, badgeOf, flowTone, healthTone, moduleTone } from "./admin.shared"
-import type {
-    AdminBadgeView,
-    AdminCardView,
-    AdminFormat,
-    AdminRowView,
-    AdminText,
-    AdminWorkspaceDetail,
+import {
+    adminCard,
+    badgeOf,
+    flowTone,
+    healthTone,
+    moduleTone,
+    type AdminBadgeView,
+    type AdminCardView,
+    type AdminFormat,
+    type AdminRowView,
+    type AdminText,
+    type AdminWorkspaceDetail,
 } from "./admin.shared"
 import { useAdminFormat } from "./useAdminFormat"
 
 /** The most characters of a raw error text a row shows. */
 const ERROR_CLIP = 300
 
-const memberRows = (
-    detail: AdminWorkspaceDetail,
-    format: AdminFormat,
-    text: AdminText,
-): ReadonlyArray<AdminRowView> => [
+/** How one list card of a workspace reads its rows from the workspace. */
+type CardSource = (detail: AdminWorkspaceDetail, format: AdminFormat, text: AdminText) => ReadonlyArray<AdminRowView>
+
+const memberRows: CardSource = (detail, format, text) => [
     ...detail.members.map((member): AdminRowView => ({
         id: member.userId,
         title: member.displayName,
@@ -86,11 +89,7 @@ const moduleRows = (detail: AdminWorkspaceDetail, format: AdminFormat, text: Adm
         }
     })
 
-const connectionRows = (
-    detail: AdminWorkspaceDetail,
-    format: AdminFormat,
-    text: AdminText,
-): ReadonlyArray<AdminRowView> =>
+const connectionRows: CardSource = (detail, format, text) =>
     detail.connections.map((entry): AdminRowView => ({
         id: entry.id,
         title: entry.name,
@@ -138,11 +137,7 @@ const orderRows = (detail: AdminWorkspaceDetail, format: AdminFormat, text: Admi
         }
     })
 
-const paymentRows = (
-    detail: AdminWorkspaceDetail,
-    format: AdminFormat,
-    text: AdminText,
-): ReadonlyArray<AdminRowView> => [
+const paymentRows: CardSource = (detail, format, text) => [
     ...detail.transfers.map((entry): AdminRowView => ({
         id: `transfer-${entry.sepayId}`,
         title: format.vnd(entry.transferAmount),
@@ -167,9 +162,6 @@ const errorRows = (detail: AdminWorkspaceDetail, format: AdminFormat): ReadonlyA
         note: format.dateTime(error.createdAt),
         badges: [],
     }))
-
-/** How one list card of a workspace reads its rows from the workspace. */
-type CardSource = (detail: AdminWorkspaceDetail, format: AdminFormat, text: AdminText) => ReadonlyArray<AdminRowView>
 
 /** The list cards under the overview of one workspace, in reading order; a workspace not read yet gives each card its label and no rows, and the logs (errors, transfers) show no count. */
 const detailCards = (

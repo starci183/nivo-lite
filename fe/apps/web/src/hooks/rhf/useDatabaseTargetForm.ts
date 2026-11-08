@@ -3,10 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, type UseFormReturn } from "react-hook-form"
 import { z } from "zod"
 import type { DbEngine, DbSavedConnection } from "@/modules/types"
-import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the database connect form; the port is text while it is typed. */
 export interface DatabaseTargetValues {

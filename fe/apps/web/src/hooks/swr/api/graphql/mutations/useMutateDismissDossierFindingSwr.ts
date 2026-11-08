@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateDismissDossierFinding,
     type MutateDismissDossierFindingRequest,
 } from "@/modules/api/graphql/mutations/mutation-dismiss-dossier-finding"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { DismissDossierFindingMutation } from "@/modules/api"
 
 /** What the DismissDossierFinding mutation is triggered with. */

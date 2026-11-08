@@ -35,11 +35,11 @@ export const usePublicDocRunner = (): PublicDocRunnerView => {
     const feedback = useTranslations("toast")
     const workspaceKey = useWorkspaceKey(QUERY_PUBLIC_DOCUMENTS_SWR_KEY, [])
     const running = useRef(false)
-    const [isPending, setPending] = useState(false)
+    const [isPending, setIsPending] = useState(false)
     const run: Run = async (action, done) => {
         if (running.current || workspaceKey === null) return undefined
         running.current = true
-        setPending(true)
+        setIsPending(true)
         try {
             const result = await runGraphQL(action, { successMessage: done, showSuccessToast: done !== undefined })
             if (result === undefined) return undefined
@@ -56,7 +56,7 @@ export const usePublicDocRunner = (): PublicDocRunnerView => {
             return undefined
         } finally {
             running.current = false
-            setPending(false)
+            setIsPending(false)
         }
     }
     return { isPending, run }

@@ -1,7 +1,15 @@
 import { purposeFor } from "@/hooks/connection-access"
 import { mapSlot, slotOfSwr } from "@/hooks/slot"
-import { guideKey, placeholdersOf, tokenValue, VERIFY, verifyKey } from "@/hooks/connection-guides"
-import type { GuideContext, GuideStepDef, Token } from "@/hooks/connection-guides"
+import {
+    guideKey,
+    placeholdersOf,
+    tokenValue,
+    VERIFY,
+    verifyKey,
+    type GuideContext,
+    type GuideStepDef,
+    type Token,
+} from "@/hooks/connection-guides"
 import type {
     AgentChoice,
     AgentOption,
@@ -40,7 +48,7 @@ export interface GuideBuild {
 const slug = (id: string): string =>
     id
         .normalize("NFD")
-        .replace(/[^A-Za-z0-9]+/gu, "-")
+        .replaceAll(/[^A-Za-z0-9]+/gu, "-")
         .toLowerCase()
 
 /**

@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateToggleHiringOnboarding,
     type MutateToggleHiringOnboardingRequest,
 } from "@/modules/api/graphql/mutations/mutation-toggle-hiring-onboarding"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { ToggleHiringOnboardingMutation } from "@/modules/api"
 
 /** What the toggleHiringOnboarding mutation is triggered with. */

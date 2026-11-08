@@ -11,15 +11,13 @@ import {
     useKnowledgeProgressViewOf,
     useLibraryCommands,
     useWorkspaceMember,
+    type WorkspaceMember,
 } from "@/hooks/knowledge"
-import { appliedBatchOf, sourceStatusLabelOf, waitingFactCountOf } from "@/modules/brain"
-import type { SourceStatusInput } from "@/modules/brain"
+import { appliedBatchOf, sourceStatusLabelOf, waitingFactCountOf, type SourceStatusInput } from "@/modules/brain"
 import type { DocumentRowBadgeView, DocumentRowView, LiveProgress } from "@/modules/documents"
 import type { KnowledgeDocument, RowActionView } from "@/modules/types"
 import { toast } from "@/modules/toast"
-import { useBrainBoard } from "./useBrainBoard"
-import type { BrainBoard } from "./useBrainBoard"
-import type { WorkspaceMember } from "@/hooks/knowledge"
+import { useBrainBoard, type BrainBoard } from "./useBrainBoard"
 
 type Translate = ReturnType<typeof useTranslations<"knowledge">>
 

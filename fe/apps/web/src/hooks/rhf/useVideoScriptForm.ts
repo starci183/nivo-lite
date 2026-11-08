@@ -3,11 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, type UseFormReturn } from "react-hook-form"
 import { z } from "zod"
-import { SCRIPT_MAX_SCENES } from "@/modules/video"
-import type { ScriptScene } from "@/modules/video"
-import type { UseFormReturn } from "react-hook-form"
+import { SCRIPT_MAX_SCENES, type ScriptScene } from "@/modules/video"
 
 /** The scenes edited before rendering a video. */
 export interface VideoScriptValues {

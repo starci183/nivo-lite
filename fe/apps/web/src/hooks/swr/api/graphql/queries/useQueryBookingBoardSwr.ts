@@ -1,8 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import useSWR from "swr"
-import type { SWRConfiguration, SWRResponse } from "swr"
+import useSWR, { type SWRConfiguration, type SWRResponse } from "swr"
 import { useWorkspaceParamsKey } from "@/hooks/workspaceKey"
 import type { WorkspaceReadKey } from "@/hooks/workspaceread"
 import { queryBookingBoard } from "@/modules/api/graphql/queries/query-booking-board"

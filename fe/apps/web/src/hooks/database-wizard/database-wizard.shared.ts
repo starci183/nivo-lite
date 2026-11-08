@@ -138,7 +138,7 @@ export const dbPreviewLines = (preview: DbPreviewRows): ReadonlyArray<{ readonly
     }))
 
 /** Only digits, at most 5: what the port field keeps of what is typed. */
-export const dbPortOf = (value: string): string => value.replace(/\D/g, "").slice(0, 5)
+export const dbPortOf = (value: string): string => value.replaceAll(/\D/g, "").slice(0, 5)
 
 /** Restores a saved connection or prepares the initial wizard state. */
 export const stateOf = (

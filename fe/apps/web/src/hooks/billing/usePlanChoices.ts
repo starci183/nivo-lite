@@ -5,8 +5,8 @@ import {
     useQueryBillingPlansSwr,
     useQueryBillingStorageSwr,
     useQueryBillingWorkspaceSwr,
+    type BillingPlanType,
 } from "@/hooks/swr"
-import type { BillingPlanType } from "@/hooks/swr"
 import { navigation } from "@/modules/i18n"
 import { workspaceRenewalPaymentPath } from "@/modules/routes"
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react"

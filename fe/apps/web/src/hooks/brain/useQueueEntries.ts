@@ -10,8 +10,9 @@ import {
     queueEntryOfRow,
     reviewBoardOf,
     todoFiltersOf,
+    type FindingCardView,
+    type QueueWords,
 } from "@/modules/brain"
-import type { FindingCardView, QueueWords } from "@/modules/brain"
 import type { DataSlot, KnowledgeListView, KnowledgeRowView, QueueEntryView } from "@/modules/types"
 import { useBrainBoard } from "./useBrainBoard"
 import { useBrainGaps } from "./useBrainGaps"

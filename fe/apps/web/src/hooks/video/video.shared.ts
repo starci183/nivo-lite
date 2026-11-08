@@ -1,6 +1,14 @@
 import type { VideoBrandType, VideoMediaType, VideoProjectType } from "@/hooks/swr"
-import { ASPECTS, isGoal, Brand, MediaItem, ProjectStatus, ProjectView, SceneRole } from "@/modules/video"
-import type { RenderView } from "@/modules/video"
+import {
+    ASPECTS,
+    isGoal,
+    Brand,
+    MediaItem,
+    ProjectStatus,
+    ProjectView,
+    SceneRole,
+    type RenderView,
+} from "@/modules/video"
 import type { VideoRefresh } from "./useVideoRefresh"
 
 export {

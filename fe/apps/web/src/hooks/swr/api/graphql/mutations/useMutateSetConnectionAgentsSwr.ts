@@ -4,9 +4,8 @@ import {
     mutateSetConnectionAgents,
     type mutateSetConnectionAgents as MutateSetConnectionAgentsOperation,
 } from "@/modules/api/graphql/mutations/mutation-set-connection-agents"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SetConnectionAgentsMutation } from "@/modules/api"
 
 /** The SWR key of the setConnectionAgents mutation. */

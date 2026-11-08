@@ -96,7 +96,7 @@ export const useHiringInterviewsView = (input: HiringViewInput): HiringInterview
             key: day.date,
             label: format.dayLabel(day.startIso),
             isToday: day.isToday && view.week === 0,
-            items: day.items.map(rowOf),
+            items: day.items.map((item) => rowOf(item)),
         })),
         invitations: view.proposed.map((interview) => ({
             ...rowOf(interview),

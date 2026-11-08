@@ -15,10 +15,9 @@ import type {
     WizardResume,
 } from "@/modules/types"
 import { useTranslations } from "next-intl"
-import { useState, useTransition } from "react"
+import { useState, useTransition, type SetStateAction, type Dispatch } from "react"
 import { createMetaWizardActions, META_STEPS, metaFailureOf, metaStartStepOf } from "./meta-wizard.shared"
 import { useMetaCommands } from "./useMetaCommands"
-import type { SetStateAction, Dispatch } from "react"
 
 /** What the Meta wizard needs from its drawer. */
 interface MetaWizardInput {

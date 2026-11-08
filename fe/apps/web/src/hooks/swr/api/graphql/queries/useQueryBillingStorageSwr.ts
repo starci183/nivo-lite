@@ -1,8 +1,7 @@
 "use client"
 
 import { argumentKey } from "@/hooks/workspaceread"
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { queryBillingStorage } from "@/modules/api/graphql/queries/query-billing-storage"
 import type { BillingStorageQuery } from "@/modules/api"
 

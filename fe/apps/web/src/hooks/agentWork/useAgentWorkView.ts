@@ -2,8 +2,7 @@
 
 import { useSearchParams } from "next/navigation"
 import { navigation } from "@/modules/i18n"
-import { agentWorkViewOf, agentWorkViewQuery } from "@/modules/agentWork"
-import type { AgentWorkViewKey } from "@/modules/agentWork"
+import { agentWorkViewOf, agentWorkViewQuery, type AgentWorkViewKey } from "@/modules/agentWork"
 
 /** The view `useAgentWorkView` returns. */
 export interface AgentWorkViewState {

@@ -2,8 +2,7 @@ import { isManager, useMember } from "@/hooks/member"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import type { ModuleKey } from "@/modules/catalog"
 import { navigation } from "@/modules/i18n"
-import { agentHref } from "@/modules/installations"
-import type { AgentTab } from "@/modules/installations"
+import { agentHref, type AgentTab } from "@/modules/installations"
 import { workspaceHref } from "@/modules/routes"
 
 const ALL_TABS: ReadonlyArray<AgentTab> = ["setup", "workbench", "work", "chat", "performance", "settings"]

@@ -1,12 +1,17 @@
 "use client"
 import { slotOfReads } from "@/hooks/slot"
 import { useVideoBrandKit } from "./useVideoBrandKit"
-import { useVideoEditorStep } from "./useVideoEditorStep"
-import type { VideoEditorAddress } from "./useVideoEditorStep"
+import { useVideoEditorStep, type VideoEditorAddress } from "./useVideoEditorStep"
 import { useVideoReferences } from "./useVideoReferences"
-import { goalTemplateOf } from "./video.shared"
+import {
+    goalTemplateOf,
+    type Goal,
+    type Brand,
+    type SourceChoice,
+    type ProjectView,
+    type MediaItem,
+} from "./video.shared"
 
-import type { Goal, Brand, SourceChoice, ProjectView, MediaItem } from "./video.shared"
 import type { DataSlot, SlotRead } from "@/modules/types"
 
 type EditorStepName = "goal" | "inputs" | "script" | "preview" | "result"

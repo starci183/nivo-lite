@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateUnpinChatMessage,
     type mutateUnpinChatMessage as UnpinChatMessageOperation,
 } from "@/modules/api/graphql/mutations/mutation-unpin-chat-message"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { UnpinChatMessageMutation } from "@/modules/api"
 
 /** What the UnpinChatMessage mutation is triggered with. */

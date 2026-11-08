@@ -10,8 +10,7 @@ import { editorHref } from "@/modules/video"
 
 import { navigation } from "@/modules/i18n"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { shapeOf, videoOwnerOf, videoResultBadgesOf } from "./videoWorkbench.shared"
-import type { VideoViewInput } from "./videoWorkbench.shared"
+import { shapeOf, videoOwnerOf, videoResultBadgesOf, type VideoViewInput } from "./videoWorkbench.shared"
 /** The actions the result step offers: approve, share, mark posted, edit again, re-render. */
 export type VideoResultViewActions = VideoProductionActions["result"]
 type ResultBusy = "approve" | "share" | "posted"

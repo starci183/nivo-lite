@@ -7,12 +7,10 @@ import { useTranslations } from "next-intl"
 import type { BadgeTone } from "@starci/grammar/common"
 import { useVideoActions } from "@/hooks/video"
 import { useFeatureLifetime, useFeatureReset } from "@/hooks/reuseables"
-import { editorHref, GOAL_TEMPLATES, goalLabelKey, stepFor } from "@/modules/video"
-import type { ProjectStatus } from "@/modules/video"
+import { editorHref, GOAL_TEMPLATES, goalLabelKey, stepFor, type ProjectStatus } from "@/modules/video"
 import { navigation } from "@/modules/i18n"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { videoOwnerOf } from "./videoWorkbench.shared"
-import type { VideoViewInput } from "./videoWorkbench.shared"
+import { videoOwnerOf, type VideoViewInput } from "./videoWorkbench.shared"
 const STATUS_TONE: Record<ProjectStatus, BadgeTone> = {
     draft: "neutral",
     scripting: "accent",

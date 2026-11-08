@@ -1,7 +1,6 @@
 import { operatingModeOf } from "@/hooks/installations"
 import type { ModuleKey } from "@/modules/catalog"
-import { agentHref } from "@/modules/installations"
-import type { OperatingMode } from "@/modules/installations"
+import { agentHref, type OperatingMode } from "@/modules/installations"
 import { workspaceHref } from "@/modules/routes"
 
 /** The wire line of a waiting or done region. */
@@ -167,9 +166,13 @@ export const toAgentDashboard = (
         waiting: {
             isFailed: !data.waiting.ok,
             total: waiting?.total ?? 0,
-            items: (waiting?.items ?? []).map(waitingRow),
+            items: (waiting?.items ?? []).map((item) => waitingRow(item)),
         },
-        done: { isFailed: !data.done.ok, count: done?.count ?? 0, items: (done?.items ?? []).map(doneRow) },
+        done: {
+            isFailed: !data.done.ok,
+            count: done?.count ?? 0,
+            items: (done?.items ?? []).map((item) => doneRow(item)),
+        },
         connections: {
             isFailed: !data.connections.ok,
             items: (connections ?? []).map((row) => ({

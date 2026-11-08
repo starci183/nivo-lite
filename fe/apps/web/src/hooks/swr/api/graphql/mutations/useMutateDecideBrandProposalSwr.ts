@@ -5,8 +5,7 @@ import {
     type mutateDecideBrandProposal as MutateDecideBrandProposalOperation,
 } from "@/modules/api/graphql/mutations/mutation-decide-brand-proposal"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { DecideBrandProposalMutation } from "@/modules/api"
 
 /** The SWR key of the decideBrandProposal mutation. */

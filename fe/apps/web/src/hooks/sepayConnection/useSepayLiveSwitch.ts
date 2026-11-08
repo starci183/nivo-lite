@@ -34,7 +34,7 @@ export const useSepayLiveSwitch = (connectionId: string): SepayLiveSwitch => {
     const connection = useSepayConnection(connectionId)
     const commands = useSepayCommands(connectionId)
     const { role } = useConnectionsRole()
-    const [isPending, setPending] = useState(false)
+    const [isPending, setIsPending] = useState(false)
     const view = "items" in connection.slot ? connection.slot.items : undefined
     const push = (isOpen: boolean): void => {
         const next = new URLSearchParams(params.toString())
@@ -52,9 +52,9 @@ export const useSepayLiveSwitch = (connectionId: string): SepayLiveSwitch => {
         ask: () => push(true),
         dismiss: () => push(false),
         confirm: () => {
-            setPending(true)
+            setIsPending(true)
             void commands.setEnvironment("live").then(() => {
-                setPending(false)
+                setIsPending(false)
                 push(false)
             })
         },

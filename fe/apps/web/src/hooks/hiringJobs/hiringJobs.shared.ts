@@ -67,7 +67,7 @@ export const jobDefaults = (job: JobView | null, starter: ReadonlyArray<string>)
     questions:
         job === null || job.questions.length === 0
             ? starter.map((text, index) => ({ ...blankQuestion(), id: `q${index + 1}`, text, required: true }))
-            : job.questions.map(questionValues),
+            : job.questions.map((item) => questionValues(item)),
     channels: job === null ? [...APPLY_CHANNELS] : [...job.channels],
 })
 
@@ -112,7 +112,7 @@ export const toJobInput = (values: HiringJobValues, id: string | null): SaveHiri
         mustHave: linesOf(values.mustHave),
         niceToHave: linesOf(values.niceToHave),
     },
-    questions: values.questions.filter((question) => question.text.trim() !== "").map(questionInput),
+    questions: values.questions.filter((question) => question.text.trim() !== "").map((item) => questionInput(item)),
     channels: values.channels,
 })
 

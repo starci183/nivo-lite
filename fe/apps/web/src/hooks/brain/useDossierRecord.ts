@@ -1,7 +1,6 @@
 "use client"
 
-import { useDossierIdentities } from "./useDossierIdentities"
-import type { DossierIdentity } from "./useDossierIdentities"
+import { useDossierIdentities, type DossierIdentity } from "./useDossierIdentities"
 
 /** What a dossier lookup gives a pane. */
 interface DossierRecordRead {

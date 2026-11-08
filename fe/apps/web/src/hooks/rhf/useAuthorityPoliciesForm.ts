@@ -2,10 +2,9 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, type UseFormReturn } from "react-hook-form"
 import { z } from "zod"
 import type { AuthorityProfile } from "@/modules/authority"
-import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the policies form. */
 export interface AuthorityPoliciesValues {

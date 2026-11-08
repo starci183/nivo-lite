@@ -11,8 +11,7 @@ import {
     useQueryModuleInstallationsSwr,
 } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { isTextField } from "./templates.shared"
-import type { PackagePreviewData, PackagePreviewRequest } from "./templates.shared"
+import { isTextField, type PackagePreviewData, type PackagePreviewRequest } from "./templates.shared"
 
 /** The fields the creator writes to package a version. */
 export interface PackageFields {

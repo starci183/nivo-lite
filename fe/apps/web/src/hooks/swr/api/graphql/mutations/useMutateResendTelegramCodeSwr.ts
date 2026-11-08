@@ -5,8 +5,7 @@ import {
     type mutateResendTelegramCode as MutateResendTelegramCodeOperation,
 } from "@/modules/api/graphql/mutations/mutation-resend-telegram-code"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { ResendTelegramCodeMutation } from "@/modules/api"
 
 /** The SWR key of the resendTelegramCode mutation. */

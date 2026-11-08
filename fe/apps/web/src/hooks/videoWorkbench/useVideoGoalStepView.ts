@@ -17,13 +17,12 @@ import {
     goalHintKey,
     goalLabelKey,
     goalTemplateOf,
+    type Goal,
 } from "@/modules/video"
 
 import { navigation } from "@/modules/i18n"
 import { useGraphQLWithToast } from "@/modules/toast"
-import { videoOwnerOf } from "./videoWorkbench.shared"
-import type { VideoViewInput } from "./videoWorkbench.shared"
-import type { Goal } from "@/modules/video"
+import { videoOwnerOf, type VideoViewInput } from "./videoWorkbench.shared"
 interface GoalProjection {
     readonly input: VideoViewInput
     readonly t: ReturnType<typeof useTranslations<"video">>

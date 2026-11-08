@@ -1,7 +1,6 @@
 "use client"
 
-import useSWRInfinite from "swr/infinite"
-import type { SWRInfiniteKeyLoader } from "swr/infinite"
+import useSWRInfinite, { type SWRInfiniteKeyLoader } from "swr/infinite"
 import {
     connectionPageKey,
     connectionPageView,

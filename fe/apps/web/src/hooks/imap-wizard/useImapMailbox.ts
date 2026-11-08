@@ -3,8 +3,7 @@
 import { useMemo } from "react"
 import { useQueryLoadImapConnectionSwr } from "@/hooks/swr"
 import type { SlotRead } from "@/hooks/slot"
-import { securityOf } from "./imap-wizard.shared"
-import type { ImapMailbox } from "./imap-wizard.shared"
+import { securityOf, type ImapMailbox } from "./imap-wizard.shared"
 
 /** The view `useImapMailbox` returns. */
 export interface ImapMailboxView {

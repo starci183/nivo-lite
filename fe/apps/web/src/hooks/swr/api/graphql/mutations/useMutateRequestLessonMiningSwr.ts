@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateRequestLessonMining,
     type MutateRequestLessonMiningRequest,
 } from "@/modules/api/graphql/mutations/mutation-request-lesson-mining"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RequestLessonMiningMutation } from "@/modules/api"
 
 /** What the RequestLessonMining mutation is triggered with. */

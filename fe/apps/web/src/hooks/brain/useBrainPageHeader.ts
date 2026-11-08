@@ -1,8 +1,14 @@
 import { useTranslations } from "next-intl"
 import { BRAIN_PANEL_PREFIX } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { BRAIN_STRIP_TABS, brainStripTabOf, brainTabHref, workspaceHref } from "@/modules/routes"
-import type { BrainStripTab, BrainTab } from "@/modules/routes"
+import {
+    BRAIN_STRIP_TABS,
+    brainStripTabOf,
+    brainTabHref,
+    workspaceHref,
+    type BrainStripTab,
+    type BrainTab,
+} from "@/modules/routes"
 import type { BrainPageHeading, BrainPageHeaderView } from "@/modules/types"
 import { useBrain } from "./useBrain"
 import { useBrainTodoCount } from "@/hooks/knowledge"

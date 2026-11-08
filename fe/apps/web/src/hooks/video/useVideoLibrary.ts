@@ -3,9 +3,8 @@ import { mapSlot, slotOfReads, slotOfSwr } from "@/hooks/slot"
 import { useQueryVideoProjectsSwr } from "@/hooks/swr"
 import { useVideoBrandKit } from "./useVideoBrandKit"
 import { useVideoReferences } from "./useVideoReferences"
-import { projectViewOf } from "./video.shared"
+import { projectViewOf, type ProjectView, type MediaItem, type Brand } from "./video.shared"
 
-import type { ProjectView, MediaItem, Brand } from "./video.shared"
 import type { DataSlot, WorkbenchFigureData } from "@/modules/types"
 
 /** What a ready library shows: the projects, the brand kit and the media. */
@@ -33,7 +32,7 @@ export const useVideoLibrary = (isActive = true): UseVideoLibraryResult => {
     const slot = slotOfReads([...kit.reads, projects], () => {
         if (kit.data === undefined || projects.data === undefined)
             throw new Error("A ready video library requires its actual kit and projects")
-        return { ...kit.data, projects: projects.data.map(projectViewOf) }
+        return { ...kit.data, projects: projects.data.map((item) => projectViewOf(item)) }
     })
     return {
         slot,

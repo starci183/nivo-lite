@@ -1,13 +1,11 @@
 "use client"
 
 import { useSWRConfig } from "swr"
-import useSWRSubscription from "swr/subscription"
+import useSWRSubscription, { type SWRSubscriptionResponse } from "swr/subscription"
 import { useViewerKeyId, useWorkspaceKey } from "@/hooks/workspaceKey"
 import { matchesSwrKey } from "@/modules/utils"
 import { QUERY_CHAT_UNREAD_SWR_KEY } from "../../graphql/queries/useQueryChatUnreadSwr"
-import { streamChatTyping } from "@/modules/api/sse/chat/stream-chat-typing"
-import type { ChatTypingPush } from "@/modules/api/sse/chat/stream-chat-typing"
-import type { SWRSubscriptionResponse } from "swr/subscription"
+import { streamChatTyping, type ChatTypingPush } from "@/modules/api/sse/chat/stream-chat-typing"
 
 /** The SWR key of the typing stream of one room; the full key carries the workspace, the signed-in member and the room. */
 export const SUBSCRIBE_CHAT_TYPING_SWR_KEY = "SUBSCRIBE_CHAT_TYPING_SWR"

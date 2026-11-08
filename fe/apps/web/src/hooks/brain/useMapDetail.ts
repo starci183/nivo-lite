@@ -1,8 +1,16 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { DOSSIER_STATUS_TONE, sizeLabelOf, statusCountsOf } from "@/modules/brain"
-import type { CategoryView, DossierView, MapDetailView, MapSelection, MapStatusOf } from "@/modules/brain"
+import {
+    DOSSIER_STATUS_TONE,
+    sizeLabelOf,
+    statusCountsOf,
+    type CategoryView,
+    type DossierView,
+    type MapDetailView,
+    type MapSelection,
+    type MapStatusOf,
+} from "@/modules/brain"
 import { brainDossierHref, brainTabHref, workspaceHref } from "@/modules/routes"
 import { useWorkspaceId } from "@/hooks/workspaces"
 

@@ -9,8 +9,7 @@ import {
 } from "@/hooks/swr"
 import type { Brand } from "@/modules/video"
 import { projectCommandOf } from "./video.shared"
-import { useVideoRefresh } from "./useVideoRefresh"
-import type { VideoOwner } from "./useVideoRefresh"
+import { useVideoRefresh, type VideoOwner } from "./useVideoRefresh"
 
 type Saved<Result> = Promise<Result | undefined>
 type OnResult<Result> = (result: Result | undefined) => void

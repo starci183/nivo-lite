@@ -11,10 +11,9 @@ import {
     serviceOptionsOf,
     summaryOf,
 } from "./publicBooking.shared"
-import { usePublicBooking } from "./usePublicBooking"
+import { usePublicBooking, type PublicBookingFields } from "./usePublicBooking"
 import { shortDayText, wallClockText, wallDate, wallMinutes } from "@/modules/i18n"
 import type { PublicBookingPageData } from "@/modules/types"
-import type { PublicBookingFields } from "./usePublicBooking"
 
 type UsePublicBookingFormResult = {
     props: {

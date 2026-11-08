@@ -1,9 +1,8 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateRemoveBookingResource } from "@/modules/api/graphql/mutations/mutation-remove-booking-resource"
 import type { MutateRemoveBookingResourceRequest } from "@/modules/api/graphql/mutations/types/remove-booking-resource"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RemoveBookingResourceMutation } from "@/modules/api"
 
 /** The SWR key of the `removeBookingResource` mutation. */

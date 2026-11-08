@@ -8,8 +8,7 @@ import { mapSlot } from "@/hooks/slot"
 import { useMutateCheckTelegramConnectionSwr } from "@/hooks/swr"
 import type { ConnectionCheck, ConnectionLineView, DataSlot } from "@/modules/types"
 import { TOKEN_REJECTED_CODE, WEBHOOK_REFUSED_CODE } from "./telegramConnection.shared"
-import { useTelegramPage } from "./useTelegramPage"
-import type { TelegramPageData } from "./useTelegramPage"
+import { useTelegramPage, type TelegramPageData } from "./useTelegramPage"
 
 type Verdict = Pick<ConnectionLineView, "badge">
 

@@ -1,7 +1,6 @@
 "use client"
 
-import useSWR from "swr"
-import type { SWRConfiguration } from "swr"
+import useSWR, { type SWRConfiguration } from "swr"
 import { queryPublicBookingTimes } from "@/modules/api/graphql/queries/query-public-booking-times"
 import type { QueryPublicBookingTimesRequest } from "@/modules/api/graphql/queries/types/public-booking-times"
 import type { ReadResponse } from "@/hooks/workspaceread"

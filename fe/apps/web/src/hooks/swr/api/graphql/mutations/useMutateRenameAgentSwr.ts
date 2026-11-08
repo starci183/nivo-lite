@@ -1,8 +1,7 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateRenameAgent, type MutateRenameAgentRequest } from "@/modules/api/graphql/mutations/mutation-rename-agent"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { RenameAgentMutation } from "@/modules/api"
 
 /** What the RenameAgent mutation is triggered with. */

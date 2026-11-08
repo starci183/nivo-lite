@@ -5,8 +5,7 @@ import {
     type mutateRemoveMember as MutateRemoveMemberOperation,
 } from "@/modules/api/graphql/mutations/mutation-remove-member"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { RemoveMemberMutation } from "@/modules/api"
 
 /** The SWR key of the removeMember mutation. */

@@ -1,8 +1,7 @@
 "use client"
 
 import { workspaceArgumentKey } from "@/hooks/workspaceread"
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { queryBillingReviewTransactions } from "@/modules/api/graphql/queries/query-billing-review-transactions"
 import type { BillingReviewTransactionsQuery } from "@/modules/api"
 

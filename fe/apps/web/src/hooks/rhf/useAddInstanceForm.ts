@@ -3,10 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, type UseFormReturn } from "react-hook-form"
 import { z } from "zod"
 import { cleanInstanceName, instanceNameKey } from "@/modules/installations"
-import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the add instance form. */
 export interface AddInstanceValues {

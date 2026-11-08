@@ -2,8 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { GUIDE_PAGES, guideKeyOf } from "@/modules/guide"
-import type { GuideText } from "@/modules/guide"
+import { GUIDE_PAGES, guideKeyOf, type GuideText } from "@/modules/guide"
 
 const stringsOf = (value: unknown): ReadonlyArray<string> =>
     Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : []

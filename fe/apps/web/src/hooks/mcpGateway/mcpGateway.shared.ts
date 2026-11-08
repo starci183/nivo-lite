@@ -1,9 +1,14 @@
 import type { useQueryMcpConnectorsSwr } from "@/hooks/swr"
-import { agentsRowOf } from "@/hooks/mcpGrants"
-import type { McpToolAgentsOf, McpToolAgentsView } from "@/hooks/mcpGrants"
+import { agentsRowOf, type McpToolAgentsOf, type McpToolAgentsView } from "@/hooks/mcpGrants"
 import type { McpConnectorCommands } from "./useMcpConnectorCommands"
-import { toolNameOf, toolTextOf } from "@/modules/mcpGateway"
-import type { McpBadgeView, McpFormatter, McpTone, McpTranslator } from "@/modules/mcpGateway"
+import {
+    toolNameOf,
+    toolTextOf,
+    type McpBadgeView,
+    type McpFormatter,
+    type McpTone,
+    type McpTranslator,
+} from "@/modules/mcpGateway"
 
 export type { McpBadgeView, McpFormatter, McpTone, McpTranslator } from "@/modules/mcpGateway"
 

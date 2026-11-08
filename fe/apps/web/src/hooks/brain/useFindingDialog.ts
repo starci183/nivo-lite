@@ -2,14 +2,14 @@
 
 import { useState } from "react"
 import { useTranslations } from "next-intl"
-import { NO_ASSIGNEE } from "@/modules/brain"
-import type {
-    DialogKind,
-    FindingDialogValues,
-    FindingDialogView,
-    FindingTextFieldView,
-    FindingView,
-    MemberOption,
+import {
+    NO_ASSIGNEE,
+    type DialogKind,
+    type FindingDialogValues,
+    type FindingDialogView,
+    type FindingTextFieldView,
+    type FindingView,
+    type MemberOption,
 } from "@/modules/brain"
 import type { DossierReviewCommands } from "./useDossierReviewCommands"
 

@@ -4,9 +4,8 @@ import {
     mutateStartZaloConnection,
     type mutateStartZaloConnection as MutateStartZaloConnectionOperation,
 } from "@/modules/api/graphql/mutations/mutation-start-zalo-connection"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { StartZaloConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the startZaloConnection mutation. */

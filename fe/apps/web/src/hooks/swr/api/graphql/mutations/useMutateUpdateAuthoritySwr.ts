@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateUpdateAuthority,
     type MutateUpdateAuthorityRequest,
 } from "@/modules/api/graphql/mutations/mutation-update-authority"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { UpdateAuthorityMutation } from "@/modules/api"
 
 /** What the UpdateAuthority mutation is triggered with. */

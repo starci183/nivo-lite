@@ -6,8 +6,7 @@ import { mapSlot } from "@/hooks/slot"
 import { useMutateCheckTelegramConnectionSwr } from "@/hooks/swr"
 import type { ConnectionFactView, DataSlot } from "@/modules/types"
 import { WEBHOOK_REFUSED_CODE } from "./telegramConnection.shared"
-import { useTelegramPage } from "./useTelegramPage"
-import type { TelegramPageData } from "./useTelegramPage"
+import { useTelegramPage, type TelegramPageData } from "./useTelegramPage"
 
 /** The health tiles of the page: the webhook, the messages Telegram holds back, and how many agents work through the bot. */
 export const useTelegramFacts = (connectionId: string | undefined): DataSlot<ReadonlyArray<ConnectionFactView>> => {

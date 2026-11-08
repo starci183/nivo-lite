@@ -2,8 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useAskKnowledge } from "@/hooks/knowledge"
-import type { AgentLens } from "@/modules/brain"
-import { askAgentOptionOf, askGridOf, askPassageOf, askSeesOf } from "@/modules/brain"
+import { type AgentLens, askAgentOptionOf, askGridOf, askPassageOf, askSeesOf } from "@/modules/brain"
 import { isWaitingOf, mapSlot, useSlotLabels } from "@/hooks/slot"
 import type { BrainAskView, BrainPageHeading } from "@/modules/types"
 import { useAgentLenses } from "./useAgentLenses"

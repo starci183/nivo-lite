@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateAssignDossierFinding,
     type MutateAssignDossierFindingRequest,
 } from "@/modules/api/graphql/mutations/mutation-assign-dossier-finding"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { AssignDossierFindingMutation } from "@/modules/api"
 
 /** What the AssignDossierFinding mutation is triggered with. */

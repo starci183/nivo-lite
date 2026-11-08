@@ -5,8 +5,7 @@ import {
     type mutateSetAgentGraphMode as MutateSetAgentGraphModeOperation,
 } from "@/modules/api/graphql/mutations/mutation-set-agent-graph-mode"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { SetAgentGraphModeMutation } from "@/modules/api"
 
 /** The SWR key of the setAgentGraphMode mutation. */

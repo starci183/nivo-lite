@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSaveAuthorityRule,
     type MutateSaveAuthorityRuleRequest,
 } from "@/modules/api/graphql/mutations/mutation-save-authority-rule"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SaveAuthorityRuleMutation } from "@/modules/api"
 
 /** What the SaveAuthorityRule mutation is triggered with. */

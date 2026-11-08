@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateApplyBrainFactGroup,
     type MutateApplyBrainFactGroupRequest,
 } from "@/modules/api/graphql/mutations/mutation-apply-brain-fact-group"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { ApplyBrainFactGroupMutation } from "@/modules/api"
 
 /** What the ApplyBrainFactGroup mutation is triggered with. */

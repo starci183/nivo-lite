@@ -4,9 +4,8 @@ import {
     mutateStartTelegramLogin,
     type mutateStartTelegramLogin as MutateStartTelegramLoginOperation,
 } from "@/modules/api/graphql/mutations/mutation-start-telegram-login"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { StartTelegramLoginMutation } from "@/modules/api"
 
 /** The SWR key of the startTelegramLogin mutation. */

@@ -4,9 +4,8 @@ import {
     mutateWantConnector,
     type mutateWantConnector as MutateWantConnectorOperation,
 } from "@/modules/api/graphql/mutations/mutation-want-connector"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { WantConnectorMutation } from "@/modules/api"
 
 /** The SWR key of the wantConnector mutation. */

@@ -5,8 +5,17 @@ import { useState } from "react"
 import { useMember } from "@/hooks/member"
 import { useQueryMemberGrantsSwr } from "@/hooks/swr"
 import type { StoredRule } from "@/hooks/authority"
-import { bandsValid, changeOf, draftOf, grantCandidates, grantMax } from "@/modules/permissions"
-import type { Approver, GrantCandidate, GrantDraft, PermissionDraft } from "@/modules/permissions"
+import {
+    bandsValid,
+    changeOf,
+    draftOf,
+    grantCandidates,
+    grantMax,
+    type Approver,
+    type GrantCandidate,
+    type GrantDraft,
+    type PermissionDraft,
+} from "@/modules/permissions"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { permissionEditsOf } from "./permissions.shared"
 import { usePermissionDrawerWords, type DrawerWordsView } from "./usePermissionDrawerWords"

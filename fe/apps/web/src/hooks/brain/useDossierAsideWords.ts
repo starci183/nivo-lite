@@ -1,8 +1,15 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { DOSSIER_STATUS_TONE, dossierTagOf } from "@/modules/brain"
-import type { DossierAsideView, DossierDeskView, DossierHeadView, DossierView, Opened } from "@/modules/brain"
+import {
+    DOSSIER_STATUS_TONE,
+    dossierTagOf,
+    type DossierAsideView,
+    type DossierDeskView,
+    type DossierHeadView,
+    type DossierView,
+    type Opened,
+} from "@/modules/brain"
 import { brainTabHref, brainUploadHref, workspaceHref } from "@/modules/routes"
 import { useWorkspaceId } from "@/hooks/workspaces"
 

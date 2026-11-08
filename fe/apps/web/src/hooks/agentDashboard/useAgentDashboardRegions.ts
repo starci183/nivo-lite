@@ -137,7 +137,7 @@ export const useAgentDashboardRegions = (
     })
     const waitingOf = (dashboard: AgentDashboardView) => ({
         count: dashboard.waiting.total > 0 ? String(dashboard.waiting.total) : null,
-        rows: dashboard.waiting.items.map(rowOf),
+        rows: dashboard.waiting.items.map((item) => rowOf(item)),
         openLabel: t("waitingOpen"),
         more:
             dashboard.waiting.total > dashboard.waiting.items.length
@@ -150,7 +150,7 @@ export const useAgentDashboardRegions = (
         count: t("doneCount", { n: dashboard.done.count }),
         logLabel: t("doneLog"),
         logHref: workspaceHref(workspaceId, CONSOLE_ROUTES.inbox),
-        rows: dashboard.done.items.map(rowOf),
+        rows: dashboard.done.items.map((item) => rowOf(item)),
         emptyMessage: t("doneEmpty"),
         emptyDescription: t("doneEmptyBody"),
     })

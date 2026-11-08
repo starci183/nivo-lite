@@ -1,13 +1,12 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { useCallback, useState } from "react"
+import { useCallback, useState, type SetStateAction, type Dispatch } from "react"
 import { useSettledGraphQL, useZaloFailureLabel } from "@/hooks/connection-wizard"
 import { mapSlot } from "@/hooks/slot"
 import { useMutateSendZaloTestMessageSwr } from "@/hooks/swr"
 import type { DataSlot, ZaloSendView } from "@/modules/types"
 import { useZaloPage } from "./useZaloPage"
-import type { SetStateAction, Dispatch } from "react"
 
 type UseZaloTestSendResult = {
     view: DataSlot<ZaloSendView>

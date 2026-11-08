@@ -3,9 +3,8 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
 import { useMemo } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, type UseFormReturn } from "react-hook-form"
 import { z } from "zod"
-import type { UseFormReturn } from "react-hook-form"
 
 /** The values of the name and consent step. */
 export interface TelegramConsentValues {
@@ -36,9 +35,9 @@ interface TelegramConsentStart {
 
 /** A phone number with a country code (or a local 0 / 84 start): 8 to 15 digits. */
 const isPhone = (raw: string): boolean => {
-    const phone = raw.trim().replace(/[\s.\-()]/gu, "")
+    const phone = raw.trim().replaceAll(/[\s.\-()]/gu, "")
     if (!/^\+?\d+$/u.test(phone)) return false
-    const digits = phone.replace(/\D/gu, "")
+    const digits = phone.replaceAll(/\D/gu, "")
     if (phone.startsWith("+") || phone.startsWith("00")) return /^[1-9]\d{7,14}$/u.test(digits.replace(/^00/u, ""))
     return phone.startsWith("0") || (phone.startsWith("84") && phone.length >= 11 && phone.length <= 12)
 }
@@ -62,7 +61,7 @@ export const useTelegramUserForm = (start: TelegramConsentStart): UseTelegramUse
             phone: z.object({ phone: z.string().refine(isPhone, t("errPhone")) }),
             code: z.object({
                 code: z.string().refine((value) => {
-                    const digits = value.replace(/\D/gu, "").length
+                    const digits = value.replaceAll(/\D/gu, "").length
                     return digits >= 4 && digits <= 8
                 }, t("errCode")),
             }),

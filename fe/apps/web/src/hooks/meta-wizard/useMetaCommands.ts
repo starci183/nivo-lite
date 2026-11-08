@@ -1,8 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { useSettledGraphQL } from "@/hooks/connection-wizard"
-import type { Settled } from "@/hooks/connection-wizard"
+import { useSettledGraphQL, type Settled } from "@/hooks/connection-wizard"
 import { metaCheckOf, metaWizardOf } from "@/hooks/connection-wire"
 import { useMutateAuthorizeMetaSwr, useMutateCheckMetaSwr, useMutateChooseMetaPageSwr } from "@/hooks/swr"
 import type { MetaCheck, MetaWizardConnection } from "@/modules/types"

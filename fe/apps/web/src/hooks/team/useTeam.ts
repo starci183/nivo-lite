@@ -1,9 +1,8 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useReducer } from "react"
 import { useQueryWorkspaceInvitesSwr, useQueryWorkspaceMembersSwr, useQueryWorkspaceStaffSwr } from "@/hooks/swr"
-import { teamViews } from "./team.shared"
-import type { TeamViews } from "./team.shared"
+import { teamViews, type TeamViews } from "./team.shared"
 
 /** The team of a workspace as the page draws it. */
 export interface TeamState {
@@ -24,7 +23,7 @@ export const useTeam = (workspaceId: string, enabled: boolean): TeamState => {
     const members = useQueryWorkspaceMembersSwr(id)
     const invites = useQueryWorkspaceInvitesSwr(id)
     const staff = useQueryWorkspaceStaffSwr(id)
-    const [now] = useState(() => Date.now())
+    const [now] = useReducer((current: number) => current, undefined, Date.now)
     const failure = [members.error, invites.error, staff.error].find((error): error is Error => error instanceof Error)
     const views = useMemo(
         () =>

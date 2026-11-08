@@ -4,8 +4,7 @@ import { useTranslations } from "next-intl"
 import { useState } from "react"
 import type { ZaloStepId } from "@/modules/types"
 import { firstOpenStep, zaloStepsDone } from "./zaloConnection.shared"
-import { useZaloPage } from "./useZaloPage"
-import type { ZaloPageData } from "./useZaloPage"
+import { useZaloPage, type ZaloPageData } from "./useZaloPage"
 
 /** One setup step as the page draws its head: done or not, the one-line summary beside its title, and whether it is open. */
 export interface ZaloStepState {

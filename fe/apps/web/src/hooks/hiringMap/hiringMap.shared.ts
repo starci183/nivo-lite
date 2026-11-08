@@ -65,7 +65,7 @@ const jobOf = (wire: HiringJobType): JobView => ({
     headcount: wire.headcount,
     description: wire.description,
     requirements: requirementsOf(wire.requirements),
-    questions: wire.questions.map(questionOf),
+    questions: wire.questions.map((item) => questionOf(item)),
     status: wire.status,
     channels: wire.channels,
     ad: adOf(wire.adVariants),
@@ -135,12 +135,12 @@ export const toHiringWorkbenchData = (wire: HiringBenchType): HiringWorkbenchDat
     waitingApprovals: wire.waitingApprovals,
     settings: wire.settings,
     figures: wire.figures,
-    jobs: wire.jobs.map(jobOf),
-    candidates: wire.candidates.map(candidateOf),
-    interviews: wire.interviews.map(interviewOf),
-    offers: wire.offers.map(offerOf),
+    jobs: wire.jobs.map((item) => jobOf(item)),
+    candidates: wire.candidates.map((item) => candidateOf(item)),
+    interviews: wire.interviews.map((item) => interviewOf(item)),
+    offers: wire.offers.map((item) => offerOf(item)),
     onboarding: wire.onboarding,
-    members: wire.members.map(memberOf),
+    members: wire.members.map((item) => memberOf(item)),
 })
 
 /** The candidate detail with its timeline flattened. */

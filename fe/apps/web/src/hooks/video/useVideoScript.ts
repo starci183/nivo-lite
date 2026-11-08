@@ -1,7 +1,6 @@
 import { useMutateRequestVideoScriptSwr, useQueryVideoScriptStatusSwr } from "@/hooks/swr"
-import { useVideoJob } from "./useVideoJob"
+import { useVideoJob, type VideoJobRead } from "./useVideoJob"
 import type { VideoOwner } from "./useVideoRefresh"
-import type { VideoJobRead } from "./useVideoJob"
 
 type UseVideoScriptResult = {
     request: (projectId: string) => Promise<

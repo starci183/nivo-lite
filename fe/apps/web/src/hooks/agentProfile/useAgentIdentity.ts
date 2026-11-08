@@ -47,7 +47,7 @@ export const useAgentIdentity = (agentId: string): AgentIdentityView => {
     const requestUpload = useMutateRequestAgentAvatarUploadSwr()
     const setAvatar = useMutateSetAgentAvatarSwr()
     const [draft, setDraft] = useState<string | null>(null)
-    const [isNameInvalid, setNameInvalid] = useState(false)
+    const [isNameInvalid, setIsNameInvalid] = useState(false)
     const agent = "items" in slot ? slot.items : undefined
     const name = draft ?? agent?.name ?? ""
 
@@ -71,7 +71,7 @@ export const useAgentIdentity = (agentId: string): AgentIdentityView => {
     const saveName = useCallback(async () => {
         const clean = name.trim()
         const isValid = clean.length >= AGENT_NAME_LIMITS.min && clean.length <= AGENT_NAME_LIMITS.max
-        setNameInvalid(!isValid)
+        setIsNameInvalid(!isValid)
         if (!isValid) return
         const saved = await runGraphQL(() => rename.trigger({ agentId, name: clean }), {
             successMessage: t("identityNameSaved"),

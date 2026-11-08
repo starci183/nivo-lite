@@ -1,14 +1,12 @@
 "use client"
 
 import { useFeatureReset } from "@/hooks/reuseables"
-import type { HiringOwner } from "@/hooks/hiring"
+import { type HiringOwner, useHiringCopy, useHiringRun } from "@/hooks/hiring"
 
 import { useMemo, useState } from "react"
-import { useHiringCopy, useHiringRun } from "@/hooks/hiring"
 import type { HiringWorkbenchData, InterviewView } from "@/hooks/hiringWire"
-import { proposedOf, weekDays } from "./hiringInterviews.shared"
+import { proposedOf, weekDays, type CalendarDay } from "./hiringInterviews.shared"
 import { useHiringInterviewCommands } from "./useHiringInterviewCommands"
-import type { CalendarDay } from "./hiringInterviews.shared"
 
 /** The view `useHiringInterviews` returns. */
 export interface HiringInterviewsView {

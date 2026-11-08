@@ -4,9 +4,8 @@ import {
     mutateTestWebhookConnection,
     type mutateTestWebhookConnection as MutateTestWebhookConnectionOperation,
 } from "@/modules/api/graphql/mutations/mutation-test-webhook-connection"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { TestWebhookConnectionMutation } from "@/modules/api"
 
 /** The SWR key of the testWebhookConnection mutation. */

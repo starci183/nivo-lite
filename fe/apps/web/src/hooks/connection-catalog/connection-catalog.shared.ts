@@ -127,7 +127,7 @@ const STROKED_D = String.fromCodePoint(0x0111)
 const foldText = (text: string): string =>
     text
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
+        .replaceAll(/[\u0300-\u036f]/g, "")
         .toLowerCase()
         .replaceAll(STROKED_D, "d")
 

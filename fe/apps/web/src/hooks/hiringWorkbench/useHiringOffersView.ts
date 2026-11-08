@@ -94,7 +94,7 @@ export const useHiringOffersView = (input: HiringViewInput): HiringOffersViewSha
         approveLabel: data.waitingApprovals > 0 ? t("offersApproveAll", { n: data.waitingApprovals }) : null,
         decisionsHref: workspaceHref(workspaceId, CONSOLE_ROUTES.inbox),
         fact: t("offersFact", { n: data.offers.length }),
-        rows: data.offers.map(rowOf),
+        rows: data.offers.map((item) => rowOf(item)),
         isBusy: view.isPending,
         error: view.error,
     }

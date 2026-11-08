@@ -1,7 +1,6 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { answeredData } from "@/hooks/workspaceread"
 import { valueOfJsonText } from "@/modules/workbench-host"

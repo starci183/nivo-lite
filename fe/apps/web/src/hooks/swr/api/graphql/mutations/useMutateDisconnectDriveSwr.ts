@@ -1,8 +1,7 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { mutateDisconnectDrive } from "@/modules/api/graphql/mutations/mutation-disconnect-drive"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { DisconnectDriveMutation } from "@/modules/api"
 
 /** The SWR key of the disconnectDrive mutation. */

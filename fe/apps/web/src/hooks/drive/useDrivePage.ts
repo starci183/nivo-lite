@@ -1,10 +1,8 @@
 "use client"
 
-import { mapSlot, slotOfSwr } from "@/hooks/slot"
-import type { SlotRead } from "@/hooks/slot"
+import { mapSlot, slotOfSwr, type SlotRead } from "@/hooks/slot"
 import { useQueryDriveGrantSwr } from "@/hooks/swr"
-import { driveStandingOf } from "./drive.shared"
-import type { DriveGrantStanding } from "./drive.shared"
+import { driveStandingOf, type DriveGrantStanding } from "./drive.shared"
 import type { DataSlot } from "@/modules/types"
 import type { KeyedMutator } from "swr"
 

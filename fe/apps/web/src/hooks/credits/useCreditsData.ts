@@ -59,11 +59,11 @@ export const useCreditsData = (contactHref: string): CreditsDataView => {
     }, [workspace, catalog, packs, quota, recent, ledger])
 
     const error =
-        readError(workspace) ||
-        readError(catalog) ||
-        readError(packs) ||
-        readError(quota) ||
-        readError(recent) ||
+        readError(workspace) ??
+        readError(catalog) ??
+        readError(packs) ??
+        readError(quota) ??
+        readError(recent) ??
         ledger.error
     const workspaceData = workspace.data
     const planData = catalog.plans

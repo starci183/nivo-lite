@@ -1,9 +1,7 @@
 "use client"
 
-import { useMutateAskGuideSwr, useQueryAgentGenerationStatusSwr } from "@/hooks/swr"
-import type { AgentGenerationStatusType } from "@/hooks/swr"
-import { mapAnswer, modelAnswer } from "@/modules/guide"
-import type { GuideReply, GuideTurn } from "@/modules/guide"
+import { useMutateAskGuideSwr, useQueryAgentGenerationStatusSwr, type AgentGenerationStatusType } from "@/hooks/swr"
+import { mapAnswer, modelAnswer, type GuideReply, type GuideTurn } from "@/modules/guide"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback, useEffect, useRef, useState } from "react"

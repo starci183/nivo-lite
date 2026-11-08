@@ -39,7 +39,7 @@ export const useDriveProgress = (enabled = true): DriveProgressView => {
     const format = useFormatter()
     const read = useQueryKnowledgeSourcesSwr({ origin: DRIVE_ORIGIN }, DRIVE_PROGRESS_POLL_MS, enabled)
     const commands = useLibraryCommands()
-    const documents = useMemo(() => read.data?.map(toKnowledgeDocument), [read.data])
+    const documents = useMemo(() => read.data?.map((item) => toKnowledgeDocument(item)), [read.data])
     const { retry } = commands
 
     const lineOf = useCallback(
@@ -73,7 +73,7 @@ export const useDriveProgress = (enabled = true): DriveProgressView => {
 
     const lines: DataSlot<ReadonlyArray<ConnectionLineView>> = mapSlot(
         slotOfSwr({ data: documents, error: read.error, isLoading: read.isLoading }),
-        (sources) => sources.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt)).map(lineOf),
+        (sources) => sources.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt)).map((item) => lineOf(item)),
     )
     return {
         lines,

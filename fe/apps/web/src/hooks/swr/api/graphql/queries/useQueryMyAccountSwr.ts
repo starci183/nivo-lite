@@ -1,7 +1,6 @@
 "use client"
 
-import useSWR from "swr"
-import type { SWRResponse } from "swr"
+import useSWR, { type SWRResponse } from "swr"
 import { useViewerKey } from "@/hooks/workspaceKey"
 import { queryMyAccount } from "@/modules/api/graphql/queries/query-my-account"
 import type { MyAccountQuery } from "@/modules/api"

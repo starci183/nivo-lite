@@ -2,15 +2,13 @@
 import { useGraphQLWithToast } from "@/modules/toast"
 
 import { useFeatureLifetime } from "@/hooks/reuseables"
-import type { HiringOwner } from "@/hooks/hiring"
+import { type HiringOwner, useHiringRun } from "@/hooks/hiring"
 
 import { useTranslations } from "next-intl"
 import type { UseFormReturn } from "react-hook-form"
-import { useHiringRun } from "@/hooks/hiring"
 import type { FieldOf } from "@/modules/types"
 import { useMutateSaveHiringSettingsSwr } from "@/hooks/swr"
-import { toSettingsInput } from "./hiringSettings.shared"
-import type { SettingsValues } from "./hiringSettings.shared"
+import { toSettingsInput, type SettingsValues } from "./hiringSettings.shared"
 
 /** The view `useHiringSettings` returns. */
 export interface HiringSettingsView {

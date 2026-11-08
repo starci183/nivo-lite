@@ -1,8 +1,15 @@
 "use client"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { SEVERITY_TONE, findingActionsOf, splitActionsOf } from "@/modules/brain"
-import type { FindingActionView, FindingRowView, FindingView, MemberOption } from "@/modules/brain"
+import {
+    SEVERITY_TONE,
+    findingActionsOf,
+    splitActionsOf,
+    type FindingActionView,
+    type FindingRowView,
+    type FindingView,
+    type MemberOption,
+} from "@/modules/brain"
 import { brainDossierHref, brainUploadHref, knowledgeSourceHref, workspaceHref } from "@/modules/routes"
 import { ownerPartOf, placeWordsOf, statusPartOf } from "./brain.shared"
 import { useWorkspaceId } from "@/hooks/workspaces"

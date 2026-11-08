@@ -30,7 +30,7 @@ export const useVideoUpload = (): UseVideoUploadResult => {
         return sent === null ? undefined : ticket.path
     }
     const upload = async (files: ReadonlyArray<File>): Promise<string[]> => {
-        const results = await Promise.all(files.map(uploadOne))
+        const results = await Promise.all(files.map((item) => uploadOne(item)))
         const paths = results.filter((path): path is string => path !== undefined)
         await mutate((key) => Array.isArray(key) && key[0] === QUERY_VIDEO_MEDIA_SWR_KEY && key[1] === workspaceId)
         return paths

@@ -4,9 +4,8 @@ import {
     mutateUpdateProfile,
     type mutateUpdateProfile as MutateUpdateProfileOperation,
 } from "@/modules/api/graphql/mutations/mutation-update-profile"
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import { answeredData } from "@/hooks/workspaceread"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { UpdateProfileMutation } from "@/modules/api"
 
 /** The SWR key of the updateProfile mutation. */

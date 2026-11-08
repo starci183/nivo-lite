@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSetOperatingMode,
     type MutateSetOperatingModeRequest,
 } from "@/modules/api/graphql/mutations/mutation-set-operating-mode"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SetOperatingModeMutation } from "@/modules/api"
 
 /** What the SetOperatingMode mutation is triggered with. */

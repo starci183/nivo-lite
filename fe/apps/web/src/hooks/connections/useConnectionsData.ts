@@ -70,7 +70,9 @@ export const useConnectionsData = (): ConnectionsDataView => {
     const items = useMemo(() => (connectionRows === undefined ? [] : connectionsOf(connectionRows)), [connectionRows])
     const active = useMemo(
         () =>
-            agentRows === undefined ? [] : agentRows.filter((agent) => agent.status === "active").map(agentOptionOf),
+            agentRows === undefined
+                ? []
+                : agentRows.filter((agent) => agent.status === "active").map((item) => agentOptionOf(item)),
         [agentRows],
     )
     const agentNames = useMemo(

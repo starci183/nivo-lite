@@ -12,8 +12,8 @@ import {
     lessonFilterTabsOf,
     lessonPlaceholderOf,
     lessonWordsOf,
+    type MineOutcome,
 } from "@/modules/brain"
-import type { MineOutcome } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref, workspaceHref } from "@/modules/routes"
 import { toast } from "@/modules/toast"

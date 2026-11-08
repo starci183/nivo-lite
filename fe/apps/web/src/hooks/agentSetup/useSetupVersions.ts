@@ -26,7 +26,7 @@ export const useSetupVersions = (
             read.data === undefined
                 ? undefined
                 : {
-                      versions: read.data.versions.map(toContextVersion),
+                      versions: read.data.versions.map((item) => toContextVersion(item)),
                       activeVersionId: read.data.activeVersionId ?? null,
                   },
         [read.data],

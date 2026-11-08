@@ -2,8 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { firstOpenTelegramStep, telegramStepsDone } from "./telegramConnection.shared"
-import type { TelegramStepId } from "./telegramConnection.shared"
+import { firstOpenTelegramStep, telegramStepsDone, type TelegramStepId } from "./telegramConnection.shared"
 import { useTelegramChecks } from "./useTelegramChecks"
 import { useTelegramPage } from "./useTelegramPage"
 

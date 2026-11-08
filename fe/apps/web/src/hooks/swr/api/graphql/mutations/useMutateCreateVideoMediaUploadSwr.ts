@@ -5,8 +5,7 @@ import {
     type mutateCreateVideoMediaUpload as MutateCreateVideoMediaUploadOperation,
 } from "@/modules/api/graphql/mutations/mutation-create-video-media-upload"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { CreateVideoMediaUploadMutation } from "@/modules/api"
 
 /** The SWR key of the createVideoMediaUpload mutation. */

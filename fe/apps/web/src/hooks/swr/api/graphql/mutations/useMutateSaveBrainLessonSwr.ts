@@ -1,11 +1,10 @@
 "use client"
 
-import useSWRMutation from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import {
     mutateSaveBrainLesson,
     type MutateSaveBrainLessonRequest,
 } from "@/modules/api/graphql/mutations/mutation-save-brain-lesson"
-import type { SWRMutationResponse } from "swr/mutation"
 import type { SaveBrainLessonMutation } from "@/modules/api"
 
 /** What the SaveBrainLesson mutation is triggered with. */

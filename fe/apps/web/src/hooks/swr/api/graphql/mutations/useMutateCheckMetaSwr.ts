@@ -5,8 +5,7 @@ import {
     type mutateCheckMeta as MutateCheckMetaOperation,
 } from "@/modules/api/graphql/mutations/mutation-check-meta"
 import { answeredData } from "@/hooks/workspaceread"
-import useSWRMutation from "swr/mutation"
-import type { SWRMutationResponse } from "swr/mutation"
+import useSWRMutation, { type SWRMutationResponse } from "swr/mutation"
 import type { CheckMetaMutation } from "@/modules/api"
 
 /** The SWR key of the checkMeta mutation. */

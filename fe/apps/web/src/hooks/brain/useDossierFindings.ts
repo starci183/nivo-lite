@@ -2,12 +2,16 @@
 
 import { useMemo } from "react"
 import { loadingSlot, slotOfSwr } from "@/hooks/slot"
-import { useQueryDossierFindingsSwr, useQueryWorkspaceMembersSwr } from "@/hooks/swr"
-import type { DossierFindingsFilter } from "@/hooks/swr"
+import { useQueryDossierFindingsSwr, useQueryWorkspaceMembersSwr, type DossierFindingsFilter } from "@/hooks/swr"
 import { useViewerKeyId } from "@/hooks/workspaceKey"
 import { useWorkspaceId } from "@/hooks/workspaces"
-import { findingViewOf, memberOptionsOf } from "@/modules/brain"
-import type { FindingsQuery, FindingView, MemberOption } from "@/modules/brain"
+import {
+    findingViewOf,
+    memberOptionsOf,
+    type FindingsQuery,
+    type FindingView,
+    type MemberOption,
+} from "@/modules/brain"
 import type { DataSlot } from "@/modules/types"
 
 /** The wire filter of a read in the words of the domain; `mine` waits for the viewer, so it answers null until the viewer is known. */
