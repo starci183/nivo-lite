@@ -146,38 +146,41 @@ const InviteAnswer = (props: InviteCardProps) => {
 }
 
 /** Draws the candidate's own interview link: one card, the invitation, then the times to pick from (or the confirmed time). */
-export const HiringInterviewReplyBase = (props: HiringInterviewReplyBaseProps) => (
-    <Page chrome="bleed" minHeight="none">
-        <PublicShell
-            label={props.props.say("replyInterviewTitle")}
-            foot={props.props.say("replyFoot")}
-            measure="reading"
-            brand={{
-                name: "items" in props.props.slot ? props.props.slot.items.shop : null,
-                isLoading: "isLoading" in props.props.slot,
-                fallbackLabel: props.props.say("brandFallback"),
-            }}
-            language={props.props.language}
-            onChooseLanguage={props.on.chooseLanguage}
-        >
-            <SlotView
-                slot={props.props.slot}
-                placeholder={INVITE_PLACEHOLDER}
-                labels={props.props.slotLabels}
-                errorDescription={props.props.failedBody}
-                onRetry={props.on.retry}
-                render={(view, isLoading) => (
-                    <Stack gap="region" measure="form">
-                        <SurfaceCard
-                            ariaLabel={props.props.say("replyInterviewTitle")}
-                            isLoading={isLoading}
-                            headers={[inviteBand({ ...props, view, isLoading })]}
-                        >
-                            <InviteAnswer {...props} shape={props.shape} view={view} isLoading={isLoading} />
-                        </SurfaceCard>
-                    </Stack>
-                )}
-            />
-        </PublicShell>
-    </Page>
-)
+export const HiringInterviewReplyBase = (props: HiringInterviewReplyBaseProps) => {
+    const { shape } = props
+    return (
+        <Page chrome="bleed" minHeight="none">
+            <PublicShell
+                label={props.props.say("replyInterviewTitle")}
+                foot={props.props.say("replyFoot")}
+                measure="reading"
+                brand={{
+                    name: "items" in props.props.slot ? props.props.slot.items.shop : null,
+                    isLoading: "isLoading" in props.props.slot,
+                    fallbackLabel: props.props.say("brandFallback"),
+                }}
+                language={props.props.language}
+                onChooseLanguage={props.on.chooseLanguage}
+            >
+                <SlotView
+                    slot={props.props.slot}
+                    placeholder={INVITE_PLACEHOLDER}
+                    labels={props.props.slotLabels}
+                    errorDescription={props.props.failedBody}
+                    onRetry={props.on.retry}
+                    render={(view, isLoading) => (
+                        <Stack gap="region" measure="form">
+                            <SurfaceCard
+                                ariaLabel={props.props.say("replyInterviewTitle")}
+                                isLoading={isLoading}
+                                headers={[inviteBand({ ...props, view, isLoading })]}
+                            >
+                                <InviteAnswer {...props} shape={shape} view={view} isLoading={isLoading} />
+                            </SurfaceCard>
+                        </Stack>
+                    )}
+                />
+            </PublicShell>
+        </Page>
+    )
+}

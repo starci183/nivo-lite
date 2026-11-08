@@ -30,7 +30,9 @@ const OFFICE_ACCOUNTS = Symbol("proof.office-chain.accounts")
 /** The Auth account directory of the office chain: no path of the chain reads an account, so a read is a failed proof. */
 class UnreadAccountDirectory implements AccountDirectory {
     accountOf(): ReturnType<AccountDirectory["accountOf"]> {
-        return Promise.reject(new TestWorldError({ code: TestWorldErrorCode.AccountsUnread }))
+        return Promise.resolve().then(() => {
+            throw new TestWorldError({ code: TestWorldErrorCode.AccountsUnread })
+        })
     }
 }
 

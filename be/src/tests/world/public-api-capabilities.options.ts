@@ -80,7 +80,9 @@ export class PublicApiProofDirectory implements AgentDirectory, AccountDirectory
     }
 
     accountOf(): ReturnType<AccountDirectory["accountOf"]> {
-        return Promise.reject(new TestWorldError({ code: TestWorldErrorCode.AccountsUnread }))
+        return Promise.resolve().then(() => {
+            throw new TestWorldError({ code: TestWorldErrorCode.AccountsUnread })
+        })
     }
 }
 

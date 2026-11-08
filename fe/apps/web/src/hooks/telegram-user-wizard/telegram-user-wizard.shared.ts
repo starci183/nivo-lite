@@ -67,10 +67,10 @@ export const createTelegramUserWizardActions = ({
         })
 
     const field = (name: TelegramUserField, value: string): void => {
-        if (name === "name") return void forms.consent.setValue("name", value, { shouldValidate: true })
-        if (name === "phone") return void forms.phone.setValue("phone", value, { shouldValidate: true })
-        if (name === "code") return void forms.code.setValue("code", value, { shouldValidate: true })
-        forms.password.setValue("password", value, { shouldValidate: true })
+        if (name === "name") forms.consent.setValue("name", value, { shouldValidate: true })
+        else if (name === "phone") forms.phone.setValue("phone", value, { shouldValidate: true })
+        else if (name === "code") forms.code.setValue("code", value, { shouldValidate: true })
+        else forms.password.setValue("password", value, { shouldValidate: true })
     }
     return { save, finish, field }
 }

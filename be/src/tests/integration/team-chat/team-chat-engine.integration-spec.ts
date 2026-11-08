@@ -30,6 +30,10 @@ const seed = async (): Promise<TeamChatIdentity> => {
 const chat = (): TeamChatRoomsService => world.resolve(TeamChatRoomsService)
 const user = (memberId: string): ChatMemberRef => ({ memberKind: "user", memberId })
 
+/** The object key an upload of the quote lands at: the workspace, the room, one upload id, the file name. */
+const quoteKeyOf = (workspaceId: string, roomId: string): RegExp =>
+    new RegExp(String.raw`^${workspaceId}/team-chat/${roomId}/[0-9a-f-]{36}/Bao gia\.pdf$`)
+
 const valueOf = <V>(result: TeamChatResult<V>): V => {
     assert(result.ok, "expected a value, got a refusal")
     return result.value
@@ -387,7 +391,7 @@ describe("files of a room", () => {
         )
         const upload = valueOf(await chat().requestUpload(workspaceId, first, room.id, facts()))
         expect(upload).toMatchObject({ method: "PUT", headers: [{ name: "Content-Type", value: "application/pdf" }] })
-        expect(upload.fileKey).toMatch(new RegExp(`^${workspaceId}/team-chat/${room.id}/[0-9a-f-]{36}/Bao gia\\.pdf$`))
+        expect(upload.fileKey).toMatch(quoteKeyOf(workspaceId, room.id))
         expect(upload.uploadUrl).toContain(upload.fileKey)
         expect(
             refusalOf(

@@ -25,6 +25,12 @@ import { ageWake, flowBurstOf, stampBurst } from "../../world/agent-work-burst.s
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { useTestWorld } from "../../world/use-test-world"
 
+/** The provider outage a fake fails with, thrown inside a promise callback so the rejection carries the DomainError. */
+const providerDown = (): Promise<never> =>
+    Promise.resolve().then(() => {
+        throw new TestWorldError({ code: TestWorldErrorCode.ProviderDown })
+    })
+
 const CHATBOT_FLOW = join(__dirname, "../../../../../.starcistacks/dev/seeds/data/graphs/chatbot.json")
 
 const world = useTestWorld({ modules: AGENT_WORK_MODULES })
@@ -225,13 +231,9 @@ describe("agent-work/fence: a lost lease and a poison wake", () => {
         const next = wakeOf("poison-next")
         scripted().script = {
             run: (turn) =>
-                new Promise((resolve, reject) => {
-                    if (turn.eventKey === poison.eventKey) {
-                        reject(new TestWorldError({ code: TestWorldErrorCode.ProviderDown }))
-                    } else {
-                        resolve({ kind: "proposal", proposal: { reply: "ok" }, usage: null })
-                    }
-                }),
+                turn.eventKey === poison.eventKey
+                    ? providerDown()
+                    : Promise.resolve({ kind: "proposal", proposal: { reply: "ok" }, usage: null }),
         }
         await post(poison)
         await drain()

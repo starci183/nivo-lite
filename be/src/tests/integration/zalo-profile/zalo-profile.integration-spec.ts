@@ -14,6 +14,12 @@ import { useSeedConnection } from "../../world/sales-door-world.service"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { useTestWorld } from "../../world/use-test-world"
 
+/** The provider outage a fake fails with, thrown inside a promise callback so the rejection carries the DomainError. */
+const providerDown = (): Promise<never> =>
+    Promise.resolve().then(() => {
+        throw new TestWorldError({ code: TestWorldErrorCode.ProviderDown })
+    })
+
 /** The real app opens in about a minute on the world; the whole suite shares that one boot. */
 jest.setTimeout(240_000)
 
@@ -63,10 +69,7 @@ beforeEach(() => {
     jest.spyOn(world.resolve<ZaloClient>(ZALO), "userProfile").mockImplementation((token, userId) => {
         asked.push({ token, userId })
         const profile = profiles.get(userId)
-        return new Promise((resolve, reject) => {
-            if (profile === undefined) reject(new TestWorldError({ code: TestWorldErrorCode.ProviderDown }))
-            else resolve(profile)
-        })
+        return profile === undefined ? providerDown() : Promise.resolve(profile)
     })
 })
 

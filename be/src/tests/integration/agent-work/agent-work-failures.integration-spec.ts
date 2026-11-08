@@ -53,7 +53,10 @@ const rowOf = (wake: AgentWake) => wakeOfFact(em(), wake.agentId, wake.source, w
 
 const failures = async () => (await world.resolve(AgentWorkSettingsService).stateOf(AGENT)).failures
 
-const down = () => Promise.reject(new TestWorldError({ code: TestWorldErrorCode.ProviderDown }))
+const down = (): Promise<never> =>
+    Promise.resolve().then(() => {
+        throw new TestWorldError({ code: TestWorldErrorCode.ProviderDown })
+    })
 
 beforeAll(async () => {
     world.cleanup(async () => {
