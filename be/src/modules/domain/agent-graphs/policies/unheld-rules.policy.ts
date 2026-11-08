@@ -17,8 +17,8 @@ export interface UnheldRule {
 }
 
 const valuesOf = (condition: Condition): ReadonlyArray<number> => {
-    if ("all" in condition) return condition.all.flatMap(valuesOf)
-    if ("any" in condition) return condition.any.flatMap(valuesOf)
+    if ("all" in condition) return condition.all.flatMap((inner) => valuesOf(inner))
+    if ("any" in condition) return condition.any.flatMap((inner) => valuesOf(inner))
     return condition.op !== "known" && typeof condition.value === "number" ? [condition.value] : []
 }
 

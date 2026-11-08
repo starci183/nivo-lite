@@ -67,7 +67,7 @@ export const contractsFromSetup = (
                               text: limit.text,
                               triggers: limit.triggers,
                               trusts: limit.trusts,
-                              sources: backing.map(sourceOf),
+                              sources: backing.map((fact) => sourceOf(fact)),
                               ids: backing.map((fact) => fact.id),
                           },
                       ]
@@ -86,7 +86,7 @@ export const contractsFromSetup = (
                         trusts,
                         sources,
                     })),
-                    sources: taskFacts.map(sourceOf),
+                    sources: taskFacts.map((fact) => sourceOf(fact)),
                 },
                 factIds: unique([...taskFacts.map((fact) => fact.id), ...limits.flatMap((limit) => limit.ids)]),
             },

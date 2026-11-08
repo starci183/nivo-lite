@@ -41,7 +41,7 @@ const doneAndCompensable = (step: RouteStep): boolean => step.status === "done" 
  * named); when none is, the done compensable steps are undone in reverse order, and with none to undo a person decides.
  */
 export const routeFailure = (facts: FailureFacts): RunFailureRoute => {
-    const pivots = facts.steps.filter(doneAndPivot).sort((a, b) => b.seq - a.seq)
+    const pivots = facts.steps.filter((step) => doneAndPivot(step)).sort((a, b) => b.seq - a.seq)
     const pivotKey = pivots[0]?.stepKey ?? null
     if (
         facts.code === TOOL_OUTCOME_UNKNOWN ||
@@ -54,7 +54,7 @@ export const routeFailure = (facts: FailureFacts): RunFailureRoute => {
         return { kind: "retry", afterMs: backoffMs(facts.attempt) }
     }
     if (pivotKey !== null) return { kind: "person", pivotKey }
-    const undo = facts.steps.filter(doneAndCompensable).sort((a, b) => b.seq - a.seq)
+    const undo = facts.steps.filter((step) => doneAndCompensable(step)).sort((a, b) => b.seq - a.seq)
     if (undo.length === 0) return { kind: "person", pivotKey: null }
     return { kind: "compensate", stepKeys: undo.map((step) => step.stepKey) }
 }

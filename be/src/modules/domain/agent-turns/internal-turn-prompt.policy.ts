@@ -12,7 +12,7 @@ const bulletOf = (line: string): string => ["-", line].join(" ")
 
 /** A titled bullet list; nothing at all for an empty list, so a part with nothing to say adds no words. */
 export const blockOf = (title: string, lines: ReadonlyArray<string>): string =>
-    lines.length === 0 ? "" : [title, ...lines.map(bulletOf)].join("\n")
+    lines.length === 0 ? "" : [title, ...lines.map((line) => bulletOf(line))].join("\n")
 
 /** The parts that have words, one blank line apart. */
 export const joinParts = (parts: ReadonlyArray<string>): string => parts.filter((part) => part !== "").join("\n\n")

@@ -26,7 +26,9 @@ const amountSpec = (key: string): FactSpec => ({
 })
 
 /** The facts of the amount of the work itself, in dong. */
-const AMOUNT_FACTS: ReadonlyArray<FactSpec> = LIMITED_ACTIONS.map((action) => `${action}.amount_vnd`).map(amountSpec)
+const AMOUNT_FACTS: ReadonlyArray<FactSpec> = LIMITED_ACTIONS.map((action) => `${action}.amount_vnd`).map((key) =>
+    amountSpec(key),
+)
 
 @Injectable()
 /**

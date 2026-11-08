@@ -6,6 +6,6 @@ import { successorsOf } from "./graph-problems.policy"
  * publish, so a stored draft reads without it.
  */
 export const withoutStrayStops = (graph: GraphDocument): GraphDocument => {
-    const reached = new Set(graph.nodes.flatMap(successorsOf))
+    const reached = new Set(graph.nodes.flatMap((node) => successorsOf(node)))
     return { ...graph, nodes: graph.nodes.filter((node) => !node.key.startsWith("stop:") || reached.has(node.key)) }
 }

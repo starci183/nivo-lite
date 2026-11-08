@@ -79,7 +79,7 @@ export class AutomationPipelinesService {
             order: { createdAt: "ASC" },
             take: ENABLED_LIMIT,
         })
-        return rows.map(toRow)
+        return rows.map((row) => toRow(row))
     }
 
     /** The pipelines of one workspace that are on. */
@@ -89,7 +89,7 @@ export class AutomationPipelinesService {
             order: { createdAt: "ASC" },
             take: ENABLED_LIMIT,
         })
-        return rows.map(toRow)
+        return rows.map((row) => toRow(row))
     }
 
     /** The pipelines of one template that are on, in every workspace, oldest workspace id first, bounded. */
@@ -99,7 +99,7 @@ export class AutomationPipelinesService {
             order: { workspaceId: "ASC" },
             take: limit,
         })
-        return rows.map(toRow)
+        return rows.map((row) => toRow(row))
     }
 
     /** The id and template key of every pipeline of a workspace. */

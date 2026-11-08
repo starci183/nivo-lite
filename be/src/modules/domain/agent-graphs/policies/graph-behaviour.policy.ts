@@ -28,7 +28,8 @@ const behaviourOfNode = (node: GraphNode): unknown => ({
  * written in another language is not a change of what the agent does.
  */
 export const sameBehaviour = (left: GraphDocument, right: GraphDocument): boolean =>
-    JSON.stringify(left.nodes.map(behaviourOfNode)) === JSON.stringify(right.nodes.map(behaviourOfNode))
+    JSON.stringify(left.nodes.map((node) => behaviourOfNode(node))) ===
+    JSON.stringify(right.nodes.map((node) => behaviourOfNode(node)))
 
 /** True when two graphs grant the same data rights, kind by kind. */
 export const sameRights = (left: GraphDocument, right: GraphDocument): boolean =>

@@ -5,6 +5,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
+import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentStepLedgerService } from "./agent-step-ledger.service"
@@ -34,7 +35,7 @@ const undoing = (record: Tally): AgentStepHandler => ({
 const throwing: AgentStepHandler = {
     kind: "close_item",
     run: () => Promise.resolve({ kind: "failed", code: "x" }),
-    compensate: () => Promise.reject(new Error("down")),
+    compensate: () => Promise.reject(new AgentRunsError({ code: AgentRunsErrorCode.ResultRejected })),
 }
 
 const withoutUndo: AgentStepHandler = { kind: "close_item", run: () => Promise.resolve({ kind: "failed", code: "x" }) }

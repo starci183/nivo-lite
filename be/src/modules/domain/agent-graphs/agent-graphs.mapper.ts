@@ -271,7 +271,7 @@ const scalarOf = (value: unknown): JsonValue => {
 
 /** The value as plain JSON; what JSON cannot hold is refused. */
 const plainOf = (value: unknown): JsonValue => {
-    if (Array.isArray(value)) return asJson(value.map(plainOf))
+    if (Array.isArray(value)) return asJson(value.map((item) => plainOf(item)))
     return asJson(isRecord(value) ? membersOf(value) : scalarOf(value))
 }
 

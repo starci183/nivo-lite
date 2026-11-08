@@ -10,6 +10,7 @@ export const AI_GENERATIONS_MESSAGES: MessageBundle = {
         "errors.AI_GENERATIONS_NOT_FOUND": "Không tìm thấy yêu cầu viết văn bản.",
         "errors.AI_GENERATIONS_KIND_NOT_ALLOWED": "Không thể yêu cầu loại văn bản này từ đây.",
         "errors.AI_GENERATIONS_GUIDE_RATE_LIMITED": "Bạn đã hỏi trợ lý NIVO quá nhiều lần. Hãy thử lại sau ít phút.",
+        "errors.AI_GENERATIONS_DEADLINE_PASSED": "NIVO đang bận, hãy thử lại sau ít phút.",
         "generation.busy": "NIVO đang bận, thử lại sau ít phút.",
         "guide.page.office.title": "Office",
         "guide.page.office.what": "Phòng làm việc chung: nhắn với đội và các agent AI, duyệt việc AI đề xuất.",
@@ -114,6 +115,7 @@ export const AI_GENERATIONS_MESSAGES: MessageBundle = {
         "errors.AI_GENERATIONS_KIND_NOT_ALLOWED": "This kind of text cannot be requested from here.",
         "errors.AI_GENERATIONS_GUIDE_RATE_LIMITED":
             "You have asked the NIVO guide too often. Try again in a few minutes.",
+        "errors.AI_GENERATIONS_DEADLINE_PASSED": "NIVO is busy, please try again in a few minutes.",
         "generation.busy": "NIVO is busy, please try again in a few minutes.",
         "guide.page.office.title": "Office",
         "guide.page.office.what": "The shared office: talk to your team and AI agents, approve what the AI proposes.",
