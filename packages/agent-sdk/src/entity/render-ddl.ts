@@ -43,7 +43,7 @@ const typedCheck = (name: string, field: FieldDef): string => {
             return typeIs("object")
         case "enum":
             if (field.of === undefined) throw new EntityRenderError("ENTITY_RENDER_VALUE_INVALID", name)
-            return `${text} IN (${field.of.map(quoteLiteral).join(", ")})`
+            return `${text} IN (${field.of.map((literal) => quoteLiteral(literal)).join(", ")})`
     }
 }
 

@@ -1,3 +1,0 @@
-{"data":{"digestOf":"sonar-project.properties"},"findings":[],"hash":"65721cc457382d8c17140871f1e0ef51a5d2bb812a1d53c22baef5ff90a6363e","path":"analysis-scope","step":"reference"}
-{"data":{"baseContent":"4f5747172a050f781d31770f75f4d739c1d77d8ac81bf2a9a0912c99c2d05a20"},"findings":[],"hash":"4f5747172a050f781d31770f75f4d739c1d77d8ac81bf2a9a0912c99c2d05a20","path":"new-code-base","step":"reference"}
-{"data":{"coverageMinPercent":100,"duplicationMaxPercent":3,"owner":"runtime/knowledge/sonar-gate.yaml"},"findings":[],"hash":"aabe365c020ca12bf20c9707d3918c71b393207c502ef8f5e41b4b09888ea6b7","path":"quality-gate","step":"reference"}

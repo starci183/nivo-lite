@@ -55,7 +55,7 @@ export const slotWithPending = (
     pending: ReadonlyArray<PendingSend>,
 ): DataSlot<ReadonlyArray<MessageRow>> => {
     if (pending.length === 0) return slot
-    const rows = pending.map(pendingRowOf)
+    const rows = pending.map((entry) => pendingRowOf(entry))
     if ("items" in slot) return { ...slot, items: [...slot.items, ...rows] }
     return "isEmpty" in slot ? { items: rows } : slot
 }

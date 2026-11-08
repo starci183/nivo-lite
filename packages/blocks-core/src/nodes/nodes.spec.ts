@@ -2,6 +2,7 @@ import { runNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { EXAMPLE_TURN, fakeNodePorts } from "@nivo-lite/agent-sdk/testing"
 import type { FakeNodePortsOptions } from "@nivo-lite/agent-sdk/testing"
+import { BlocksError } from "../blocks-error"
 import { coreEffects, coreTools } from "../vocabulary"
 import { coreNodes } from "./core-nodes"
 import { raiseWorkItemNode } from "./core/raise-work-item.node"
@@ -96,7 +97,7 @@ describe("payment.request", () => {
     }
     const input = { orderId: "o1", conversationId: "conv-1", locale: "en" }
 
-    const run = (tools: ReadonlyArray<unknown>, failure: Error | null = null) =>
+    const run = (tools: ReadonlyArray<unknown>, failure: BlocksError<string> | null = null) =>
         runOver(paymentRequestNode, input, { store: { order: [order] }, tools }, (ports) =>
             failure === null ? ports : { ...ports, callTool: () => Promise.reject(failure) },
         )
@@ -125,7 +126,7 @@ describe("payment.request", () => {
     })
 
     it("tells the customer the order is recorded and raises a connect_sepay work item when the tool fails, naming the kind of the failure", async () => {
-        const { output, executed } = await run([], new Error("no provider connected"))
+        const { output, executed } = await run([], new BlocksError("GRAPH_NODES_TOOL_FAILED", "payment.instruction"))
 
         expect(output).toEqual({ status: "no_account", content: null, qrUrl: null })
         expect(executed.map((one) => one.id)).toEqual(["channel.send", "work-item.raise"])
@@ -134,7 +135,7 @@ describe("payment.request", () => {
         expect(String(executed[0]?.payload.text)).not.toContain("Bank:")
         expect(executed[1]?.payload).toMatchObject({
             action: "connect_sepay",
-            payload: { orderId: "o1", failure: "Error" },
+            payload: { orderId: "o1", failure: "BlocksError" },
         })
     })
 })

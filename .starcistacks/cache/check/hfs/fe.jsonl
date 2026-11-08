@@ -1,4 +1,0 @@
-{"data":{},"findings":[],"hash":"11fd745a0526a81cbb5c08bb163f34d3638772806dc9df7d8b5c1e977013b86b","path":"fe/eslint.config.mjs","step":"file-rules"}
-{"data":{},"findings":[],"hash":"a8f87cfce2b9a7506f952f6f399183e762d2d212acd7c60b49270f08bbcf6032","path":"fe/i18n-dynamic-keys.yaml","step":"file-rules"}
-{"data":{},"findings":[],"hash":"31f07cd34fa182989c68128d4b1411199f2014e693d60fc909b5f7b7db84ee26","path":"fe/stylelint.config.mjs","step":"file-rules"}
-{"data":{},"findings":[],"hash":"0d819304320307f9c2c1a5cc9db56ff1886366ef0b01f4e3c49bcc3b9c09a5d7","path":"fe/tsconfig.json","step":"file-rules"}

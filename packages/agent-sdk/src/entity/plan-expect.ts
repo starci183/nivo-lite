@@ -93,7 +93,7 @@ export const WORKSPACE_PREDICATE: string = normalizeSql(`${WORKSPACE} = public.e
 
 const generated = (partition: string, name: string, parts: ReadonlyArray<string>, method: string): ExpectedIndex => ({
     name: identOf(`${partition}_${name}`),
-    parts: parts.map(normalizeSql),
+    parts: parts.map((part) => normalizeSql(part)),
     unique: false,
     method,
     partial: false,
@@ -123,7 +123,7 @@ export const expectedIndexes = (entity: EntityDefinition): ReadonlyArray<Expecte
     return [
         ...(entity.indexes ?? []).map((index) => ({
             name: identOf(`${partition}_${index.name}`),
-            parts: [normalizeSql(WORKSPACE), ...index.on.map(partOf)],
+            parts: [normalizeSql(WORKSPACE), ...index.on.map((part) => partOf(part))],
             unique: index.unique === true,
             method: index.using ?? "btree",
             partial: index.where !== undefined,

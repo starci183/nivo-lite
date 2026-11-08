@@ -1,4 +1,5 @@
 import type { ActionResult } from "@nivo-lite/agent-sdk/block"
+import { BlocksError } from "../../../blocks-error"
 import { ORDER, TRANSACTION, orderOf, transactionOf } from "../../../rules/accounting/accounting.fixtures"
 import type { OrderRecord, TransactionRecord } from "../../../rules/accounting/accounting.types"
 import {
@@ -24,7 +25,7 @@ const worldOf = (transaction: TransactionRecord | null = PAID, order: OrderRecor
 
 const run = (world: MemoryWorld, raw: unknown, now = new Date("2026-11-07T10:00:30Z")): Promise<ActionResult> =>
     repostLedgerAction.execute?.(memoryProvider(world), raw, { ...SYSTEM_CONTEXT, now }) ??
-    Promise.reject(new Error("not runnable"))
+    Promise.reject(new BlocksError("ACTION_NOT_RUNNABLE", "execute"))
 
 describe("accounting.repost-ledger", () => {
     it("is a transactional action of the accounting permission that refreshes nothing", () => {

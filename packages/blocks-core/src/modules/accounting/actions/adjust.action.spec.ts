@@ -1,4 +1,5 @@
 import type { ActionResult } from "@nivo-lite/agent-sdk/block"
+import { BlocksError } from "../../../blocks-error"
 import { ADJUSTMENT, INVOICE, TRANSACTION } from "../../../rules/accounting/accounting.fixtures"
 import { entryStatusOf } from "../../../rules/accounting/entry-status"
 import {
@@ -16,7 +17,7 @@ import {
 import type { MemoryWorld } from "../fixtures/accounting.memory"
 import { adjustAction } from "./adjust.action"
 
-const NOT_RUNNABLE = new Error("not runnable")
+const NOT_RUNNABLE = new BlocksError("ACTION_NOT_RUNNABLE", "execute")
 
 const INVOICE_ENTRY = "00000000-0000-4000-8000-0000000001a3"
 const PAYMENT_ENTRY = "00000000-0000-4000-8000-0000000001a1"

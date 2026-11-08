@@ -26,7 +26,7 @@ describe("the fake entities of the runs specs", () => {
             api.link("a", "r", "b"),
             api.unlink("a", "r", "b"),
         ]
-        for (const attempt of refused) await expect(attempt).rejects.toThrow("unused")
+        for (const attempt of refused) await expect(attempt).rejects.toThrow("FAKE_PORT_UNUSED")
     })
 
     it("serve the ports of the reads", () => {

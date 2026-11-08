@@ -37,7 +37,10 @@ const sameStrings = (left: ReadonlyArray<string>, right: ReadonlyArray<string>):
     left.length === right.length && left.every((item, index) => item === right[index])
 
 const indexMatches = (have: CatalogIndex, want: ExpectedIndex): boolean =>
-    sameStrings(have.columns.map(normalizeSql), want.parts) &&
+    sameStrings(
+        have.columns.map((column) => normalizeSql(column)),
+        want.parts,
+    ) &&
     have.unique === want.unique &&
     have.method === want.method &&
     (have.predicate !== null) === want.partial
@@ -255,7 +258,7 @@ export const planOf = (entities: ReadonlyArray<EntityDefinition>, snapshot: Cata
     const declared = new Set<string>(entities.map((entity) => entity.name))
     const views = new Set(entities.flatMap((entity) => expectedView(entity)?.name ?? []))
     return [
-        ...(entities.some(needsTrigram) && !snapshot.extensions.includes("pg_trgm")
+        ...(entities.some((entity) => needsTrigram(entity)) && !snapshot.extensions.includes("pg_trgm")
             ? [
                   op(
                       "create_extension",
@@ -265,7 +268,7 @@ export const planOf = (entities: ReadonlyArray<EntityDefinition>, snapshot: Cata
                   ),
               ]
             : []),
-        ...(entities.some(needsGist) && !snapshot.extensions.includes("btree_gist")
+        ...(entities.some((entity) => needsGist(entity)) && !snapshot.extensions.includes("btree_gist")
             ? [op("create_extension", "extension:btree_gist", true, "EXCLUDE constraints (allowlisted, R259)")]
             : []),
         ...BASE_TABLES.flatMap((table) =>

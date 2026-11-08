@@ -1,5 +1,6 @@
 import type { AggregateRow, EntityApi, EntityAggregate, EntityQuery, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
+import { BlocksError } from "../../../blocks-error"
 import { agentRuns } from "../ports"
 import { DONE_SHOWN, agentDoneRead } from "./agent-done.read"
 
@@ -22,7 +23,7 @@ const runRow = (id: string): RecordRow => ({
     data: { trigger: "tag", endedAt: "2026-11-04T11:00:00.000Z" },
 })
 
-const unused = (): Promise<never> => Promise.reject(new Error("unused"))
+const unused = (): Promise<never> => Promise.reject(new BlocksError("FAKE_PORT_UNUSED", "agent-runs"))
 
 /** A runs port with `listed` rows on its page and `counted` as the aggregate's count (null: the aggregate answers no group). */
 const run = (listed: number, counted: number | null, raw: unknown = { agent: AGENT }) => {

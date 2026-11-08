@@ -1,5 +1,6 @@
 import { portsOf } from "@nivo-lite/agent-sdk/port"
 import type { PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
+import { BlocksError } from "../../../blocks-error"
 import { INSTALLATION, INSTALLATION_FACTS } from "../fixtures/platform.fixtures"
 import { installationPort } from "../ports"
 import type { InstallationSource } from "../platform.types"
@@ -29,7 +30,9 @@ describe("platform.installation", () => {
     })
 
     it("refuses a variable the read does not declare", async () => {
-        const source: InstallationSource = { current: () => Promise.reject(new Error("unreached")) }
+        const source: InstallationSource = {
+            current: () => Promise.reject(new BlocksError("FAKE_PORT_UNUSED", "installation.current")),
+        }
 
         const result = await installationRead.execute?.(providerOf(source), { extra: 1 }, CONTEXT)
 
@@ -37,7 +40,9 @@ describe("platform.installation", () => {
     })
 
     it("reaches the source through its one port", () => {
-        const source: InstallationSource = { current: () => Promise.reject(new Error("unreached")) }
+        const source: InstallationSource = {
+            current: () => Promise.reject(new BlocksError("FAKE_PORT_UNUSED", "installation.current")),
+        }
 
         expect(portsOf(providerOf(source), installationRead.ports ?? {})).toEqual({ installation: source })
     })

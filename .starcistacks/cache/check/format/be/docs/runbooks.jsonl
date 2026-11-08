@@ -1,9 +1,0 @@
-{"findings":[],"hash":"fc98419b1bad9e4e9f9e976b46649f1847d989e9188707a0c4a5286d9bc535d7","path":"be/docs/runbooks/cutover.md","step":"prettier"}
-{"findings":[],"hash":"ced6272c1fae1b216819fdb3d4accff21d7f122ecb950cd7ec1cd60774637a73","path":"be/docs/runbooks/dns-rollback.md","step":"prettier"}
-{"findings":[],"hash":"cbd909f115572913f65437979bfa3ddf39577aa570da9d028b5a1bde9e940655","path":"be/docs/runbooks/jobs-operations.md","step":"prettier"}
-{"findings":[],"hash":"96f0e13a858c181a86499dfbc29fffcb28cdca9fc5c3c965c95ccab4f4748a15","path":"be/docs/runbooks/lite-baseline.md","step":"prettier"}
-{"findings":[],"hash":"8d6e7c3648febd45b3ffe85a02ecfd7f4f276c3553fd4cf676c6d0ad82934754","path":"be/docs/runbooks/migration-restamp.md","step":"prettier"}
-{"findings":[],"hash":"2e531367111a78a1f38e0d0e3cb6e72eb559e4743836e5a8a7ae2cd28671e0d5","path":"be/docs/runbooks/queue-jobs.md","step":"prettier"}
-{"findings":[],"hash":"f2036555d05e992c84fa736cf3afdcaaace971344f4a70acf5a33577d7594dcd","path":"be/docs/runbooks/vps-stack.md","step":"prettier"}
-{"findings":[],"hash":"724007da226f9297d42133c5ca050372938360179866d2d8f4e8f6cb0edb2aa3","path":"be/docs/runbooks/webhook-receipts.md","step":"prettier"}
-{"findings":[],"hash":"c2d8f61d16f21309daa896e384ae274f9554295e3c71673425265dd616f6f393","path":"be/docs/runbooks/workspace-cleanup.md","step":"prettier"}

@@ -1,6 +1,7 @@
 import type { EntityApi, EntityQuery } from "@nivo-lite/agent-sdk/entity/port"
 import { queryProblems } from "@nivo-lite/agent-sdk/query"
 import type { EntityCatalog } from "@nivo-lite/agent-sdk/query"
+import { BlocksError } from "../../blocks-error"
 import { FLOW_F_ENTITIES } from "../../entities/flow-f.entities"
 import { cancelFactsOf, openClaimsOf } from "./order-links"
 
@@ -25,10 +26,10 @@ const recording = (count: number | undefined): RecordingPort => {
         update: () => Promise.resolve({ ok: false, reason: "invalid" }),
         insert: () => Promise.resolve({ ok: false, reason: "invalid" }),
         upsert: () => Promise.resolve({ ok: false, reason: "invalid" }),
-        ensure: () => Promise.reject(new Error("unused")),
-        delete: () => Promise.reject(new Error("unused")),
-        link: () => Promise.reject(new Error("unused")),
-        unlink: () => Promise.reject(new Error("unused")),
+        ensure: () => Promise.reject(new BlocksError("FAKE_PORT_UNUSED", "order-links")),
+        delete: () => Promise.reject(new BlocksError("FAKE_PORT_UNUSED", "order-links")),
+        link: () => Promise.reject(new BlocksError("FAKE_PORT_UNUSED", "order-links")),
+        unlink: () => Promise.reject(new BlocksError("FAKE_PORT_UNUSED", "order-links")),
     }
     return { api, asked }
 }

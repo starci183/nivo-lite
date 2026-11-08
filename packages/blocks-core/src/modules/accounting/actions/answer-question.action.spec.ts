@@ -1,4 +1,5 @@
 import type { ActionResult } from "@nivo-lite/agent-sdk/block"
+import { BlocksError } from "../../../blocks-error"
 import {
     ACCOUNTANT_CONTEXT,
     ACCOUNTANT_ID,
@@ -20,7 +21,8 @@ const worldOf = (status = "open"): MemoryWorld => {
 }
 
 const run = (world: MemoryWorld, raw: unknown, context = ACCOUNTANT_CONTEXT): Promise<ActionResult> =>
-    answerQuestionAction.execute?.(memoryProvider(world), raw, context) ?? Promise.reject(new Error("not runnable"))
+    answerQuestionAction.execute?.(memoryProvider(world), raw, context) ??
+    Promise.reject(new BlocksError("ACTION_NOT_RUNNABLE", "execute"))
 
 const payload = (answer: string) => ({ id: "q1", command: "edit", answer })
 

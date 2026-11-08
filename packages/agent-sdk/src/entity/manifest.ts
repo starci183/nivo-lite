@@ -57,5 +57,7 @@ const manifestEntityOf = (entity: EntityDefinition): ManifestEntity => {
 /** The manifest the app's `cli entities` command writes for the declared entities. */
 export const manifestOf = (entities: ReadonlyArray<EntityDefinition>): EntityManifest => ({
     version: 1,
-    entities: entities.map(manifestEntityOf).sort((left, right) => left.entity.localeCompare(right.entity)),
+    entities: entities
+        .map((entity) => manifestEntityOf(entity))
+        .sort((left, right) => left.entity.localeCompare(right.entity)),
 })
