@@ -4,8 +4,9 @@ import {
     DOSSIER_REVIEW_PACK_VERSION,
     DOSSIER_REVIEW_PROMPT_VERSION,
     isRemedyAction,
+    type EvidenceRole,
+    type FindingEvidence,
 } from "./dossier-review.contracts"
-import type { EvidenceRole, FindingEvidence } from "./dossier-review.contracts"
 import type {
     DocumentInput,
     DocumentState,
@@ -14,8 +15,7 @@ import type {
     ReviewFact,
 } from "./dossier-inputs.contracts"
 import type { BundleDocument, BundleItem, CitedQuote, DossierBundle, ReasonedReview } from "./dossier-review.port"
-import { itemHolds, normalizeQuote } from "./evidence.policy"
-import type { EvidenceCorpus } from "./evidence.policy"
+import { itemHolds, normalizeQuote, type EvidenceCorpus } from "./evidence.policy"
 
 /** A passage key and what it stands for. */
 export interface PassageKey {

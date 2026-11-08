@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto"
-import { apiScalarText, getPath, isApiJsonObject, readApiJson } from "@modules/integrations/data-sources"
-import type { OpenApiOperation, OpenApiPull } from "@modules/integrations/data-sources"
+import {
+    apiScalarText,
+    getPath,
+    isApiJsonObject,
+    readApiJson,
+    type OpenApiOperation,
+    type OpenApiPull,
+} from "@modules/integrations/data-sources"
 import type { DataRecordInput } from "./data-hub.contracts"
 
 /** Items asked for per page. */

@@ -1,31 +1,42 @@
 import { Injectable } from "@nestjs/common"
-import { In, IsNull } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, IsNull, type EntityManager } from "typeorm"
 import { UsageMeterService } from "@modules/domain/knowledge"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { isDossierReviewPayload } from "@modules/queues/knowledge"
-import { UNFILED_DOSSIER_ID, UNFILED_DOSSIER_NAME } from "./dossier-inputs.contracts"
-import type { DossierInputs, FindingCandidate, ReviewContext, RuleOutput } from "./dossier-inputs.contracts"
-import { DOSSIER_REVIEW_CAPS, FINDING_SEVERITIES, JOB_FAILED } from "./dossier-review.contracts"
-import type { AiState, JobOutcome } from "./dossier-review.contracts"
+import {
+    UNFILED_DOSSIER_ID,
+    UNFILED_DOSSIER_NAME,
+    type DossierInputs,
+    type FindingCandidate,
+    type ReviewContext,
+    type RuleOutput,
+} from "./dossier-inputs.contracts"
+import {
+    DOSSIER_REVIEW_CAPS,
+    FINDING_SEVERITIES,
+    JOB_FAILED,
+    type AiState,
+    type JobOutcome,
+} from "./dossier-review.contracts"
 import { InjectDossierReasoner } from "./dossier-review.decorators"
 import { DossierReviewLogEvent } from "./dossier-review.log-events"
 import type { DossierReasoner } from "./dossier-review.port"
 import { statusOf } from "./dossier-status.policy"
-import { guardCandidates } from "./evidence.policy"
-import type { DropReason, EvidenceCorpus, GuardOutcome, KnownFinding } from "./evidence.policy"
+import {
+    guardCandidates,
+    type DropReason,
+    type EvidenceCorpus,
+    type GuardOutcome,
+    type KnownFinding,
+} from "./evidence.policy"
 import { toFindingRows, toFindingUpdate, toStoredFinding } from "./finding-record.mapper"
 import { citedIds, coverageKey, evidenceHashOf, fingerprintOf } from "./fingerprint.policy"
 import { DossierFindingEntity, DossierReviewEntity, DossierReviewRunEntity } from "./persistence/entities"
-import { reconcile } from "./reconcile.policy"
-import type { Reconciliation } from "./reconcile.policy"
+import { reconcile, type Reconciliation } from "./reconcile.policy"
 import { buildBundle, corpusOf, inputsFingerprintOf, reasonedCandidates, resolvedByModel } from "./review-bundle.policy"
 import { ReviewCriticService } from "./review-critic.service"
 import { ReviewInputsService } from "./review-inputs.service"
@@ -139,7 +150,7 @@ export class DossierReviewRunnerService {
             runId: run.id,
             now,
             trigger: run.trigger,
-            stored: pass.stored.map(toStoredFinding),
+            stored: pass.stored.map((row) => toStoredFinding(row)),
             candidates: [...pass.ruleGuard.kept, ...ai.kept].map((candidate) => ({
                 candidate,
                 fingerprint: fingerprintOf(candidate),
@@ -295,7 +306,10 @@ export class DossierReviewRunnerService {
         const previous = new Map(pass.reviews.map((review) => [review.dossierId, review.inputsFingerprint]))
         await eachInOrder(targets, async (inputs) => {
             const ownRules = pass.ruleGuard.kept.filter((item) => item.dossierId === inputs.dossier.id)
-            const fingerprint = inputsFingerprintOf(inputs, ownRules.map(fingerprintOf))
+            const fingerprint = inputsFingerprintOf(
+                inputs,
+                ownRules.map((candidate) => fingerprintOf(candidate)),
+            )
             if (previous.get(inputs.dossier.id) === fingerprint) return
             const { tally } = result
             tally.changed += 1

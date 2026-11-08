@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { LessThan } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { LessThan, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { InvoiceTally, LedgerInvoice, OptionalReceiptInvoice, OverdueInvoice } from "./invoices-ledger.contracts"
 import { InvoiceEntity } from "./persistence/entities"

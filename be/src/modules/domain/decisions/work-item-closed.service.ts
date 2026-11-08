@@ -1,6 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { Decider, WorkContext, WorkItem } from "./decisions.contracts"
 import { InjectWorkItemClosed } from "./work-engine.decorators"
 import { WorkEngineLogEvent } from "./work-engine.log-events"

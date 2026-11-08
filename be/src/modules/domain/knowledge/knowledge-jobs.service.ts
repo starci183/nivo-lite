@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { KnowledgeError, KnowledgeErrorCode } from "./errors/knowledge.error"
 import { KnowledgeIndexingService } from "./knowledge-indexing.service"
 import { reembedPayloadOf, sourcePayloadOf } from "./knowledge-payload.policy"

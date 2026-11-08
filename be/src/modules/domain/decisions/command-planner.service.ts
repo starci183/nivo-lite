@@ -4,10 +4,8 @@ import { AgentDirectoryService } from "@modules/domain/agents"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkItemsChainReadService } from "@modules/domain/work-items"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import {
     defaultDedupeKey,
     instanceLabel,

@@ -122,7 +122,7 @@ export const toSaveHiringJobRequest = (workspaceId: string, input: SaveJobForm):
     ...(isGiven(input.headcount) ? { headcount: input.headcount } : {}),
     ...(isGiven(input.description) ? { description: input.description } : {}),
     ...(isGiven(input.requirements) ? { requirements: toJobRequirements(input.requirements) } : {}),
-    questions: input.questions.map(toJobQuestion),
+    questions: input.questions.map((question) => toJobQuestion(question)),
     ...(isGiven(input.channels) ? { channels: input.channels } : {}),
     ...(isGiven(input.closesAt) ? { closesAt: input.closesAt } : {}),
 })

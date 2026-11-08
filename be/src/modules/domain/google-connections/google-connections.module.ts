@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule, OnModuleInit } from "@nestjs/common"
+import { Module, type DynamicModule, type OnModuleInit } from "@nestjs/common"
 import { LedgerRegistryService } from "@modules/domain/provider-registry"
 import { DriveGrantService } from "./drive-grant.service"
 import { GoogleConnectionsService } from "./google-connections.service"

@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { OfficeLog, ModuleTextGenerator } from "@modules/domain/module-ops"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import type { ComposedMessage, LoadedPo } from "./inventory.contracts"
 import { formatDay, formatMoney, formatQty } from "./policies/number-format.policy"
 import { AuthorityService } from "@modules/domain/authority"
@@ -45,7 +44,9 @@ export class InventoryOrderMessageService {
             .map((line) => `- ${line.name}: ${formatQty(line.qty)} ${line.unit}`)
             .join("\n")
         const supplier = po.supplier
-        const who = supplier?.contactName || supplier?.name || this.text("inventory.addressFallback", {})
+        const who =
+            [supplier?.contactName, supplier?.name].find((name) => name !== undefined && name !== "") ??
+            this.text("inventory.addressFallback", {})
         const due = po.expectedAt === null ? "" : formatDay(po.expectedAt)
         const fallback =
             kind === "reminder"

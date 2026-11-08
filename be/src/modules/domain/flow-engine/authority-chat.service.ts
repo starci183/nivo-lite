@@ -1,19 +1,19 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { AuthorityService } from "@modules/domain/authority"
-import type { AuthorityPatch, AuthorityProfile } from "@modules/domain/authority"
-import { AuthorityActionsService } from "@modules/domain/authority-actions"
-import type { AuthorityActionRecord } from "@modules/domain/authority-actions"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import type { AuthorityRuleRecord, RuleMode } from "@modules/domain/authority-rules"
-import { EvidenceService, ModuleCatalogService, formatVnd } from "@modules/domain/decisions"
-import type { Proposal, WorkContext } from "@modules/domain/decisions"
+import { AuthorityService, type AuthorityPatch, type AuthorityProfile } from "@modules/domain/authority"
+import { AuthorityActionsService, type AuthorityActionRecord } from "@modules/domain/authority-actions"
+import { AuthorityRulesService, type AuthorityRuleRecord, type RuleMode } from "@modules/domain/authority-rules"
+import {
+    EvidenceService,
+    ModuleCatalogService,
+    formatVnd,
+    type Proposal,
+    type WorkContext,
+} from "@modules/domain/decisions"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
-import { InjectAiTasks } from "@modules/domain/ai-tasks"
-import type { AiTasksService } from "@modules/domain/ai-tasks"
+import { InjectAiTasks, type AiTasksService } from "@modules/domain/ai-tasks"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
 import {
     amountIn,
     appended,

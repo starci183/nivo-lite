@@ -1,9 +1,7 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
 import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
 import type { EntityManager } from "typeorm"
-import { GraphNodeRegistryService, rowsAnswering } from "@modules/domain/graph-nodes"
-import type { NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
+import { GraphNodeRegistryService, rowsAnswering, type NodeRow, type NodeTurn } from "@modules/domain/graph-nodes"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InventoryItemEntity } from "./persistence/entities"
 
@@ -42,6 +40,9 @@ export class InventoryGraphService implements OnModuleInit {
             order: { name: "ASC" },
             take: CATALOGUE_LIMIT,
         })
-        return rowsAnswering(items.map(rowOf), query)
+        return rowsAnswering(
+            items.map((item) => rowOf(item)),
+            query,
+        )
     }
 }

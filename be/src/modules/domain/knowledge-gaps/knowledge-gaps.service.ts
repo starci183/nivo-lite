@@ -1,11 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { factSlugOf } from "@modules/domain/brain-facts"
 import { InjectPrimaryEntityManager, returnedRows } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import { isGapReturned, toGapFields, toGapRecord } from "./gap-record.mapper"
-import type { GapFields } from "./gap-record.mapper"
+import { isGapReturned, toGapFields, toGapRecord, type GapFields } from "./gap-record.mapper"
 import { answers, keywordsOf, sameQuestion, splitTopic, wordSet } from "./gap-keywords.policy"
 import type {
     Answerer,
@@ -51,7 +49,7 @@ export class KnowledgeGapsService {
             order: { count: "DESC", lastSeenAt: "DESC" },
             take: Math.min(limit, LIST_MAX),
         })
-        return rows.map(toGapRecord)
+        return rows.map((row) => toGapRecord(row))
     }
 
     /**
@@ -59,7 +57,7 @@ export class KnowledgeGapsService {
      * again); otherwise a new gap starts. Answers null when the question has no significant word to remember it by.
      */
     async record(workspaceId: string, input: GapInput): Promise<MaybeGapRecorded> {
-        const question = input.question.replace(/\s+/g, " ").trim().slice(0, QUESTION_MAX)
+        const question = input.question.replaceAll(/\s+/g, " ").trim().slice(0, QUESTION_MAX)
         const keywords = keywordsOf(question)
         if (keywords.length === 0) return null
         const key = factSlugOf(question)
@@ -155,7 +153,7 @@ export class KnowledgeGapsService {
             }),
             this.entityManager.count(KnowledgeGapEntity, { where: { workspaceId, module, status: "open" } }),
         ])
-        return { openCount, items: rows.map(toGapRecord) }
+        return { openCount, items: rows.map((row) => toGapRecord(row)) }
     }
 
     /** Counts a question once more in one statement; an answered gap opens again. Answers the changed gap, or undefined when it is gone. */

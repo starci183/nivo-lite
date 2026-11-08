@@ -23,10 +23,10 @@ const D_WITH_STROKE = new RegExp(String.fromCodePoint(0x111), "giu")
 export const parseNumber = (value: unknown, fallback = 0): number => {
     if (typeof value === "number") return Number.isFinite(value) ? value : fallback
     if (typeof value !== "string") return fallback
-    const compact = value.trim().replace(/\s/gu, "").replace(CURRENCY_TAIL, "")
+    const compact = value.trim().replaceAll(/\s/gu, "").replace(CURRENCY_TAIL, "")
     if (compact === "") return fallback
     const grouped = DOT_THOUSANDS.test(compact) || COMMA_THOUSANDS.test(compact)
-    const parsed = Number(grouped ? compact.replace(/[.,]/gu, "") : compact.replace(",", "."))
+    const parsed = Number(grouped ? compact.replaceAll(/[.,]/gu, "") : compact.replace(",", "."))
     return Number.isFinite(parsed) ? parsed : fallback
 }
 
@@ -50,8 +50,8 @@ export const formatDay = (iso: string): string => iso.slice(0, 10).split("-").re
 export const foldText = (text: string): string =>
     text
         .normalize("NFD")
-        .replace(/\p{M}/gu, "")
-        .replace(D_WITH_STROKE, "d")
+        .replaceAll(/\p{M}/gu, "")
+        .replaceAll(D_WITH_STROKE, "d")
         .toLowerCase()
-        .replace(/[^a-z0-9]+/gu, " ")
+        .replaceAll(/[^a-z0-9]+/gu, " ")
         .trim()

@@ -48,11 +48,11 @@ const toHiringJobQuestionFields = (question: JobQuestion): HiringJobQuestionFiel
 /** Maps one job post with its questions split into typed fields. */
 const toHiringJobFields = (job: HiringJobView): HiringJobFields => ({
     ...job,
-    questions: job.questions.map(toHiringJobQuestionFields),
+    questions: job.questions.map((question) => toHiringJobQuestionFields(question)),
 })
 
 /** Maps the workbench view so question expectations become three typed fields. */
 export const toHiringBenchType = (result: HiringBenchView): HiringBenchFields => ({
     ...result,
-    jobs: result.jobs.map(toHiringJobFields),
+    jobs: result.jobs.map((job) => toHiringJobFields(job)),
 })

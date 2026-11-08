@@ -1,13 +1,20 @@
 import { Injectable } from "@nestjs/common"
-import { RoutedNativeAdapter, argumentsOf, invalidArguments } from "@modules/domain/mcp-gateway"
-import type { GatewayJson, NativeConnectorManifest, NativeToolHandler } from "@modules/domain/mcp-gateway"
+import {
+    RoutedNativeAdapter,
+    argumentsOf,
+    invalidArguments,
+    type GatewayJson,
+    type NativeConnectorManifest,
+    type NativeToolHandler,
+} from "@modules/domain/mcp-gateway"
 import {
     agentIdFor,
     InjectOpenclawGateway,
     InjectOpenclawGatewayHistory,
     threadKeyFor,
+    type GatewayClient,
+    type GatewayHistoryClient,
 } from "@modules/integrations/openclaw"
-import type { GatewayClient, GatewayHistoryClient } from "@modules/integrations/openclaw"
 import {
     AGENT_HISTORY_INPUT_SCHEMA,
     AGENT_HISTORY_SCHEMA,

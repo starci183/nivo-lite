@@ -1,15 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
-import type { PassagePlace } from "@modules/domain/knowledge-chunks"
-import { MemberLookupService, WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { In, type EntityManager } from "typeorm"
+import { KnowledgeChunksService, type PassagePlace } from "@modules/domain/knowledge-chunks"
+import { MemberLookupService, WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
 import type {
     AssignFindingInput,
     ConfirmFindingInput,
@@ -136,7 +131,7 @@ export class DossierFindingsService {
             .getMany()
         const shown = rows.slice(0, page.first)
         const render = await this.renderer(workspaceId, shown, locale)
-        const nodes = shown.map(render)
+        const nodes = shown.map((finding) => render(finding))
         const last = shown.at(-1)
         return {
             nodes,
@@ -179,7 +174,7 @@ export class DossierFindingsService {
             .addGroupBy("f.severity")
             .getRawMany<{ status: string; severity: string; count: string | number }>()
         const sum = (keep: (row: { status: string; severity: string }) => boolean): number =>
-            counts.filter(keep).reduce((total, row) => total + Number(row.count), 0)
+            counts.filter((row) => keep(row)).reduce((total, row) => total + Number(row.count), 0)
         const draftsAwaiting = await this.entityManager.count(DossierRemedyDraftEntity, {
             where: { workspaceId, status: "proposed" },
         })

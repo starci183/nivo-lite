@@ -1,5 +1,4 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { ActionPerformerRegistry } from "@modules/domain/module-ops"
 import { InventoryDispatchService } from "./inventory-dispatch.service"
 import { InventoryStockService } from "./inventory-stock.service"

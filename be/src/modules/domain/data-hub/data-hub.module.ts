@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { DataSyncModule } from "@modules/queues/data-sync"
 import { CsvImportSyncService } from "./csv-import-sync.service"
 import { CsvImportWizardService } from "./csv-import-wizard.service"

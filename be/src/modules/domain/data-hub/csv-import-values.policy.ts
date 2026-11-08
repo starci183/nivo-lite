@@ -10,12 +10,12 @@ export const fold = (text: string): string =>
         .replace(COMBINING_MARKS, "")
         .replace(D_STROKE, "d")
         .toLowerCase()
-        .replace(/[^a-z0-9]+/gu, " ")
+        .replaceAll(/[^a-z0-9]+/gu, " ")
         .trim()
 
 /** Digits only, the Vietnamese way: "+84 912 345 678" and "912345678" both become "0912345678". Keeps text, never a number. */
 export const normalisePhone = (raw: string): string => {
-    let digits = raw.replace(/\D+/gu, "")
+    let digits = raw.replaceAll(/\D+/gu, "")
     if (digits === "") return ""
     if (digits.startsWith("84") && digits.length >= 11) digits = `0${digits.slice(2)}`
     else if (digits.length === 9 && !digits.startsWith("0")) digits = `0${digits}`
@@ -33,7 +33,7 @@ const normalizedNumber = (text: string): string => {
         const thousand = decimal === "." ? "," : "."
         out = text.split(thousand).join("").replace(decimal, ".")
     } else if (dots > 1 || commas > 1) {
-        out = text.replace(/[.,]/gu, "")
+        out = text.replaceAll(/[.,]/gu, "")
     } else if (dots > 0 || commas > 0) {
         const separator = dots > 0 ? "." : ","
         const [head = "", tail = ""] = text.split(separator)
@@ -45,7 +45,7 @@ const normalizedNumber = (text: string): string => {
 
 /** "1.200.000" gives 1200000, "1,200,000" gives 1200000, "1.234,56" gives 1234.56, "12.5" gives 12.5, "(300)" gives -300. Null when it is not a number. */
 export const parseNumberLoose = (raw: string): number | null => {
-    let text = raw.trim().replace(/\s+/gu, "").replace(CURRENCY_MARKS, "")
+    let text = raw.trim().replaceAll(/\s+/gu, "").replace(CURRENCY_MARKS, "")
     if (text === "") return null
     let negative = false
     if (/^\(.*\)$/u.test(text)) {

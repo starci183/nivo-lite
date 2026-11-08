@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { JobOpsOptions } from "./job-ops.options"
 
 /** Token of the jobs operations options, exported so a spec can provide it. */

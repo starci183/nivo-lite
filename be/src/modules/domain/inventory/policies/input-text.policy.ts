@@ -54,6 +54,6 @@ export const parseCommaList = (text: string): Array<string> =>
 export const deriveSku = (name: string): string =>
     foldText(name)
         .toUpperCase()
-        .replace(/[^A-Z0-9]+/gu, "-")
-        .replace(/^-|-$/gu, "")
+        .replaceAll(/[^A-Z0-9]+/gu, "-")
+        .replaceAll(/^-|-$/gu, "")
         .slice(0, DERIVED_SKU_MAX) || "ITEM"

@@ -6,8 +6,10 @@ import {
     parseCatalogSnapshot,
     planOf,
     renderMigration,
+    type CatalogSnapshot,
+    type EntityManifest,
+    type PlanOp,
 } from "@nivo-lite/agent-sdk/entity"
-import type { CatalogSnapshot, EntityManifest, PlanOp } from "@nivo-lite/agent-sdk/entity"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { parseJsonText } from "@modules/platform/primitives"

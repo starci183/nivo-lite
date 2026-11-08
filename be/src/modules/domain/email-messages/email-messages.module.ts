@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./email-messages.module-definition"
 import { EmailMessagesService } from "./email-messages.service"
 import { EmailMessagesLedgerService } from "./email-messages-ledger.service"

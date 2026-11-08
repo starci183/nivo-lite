@@ -1,7 +1,6 @@
 import type { ConnectionRecord } from "@modules/domain/connections"
 import type { BusinessLedgerEntry } from "@modules/domain/provider-registry"
-import { GoogleError } from "@modules/integrations/google"
-import type { SheetCell } from "@modules/integrations/google"
+import { GoogleError, type SheetCell } from "@modules/integrations/google"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "../errors/google-connections.error"
 import { CONSENT_PREFIX } from "./consent-reason.policy"
 
@@ -101,7 +100,7 @@ export const consentRowOf = (rows: ReadonlyArray<ConnectionRecord>, email: strin
     const awaiting = (row: ConnectionRecord): boolean =>
         (row.status === "error" && (row.lastError ?? "").startsWith(CONSENT_PREFIX)) ||
         (row.status === "pending" && row.meta.consent === "needed")
-    return rows.find(awaiting) ?? null
+    return rows.find((row) => awaiting(row)) ?? null
 }
 
 /** The public facts a consent leaves on a connection: the account email, and `consent: given` where the seed had made it wait. */

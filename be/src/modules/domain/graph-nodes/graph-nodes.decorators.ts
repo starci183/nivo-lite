@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { NodeModelDoor, NodeToolDoor } from "./graph-nodes.contracts"
 import type { GraphNodesOptions } from "./graph-nodes.options"
 

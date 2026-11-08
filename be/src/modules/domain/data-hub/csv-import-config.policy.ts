@@ -1,7 +1,16 @@
 import { CSV_COPY } from "./messages/csv-import.messages"
 import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"
-import { CSV_COLUMN_KINDS, CSV_NO_COLUMN, CSV_SCHEDULES, CSV_TABLE_ENTITIES } from "./csv-import.contracts"
-import type { CsvColumnKind, CsvConfig, CsvEntity, CsvMapping, CsvSource } from "./csv-import.contracts"
+import {
+    CSV_COLUMN_KINDS,
+    CSV_NO_COLUMN,
+    CSV_SCHEDULES,
+    CSV_TABLE_ENTITIES,
+    type CsvColumnKind,
+    type CsvConfig,
+    type CsvEntity,
+    type CsvMapping,
+    type CsvSource,
+} from "./csv-import.contracts"
 
 const SUMMARY_FORMAT = new Intl.NumberFormat("vi-VN")
 const SOURCES: ReadonlySet<string> = new Set(["file", "sheet", "manual", "document"])
@@ -115,7 +124,7 @@ export const tableEntityOf = (raw: string | null | undefined): Exclude<CsvEntity
 
 /** The name of a new import, trimmed to 60 characters, at least 2. */
 export const cleanImportName = (raw: string | null | undefined): string => {
-    const name = (raw ?? "").trim().replace(/\s+/gu, " ").slice(0, 60)
+    const name = (raw ?? "").trim().replaceAll(/\s+/gu, " ").slice(0, 60)
     if (name.length < 2) throw invalid(CSV_COPY.nameTooShort)
     return name
 }

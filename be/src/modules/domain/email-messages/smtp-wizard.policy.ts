@@ -25,13 +25,13 @@ export const isSmtpPreset = (preset: string): boolean => PRESETS.has(preset)
 
 /** The password as the provider wants it: Google app passwords lose every whitespace, the others are trimmed. */
 export const cleanSmtpPassword = (preset: string, password: string): string =>
-    GOOGLE_PRESETS.has(preset) ? password.replace(/\s+/gu, "") : password.trim()
+    GOOGLE_PRESETS.has(preset) ? password.replaceAll(/\s+/gu, "") : password.trim()
 
 /** Validates and cleans the wizard form; the first problem found decides the answer. */
 export const cleanSmtpForm = (input: SmtpFormInput): SmtpFormVerdict => {
     if (!isSmtpPreset(input.preset)) return { ok: false, code: EmailMessagesErrorCode.SmtpInvalid }
     const host = clean(input.host, 253).toLowerCase()
-    const fromName = clean(input.fromName, 80).replace(/[\r\n"<>]/gu, "")
+    const fromName = clean(input.fromName, 80).replaceAll(/[\r\n"<>]/gu, "")
     const fromEmail = clean(input.fromEmail, 254).toLowerCase()
     const replyTo = clean(input.replyTo, 254).toLowerCase()
     const user = clean(input.user, 254)

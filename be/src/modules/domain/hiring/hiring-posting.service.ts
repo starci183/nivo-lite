@@ -1,7 +1,6 @@
 import type { CredentialPrincipal } from "@modules/domain/identity"
 import { Injectable } from "@nestjs/common"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { HiringError, HiringErrorCode } from "./errors/hiring.error"
 import type { PostingCredentialRequest } from "./hiring-posting.contracts"
 import { HiringDataService } from "./hiring-data.service"

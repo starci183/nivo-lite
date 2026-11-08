@@ -1,10 +1,14 @@
 import { Injectable } from "@nestjs/common"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { McpGatewayService, argsHashOf, domainNameIn, gatewayArgumentsSchema } from "@modules/domain/mcp-gateway"
-import type { GatewayCaller } from "@modules/domain/mcp-gateway"
+import {
+    McpGatewayService,
+    argsHashOf,
+    domainNameIn,
+    gatewayArgumentsSchema,
+    type GatewayCaller,
+} from "@modules/domain/mcp-gateway"
 import type { EngineDoorProvider } from "@modules/domain/entity-engine"
-import { isDomainTool } from "@nivo-lite/agent-sdk/mutation"
-import type { DoorApi, DoorCallResult } from "@nivo-lite/agent-sdk/mutation"
+import { isDomainTool, type DoorApi, type DoorCallResult } from "@nivo-lite/agent-sdk/mutation"
 import { doorResultOf, gatewayNameOf, opKeyOf } from "./door-call.policy"
 import { NIVO_AGENT_MODULE, NOT_GRANTED, isDoorGranted } from "./door-grants.policy"
 import type { DoorBinding } from "./entity-engine-door.contracts"

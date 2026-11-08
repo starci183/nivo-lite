@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { EventsService } from "./events.service"
 import { EventsActivityReadService } from "./events-activity-read.service"
 import { EventsReadService } from "./events-read.service"

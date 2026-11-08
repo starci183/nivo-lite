@@ -39,10 +39,12 @@ export const rankPassages = (
     base: ReadonlyArray<NivoHit>,
     limit: number,
 ): ReadonlyArray<Passage> =>
-    [...business, ...base.map(nivoPassage)].sort((a, b) => b.score - a.score).slice(0, Math.max(1, Math.min(limit, 40)))
+    [...business, ...base.map((hit) => nivoPassage(hit))]
+        .sort((a, b) => b.score - a.score)
+        .slice(0, Math.max(1, Math.min(limit, 40)))
 
 /** The tsquery text of the folded words of a question (`a | b`), or null when it has none. */
 export const tsqueryOf = (folded: string): string | null => {
-    const words = folded.replace(/[^a-z0-9]+/g, " ").trim()
+    const words = folded.replaceAll(/[^a-z0-9]+/g, " ").trim()
     return words === "" ? null : words.replaceAll(/\s+/g, " | ")
 }

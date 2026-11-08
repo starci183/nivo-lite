@@ -14,8 +14,8 @@ import {
     isAttribute,
     remedyActionOf,
     titlesOf,
+    type RuleFamily,
 } from "./rule-kit.policy"
-import type { RuleFamily } from "./rule-kit.policy"
 
 /** One person holding a role in one fact, with the span the fact or its document gives. */
 export interface Holding {
@@ -83,7 +83,8 @@ const holdersFindings = (context: ReviewContext, role: RoleKey): ReadonlyArray<F
         involved
             .filter((holding) => holding.key === key)
             .map((holding) => holding.from ?? "")
-            .reduce((max, from) => (from > max ? from : max), "")
+            .sort((a, b) => a.localeCompare(b))
+            .at(-1) ?? ""
     const ordered = [...involved].sort(
         (a, b) => latestStart(a.key).localeCompare(latestStart(b.key)) || a.key.localeCompare(b.key),
     )

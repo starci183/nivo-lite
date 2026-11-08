@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectQueueOutbox } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
+import { InjectQueueOutbox, type QueueOutbox } from "@modules/platform/queue"
 import { JobOpsError, JobOpsErrorCode } from "./errors/job-ops.error"
 import { JOB_TICKS } from "./job-tick.policy"
 

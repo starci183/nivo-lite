@@ -2,15 +2,11 @@ import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { StaffDirectoryService } from "@modules/domain/staff"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { WorkspaceMembersService, canDecide } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { WorkspaceMembersService, canDecide, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectInbox } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
+import { InjectInbox, type Inbox } from "@modules/platform/inbox"
 import { WorkItemsService } from "@modules/domain/work-items"
 import type { WorkContext, WorkItem } from "./decisions.contracts"
 import { DecisionsService } from "./decisions.service"
@@ -46,7 +42,7 @@ export class WorkPlacementService {
         const item = await this.decisions.getWorkItem(principalId, workspaceId, request.workItemId)
         const member = await this.members.require(principalId, workspaceId)
         if (!canDecide(member, assigneeOf(item))) throw new DecisionsError({ code: DecisionsErrorCode.NotAllowed })
-        const note = request.note.trim().replace(/\s+/g, " ")
+        const note = request.note.trim().replaceAll(/\s+/g, " ")
         if (note === "") throw new DecisionsError({ code: DecisionsErrorCode.HoldNoteRequired })
         if (item.status !== "waiting_decision") throw new DecisionsError({ code: DecisionsErrorCode.NotWaiting })
         const key = createHash("sha256")

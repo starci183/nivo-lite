@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { CandidateChat } from "./candidate-chat.port"
 import { ChannelCandidateChatService } from "./channel-candidate-chat.service"
 import { CvStorage } from "./cv-storage.port"

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { Brackets, In, IsNull, MoreThanOrEqual, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { Brackets, In, IsNull, MoreThanOrEqual, Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { hybridHit, hybridScore } from "./hybrid-score.policy"

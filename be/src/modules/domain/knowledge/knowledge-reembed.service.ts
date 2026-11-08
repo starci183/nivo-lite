@@ -2,8 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { KnowledgeChunksService, passageHashOf, toVector } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { EmbeddingService } from "./embedding.service"
-import { REEMBED_BATCH, REEMBED_MAX_BATCHES } from "./knowledge.contracts"
-import type { ReembedOutcome } from "./knowledge.contracts"
+import { REEMBED_BATCH, REEMBED_MAX_BATCHES, type ReembedOutcome } from "./knowledge.contracts"
 import { UsageMeterService } from "./usage-meter.service"
 
 /** How long one batch of passages may take to embed. */

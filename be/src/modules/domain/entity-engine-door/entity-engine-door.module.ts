@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { syncAgentTurnsJob } from "./agent-turn-sync.policy"
 import { ENTITY_ENGINE_DOOR_JOBS } from "./entity-engine-door.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./entity-engine-door.module-definition"

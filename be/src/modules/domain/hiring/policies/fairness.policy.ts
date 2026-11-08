@@ -198,7 +198,7 @@ export const findFairnessViolations = (text: string, field: FairnessField | "" =
             if (!legal && !found.has(key)) {
                 const excerpt = normalized
                     .slice(wordsBefore(normalized, from, CONTEXT_WORDS), wordsAfter(normalized, to, CONTEXT_WORDS))
-                    .replace(/\s+/gu, " ")
+                    .replaceAll(/\s+/gu, " ")
                     .trim()
                 found.set(key, { category: rule.category, excerpt, field })
             }

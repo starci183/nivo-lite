@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { ConnectionActor } from "@modules/domain/connections"
-import { InjectImap } from "@modules/integrations/data-sources"
-import type { ImapClient } from "@modules/integrations/data-sources"
+import { InjectImap, type ImapClient } from "@modules/integrations/data-sources"
 import { DataHubService } from "./data-hub.service"
 import type { ImapInput, ImapView } from "./imap-connection.contracts"
 import {

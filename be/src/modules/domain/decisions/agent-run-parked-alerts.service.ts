@@ -1,10 +1,8 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { AgentRunAlertsService, AgentRunsService } from "@modules/domain/agent-runs"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { FlowAlerts, ParkedFlowAlert } from "@modules/platform/jobs"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
 import { WorkEngineService } from "./work-engine.service"
 import type { WorkSpec } from "./decisions.contracts"
 

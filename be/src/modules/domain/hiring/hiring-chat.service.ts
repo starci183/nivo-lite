@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import type { JobRecord } from "./hiring.contracts"
 import { HiringCandidatesService } from "./hiring-candidates.service"
 import { HiringDataService } from "./hiring-data.service"

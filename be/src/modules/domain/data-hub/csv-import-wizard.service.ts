@@ -1,26 +1,24 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor } from "@modules/domain/connections"
-import { InjectTable } from "@modules/integrations/data-sources"
-import type { Table, TableClient } from "@modules/integrations/data-sources"
+import { ConnectionsService, type ConnectionActor } from "@modules/domain/connections"
+import { InjectTable, type Table, type TableClient } from "@modules/integrations/data-sources"
 import type { DataRecordInput } from "./data-hub.contracts"
 import { CSV_COPY } from "./messages/csv-import.messages"
 import { DataHubService } from "./data-hub.service"
 import { DataRecordsService } from "@modules/domain/data-records"
 import { DataSyncRunsService } from "@modules/domain/data-sync-runs"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { CSV_MAX_DOCUMENT_FILES } from "./csv-import.contracts"
-import type {
-    CsvConfig,
-    CsvEntity,
-    CsvImportRequest,
-    CsvImportResult,
-    CsvMapping,
-    CsvPreview,
-    CsvSavedImport,
-    CsvSourceRequest,
-    DocumentImportRequest,
+import {
+    CSV_MAX_DOCUMENT_FILES,
+    type CsvConfig,
+    type CsvEntity,
+    type CsvImportRequest,
+    type CsvImportResult,
+    type CsvMapping,
+    type CsvPreview,
+    type CsvSavedImport,
+    type CsvSourceRequest,
+    type DocumentImportRequest,
 } from "./csv-import.contracts"
 import {
     cleanImportName,

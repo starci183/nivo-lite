@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { ChannelDeliveryService } from "@modules/domain/channels"
 import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectIds, type Ids } from "@modules/platform/ids"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { CandidateChat } from "./candidate-chat.port"
 import { HiringLogEvent } from "./hiring.log-events"
 

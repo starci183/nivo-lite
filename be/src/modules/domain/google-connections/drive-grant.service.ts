@@ -1,11 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
+import { ConnectionsService, type ConnectionActor, type ConnectionRecord } from "@modules/domain/connections"
 import type { DriveAccessSource } from "@modules/domain/knowledge"
-import { DocumentsError, DocumentsErrorCode } from "@modules/integrations/documents"
-import type { DriveAccess } from "@modules/integrations/documents"
-import { DRIVE_PURPOSE, DRIVE_READ_SCOPE, GoogleError, InjectGoogleClient } from "@modules/integrations/google"
-import type { GoogleClient } from "@modules/integrations/google"
+import { DocumentsError, DocumentsErrorCode, type DriveAccess } from "@modules/integrations/documents"
+import {
+    DRIVE_PURPOSE,
+    DRIVE_READ_SCOPE,
+    GoogleError,
+    InjectGoogleClient,
+    type GoogleClient,
+} from "@modules/integrations/google"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 import type { ConsentStart, DriveGrant } from "./google-connections.contracts"
 import { GoogleTokensService } from "./google-tokens.service"

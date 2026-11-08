@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull, Like, MoreThan, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { IsNull, Like, MoreThan, Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { SourceRecord } from "./knowledge-sources.contracts"
-import { KnowledgeSourceEntity } from "./persistence/entities"
-import type { KnowledgeSourceStatus } from "./persistence/entities"
+import { KnowledgeSourceEntity, type KnowledgeSourceStatus } from "./persistence/entities"
 import { contentHashOf } from "./source-hash.policy"
 import { firstPartIdOf, partOriginOf, partTextsInOrder } from "./source-parts.policy"
 

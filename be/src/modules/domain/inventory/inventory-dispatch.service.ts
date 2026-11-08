@@ -1,11 +1,15 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { ApprovalGate, OfficeLog, OutboundMail } from "@modules/domain/module-ops"
-import type { PerformContext, PerformResult } from "@modules/domain/module-ops"
+import {
+    ApprovalGate,
+    OfficeLog,
+    OutboundMail,
+    type PerformContext,
+    type PerformResult,
+} from "@modules/domain/module-ops"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { InventoryError, InventoryErrorCode } from "./errors/inventory.error"
 import type { LoadedPo, SendKind, SendRequestResult } from "./inventory.contracts"
 import type { RequestSendOutput, RequestSendParams } from "./inventory-operations.contracts"

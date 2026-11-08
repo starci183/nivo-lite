@@ -113,7 +113,9 @@ describe("IdentitySessionStoreService.transaction (a rotation)", () => {
     it("rolls the transaction back when the work throws", async () => {
         const { subject, transaction } = await build()
 
-        await expect(subject.transaction(() => Promise.reject(new Error("disk full")))).rejects.toThrow("disk full")
+        await expect(subject.transaction(jest.fn().mockRejectedValue(new Error("disk full")))).rejects.toThrow(
+            "disk full",
+        )
 
         expect(transaction.rollbacks).toBe(1)
     })

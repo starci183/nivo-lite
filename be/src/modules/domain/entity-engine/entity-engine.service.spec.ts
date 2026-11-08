@@ -149,7 +149,7 @@ describe("EntityEngineService within", () => {
         const { engine, em } = await build(mockEntityManager({ query: [SCOPE_SQL, []] }))
         em.query.mockResolvedValue([])
 
-        await expect(engine.within(em, WS, () => Promise.reject(new Error("boom")))).rejects.toThrow("boom")
+        await expect(engine.within(em, WS, jest.fn().mockRejectedValue(new Error("boom")))).rejects.toThrow("boom")
 
         expect(em.query.mock.calls.map((call) => call[0])).toEqual([SCOPE_SQL, LEAVE_SQL])
     })

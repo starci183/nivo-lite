@@ -1,14 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor } from "@modules/domain/connections"
+import { ConnectionsService, type ConnectionActor } from "@modules/domain/connections"
 import {
     InjectTelegramUser,
     TELEGRAM_NOT_CONFIGURED_MESSAGE,
     TELEGRAM_REVOKED_MESSAGE,
+    type TelegramChatChoice,
+    type TelegramUserClient,
 } from "@modules/integrations/telegram-user"
-import type { TelegramChatChoice, TelegramUserClient } from "@modules/integrations/telegram-user"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { DataConnection } from "./data-hub.contracts"
 import { DataHubService } from "./data-hub.service"
@@ -139,7 +138,7 @@ export class TelegramUserWizardService {
     async submitCode(actor: ConnectionActor, input: TelegramCodeEntry): Promise<TelegramLoginProgress> {
         await this.hub.owner(actor)
         const { connection, login } = await this.pendingLogin(actor.workspaceId, input.connectionId)
-        const code = input.code.replace(/\D/gu, "")
+        const code = input.code.replaceAll(/\D/gu, "")
         if (code.length < 4 || code.length > 8) throw invalid(TEXT.codeLength)
         const result = await this.telegram.signIn({ ...login, code })
         if (result.kind === "password") {

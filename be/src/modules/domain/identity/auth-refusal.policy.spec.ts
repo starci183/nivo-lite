@@ -55,7 +55,7 @@ describe("refusing", () => {
         const subject = await build()
 
         await expect(
-            subject.refusing(() => Promise.reject(new AuthError(AUTH_ERROR_CODES.TooManyAttempts))),
+            subject.refusing(jest.fn().mockRejectedValue(new AuthError(AUTH_ERROR_CODES.TooManyAttempts))),
         ).rejects.toMatchObject({ code: "IDENTITY_TOO_MANY_ATTEMPTS" })
     })
 
@@ -65,13 +65,13 @@ describe("refusing", () => {
             code: "NEW_CODE_OF_THE_PACKAGE",
         })
 
-        await expect(subject.refusing(() => Promise.reject(cause))).rejects.toBe(cause)
+        await expect(subject.refusing(jest.fn().mockRejectedValue(cause))).rejects.toBe(cause)
     })
 
     it("leaves any other failure as it is", async () => {
         const subject = await build()
         const failure = new Error("database is down")
 
-        await expect(subject.refusing(() => Promise.reject(failure))).rejects.toBe(failure)
+        await expect(subject.refusing(jest.fn().mockRejectedValue(failure))).rejects.toBe(failure)
     })
 })

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { Brackets, In } from "typeorm"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import { Brackets, In, type EntityManager, type SelectQueryBuilder } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { DocumentVisibility, ReadableScope, ReadableSource } from "./knowledge-sources.contracts"
 import { KnowledgeSourceEntity } from "./persistence/entities"

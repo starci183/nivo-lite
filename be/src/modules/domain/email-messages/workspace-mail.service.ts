@@ -1,13 +1,16 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionsService } from "@modules/domain/connections"
-import { InjectMailRelay, MailError } from "@modules/integrations/mail"
-import type { MailAttachment, MailMessage, MailRelayService, SmtpConfig } from "@modules/integrations/mail"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import {
+    InjectMailRelay,
+    MailError,
+    type MailAttachment,
+    type MailMessage,
+    type MailRelayService,
+    type SmtpConfig,
+} from "@modules/integrations/mail"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { fitsAttachmentLimit, mailAttachmentsOf } from "./attachments.policy"
 import { isMailAddress } from "./email-address.policy"
 import { EmailMessagesLogEvent } from "./email-messages.log-events"

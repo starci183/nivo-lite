@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { MANAGER_COMMANDS } from "./flows.contracts"
-import type { FlowGate, FlowRequest, FlowResult } from "./flows.contracts"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { MANAGER_COMMANDS, type FlowGate, type FlowRequest, type FlowResult } from "./flows.contracts"
 import { InjectFlowGate } from "./flows.decorators"
 import { payloadOf } from "./policies/flow-payload.policy"
 

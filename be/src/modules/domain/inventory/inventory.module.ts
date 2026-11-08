@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { InventoryReplenishModule } from "@modules/queues/inventory-replenish"
 import { InventoryAutomationService } from "./inventory-automation.service"
 import { InventoryCatalogService } from "./inventory-catalog.service"

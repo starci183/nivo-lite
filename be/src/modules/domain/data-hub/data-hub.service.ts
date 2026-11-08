@@ -1,15 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionMember } from "@modules/domain/connections"
-import type {
-    DataConnection,
-    DataConnectionChange,
-    DataConnectionDraft,
-    ProviderFilter,
-    StoredCredential,
-    SyncMinutes,
+import { ConnectionsService, type ConnectionActor, type ConnectionMember } from "@modules/domain/connections"
+import {
+    type DataConnection,
+    type DataConnectionChange,
+    type DataConnectionDraft,
+    type ProviderFilter,
+    type StoredCredential,
+    type SyncMinutes,
+    isDataProvider,
 } from "./data-hub.contracts"
-import { isDataProvider } from "./data-hub.contracts"
 import { toDataConnection } from "./data-hub.mapper"
 import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"
 

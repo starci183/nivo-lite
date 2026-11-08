@@ -33,7 +33,7 @@ const MAX_PLACEHOLDER_LABEL = 120
 const MAX_PLACEHOLDER_REASON = 200
 
 /** One line of text: whitespace collapsed, ends trimmed, cut to the bound. */
-const lineOf = (text: string, max: number): string => text.replace(/\s+/g, " ").trim().slice(0, max).trimEnd()
+const lineOf = (text: string, max: number): string => text.replaceAll(/\s+/g, " ").trim().slice(0, max).trimEnd()
 
 /** A paragraph of text: ends trimmed, cut to the bound. */
 const textOf = (text: string, max: number): string => text.trim().slice(0, max).trimEnd()
@@ -71,7 +71,7 @@ const findingOf = (finding: DossierReviewAnswer["findings"][number]): ReasonedFi
 /** The parsed review answer as the port's value: every text trimmed to its bound, findings with nothing readable dropped. */
 export const toReasonedReview = (answer: DossierReviewAnswer, figures: CallFigures): ReasonedReview => ({
     findings: answer.findings
-        .map(findingOf)
+        .map((finding) => findingOf(finding))
         .filter((finding): finding is ReasonedFinding => finding !== null)
         .slice(0, MAX_FINDINGS),
     stillOpen: answer.stillOpen.slice(0, MAX_STILL_OPEN).map((verdict) => ({

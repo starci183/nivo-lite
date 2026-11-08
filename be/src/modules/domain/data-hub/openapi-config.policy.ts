@@ -4,10 +4,13 @@ import {
     OPENAPI_PULL_ENTITIES,
     isApiJsonObject,
     readApiJson,
+    type OpenApiAuth,
+    type OpenApiConfig,
+    type OpenApiOperation,
+    type OpenApiPull,
 } from "@modules/integrations/data-sources"
 import type { OpenApiAuthDraft } from "./openapi-wizard.contracts"
 import { apiSummary } from "./messages/openapi.messages"
-import type { OpenApiAuth, OpenApiConfig, OpenApiOperation, OpenApiPull } from "@modules/integrations/data-sources"
 
 type OpenApiAuthType = OpenApiAuth["type"]
 type OpenApiMethod = OpenApiOperation["method"]

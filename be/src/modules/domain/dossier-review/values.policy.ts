@@ -15,8 +15,8 @@ import {
     factsOfContext,
     isAttribute,
     titlesOf,
+    type RuleFamily,
 } from "./rule-kit.policy"
-import type { RuleFamily } from "./rule-kit.policy"
 
 /** The smallest amount read as a monthly wage; a smaller figure counts millions or hours, not a wage. */
 const WAGE_FLOOR = 100_000

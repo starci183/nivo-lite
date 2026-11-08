@@ -11,8 +11,7 @@ import type {
     OptionalRecordRow,
     RecordRow,
 } from "@nivo-lite/agent-sdk/entity/port"
-import { queryProblems } from "@nivo-lite/agent-sdk/query"
-import type { Aggregate, Query } from "@nivo-lite/agent-sdk/query"
+import { queryProblems, type Aggregate, type Query } from "@nivo-lite/agent-sdk/query"
 import { readCursor, signCursor } from "./cursor.policy"
 import { EngineFailureService } from "./engine-failure.service"
 import { InjectEntityEngineOptions } from "./entity-engine.decorators"

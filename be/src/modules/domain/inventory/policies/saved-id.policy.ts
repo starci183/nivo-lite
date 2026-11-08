@@ -1,5 +1,4 @@
-import { InventoryError } from "../errors/inventory.error"
-import type { InventoryErrorCode } from "../errors/inventory.error"
+import { InventoryError, type InventoryErrorCode } from "../errors/inventory.error"
 
 /** The row a write function answers: the id of the row it wrote, or null when the row to change is missing. */
 export interface IdRow {

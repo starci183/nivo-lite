@@ -1,26 +1,23 @@
 import { Injectable } from "@nestjs/common"
-import { In, MoreThanOrEqual } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, MoreThanOrEqual, type EntityManager } from "typeorm"
 import { BrainFactsReadService, factLine, factSlugOf } from "@modules/domain/brain-facts"
 import { UsageMeterService } from "@modules/domain/knowledge"
 import { DossierSourcesService, KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { isDossierRemedyPayload, KNOWLEDGE_BLOCKED_CREDITS, KnowledgeQueue } from "@modules/queues/knowledge"
 import { packEntryOf } from "./dossier-pack.policy"
 import { InjectRemedyWriter } from "./dossier-review.decorators"
-import { DOSSIER_REVIEW_CAPS, JOB_FAILED } from "./dossier-review.contracts"
-import type {
-    DraftStatus,
-    JobOutcome,
-    MaybeRemedyDraft,
-    OptionalText,
-    RemedyDraftRecord,
+import {
+    DOSSIER_REVIEW_CAPS,
+    JOB_FAILED,
+    type DraftStatus,
+    type JobOutcome,
+    type MaybeRemedyDraft,
+    type OptionalText,
+    type RemedyDraftRecord,
 } from "./dossier-review.contracts"
 import type { RemedyWriter } from "./dossier-review.port"
 import { DossierReviewError, DossierReviewErrorCode } from "./errors/dossier-review.error"
@@ -51,7 +48,7 @@ const IDENTITY_ATTRIBUTES: ReadonlySet<string> = new Set(
         "phan von gop",
         "nguoi dai dien theo phap luat",
         "chu tich hoi dong thanh vien",
-    ].map(factSlugOf),
+    ].map((text) => factSlugOf(text)),
 )
 
 /** The most identity lines a draft is written from. */
@@ -146,7 +143,7 @@ export class DossierRemedyDraftsService {
         const identity = (await this.facts.list(workspaceId, { statuses: ["active", "proposed"], limit: 500 }))
             .filter((fact) => IDENTITY_ATTRIBUTES.has(fact.attribute))
             .slice(0, IDENTITY_MAX)
-            .map(factLine)
+            .map((fact) => factLine(fact))
         const now = this.clock.now()
         const text = await this.writer.draft({
             workspaceId,

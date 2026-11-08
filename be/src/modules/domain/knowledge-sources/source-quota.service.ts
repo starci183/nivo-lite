@@ -5,8 +5,13 @@ import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { advisoryXactLock, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { unwrapOutcome } from "@modules/platform/primitives"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
-import { KNOWLEDGE_UPLOAD_BUCKET, STORAGE_OBJECT_MISSING, WORKSPACE_SOURCE_BYTES } from "./knowledge-sources.contracts"
-import type { KnowledgeUsage, MaybeStoragePath } from "./knowledge-sources.contracts"
+import {
+    KNOWLEDGE_UPLOAD_BUCKET,
+    STORAGE_OBJECT_MISSING,
+    WORKSPACE_SOURCE_BYTES,
+    type KnowledgeUsage,
+    type MaybeStoragePath,
+} from "./knowledge-sources.contracts"
 import { InjectKnowledgeStorage } from "./knowledge-sources.decorators"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 import type { NormalizedSource } from "./source-input.policy"

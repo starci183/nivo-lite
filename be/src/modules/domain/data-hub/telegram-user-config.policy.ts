@@ -17,7 +17,7 @@ const kindOf = (value: unknown): TelegramChatKind =>
 
 /** E.164 from what an owner types: "0912 345 678" and "84912345678" become +84912345678; null when it is not a phone number. */
 export const normalizePhone = (raw: string): string | null => {
-    let phone = raw.trim().replace(/[\s.\-()]/gu, "")
+    let phone = raw.trim().replaceAll(/[\s.\-()]/gu, "")
     if (!/^\+?\d+$/u.test(phone)) return null
     if (phone.startsWith("00")) phone = `+${phone.slice(2)}`
     else if (phone.startsWith("+")) phone = `+${phone.slice(1)}`
@@ -28,7 +28,7 @@ export const normalizePhone = (raw: string): string | null => {
 }
 
 /** Only the last three digits ever leave the server, and only as part of the account label. */
-export const maskPhone = (phone: string): string => `…${phone.replace(/\D/gu, "").slice(-3)}`
+export const maskPhone = (phone: string): string => `…${phone.replaceAll(/\D/gu, "").slice(-3)}`
 
 /** The account label kept in the public facts. */
 export const accountLabel = (name: string, username: string | null, phone: string): string => {

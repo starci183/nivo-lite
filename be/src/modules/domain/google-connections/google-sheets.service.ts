@@ -1,9 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionRecord } from "@modules/domain/connections"
+import { ConnectionsService, type ConnectionRecord } from "@modules/domain/connections"
 import type { PipelineConfig } from "@modules/domain/automation-pipelines"
-import { GoogleError, InjectGoogleClient, sheetUrlOf } from "@modules/integrations/google"
-import type { GoogleClient, SheetEventIn, SheetEventResult } from "@modules/integrations/google"
+import {
+    GoogleError,
+    InjectGoogleClient,
+    sheetUrlOf,
+    type GoogleClient,
+    type SheetEventIn,
+    type SheetEventResult,
+} from "@modules/integrations/google"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 import type { OrdersSheet } from "./google-connections.contracts"
 import { GoogleTokensService } from "./google-tokens.service"
@@ -63,7 +68,11 @@ export class GoogleSheetsService {
     /** The named Google connection of the workspace, or its oldest live one. */
     private async loadRow(workspaceId: string, connectionId: string | null): Promise<ConnectionRecord | null> {
         const rows = await this.connections.listByProvider(workspaceId, "google", { includeDisconnected: false })
-        return (connectionId === null ? rows.find(isLive) : rows.find((row) => row.id === connectionId)) ?? null
+        return (
+            (connectionId === null
+                ? rows.find((connection) => isLive(connection))
+                : rows.find((row) => row.id === connectionId)) ?? null
+        )
     }
 
     /** A valid access token of the named (or oldest) Google connection; a missing, refused or revoked one is a typed error. */

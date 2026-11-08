@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { DossierFindingInUseService } from "./dossier-finding-in-use.service"
 import { DossierFindingsService } from "./dossier-findings.service"
 import { DossierRemedyDraftsService } from "./dossier-remedy-drafts.service"

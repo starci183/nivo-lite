@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionsService } from "@modules/domain/connections"
 import { randomSecret } from "@modules/domain/connection-secrets"
-import { GoogleError, InjectGoogleClient, safeReturnTo } from "@modules/integrations/google"
-import type { GoogleClient } from "@modules/integrations/google"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { GoogleError, InjectGoogleClient, safeReturnTo, type GoogleClient } from "@modules/integrations/google"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 import type {
     ConsentRequest,

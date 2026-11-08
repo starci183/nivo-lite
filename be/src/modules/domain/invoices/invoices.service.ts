@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InvoicesError, InvoicesErrorCode } from "./errors/invoices.error"
 import { INVOICE_COLUMNS, INVOICE_RETURNING, selectColumns } from "./invoice-columns.policy"

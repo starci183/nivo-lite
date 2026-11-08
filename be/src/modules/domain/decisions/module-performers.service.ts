@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { ActionPerformerRegistry } from "@modules/domain/module-ops"
-import type { ActionPerformer } from "@modules/domain/module-ops"
+import { ActionPerformerRegistry, type ActionPerformer } from "@modules/domain/module-ops"
 import type {
     Performed,
     PerformedBy,
@@ -11,8 +10,7 @@ import type {
     WorkPerformer,
 } from "./decisions.contracts"
 import { performContextOf, performedOf } from "./module-gate.policy"
-import { InjectWorkPerformerRegistry } from "./work-performer.port"
-import type { WorkPerformerRegistry } from "./work-performer.port"
+import { InjectWorkPerformerRegistry, type WorkPerformerRegistry } from "./work-performer.port"
 
 /** A module performer as the work engine calls it: the proposal is preset, perform maps the result, a refusal runs the undo. */
 const asWorkPerformer = (performer: ActionPerformer): WorkPerformer => ({

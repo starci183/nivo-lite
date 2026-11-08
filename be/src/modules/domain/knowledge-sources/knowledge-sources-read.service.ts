@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import { In, type EntityManager, type SelectQueryBuilder } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { SourceBrief } from "./knowledge-sources.contracts"
 import type {

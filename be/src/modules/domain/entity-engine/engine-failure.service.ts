@@ -1,13 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import type { ErrorParams } from "@modules/platform/errors"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectIds, type Ids } from "@modules/platform/ids"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { EntityEngineLogEvent } from "./entity-engine.log-events"
 import { EntityEngineError, EntityEngineErrorCode } from "./errors/entity-engine.error"
-import { pgFailureOf } from "./pg-failure.policy"
-import type { PgFailure } from "./pg-failure.policy"
+import { pgFailureOf, type PgFailure } from "./pg-failure.policy"
 
 /** The secret-free cause of an invalid statement: its SQLSTATE, the entity, and the constraint and column the database names; never a value. */
 const invalidParamsOf = (failure: Extract<PgFailure, { readonly kind: "invalid" }>, entity: string): ErrorParams => ({

@@ -1,6 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import { KnowledgeChunksService, reusePlanOf, toVector } from "@modules/domain/knowledge-chunks"
-import type { ChunkDraft, LocatedText, MissingPassage, PassagePlace } from "@modules/domain/knowledge-chunks"
+import {
+    KnowledgeChunksService,
+    reusePlanOf,
+    toVector,
+    type ChunkDraft,
+    type LocatedText,
+    type MissingPassage,
+    type PassagePlace,
+} from "@modules/domain/knowledge-chunks"
 import {
     KnowledgeSourcesService,
     MAX_SOURCE_CHARS,
@@ -8,16 +15,14 @@ import {
     StoredNote,
     embedPercent,
     partsOf,
+    type MaybeSource,
+    type SourceRecord,
 } from "@modules/domain/knowledge-sources"
-import type { MaybeSource, SourceRecord } from "@modules/domain/knowledge-sources"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectTimer } from "@modules/platform/retry"
-import type { Timer } from "@modules/platform/retry"
+import { InjectTimer, type Timer } from "@modules/platform/retry"
 import { EmbeddingService } from "./embedding.service"
-import { BULK_CHUNKS, EMBED_BATCH } from "./knowledge.contracts"
-import type { IndexOutcome, IndexRun } from "./knowledge.contracts"
+import { BULK_CHUNKS, EMBED_BATCH, type IndexOutcome, type IndexRun } from "./knowledge.contracts"
 import { KnowledgeLogEvent } from "./knowledge.log-events"
 import { InjectKnowledgeFullOptions } from "./knowledge.decorators"
 import type { KnowledgeFullOptions } from "./knowledge.options"

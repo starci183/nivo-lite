@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { ApprovalRequest, ApprovalRequester, ApprovalResult, ToolContext } from "@modules/domain/agent-tools"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { WorkEngineService } from "./work-engine.service"
 
 const ENGINE_ACTOR = "NIVO"

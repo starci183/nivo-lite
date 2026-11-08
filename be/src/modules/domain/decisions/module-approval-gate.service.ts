@@ -1,6 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import { ApprovalGate } from "@modules/domain/module-ops"
-import type { ApprovalDecision, ModuleApprovalRequest, ModuleApprovalResult } from "@modules/domain/module-ops"
+import {
+    ApprovalGate,
+    type ApprovalDecision,
+    type ModuleApprovalRequest,
+    type ModuleApprovalResult,
+} from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { Locale } from "@modules/platform/i18n"
 import type { Decider, WorkContext, WorkItem } from "./decisions.contracts"

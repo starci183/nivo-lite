@@ -1,5 +1,4 @@
-import { cursorScopeOf } from "@nivo-lite/agent-sdk/query"
-import type { Query } from "@nivo-lite/agent-sdk/query"
+import { cursorScopeOf, type Query } from "@nivo-lite/agent-sdk/query"
 import type { EntitiesApi, EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 
 /**

@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { DossierReasoner, RemedyWriter } from "./dossier-review.port"
 
 /** Token of the model reader of a dossier. */

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectStorageObjects } from "@modules/integrations/object-storage"
-import type { StorageObjectsPort } from "@modules/integrations/object-storage"
+import { InjectStorageObjects, type StorageObjectsPort } from "@modules/integrations/object-storage"
 import { CvStorage } from "./cv-storage.port"
 
 /** The private bucket of candidate CVs: every read and write goes through the storage port. */

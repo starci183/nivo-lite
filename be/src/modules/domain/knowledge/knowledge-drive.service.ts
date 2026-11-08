@@ -1,10 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import { DocumentsError, DocumentsErrorCode, InjectDocuments } from "@modules/integrations/documents"
-import type { DocumentsPort, DriveFolderListing } from "@modules/integrations/documents"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import {
+    DocumentsError,
+    DocumentsErrorCode,
+    InjectDocuments,
+    type DocumentsPort,
+    type DriveFolderListing,
+} from "@modules/integrations/documents"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { InjectDriveAccessSource } from "./knowledge.decorators"
 import type { DriveAccessSource, PickedFolder } from "./knowledge.contracts"
 import { KnowledgeLogEvent } from "./knowledge.log-events"

@@ -135,7 +135,7 @@ describe("ModuleJobRunnerService", () => {
         expect(binding?.scopeOpen()).toBe(false)
         expect(await runIn?.(() => Promise.resolve(binding?.scopeOpen()))).toBe(true)
         expect(binding?.scopeOpen()).toBe(false)
-        await expect(runIn?.(() => Promise.reject(new Error("boom")))).rejects.toThrow("boom")
+        await expect(runIn?.(jest.fn().mockRejectedValue(new Error("boom")))).rejects.toThrow("boom")
         expect(binding?.scopeOpen()).toBe(false)
     })
 

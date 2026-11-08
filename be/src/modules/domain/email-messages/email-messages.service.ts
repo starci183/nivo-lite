@@ -1,11 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { MoreThanOrEqual } from "typeorm"
-import type { EntityManager, FindOptionsWhere } from "typeorm"
+import { MoreThanOrEqual, type EntityManager, type FindOptionsWhere } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { EmailRecord, OptionalVia } from "./email-messages.contracts"
 import { EmailMessagesError, EmailMessagesErrorCode } from "./errors/email-messages.error"
-import { EmailMessageEntity } from "./persistence/entities"
-import type { EmailMessageRefs } from "./persistence/entities"
+import { EmailMessageEntity, type EmailMessageRefs } from "./persistence/entities"
 
 const isRefValue = (value: unknown): value is EmailMessageRefs[string] =>
     value === null || ["string", "number", "boolean", "object"].includes(typeof value)

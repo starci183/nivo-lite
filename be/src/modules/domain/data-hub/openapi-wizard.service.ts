@@ -11,8 +11,10 @@ import {
     openApiFailure,
     parseJsonBody,
     suggestFromItems,
+    type OpenApiAuth,
+    type OpenApiClient,
+    type PublicHostClient,
 } from "@modules/integrations/data-sources"
-import type { OpenApiAuth, OpenApiClient, PublicHostClient } from "@modules/integrations/data-sources"
 import { OPENAPI_WIZARD_TEXT } from "./messages/openapi.messages"
 import { DataHubService } from "./data-hub.service"
 import { DataHubError, DataHubErrorCode } from "./errors/data-hub.error"

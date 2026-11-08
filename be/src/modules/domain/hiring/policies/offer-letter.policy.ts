@@ -83,7 +83,7 @@ export const cleanLetterPart = (value: string): string | null => {
         .map((part, index, parts) => {
             if (index % 2 === 1) return parts[index + 1]?.startsWith(" ") ? "" : part
             const plain = index > 0 && part.startsWith(" ") ? part.slice(1) : part
-            return plain.replace(/\*\*?|__/gu, "")
+            return plain.replaceAll(/\*\*?|__/gu, "")
         })
         .join("")
         .trim()

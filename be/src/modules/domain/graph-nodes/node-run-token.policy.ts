@@ -50,7 +50,7 @@ export const verifyRunToken = (key: Buffer, token: string, now: number): Optiona
 
 /** The JSON of a value with the members of every object in name order, so equal arguments always print the same. */
 const canonical = (value: unknown): string => {
-    if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`
+    if (Array.isArray(value)) return `[${value.map((entry) => canonical(entry)).join(",")}]`
     if (typeof value === "object" && value !== null) {
         const entries = Object.entries(value).sort(([left], [right]) => left.localeCompare(right))
         const members = entries.map(([name, member]) => [JSON.stringify(name), canonical(member)].join(":"))

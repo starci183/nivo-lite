@@ -1,5 +1,4 @@
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import { KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import { MAX_UPLOAD_BYTES, WORKSPACE_SOURCE_BYTES } from "./knowledge-sources.contracts"
 import type { NormalizedSource } from "./source-input.policy"

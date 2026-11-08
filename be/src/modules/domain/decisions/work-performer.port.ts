@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { OptionalWorkPerformer, WorkPerformer } from "./decisions.contracts"
 
 /** Where capabilities register the performer of each action, and where the engine looks one up. */

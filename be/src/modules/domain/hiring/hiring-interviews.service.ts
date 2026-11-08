@@ -2,11 +2,9 @@ import { hiringLinkPrincipal, requireHiringLinkBinding } from "./policies/link-c
 import type { CredentialPrincipal } from "@modules/domain/identity"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ApprovalGate, OfficeLog } from "@modules/domain/module-ops"
-import type { PerformContext, PerformResult } from "@modules/domain/module-ops"
+import { ApprovalGate, OfficeLog, type PerformContext, type PerformResult } from "@modules/domain/module-ops"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { HiringError, HiringErrorCode } from "./errors/hiring.error"
 import type { InterviewRecord } from "./hiring.contracts"
@@ -128,7 +126,8 @@ export class HiringInterviewsService {
         const slots = computeSlots(usedDefault ? DEFAULT_WINDOWS : declared, busy, duration, this.clock.now())
         if (slots.length === 0) throw new HiringError({ code: HiringErrorCode.NoSlots })
         const mode = fieldText(context.fields, "mode") === "online" ? "online" : "in_person"
-        const location = fieldText(context.fields, "location") || job?.location || ""
+        const declaredLocation = fieldText(context.fields, "location")
+        const location = declaredLocation === "" ? (job?.location ?? "") : declaredLocation
         const interviewerName = fieldText(context.fields, "interviewer_name")
         const token = await this.data.newToken()
         const line = this.words.text("hiring.event.interviewProposed", {

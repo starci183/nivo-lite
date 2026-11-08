@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
 import { WorkspaceBusinessTypeReadService } from "@modules/domain/workspaces"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { SuggestionContext, SuggestionDecision } from "./knowledge-suggestion-state.contracts"
@@ -37,7 +36,7 @@ export class KnowledgeSuggestionStateService {
             }),
             this.workspaces.businessTypeOf(workspaceId),
         ])
-        return { decisions: states.flatMap(decisionOf), businessType }
+        return { decisions: states.flatMap((state) => decisionOf(state)), businessType }
     }
 
     /** Marks a suggestion dismissed or not applicable; an absent state brings it back. Owners and managers only. */

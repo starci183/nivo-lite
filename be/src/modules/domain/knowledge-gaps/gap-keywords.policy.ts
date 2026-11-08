@@ -164,8 +164,10 @@ export interface TopicSplit {
     readonly attribute: string | null
 }
 
+const textOrNull = (part: string | undefined): string | null => (part === undefined || part === "" ? null : part)
+
 /** A topic written "subject | attribute" becomes its two parts. */
 export const splitTopic = (raw: string | null | undefined): TopicSplit => {
     const [subject, attribute] = (raw ?? "").split("|").map((part) => part.trim().slice(0, 120))
-    return { subject: subject || null, attribute: attribute || null }
+    return { subject: textOrNull(subject), attribute: textOrNull(attribute) }
 }
