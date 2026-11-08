@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { PollLimits } from "./connection-poll.contracts"
-import { takeToken } from "./poll-bucket.policy"
-import type { BucketState } from "./poll-bucket.policy"
+import { takeToken, type BucketState } from "./poll-bucket.policy"
 import type { PollLimiterStore, TokenAnswer } from "./poll-limiter.contracts"
 
 @Injectable()

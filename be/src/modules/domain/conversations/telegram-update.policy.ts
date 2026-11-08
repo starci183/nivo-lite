@@ -1,5 +1,4 @@
-import { isRecord, ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { isRecord, ok, refused, type Outcome } from "@modules/platform/primitives"
 import type { TelegramInbound } from "./conversations.contracts"
 import { ConversationsErrorCode } from "./errors/conversations.error"
 import { numberField, readJsonObject, textField } from "./inbound-body.policy"

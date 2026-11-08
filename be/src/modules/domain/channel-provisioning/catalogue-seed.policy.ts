@@ -1,6 +1,5 @@
 import { invalid, readSeedDocuments, textOf } from "./management-seed.policy"
-import { CATALOGUE_SEED_SCHEMA } from "./catalogue-seed.contracts"
-import type { CatalogueItem } from "./catalogue-seed.contracts"
+import { CATALOGUE_SEED_SCHEMA, type CatalogueItem } from "./catalogue-seed.contracts"
 
 const SKU_PATTERN = /^[A-Z0-9][A-Z0-9-]{0,39}$/u
 
@@ -21,7 +20,7 @@ export const readCatalogueItems = (text: string): ReadonlyArray<CatalogueItem> =
     const items = readSeedDocuments(text).flatMap((document) => {
         if (!isRecord(document) || document.schema !== CATALOGUE_SEED_SCHEMA) return invalid("schema")
         return Array.isArray(document.items) && document.items.length > 0
-            ? document.items.map(itemOf)
+            ? document.items.map((raw) => itemOf(raw))
             : invalid("items")
     })
     return new Set(items.map((item) => item.sku)).size === items.length ? items : invalid("item.sku")

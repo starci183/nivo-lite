@@ -1,11 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { UsageGateService } from "@modules/domain/ai-usage-events"
-import { InjectAi } from "@modules/integrations/ai"
-import type { AiService } from "@modules/integrations/ai"
-import { InjectDocuments } from "@modules/integrations/documents"
-import type { DocumentsPort } from "@modules/integrations/documents"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectAi, type AiService } from "@modules/integrations/ai"
+import { InjectDocuments, type DocumentsPort } from "@modules/integrations/documents"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type {
     ChatFileRead,
     ChatFileTurn,

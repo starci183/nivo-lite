@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import type { EntityManager } from "typeorm"
-import { In } from "typeorm"
+import { type EntityManager, In } from "typeorm"
 import { EntitlementsService } from "@modules/domain/billing"
 import type { StorageObjectsPort } from "@modules/integrations/object-storage"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import {
     CHAT_FILE_BUCKET,

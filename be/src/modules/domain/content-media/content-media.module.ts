@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { CONTENT_MEDIA_STORAGE } from "./content-media.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./content-media.module-definition"
 import { ContentMediaService } from "./content-media.service"

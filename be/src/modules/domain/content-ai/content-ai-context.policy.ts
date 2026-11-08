@@ -1,8 +1,6 @@
 import type { ContentMediaRef } from "@modules/domain/content-items"
-import { isPlanChannel } from "./content-ai-planning.policy"
-import type { PlanEvent, PlanPillar, PlannedSlot } from "./content-ai-planning.policy"
-import { isJsonObject } from "./content-ai-prompt.policy"
-import type { BrandContext, ChannelWarning, ClaimWarning } from "./content-ai-prompt.policy"
+import { isPlanChannel, type PlanEvent, type PlanPillar, type PlannedSlot } from "./content-ai-planning.policy"
+import { isJsonObject, type BrandContext, type ChannelWarning, type ClaimWarning } from "./content-ai-prompt.policy"
 
 /** Reads metadata as an object, using an empty object for a missing or malformed value. */
 export const objectOf = (value: unknown): Record<string, unknown> => (isJsonObject(value) ? value : {})

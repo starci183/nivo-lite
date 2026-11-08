@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConnectorInterestModule } from "@modules/domain/connector-interest"
 import { noAgentIds } from "./connection-agents.policy"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./connections.module-definition"

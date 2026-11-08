@@ -1,5 +1,4 @@
-import { isRecord, ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { isRecord, ok, refused, type Outcome } from "@modules/platform/primitives"
 import type { InboundAttachment, ZaloInbound } from "./conversations.contracts"
 import { ConversationsErrorCode } from "./errors/conversations.error"
 import { epochMillisField, listField, readJsonObject, textField } from "./inbound-body.policy"

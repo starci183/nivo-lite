@@ -2,12 +2,10 @@ import { Injectable } from "@nestjs/common"
 import { AuthorityService } from "@modules/domain/authority"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
-import { ContextVersionsService } from "@modules/domain/module-context-versions"
-import type { VersionSnapshot } from "@modules/domain/module-context-versions"
+import { ContextVersionsService, type VersionSnapshot } from "@modules/domain/module-context-versions"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspacesService } from "@modules/domain/workspaces"
-import { trimmedText } from "./content-ai-prompt.policy"
-import type { BrandMaterial } from "./content-ai-prompt.policy"
+import { trimmedText, type BrandMaterial } from "./content-ai-prompt.policy"
 
 /** The most public sources a marketing prompt reads. */
 const SOURCE_LIMIT = 40

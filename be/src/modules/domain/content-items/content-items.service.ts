@@ -12,8 +12,12 @@ import type {
     ScheduleView,
     ScheduledChannelMark,
 } from "./content-items.contracts"
-import { ISO_TEXT, draftRefOf } from "./persistence/content-item.projection"
-import type { DueChannelProjection, ScheduleProjection } from "./persistence/content-item.projection"
+import {
+    ISO_TEXT,
+    draftRefOf,
+    type DueChannelProjection,
+    type ScheduleProjection,
+} from "./persistence/content-item.projection"
 import { ContentItemEntity } from "./persistence/entities"
 
 /** A stored post as the scheduler reads it: the text of each channel and the attached media paths. */

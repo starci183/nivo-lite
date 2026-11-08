@@ -1,11 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { Not, type EntityManager } from "typeorm"
 import { ContentPillarsService } from "@modules/domain/content-pillars"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import type {
     ContentAiItemRef,
     ContentQuickIdeaCreated,

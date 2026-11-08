@@ -1,19 +1,16 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { proposalTextOf } from "@modules/domain/agent-turns"
-import { AgentWorkHandlersService } from "@modules/domain/agent-work"
-import type {
-    AgentHandlerEnding,
-    AgentTurnPrep,
-    AgentTurnView,
-    AgentWakeView,
-    AgentWakeSource,
-    AgentWorkHandler,
+import {
+    AgentWorkHandlersService,
+    type AgentHandlerEnding,
+    type AgentTurnPrep,
+    type AgentTurnView,
+    type AgentWakeView,
+    type AgentWakeSource,
+    type AgentWorkHandler,
 } from "@modules/domain/agent-work"
-import { ChatTurnService } from "@modules/domain/conversations"
-import type { CustomerTurn } from "@modules/domain/conversations"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { ChatTurnService, type CustomerTurn } from "@modules/domain/conversations"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { CustomerCorePlanService } from "./customer-core-plan.service"
 import { CustomerIntentSettleService } from "./customer-intent-settle.service"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"

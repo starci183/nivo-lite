@@ -1,6 +1,5 @@
 import { z } from "zod"
-import { gatewayArgumentsSchema, gatewayToolNameSchema } from "@modules/domain/mcp-gateway"
-import type { GatewayArgument } from "@modules/domain/mcp-gateway"
+import { gatewayArgumentsSchema, gatewayToolNameSchema, type GatewayArgument } from "@modules/domain/mcp-gateway"
 
 /** The largest encoded argument object accepted by the OpenClaw bridge. */
 const ARGUMENTS_JSON_MAX = 65536

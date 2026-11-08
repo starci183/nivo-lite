@@ -1,18 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { SourceCategoriesService } from "@modules/domain/knowledge-sources"
-import { MemberLookupService, WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectTable } from "@modules/integrations/data-sources"
-import type { TableClient } from "@modules/integrations/data-sources"
+import { MemberLookupService, WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectTable, type TableClient } from "@modules/integrations/data-sources"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { DOSSIERS_MAX } from "./brain-dossiers.contracts"
-import type {
-    AssignDossierInput,
-    DossierImportResult,
-    DossierRecord,
-    DossierWorkbook,
+import {
+    DOSSIERS_MAX,
+    type AssignDossierInput,
+    type DossierImportResult,
+    type DossierRecord,
+    type DossierWorkbook,
 } from "./brain-dossiers.contracts"
 import { documentCountsOf, toDossierRecord } from "./dossier-record.mapper"
 import { dossiersOf, layoutOf } from "./dossier-sheet.policy"

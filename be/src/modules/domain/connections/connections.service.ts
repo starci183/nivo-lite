@@ -1,15 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { Not, Raw } from "typeorm"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
-import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
+import { Not, Raw, type EntityManager, type SelectQueryBuilder } from "typeorm"
+import { ConnectionSecretsService, type OptionalStoredSecret } from "@modules/domain/connection-secrets"
 import { ConnectorInterestService } from "@modules/domain/connector-interest"
-import type { OptionalStoredSecret } from "@modules/domain/connection-secrets"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager, returnedRows, rowShape } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import { cleanConnectionName } from "./connection-name.policy"
 import { isPlannedConnector } from "./connector-catalog.policy"
 import { publicSiteUrl, webhookUrlFor } from "./connection-url.policy"
@@ -47,8 +43,7 @@ import { ConnectionsLogEvent } from "./connections.log-events"
 import type { ConnectionsOptions } from "./connections.options"
 import { ConnectionsError, ConnectionsErrorCode } from "./errors/connections.error"
 import { ConnectionEntity } from "./persistence/entities"
-import { returnedIds, projectConnections } from "./persistence/connection.projection"
-import type { ConnectionProjection } from "./persistence/connection.projection"
+import { returnedIds, projectConnections, type ConnectionProjection } from "./persistence/connection.projection"
 
 /** The most rows any list of connections returns. */
 const LIST_MAX = 500
@@ -141,7 +136,7 @@ export class ConnectionsService {
             .orderBy("c.createdAt")
             .limit(LIST_MAX)
             .getRawMany<ConnectionProjection>()
-        return rows.map(toConnectionRecord)
+        return rows.map((row) => toConnectionRecord(row))
     }
 
     /**
@@ -178,7 +173,7 @@ export class ConnectionsService {
             .orderBy("c.createdAt")
             .limit(LIST_MAX)
             .getRawMany<ConnectionProjection>()
-        return rows.map(toConnectionRecord)
+        return rows.map((row) => toConnectionRecord(row))
     }
 
     /** The providers the workspace is connected to (one entry each, a disconnected connection does not count), at most `limit`. */
@@ -205,7 +200,7 @@ export class ConnectionsService {
             .orderBy("c.createdAt")
             .limit(LIST_MAX)
             .getRawMany<ConnectionProjection>()
-        return rows.map(toConnectionRecord)
+        return rows.map((row) => toConnectionRecord(row))
     }
 
     /** Creates a connection and its sealed secret in one transaction (the caller's when handed in); answers the id. */

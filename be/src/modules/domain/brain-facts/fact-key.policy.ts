@@ -23,8 +23,8 @@ export const foldedText = (text: string): string =>
         .toLowerCase()
         .replaceAll("\u0111", "d")
         .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
-        .replace(/[^a-z0-9]+/g, " ")
+        .replaceAll(/\p{Diacritic}/gu, "")
+        .replaceAll(/[^a-z0-9]+/g, " ")
         .trim()
 
 /** Lower case, accents removed (d with stroke becomes d), anything else turned into single dashes: "Combo Thu gian!" becomes "combo-thu-gian". */
@@ -33,9 +33,9 @@ export const factSlugOf = (text: string): string =>
         .toLowerCase()
         .replaceAll("\u0111", "d")
         .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "")
+        .replaceAll(/\p{Diacritic}/gu, "")
+        .replaceAll(/[^a-z0-9]+/g, "-")
+        .replaceAll(/^-|-$/g, "")
         .slice(0, 120)
 
 /** Vietnamese scale words as written with accents and without (billion, million, thousand), and the short forms tr and k. */
@@ -53,7 +53,7 @@ const scaleOf = (word: string): number => {
 
 /** A number written the Vietnamese way ("650.000", "1,2 tr", "8tr", "2 trieu", "1.5k") or null. */
 export const numberOf = (raw: string): number | null => {
-    const text = raw.toLowerCase().replace(/\s+/g, " ").trim()
+    const text = raw.toLowerCase().replaceAll(/\s+/g, " ").trim()
     const match = NUMBER_WITH_SCALE.exec(text)
     if (match === null) return null
     const digits = match[1] ?? ""
@@ -62,12 +62,12 @@ export const numberOf = (raw: string): number | null => {
     const amount =
         scale > 1
             ? Number(digits.replace(",", "."))
-            : Number(digits.replace(/[.,](?=\d{3}(\D|$))/g, "").replace(",", "."))
+            : Number(digits.replaceAll(/[.,](?=\d{3}(\D|$))/g, "").replace(",", "."))
     return Number.isFinite(amount) ? Math.round(amount * scale * 100) / 100 : null
 }
 
 /** The wording of a value without its digits, to compare "8h" with "8 minutes". */
-const wording = (text: string): string => factSlugOf(text.replace(/[\d.,\s]/g, ""))
+const wording = (text: string): string => factSlugOf(text.replaceAll(/[\d.,\s]/g, ""))
 
 /** Two values say the same thing: equal numbers with the same wording around them, or equal once normalised. */
 export const sameValue = (first: string, second: string): boolean => {

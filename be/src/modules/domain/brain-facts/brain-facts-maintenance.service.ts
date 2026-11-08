@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { Raw } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { Raw, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { BrainFactsReadService } from "./brain-facts-read.service"
@@ -52,7 +51,7 @@ export class BrainFactsMaintenanceService {
             .getMany()
         const orphans: Array<string> = []
         const folded = foldedText(unchanged)
-        const taken = rows.map(toFactRecord).filter((fact) => !factStandsIn(fact, sourceId, folded))
+        const taken = rows.map((row) => toFactRecord(row)).filter((fact) => !factStandsIn(fact, sourceId, folded))
         await eachInOrder(taken, async (fact) => {
             const rest = fact.evidence.filter((item) => !(item.kind === "document" && item.ref === sourceId))
             if (fact.status === "proposed" && rest.length === 0) {
@@ -78,7 +77,7 @@ export class BrainFactsMaintenanceService {
                 where: { workspaceId, status: "scheduled", validFrom: Raw((column) => `${column} <= now()`) },
                 take: 200,
             })
-        ).map(toFactRecord)
+        ).map((row) => toFactRecord(row))
         const activated: Array<FactRecord> = []
         await eachInOrder(due, async (fact) => {
             const current = await this.reads.keyed(

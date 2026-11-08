@@ -85,7 +85,7 @@ const leadOf = (value: unknown): CapturedLead | null => {
 
 const amountOf = (value: unknown): number => {
     if (typeof value === "number") return value
-    if (typeof value === "string") return Number(value.replace(/[^\d]/gu, ""))
+    if (typeof value === "string") return Number(value.replaceAll(/[^\d]/gu, ""))
     return Number.NaN
 }
 

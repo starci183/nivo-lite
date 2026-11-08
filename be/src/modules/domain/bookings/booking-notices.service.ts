@@ -4,8 +4,7 @@ import { BookingResourcesReadService } from "@modules/domain/booking-resources"
 import { BookingServicesReadService } from "@modules/domain/booking-services"
 import { WorkspacesService } from "@modules/domain/workspaces"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { EFFECTS_COLUMNS, EFFECTS_WHERE } from "./booking-effects.rows"
 import type { EffectsBaseFacts, EffectsRow } from "./booking-facts.contracts"
 import { BookingModelService } from "./booking-model.service"
@@ -24,8 +23,9 @@ import {
     reminderText,
     reminderVariables,
     whenText,
+    type NoticeFacts,
+    type Say,
 } from "./policies/booking-notice-text.policy"
-import type { NoticeFacts, Say } from "./policies/booking-notice-text.policy"
 
 /** A booking of a workspace, or null when there is none. */
 export type OptionalBooking = EffectsRow | null

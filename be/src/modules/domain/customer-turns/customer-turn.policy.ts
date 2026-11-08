@@ -13,7 +13,7 @@ export const clipText = (text: string, max: number): string =>
     text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text
 
 /** An item with case, spacing and Unicode form folded away. */
-const norm = (text: string): string => text.normalize("NFC").toLowerCase().replace(/\s+/gu, " ").trim()
+const norm = (text: string): string => text.normalize("NFC").toLowerCase().replaceAll(/\s+/gu, " ").trim()
 
 /** The same item said twice is one item: case, spacing and Unicode form do not matter. */
 export const sameItems = (a: string, b: string): boolean => norm(a) === norm(b)

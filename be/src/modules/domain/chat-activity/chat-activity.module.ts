@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ChatActivityService } from "./chat-activity.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./chat-activity.module-definition"
 

@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ChatMessageProposeExecutorService } from "./chat-message-propose-executor.service"
 import { ChannelSendExecutorService } from "./channel-send-executor.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./chat-node-ports.module-definition"

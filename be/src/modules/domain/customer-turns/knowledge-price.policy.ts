@@ -24,7 +24,7 @@ const scaled = (text: string, pattern: RegExp, factor: number): ReadonlyArray<nu
 export const pricesInKnowledge = (knowledge: string | null): ReadonlyArray<number> => {
     const text = (knowledge ?? "").normalize("NFC").toLowerCase()
     const plain = [...text.matchAll(PLAIN)]
-        .map((match) => Number(match[0].replace(/[.,]/gu, "")))
+        .map((match) => Number(match[0].replaceAll(/[.,]/gu, "")))
         .filter((value) => Number.isFinite(value) && value >= PLAIN_MIN)
     return [...new Set([...scaled(text, MILLION, 1_000_000), ...scaled(text, THOUSAND, 1000), ...plain])]
 }

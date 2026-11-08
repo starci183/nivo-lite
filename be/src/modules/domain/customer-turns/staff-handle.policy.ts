@@ -23,8 +23,8 @@ const ADVISOR_ROLE = /tu van|sales|ban hang|kinh doanh|cskh|cham soc khach|advis
 
 /** Lowercase, accents and parentheses removed. */
 export const foldText = (text: string): string =>
-    withoutParentheses(text.toLowerCase().normalize("NFD").replace(COMBINING_MARKS, "").replace(D_STROKE, "d"))
-        .replace(/\s+/gu, " ")
+    withoutParentheses(text.toLowerCase().normalize("NFD").replaceAll(COMBINING_MARKS, "").replaceAll(D_STROKE, "d"))
+        .replaceAll(/\s+/gu, " ")
         .trim()
 
 /** The base handle of a name: a Vietnamese colleague is called by the given name, the last word without its title ("Chi Ha" -> ha). */

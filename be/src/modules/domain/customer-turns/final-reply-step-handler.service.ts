@@ -1,16 +1,17 @@
-import { outputScopeSchema } from "./output-steps.schema"
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { outputScopeSchema, type OutputScope } from "./output-steps.schema"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { CHAT_DELIVERY_UNKNOWN, ChatMessagesService } from "@modules/domain/chat-records"
-import { AgentRunHandlersService } from "@modules/domain/agent-runs"
-import type { AgentStepHandler, StepAnswer, StepView } from "@modules/domain/agent-runs"
-import { ChatTurnService } from "@modules/domain/conversations"
-import type { CustomerTurn } from "@modules/domain/conversations"
+import {
+    AgentRunHandlersService,
+    type AgentStepHandler,
+    type StepAnswer,
+    type StepView,
+} from "@modules/domain/agent-runs"
+import { ChatTurnService, type CustomerTurn } from "@modules/domain/conversations"
 import type { DeliveryOutcome } from "@modules/domain/channels"
 import { CustomerDeliveryService } from "@modules/domain/work-performers"
 import { FinalReplyService } from "./final-reply.service"
 import { FINAL_REPLY_STEP_KIND, outputsOf } from "./output-steps.policy"
-import type { OutputScope } from "./output-steps.schema"
 
 /** Why the row cannot run. */
 const INVALID_INPUT = "invalid_input"

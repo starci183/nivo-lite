@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims } from "@modules/platform/jobs"
 import { isBankFeedDeliveryRecorded } from "@modules/queues/bank-feed-delivery"
 import { BankFeedService } from "./bank-feed.service"
 

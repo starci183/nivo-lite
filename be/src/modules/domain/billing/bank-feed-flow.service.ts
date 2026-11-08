@@ -2,12 +2,14 @@ import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { IncomingCredit } from "@modules/domain/bank-feed-inbox"
 import { AgentTagService } from "@modules/domain/agent-work"
-import { PaymentTransactionsService } from "@modules/domain/payment-transactions"
-import type { OptionalRecordedMovement, PaymentMovement, RecordedMovement } from "@modules/domain/payment-transactions"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
-import { InjectBankFeedFlow } from "./billing.decorators"
-import type { BankFeedFlow } from "./billing.decorators"
+import {
+    PaymentTransactionsService,
+    type OptionalRecordedMovement,
+    type PaymentMovement,
+    type RecordedMovement,
+} from "@modules/domain/payment-transactions"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectBankFeedFlow, type BankFeedFlow } from "./billing.decorators"
 import type { FeedCreditAnswer, ProvenConnection } from "./billing.contracts"
 
 /** The locale of the lines billing writes into the shared records: the workspace owners read them in Vietnamese. */

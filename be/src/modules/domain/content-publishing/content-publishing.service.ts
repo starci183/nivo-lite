@@ -1,15 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import { ContentApprovalStoreService, ContentEditorService } from "@modules/domain/content-items"
-import type { ContentPublishedResult } from "@modules/domain/content-items"
+import {
+    ContentApprovalStoreService,
+    ContentEditorService,
+    type ContentPublishedResult,
+} from "@modules/domain/content-items"
 import { WorkEngineService } from "@modules/domain/decisions"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { EventsService } from "@modules/domain/events"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import type {
     MarkContentPublishedRequest,
     SubmitContentRequest,

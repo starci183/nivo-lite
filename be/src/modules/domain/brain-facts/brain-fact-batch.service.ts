@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull, Like } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { IsNull, Like, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { bulkTagOf } from "./bulk-apply.policy"
 import { BrainFactEntity } from "./persistence/entities"

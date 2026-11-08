@@ -1,11 +1,17 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { randomSecret } from "@modules/domain/connection-secrets"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService, sha256 } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord, Environment } from "@modules/domain/connections"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    ConnectionsService,
+    sha256,
+    type ConnectionActor,
+    type ConnectionRecord,
+    type Environment,
+} from "@modules/domain/connections"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { bankDisplayNameOf } from "./bank-name.policy"
 import type { SepayKeyReveal } from "./channel-connections.contracts"
 import { ChannelConnectionsLogEvent } from "./channel-connections.log-events"
@@ -142,7 +148,7 @@ export class SepayConnectionService {
             .orderBy("e.receivedAt", "DESC")
             .limit(EVENT_LIMIT)
             .getRawMany()
-        return rows.filter(isEventRead).map(eventOf)
+        return rows.filter(isEventRead).map((row) => eventOf(row))
     }
 
     /** Switches the connection between the SePay test mode and live (owner). Credits of a test connection are never booked. */

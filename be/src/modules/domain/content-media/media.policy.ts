@@ -30,16 +30,16 @@ const safeName = (name: string): string => {
             ? name
                   .slice(dot + 1)
                   .toLowerCase()
-                  .replace(/[^a-z0-9]/g, "")
+                  .replaceAll(/[^a-z0-9]/g, "")
                   .slice(0, 5)
             : ""
     const stem =
         (dot > 0 ? name.slice(0, dot) : name)
             .normalize("NFD")
-            .replace(COMBINING_MARKS, "")
-            .replace(D_STROKE, "d")
-            .replace(/[^a-zA-Z0-9]+/g, "-")
-            .replace(/^-|-$/g, "")
+            .replaceAll(COMBINING_MARKS, "")
+            .replaceAll(D_STROKE, "d")
+            .replaceAll(/[^a-zA-Z0-9]+/g, "-")
+            .replaceAll(/^-|-$/g, "")
             .slice(0, 40) || "file"
     return ext === "" ? stem : `${stem}.${ext}`
 }

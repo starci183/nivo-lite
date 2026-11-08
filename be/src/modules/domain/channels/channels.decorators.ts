@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { ChannelSenderRegistry } from "./channels.contracts"
 import type { ZaloInboxReads } from "./channels.port"
 import type { ChannelsConfig } from "./channels.options"

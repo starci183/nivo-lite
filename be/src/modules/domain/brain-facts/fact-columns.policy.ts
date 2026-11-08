@@ -1,5 +1,4 @@
-import { IsNull } from "typeorm"
-import type { FindOperator, UpdateQueryBuilder } from "typeorm"
+import { IsNull, type FindOperator, type UpdateQueryBuilder } from "typeorm"
 import type { Evidence, InstallationScope } from "./brain-facts.contracts"
 import type { BrainFactEntity } from "./persistence/entities"
 

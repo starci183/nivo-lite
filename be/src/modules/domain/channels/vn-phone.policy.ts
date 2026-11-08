@@ -17,7 +17,7 @@ const nationalOf = (digits: string): string => {
  * `+84 912.345.678`, `0084912345678`, `84912345678` and the bare nine digits `912345678`.
  */
 export const normaliseVnPhone = (raw: string | null | undefined): string | null => {
-    const compact = (raw ?? "").trim().replace(SEPARATORS, "")
+    const compact = (raw ?? "").trim().replaceAll(SEPARATORS, "")
     if (!/^\+?\d+$/u.test(compact)) return null
     const phone = `84${nationalOf(compact.replace(/^\+/u, ""))}`
     return ZNS_PHONE.test(phone) ? phone : null

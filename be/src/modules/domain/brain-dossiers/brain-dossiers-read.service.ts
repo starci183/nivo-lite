@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { DOSSIERS_MAX } from "./brain-dossiers.contracts"
-import type { DossierEntry } from "./brain-dossiers.contracts"
+import { DOSSIERS_MAX, type DossierEntry } from "./brain-dossiers.contracts"
 import { BrainDossierEntity } from "./persistence/entities"
 
 @Injectable()

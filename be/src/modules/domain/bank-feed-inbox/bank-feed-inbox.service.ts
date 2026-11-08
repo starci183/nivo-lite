@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { InjectEntityInbox } from "@modules/platform/inbox"
-import type { EntityInbox } from "@modules/platform/inbox"
+import { IsNull, type EntityManager } from "typeorm"
+import { InjectEntityInbox, type EntityInbox } from "@modules/platform/inbox"
 import type { FeedReceiptPayload, BankFeedInboxReceiptLookup, BankFeedProvider } from "./bank-feed-inbox.contracts"
 import { BankFeedInboxEntity } from "./persistence/entities"
 

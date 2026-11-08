@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { ContentPillar, ContentPillarDraft } from "./content-pillars.contracts"
 import { toContentPillar } from "./content-pillars.mapper"
@@ -21,7 +20,7 @@ export class ContentPillarsService {
             order: { sort: "ASC", createdAt: "ASC" },
             take: 100,
         })
-        return rows.map(toContentPillar)
+        return rows.map((row) => toContentPillar(row))
     }
 
     /** The ids among `ids` that are themes of the workspace. */

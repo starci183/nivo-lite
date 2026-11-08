@@ -1,13 +1,20 @@
-import { outputInputSchema } from "./output-steps.schema"
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { AgentRunHandlersService } from "@modules/domain/agent-runs"
-import type { AgentStepHandler, StepAnswer, StepSpec, StepView } from "@modules/domain/agent-runs"
-import { gatewayArgumentsSchema, McpGatewayService, outputStepOf } from "@modules/domain/mcp-gateway"
-import type { GatewayCaller } from "@modules/domain/mcp-gateway"
+import { outputInputSchema, type OutputInput } from "./output-steps.schema"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
+import {
+    AgentRunHandlersService,
+    type AgentStepHandler,
+    type StepAnswer,
+    type StepSpec,
+    type StepView,
+} from "@modules/domain/agent-runs"
+import {
+    gatewayArgumentsSchema,
+    McpGatewayService,
+    outputStepOf,
+    type GatewayCaller,
+} from "@modules/domain/mcp-gateway"
 import { parseJsonText } from "@modules/platform/primitives"
 import { finalReplySpecOf, OUTPUT_STEP_KIND, outputResultOf, outputSpecOf } from "./output-steps.policy"
-import type { OutputInput } from "./output-steps.schema"
 
 /** Why the row cannot run: it holds no call. */
 const INVALID_INPUT = "invalid_input"

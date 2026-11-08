@@ -1,6 +1,5 @@
 import type { AgentPluginManifest } from "@modules/domain/agent-plugins"
-import type { IntentCheck, IntentFrame } from "@modules/domain/intent-contracts"
-import { requestFrameOf } from "@modules/domain/intent-contracts"
+import { type IntentCheck, type IntentFrame, requestFrameOf } from "@modules/domain/intent-contracts"
 import { customerReplySchema } from "./customer-intents.schema"
 
 /** The kind of result a customer turn answers, and the checks it passes. */

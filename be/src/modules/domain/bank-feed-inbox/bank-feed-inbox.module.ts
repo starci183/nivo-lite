@@ -1,6 +1,5 @@
 import { INBOX, InboxService } from "@modules/platform/inbox"
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./bank-feed-inbox.module-definition"
 import { BankFeedReceiptService } from "./bank-feed-inbox.service"
 

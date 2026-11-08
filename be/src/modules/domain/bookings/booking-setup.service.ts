@@ -218,7 +218,7 @@ export class BookingSetupService {
         const slug = trimSlug(
             text(params.slug, 100)
                 .toLowerCase()
-                .replace(/[^a-z0-9-]+/gu, "-"),
+                .replaceAll(/[^a-z0-9-]+/gu, "-"),
         )
         ensure(typeof params.enabled === "boolean" && (slug === "" ? !params.enabled : SLUG.test(slug)))
         const note = text(params.note, 400)

@@ -1,6 +1,5 @@
 import type { ListedRecord } from "@nivo-lite/agent-sdk/entity/port"
-import { q } from "@nivo-lite/agent-sdk/query"
-import type { Query } from "@nivo-lite/agent-sdk/query"
+import { q, type Query } from "@nivo-lite/agent-sdk/query"
 import { CONVERSATION_ENTITY } from "./chat-conversation.policy"
 import type { ChatCustomerProfile, ChatProfileCandidate, ChatProfileDue } from "./chat-records.contracts"
 

@@ -1,12 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { ConnectionApiTokenService, randomSecret, safeEqual } from "@modules/domain/connection-secrets"
-import { ConnectionsService, sha256 } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
+import { ConnectionsService, sha256, type ConnectionActor, type ConnectionRecord } from "@modules/domain/connections"
 import { ConnectionReadyEvent } from "@modules/events/api"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectEventBus } from "@modules/platform/event-bus"
-import type { EventBus } from "@modules/platform/event-bus"
+import { InjectEventBus, type EventBus } from "@modules/platform/event-bus"
 import type {
     ChannelSeed,
     SeedGoogle,

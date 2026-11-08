@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { BrainLogEvent } from "./brain.log-events"
 
 @Injectable()
@@ -10,7 +9,7 @@ export class ModelJsonService {
 
     /** The parsed JSON of an answer, or null when no object or list in it parses. */
     jsonOf(answer: string): unknown {
-        const body = answer.replace(/```(?:json)?/gi, "")
+        const body = answer.replaceAll(/```(?:json)?/gi, "")
         const object = [body.indexOf("{"), body.lastIndexOf("}")] as const
         const list = [body.indexOf("["), body.lastIndexOf("]")] as const
         const tries = list[0] >= 0 && (object[0] < 0 || list[0] < object[0]) ? [list, object] : [object, list]

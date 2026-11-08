@@ -1,5 +1,4 @@
-import { SUBJECT_TYPES, factSlugOf, foldedText } from "@modules/domain/brain-facts"
-import type { BrainSubjectType } from "@modules/domain/brain-facts"
+import { SUBJECT_TYPES, factSlugOf, foldedText, type BrainSubjectType } from "@modules/domain/brain-facts"
 import { chunkText } from "@modules/domain/knowledge-chunks"
 
 /** Bump when the prompt or the rules below change meaningfully, with a migration clearing `knowledge_sources.content_hash`, which otherwise skips an unchanged document before its facts: every document is then read again once. */
@@ -96,7 +95,7 @@ export interface ParsedFacts {
 /** A bounded single-line text from a JSON value, or "". */
 const textOf = (value: unknown, max: number): string => {
     const raw = typeof value === "number" && Number.isFinite(value) ? String(value) : value
-    return typeof raw === "string" ? raw.replace(/\s+/g, " ").trim().slice(0, max) : ""
+    return typeof raw === "string" ? raw.replaceAll(/\s+/g, " ").trim().slice(0, max) : ""
 }
 
 /** An ISO date (day precision, Vietnam time) between 2000 and 2100, or null. */

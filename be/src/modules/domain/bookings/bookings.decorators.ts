@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { BookingNotifier } from "./booking-notice.contracts"
 
 /** Token of the delivery of booking notices into the chat of a customer. */

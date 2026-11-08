@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./content-settings.module-definition"
 import { ContentSettingsService } from "./content-settings.service"
 import { ContentConfigurationService } from "./content-configuration.service"

@@ -5,14 +5,13 @@ import {
     IntentTurnService,
     RuntimeAgentService,
     pinnedOf,
+    type IntentScope,
 } from "@modules/domain/agent-turns"
-import type { IntentScope } from "@modules/domain/agent-turns"
 import type { AgentTurnPlan, AgentTurnView } from "@modules/domain/agent-work"
 import { replyTimeoutSec } from "@modules/domain/agents"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import { threadKeyFor } from "@modules/integrations/openclaw"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { CustomerIntentContextService } from "./customer-intent-context.service"
 import { planFilesOf } from "./customer-intent.policy"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"

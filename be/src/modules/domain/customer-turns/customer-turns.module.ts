@@ -1,6 +1,5 @@
-import { Module } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { GRAPH_FLOW_TRIGGER_MESSAGES } from "@modules/domain/agent-graphs"
-import type { DynamicModule } from "@nestjs/common"
 import { AgentKnowledgeModule } from "@modules/domain/agent-knowledge"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./customer-turns.module-definition"

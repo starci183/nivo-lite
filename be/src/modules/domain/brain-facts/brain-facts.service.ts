@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager, FindOptionsWhere } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { BrainFactsMaintenanceService } from "./brain-facts-maintenance.service"
@@ -23,13 +22,18 @@ import type {
     ProposeResult,
     WithdrawnFacts,
 } from "./brain-facts.contracts"
-import { RETURNED, factKeyOf, returnedFacts } from "./fact-columns.policy"
-import type { FactChanges, NewFact } from "./fact-columns.policy"
+import { RETURNED, factKeyOf, returnedFacts, type FactChanges, type NewFact } from "./fact-columns.policy"
 import { SUPERSEDE, activateChanges, decisionOf, scheduleChanges } from "./fact-write.policy"
 import { BrainFactEntity } from "./persistence/entities"
 
 /** Who acts for the brain itself when no person decides. */
 const BRAIN = "NIVO"
+
+/** The trimmed text, or null when nothing (or only blanks) was given. */
+const textOrNull = (text: string | null | undefined): string | null => {
+    const trimmed = text?.trim()
+    return trimmed === undefined || trimmed === "" ? null : trimmed
+}
 
 @Injectable()
 /**
@@ -138,7 +142,7 @@ export class BrainFactsService {
             attributeLabel: normal.attributeLabel,
             value: normal.value,
             valueNumber: normal.valueNumber === null ? null : String(normal.valueNumber),
-            unit: input.unit?.trim() || active?.unit || null,
+            unit: textOrNull(input.unit) ?? textOrNull(active?.unit),
             scope,
             modules: scope === "restricted" ? [...(input.modules ?? active?.modules ?? [])] : [],
             sourceKind: input.sourceKind,
@@ -172,7 +176,7 @@ export class BrainFactsService {
                 "active",
                 fact.installationId,
             )
-            const reason = note?.trim() || null
+            const reason = textOrNull(note)
             if (fact.proposalKind === "retire") {
                 if (current !== undefined)
                     await this.stop(
@@ -209,14 +213,14 @@ export class BrainFactsService {
         return this.changed(
             this.entityManager,
             { workspaceId, id, status: "proposed" },
-            decisionOf("rejected", note?.trim() || null, decidedBy),
+            decisionOf("rejected", textOrNull(note), decidedBy),
             BrainFactsErrorCode.NotProposed,
         )
     }
 
     /** Stops an active fact without a replacement (no longer true): it expires now. */
     retire(workspaceId: string, id: string, decidedBy: string, note?: string): Promise<FactRecord> {
-        return this.stop(this.entityManager, workspaceId, id, decidedBy, note?.trim() || null)
+        return this.stop(this.entityManager, workspaceId, id, decidedBy, textOrNull(note))
     }
 
     /** Chooses one of several competing proposals: it is applied and every other waiting proposal of the key is rejected. */

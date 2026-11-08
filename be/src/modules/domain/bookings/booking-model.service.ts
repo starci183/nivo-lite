@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, LessThan, MoreThan } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, LessThan, MoreThan, type EntityManager } from "typeorm"
 import { BookingExceptionsReadService } from "@modules/domain/booking-exceptions"
 import { BookingHoursReadService } from "@modules/domain/booking-hours"
 import { BookingResourcesReadService } from "@modules/domain/booking-resources"
@@ -18,8 +17,13 @@ import {
     toTakenSpan,
     toWeeklyHours,
 } from "./booking-model.mapper"
-import { ACTIVE_STATUSES, DEFAULT_SETTINGS } from "./bookings.contracts"
-import type { BookingModel, BookingSettings, TakenSpan } from "./bookings.contracts"
+import {
+    ACTIVE_STATUSES,
+    DEFAULT_SETTINGS,
+    type BookingModel,
+    type BookingSettings,
+    type TakenSpan,
+} from "./bookings.contracts"
 import { BookingEntity } from "./persistence/entities"
 import { leaveBlocks } from "./policies/booking-rules.policy"
 import { localDate } from "./policies/zoned-time.policy"
@@ -56,10 +60,10 @@ export class BookingModelService {
         ])
         return {
             settings,
-            services: services.map(toBookable),
-            resources: resources.map(toResource),
-            hours: hours.map(toWeeklyHours),
-            exceptions: exceptions.map(toDateException),
+            services: services.map((service) => toBookable(service)),
+            resources: resources.map((resource) => toResource(resource)),
+            hours: hours.map((hour) => toWeeklyHours(hour)),
+            exceptions: exceptions.map((exception) => toDateException(exception)),
         }
     }
 
@@ -84,7 +88,13 @@ export class BookingModelService {
             }),
             this.leaveDays(workspaceId, localDate(fromMs, timeZone), localDate(toMs, timeZone)),
         ])
-        return [...held.map(toTakenSpan), ...leaveBlocks(leaves.map(toLeaveDay), timeZone)]
+        return [
+            ...held.map((booking) => toTakenSpan(booking)),
+            ...leaveBlocks(
+                leaves.map((leave) => toLeaveDay(leave)),
+                timeZone,
+            ),
+        ]
     }
 
     /** The approved leave days of staff linked to a resource that touch two local dates. */

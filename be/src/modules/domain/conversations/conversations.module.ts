@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { CHAT_TURN_EXTENSIONS, CHAT_TURN_OUTCOMES } from "./conversations.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./conversations.module-definition"
 import { ChatTurnExtensionsService } from "./chat-turn-extensions.service"

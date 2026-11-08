@@ -1,18 +1,24 @@
 import { Injectable } from "@nestjs/common"
 import { ZaloCredentialsService } from "@modules/domain/channels"
 import { ConnectionsService } from "@modules/domain/connections"
-import { ContentApprovalStoreService, ContentItemsService } from "@modules/domain/content-items"
-import type { DueChannelPost, ScheduleView } from "@modules/domain/content-items"
+import {
+    ContentApprovalStoreService,
+    ContentItemsService,
+    type DueChannelPost,
+    type ScheduleView,
+} from "@modules/domain/content-items"
 import type { WorkContext } from "@modules/domain/decisions"
 import { parseMetaSecret } from "@modules/domain/meta-connections"
-import { InjectMetaClient } from "@modules/integrations/meta"
-import type { MetaClient } from "@modules/integrations/meta"
-import { InjectZaloArticles, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
-import type { ZaloArticle, ZaloArticleClient } from "@modules/integrations/zalo"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectMetaClient, type MetaClient } from "@modules/integrations/meta"
+import {
+    InjectZaloArticles,
+    ZaloError,
+    ZaloErrorCode,
+    type ZaloArticle,
+    type ZaloArticleClient,
+} from "@modules/integrations/zalo"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { BrandImagesService } from "./brand-images.service"
 import { ContentAiError, ContentAiErrorCode } from "./errors/content-ai.error"

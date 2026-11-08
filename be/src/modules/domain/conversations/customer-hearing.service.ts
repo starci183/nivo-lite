@@ -1,9 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ChatConversationsService, ChatMessagesService, chatStampOf } from "@modules/domain/chat-records"
-import type { ChatMessageStamp } from "@modules/domain/chat-records"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import {
+    ChatConversationsService,
+    ChatMessagesService,
+    chatStampOf,
+    type ChatMessageStamp,
+} from "@modules/domain/chat-records"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { CustomerIntakeService } from "./customer-intake.service"
 import type { Hearing } from "./customer-hearing.contracts"
 

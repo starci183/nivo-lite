@@ -1,10 +1,10 @@
-﻿import { CONTENT_CHANNELS } from "./content-editor.contracts"
-import type {
-    ContentEvidence,
-    ContentLink,
-    ContentMediaRef,
-    ContentVariant,
-    PublishMark,
+﻿import {
+    CONTENT_CHANNELS,
+    type ContentEvidence,
+    type ContentLink,
+    type ContentMediaRef,
+    type ContentVariant,
+    type PublishMark,
 } from "./content-editor.contracts"
 
 const recordOf = (value: unknown): object | null =>

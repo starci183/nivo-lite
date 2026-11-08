@@ -1,8 +1,11 @@
 import { isMailAddress } from "@modules/domain/email-messages"
-import { invalid, sealedValuesOf, textOf } from "./management-seed.policy"
-import type { Values } from "./management-seed.policy"
-import { TEST_ACCOUNTS_SEED_SCHEMA } from "./test-accounts-seed.contracts"
-import type { TestAccountsSeed, TestSeat, TestWorkspace } from "./test-accounts-seed.contracts"
+import { invalid, sealedValuesOf, textOf, type Values } from "./management-seed.policy"
+import {
+    TEST_ACCOUNTS_SEED_SCHEMA,
+    type TestAccountsSeed,
+    type TestSeat,
+    type TestWorkspace,
+} from "./test-accounts-seed.contracts"
 
 const ROLES: ReadonlyArray<TestSeat["role"]> = ["owner", "manager", "staff"]
 

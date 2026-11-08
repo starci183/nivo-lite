@@ -1,6 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { IntentPipelineService, IntentTurnService, INTENT_STEP_KIND, pinnedOf } from "@modules/domain/agent-turns"
-import type { IntentDoorExtra } from "@modules/domain/agent-turns"
+import {
+    IntentPipelineService,
+    IntentTurnService,
+    INTENT_STEP_KIND,
+    pinnedOf,
+    type IntentDoorExtra,
+} from "@modules/domain/agent-turns"
 import type { AgentHandlerEnding, AgentTurnView } from "@modules/domain/agent-work"
 import { wakeFileRefOf } from "./customer-intent.policy"
 

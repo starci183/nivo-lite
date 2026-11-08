@@ -1,5 +1,10 @@
-import { DOSSIER_STATUSES } from "./brain-dossiers.contracts"
-import type { DossierInput, DossierSheet, DossierStatus, SheetLayout } from "./brain-dossiers.contracts"
+import {
+    DOSSIER_STATUSES,
+    type DossierInput,
+    type DossierSheet,
+    type DossierStatus,
+    type SheetLayout,
+} from "./brain-dossiers.contracts"
 import { DOSSIER_CHECKLIST_WORDS } from "./messages/dossier-checklist.messages"
 
 const WORDS = DOSSIER_CHECKLIST_WORDS
@@ -10,7 +15,7 @@ const STATUS_WORDS: ReadonlyArray<readonly [DossierStatus, string]> = DOSSIER_ST
 )
 
 /** The words of a cell compared without case, composition of accents or repeated spaces. */
-const wordsOf = (cell: string): string => cell.normalize("NFC").replace(/\s+/gu, " ").trim().toLowerCase()
+const wordsOf = (cell: string): string => cell.normalize("NFC").replaceAll(/\s+/gu, " ").trim().toLowerCase()
 
 /** The number and separator in front of a folder name ("01. LEGAL FILES"); what follows is the label the documents carry as their topic. */
 const CATEGORY_PREFIX = /^\s*\d+\s*[.)\-–:]\s*/u

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, IsNull, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, IsNull, Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager, namesById } from "@modules/platform/database"
 import type {
     BookingResourceRecord,

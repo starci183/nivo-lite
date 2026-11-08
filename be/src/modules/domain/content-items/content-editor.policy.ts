@@ -1,7 +1,11 @@
 import { isWorkspaceMediaPath } from "@modules/domain/content-media"
 import { ContentItemsError, ContentItemsErrorCode } from "./errors/content-items.error"
-import { CONTENT_CHANNELS } from "./content-editor.contracts"
-import type { ContentItem, ContentVariant, SaveContentItem } from "./content-editor.contracts"
+import {
+    CONTENT_CHANNELS,
+    type ContentItem,
+    type ContentVariant,
+    type SaveContentItem,
+} from "./content-editor.contracts"
 
 /** Rejects invalid editor data using a localized domain failure. */
 export const requireContentInput = (condition: boolean): void => {
@@ -10,7 +14,7 @@ export const requireContentInput = (condition: boolean): void => {
 
 /** Canonical, bounded hashtags without duplicate or empty entries. */
 export const contentHashtags = (values: ReadonlyArray<string>): Array<string> =>
-    [...new Set(values.map((value) => value.trim().replace(/^#+/, "").replace(/\s+/g, "")).filter(Boolean))]
+    [...new Set(values.map((value) => value.trim().replace(/^#+/, "").replaceAll(/\s+/g, "")).filter(Boolean))]
         .slice(0, 30)
         .map((value) => value.slice(0, 80))
 

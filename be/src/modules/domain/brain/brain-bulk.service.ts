@@ -6,17 +6,13 @@ import {
     batchIdOf,
     bulkNoteOf,
     isBulkSafe,
+    type FactRecord,
 } from "@modules/domain/brain-facts"
-import type { FactRecord } from "@modules/domain/brain-facts"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectIds, type Ids } from "@modules/platform/ids"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { BulkApplied, BulkUndone } from "./brain.contracts"
 import { BrainLogEvent } from "./brain.log-events"

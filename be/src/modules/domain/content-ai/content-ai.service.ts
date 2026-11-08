@@ -4,13 +4,11 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { GenerationsService } from "@modules/domain/ai-generations"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { ContentAiStoreService, ContentEditorService } from "@modules/domain/content-items"
-import type { ContentItem } from "@modules/domain/content-items"
+import { ContentAiStoreService, ContentEditorService, type ContentItem } from "@modules/domain/content-items"
 import { ContentConfigurationService } from "@modules/domain/content-settings"
 import { ContentMediaService } from "@modules/domain/content-media"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import type {
@@ -39,8 +37,8 @@ import {
     planUser,
     slotLine,
     trimmedText,
+    type BrandMaterial,
 } from "./content-ai-prompt.policy"
-import type { BrandMaterial } from "./content-ai-prompt.policy"
 import { ContentAiError, ContentAiErrorCode } from "./errors/content-ai.error"
 
 type DraftItem = Pick<
@@ -269,7 +267,7 @@ export class ContentAiService {
             seconds: numeric(result.seconds),
             skippedPast: numeric(result.skippedPast),
             warnings: Array.isArray(result.warnings)
-                ? result.warnings.filter(isChannelWarning).map(toContentAiReview)
+                ? result.warnings.filter(isChannelWarning).map((warning) => toContentAiReview(warning))
                 : [],
             errorCode,
         }

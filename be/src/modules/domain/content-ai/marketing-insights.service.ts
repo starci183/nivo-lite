@@ -2,11 +2,9 @@ import { Injectable } from "@nestjs/common"
 import { ContentEngagementDailyService } from "@modules/domain/content-engagement-daily"
 import { ContentWeeklyReportsService } from "@modules/domain/content-weekly-reports"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import type { Locale } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { MarketingWeeklyReport } from "./content-agent.contracts"
 import { ContentAgentLogEvent } from "./content-agent.log-events"
 import { MarketingCardsService } from "./marketing-cards.service"
@@ -84,7 +82,7 @@ export class MarketingInsightsService {
         const now = this.clock.now()
         const [rows, stored] = await Promise.all([
             this.daily.between(workspaceId, bounds.previousStart, bounds.nextStart),
-            this.reports.find(workspaceId, weekStart),
+            this.reports.weekOf(workspaceId, weekStart),
         ])
         if (stored !== null && isCacheFresh(stored.computedAt, bounds.nextStart, now)) {
             const figures = weeklyReportOf(weekStart, rows, [])

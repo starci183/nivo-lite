@@ -5,7 +5,7 @@ import {
     readContentEvidence,
     readContentPublished,
 } from "./content-editor-json.mapper"
-import { CONTENT_CHANNELS } from "./content-editor.contracts"
+import { CONTENT_CHANNELS, type ContentItem } from "./content-editor.contracts"
 
 const CONTENT_STATUSES = new Set(["idea", "draft", "waiting_approval", "approved", "published", "skipped"])
 const CONTENT_SOURCES = new Set(["manual", "plan", "quick", "offer", "automation"])
@@ -13,7 +13,6 @@ const readChannels = (values: ReadonlyArray<string>): Array<string> => {
     const channels = values.filter((channel) => CONTENT_CHANNELS.includes(channel))
     return channels.length === 0 ? ["facebook"] : channels
 }
-import type { ContentItem } from "./content-editor.contracts"
 import type { ContentItemEntity } from "./persistence/entities"
 
 /** Serializes a PostgreSQL timestamp independently of the driver parser. */

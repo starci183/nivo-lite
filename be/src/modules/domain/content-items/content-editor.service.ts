@@ -1,10 +1,8 @@
 import { VideoRendersService } from "@modules/domain/video-renders"
 import { Injectable } from "@nestjs/common"
-import { And, In, LessThan, MoreThanOrEqual } from "typeorm"
-import type { EntityManager, FindOperator } from "typeorm"
+import { And, In, LessThan, MoreThanOrEqual, type EntityManager, type FindOperator } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { ContentPillarsService } from "@modules/domain/content-pillars"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { ContentItemsError, ContentItemsErrorCode } from "./errors/content-items.error"
@@ -70,7 +68,7 @@ export class ContentEditorService {
             order: { scheduledAt: { direction: "ASC", nulls: "LAST" }, createdAt: "DESC" },
             take: 500,
         })
-        return rows.map(toContentItem)
+        return rows.map((row) => toContentItem(row))
     }
 
     /** A workspace-scoped row for trusted application orchestration. */

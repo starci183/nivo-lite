@@ -1,16 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { BrainFactsService, factLine } from "@modules/domain/brain-facts"
-import type { FactRecord, ProposeResult } from "@modules/domain/brain-facts"
-import { BrainLessonsService } from "@modules/domain/brain-lessons"
-import type { LessonRecord } from "@modules/domain/brain-lessons"
+import { BrainFactsService, factLine, type FactRecord, type ProposeResult } from "@modules/domain/brain-facts"
+import { BrainLessonsService, type LessonRecord } from "@modules/domain/brain-lessons"
 import { FACT_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { WorkspaceMembersService, type WorkspaceMember, type WorkspaceRole } from "@modules/domain/workspace-members"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { FactDecision, FactForm, KeepCurrentInput, LessonDecision, LessonForm } from "./brain.contracts"
 import { BrainLogEvent } from "./brain.log-events"
@@ -18,6 +13,12 @@ import { DocumentFactsService } from "./document-facts.service"
 
 /** Who may change the brain of a workspace. */
 const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
+
+/** The trimmed note as the evidence quote; none when it is blank. */
+const quoteOf = (note: string | undefined): string | undefined => {
+    const trimmed = note?.trim()
+    return trimmed === "" ? undefined : trimmed
+}
 
 @Injectable()
 /**
@@ -57,7 +58,7 @@ export class BrainService {
                     kind: "manual",
                     ref: `manual:${now.getTime()}`,
                     label: `${me.displayName} wrote this on the Second Brain page`,
-                    quote: form.note?.trim() || undefined,
+                    quote: quoteOf(form.note),
                     at: now.toISOString(),
                 },
             ],

@@ -1,8 +1,13 @@
 import { approvalInputSchema } from "./output-steps.schema"
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { AgentRunHandlersService, DECISION_ACTOR_UNKNOWN } from "@modules/domain/agent-runs"
-import type { AgentStepHandler, StepAnswer, StepDecision, StepView } from "@modules/domain/agent-runs"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
+import {
+    AgentRunHandlersService,
+    DECISION_ACTOR_UNKNOWN,
+    type AgentStepHandler,
+    type StepAnswer,
+    type StepDecision,
+    type StepView,
+} from "@modules/domain/agent-runs"
 import { APPROVAL_STEP_KIND, approvedInputOf, approvedOutputsOf, declinedReplyOf } from "./output-steps.policy"
 
 /** Why the row cannot run. */

@@ -4,12 +4,10 @@ import { BookingExceptionsReadService } from "@modules/domain/booking-exceptions
 import { BookingHoursReadService } from "@modules/domain/booking-hours"
 import { BookingResourcesReadService } from "@modules/domain/booking-resources"
 import { BookingServicesReadService } from "@modules/domain/booking-services"
-import { BookingWaitlistReadService } from "@modules/domain/booking-waitlist"
-import type { BookingWaitRecord } from "@modules/domain/booking-waitlist"
+import { BookingWaitlistReadService, type BookingWaitRecord } from "@modules/domain/booking-waitlist"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { StaffDirectoryService } from "@modules/domain/staff"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { BookingBoard, BookingBoardParams } from "./booking-board.contracts"
 import type { BoardBookingFacts, BoardStaffFacts, BoardWaitFacts } from "./booking-facts.contracts"
@@ -81,7 +79,8 @@ export class BookingBoardService {
         this.requireRange(from, to)
         const fromAt = new Date(zonedMs(from, "00:00", timezone))
         const toAt = new Date(zonedMs(addDays(to, 1), "00:00", timezone))
-        const exceptionsFrom = from < addDays(today, -1) ? from : addDays(today, -1)
+        const yesterday = addDays(today, -1)
+        const exceptionsFrom = from.localeCompare(yesterday) < 0 ? from : yesterday
         const [services, resources, hours, exceptions, bookings, waitlist, staff, overview] = await Promise.all([
             this.servicesRead.catalogue(params.workspaceId),
             this.resourcesRead.catalogue(params.workspaceId),
@@ -99,12 +98,12 @@ export class BookingBoardService {
             from,
             to,
             settings,
-            services: services.map(toBoardService),
-            resources: resources.map(toBoardResource),
-            hours: hours.map(toWeeklyHours),
-            exceptions: exceptions.map(toBoardException),
+            services: services.map((service) => toBoardService(service)),
+            resources: resources.map((resource) => toBoardResource(resource)),
+            hours: hours.map((hour) => toWeeklyHours(hour)),
+            exceptions: exceptions.map((exception) => toBoardException(exception)),
             bookings: bookings.map((row) => toBoardBooking(row, timezone)),
-            waitlist: waitlist.map(toBoardWait),
+            waitlist: waitlist.map((wait) => toBoardWait(wait)),
             staff,
             ...overview,
         }

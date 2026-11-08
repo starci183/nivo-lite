@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { LessThan } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { LessThan, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import { InjectConnectionSecretsOptions } from "./connection-secrets.decorators"
 import type {
     ConnectionSecret,
@@ -175,7 +173,7 @@ export class ConnectionSecretsService {
             })
             .returning('connection_id AS "connectionId"')
             .execute()
-        return Array.isArray(taken.raw) && taken.raw.some(hasConnectionId)
+        return Array.isArray(taken.raw) && taken.raw.some((value) => hasConnectionId(value))
     }
 
     /** Drops the refresh lease. */

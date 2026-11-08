@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { ContentCadence, ContentCadenceDraft } from "./content-cadence.contracts"
 import { toContentCadence } from "./content-cadence.mapper"
@@ -18,7 +17,7 @@ export class ContentCadenceService {
             order: { channel: "ASC" },
             take: 4,
         })
-        return rows.map(toContentCadence)
+        return rows.map((row) => toContentCadence(row))
     }
 
     /** Replaces channels inside the caller's workspace configuration transaction. */

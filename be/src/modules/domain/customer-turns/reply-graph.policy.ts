@@ -3,8 +3,7 @@ import type { GraphCheck } from "@modules/domain/authority-rules"
 import type { CustomerTurn } from "@modules/domain/conversations"
 import type { WorkItem } from "@modules/domain/decisions"
 import type { InvoiceRow } from "@modules/domain/invoices"
-import { AMOUNT_EVIDENCE } from "@modules/domain/work-items"
-import type { GraphEvidence, ReasonCode } from "@modules/domain/work-items"
+import { AMOUNT_EVIDENCE, type GraphEvidence, type ReasonCode } from "@modules/domain/work-items"
 import type { CapturedOrder, CustomerReply, HumanReason } from "./customer-turns.contracts"
 
 /** The action whose rule says whether a reply leaves alone. */

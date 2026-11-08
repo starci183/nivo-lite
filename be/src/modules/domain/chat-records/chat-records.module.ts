@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ChatConversationsService } from "./chat-conversations.service"
 import { ChatEntitiesService } from "./chat-entities.service"
 import { ChatMessagesService } from "./chat-messages.service"

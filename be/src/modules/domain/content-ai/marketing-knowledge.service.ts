@@ -1,10 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { BrainLessonsService } from "@modules/domain/brain-lessons"
-import type { LessonRecord } from "@modules/domain/brain-lessons"
-import { KnowledgeSearchService } from "@modules/domain/knowledge"
-import type { Passage } from "@modules/domain/knowledge"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { BrainLessonsService, type LessonRecord } from "@modules/domain/brain-lessons"
+import { KnowledgeSearchService, type Passage } from "@modules/domain/knowledge"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { DraftGuidance } from "./marketing-cards.contracts"
 import { ContentAgentLogEvent } from "./content-agent.log-events"
 
@@ -20,7 +17,7 @@ const TEMPLATES_MAX = 3
 const LINE_MAX = 400
 
 const lineOf = (title: string, body: string): string =>
-    `${title}: ${body.replace(/\s+/gu, " ").trim()}`.slice(0, LINE_MAX)
+    `${title}: ${body.replaceAll(/\s+/gu, " ").trim()}`.slice(0, LINE_MAX)
 
 @Injectable()
 /**

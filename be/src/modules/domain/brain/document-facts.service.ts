@@ -1,24 +1,25 @@
 import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
-import { BrainExtractionsService, ExtractionNote } from "@modules/domain/brain-extractions"
-import type { MaybeExtraction } from "@modules/domain/brain-extractions"
-import { BrainFactsService } from "@modules/domain/brain-facts"
-import type { Evidence } from "@modules/domain/brain-facts"
+import { BrainExtractionsService, ExtractionNote, type MaybeExtraction } from "@modules/domain/brain-extractions"
+import { BrainFactsService, type Evidence } from "@modules/domain/brain-facts"
 import { DOC_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeIndexingService, UsageMeterService } from "@modules/domain/knowledge"
-import { KnowledgeSourcesService, StoredNote, factsPercent } from "@modules/domain/knowledge-sources"
-import type { SourceRecord } from "@modules/domain/knowledge-sources"
-import { InjectAi } from "@modules/integrations/ai"
-import type { AiBudget, AiChatAnswer, AiService } from "@modules/integrations/ai"
-import { InjectLogger } from "@modules/platform/logging"
+import { KnowledgeSourcesService, StoredNote, factsPercent, type SourceRecord } from "@modules/domain/knowledge-sources"
+import { InjectAi, type AiBudget, type AiChatAnswer, type AiService } from "@modules/integrations/ai"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { concurrencyGateOf, eachInOrder } from "@modules/platform/primitives"
-import type { Logger } from "@modules/platform/logging"
 import { DocumentReviewService } from "./document-review.service"
 import { ModelJsonService } from "./model-json.service"
 import { sourcePayloadOf } from "./brain-payload.policy"
 import { BrainError, BrainErrorCode } from "./errors/brain.error"
-import type { ExtractedFact } from "./extraction.policy"
-import { MAX_FACTS_PER_DOC, PROMPT_VERSION, SYSTEM_PROMPT, parseFacts, userPrompt } from "./extraction.policy"
+import {
+    type ExtractedFact,
+    MAX_FACTS_PER_DOC,
+    PROMPT_VERSION,
+    SYSTEM_PROMPT,
+    parseFacts,
+    userPrompt,
+} from "./extraction.policy"
 import type { FactsOutcome, ReadingPlan } from "./brain.contracts"
 import { readingPlanOf } from "./reading-plan.policy"
 import { BrainLogEvent } from "./brain.log-events"

@@ -1,11 +1,15 @@
 import { Injectable } from "@nestjs/common"
 import type { StartZaloInput, ZaloWizardConnection } from "@modules/domain/channel-connections"
 import { ConnectionSecretsService, randomSecret } from "@modules/domain/connection-secrets"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    ConnectionsService,
+    type ConnectionActor,
+    type ConnectionRecord,
+} from "@modules/domain/connections"
 import { isZaloRefusal } from "@modules/integrations/zalo"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { OptionalZnsRenewal, ZaloAuthorization, ZaloReturn, ZnsRenewalSettings } from "./channels.contracts"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ChannelsError } from "./errors/channels.error"

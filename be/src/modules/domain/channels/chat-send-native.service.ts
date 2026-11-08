@@ -1,8 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
-import type { ChatStoredReply } from "@modules/domain/chat-records"
-import { McpGatewayError, McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
-import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
+import { ChatConversationsService, ChatMessagesService, type ChatStoredReply } from "@modules/domain/chat-records"
+import {
+    McpGatewayError,
+    McpGatewayErrorCode,
+    type GatewayJson,
+    type NativeAdapter,
+    type NativeCaller,
+    type NativeConnectorManifest,
+} from "@modules/domain/mcp-gateway"
 import { ChannelCustomerProfileService } from "./channel-customer-profile.service"
 import { ChannelDeliveryService } from "./channel-delivery.service"
 import {
@@ -10,8 +15,8 @@ import {
     CHAT_PROFILE_SCHEMA,
     CHAT_SEND_INPUT_SCHEMA,
     CHAT_SEND_SCHEMA,
+    type ChatSendInput,
 } from "./chat-send-native.schema"
-import type { ChatSendInput } from "./chat-send-native.schema"
 
 /** The shape of the id of a record: only a replay key of this shape can name a line already stored in the conversation. */
 const MESSAGE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

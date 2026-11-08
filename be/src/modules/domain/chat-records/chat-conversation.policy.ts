@@ -1,6 +1,5 @@
 import type { ListedRecord, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import { q } from "@nivo-lite/agent-sdk/query"
-import type { FilterExpr, Query } from "@nivo-lite/agent-sdk/query"
+import { q, type FilterExpr, type Query } from "@nivo-lite/agent-sdk/query"
 import type { ConversationState } from "@nivo-lite/blocks-core/rules/chatbot"
 import type {
     ConversationData,

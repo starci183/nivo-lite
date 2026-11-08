@@ -1,21 +1,18 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { ContentApprovalStoreService } from "@modules/domain/content-items"
-import { InjectWorkPerformerRegistry } from "@modules/domain/decisions"
-import type {
-    Performed,
-    PerformedBy,
-    Prepared,
-    Proposal,
-    WorkContext,
-    WorkItem,
-    WorkPerformer,
-    WorkPerformerRegistry,
+import {
+    InjectWorkPerformerRegistry,
+    type Performed,
+    type PerformedBy,
+    type Prepared,
+    type Proposal,
+    type WorkContext,
+    type WorkItem,
+    type WorkPerformer,
+    type WorkPerformerRegistry,
 } from "@modules/domain/decisions"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { ContentPublishingError, ContentPublishingErrorCode } from "./errors/content-publishing.error"
 
 @Injectable()

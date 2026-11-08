@@ -1,9 +1,6 @@
-import { ContentPillarsService } from "@modules/domain/content-pillars"
-import type { ContentPillarDraft } from "@modules/domain/content-pillars"
-import { ContentCadenceService } from "@modules/domain/content-cadence"
-import type { ContentCadenceDraft } from "@modules/domain/content-cadence"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { ContentPillarsService, type ContentPillarDraft } from "@modules/domain/content-pillars"
+import { ContentCadenceService, type ContentCadenceDraft } from "@modules/domain/content-cadence"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -117,7 +114,7 @@ export class ContentConfigurationService {
                     .split(/[\s,]+/)
                     .filter(Boolean)
                     .slice(0, 15)
-                    .map((tag) => tag.replace(/^#+/, "").replace(/[\s#]+/g, ""))
+                    .map((tag) => tag.replace(/^#+/, "").replaceAll(/[\s#]+/g, ""))
                     .filter((tag) => tag !== "")
                     .map((tag) => `#${tag}`),
             ),

@@ -1,18 +1,16 @@
-import { Injectable } from "@nestjs/common"
-import type { OnApplicationBootstrap } from "@nestjs/common"
-import { InjectWorkPerformerRegistry } from "@modules/domain/decisions"
-import type {
-    Performed,
-    PerformedBy,
-    Prepared,
-    Proposal,
-    WorkContext,
-    WorkItem,
-    WorkPerformer,
-    WorkPerformerRegistry,
+import { Injectable, type OnApplicationBootstrap } from "@nestjs/common"
+import {
+    InjectWorkPerformerRegistry,
+    type Performed,
+    type PerformedBy,
+    type Prepared,
+    type Proposal,
+    type WorkContext,
+    type WorkItem,
+    type WorkPerformer,
+    type WorkPerformerRegistry,
 } from "@modules/domain/decisions"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ContentScheduleService } from "./content-schedule.service"
 import { ContentAgentLogEvent } from "./content-agent.log-events"
 import { MarketingDraftService } from "./marketing-draft.service"

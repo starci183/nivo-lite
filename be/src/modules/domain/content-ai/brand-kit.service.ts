@@ -1,21 +1,15 @@
 import { Injectable } from "@nestjs/common"
 import { DirectGenerationService } from "@modules/domain/ai-generations"
-import { BrainFactsService } from "@modules/domain/brain-facts"
-import type { Evidence } from "@modules/domain/brain-facts"
-import { ContentBrandProposalsService } from "@modules/domain/content-brand-proposals"
-import type { BrandProposalRecord } from "@modules/domain/content-brand-proposals"
-import { ContentSettingsService } from "@modules/domain/content-settings"
-import type { StoredGuidelineBrand } from "@modules/domain/content-settings"
+import { BrainFactsService, type Evidence } from "@modules/domain/brain-facts"
+import { ContentBrandProposalsService, type BrandProposalRecord } from "@modules/domain/content-brand-proposals"
+import { ContentSettingsService, type StoredGuidelineBrand } from "@modules/domain/content-settings"
 import { EventsService } from "@modules/domain/events"
 import { SetupMessagesService } from "@modules/domain/module-setup-messages"
 import { VideoBrandKitsService } from "@modules/domain/video-brand-kits"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectDocuments } from "@modules/integrations/documents"
-import type { DocumentsPort } from "@modules/integrations/documents"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectDocuments, type DocumentsPort } from "@modules/integrations/documents"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { brandKitMessages, brandVoiceOf, cleanBrandKit, readBrandKit } from "./brand-kit.policy"
 import { ContentAiError, ContentAiErrorCode } from "./errors/content-ai.error"
 import type {
@@ -132,7 +126,7 @@ export class BrandKitService {
         installationId: string,
     ): Promise<ReadonlyArray<BrandProposal>> {
         await this.members.require(principalId, workspaceId, GOVERNORS)
-        return (await this.proposalsStore.list(workspaceId, installationId)).map(proposalOf)
+        return (await this.proposalsStore.list(workspaceId, installationId)).map((record) => proposalOf(record))
     }
 
     /** Confirms (with the card's edits) or rejects a waiting proposal; a confirmation writes the kit where content and video read it. */
