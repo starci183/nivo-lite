@@ -14,7 +14,7 @@ const AUDIENCES: ReadonlySet<unknown> = new Set(["owner", "customer"])
 const isText = (value: unknown): boolean => typeof value === "string" && value.length > 0
 const isLocalized = (value: unknown): boolean => isRecord(value) && isText(value.vi) && isText(value.en)
 const isCount = (value: unknown): boolean => typeof value === "number" && Number.isInteger(value) && value >= 0
-const isTextList = (value: unknown): boolean => Array.isArray(value) && value.every(isText)
+const isTextList = (value: unknown): boolean => Array.isArray(value) && value.every((item) => isText(item))
 const everyItem = (value: unknown, check: Check): boolean =>
     Array.isArray(value) && value.every((item: unknown) => check(item, {}))
 const isScalar = (value: unknown): boolean =>
@@ -52,7 +52,7 @@ const FIELDS: ReadonlyArray<readonly [name: string, check: Check]> = [
     ["variables", isTextList],
     ["defaultBody", (value) => value === null || isLocalized(value)],
     ["authority", (value) => isRecord(value) && (value.action === null || isText(value.action))],
-    ["defaults", (value) => isRecord(value) && Object.values(value).every(isScalar)],
+    ["defaults", (value) => isRecord(value) && Object.values(value).every((item) => isScalar(item))],
     [
         "n8n",
         (value, whole) =>

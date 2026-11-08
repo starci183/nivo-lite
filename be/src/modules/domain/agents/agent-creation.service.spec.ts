@@ -76,7 +76,7 @@ describe("AgentCreationService", () => {
 
     it("draws another id when the one drawn is taken in the workspace", async () => {
         const em = mockEntityManager()
-        const first = fakeQueryBuilder({ execute: () => Promise.reject(SERIAL_TAKEN) })
+        const first = fakeQueryBuilder({ execute: jest.fn().mockRejectedValue(SERIAL_TAKEN) })
         const second = fakeQueryBuilder({ execute: { raw: [AGENT] } })
         em.createQueryBuilder.mockReturnValueOnce(first.builder).mockReturnValueOnce(second.builder)
         const { service } = await build(em)
@@ -92,7 +92,7 @@ describe("AgentCreationService failures", () => {
     it("gives up when every id it draws is taken", async () => {
         const em = mockEntityManager()
         em.createQueryBuilder.mockImplementation(
-            () => fakeQueryBuilder({ execute: () => Promise.reject(SERIAL_TAKEN) }).builder,
+            () => fakeQueryBuilder({ execute: jest.fn().mockRejectedValue(SERIAL_TAKEN) }).builder,
         )
         const { service } = await build(em)
 
@@ -103,7 +103,9 @@ describe("AgentCreationService failures", () => {
     it("refuses a handle another agent uses", async () => {
         const em = mockEntityManager()
         const duplicate = Object.assign(new Error("duplicate"), { code: "23505" })
-        em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: () => Promise.reject(duplicate) }).builder)
+        em.createQueryBuilder.mockReturnValue(
+            fakeQueryBuilder({ execute: jest.fn().mockRejectedValue(duplicate) }).builder,
+        )
         const { service } = await build(em)
 
         await expect(service.create("u1", agent)).rejects.toMatchObject({
@@ -116,7 +118,9 @@ describe("AgentCreationService failures", () => {
         "rethrows any other database failure as it came: %p",
         async (failure) => {
             const em = mockEntityManager()
-            em.createQueryBuilder.mockReturnValue(fakeQueryBuilder({ execute: () => Promise.reject(failure) }).builder)
+            em.createQueryBuilder.mockReturnValue(
+                fakeQueryBuilder({ execute: jest.fn().mockRejectedValue(failure) }).builder,
+            )
             const { service } = await build(em)
 
             await expect(service.create("u1", agent)).rejects.toBe(failure)

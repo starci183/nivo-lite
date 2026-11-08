@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
+import { AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import type { GenerateParams, GenerationInput } from "./ai-generations.contracts"
 import {
     DEFAULT_TIMEOUT_MS,
@@ -131,7 +132,7 @@ describe("generation policy untilAborted", () => {
         const controller = new AbortController()
         const addListener = jest.spyOn(controller.signal, "addEventListener")
         const removeListener = jest.spyOn(controller.signal, "removeEventListener")
-        const failure = new Error("work failed")
+        const failure = new AiGenerationsError({ code: AiGenerationsErrorCode.GenerationFailed })
 
         await expect(subject.untilAborted(Promise.reject(failure), controller.signal)).rejects.toBe(failure)
 
@@ -147,7 +148,10 @@ describe("generation policy untilAborted", () => {
         const reason = new Error("deadline already passed")
         controller.abort(reason)
 
-        await expect(subject.untilAborted(Promise.resolve("too late"), controller.signal)).rejects.toBe(reason)
+        await expect(subject.untilAborted(Promise.resolve("too late"), controller.signal)).rejects.toMatchObject({
+            code: AiGenerationsErrorCode.DeadlinePassed,
+            cause: reason,
+        })
 
         expect(addListener).not.toHaveBeenCalled()
         expect(removeListener).not.toHaveBeenCalled()
@@ -162,7 +166,7 @@ describe("generation policy untilAborted", () => {
 
         controller.abort(reason)
 
-        await expect(pending).rejects.toBe(reason)
+        await expect(pending).rejects.toMatchObject({ code: AiGenerationsErrorCode.DeadlinePassed, cause: reason })
     })
 })
 

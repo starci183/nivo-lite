@@ -28,6 +28,7 @@ import { AgentGraphChecksService } from "./agent-graph-checks.service"
 import { AGENT_GRAPH_APPROVALS } from "./agent-graphs.decorators"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
 import { AgentGraphDeciderService } from "./agent-graph-decider.service"
+import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
 import { AgentGraphsService } from "./agent-graphs.service"
 import type { GraphState } from "./agent-graphs.service"
@@ -52,7 +53,7 @@ interface BuildOptions {
     readonly facts?: Record<string, number | undefined>
     /** A walk the checks double answers instead of walking the graph. */
     readonly walk?: GraphWalk
-    readonly walkError?: Error
+    readonly walkError?: AgentGraphsError
 }
 
 const build = async (state: GraphState | null, options: BuildOptions = {}) => {
@@ -169,7 +170,9 @@ describe("AgentGraphDeciderService.decide when the graph cannot judge", () => {
     })
 
     it("asks, and says so in the log, when reading or walking the graph fails", async () => {
-        const built = await build(stateOf({ mode: "enforced" }), { walkError: new Error("db down") })
+        const built = await build(stateOf({ mode: "enforced" }), {
+            walkError: new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound }),
+        })
 
         const judgement = await built.service.decide(deciderRequestOf(gateOf(AUTO)))
 

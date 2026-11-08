@@ -16,6 +16,8 @@ export enum AiGenerationsErrorCode {
     KindNotAllowed = "AI_GENERATIONS_KIND_NOT_ALLOWED",
     /** The member asked the NIVO guide more often than the window allows. */
     GuideRateLimited = "AI_GENERATIONS_GUIDE_RATE_LIMITED",
+    /** The deadline of a generation call passed (its signal aborted) before the awaited step finished; the abort reason rides as the cause. */
+    DeadlinePassed = "AI_GENERATIONS_DEADLINE_PASSED",
 }
 
 /** How each ai-generations code travels. */
@@ -27,6 +29,7 @@ export const AI_GENERATIONS_ERROR_KINDS: Record<AiGenerationsErrorCode, ErrorKin
     [AiGenerationsErrorCode.GenerationNotFound]: "not-found",
     [AiGenerationsErrorCode.KindNotAllowed]: "forbidden",
     [AiGenerationsErrorCode.GuideRateLimited]: "rate-limited",
+    [AiGenerationsErrorCode.DeadlinePassed]: "unavailable",
 }
 
 /** The one error class of the ai-generations capability. */

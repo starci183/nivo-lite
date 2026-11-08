@@ -55,7 +55,7 @@ const splitByIds = (value: unknown): SplitActions => {
     if (!Array.isArray(value)) return { kept: value, refused: [] }
     const listed: ReadonlyArray<unknown> = value.slice(0, ACTIONS_MAX)
     return {
-        kept: listed.filter(hasRecordIds),
+        kept: listed.filter((entry) => hasRecordIds(entry)),
         refused: listed.flatMap((entry) =>
             hasRecordIds(entry) ? [] : [{ action: actionNameOf(entry), reason: INVALID_RECORD_ID }],
         ),

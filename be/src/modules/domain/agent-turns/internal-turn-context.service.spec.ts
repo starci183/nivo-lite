@@ -142,7 +142,7 @@ describe("InternalTurnContextService.messageOf", () => {
     })
 
     it("leaves out a part that cannot be read and logs it, never the turn", async () => {
-        const failing = (): Promise<never> => Promise.reject(new Error("read failed"))
+        const failing = jest.fn<Promise<never>, []>().mockRejectedValue(new Error("read failed"))
         const { service, logger } = await build({
             authority: failing,
             goals: failing,
@@ -195,7 +195,7 @@ describe("InternalTurnContextService.partsOf", () => {
     })
 
     it("leaves out a part that cannot be read and logs it, never the turn", async () => {
-        const failing = (): Promise<never> => Promise.reject(new Error("read failed"))
+        const failing = jest.fn<Promise<never>, []>().mockRejectedValue(new Error("read failed"))
         const { service, logger } = await build({ authority: failing, goals: failing, tasks: failing })
 
         const parts = await service.partsOf(input)

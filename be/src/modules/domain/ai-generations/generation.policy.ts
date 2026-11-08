@@ -1,4 +1,5 @@
 import type { RunUsage } from "@modules/integrations/openclaw"
+import { AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import type {
     GenMessage,
     GenerateParams,
@@ -157,7 +158,8 @@ export const isTimeoutCause = (cause: unknown): boolean =>
 /** Waits for the work, or fails the moment the signal aborts, so one deadline covers every step of a call. */
 export const untilAborted = <T>(work: Promise<T>, signal: AbortSignal): Promise<T> =>
     new Promise<T>((resolve, reject) => {
-        const onAbort = (): void => reject(signal.reason)
+        const onAbort = (): void =>
+            reject(new AiGenerationsError({ code: AiGenerationsErrorCode.DeadlinePassed, cause: signal.reason }))
         if (signal.aborted) {
             onAbort()
             return

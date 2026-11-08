@@ -6,6 +6,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
 import { AgentRunAlertsService } from "./agent-run-alerts.service"
+import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AGENT_RUNS_OPTIONS } from "./agent-runs.decorators"
@@ -141,7 +142,7 @@ describe("AgentRunDeadLetterService.tell the cause of the failure", () => {
         const record = tally()
         const failing: AgentStepHandler = {
             ...speaking("door", record),
-            deadLetter: () => Promise.reject(new Error("x")),
+            deadLetter: () => Promise.reject(new AgentRunsError({ code: AgentRunsErrorCode.ResultRejected })),
         }
         const { service, logger } = await build([failing], record)
 
@@ -181,7 +182,7 @@ describe("AgentRunDeadLetterService.tell when there is nothing to do or nothing 
         const failing: AgentStepHandler = {
             kind: "door",
             run: () => Promise.resolve({ kind: "failed", code: "x" }),
-            deadLetter: () => Promise.reject(new Error("down")),
+            deadLetter: () => Promise.reject(new AgentRunsError({ code: AgentRunsErrorCode.ResultRejected })),
         }
         const { service, logger } = await build([failing], record)
 
@@ -242,7 +243,8 @@ const buildAlerting = async (over: AlertScene) => {
     const registry = mock<AgentRunHandlersService>({ of: jest.fn() })
     const alerts = mock<AgentRunAlertsService>({
         raise: jest.fn((alert: ParkedFlowAlert) => {
-            if (over.fails === true) return Promise.reject(new Error("down"))
+            if (over.fails === true)
+                return Promise.reject(new AgentRunsError({ code: AgentRunsErrorCode.ResultRejected }))
             raised.alerts.push(alert)
             return Promise.resolve()
         }),
@@ -272,7 +274,7 @@ const buildUnnamed = async () => {
     const registry = mock<AgentRunHandlersService>({ of: jest.fn() })
     const alerts = mock<AgentRunAlertsService>({
         raise: jest.fn((alert: ParkedFlowAlert) => {
-            if (false) return Promise.reject(new Error("down"))
+            if (false) return Promise.reject(new AgentRunsError({ code: AgentRunsErrorCode.ResultRejected }))
             raised.alerts.push(alert)
             return Promise.resolve()
         }),

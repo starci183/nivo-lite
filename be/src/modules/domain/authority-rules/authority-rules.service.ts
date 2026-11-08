@@ -159,7 +159,7 @@ export class AuthorityRulesService {
                 order: { department: "ASC", action: "ASC" },
                 take: 500,
             })
-            .then((rows) => rows.map(toRuleRecord))
+            .then((rows) => rows.map((row) => toRuleRecord(row)))
     }
 
     /**

@@ -5,6 +5,7 @@ import type { Logger } from "@modules/platform/logging"
 import { QUEUE_TIMEOUT } from "@modules/platform/queue"
 import type { QueueTimeout } from "@modules/platform/queue"
 import { AgentProbesService } from "./agent-probes.service"
+import { AgentSchedulesError, AgentSchedulesErrorCode } from "./errors/agent-schedules.error"
 import { AgentSchedulesLogEvent } from "./agent-schedules.log-events"
 import { InvoicesDueProbeService } from "./probes/invoices-due-probe.service"
 import { MoneyInProbeService } from "./probes/money-in-probe.service"
@@ -104,7 +105,9 @@ describe("AgentProbesService.decide, what the probe found", () => {
 
 describe("AgentProbesService.decide, a probe that fails", () => {
     it("skips the wake as a failed probe when the probe throws, and says so", async () => {
-        const { service, logger } = await build(Promise.reject(new Error("db down")))
+        const { service, logger } = await build(
+            Promise.reject(new AgentSchedulesError({ code: AgentSchedulesErrorCode.DrainPayloadInvalid })),
+        )
 
         await expect(service.decide(AGENT, { probeKey: "invoices_due" })).resolves.toEqual({
             kind: "skip",

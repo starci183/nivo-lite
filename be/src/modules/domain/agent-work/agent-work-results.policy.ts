@@ -189,6 +189,6 @@ const dueOf = (row: unknown): AgentWorkDue | null => {
 
 /** Reads the rows of `agent_work_due`; null when any row is of the wrong shape, so a half-read sweep never drives half of the work. */
 export const parseDue = (rows: ReadonlyArray<unknown>): ReadonlyArray<AgentWorkDue> | null => {
-    const due = rows.map(dueOf)
+    const due = rows.map((row) => dueOf(row))
     return due.every((entry) => entry !== null) ? due : null
 }

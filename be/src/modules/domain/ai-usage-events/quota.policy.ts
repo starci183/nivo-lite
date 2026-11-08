@@ -23,6 +23,12 @@ const ratioOf = (used: number, limit: number | null): number => {
     return limit <= 0 ? 1 : used / limit
 }
 
+/** The sentence to show when the allowance is spent: trimmed, and none when blank. */
+const fallbackReplyOf = (raw: string | null): string | null => {
+    const reply = raw?.trim()
+    return reply === undefined || reply === "" ? null : reply
+}
+
 /**
  * Credits are one pool: the allowance first, then the top-ups. The pool is the allowance (or the use, once past it) plus the top-up
  * credits still left, so the ratio reaches 1 only when the allowance is used up AND no top-up credit is left.
@@ -81,7 +87,7 @@ export const quotaOf = (row: QuotaFigures): QuotaStatus => {
         costUsd: row.cost_usd,
         messagesLimit: row.messages_limit,
         tokensLimit: row.tokens_limit,
-        fallbackReply: row.fallback_reply?.trim() || null,
+        fallbackReply: fallbackReplyOf(row.fallback_reply),
         creditsUsed,
         creditsLimit,
         creditsCarried: row.credits_carried ?? 0,
