@@ -16,8 +16,7 @@ import type {
     RunActionConfig,
     RunReadConfig,
 } from "./block.types"
-import type { DefinitionErrorCode } from "./definition-error"
-import { SdkDefinitionError } from "./definition-error"
+import { type DefinitionErrorCode, SdkDefinitionError } from "./definition-error"
 import { parseStrict } from "./input"
 
 /** The words of a form field, or of an action, whose value the schema refused: a key of the SDK message catalogue. */

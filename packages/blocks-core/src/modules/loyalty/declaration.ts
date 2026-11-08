@@ -1,5 +1,4 @@
-import { defineModule } from "@nivo-lite/agent-sdk/module"
-import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
+import { defineModule, type ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
 import {
     adjustPointsAction,
     recordPurchaseAction,

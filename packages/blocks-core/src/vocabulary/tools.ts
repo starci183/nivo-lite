@@ -1,5 +1,4 @@
-import { defineTool } from "@nivo-lite/agent-sdk/node"
-import type { ToolDefinition } from "@nivo-lite/agent-sdk/node"
+import { defineTool, type ToolDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { MAX_BODY, MAX_ID, MAX_LINE } from "../bounds"
 

@@ -6,8 +6,16 @@ import type { ExpiryEntry, LedgerKind, LedgerTotal } from "../../rules/loyalty/l
 import { activityOf } from "../../rules/loyalty/stats"
 import type { LedgerPost, LedgerRow, MemberPatch, MemberRow, StoreResult, Synced } from "./loyalty.types"
 import { LEDGER_FIELDS, MEMBER_FIELDS, expiryEntryOf, ledgerRowOf, memberOf } from "./loyalty-records"
-import { PAGE_SIZE, REWARDS_MAX, RETRIES, firstOf, numberOf, resultOf, rowsOf } from "./loyalty-paging"
-import type { PagelessQuery } from "./loyalty-paging"
+import {
+    PAGE_SIZE,
+    REWARDS_MAX,
+    RETRIES,
+    firstOf,
+    numberOf,
+    resultOf,
+    rowsOf,
+    type PagelessQuery,
+} from "./loyalty-paging"
 
 /** The most customers a read that looks through all of them reads. */
 export const MEMBERS_MAX = 5_000

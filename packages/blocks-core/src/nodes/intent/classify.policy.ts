@@ -1,5 +1,4 @@
-import { wordListOf } from "../../messages/catalog"
-import type { WordKey } from "../../messages/catalog"
+import { wordListOf, type WordKey } from "../../messages/catalog"
 import type {
     AttachmentSlot,
     ClassifyInput,
@@ -147,7 +146,7 @@ export const addressInWords = (text: string): string | null => {
 }
 
 const orderOf = (order: ModelOrder): OrderSlot => ({
-    items: order.items.flatMap(lineOf),
+    items: order.items.flatMap((item) => lineOf(item)),
     address: addressOf(order),
     customer: textOrNull(order.customer, NAME_MAX),
 })

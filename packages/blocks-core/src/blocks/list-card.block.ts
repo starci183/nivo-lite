@@ -1,14 +1,11 @@
-import { defineBlock } from "@nivo-lite/agent-sdk/block"
-import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineBlock, type BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
 import { ALL_TAB } from "../rows/filter-tabs"
 import { CELL_TONES } from "../rows/table-rows"
 import { CHIPS_MAX, ITEMS_MAX, PATH_MAX } from "./bounds"
-import { labelsProp } from "./labels-prop"
-import type { LabelsSchema } from "./labels-prop"
-import { paramName } from "./param-name"
-import type { ParamNameSchema } from "./param-name"
+import { labelsProp, type LabelsSchema } from "./labels-prop"
+import { paramName, type ParamNameSchema } from "./param-name"
 import type { EnumSchema, OptionalRead, RequiredRead, TextSchema } from "./schema-types"
 
 /** The longest raw value a badge is given a tone for, and the most values one badge gives a tone. */

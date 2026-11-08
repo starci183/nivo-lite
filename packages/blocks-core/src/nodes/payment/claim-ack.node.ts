@@ -1,5 +1,4 @@
-import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { defineNode, type NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import type { NodeSchema } from "../node-schema.types"
 import { claimAckOf } from "./claim-ack.policy"

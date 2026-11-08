@@ -1,7 +1,11 @@
-import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeContext, NodeDefinition } from "@nivo-lite/agent-sdk/node"
-import { scoreCandidates } from "@nivo-lite/agent-sdk/reconcile"
-import type { Arrival, Candidate, Claim, Evidenced } from "@nivo-lite/agent-sdk/reconcile"
+import { defineNode, type NodeContext, type NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import {
+    scoreCandidates,
+    type Arrival,
+    type Candidate,
+    type Claim,
+    type Evidenced,
+} from "@nivo-lite/agent-sdk/reconcile"
 import { z } from "zod"
 import { bestTransaction } from "./evidence.policy"
 import {
@@ -25,8 +29,19 @@ import {
     WINDOW_HOURS,
 } from "./payment.fixtures"
 import { READ_CLAIMS, READ_CONVERSATIONS, READ_LEADS, READ_ORDERS, READ_TRANSACTIONS } from "./payment.rights"
-import { AWAITING_PAYMENT, arrivalSchema, atOf, claimSchema, evidencedSchema } from "./payment.schemas"
-import type { ClaimRow, ConversationRow, LeadRow, OrderRow, PricedOrder, TransactionRow } from "./payment.schemas"
+import {
+    AWAITING_PAYMENT,
+    arrivalSchema,
+    atOf,
+    claimSchema,
+    evidencedSchema,
+    type ClaimRow,
+    type ConversationRow,
+    type LeadRow,
+    type OrderRow,
+    type PricedOrder,
+    type TransactionRow,
+} from "./payment.schemas"
 import { MAX_ENTRIES, MAX_ID } from "../../bounds"
 
 const HOUR_MS = 3_600_000
@@ -148,7 +163,9 @@ const evidenceOf = (
     asked: string | null,
     windowMs: number,
 ): EvidenceOutput => {
-    const claims = rows.map(claimOf).toSorted((left, right) => Number(right.id === asked) - Number(left.id === asked))
+    const claims = rows
+        .map((row) => claimOf(row))
+        .toSorted((left, right) => Number(right.id === asked) - Number(left.id === asked))
     return {
         arrival,
         evidenced: scoreCandidates(arrival, candidates, claims, { windowMs }),
@@ -215,7 +232,7 @@ const fromClaim = async (context: NodeContext, claimId: string, windowMs: number
     const leadName = leadId === null ? null : await nameOf(context, leadId)
     const transaction = bestTransaction(claim, leadName, await feedFor(context, claim), windowMs)
     const rows = (await openClaims(context)).map((row) => (row.id === claim.id ? { ...row, leadId } : row))
-    if (transaction === undefined) return { ...NONE, claims: rows.map(claimOf), claimId: claim.id }
+    if (transaction === undefined) return { ...NONE, claims: rows.map((row) => claimOf(row)), claimId: claim.id }
     const arrival = arrivalOf(transaction)
     const candidates = leadId === null ? [] : await candidatesOf(context, arrival, windowMs, leadId)
     return evidenceOf(arrival, candidates, rows, claim.id, windowMs)

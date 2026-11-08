@@ -1,6 +1,5 @@
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
-import { q } from "@nivo-lite/agent-sdk/query"
-import type { FilterExpr } from "@nivo-lite/agent-sdk/query"
+import { q, type FilterExpr } from "@nivo-lite/agent-sdk/query"
 import type { SalesSettings } from "../../../rules/sales/settings"
 import type { WaitingOrder } from "../../../rules/sales/waiting"
 import { WAITING_SHOWN } from "../constants"

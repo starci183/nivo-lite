@@ -1,11 +1,16 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ListShape, ReadDefinition } from "@nivo-lite/agent-sdk/block"
-import { q } from "@nivo-lite/agent-sdk/query"
-import type { FilterExpr } from "@nivo-lite/agent-sdk/query"
+import { defineRead, type ListShape, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { q, type FilterExpr } from "@nivo-lite/agent-sdk/query"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
-import { ALL_RUNS, RUN_FIELDS, RUN_FILTERS, runRowOf, statusesOf } from "../agent-runs"
-import type { AgentRunsPage, RunFilter } from "../agent-runs"
+import {
+    ALL_RUNS,
+    RUN_FIELDS,
+    RUN_FILTERS,
+    runRowOf,
+    statusesOf,
+    type AgentRunsPage,
+    type RunFilter,
+} from "../agent-runs"
 import { PLATFORM_VIEW } from "../constants"
 import { agentGraphs, agentRuns, agentRunsList } from "../ports"
 import { agentOfInstallation } from "./agent-run-scope"

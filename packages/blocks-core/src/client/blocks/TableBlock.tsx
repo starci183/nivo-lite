@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
-import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
+import { SlotView, useBlockHost, type SlotLabels } from "@nivo-lite/agent-sdk/client"
 import type { ReadPage } from "@nivo-lite/agent-sdk/block"
-import type { SlotLabels } from "@nivo-lite/agent-sdk/client"
 import { Alert, Badge, Button, DataTable, EmptyNotice, Stack, Text } from "@starci/grammar/common"
 import type { tableBlock } from "../../blocks/table.block"
 import { cellContextOf } from "../../rows/cell-format"
@@ -14,8 +13,9 @@ import {
     selectedIdsOf,
     tablePlaceholder,
     tableRowsOf,
+    type CellView,
+    type TableRow,
 } from "../../rows/table-rows"
-import type { CellView, TableRow } from "../../rows/table-rows"
 import { queryOf } from "../../rows/search"
 import { relabeller } from "../../rows/value-labels"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
@@ -54,18 +54,12 @@ interface TableCellProps {
     readonly cell: CellView
 }
 
-/** One cell: its text, in a badge of its tone for a badge column, over its note when it has one. */
-const TableCell = (props: TableCellProps): ReactNode => {
+/** The text of a plain cell, over its note when it has one. */
+const TableCellText = (props: TableCellProps): ReactNode => {
     const { cell } = props
-    if (cell.isBadge) {
-        return (
-            <Badge tone={cell.tone} isDot>
-                {cell.text}
-            </Badge>
-        )
-    }
-    if (cell.note === "") return <>{cell.text}</>
-    return (
+    return cell.note === "" ? (
+        cell.text
+    ) : (
         <Stack gap="inline">
             <Text size="sm" isStrong>
                 {cell.text}
@@ -74,6 +68,18 @@ const TableCell = (props: TableCellProps): ReactNode => {
                 {cell.note}
             </Text>
         </Stack>
+    )
+}
+
+/** One cell: its text, in a badge of its tone for a badge column, over its note when it has one. */
+const TableCell = (props: TableCellProps): ReactNode => {
+    const { cell } = props
+    return cell.isBadge ? (
+        <Badge tone={cell.tone} isDot>
+            {cell.text}
+        </Badge>
+    ) : (
+        <TableCellText cell={cell} />
     )
 }
 

@@ -1,5 +1,4 @@
-import { countsRead, listRead } from "@nivo-lite/agent-sdk/module"
-import type { ListReadDefinition } from "@nivo-lite/agent-sdk/module"
+import { countsRead, listRead, type ListReadDefinition } from "@nivo-lite/agent-sdk/module"
 import type { ListShape, ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { ORDER_STATUSES } from "../../../rules/sales/order-status"
 import { SALES_VIEW } from "../constants"

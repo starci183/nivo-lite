@@ -1,5 +1,4 @@
-import { specDocumentSchema } from "@nivo-lite/agent-sdk/spec"
-import type { SpecDocument } from "@nivo-lite/agent-sdk/spec"
+import { specDocumentSchema, type SpecDocument } from "@nivo-lite/agent-sdk/spec"
 import data from "./sales.workbench.json"
 
 /** The seed spec of the Sales workbench: the customers by stage and the orders with the owner's wait, parsed once. */

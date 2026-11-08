@@ -1,6 +1,5 @@
 import { z } from "zod"
-import { RUN_STATES } from "./run-state"
-import type { RunState } from "./run-state"
+import { RUN_STATES, type RunState } from "./run-state"
 
 /** What a node of a graph is. */
 export const GRAPH_NODE_KINDS = ["trigger", "step", "condition", "wait", "output"] as const

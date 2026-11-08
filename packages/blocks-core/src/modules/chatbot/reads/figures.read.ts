@@ -1,8 +1,6 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ListQuery, ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ListQuery, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
-import { chatFiguresOf } from "../../../rules/chatbot/figures"
-import type { ChatFigures } from "../../../rules/chatbot/figures"
+import { chatFiguresOf, type ChatFigures } from "../../../rules/chatbot/figures"
 import { THREADS_LIST } from "../ports"
 import { THREADS_SHAPE } from "./threads.read"
 

@@ -1,5 +1,4 @@
-import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { defineNode, type NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { channelSendEffect } from "../../vocabulary"
 import { CLAIM_DINH, STORE_REAL_CASE } from "./payment.fixtures"

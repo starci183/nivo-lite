@@ -1,12 +1,10 @@
-import { useState } from "react"
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { Badge, Button, Cluster, DropdownMenu, Link, Quote, Stack, Text } from "@starci/grammar/common"
 import type { EditAnswer } from "../../rows/decision-commands"
 import type { FormValues } from "../../rows/form-values"
 import type { CommandView, DecisionRowView } from "../../views/views.types"
 import { decisionLinesOf } from "../../rows/decision-lines"
-import { DecisionEditForm } from "./DecisionEditForm"
-import type { DecisionEditFormProps } from "./DecisionEditForm"
+import { DecisionEditForm, type DecisionEditFormProps } from "./DecisionEditForm"
 
 /** What a row needs to edit a decision in place: the form the spec declares, and how its values are sent for this row. */
 export interface DecisionEdit extends Pick<DecisionEditFormProps, "fields" | "currency" | "words"> {

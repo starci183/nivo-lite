@@ -1,5 +1,4 @@
-import { defineJob, doorPort, retryJob } from "@nivo-lite/agent-sdk/mutation"
-import type { DoorApi, JobDefinition } from "@nivo-lite/agent-sdk/mutation"
+import { defineJob, doorPort, retryJob, type DoorApi, type JobDefinition } from "@nivo-lite/agent-sdk/mutation"
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
 import { z } from "zod"

@@ -1,8 +1,7 @@
 import type { EngineResult, RecordRow, WriteLinks, WriteValues } from "@nivo-lite/agent-sdk/entity/port"
 import type { FieldDef, UniqueConstraint } from "@nivo-lite/agent-sdk/entity"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
-import { ACCOUNTANT_CONTEXT, CATALOG, rowsOf } from "./accounting.memory-world"
-import type { MemoryWorld } from "./accounting.memory-world"
+import { ACCOUNTANT_CONTEXT, CATALOG, rowsOf, type MemoryWorld } from "./accounting.memory-world"
 import { isNil, valueOf } from "./accounting.memory-rows"
 
 /** The uuid-shaped id the fake mints for the n-th record of an entity. */

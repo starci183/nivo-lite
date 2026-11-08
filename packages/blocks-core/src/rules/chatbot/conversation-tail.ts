@@ -1,5 +1,4 @@
-import { PREVIEW_MAX, previewOf } from "./message"
-import type { MessageRole } from "./message"
+import { PREVIEW_MAX, previewOf, type MessageRole } from "./message"
 
 /** What a conversation keeps of its lines so the inbox lists it without reading them: written with every line. */
 export interface ConversationTail {

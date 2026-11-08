@@ -1,6 +1,5 @@
 import { z } from "zod"
-import { ALL_TAB } from "../../rows/filter-tabs"
-import type { TabCounts, TabEntry } from "../../rows/filter-tabs"
+import { ALL_TAB, type TabCounts, type TabEntry } from "../../rows/filter-tabs"
 import { textOf, valueAt } from "../../slots/paths"
 
 /** The activity value of a customer who has gone quiet; its tab sits after the tiers. */
@@ -107,7 +106,7 @@ export const paramsOfTab = (tab: string): TabParams => {
 export const maskedContact = (contact: string): string => {
     const at = contact.indexOf("@")
     if (at > 0) return `${contact.slice(0, 1)}***${contact.slice(at)}`
-    const compact = contact.replace(/\s/g, "")
+    const compact = contact.replaceAll(/\s/g, "")
     const digits = compact.startsWith("84") && compact.length > 10 ? `0${compact.slice(2)}` : compact
     return digits.length < 8 ? contact : `${digits.slice(0, 4)} *** ${digits.slice(-3)}`
 }

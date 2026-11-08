@@ -1,7 +1,7 @@
 import { QUERY_BOUNDS } from "./query-bounds"
 
 /** Escapes `\`, `%` and `_`, so user text matches itself inside a LIKE operand (the default LIKE escape is the backslash). */
-export const escapeLike = (text: string): string => text.replace(/[\\%_]/g, (char) => `\\${char}`)
+export const escapeLike = (text: string): string => text.replaceAll(/[\\%_]/g, (char) => `\\${char}`)
 
 /**
  * The LIKE operand of a `search` filter: the text trimmed, cut to the search bound, escaped and wrapped in `%`. Null when nothing is

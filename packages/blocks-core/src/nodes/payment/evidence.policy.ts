@@ -1,6 +1,5 @@
 import { mentionsName } from "@nivo-lite/agent-sdk/reconcile"
-import { atOf } from "./payment.schemas"
-import type { ClaimRow, TransactionRow } from "./payment.schemas"
+import { atOf, type ClaimRow, type TransactionRow } from "./payment.schemas"
 
 /** What a transaction of the feed is worth as the money of a claim: the amount it names, the name on the transfer, and how near in time. */
 const AMOUNT_POINTS = 40

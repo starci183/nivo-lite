@@ -1,5 +1,4 @@
-import { defineModule } from "@nivo-lite/agent-sdk/module"
-import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
+import { defineModule, type ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
 import { APPROVE_AND_SEND } from "./actions/approve-and-send.action"
 import { DECIDE } from "./actions/decide.action"
 import { HANDOFF } from "./actions/handoff.action"

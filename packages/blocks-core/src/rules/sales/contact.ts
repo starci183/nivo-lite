@@ -14,7 +14,7 @@ export const normaliseContact = (raw: RawContact): string | null => {
     const value = (raw ?? "").trim()
     if (value === "") return null
     if (value.includes("@")) return value.toLowerCase()
-    const digits = value.replace(/\D/g, "")
+    const digits = value.replaceAll(/\D/g, "")
     if (digits === "") return null
     if (digits.startsWith("0")) return `84${digits.slice(1)}`
     return !digits.startsWith("84") && digits.length === 9 ? `84${digits}` : digits
@@ -33,5 +33,5 @@ const PHONE_IN_TEXT = /(?:\+?84|0)(?:[\s.-]?\d){9,10}/u
 /** The first phone number a customer wrote in a message, with its separators removed; null when the message holds none. */
 export const phoneInText = (text: string): string | null => {
     const found = PHONE_IN_TEXT.exec(text)?.[0]
-    return found === undefined ? null : found.replace(/[\s.-]/gu, "")
+    return found === undefined ? null : found.replaceAll(/[\s.-]/gu, "")
 }

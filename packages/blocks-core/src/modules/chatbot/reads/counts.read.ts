@@ -1,6 +1,11 @@
 import { countsRead } from "@nivo-lite/agent-sdk/module"
-import { defineRead, timeWindowOf } from "@nivo-lite/agent-sdk/block"
-import type { CountsResult, ListQuery, ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import {
+    defineRead,
+    timeWindowOf,
+    type CountsResult,
+    type ListQuery,
+    type ReadDefinition,
+} from "@nivo-lite/agent-sdk/block"
 import { z } from "zod"
 import { CHATBOT_CHANNELS } from "../../../rules/chatbot"
 import { THREADS_LIST } from "../ports"

@@ -26,7 +26,7 @@ export const redeemBlock = (
 /** The code a customer shows to receive a reward, made from the end of the redemption key. */
 export const redeemCode = (ref: string): string =>
     `QT-${ref
-        .replace(/[^a-z0-9]/giu, "")
+        .replaceAll(/[^a-z0-9]/giu, "")
         .slice(-6)
         .toUpperCase()
         .padStart(6, "0")}`

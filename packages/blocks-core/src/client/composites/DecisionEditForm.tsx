@@ -1,12 +1,9 @@
-import { useState } from "react"
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import type { SpecText } from "@nivo-lite/agent-sdk/schema"
 import { Alert, Button, Cluster, Form, Grid } from "@starci/grammar/common"
-import { editFailure } from "../../rows/decision-commands"
-import type { EditAnswer } from "../../rows/decision-commands"
+import { editFailure, type EditAnswer } from "../../rows/decision-commands"
 import type { FormValues } from "../../rows/form-values"
-import { FormFieldView } from "./FormFieldView"
-import type { FormFieldData } from "./FormFieldView"
+import { FormFieldView, type FormFieldData } from "./FormFieldView"
 import { useFormValues } from "./useFormValues"
 
 /** The words of an edit form that are not its fields'. */

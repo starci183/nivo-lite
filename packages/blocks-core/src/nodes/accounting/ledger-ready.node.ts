@@ -1,11 +1,9 @@
-import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { defineNode, type NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import type { LedgerStatusResult } from "../../vocabulary"
 import type { NodeSchema } from "../node-schema.types"
 import { bilingualOf } from "../../messages/catalog"
-import { isRecordable } from "./ledger.policy"
-import type { LedgerResult } from "./ledger.policy"
+import { isRecordable, type LedgerResult } from "./ledger.policy"
 
 /** How the settlement came out. */
 interface LedgerReadyInput {

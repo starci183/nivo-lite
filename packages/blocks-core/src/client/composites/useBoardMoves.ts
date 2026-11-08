@@ -1,7 +1,6 @@
 import { useState } from "react"
 import type { ActionHandle } from "@nivo-lite/agent-sdk/block"
-import { unsettledMoves, withMove, withoutMove } from "../../rows/board-rows"
-import type { BoardMoves, Placed } from "../../rows/board-rows"
+import { unsettledMoves, withMove, withoutMove, type BoardMoves, type Placed } from "../../rows/board-rows"
 
 /** The pending moves of a board and the command that makes one. */
 export interface BoardMover {

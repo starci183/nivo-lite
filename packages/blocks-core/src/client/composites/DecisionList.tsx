@@ -1,9 +1,7 @@
 import type { ReactNode } from "react"
-import { EmptyNotice, Link, Section, SurfaceCard } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { EmptyNotice, Link, Section, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import type { DecisionQueueView, DecisionRowView } from "../../views/views.types"
-import { DecisionRow } from "./DecisionRow"
-import type { DecisionEdit } from "./DecisionRow"
+import { DecisionRow, type DecisionEdit } from "./DecisionRow"
 
 /** Where a list of waiting rows stands: a card on a card page, or a section in a pane. */
 type DecisionListSurface = "card" | "section"

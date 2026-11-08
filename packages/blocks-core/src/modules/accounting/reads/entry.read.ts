@@ -1,11 +1,9 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import { z } from "zod"
 import type { BookEntryKind, BookEntryRecord } from "../../../rules/accounting/accounting.types"
 import { canRepost } from "../../../rules/accounting/ledger-repost"
-import { lineageOf } from "../../../rules/accounting/lineage"
-import type { LineageSources, LineageStep } from "../../../rules/accounting/lineage"
+import { lineageOf, type LineageSources, type LineageStep } from "../../../rules/accounting/lineage"
 import { SOURCE_ADJUSTMENT, SOURCE_INVOICE, SOURCE_TRANSACTION } from "../../../rules/accounting/posting"
 import {
     adjustmentById,

@@ -1,12 +1,14 @@
-import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { defineNode, type NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import {
     hasSignal,
     outcomeOfJudgement,
     outcomeWithoutEvidence,
     outcomeWithoutJudge,
+    type Arrival,
+    type Claim,
+    type Evidenced,
+    type Outcome,
 } from "@nivo-lite/agent-sdk/reconcile"
-import type { Arrival, Claim, Evidenced, Outcome } from "@nivo-lite/agent-sdk/reconcile"
 import { z } from "zod"
 import { failureKindOf } from "../core/failure.policy"
 import {
@@ -18,8 +20,7 @@ import {
     EVIDENCED_FOR_MOMO,
     EVIDENCED_FOR_MOMO_CLAIM,
 } from "./payment.fixtures"
-import { arrivalSchema, claimSchema, evidencedSchema, judgementAnswerSchema } from "./payment.schemas"
-import type { Named } from "./payment.schemas"
+import { arrivalSchema, claimSchema, evidencedSchema, judgementAnswerSchema, type Named } from "./payment.schemas"
 import { MAX_BODY, MAX_ENTRIES, MAX_ID } from "../../bounds"
 import { sampleOf } from "../../messages/catalog"
 
@@ -117,7 +118,7 @@ export const paymentJudgeNode: NodeDefinition<
     effects: [],
     run: async (given, context) => {
         const { arrival } = given
-        if (arrival === null || !given.evidenced.some(hasSignal)) {
+        if (arrival === null || !given.evidenced.some((evidence) => hasSignal(evidence))) {
             return outputOf(outcomeWithoutEvidence(given.evidenced))
         }
         const signalled = given.evidenced.filter(hasSignal)

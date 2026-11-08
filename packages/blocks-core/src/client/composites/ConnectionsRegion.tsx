@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { EmptyNotice, Link, SurfaceCard } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { EmptyNotice, Link, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import type { ConnectionsRegionView } from "../../views/views.types"
 
 /** Copy and view of the connections region; first-load geometry is the same card as its settled view. */

@@ -1,6 +1,5 @@
 import { textOf } from "../slots/paths"
-import { formatValue, numberOf } from "./cell-format"
-import type { CellContext } from "./cell-format"
+import { formatValue, numberOf, type CellContext } from "./cell-format"
 
 /**
  * The formats a figure may draw its value in: a number with grouping, money in the block's currency, a percent (the value is a

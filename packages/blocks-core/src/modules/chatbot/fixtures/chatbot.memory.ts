@@ -10,20 +10,17 @@ import type {
     WriteLinks,
     WriteValues,
 } from "@nivo-lite/agent-sdk/entity/port"
-import { doorPort, outboxPort } from "@nivo-lite/agent-sdk/mutation"
-import type { DoorApi, DoorCallResult, OutboxApi } from "@nivo-lite/agent-sdk/mutation"
-import { unprovided } from "@nivo-lite/agent-sdk/port"
-import type { PortDefinition, PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
-import { queryProblems } from "@nivo-lite/agent-sdk/query"
-import type { EntityCatalog, FilterExpr, OrderBy } from "@nivo-lite/agent-sdk/query"
+import { doorPort, outboxPort, type DoorApi, type DoorCallResult, type OutboxApi } from "@nivo-lite/agent-sdk/mutation"
+import { unprovided, type PortDefinition, type PortProvider, type RunContext } from "@nivo-lite/agent-sdk/port"
+import { queryProblems, type EntityCatalog, type FilterExpr, type OrderBy } from "@nivo-lite/agent-sdk/query"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { FLOW_F_ENTITIES } from "../../../entities/flow-f.entities"
+import { BlocksError } from "../../../blocks-error"
 import type { MemberDirectory, MemberFacts } from "../../platform/platform.types"
 import { membersPort } from "../../platform/ports"
 import { threadRowOf } from "../chatbot-records"
 import type { ThreadRow } from "../chatbot.types"
-import { CONVERSATIONS, MESSAGES, SETTINGS, THREADS_LIST } from "../ports"
-import type { ThreadsList } from "../ports"
+import { CONVERSATIONS, MESSAGES, SETTINGS, THREADS_LIST, type ThreadsList } from "../ports"
 import { THREAD_ROWS } from "./chatbot.fixtures"
 
 /** The member of the fake workspace who is staff. */
@@ -119,7 +116,7 @@ export const putConversation = (world: MemoryWorld, row: ThreadRow): void => {
 
 /** A world holding the fixture conversations, a staff member and a manager, one customer linked to the first conversation and no lines. */
 export const memoryWorld = (): MemoryWorld => ({
-    conversations: THREAD_ROWS.map(recordOfThread),
+    conversations: THREAD_ROWS.map((row) => recordOfThread(row)),
     lines: [],
     settings: [],
     leads: new Map([
@@ -195,7 +192,8 @@ const matching = (table: Table, on: string, values: WriteValues): RecordRow | un
 }
 
 /** What the fake engine does not do. */
-const unsupported = (): Promise<never> => Promise.reject(new Error("The fake engine does not run this call."))
+const unsupported = (): Promise<never> =>
+    Promise.reject(new BlocksError("FAKE_ENGINE_UNSUPPORTED", "The fake engine does not run this call."))
 
 /** How a table of the fake engine reaches the rest of the world. */
 interface Table {
@@ -284,7 +282,9 @@ const entityApi = (table: Table): EntityApi => ({
     list: (query) => {
         const problems = problemsOf(table, query)
         return problems.length > 0
-            ? Promise.reject(new Error(`The planner refuses the query: ${problems.join(",")}`))
+            ? Promise.reject(
+                  new BlocksError("FAKE_ENGINE_QUERY_REFUSED", `The planner refuses the query: ${problems.join(",")}`),
+              )
             : Promise.resolve(listed(table, query))
     },
     insert: (values, links) => Promise.resolve(inserted(table, values, links)),

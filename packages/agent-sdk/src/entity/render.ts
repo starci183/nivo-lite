@@ -140,7 +140,7 @@ export const renderOp = (op: PlanOp, entities: ReadonlyArray<EntityDefinition>):
 
 const STAMP = /^\d{14}$/
 
-const oneLine = (text: string): string => text.replace(/\s+/g, " ").trim()
+const oneLine = (text: string): string => text.replaceAll(/\s+/g, " ").trim()
 
 /**
  * The migration file for a plan: header, then one commented block per step; no transaction control (BE-PERSISTENCE-1, R213).

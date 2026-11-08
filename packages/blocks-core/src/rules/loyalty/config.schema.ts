@@ -1,5 +1,4 @@
-import { z } from "zod"
-import type { ZodType } from "zod"
+import { z, type ZodType } from "zod"
 import type { LoyaltyConfig } from "./config.types"
 
 /** The most tiers a ladder holds. */

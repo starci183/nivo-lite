@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { EmptyNotice, Section, SurfaceCard } from "@starci/grammar/common"
-import type { BadgeData, ListRowData } from "@starci/grammar/common"
+import { EmptyNotice, Section, SurfaceCard, type BadgeData, type ListRowData } from "@starci/grammar/common"
 import type { RecordRow } from "../../rows/rows"
 
 /** What the card list takes. */

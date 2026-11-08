@@ -1,5 +1,4 @@
-import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeContext, NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { defineNode, type NodeContext, type NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { channelSendEffect, paymentMarkPaidEffect } from "../../vocabulary"
 import {
@@ -12,8 +11,14 @@ import {
     TRANSACTION_NAMED,
 } from "./payment.fixtures"
 import { READ_CONVERSATIONS, READ_ORDERS, READ_TRANSACTIONS } from "./payment.rights"
-import { AWAITING_PAYMENT, atOf } from "./payment.schemas"
-import type { ConversationRow, OrderRow, SettleMode, TransactionRow } from "./payment.schemas"
+import {
+    AWAITING_PAYMENT,
+    atOf,
+    type ConversationRow,
+    type OrderRow,
+    type SettleMode,
+    type TransactionRow,
+} from "./payment.schemas"
 import { MAX_BODY, MAX_ENTRIES, MAX_ID, MAX_LINE } from "../../bounds"
 import { sampleOf } from "../../messages/catalog"
 

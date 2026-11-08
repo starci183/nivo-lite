@@ -1,5 +1,4 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ReadDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ReadDefinition } from "@nivo-lite/agent-sdk/block"
 import type { PortsOf, RunContext } from "@nivo-lite/agent-sdk/port"
 import { z } from "zod"
 import { computeFigures, computeStats } from "../../../rules/loyalty/stats"

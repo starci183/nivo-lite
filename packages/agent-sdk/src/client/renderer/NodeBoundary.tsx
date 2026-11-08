@@ -1,5 +1,4 @@
-import { Component } from "react"
-import type { ReactNode } from "react"
+import { Component, type ReactNode } from "react"
 import { EmptyNotice } from "@starci/grammar/common"
 
 /** What the boundary of one node takes. */
@@ -29,13 +28,14 @@ export class NodeBoundary extends Component<NodeBoundaryProps, NodeBoundaryState
     }
 
     override render(): ReactNode {
-        if (!this.state.hasCrashed) return <>{this.props.children}</>
-        return (
+        return this.state.hasCrashed ? (
             <EmptyNotice
                 message={this.props.message}
                 actionLabel={this.props.retryLabel}
                 onAction={() => this.setState({ hasCrashed: false })}
             />
+        ) : (
+            this.props.children
         )
     }
 }

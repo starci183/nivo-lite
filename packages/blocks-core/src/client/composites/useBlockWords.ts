@@ -1,5 +1,4 @@
-import { useBlockHost, useModuleNamespace } from "@nivo-lite/agent-sdk/client"
-import type { SlotLabels } from "@nivo-lite/agent-sdk/client"
+import { useBlockHost, useModuleNamespace, type SlotLabels } from "@nivo-lite/agent-sdk/client"
 import type { SpecText } from "@nivo-lite/agent-sdk/schema"
 import libraryMessages from "../../messages/vi.json"
 

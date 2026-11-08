@@ -3,10 +3,8 @@ import { defineAction, defineRead } from "../block/block"
 import { definePort, unprovided } from "../port/port"
 import type { PortDefinition, PortProvider, RunContext } from "../port/port.types"
 import type { ActionDefinition, ActionResult, ReadDefinition } from "../block/block.types"
-import { defineJob } from "../mutation/job"
-import type { JobContext, JobDefinition } from "../mutation/job"
-import { doorPort } from "../mutation/door-port"
-import type { DoorApi } from "../mutation/door-port"
+import { defineJob, type JobContext, type JobDefinition } from "../mutation/job"
+import { doorPort, type DoorApi } from "../mutation/door-port"
 
 /** A port with one method, and a provider that supports only it. */
 export interface Counter {
@@ -28,6 +26,15 @@ export const context: RunContext = {
     locale: "vi",
 }
 export const jobContext: JobContext = { workspaceId: "w", attempt: 1, effectKey: (step) => `k:${step}` }
+
+/**
+ * The bug of a run: a native SyntaxError (never an SdkError, which the invoke maps to a refusal) that rejects with the word in its
+ * message (`Cannot convert <word> to a BigInt`), so a spec proves any other thrown error propagates.
+ */
+const crash = <T>(word: string): Promise<T> =>
+    new Promise<T>(() => {
+        BigInt(word)
+    })
 
 const readBase = { dataKind: "demo", shape: "value", fields: ["n"], paths: {}, permission: "demo.read" } as const
 
@@ -53,7 +60,7 @@ export const failingRead: ReadDefinition = defineRead({
     id: "demo.failing",
     variables: z.object({}),
     ports: {},
-    run: () => Promise.reject(new Error("bug")),
+    run: () => crash("bug"),
 })
 
 export const hostRead: ReadDefinition = defineRead({
@@ -108,7 +115,7 @@ export const failingAction: ActionDefinition = defineAction({
     ...bump,
     id: "demo.failing-action",
     ports: {},
-    run: () => Promise.reject(new Error("bug")),
+    run: () => crash("bug"),
 })
 
 export const hostAction: ActionDefinition = defineAction({
@@ -136,7 +143,7 @@ export const failingJob: JobDefinition = defineJob({
     input: z.object({}),
     ports: {},
     attempts: 2,
-    run: () => Promise.reject(new Error("transient")),
+    run: () => crash("transient"),
 })
 
 /** A provider that supports the door port and nothing else. */

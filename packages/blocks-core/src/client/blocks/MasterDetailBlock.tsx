@@ -1,5 +1,4 @@
-import { Children } from "react"
-import type { ReactNode } from "react"
+import { Children, type ReactNode } from "react"
 import { EmptyNotice, Grid, SurfaceCard } from "@starci/grammar/common"
 import type { masterDetailBlock } from "../../blocks/master-detail.block"
 import { useBlockWords } from "../composites/useBlockWords"

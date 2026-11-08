@@ -9,12 +9,9 @@ import type {
     PageRow,
     RecordRow,
 } from "@nivo-lite/agent-sdk/entity/port"
-import { doorPort, outboxPort } from "@nivo-lite/agent-sdk/mutation"
-import type { DoorApi, OutboxApi } from "@nivo-lite/agent-sdk/mutation"
-import { unprovided } from "@nivo-lite/agent-sdk/port"
-import type { PortDefinition, PortProvider } from "@nivo-lite/agent-sdk/port"
-import { queryProblems } from "@nivo-lite/agent-sdk/query"
-import type { Aggregate, MeasureSpec } from "@nivo-lite/agent-sdk/query"
+import { doorPort, outboxPort, type DoorApi, type OutboxApi } from "@nivo-lite/agent-sdk/mutation"
+import { unprovided, type PortDefinition, type PortProvider } from "@nivo-lite/agent-sdk/port"
+import { queryProblems, type Aggregate, type MeasureSpec } from "@nivo-lite/agent-sdk/query"
 import type {
     AdjustmentRecord,
     BookEntryRecord,
@@ -23,14 +20,14 @@ import type {
     OrderRecord,
     TransactionRecord,
 } from "../../../rules/accounting/accounting.types"
+import { BlocksError } from "../../../blocks-error"
 import type { MemberDirectory } from "../../platform/platform.types"
 import { membersPort } from "../../platform/ports"
 import type { EntryRow } from "../accounting.types"
 import { bookEntryOf } from "../accounting-records"
 import { ENTRIES_LIST } from "../ports"
 import { compareBy, matches, pick, valueOf } from "./accounting.memory-rows"
-import { CATALOG, putRecord, rowsOf } from "./accounting.memory-world"
-import type { MemoryWorld } from "./accounting.memory-world"
+import { CATALOG, putRecord, rowsOf, type MemoryWorld } from "./accounting.memory-world"
 import { deleted, ensured, inserted, linked, updated, upserted } from "./accounting.memory-writes"
 
 export { ACCOUNTANT_CONTEXT, ACCOUNTANT_ID, SYSTEM_CONTEXT, memoryWorld } from "./accounting.memory-world"
@@ -191,7 +188,8 @@ const aggregated = (world: MemoryWorld, entity: string, aggregate: EntityAggrega
 }
 
 /** What the fake engine does not do. */
-const unsupported = (): Promise<never> => Promise.reject(new Error("The fake engine does not run this call."))
+const unsupported = (): Promise<never> =>
+    Promise.reject(new BlocksError("FAKE_ENGINE_UNSUPPORTED", "The fake engine does not run this call."))
 
 /** The data port of one entity over a world: the calls the module makes. */
 export const entityApi = (world: MemoryWorld, entity: string): EntityApi => ({
@@ -199,14 +197,21 @@ export const entityApi = (world: MemoryWorld, entity: string): EntityApi => ({
     list: (query) => {
         const problems = problemsOf({ from: entity, ...query })
         return problems.length > 0
-            ? Promise.reject(new Error(`The planner refuses the query: ${problems.join(",")}`))
+            ? Promise.reject(
+                  new BlocksError("FAKE_ENGINE_QUERY_REFUSED", `The planner refuses the query: ${problems.join(",")}`),
+              )
             : Promise.resolve(listed(world, entity, query))
     },
     aggregate: (aggregate) => {
         const tree: Aggregate = { from: entity, ...aggregate }
         const problems = problemsOf(tree)
         return problems.length > 0
-            ? Promise.reject(new Error(`The planner refuses the aggregate: ${problems.join(",")}`))
+            ? Promise.reject(
+                  new BlocksError(
+                      "FAKE_ENGINE_QUERY_REFUSED",
+                      `The planner refuses the aggregate: ${problems.join(",")}`,
+                  ),
+              )
             : Promise.resolve(aggregated(world, entity, aggregate))
     },
     insert: (values, links) => Promise.resolve(inserted(world, entity, values, links)),

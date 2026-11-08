@@ -1,12 +1,10 @@
-import { defineBlock } from "@nivo-lite/agent-sdk/block"
-import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineBlock, type BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
 import { LIST_FIELD_KINDS, LIST_FIELDS_MAX, LIST_ROWS_MAX } from "../rows/list-rows"
 import { PATH_MAX } from "./bounds"
 import { currencyCode } from "./currency-prop"
-import { formField } from "./form.block"
-import type { FormFieldSchema, OptionalRead } from "./form.block"
+import { formField, type FormFieldSchema, type OptionalRead } from "./form.block"
 import type { RequiredAction, TextSchema } from "./schema-types"
 
 /** A field of a row: a form field of one of the kinds a row holds. */

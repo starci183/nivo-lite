@@ -1,5 +1,4 @@
-import { defineRenderer } from "@nivo-lite/agent-sdk/client"
-import type { BlockRenderer } from "@nivo-lite/agent-sdk/client"
+import { defineRenderer, type BlockRenderer } from "@nivo-lite/agent-sdk/client"
 import {
     asideDetailBlock,
     cardGridBlock,

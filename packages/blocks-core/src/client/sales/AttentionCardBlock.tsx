@@ -1,10 +1,8 @@
 import type { ReactNode } from "react"
-import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
-import type { DataSlot } from "@nivo-lite/agent-sdk/client"
+import { SlotView, useBlockHost, type DataSlot } from "@nivo-lite/agent-sdk/client"
 import type { ActionHandle, ReadHandle } from "@nivo-lite/agent-sdk/block"
-import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
+import { EmptyNotice, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import { surfaceFrame } from "../composites/surfaceFrame"
-import type { ListRowData } from "@starci/grammar/common"
 import type { salesAttentionCardBlock } from "../../blocks/sales/attention-card.block"
 import { countedWords } from "../../rows/counted-words"
 import { recordsView } from "../../rows/rows"
@@ -16,8 +14,9 @@ import {
     attentionEntriesOf,
     attentionListOf,
     parkedEntriesOf,
+    type AttentionCommand,
+    type AttentionEntry,
 } from "../../rules/sales/attention-list"
-import type { AttentionCommand, AttentionEntry } from "../../rules/sales/attention-list"
 import { combinedSlots } from "../../slots/combine"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
@@ -128,7 +127,7 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
                     headingLevel={3}
                     {...(count === null ? {} : { fact: countedWords(word(ATTENTION_COUNT_KEY), count) })}
                     isLoading={isLoading}
-                    items={items.map(rowOf)}
+                    items={items.map((item) => rowOf(item))}
                     empty={<EmptyNotice message={labels.empty} />}
                 />
             )}

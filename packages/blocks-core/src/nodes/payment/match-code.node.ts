@@ -1,7 +1,5 @@
-import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
-import { decideByCode } from "@nivo-lite/agent-sdk/reconcile"
-import type { Evidenced } from "@nivo-lite/agent-sdk/reconcile"
+import { defineNode, type NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { decideByCode, type Evidenced } from "@nivo-lite/agent-sdk/reconcile"
 import { z } from "zod"
 import {
     EVIDENCED_CODE_WRONG_AMOUNT,
@@ -9,8 +7,7 @@ import {
     EVIDENCED_FOR_MOMO,
     EVIDENCED_WITH_CODE,
 } from "./payment.fixtures"
-import { evidencedSchema } from "./payment.schemas"
-import type { Named } from "./payment.schemas"
+import { evidencedSchema, type Named } from "./payment.schemas"
 import { MAX_BODY, MAX_ENTRIES, MAX_ID } from "../../bounds"
 
 /** The candidates with the evidence gathered for the transaction. */

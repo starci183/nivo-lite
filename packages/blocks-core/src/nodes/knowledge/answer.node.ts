@@ -1,5 +1,4 @@
-import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { defineNode, type NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import type { NodeSchema } from "../node-schema.types"
 import { PUBLIC_VISIBILITY, answerAsk, answerOf, gapAnswerOf, publicDocumentsOf } from "./answer.policy"
 import { answerInputSchema, answerOutputSchema, answerParamsSchema } from "./answer.schema"

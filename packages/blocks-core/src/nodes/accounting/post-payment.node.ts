@@ -1,5 +1,4 @@
-import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { defineNode, type NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import { z } from "zod"
 import type { LedgerRef } from "../../vocabulary"
@@ -9,8 +8,7 @@ import { bilingualOf, messageOf } from "../../messages/catalog"
 import { LEAD_DINH, ORDER_DINH, STORE_REAL_CASE, TRANSACTION_DINH } from "../payment/payment.fixtures"
 import { READ_LEADS, READ_ORDERS, READ_TRANSACTIONS } from "../payment/payment.rights"
 import type { LeadRow, OrderRow, TransactionRow } from "../payment/payment.schemas"
-import { entryOf, isConnectionRefused, isRecordable } from "./ledger.policy"
-import type { LedgerResult } from "./ledger.policy"
+import { entryOf, isConnectionRefused, isRecordable, type LedgerResult } from "./ledger.policy"
 
 /** The settlement to write down: the transaction, the order it paid and how it came out. */
 interface LedgerAppendInput {

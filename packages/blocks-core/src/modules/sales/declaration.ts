@@ -1,5 +1,4 @@
-import { defineModule } from "@nivo-lite/agent-sdk/module"
-import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
+import { defineModule, type ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
 import { cancelOrderAction } from "./actions/cancel-order.action"
 import { decideAction } from "./actions/decide.action"
 import { confirmOrderAction } from "./actions/confirm-order.action"

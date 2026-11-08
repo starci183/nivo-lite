@@ -1,9 +1,7 @@
-import { useMemo } from "react"
-import type { ReactNode } from "react"
+import { useMemo, type ReactNode } from "react"
 import { Alert, EmptyNotice } from "@starci/grammar/common"
 import type { ActionDefinition, ReadDefinition } from "../../block/block.types"
-import type { PlanNode, RenderPlan } from "../../spec/render-plan"
-import { renderPlan, viewOf } from "../../spec/render-plan"
+import { type PlanNode, type RenderPlan, renderPlan, viewOf } from "../../spec/render-plan"
 import { paramHandleOf } from "../../spec/spec-param"
 import type { SpecProblem, StoredSpec } from "../../spec/spec.types"
 import {
@@ -16,8 +14,7 @@ import { PageFrame } from "./PageFrame"
 import { PrimaryCommand } from "./PrimaryCommand"
 import type { SpecContext } from "./renderer.types"
 import { SpecNode } from "./SpecNode"
-import { chromeOf, paneOf } from "./view-chrome"
-import type { ViewChrome } from "./view-chrome"
+import { chromeOf, paneOf, type ViewChrome } from "./view-chrome"
 import { ViewBody } from "./ViewBody"
 
 /** What the route gives the workbench. */

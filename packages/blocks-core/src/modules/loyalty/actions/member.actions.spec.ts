@@ -299,6 +299,12 @@ describe("loyalty.record-purchase", () => {
         expect(rowsOf(world, "loyalty.member").at(-1)?.data["name"]).toBe("84922111000")
     })
 
+    it("names the customer after the phone when the name given is only blanks", async () => {
+        const world = sampleWorld()
+        await run(recordPurchaseAction, { phone: "0922111000", name: "   ", amountVnd: 50_000, ref: "sale-10" }, world)
+        expect(rowsOf(world, "loyalty.member").at(-1)?.data["name"]).toBe("84922111000")
+    })
+
     it("lifts the customer to the tier the lifetime spend reaches", async () => {
         const world = sampleWorld()
         const result = await run(

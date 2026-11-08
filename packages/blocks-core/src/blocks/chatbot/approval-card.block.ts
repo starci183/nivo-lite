@@ -1,5 +1,4 @@
-import { defineBlock } from "@nivo-lite/agent-sdk/block"
-import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineBlock, type BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { REPLY_MAX } from "../../rules/chatbot/reply"
 import type { OptionalAction, RequiredAction, RequiredRead } from "../schema-types"
 import { z } from "zod"

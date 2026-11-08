@@ -1,12 +1,9 @@
-import { defineBlock } from "@nivo-lite/agent-sdk/block"
-import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineBlock, type BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
 import { ITEMS_MAX, PATH_MAX } from "./bounds"
-import { labelsProp } from "./labels-prop"
-import type { LabelsSchema } from "./labels-prop"
-import { paramName } from "./param-name"
-import type { ParamNameSchema } from "./param-name"
+import { labelsProp, type LabelsSchema } from "./labels-prop"
+import { paramName, type ParamNameSchema } from "./param-name"
 import type { OptionalAction, RequiredRead, TextSchema } from "./schema-types"
 
 /** The longest value a column holds: it is the value of a field. */

@@ -1,9 +1,7 @@
-import { defineBlock } from "@nivo-lite/agent-sdk/block"
-import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineBlock, type BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
-import { paramName } from "../param-name"
-import type { ParamNameSchema } from "../param-name"
+import { paramName, type ParamNameSchema } from "../param-name"
 import type { OptionalRead, RequiredRead, TextSchema } from "../schema-types"
 
 const props: z.ZodObject<{

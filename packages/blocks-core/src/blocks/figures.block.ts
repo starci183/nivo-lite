@@ -1,9 +1,14 @@
-import { defineBlock } from "@nivo-lite/agent-sdk/block"
-import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
+import { defineBlock, type BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { specText } from "@nivo-lite/agent-sdk/schema"
 import { z } from "zod"
-import { FIGURE_FORMATS, FIGURE_KINDS, FIGURE_VARIANTS } from "../rows/figure-format"
-import type { FigureFormat, FigureKind, FigureVariant } from "../rows/figure-format"
+import {
+    FIGURE_FORMATS,
+    FIGURE_KINDS,
+    FIGURE_VARIANTS,
+    type FigureFormat,
+    type FigureKind,
+    type FigureVariant,
+} from "../rows/figure-format"
 import { ITEMS_MAX, PATH_MAX } from "./bounds"
 import { currencyCode } from "./currency-prop"
 import type { EnumSchema, TextSchema, RequiredRead } from "./schema-types"

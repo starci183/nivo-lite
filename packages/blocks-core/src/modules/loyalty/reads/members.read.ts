@@ -1,8 +1,6 @@
-import { defineRead } from "@nivo-lite/agent-sdk/block"
-import type { ListShape, ReadDefinition, ReadRunResult } from "@nivo-lite/agent-sdk/block"
+import { defineRead, type ListShape, type ReadDefinition, type ReadRunResult } from "@nivo-lite/agent-sdk/block"
 import { portsOf } from "@nivo-lite/agent-sdk/port"
-import { countsRead, listRead } from "@nivo-lite/agent-sdk/module"
-import type { ListReadDefinition } from "@nivo-lite/agent-sdk/module"
+import { countsRead, listRead, type ListReadDefinition } from "@nivo-lite/agent-sdk/module"
 import { z } from "zod"
 import { MAX_ID } from "../../../bounds"
 import { DEFAULT_CONFIG } from "../../../rules/loyalty/config"
@@ -190,6 +188,6 @@ export const memberLedgerRead: ReadDefinition = defineRead({
     permission: LOYALTY_VIEW,
     ports: { ledger: LEDGER },
     run: async ({ ledger }, { id }): Promise<{ readonly rows: ReadonlyArray<LedgerRowView> }> => ({
-        rows: (await ledgerTimeline(ledger, id, TIMELINE_ROWS)).map(ledgerViewOf),
+        rows: (await ledgerTimeline(ledger, id, TIMELINE_ROWS)).map((entry) => ledgerViewOf(entry)),
     }),
 })

@@ -9,10 +9,15 @@ import type {
     PageRow,
     RecordRow,
 } from "@nivo-lite/agent-sdk/entity/port"
-import { unprovided } from "@nivo-lite/agent-sdk/port"
-import type { PortDefinition, PortProvider } from "@nivo-lite/agent-sdk/port"
-import { queryProblems } from "@nivo-lite/agent-sdk/query"
-import type { CompareExpr, EntityCatalog, FilterExpr, OrderBy } from "@nivo-lite/agent-sdk/query"
+import { unprovided, type PortDefinition, type PortProvider } from "@nivo-lite/agent-sdk/port"
+import {
+    queryProblems,
+    type CompareExpr,
+    type EntityCatalog,
+    type FilterExpr,
+    type OrderBy,
+} from "@nivo-lite/agent-sdk/query"
+import { BlocksError } from "../../blocks-error"
 import { FLOW_F_ENTITIES } from "../../entities/flow-f.entities"
 import type { SalesSettings } from "../../rules/sales/settings"
 import { matchesQuery } from "../../rules/sales/search"
@@ -144,14 +149,20 @@ const CATALOG: EntityCatalog = new Map(FLOW_F_ENTITIES.map((entity) => [entity.n
 const COLUMNS: ReadonlySet<string> = new Set(["id", "version", "createdAt", "updatedAt"])
 
 /** What the fake engine does not do. */
-const unsupported = (): Promise<never> => Promise.reject(new Error("The fake engine does not run this call."))
+const unsupported = (): Promise<never> =>
+    Promise.reject(new BlocksError("FAKE_ENGINE_UNSUPPORTED", "The fake engine does not run this call."))
 
 /** The answer to a write the fake engine does not take. */
 const unsupportedResult: EngineResult = { ok: false, reason: "invalid" }
 
 /** The refusal of a condition the fake engine does not run. */
 const unrun = (where: FilterExpr | undefined): Promise<never> =>
-    Promise.reject(new Error(`The fake engine does not run the condition ${JSON.stringify(where)}.`))
+    Promise.reject(
+        new BlocksError(
+            "FAKE_ENGINE_UNSUPPORTED",
+            `The fake engine does not run the condition ${JSON.stringify(where)}.`,
+        ),
+    )
 
 /** The record the fake engine holds for a row: the system fields are columns, every other key is a declared field. */
 const recordOf = (row: object): RecordRow => ({
@@ -318,7 +329,9 @@ const entityApi = (table: Table): EntityApi => ({
     list: (query) => {
         const problems = queryProblems({ from: table.entity, ...query }, CATALOG).map((problem) => problem.code)
         if (problems.length > 0)
-            return Promise.reject(new Error(`The planner refuses the query: ${problems.join(",")}`))
+            return Promise.reject(
+                new BlocksError("FAKE_ENGINE_QUERY_REFUSED", `The planner refuses the query: ${problems.join(",")}`),
+            )
         const found = matching(table, query.where)
         return found === null ? unrun(query.where) : Promise.resolve(listed(table, query, found))
     },
@@ -385,7 +398,7 @@ const rightsDirectory = (state: MemoryState): RightsDirectory => ({
 export const memoryProvider = (state: MemoryState): PortProvider => {
     const leads: Table = {
         entity: "sales.lead",
-        records: () => state.leads.map(recordOf),
+        records: () => state.leads.map((row) => recordOf(row)),
         replace: (index, record) => {
             const row = leadRowOf(record)
             if (row !== null) state.leads[index] = row
@@ -396,7 +409,7 @@ export const memoryProvider = (state: MemoryState): PortProvider => {
     }
     const orders: Table = {
         entity: "sales.order",
-        records: () => state.orders.map(recordOf),
+        records: () => state.orders.map((row) => recordOf(row)),
         replace: (index, record) => {
             const row = orderRowOf(record)
             if (row !== null) state.orders[index] = row
@@ -407,7 +420,7 @@ export const memoryProvider = (state: MemoryState): PortProvider => {
     }
     const linked = (entity: string, rows: Array<OrderLinkRow>, joins: Table["joins"]): Table => ({
         entity,
-        records: () => rows.map(recordOf),
+        records: () => rows.map((row) => recordOf(row)),
         replace: (index, record) => {
             const row = orderLinkRowOf(record)
             if (row !== null) rows[index] = row

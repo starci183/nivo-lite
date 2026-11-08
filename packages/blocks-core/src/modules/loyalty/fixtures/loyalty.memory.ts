@@ -1,13 +1,17 @@
 import type { ListFilter, ListPage, ListQuery, ListShape, ListSource } from "@nivo-lite/agent-sdk/block"
 import type { EntityApi, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import { unprovided } from "@nivo-lite/agent-sdk/port"
-import type { PortDefinition, PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
+import { unprovided, type PortDefinition, type PortProvider, type RunContext } from "@nivo-lite/agent-sdk/port"
 import { NEVER_BOUGHT } from "../../../entities/loyalty/member.entity"
 import { tierByKey } from "../../../rules/loyalty/config"
 import { fold } from "../../../rules/loyalty/fold"
 import { activityOf } from "../../../rules/loyalty/stats"
-import { entityApi, memoryWorld, putRecord, rowsOf } from "../../accounting/fixtures/accounting.memory"
-import type { MemoryWorld } from "../../accounting/fixtures/accounting.memory"
+import {
+    entityApi,
+    memoryWorld,
+    putRecord,
+    rowsOf,
+    type MemoryWorld,
+} from "../../accounting/fixtures/accounting.memory"
 import { compareBy } from "../../accounting/fixtures/accounting.memory-rows"
 import { loyaltyMembersList } from "../ports"
 import { campaignOf, decisionOf, ledgerRowOf, memberOf, programOfRecord, rewardOf } from "../loyalty-records"
@@ -20,9 +24,8 @@ import type {
     ProgramRow,
     RewardRow,
 } from "../loyalty.types"
-import type { StoredEntry } from "./loyalty.data"
-import type { LeadSeed } from "./loyalty.memory.types"
 import {
+    type StoredEntry,
     SAMPLE_CAMPAIGNS,
     SAMPLE_DECISIONS,
     SAMPLE_ENTRIES,
@@ -31,6 +34,7 @@ import {
     SAMPLE_PROGRAM,
     SAMPLE_REWARDS,
 } from "./loyalty.data"
+import type { LeadSeed } from "./loyalty.memory.types"
 
 /** The entities the fake engine serves the Loyalty module: its own and the Sales and Chatbot ones it reads. */
 const ENTITIES: ReadonlyArray<string> = [
@@ -114,14 +118,24 @@ export const membersList = (world: MemoryWorld): ListSource<MemberListRow> => ({
     page: (shape, query): Promise<ListPage<MemberListRow>> => {
         const keys = shape.sort[query.sort] ?? []
         const ordered = rowsOf(world, "loyalty.member").toSorted(compareBy(keys))
-        const sorted = keptBy(ordered.map(rowOf), shape, query, null)
+        const sorted = keptBy(
+            ordered.map((record) => rowOf(record)),
+            shape,
+            query,
+            null,
+        )
         const start = query.cursor === null ? 0 : Number(query.cursor)
         const end = start + query.size
         return Promise.resolve({ rows: sorted.slice(start, end), cursor: end < sorted.length ? String(end) : null })
     },
     counts: (shape, by, query) => {
         const filter = enumeratedOf(shape.filters?.[by])
-        const found = keptBy(rowsOf(world, "loyalty.member").map(rowOf), shape, query, by)
+        const found = keptBy(
+            rowsOf(world, "loyalty.member").map((record) => rowOf(record)),
+            shape,
+            query,
+            by,
+        )
         const names = filter.open
             ? [
                   ...new Set(

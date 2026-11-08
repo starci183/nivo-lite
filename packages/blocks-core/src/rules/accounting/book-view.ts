@@ -2,8 +2,7 @@ import { z } from "zod"
 import { MAX_ENTRIES, MAX_ID, MAX_LINE } from "../../bounds"
 import { formatValue } from "../../rows/cell-format"
 import type { CellTone } from "../../rows/table-rows"
-import { ENTRY_STATUSES } from "./entry-status"
-import type { EntryStatus } from "./entry-status"
+import { ENTRY_STATUSES, type EntryStatus } from "./entry-status"
 
 /** The language the book draws money in, whatever the viewer reads: the books are Vietnamese dong, written the Vietnamese way. */
 const MONEY_LOCALE = "vi-VN"

@@ -1,5 +1,4 @@
-import { defineEffect } from "@nivo-lite/agent-sdk/node"
-import type { EffectDefinition } from "@nivo-lite/agent-sdk/node"
+import { defineEffect, type EffectDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { MAX_ID, MAX_LINE } from "../../bounds"
 import { REPLY_MAX } from "../../rules/chatbot/reply"

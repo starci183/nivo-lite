@@ -1,8 +1,7 @@
 import type { BlockDefinition } from "../block/block.types"
 import type { SpecText } from "../schema/schema.types"
 import { PlanError } from "./plan-error"
-import type { SpecBindings } from "./spec"
-import { blockIndex, specProblems } from "./spec"
+import { type SpecBindings, blockIndex, specProblems } from "./spec"
 import type {
     SpecActionBinding,
     SpecAsideSummary,
