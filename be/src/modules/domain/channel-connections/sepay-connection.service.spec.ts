@@ -1,3 +1,4 @@
+import { DomainError } from "@modules/platform/errors"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
 import { ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
@@ -8,6 +9,9 @@ import type { Logger } from "@modules/platform/logging"
 import { answerByTable } from "@tests/fixtures/builders/table-query-builder.builder"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { SepayConnectionService } from "./sepay-connection.service"
+
+/** A failing collaborator of the spec: carries a code, as every error of the application does. */
+class Outage extends DomainError<string> {}
 
 const actor = { principalId: "owner-1", workspaceId: "ws-1" }
 const BULLETS = "•".repeat(12)
@@ -44,7 +48,7 @@ const build = async (connection: ConnectionRecord = feed()) => {
     connections.patch.mockResolvedValue(undefined)
     const manager = mockEntityManager()
     let answer: ReadonlyArray<unknown> = []
-    let failure: unknown = null
+    let failure: Outage | null = null
     const seen = answerByTable(manager, {
         "": () => (failure === null ? answer : Promise.reject(failure)),
     })
@@ -52,7 +56,7 @@ const build = async (connection: ConnectionRecord = feed()) => {
         set: (next: ReadonlyArray<unknown>) => {
             answer = next
         },
-        fail: (error: unknown) => {
+        fail: (error: Outage) => {
             failure = error
         },
     }
@@ -287,16 +291,16 @@ describe("SepayConnectionService deliveries", () => {
         const { service, seen } = await build()
         const raw = Buffer.from(JSON.stringify({ id: 2, transferType: "in", transferAmount: 5 }))
 
-        await expect(service.traceIntake("c1", raw, () => Promise.reject(new Error("intake")))).rejects.toThrow(
-            "intake",
-        )
+        await expect(
+            service.traceIntake("c1", raw, () => Promise.reject(new Outage({ code: "intake" }))),
+        ).rejects.toThrow("intake")
 
         expect(seen.queries).toHaveLength(0)
     })
 
     it("remembers a refused key as unauthorized, and logs instead of failing when the write fails", async () => {
         const { service, rows, logger, seen } = await build()
-        rows.fail(new Error("down"))
+        rows.fail(new Outage({ code: "down" }))
 
         await expect(service.traceRefusal("c1")).resolves.toBeUndefined()
 

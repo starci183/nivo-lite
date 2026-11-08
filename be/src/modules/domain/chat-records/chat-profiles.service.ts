@@ -18,7 +18,7 @@ export class ChatProfilesService {
     due(workspaceId: string, due: ChatProfileDue): Promise<ReadonlyArray<ChatProfileCandidate>> {
         return this.entities.run(workspaceId, async (api) => {
             const page = await api.list(profileDueQuery(due))
-            return onePerCustomer(page.rows.flatMap(candidateOf))
+            return onePerCustomer(page.rows.flatMap((found) => candidateOf(found)))
         })
     }
 

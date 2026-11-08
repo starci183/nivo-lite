@@ -51,7 +51,7 @@ const build = async (now = NOW) => {
     const channels = mock<MarketingChannelsService>()
     suggestions.suggest.mockResolvedValue(SUGGESTION)
     daily.between.mockResolvedValue(DAYS)
-    reports.find.mockResolvedValue(null)
+    reports.weekOf.mockResolvedValue(null)
     reports.claimPost.mockResolvedValue(true)
     channels.postsOf.mockResolvedValue(POSTS)
     channels.sync.mockResolvedValue(2)
@@ -98,7 +98,7 @@ describe("MarketingInsightsService report", () => {
 
     it("shows a week from the store without calling the channels or the model while it is fresh", async () => {
         const { service, reports, channels, suggestions } = await build()
-        reports.find.mockResolvedValue({
+        reports.weekOf.mockResolvedValue({
             posts: [RANKED],
             postCount: 8,
             suggestion: null,
@@ -117,7 +117,7 @@ describe("MarketingInsightsService report", () => {
 
     it("computes a stored week again when its extras are stale", async () => {
         const { service, reports, channels } = await build()
-        reports.find.mockResolvedValue({
+        reports.weekOf.mockResolvedValue({
             posts: [],
             postCount: 0,
             suggestion: null,

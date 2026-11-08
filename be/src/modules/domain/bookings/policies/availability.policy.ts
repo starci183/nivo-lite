@@ -150,7 +150,7 @@ const plain = (c: Candidate): FreeSlot => ({
 
 /** Every free start time of a service between two instants, earliest first. */
 export const findSlots = (input: PlanInput, fromMs: number, toMs: number): ReadonlyArray<FreeSlot> =>
-    candidates(input, fromMs, toMs).map(plain)
+    candidates(input, fromMs, toMs).map((candidate) => plain(candidate))
 
 /** One free resource at an exact start (the least loaded, then the first in order), or the reason there is none. */
 export const checkSlot = (input: PlanInput, startMs: number): SlotCheck => {

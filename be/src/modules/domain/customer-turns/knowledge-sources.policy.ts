@@ -30,7 +30,10 @@ export const recallSourcesOf = (
     passages: ReadonlyArray<Passage>,
 ): KnowledgeSources => {
     const sources = new Map<string, HubNoteSource>()
-    for (const source of [...facts.map(sourceOfFact), ...passages.map(sourceOfPassage)]) {
+    for (const source of [
+        ...facts.map((fact) => sourceOfFact(fact)),
+        ...passages.map((passage) => sourceOfPassage(passage)),
+    ]) {
         const key = `${source.kind}:${source.ref}`
         if (!sources.has(key)) sources.set(key, source)
     }
