@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { Button, Page, Stack } from "@starci/grammar/common"
-import type { PageHeaderContent } from "@starci/grammar/common"
+import { Button, Page, Stack, type PageHeaderContent } from "@starci/grammar/common"
 import { BillingOverview, BillingOverviewSkeleton } from "@/components/blocks/BillingOverview"
 import { BillingPlans } from "@/components/blocks/BillingPlans"
 import { PayDrawer } from "@/components/blocks/PayDrawer"

@@ -18,8 +18,7 @@ import {
 import { webSiteOrigin } from "@/modules/config"
 import { slotOfReads } from "@/hooks/slot"
 import type { AgentOption, Connection } from "@/modules/types"
-import { ConnectorDetailOverlayBase, OverlayHost, detailRowsOf } from "./component"
-import type { DetailEntry } from "./component"
+import { ConnectorDetailOverlayBase, OverlayHost, detailRowsOf, type DetailEntry } from "./component"
 
 /** Workspace inputs supplied by a caller, or read by the drawer when its server page registers it without inputs. */
 type ConnectorDetailOverlayProps = {

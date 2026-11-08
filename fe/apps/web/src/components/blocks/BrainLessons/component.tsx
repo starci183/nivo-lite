@@ -1,5 +1,4 @@
-import { Alert, Button, Cluster, Icon, IconTile, Select, Stack } from "@starci/grammar/common"
-import type { ListBoxItem } from "@starci/grammar/common"
+import { Alert, Button, Cluster, Icon, IconTile, Select, Stack, type ListBoxItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { LessonDetail } from "@/components/composites/LessonDetail"
 import { RowTrailing } from "@/components/composites/RowTrailing"

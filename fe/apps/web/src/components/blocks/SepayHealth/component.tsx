@@ -1,5 +1,4 @@
-import { Section, PaneSection } from "@starci/grammar/common"
-import type { Figure } from "@starci/grammar/common"
+import { Section, PaneSection, type Figure } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 

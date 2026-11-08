@@ -1,11 +1,18 @@
-import { Button, EmptyNotice, Icon, Page, Stack, SurfaceCard } from "@starci/grammar/common"
-import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
+import {
+    Button,
+    EmptyNotice,
+    Icon,
+    Page,
+    Stack,
+    SurfaceCard,
+    type BadgeTone,
+    type BreadcrumbItem,
+} from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
-import { AddInstanceDialog } from "@/components/composites/AddInstanceDialog"
-import type { AddInstanceDialogProps } from "@/components/composites/AddInstanceDialog"
+import { AddInstanceDialog, type AddInstanceDialogProps } from "@/components/composites/AddInstanceDialog"
 
 /** One instance as the list draws it. */
 export interface InstanceRowView {

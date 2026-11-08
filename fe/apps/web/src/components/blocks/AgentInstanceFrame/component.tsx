@@ -12,8 +12,11 @@ import {
     PaneGrid,
     PaneSection,
     Cluster,
+    type BadgeTone,
+    type BreadcrumbItem,
+    type DropdownMenuEntry,
+    type PageHeaderContent,
 } from "@starci/grammar/common"
-import type { BadgeTone, BreadcrumbItem, DropdownMenuEntry, PageHeaderContent } from "@starci/grammar/common"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
 import { nivoIconSource } from "@/components/leaves/Icon"

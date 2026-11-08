@@ -3,8 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useAgentProfile } from "@/hooks/agentProfile"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AgentProfileOwnerBase } from "./component"
-import type { OwnerView } from "./component"
+import { AgentProfileOwnerBase, type OwnerView } from "./component"
 
 /** The agent whose owner the card shows. */
 type AgentProfileOwnerProps = {

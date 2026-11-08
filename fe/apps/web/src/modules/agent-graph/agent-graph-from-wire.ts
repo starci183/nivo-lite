@@ -19,10 +19,8 @@ import type {
     AgentGraphWireSource,
     AgentGraphWireStep,
 } from "./agent-graph-wire"
-import { termsOfWhen, termsWords } from "./agent-graph-condition"
-import type { AgentGraphConditionWords } from "./agent-graph-condition"
-import { roleWordOf } from "./agent-graph-words"
-import type { AgentGraphT } from "./agent-graph-words"
+import { termsOfWhen, termsWords, type AgentGraphConditionWords } from "./agent-graph-condition"
+import { roleWordOf, type AgentGraphT } from "./agent-graph-words"
 
 /** One version of the history as the contract lists it. */
 export interface AgentGraphWireVersion {

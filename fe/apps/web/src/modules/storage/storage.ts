@@ -1,6 +1,5 @@
 import { deserialize, serialize } from "@/modules/superjson"
-import { WORKSPACE_COOKIE } from "./ids"
-import type { StorageId } from "./ids"
+import { WORKSPACE_COOKIE, type StorageId } from "./ids"
 
 /** A typed view over one Web Storage area; every access is guarded because storage can be blocked or absent (SSR). */
 interface TypedStorage {

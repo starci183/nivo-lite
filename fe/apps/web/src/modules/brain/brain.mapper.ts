@@ -6,17 +6,17 @@ import type {
     BrainLensType,
     BrainLessonType,
 } from "@/modules/api"
-import { FACT_SUBJECT_TYPES } from "@/modules/types"
-import type {
-    BrainEvidence,
-    BrainExtraction,
-    BrainFact,
-    BrainGap,
-    BrainLens,
-    BrainLesson,
-    FactScope,
-    FactSource,
-    FactState,
+import {
+    FACT_SUBJECT_TYPES,
+    type BrainEvidence,
+    type BrainExtraction,
+    type BrainFact,
+    type BrainGap,
+    type BrainLens,
+    type BrainLesson,
+    type FactScope,
+    type FactSource,
+    type FactState,
 } from "@/modules/types"
 
 const SCOPES: ReadonlyArray<FactScope> = ["public", "internal", "restricted"]
@@ -60,7 +60,7 @@ export const toBrainFact = (row: BrainFactType): BrainFact => ({
     validFrom: row.validFrom ?? null,
     validTo: row.validTo ?? null,
     proposalKind: row.proposalKind === "retire" ? "retire" : "set",
-    evidence: row.evidence.map(toBrainEvidence),
+    evidence: row.evidence.map((evidence) => toBrainEvidence(evidence)),
     proposedBy: row.proposedBy,
     proposedAt: row.proposedAt,
     decidedBy: row.decidedBy ?? null,
@@ -76,7 +76,7 @@ export const toBrainLesson = (row: BrainLessonType): BrainLesson => ({
     body: row.body,
     appliesWhen: row.appliesWhen,
     status: LESSON_STATUSES.find((known) => known === row.status) ?? "proposed",
-    evidence: row.evidence.map(toBrainEvidence),
+    evidence: row.evidence.map((evidence) => toBrainEvidence(evidence)),
 })
 
 /** The question a `brain` gap item stands for. */

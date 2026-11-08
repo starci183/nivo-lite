@@ -1,6 +1,5 @@
-import type { SwitchStatusProps } from "@/components/composites/SwitchStatus"
+import { type SwitchStatusProps, SwitchStatus } from "@/components/composites/SwitchStatus"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { SwitchStatus } from "@/components/composites/SwitchStatus"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** What the card draws once the installation arrived, every word resolved. */

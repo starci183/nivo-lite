@@ -8,8 +8,8 @@ import {
     canOpenWorkspace,
     useOpenWorkspace,
     useWorkspaceCards,
+    type WorkspaceState,
 } from "@/hooks/workspaces"
-import type { WorkspaceState } from "@/hooks/workspaces"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { creditsPath, workspaceHref } from "@/modules/routes"
 import { WorkspacesListBase } from "./component"

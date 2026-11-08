@@ -1,5 +1,4 @@
-import { Badge, EmptyNotice, ListBox, SearchField, Select, Stack, Tabs } from "@starci/grammar/common"
-import type { ListBoxItem } from "@starci/grammar/common"
+import { Badge, EmptyNotice, ListBox, SearchField, Select, Stack, Tabs, type ListBoxItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { KnowledgeDocMark } from "@/components/composites/KnowledgeDocMark"
 import type { DocListCopy, DocListFace, DocRowView } from "@/modules/types"

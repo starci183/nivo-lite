@@ -3,8 +3,7 @@
 import { useTranslations } from "next-intl"
 import { isManager, useMember } from "@/hooks/member"
 import { useState } from "react"
-import { ApiQuickStartBase } from "./component"
-import type { QuickStartExample } from "./component"
+import { ApiQuickStartBase, type QuickStartExample } from "./component"
 
 /** Props for the connected quick start: the public API address, the site origin and /api/v1. */
 interface ApiQuickStartProps {

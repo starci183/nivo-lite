@@ -1,7 +1,6 @@
 "use client"
 
-import { useInstanceAgentId } from "@/hooks/installations"
-import type { ModuleKey } from "@/hooks/installations"
+import { useInstanceAgentId, type ModuleKey } from "@/hooks/installations"
 import { roomHandlersOf, useTeamChatRoomState, useTeamChatRoomView } from "@/hooks/teamChat"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"

@@ -1,8 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { URL_PARAMS } from "@/hooks/connections"
 import { useSlotLabels } from "@/hooks/slot"
 import { useConnectionsList, visibleRowsOf } from "@/hooks/connectionsPanes"

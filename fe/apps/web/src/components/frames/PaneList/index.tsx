@@ -1,7 +1,15 @@
-import { Button, EmptyNotice, ListBox, Stack, Text } from "@starci/grammar/common"
-import type { ErrorData, IconSource, ListBoxItem, ListBoxSection } from "@starci/grammar/common"
-import { FilterGroup } from "@/components/composites/FilterGroup"
-import type { FilterGroupChoice, FilterGroupSearch } from "@/components/composites/FilterGroup"
+import {
+    Button,
+    EmptyNotice,
+    ListBox,
+    Stack,
+    Text,
+    type ErrorData,
+    type IconSource,
+    type ListBoxItem,
+    type ListBoxSection,
+} from "@starci/grammar/common"
+import { FilterGroup, type FilterGroupChoice, type FilterGroupSearch } from "@/components/composites/FilterGroup"
 
 /** What an empty list says, and the one action that invites the next step. */
 interface PaneListEmpty {

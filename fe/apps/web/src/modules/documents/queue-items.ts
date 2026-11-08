@@ -1,6 +1,5 @@
 import { linkProblemOf, nextId } from "./link-rows"
-import { DOCUMENT_MAX_BYTES } from "./queue"
-import type { QueueItem } from "./queue"
+import { DOCUMENT_MAX_BYTES, type QueueItem } from "./queue"
 import type { ArchiveResult, ArchiveRow } from "./zip"
 import { SUPPORTED_FILE } from "./zip-names"
 

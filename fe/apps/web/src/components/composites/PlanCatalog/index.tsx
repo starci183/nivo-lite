@@ -10,8 +10,8 @@ import {
     ChoiceChips,
     Select,
     Text,
+    type ListRowData,
 } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
 import type { PlanCardView, PlanGroupView } from "@/modules/types"
 
 interface PlanCatalogProps {

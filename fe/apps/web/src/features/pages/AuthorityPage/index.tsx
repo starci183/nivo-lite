@@ -2,8 +2,7 @@ import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { paneGridOf } from "@/hooks/paneFrame"
-import { AUTHORITY_SECTIONS } from "@/modules/authority"
-import type { AuthoritySectionId } from "@/modules/authority"
+import { AUTHORITY_SECTIONS, type AuthoritySectionId } from "@/modules/authority"
 import { AuthorityPageBase } from "./component"
 
 /** The document title of the authority page. */

@@ -1,6 +1,5 @@
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { ListRegion } from "@/components/composites/ListRegion"
-import type { ListRegionProps } from "@/components/composites/ListRegion"
+import { ListRegion, type ListRegionProps } from "@/components/composites/ListRegion"
 import type { ProfileRegionBaseProps } from "@/modules/types"
 
 /** The card copy, its lines as a slot, and the retry. */

@@ -8,8 +8,8 @@ import {
     OTHER_BUSINESS_TYPE,
     WORKSPACE_BUSINESS_TYPES,
     useCreateWorkspace,
+    type WorkspaceBusinessType,
 } from "@/hooks/workspaces"
-import type { WorkspaceBusinessType } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
 import { AUTH_ROUTES, workspaceChannelsPath } from "@/modules/routes"
 import { WorkspaceCreateBase } from "./component"
@@ -26,7 +26,7 @@ export const WorkspaceCreate = () => {
     const router = navigation.useRouter()
     const { create, isCreating } = useCreateWorkspace()
     const form = useWorkspaceCreateForm()
-    const [isNavigating, setNavigating] = useState(false)
+    const [isNavigating, setIsNavigating] = useState(false)
 
     const submit = form.handleSubmit(async (values) => {
         const id = await create(
@@ -34,7 +34,7 @@ export const WorkspaceCreate = () => {
             values.businessType === OTHER_BUSINESS_TYPE ? values.customIndustry : values.businessType,
         )
         if (id === undefined) return
-        setNavigating(true)
+        setIsNavigating(true)
         router.push(workspaceChannelsPath(id))
     })
 

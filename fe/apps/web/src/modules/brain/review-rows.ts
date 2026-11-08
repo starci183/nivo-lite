@@ -1,8 +1,7 @@
 import type { useTranslations } from "next-intl"
 import type { BrainFact, KnowledgeRowView, RowActionView, RowPartView } from "@/modules/types"
 import { adviceFor, proposerOf } from "./advice"
-import { reviewBoardOf } from "./board"
-import type { ReviewSingle, ReviewConflict, ReviewBoard } from "./board"
+import { reviewBoardOf, type ReviewSingle, type ReviewConflict, type ReviewBoard } from "./board"
 import { FACT_SOURCE_KEY } from "./labels"
 
 /** The facts review's resolved copy and initiating action identity. */

@@ -1,6 +1,5 @@
 import { Badge, Cluster, EmptyNotice, SurfaceCard, Text, type ListRowData } from "@starci/grammar/common"
-import { IconGlyph } from "@/components/leaves/Icon"
-import type { IconGlyphName } from "@/components/leaves/Icon"
+import { IconGlyph, type IconGlyphName } from "@/components/leaves/Icon"
 import { ANCHOR } from "./classNames"
 
 /** One step of the flow: who acts, what happens, and whether the person decides. */

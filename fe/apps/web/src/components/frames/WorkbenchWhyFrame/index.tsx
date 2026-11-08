@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
 import { Pane, PaneGrid, PaneSection } from "@starci/grammar/common"
-import { WorkbenchWhy } from "@/components/composites/WorkbenchWhy"
-import type { WorkbenchWhyLabels } from "@/components/composites/WorkbenchWhy"
+import { WorkbenchWhy, type WorkbenchWhyLabels } from "@/components/composites/WorkbenchWhy"
 import type { WorkbenchWhyView } from "@/modules/types"
 
 /** The resolved explanation and labels framing the owner's list content. */

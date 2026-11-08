@@ -15,8 +15,8 @@ import {
     catalogTagOf,
     checkProvidersOf,
     connectionCountsOf,
+    type CatalogEntry,
 } from "@/hooks/connection-catalog"
-import type { CatalogEntry } from "@/hooks/connection-catalog"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
 import {
     connectionPageHref,

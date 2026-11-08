@@ -1,8 +1,7 @@
 "use client"
 
 import * as Outline from "@heroicons/react/24/outline"
-import { Icon as GrammarIcon, IconTile } from "@starci/grammar/common"
-import type { IconSource, IconUsage } from "@starci/grammar/common"
+import { Icon as GrammarIcon, IconTile, type IconSource, type IconUsage } from "@starci/grammar/common"
 
 import type { ForwardRefExoticComponent, ReactElement, RefAttributes, SVGProps } from "react"
 

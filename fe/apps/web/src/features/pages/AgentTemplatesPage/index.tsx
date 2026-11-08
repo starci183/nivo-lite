@@ -2,8 +2,7 @@ import type { Metadata } from "next"
 import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { agentPageTabsOf, agentsSubpageCrumbsOf } from "@/modules/page-header"
-import { AgentTemplatesPageBase } from "./component"
-import type { AgentTemplatesView } from "./component"
+import { AgentTemplatesPageBase, type AgentTemplatesView } from "./component"
 
 /** What the route hands the page: the view, and for the packaging view the installation. */
 interface AgentTemplatesPageProps {

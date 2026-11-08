@@ -1,6 +1,5 @@
 import { AUTO_RESOURCE } from "@/hooks/bookingDesk"
-import { BookingCustomerFields } from "@/components/leaves/BookingCustomerFields"
-import type { BookingPlacementDialogProps } from "@/components/leaves/BookingCustomerFields"
+import { BookingCustomerFields, type BookingPlacementDialogProps } from "@/components/leaves/BookingCustomerFields"
 import { parseDate, parseTime } from "@internationalized/date"
 import {
     Alert,

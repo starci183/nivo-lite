@@ -1,5 +1,4 @@
-import { AvatarButton, DropdownMenu } from "@starci/grammar/common"
-import type { DropdownMenuEntry } from "@starci/grammar/common"
+import { AvatarButton, DropdownMenu, type DropdownMenuEntry } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 

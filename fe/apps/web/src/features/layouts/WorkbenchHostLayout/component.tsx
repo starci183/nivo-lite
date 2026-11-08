@@ -1,5 +1,9 @@
-import { WorkbenchHostProvider } from "@nivo-lite/agent-sdk/client"
-import type { BlockRenderer, RegistryCheck, WorkbenchHost } from "@nivo-lite/agent-sdk/client"
+import {
+    WorkbenchHostProvider,
+    type BlockRenderer,
+    type RegistryCheck,
+    type WorkbenchHost,
+} from "@nivo-lite/agent-sdk/client"
 import type { ReactNode } from "react"
 
 /** What the pure half takes: the host, the installed blocks, the enabled modules and the registry comparison to mount, and what they wrap. */

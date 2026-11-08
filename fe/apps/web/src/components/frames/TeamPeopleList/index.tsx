@@ -1,5 +1,12 @@
-import { Badge, Cluster, EmptyNotice, IconTile, Text } from "@starci/grammar/common"
-import type { ListBoxItem, ListBoxSection } from "@starci/grammar/common"
+import {
+    Badge,
+    Cluster,
+    EmptyNotice,
+    IconTile,
+    Text,
+    type ListBoxItem,
+    type ListBoxSection,
+} from "@starci/grammar/common"
 import { FilterGroup } from "@/components/composites/FilterGroup"
 import { PaneSections } from "@/components/composites/PaneSections"
 import { nivoIconSource } from "@/components/leaves/Icon"

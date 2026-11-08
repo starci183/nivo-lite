@@ -8,8 +8,7 @@ import { navigation } from "@/modules/i18n"
 import { profileChipsOf, useAgentProfile, useProfileModuleName } from "@/hooks/agentProfile"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { AGENTS_ROUTE, CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
-import { AgentProfileHeadBase } from "./component"
-import type { ProfileHeadView } from "./component"
+import { AgentProfileHeadBase, type ProfileHeadView } from "./component"
 
 const PLACEHOLDER: ProfileHeadView = {
     crumbs: [],

@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
 import { Cluster, Progress, Section, Stack } from "@starci/grammar/common"
-import { WizardFooter } from "@/components/branches/WizardFooter"
-import type { WizardAction } from "@/components/branches/WizardFooter"
+import { WizardFooter, type WizardAction } from "@/components/branches/WizardFooter"
 
 /** What the shared wizard frame draws. */
 type WizardFrameProps = {

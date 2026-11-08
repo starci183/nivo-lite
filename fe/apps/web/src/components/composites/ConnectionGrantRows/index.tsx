@@ -1,5 +1,4 @@
-import { EmptyNotice, Section, Select } from "@starci/grammar/common"
-import type { ItemLeading, ListRowData } from "@starci/grammar/common"
+import { EmptyNotice, Section, Select, type ItemLeading, type ListRowData } from "@starci/grammar/common"
 
 /** One pair of an agent and a connection: who or what the row names, and the level between them. */
 interface ConnectionGrantRowData {

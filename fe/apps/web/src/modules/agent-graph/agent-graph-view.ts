@@ -11,11 +11,15 @@ import { cardLineWithChannels } from "./agent-graph-channels"
 import { flowEdgesOf, flowNodesOf, layerHeadersOf } from "./agent-graph-flow"
 import { problemLinesOf } from "./agent-graph-problems"
 import { detailViewOf } from "./agent-graph-view-detail"
-import { adderPickOf, adderViewOf, decideEditorViewOf, problemsViewOf } from "./agent-graph-view-decide"
-import type { AgentGraphAdderPick } from "./agent-graph-view-decide"
+import {
+    adderPickOf,
+    adderViewOf,
+    decideEditorViewOf,
+    problemsViewOf,
+    type AgentGraphAdderPick,
+} from "./agent-graph-view-decide"
 import { branchesViewOf, modeViewOf, proposalsViewOf, runViewOf, versionsViewOf } from "./agent-graph-view-lists"
-import { kindWordOf } from "./agent-graph-words"
-import type { AgentGraphContext } from "./agent-graph-words"
+import { kindWordOf, type AgentGraphContext } from "./agent-graph-words"
 
 /** What the person is doing on the panes: the choices that are not data. */
 export interface AgentGraphUi {

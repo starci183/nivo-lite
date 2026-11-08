@@ -1,5 +1,4 @@
-import { SurfaceCard } from "@starci/grammar/common"
-import type { Figure } from "@starci/grammar/common"
+import { SurfaceCard, type Figure } from "@starci/grammar/common"
 
 /** Props for {@link FiguresStrip}. */
 interface FiguresStripProps {

@@ -5,8 +5,7 @@ import type { ComponentProps } from "react"
 import { WizardFrame, frameOf } from "@/components/frames/WizardFrame"
 import { WizardConsentCopy } from "@/components/composites/WizardConsentCopy"
 import { DriveFileChooser } from "@/components/composites/DriveFileChooser"
-import type { WizardAction } from "@/components/branches/WizardFooter"
-import { WizardFooter } from "@/components/branches/WizardFooter"
+import { type WizardAction, WizardFooter } from "@/components/branches/WizardFooter"
 
 /** The words of the wizard: its three steps' guidance and buttons. */
 type DriveWizardText = Readonly<

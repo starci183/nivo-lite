@@ -1,5 +1,4 @@
-import { FINDING_KINDS } from "./findings"
-import type { FindingKind } from "./findings"
+import { FINDING_KINDS, type FindingKind } from "./findings"
 import type { FindingView } from "./finding-view"
 
 /** What the queue of what needs doing is narrowed to: everything, one kind of finding, the facts waiting, or the customer questions. */

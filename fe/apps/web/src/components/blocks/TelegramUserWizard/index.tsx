@@ -1,12 +1,11 @@
 "use client"
 
-import type { SlotRead } from "@/hooks/slot"
+import { type SlotRead, useSlotLabels, slotOfReads } from "@/hooks/slot"
 
 import { TelegramUserWizardBase, type TelegramUserWizardBaseProps } from "./component"
 import { useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf } from "@/hooks/connection-wizard"
-import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import type { AgentOption, SlotLabels } from "@/modules/types"
 import { MAX_CHATS } from "@/hooks/telegram-chats"
 import { useTelegramUserWizard } from "@/hooks/telegram-user-wizard"

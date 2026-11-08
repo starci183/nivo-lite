@@ -1,5 +1,4 @@
-import { Badge, Stack, Text } from "@starci/grammar/common"
-import type { BadgeProps } from "@starci/grammar/common"
+import { Badge, Stack, Text, type BadgeProps } from "@starci/grammar/common"
 import { TRAILING_CLASS_NAME } from "./classNames"
 
 /** What the end of a list row says: a muted meta line (a time, an owner) and one soft status chip. */

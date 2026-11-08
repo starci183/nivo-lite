@@ -1,15 +1,10 @@
 import { Button, Text } from "@starci/grammar/common"
 import { ConnectionSteps, stepsWithBodies } from "@/components/composites/ConnectionSteps"
-import { ConnectionGrantsBand } from "@/components/frames/ConnectionGrantsBand"
-import type { ConnectionGrantsBandProps } from "@/components/frames/ConnectionGrantsBand"
-import { SepayAccountBody } from "@/components/frames/SepayAccountBody"
-import type { SepayAccountBodyProps } from "@/components/frames/SepayAccountBody"
-import { SepayChecklistBody } from "@/components/frames/SepayChecklistBody"
-import type { SepayChecklistBodyProps } from "@/components/frames/SepayChecklistBody"
-import { SepayEnvironmentBody } from "@/components/frames/SepayEnvironmentBody"
-import type { SepayEnvironmentBodyProps } from "@/components/frames/SepayEnvironmentBody"
-import { SepayPasteBody } from "@/components/frames/SepayPasteBody"
-import type { SepayPasteBodyProps } from "@/components/frames/SepayPasteBody"
+import { ConnectionGrantsBand, type ConnectionGrantsBandProps } from "@/components/frames/ConnectionGrantsBand"
+import { SepayAccountBody, type SepayAccountBodyProps } from "@/components/frames/SepayAccountBody"
+import { SepayChecklistBody, type SepayChecklistBodyProps } from "@/components/frames/SepayChecklistBody"
+import { SepayEnvironmentBody, type SepayEnvironmentBodyProps } from "@/components/frames/SepayEnvironmentBody"
+import { SepayPasteBody, type SepayPasteBodyProps } from "@/components/frames/SepayPasteBody"
 
 /** One setup step as it is worded: its title, the summary beside it, the guidance under it, and where it stands. */
 interface SepayStepView {

@@ -6,8 +6,7 @@ import { useHiringFormat, useHiringSay } from "@/hooks/hiring"
 import { useHiringInterviewReply, usePublicHiringInterview, type PublicInterviewView } from "@/hooks/hiringPublic"
 import { useLocaleSwitch } from "@/hooks/locale"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
-import { HiringInterviewReplyBase } from "./component"
-import type { HiringInterviewReplyShape } from "./component"
+import { HiringInterviewReplyBase, type HiringInterviewReplyShape } from "./component"
 
 /** The token of the candidate's own link. */
 interface HiringInterviewReplyProps {
@@ -29,7 +28,7 @@ export const HiringInterviewReply = (props: HiringInterviewReplyProps) => {
     const slotLabels = useSlotLabels()
     const language = useLocaleSwitch()
     const [selected, setSelected] = useState("")
-    const [isMissing, setMissing] = useState(false)
+    const [isMissing, setIsMissing] = useState(false)
     const read = usePublicHiringInterview(props.token)
     const reply = useHiringInterviewReply(props.token)
     const view = read.view
@@ -84,10 +83,10 @@ export const HiringInterviewReply = (props: HiringInterviewReplyProps) => {
             on={{
                 select: (start) => {
                     setSelected(start)
-                    setMissing(false)
+                    setIsMissing(false)
                 },
                 confirm: () => {
-                    setMissing(selected === "")
+                    setIsMissing(selected === "")
                     if (selected !== "") reply.pick(selected)
                 },
                 pick: reply.pick,

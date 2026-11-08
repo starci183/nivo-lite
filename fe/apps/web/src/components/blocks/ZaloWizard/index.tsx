@@ -1,9 +1,8 @@
 "use client"
 
-import type { SlotRead } from "@/hooks/slot"
+import { type SlotRead, useSlotLabels, slotOfReads } from "@/hooks/slot"
 
 import { useTranslations } from "next-intl"
-import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import { GUIDES } from "@/hooks/connection-guides"
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf, EMPTY_GUIDE_CONTEXT, guideScreensOf, useCopyLabels } from "@/hooks/connection-wizard"

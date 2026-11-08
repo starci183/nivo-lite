@@ -7,8 +7,7 @@ import type {
     PublicBrainCopy,
     PublicDraftView,
 } from "@/modules/types"
-import { failureKeyOf, listedPublicDocs, publicBadgeOf } from "./public-docs"
-import type { PublicBadge, PublicDocument } from "./public-docs"
+import { failureKeyOf, listedPublicDocs, publicBadgeOf, type PublicBadge, type PublicDocument } from "./public-docs"
 
 /** The translators the public documents screen speaks through. */
 type PublicTranslate = ReturnType<typeof useTranslations<"publicBrain">>

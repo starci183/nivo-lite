@@ -2,13 +2,10 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useAgentInstallation, useAgentRights, useChooseOperatingMode } from "@/hooks/agentSettings"
-import type { AgentMode } from "@/hooks/agentSettings"
-import { useModuleName } from "@/hooks/installations"
-import type { ModuleKey } from "@/hooks/installations"
+import { useAgentInstallation, useAgentRights, useChooseOperatingMode, type AgentMode } from "@/hooks/agentSettings"
+import { useModuleName, type ModuleKey } from "@/hooks/installations"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AgentModeCardBase } from "./component"
-import type { ModeView } from "./component"
+import { AgentModeCardBase, type ModeView } from "./component"
 
 /** The installation the card sets and its catalogue key. */
 type AgentModeCardProps = {

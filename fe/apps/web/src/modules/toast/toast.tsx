@@ -1,4 +1,9 @@
-import { toast as heroToast } from "@heroui/react"
+import {
+    toast as heroToast,
+    type ToastPromiseOptions,
+    type ToastContentValue,
+    type HeroUIToastOptions,
+} from "@heroui/react"
 import {
     CheckCircleIcon,
     ExclamationTriangleIcon,
@@ -8,7 +13,6 @@ import {
 import { IconTile } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 
-import type { ToastPromiseOptions, ToastContentValue, HeroUIToastOptions } from "@heroui/react"
 import type { UNSTABLE_ToastQueue } from "react-aria-components"
 
 /** Options a status toast accepts: the HeroUI ones, minus the `variant` each status already implies. */

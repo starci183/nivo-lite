@@ -1,5 +1,4 @@
-import { MODULE_KEYS } from "@/modules/catalog"
-import type { ModuleKey } from "@/modules/catalog"
+import { MODULE_KEYS, type ModuleKey } from "@/modules/catalog"
 
 /** A suggestion to add something to the knowledge, never a requirement; its words live in the catalog (`knowledge` namespace). */
 export interface DocumentIdea {

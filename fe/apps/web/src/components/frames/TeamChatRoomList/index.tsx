@@ -1,5 +1,4 @@
-import { EmptyNotice, IconTile, ListBox } from "@starci/grammar/common"
-import type { ListBoxItem } from "@starci/grammar/common"
+import { EmptyNotice, IconTile, ListBox, type ListBoxItem } from "@starci/grammar/common"
 import { RowTrailing } from "@/components/composites/RowTrailing"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { nivoIconSource } from "@/components/leaves/Icon"

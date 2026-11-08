@@ -9,8 +9,7 @@ import { LOYALTY } from "./loyalty"
 import { VIDEO } from "./video"
 import { CONTENT } from "./content"
 import { HIRING } from "./hiring"
-import { ACTION_KEYS, MODULE_KEYS } from "./catalog.keys"
-import type { ActionKey, ModuleKey } from "./catalog.keys"
+import { ACTION_KEYS, MODULE_KEYS, type ActionKey, type ModuleKey } from "./catalog.keys"
 import type { ModuleDef, RegistryAction } from "./catalog.types"
 
 /** The routing, visuals and behavior of every module by key. */

@@ -1,5 +1,4 @@
-import { Page } from "@starci/grammar/common"
-import type { BreadcrumbItem, PageHeaderContent } from "@starci/grammar/common"
+import { Page, type BreadcrumbItem, type PageHeaderContent } from "@starci/grammar/common"
 import type { ReactElement } from "react"
 import { AgentMarketplace } from "@/components/blocks/AgentMarketplace"
 import { AgentTemplatePackage } from "@/components/blocks/AgentTemplatePackage"

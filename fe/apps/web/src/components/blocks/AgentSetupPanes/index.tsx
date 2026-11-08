@@ -21,8 +21,7 @@ import { useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import type { AgentSetupCopy, SetupSideGate } from "@/modules/types"
-import { AgentSetupPanesBase } from "./component"
-import type { AgentSetupChatContent } from "./component"
+import { AgentSetupPanesBase, type AgentSetupChatContent } from "./component"
 
 /** What the Setup page hands the panes: the instance and catalogue key of the url. */
 type AgentSetupPanesProps = {

@@ -1,5 +1,11 @@
-import { allGatesConfirmed, gateEntry, gatesOf, snapshotOf } from "@/modules/installations"
-import type { ContextVersion, SetupSession } from "@/modules/installations"
+import {
+    allGatesConfirmed,
+    gateEntry,
+    gatesOf,
+    snapshotOf,
+    type ContextVersion,
+    type SetupSession,
+} from "@/modules/installations"
 import type { ModuleKey } from "@/modules/catalog"
 
 /** How far the checklist is and whether applying the draft would change anything. */

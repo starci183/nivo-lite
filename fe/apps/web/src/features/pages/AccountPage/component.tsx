@@ -1,5 +1,4 @@
-import { Page, Stack } from "@starci/grammar/common"
-import type { PageHeaderContent } from "@starci/grammar/common"
+import { Page, Stack, type PageHeaderContent } from "@starci/grammar/common"
 import { AccountSessions } from "@/components/blocks/AccountSessions"
 import { AccountSignIn } from "@/components/blocks/AccountSignIn"
 

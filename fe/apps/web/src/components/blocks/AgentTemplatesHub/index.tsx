@@ -5,8 +5,7 @@ import { useState } from "react"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { useTemplatesHub } from "@/hooks/templates"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AgentTemplatesHubBase } from "./component"
-import type { AgentTemplatesHubData, HubDialog } from "./component"
+import { AgentTemplatesHubBase, type AgentTemplatesHubData, type HubDialog } from "./component"
 
 /** The shape of the hub while its first read loads: the skeleton reuses the ready tree. */
 const PLACEHOLDER: AgentTemplatesHubData = {

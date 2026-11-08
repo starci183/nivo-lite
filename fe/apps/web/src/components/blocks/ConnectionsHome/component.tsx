@@ -1,5 +1,12 @@
-import { EmptyNotice, Pane, PaneGrid, PaneSection, Section } from "@starci/grammar/common"
-import type { Figure, ListRowData } from "@starci/grammar/common"
+import {
+    EmptyNotice,
+    Pane,
+    PaneGrid,
+    PaneSection,
+    Section,
+    type Figure,
+    type ListRowData,
+} from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PaneBody } from "@/components/frames/PaneBody"
 import { PaneBlank } from "@/components/composites/PaneBlank"

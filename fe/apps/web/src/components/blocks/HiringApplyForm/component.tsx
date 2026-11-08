@@ -14,9 +14,8 @@ import {
 } from "@starci/grammar/common"
 
 import { HiringApplyQuestion } from "@/components/composites/HiringApplyQuestion"
-import { HiringJobPost } from "@/components/composites/HiringJobPost"
+import { HiringJobPost, type HiringJobPostProps } from "@/components/composites/HiringJobPost"
 import { PublicShell } from "@/components/frames/PublicShell"
-import type { HiringJobPostProps } from "@/components/composites/HiringJobPost"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { ApplyValues, DataSlot, FieldOf, HiringSay, PublicQuestionView, SlotLabels } from "@/modules/types"
 import { HONEYPOT_CLASS_NAME } from "./classNames"

@@ -1,14 +1,13 @@
-import { bubbleDiameter } from "@starci/grammar/common"
-import type {
-    BubbleMapEdge,
-    BubbleMapFill,
-    BubbleMapNode,
-    BubbleMapRingPart,
-    FlowGraphTone,
+import {
+    bubbleDiameter,
+    type BubbleMapEdge,
+    type BubbleMapFill,
+    type BubbleMapNode,
+    type BubbleMapRingPart,
+    type FlowGraphTone,
 } from "@starci/grammar/common"
-import { DOSSIER_STATUS_ORDER } from "./dossiers"
+import { DOSSIER_STATUS_ORDER, type CategoryView, type DossierStatus, type DossierView } from "./dossiers"
 import { dossierTagOf } from "./finding-view"
-import type { CategoryView, DossierStatus, DossierView } from "./dossiers"
 
 /** The centre of the map: the workspace's brain, which every category hangs from. */
 export const MAP_ROOT_ID = "root"

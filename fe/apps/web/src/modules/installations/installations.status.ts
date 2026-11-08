@@ -50,7 +50,7 @@ export const installationPersonName = (installation: Installation): string =>
 
 /** Accent-insensitive text for matching: NFD, marks stripped, d-stroke folded, lower case. */
 export const foldText = (text: string): string =>
-    text.normalize("NFD").replace(/[̀-ͯ]/gu, "").replace(/đ/giu, "d").toLowerCase()
+    text.normalize("NFD").replaceAll(/[̀-ͯ]/gu, "").replaceAll(/đ/giu, "d").toLowerCase()
 
 /** The parts of the facts line under an agent name. */
 type AgentSubtitleParts = {

@@ -1,5 +1,4 @@
-import { SurfaceCard } from "@starci/grammar/common"
-import type { ErrorData, ListRowData } from "@starci/grammar/common"
+import { SurfaceCard, type ErrorData, type ListRowData } from "@starci/grammar/common"
 
 /** One workspace row, already worded for the person's language. */
 export interface WorkspaceRowView {

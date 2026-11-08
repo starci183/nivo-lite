@@ -1,6 +1,8 @@
 import { Alert, Button, Cluster, Image, MediaFrame, Page, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import { WorkspacePaymentDetails } from "@/components/composites/WorkspacePaymentDetails"
-import type { WorkspacePaymentDetailsProps } from "@/components/composites/WorkspacePaymentDetails"
+import {
+    WorkspacePaymentDetails,
+    type WorkspacePaymentDetailsProps,
+} from "@/components/composites/WorkspacePaymentDetails"
 import { CENTERED_CLASS_NAME, MASCOT_CLASS_NAME, MEASURE_CLASS_NAME } from "./classNames"
 
 /** Presentation of a payment step after the connected block resolves its state. */

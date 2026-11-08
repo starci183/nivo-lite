@@ -1,5 +1,4 @@
-import { Alert, Button, EmptyNotice, Stack, SurfaceCard } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { Alert, Button, EmptyNotice, Stack, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import { SetupGateBody } from "@/components/branches/SetupGateBody"
 import type { SetupSideGate, SetupSideView } from "@/modules/types"
 

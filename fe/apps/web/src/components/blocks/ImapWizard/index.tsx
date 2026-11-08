@@ -1,11 +1,10 @@
 "use client"
 
-import type { SlotRead } from "@/hooks/slot"
+import { type SlotRead, useSlotLabels, slotOfReads } from "@/hooks/slot"
 
 import { useFormatter, useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf } from "@/hooks/connection-wizard"
-import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import type { AgentOption, SlotLabels } from "@/modules/types"
 import {
     IMAP_EVERY,

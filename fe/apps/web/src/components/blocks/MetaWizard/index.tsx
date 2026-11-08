@@ -1,11 +1,10 @@
 "use client"
 
-import type { SlotRead } from "@/hooks/slot"
+import { type SlotRead, useSlotLabels, slotOfReads } from "@/hooks/slot"
 
 import { useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
 import { agentChoicesOf } from "@/hooks/connection-wizard"
-import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import { META_STEPS, metaCheckLines, useMetaWizard } from "@/hooks/meta-wizard"
 import type { AgentOption } from "@/modules/types"
 import { MetaWizardBase } from "./component"

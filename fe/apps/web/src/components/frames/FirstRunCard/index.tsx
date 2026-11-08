@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { Cluster, Heading, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import type { Collection } from "@starci/grammar/common"
+import { Cluster, Heading, Stack, SurfaceCard, Text, type Collection } from "@starci/grammar/common"
 
 /** What a first-run card draws: its question, the line under it, the body and the ways back and on. */
 interface FirstRunCardHead {

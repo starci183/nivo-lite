@@ -1,5 +1,4 @@
-import { createViewerCache } from "@starci/next-data"
-import type { ViewerCache } from "@starci/next-data"
+import { createViewerCache, type ViewerCache } from "@starci/next-data"
 
 /** The writes to the cache of the viewer on screen: each viewer has their own, so the mutate SWR exports, bound to its default cache, reaches none of them. */
 export const viewerCache: ViewerCache = createViewerCache()

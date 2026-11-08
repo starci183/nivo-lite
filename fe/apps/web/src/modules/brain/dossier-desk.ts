@@ -1,9 +1,7 @@
-import { filterOfStatus } from "./findings"
+import { filterOfStatus, type FindingFilter } from "./findings"
 import type { DossierFindingsPane } from "./dossier-findings-pane"
-import { dossierTagOf, reviewedStatusOf } from "./finding-view"
-import type { FindingFilter } from "./findings"
+import { dossierTagOf, reviewedStatusOf, type FindingView } from "./finding-view"
 import type { FindingActionView } from "./finding-row"
-import type { FindingView } from "./finding-view"
 import type { CategoryView, DossierView } from "./dossiers"
 import type { DossierRowView, DossierSectionView } from "./dossier-desk-view"
 

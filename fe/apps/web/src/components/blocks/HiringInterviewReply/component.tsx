@@ -10,8 +10,8 @@ import {
     SurfaceCard,
     Text,
     TextAction,
+    type HeaderZone,
 } from "@starci/grammar/common"
-import type { HeaderZone } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { HiringReplyOutcome } from "@/components/composites/HiringReplyOutcome"
 import { PublicShell } from "@/components/frames/PublicShell"

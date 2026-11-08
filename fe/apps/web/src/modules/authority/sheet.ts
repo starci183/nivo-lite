@@ -1,5 +1,12 @@
-import { EMPTY_PROFILE, approvalPolicyOf, approverRoleOf, authorityModeOf, ruleUnitOf } from "./rules"
-import type { AuthorityProfile, AuthoritySheet } from "./rules"
+import {
+    EMPTY_PROFILE,
+    approvalPolicyOf,
+    approverRoleOf,
+    authorityModeOf,
+    ruleUnitOf,
+    type AuthorityProfile,
+    type AuthoritySheet,
+} from "./rules"
 
 /** The back end profile line. */
 interface ProfileWire {

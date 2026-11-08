@@ -1,8 +1,7 @@
 "use client"
 
-import type { SlotRead } from "@/hooks/slot"
+import { type SlotRead, useSlotLabels, slotOfReads } from "@/hooks/slot"
 
-import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import { useBankName } from "@/hooks/banks"
 import { useFormatter, useTranslations } from "next-intl"
 import { GUIDES } from "@/hooks/connection-guides"

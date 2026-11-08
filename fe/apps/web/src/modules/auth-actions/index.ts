@@ -6,8 +6,11 @@ import {
     signUp,
     startOAuth,
     updatePassword,
+    type PasswordReset,
+    type SignInInput,
+    type SignInResult,
+    type SignUpResult,
 } from "./actions"
-import type { PasswordReset, SignInInput, SignInResult, SignUpResult } from "./actions"
 
 import type { GraphQLResponse } from "../types"
 

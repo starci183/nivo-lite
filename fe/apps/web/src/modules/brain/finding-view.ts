@@ -1,6 +1,5 @@
 import type { EvidenceItemView } from "./finding-row"
-import { DOSSIER_STATUS_ORDER } from "./dossiers"
-import type { DossierStatus } from "./dossiers"
+import { DOSSIER_STATUS_ORDER, type DossierStatus } from "./dossiers"
 import {
     FINDING_KINDS,
     FINDING_RESOLUTIONS,
@@ -9,15 +8,13 @@ import {
     REMEDY_ACTIONS,
     REMEDY_DRAFT_STATUSES,
     EVIDENCE_PLACE_KINDS,
-} from "./findings"
-import type {
-    EvidencePlaceKind,
-    FindingKind,
-    FindingResolution,
-    FindingSeverity,
-    FindingStatus,
-    RemedyAction,
-    RemedyDraftStatus,
+    type EvidencePlaceKind,
+    type FindingKind,
+    type FindingResolution,
+    type FindingSeverity,
+    type FindingStatus,
+    type RemedyAction,
+    type RemedyDraftStatus,
 } from "./findings"
 
 /** Where in its document a quote sits: the page of a PDF, the slide of a presentation or the sheet of a workbook. */

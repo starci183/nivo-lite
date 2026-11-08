@@ -1,23 +1,23 @@
 import { Page, Pane, PaneGrid } from "@starci/grammar/common"
-import { ChecklistImportDialog } from "@/components/composites/ChecklistImportDialog"
-import type { ChecklistImportDialogProps } from "@/components/composites/ChecklistImportDialog"
+import { ChecklistImportDialog, type ChecklistImportDialogProps } from "@/components/composites/ChecklistImportDialog"
 import { brainHeaderTabs } from "@/components/composites/BrainHeaderActions"
 import type { DossierFindingsPane, FindingAction } from "@/components/composites/DossierFindingBoard"
 import type { FindingDialogValues, FindingDialogView } from "@/components/composites/DossierFindingDialogs"
 import { DossierHeaderActions } from "@/components/composites/DossierHeaderActions"
 import { PaneBlank } from "@/components/composites/PaneBlank"
 import { DossierAside } from "@/components/frames/DossierAside"
-import { DossierHeadBand } from "@/components/frames/DossierHeadBand"
-import type { DossierMainCopy } from "@/components/frames/DossierHeadBand"
-import { DossierList } from "@/components/frames/DossierList"
-import type { DossierDeskView, DossierListCopy, DossierMode } from "@/components/frames/DossierList"
+import { DossierHeadBand, type DossierMainCopy } from "@/components/frames/DossierHeadBand"
+import {
+    DossierList,
+    type DossierDeskView,
+    type DossierListCopy,
+    type DossierMode,
+} from "@/components/frames/DossierList"
 import { DossierMainBody } from "@/components/frames/DossierMainBody"
 import { DossierMapDetail } from "@/components/frames/DossierMapDetail"
-import { DossierMapHead, DossierMapPane } from "@/components/frames/DossierMapPane"
-import type { MapView } from "@/components/frames/DossierMapPane"
+import { DossierMapHead, DossierMapPane, type MapView } from "@/components/frames/DossierMapPane"
 import { DossierNotice } from "@/components/frames/DossierNotice"
-import { DossierRemedyDrawer } from "@/components/frames/DossierRemedyDrawer"
-import type { DossierRemedyDrawerProps } from "@/components/frames/DossierRemedyDrawer"
+import { DossierRemedyDrawer, type DossierRemedyDrawerProps } from "@/components/frames/DossierRemedyDrawer"
 import { PaneBody } from "@/components/frames/PaneBody"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { BrainPageHeaderView } from "@/modules/types"

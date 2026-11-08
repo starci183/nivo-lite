@@ -4,8 +4,13 @@
 // these instead of importing `run*WithToast` directly, so every toast message is localized.
 import { useTranslations } from "next-intl"
 import { useCallback, useMemo } from "react"
-import { runGraphQLWithToast, runRestWithToast } from "./api"
-import type { RunGraphQLWithToastOptions, RunRestWithToastOptions, ToastMessages } from "./api"
+import {
+    runGraphQLWithToast,
+    runRestWithToast,
+    type RunGraphQLWithToastOptions,
+    type RunRestWithToastOptions,
+    type ToastMessages,
+} from "./api"
 
 /** Resolves the localized {@link ToastMessages} from the `toast` namespace. */
 const useToastMessages = (): ToastMessages => {

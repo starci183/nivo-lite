@@ -4,8 +4,7 @@ import { BrainHeaderActions, brainHeaderTabs } from "@/components/composites/Bra
 import { PaneBlank } from "@/components/composites/PaneBlank"
 import { PaneHead } from "@/components/composites/PaneHead"
 import { BrainNotice } from "@/components/composites/BrainNotice"
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { IconName } from "@/components/leaves/Icon"
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 import type { BrainHeadView, BrainPageHeaderView, DataSlot, PaneGridLayout, SlotLabels } from "@/modules/types"
 
 /** The words of the panes of a list tab. */
