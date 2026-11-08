@@ -2,7 +2,7 @@ import type { SaveBrainFactRequest } from "../../application/save-brain-fact.con
 import type { ProposeResult } from "@modules/domain/brain-facts"
 import type { SaveBrainFactInput } from "./dto/save-brain-fact.input"
 import type { SavedFactType } from "./dto/saved-fact.type"
-import { toBrainFactType } from "./brain-records.mapper"
+import { toBrainFactType } from "./brain-items.mapper"
 
 /** Maps the GraphQL input to the request. */
 export const toSaveBrainFactRequest = (workspaceId: string, input: SaveBrainFactInput): SaveBrainFactRequest => ({

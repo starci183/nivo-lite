@@ -81,7 +81,7 @@ export const toGetInstallationRequest = (
 
 /** Maps the installed agents to the GraphQL type. */
 export const toModuleInstallationsType = (records: ReadonlyArray<InstallationView>): Array<ModuleInstallationType> =>
-    records.map(toModuleInstallationType)
+    records.map((record) => ({ ...record }))
 
 /** Maps the installation of the GraphQL input, with the workspace it names, to the sync status request. */
 export const toGetAgentSyncStatusRequest = (

@@ -1,7 +1,9 @@
-import { Module } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { AI_GENERATION_COMPLETED_VIDEO_TOPIC_QUEUE, InjectEventConsumerRegistry } from "@modules/platform/event-bus"
-import type { EventConsumerRegistry } from "@modules/platform/event-bus"
+import { Module, type OnModuleInit } from "@nestjs/common"
+import {
+    AI_GENERATION_COMPLETED_VIDEO_TOPIC_QUEUE,
+    InjectEventConsumerRegistry,
+    type EventConsumerRegistry,
+} from "@modules/platform/event-bus"
 import { VideoScriptingModule } from "../../video-scripting.module"
 import { AiGenerationCompletedConsumer } from "./ai-generation-completed.consumer"
 import { ConfigurableModuleClass } from "./video-scripting-message.module-definition"

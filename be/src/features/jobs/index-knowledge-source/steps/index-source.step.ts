@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { KnowledgeJobsService } from "@modules/domain/knowledge"
-import { AdvancingJobStepPolicy, InjectJobClaims } from "@modules/platform/jobs"
-import type { JobClaims, JobStep } from "@modules/platform/jobs"
+import { AdvancingJobStepPolicy, InjectJobClaims, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the source of the claimed job is read, cut into passages, embedded and stored. */

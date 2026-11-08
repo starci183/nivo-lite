@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { ConnectionGrantsService } from "@modules/domain/connection-grants"
+import { ConnectionGrantsService, type ConnectionBoardEntry } from "@modules/domain/connection-grants"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import type { ConnectionBoardEntry } from "@modules/domain/connection-grants"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ListConnectionsQuery } from "./list-connections.query"
 
 @QueryHandler(ListConnectionsQuery)

@@ -1,6 +1,5 @@
 import { mock } from "@starci/jest-preset"
-import { Brackets } from "typeorm"
-import type { WhereExpressionBuilder } from "typeorm"
+import { Brackets, type WhereExpressionBuilder } from "typeorm"
 
 /** The conditions a `Brackets` group adds, in order, each as the arguments of its `where` or `orWhere` call. */
 export const bracketConditions = (brackets: unknown): ReadonlyArray<ReadonlyArray<unknown>> => {

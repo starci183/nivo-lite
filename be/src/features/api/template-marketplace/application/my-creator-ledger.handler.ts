@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { CreatorLedgerService } from "@modules/domain/template-marketplace"
-import type { CreatorLedgerView } from "@modules/domain/template-marketplace"
+import { CreatorLedgerService, type CreatorLedgerView } from "@modules/domain/template-marketplace"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { MyCreatorLedgerQuery } from "./my-creator-ledger.query"
 
 @QueryHandler(MyCreatorLedgerQuery)

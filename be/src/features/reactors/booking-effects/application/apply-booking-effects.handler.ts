@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { BookingEffectsService } from "@modules/domain/bookings"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ApplyBookingEffectsCommand } from "./apply-booking-effects.command"
 import type { ApplyBookingEffectsResult } from "./apply-booking-effects.contracts"
 

@@ -5,8 +5,13 @@ import {
 } from "@modules/platform/event-bus"
 import { InboxService } from "@modules/platform/inbox"
 import { eachInOrder } from "@modules/platform/primitives"
-import { SpecEvent, drainRounds, openEventBusProof, pause } from "../../world/event-bus-proof.service"
-import type { EventBusProof } from "../../world/event-bus-proof.service"
+import {
+    SpecEvent,
+    drainRounds,
+    openEventBusProof,
+    pause,
+    type EventBusProof,
+} from "../../world/event-bus-proof.service"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { useTestWorld } from "../../world/use-test-world"
 

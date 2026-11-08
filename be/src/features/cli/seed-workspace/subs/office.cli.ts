@@ -1,6 +1,5 @@
 import { CommandRunner, Option, SubCommand } from "nest-commander"
-import { OfficeSeedService } from "@modules/domain/workspace-seed"
-import type { OfficeCommand } from "@modules/domain/workspace-seed"
+import { OfficeSeedService, type OfficeCommand } from "@modules/domain/workspace-seed"
 
 @SubCommand({
     name: "office",

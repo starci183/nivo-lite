@@ -1,15 +1,15 @@
-import type {
-    Evidence,
-    FactInput,
-    FactRecord,
-    BrainSubjectType,
-    Scope,
-    FactStatus,
-    FactSource,
-    FactProposalKind,
+import {
+    type Evidence,
+    type FactInput,
+    type FactRecord,
+    type BrainSubjectType,
+    type Scope,
+    type FactStatus,
+    type FactSource,
+    type FactProposalKind,
+    brainFactsEntities,
 } from "@modules/domain/brain-facts"
 import { builder } from "@starci/jest-preset"
-import { brainFactsEntities } from "@modules/domain/brain-facts"
 import { entityRowBuilder } from "./entity-row.builder"
 
 const BrainFactEntity: (typeof brainFactsEntities)[0] = brainFactsEntities[0]

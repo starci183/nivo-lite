@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { ContentConfigurationService } from "@modules/domain/content-settings"
-import type { ContentConfiguration } from "@modules/domain/content-settings"
+import { ContentConfigurationService, type ContentConfiguration } from "@modules/domain/content-settings"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ContentConfigurationQuery } from "./content-configuration.query"
 
 @QueryHandler(ContentConfigurationQuery)

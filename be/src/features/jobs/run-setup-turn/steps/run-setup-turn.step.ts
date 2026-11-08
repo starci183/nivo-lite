@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { SetupTurnService } from "@modules/domain/modules"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: NIVO answers the owner message of the setup chat the payload names (one model call, the draft, the cards and the reply). */

@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AgentBindingsService } from "@modules/domain/agent-connections"
-import type { BoundConnection } from "@modules/domain/agent-connections"
+import { AgentBindingsService, type BoundConnection } from "@modules/domain/agent-connections"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ListAgentConnectionsQuery } from "./list-agent-connections.query"
 
 @QueryHandler(ListAgentConnectionsQuery)

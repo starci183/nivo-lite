@@ -1,6 +1,5 @@
 import { randomBytes } from "node:crypto"
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AGENT_TURNS_OPTIONS } from "../../modules/domain/agent-turns/agent-turns.decorators"
 import { AgentTurnAccessService } from "../../modules/domain/agent-turns/agent-turn-access.service"
 import { Secret } from "@modules/platform/config"

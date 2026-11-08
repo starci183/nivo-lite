@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { PaymentOrderRequestsService } from "@modules/domain/payment-order-requests"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: makes the payment order a member asked for and answers the request row. */

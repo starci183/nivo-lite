@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { CsvImportWizardService } from "@modules/domain/data-hub"
-import type { CsvPreview } from "@modules/domain/data-hub"
+import { CsvImportWizardService, type CsvPreview } from "@modules/domain/data-hub"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { PreviewCsvSourceQuery } from "./preview-csv-source.query"
 
 @QueryHandler(PreviewCsvSourceQuery)

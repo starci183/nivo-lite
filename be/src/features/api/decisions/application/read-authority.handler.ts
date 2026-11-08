@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { DecisionsService } from "@modules/domain/decisions"
-import type { AuthoritySheet } from "@modules/domain/decisions"
+import { DecisionsService, type AuthoritySheet } from "@modules/domain/decisions"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ReadAuthorityQuery } from "./read-authority.query"
 
 @QueryHandler(ReadAuthorityQuery)

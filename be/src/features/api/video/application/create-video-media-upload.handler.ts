@@ -1,10 +1,8 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { VideoMediaService } from "@modules/domain/video"
+import { VideoMediaService, type VideoMediaTicket } from "@modules/domain/video"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { CreateVideoMediaUploadCommand } from "./create-video-media-upload.command"
-import type { VideoMediaTicket } from "@modules/domain/video"
 
 @CommandHandler(CreateVideoMediaUploadCommand)
 /** Dispatches createVideoMediaUpload through its checked domain use case. */

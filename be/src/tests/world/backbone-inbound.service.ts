@@ -1,11 +1,16 @@
 import type { OptionalRunTrace } from "@modules/domain/agent-runs"
-import type { AgentTurnView, AgentHandlerEnding, AgentBegin } from "@modules/domain/agent-work"
+import {
+    type AgentTurnView,
+    type AgentHandlerEnding,
+    type AgentBegin,
+    AgentTurnsService,
+    AgentTriggersService,
+} from "@modules/domain/agent-work"
 import type { InboundEvent, InboundAccepted } from "../../modules/domain/agent-inbound/agent-inbound.contracts"
 import type { IntentPlan, IntentRead } from "../../modules/domain/agent-turns/agent-turns.contracts"
 import assert from "node:assert/strict"
 import { randomBytes } from "node:crypto"
 import { In } from "typeorm"
-import { AgentTurnsService, AgentTriggersService } from "@modules/domain/agent-work"
 import {
     GenericWebhookIntakeService,
     GenericWebhookJobService,
@@ -13,8 +18,7 @@ import {
 } from "@modules/domain/agent-inbound"
 import { ConnectionsService } from "@modules/domain/connections"
 import { workItemsEntities } from "@modules/domain/work-items"
-import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
-import type { ChatTranscriptLine } from "@modules/domain/chat-records"
+import { ChatConversationsService, ChatMessagesService, type ChatTranscriptLine } from "@modules/domain/chat-records"
 import { entityEngineEntities } from "@modules/domain/entity-engine"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"
 import { jobsEntities } from "@modules/platform/jobs"
@@ -33,8 +37,13 @@ import { CustomerIntentsService } from "../../modules/domain/customer-turns/cust
 import { CustomerWorkHandlerService } from "../../modules/domain/customer-turns/customer-work-handler.service"
 import { AgentTurnExecutorService } from "../../modules/domain/agent-turns/agent-turn-executor.service"
 import { AccountingPerformersRegistrarService } from "../../modules/domain/accounting/accounting-performers-registrar.service"
-import { INBOUND_EVENT, INBOUND_GRAPH, persistInboundScene } from "../fixtures/builders/backbone-inbound.builder"
-import type { InboundIdentity, InboundSceneHolder } from "../fixtures/builders/backbone-inbound.builder"
+import {
+    INBOUND_EVENT,
+    INBOUND_GRAPH,
+    persistInboundScene,
+    type InboundIdentity,
+    type InboundSceneHolder,
+} from "../fixtures/builders/backbone-inbound.builder"
 import { lapseLease, removeDrainJobs, settleAgentWork, wakeOfFact, wakesOfFact } from "./agent-work-database.service"
 import { removeAuthUsers, removeWorkspace } from "./proof-accounts.service"
 import { removeStepJobs } from "./agent-runs-database.service"
@@ -176,8 +185,8 @@ const readsOf = (world: World, who: InboundIdentity) => ({
         return world.resolve(AgentRunTraceService).ofWake(who.workspaceId, wake.id)
     },
     wakes: (event: InboundEvent): Promise<number> => wakesOfFact(world.db.primary, who.agentId, event.idempotencyKey),
-    items: (): Promise<Array<WorkItemEntity>> =>
-        world.db.primary.find(WorkItemEntity, { where: { workspaceId: who.workspaceId }, take: ROWS_MAX }),
+    items: async (): Promise<Array<WorkItemEntity>> =>
+        await world.db.primary.find(WorkItemEntity, { where: { workspaceId: who.workspaceId }, take: ROWS_MAX }),
     async replies(): Promise<ReadonlyArray<ChatTranscriptLine>> {
         const lines = await world.resolve(ChatMessagesService).transcript(who.workspaceId, who.conversationId)
         return lines.filter((line) => line.role === "agent")
@@ -276,8 +285,8 @@ const webhooksOf = (
             valid = true,
             claims: Readonly<Record<string, unknown>> = {},
         ): Promise<InboundEvent | null> => deliverWebhook(world, eventOf, state, key, valid, claims),
-        receipts: (): Promise<Array<JobOutboxEntity>> =>
-            world.db.primary.find(JobOutboxEntity, {
+        receipts: async (): Promise<Array<JobOutboxEntity>> =>
+            await world.db.primary.find(JobOutboxEntity, {
                 where: {
                     queue: "generic_webhook",
                     dedupeKey: In([...state.deliveryIds].map((deliveryId) => genericWebhookKey(deliveryId))),

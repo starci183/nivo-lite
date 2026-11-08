@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { DossierReviewRunnerService } from "@modules/domain/dossier-review"
-import { AdvancingJobStepPolicy, InjectJobClaims } from "@modules/platform/jobs"
-import type { JobClaims, JobStep } from "@modules/platform/jobs"
+import { AdvancingJobStepPolicy, InjectJobClaims, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the review run of the claimed job is carried out. */

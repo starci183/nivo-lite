@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { VideoService } from "@modules/domain/video"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { RequestRenderResult } from "./request-render.contracts"
 import { RequestRenderCommand } from "./request-render.command"
 

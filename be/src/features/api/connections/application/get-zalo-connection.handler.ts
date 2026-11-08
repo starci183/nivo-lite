@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { ZaloConnectService } from "@modules/domain/channels"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { ZaloWizardConnection } from "@modules/domain/channel-connections"
 import { GetZaloConnectionQuery } from "./get-zalo-connection.query"
 

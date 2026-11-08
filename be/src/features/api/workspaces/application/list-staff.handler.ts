@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { StaffOption } from "@modules/domain/workspace-members"
+import { WorkspaceMembersService, type StaffOption } from "@modules/domain/workspace-members"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ListStaffQuery } from "./list-staff.query"
 
 @QueryHandler(ListStaffQuery)

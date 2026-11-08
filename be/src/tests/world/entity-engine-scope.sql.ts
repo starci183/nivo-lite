@@ -1,5 +1,4 @@
-import type { SqlText } from "@modules/platform/database"
-import { sql } from "@modules/platform/database"
+import { type SqlText, sql } from "@modules/platform/database"
 
 /** The tables only the engine role reaches: the records, their links and the counters. */
 export const ENGINE_TABLES = ["records", "record_links", "entity_sequences"] as const

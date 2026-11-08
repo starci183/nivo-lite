@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { HiringCandidatesService } from "@modules/domain/hiring"
-import type { DeleteCandidateOutput } from "@modules/domain/hiring"
+import { HiringCandidatesService, type DeleteCandidateOutput } from "@modules/domain/hiring"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DeleteHiringCandidateCommand } from "./delete-hiring-candidate.command"
 
 @CommandHandler(DeleteHiringCandidateCommand)

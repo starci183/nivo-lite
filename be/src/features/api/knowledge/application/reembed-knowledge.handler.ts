@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { KnowledgeReembedService } from "@modules/domain/knowledge"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ReembedKnowledgeCommand } from "./reembed-knowledge.command"
 
 @CommandHandler(ReembedKnowledgeCommand)

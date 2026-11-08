@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { VideoRenderService } from "@modules/domain/video"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the render the claimed job names is produced, uploaded and settled. */

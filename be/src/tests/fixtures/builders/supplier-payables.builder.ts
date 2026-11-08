@@ -1,7 +1,10 @@
 import { builder } from "@starci/jest-preset"
-import { supplierPayablesEntities } from "@modules/domain/supplier-payables"
+import {
+    supplierPayablesEntities,
+    type NewSupplierPayable,
+    type SupplierPayableRow,
+} from "@modules/domain/supplier-payables"
 import type { TaxProfile } from "@modules/domain/accounting"
-import type { NewSupplierPayable, SupplierPayableRow } from "@modules/domain/supplier-payables"
 
 const SupplierPayableEntity: (typeof supplierPayablesEntities)[0] = supplierPayablesEntities[0]
 type SupplierPayableEntity = InstanceType<typeof SupplierPayableEntity>

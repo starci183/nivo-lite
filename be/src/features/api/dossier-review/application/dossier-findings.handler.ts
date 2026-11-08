@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { DossierFindingsService } from "@modules/domain/dossier-review"
-import type { FindingPage } from "@modules/domain/dossier-review"
+import { DossierFindingsService, type FindingPage } from "@modules/domain/dossier-review"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DossierFindingsQuery } from "./dossier-findings.query"
 
 @QueryHandler(DossierFindingsQuery)

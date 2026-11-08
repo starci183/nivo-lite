@@ -3,8 +3,7 @@ import { AgentRunTraceService } from "../../modules/domain/agent-runs/agent-run-
 import { AgentRunsService } from "../../modules/domain/agent-runs/agent-runs.service"
 import { AgentWakeService } from "../../modules/domain/agent-work/agent-wake.service"
 import { agentWakeOf } from "../fixtures/builders/agent-work.builder"
-import { persistOfficeRows } from "../fixtures/builders/office-chain.builder"
-import type { OfficeIdentity } from "../fixtures/builders/office-chain.builder"
+import { persistOfficeRows, type OfficeIdentity } from "../fixtures/builders/office-chain.builder"
 import { settleAgentWork, wakeOfFact } from "./agent-work-database.service"
 import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
 import { removeAuthUsers, removeWorkspace } from "./proof-accounts.service"
@@ -17,8 +16,8 @@ import {
     removeStepJobs,
     runDataOf,
     stepJobsOf,
+    type RunData,
 } from "./agent-runs-database.service"
-import type { RunData } from "./agent-runs-database.service"
 import type { StepSpec } from "../../modules/domain/agent-runs/agent-runs.contracts"
 import type { RunStepView } from "@modules/domain/agent-runs"
 

@@ -1,6 +1,11 @@
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
-import { INSTAGRAM_FIELDS, PAGE_FIELDS } from "@modules/integrations/meta"
-import type { AppObject, MetaPageChoice, MetaSubscriptionStatus } from "@modules/integrations/meta"
+import {
+    INSTAGRAM_FIELDS,
+    PAGE_FIELDS,
+    type AppObject,
+    type MetaPageChoice,
+    type MetaSubscriptionStatus,
+} from "@modules/integrations/meta"
 
 export const ID = "12345678-1234-1234-1234-123456789abc"
 export const actor: ConnectionActor = { principalId: "owner-1", workspaceId: "ws-1" }

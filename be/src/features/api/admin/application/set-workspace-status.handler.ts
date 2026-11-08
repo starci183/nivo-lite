@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { AdminSupportService } from "@modules/domain/platform-admin"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { SetWorkspaceStatusResult } from "./set-workspace-status.contracts"
 import { SetWorkspaceStatusCommand } from "./set-workspace-status.command"
 

@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ContentPublishingService } from "@modules/domain/content-publishing"
-import type { SubmittedContent } from "@modules/domain/content-publishing"
+import { ContentPublishingService, type SubmittedContent } from "@modules/domain/content-publishing"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SubmitContentForApprovalCommand } from "./submit-content-for-approval.command"
 
 @CommandHandler(SubmitContentForApprovalCommand)

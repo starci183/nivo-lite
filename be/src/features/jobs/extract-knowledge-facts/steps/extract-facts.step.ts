@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { DocumentFactsService } from "@modules/domain/brain"
-import { AdvancingJobStepPolicy, InjectJobClaims } from "@modules/platform/jobs"
-import type { JobClaims, JobStep } from "@modules/platform/jobs"
+import { AdvancingJobStepPolicy, InjectJobClaims, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the facts of the document of the claimed job are read and filed as proposals. */

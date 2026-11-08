@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { InventoryReplenishService } from "@modules/domain/inventory"
-import { AdvancingJobStepPolicy, InjectJobClaims } from "@modules/platform/jobs"
-import type { JobClaims, JobStep } from "@modules/platform/jobs"
+import { AdvancingJobStepPolicy, InjectJobClaims, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the items whose stock moved are checked against their reorder point and low ones get a draft purchase order. */

@@ -1,7 +1,9 @@
-import type { QueryBuilderAnswers, FakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import {
+    type QueryBuilderAnswers,
+    type FakeQueryBuilder,
+    queueQueryBuilders,
+} from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import type { MockEntityManager } from "@starci/jest-preset"
-
-import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 
 /** The answer of an insert that stored these ids. */
 export const stored = (...ids: Array<string>): QueryBuilderAnswers => ({ execute: { raw: ids.map((id) => ({ id })) } })

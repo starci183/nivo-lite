@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { DossierRemedyDraftsService } from "@modules/domain/dossier-review"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import type { QueueDelivery } from "@modules/platform/queue"
 import { KNOWLEDGE_QUEUE, KnowledgeJob } from "@modules/queues/knowledge"
 import { DraftDossierRemedyStep } from "../../steps/draft-dossier-remedy.step"

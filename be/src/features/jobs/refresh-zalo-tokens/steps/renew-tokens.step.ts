@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ZaloCredentialsService } from "@modules/domain/channels"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: every Zalo OA whose access token ends soon gets a new pair, which also keeps the 3-month refresh token rolling. */

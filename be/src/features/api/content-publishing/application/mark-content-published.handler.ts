@@ -2,8 +2,7 @@ import { CommandHandler } from "@nestjs/cqrs"
 import type { ContentPublishedResult } from "@modules/domain/content-items"
 import { ContentPublishingService } from "@modules/domain/content-publishing"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { MarkContentPublishedCommand } from "./mark-content-published.command"
 
 @CommandHandler(MarkContentPublishedCommand)

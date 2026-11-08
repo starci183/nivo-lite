@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import { SYSTEM_HISTORY_RETENTION_QUEUE } from "@modules/queues/system-history-retention"
 import { SweepSystemHistoryStep } from "../../steps/sweep-system-history.step"
 

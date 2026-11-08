@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { McpGatewayAdminService } from "@modules/domain/mcp-gateway"
-import type { GrantView } from "@modules/domain/mcp-gateway"
+import { McpGatewayAdminService, type GrantView } from "@modules/domain/mcp-gateway"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ListMcpToolGrantsQuery } from "./list-mcp-tool-grants.query"
 
 @QueryHandler(ListMcpToolGrantsQuery)

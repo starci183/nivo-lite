@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import { INVENTORY_REPLENISH_QUEUE } from "@modules/queues/inventory-replenish"
 import { ReplenishStep } from "../../steps/replenish.step"
 

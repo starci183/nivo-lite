@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { ListApiKeysResult } from "./list-api-keys.contracts"
 import { ListApiKeysQuery } from "./list-api-keys.query"
 

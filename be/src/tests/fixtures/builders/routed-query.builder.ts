@@ -1,5 +1,4 @@
-import { builderOf, fakeQueryBuilder } from "./entity-query-builder-fake.builder"
-import type { FakeQueryBuilder } from "./entity-query-builder-fake.builder"
+import { builderOf, fakeQueryBuilder, type FakeQueryBuilder } from "./entity-query-builder-fake.builder"
 
 /** What a routed builder answers: each terminal decides from the calls recorded on the builder so far. */
 export interface QueryBuilderRoutes {

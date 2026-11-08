@@ -13,19 +13,20 @@ import type {
 import type { MockOf } from "@starci/jest-preset"
 import type { CallLogLine, McpCallLogService } from "@modules/domain/mcp-call-log"
 import type { McpConnectorRow, McpConnectorsService } from "@modules/domain/mcp-connectors"
-import type {
-    CapabilityRole,
-    GatewayCaller,
-    GatewayCallResult,
-    GatewayJson,
-    McpGatewayService,
-    NativeConnectorManifest,
+import {
+    type CapabilityRole,
+    type GatewayCaller,
+    type GatewayCallResult,
+    type GatewayJson,
+    type McpGatewayService,
+    type NativeConnectorManifest,
+    McpGatewayError,
+    McpGatewayErrorCode,
+    SEPAY_MANIFEST,
 } from "@modules/domain/mcp-gateway"
-import { McpGatewayError, McpGatewayErrorCode, SEPAY_MANIFEST } from "@modules/domain/mcp-gateway"
 import type { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
 import type { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
-import { McpErrorCode } from "@modules/integrations/mcp"
-import type { McpRemote, McpRemoteResult } from "@modules/integrations/mcp"
+import { McpErrorCode, type McpRemote, type McpRemoteResult } from "@modules/integrations/mcp"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { QueueTimeout } from "@modules/platform/queue"
 import {
@@ -36,8 +37,8 @@ import {
     remoteConnectorRowOf,
     roleProvidersOf,
     toolGrantRowOf,
+    type GatewaySpecSetup,
 } from "./mcp-gateway.builder"
-import type { GatewaySpecSetup } from "./mcp-gateway.builder"
 
 /** The typed constructor doubles whose deterministic defaults one gateway scenario arranges. */
 interface GatewayScenarioDoubles {

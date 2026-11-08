@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { SmtpWizardService } from "@modules/domain/email-messages"
-import type { SmtpConnectionView } from "@modules/domain/email-messages"
+import { SmtpWizardService, type SmtpConnectionView } from "@modules/domain/email-messages"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { StartSmtpConnectionCommand } from "./start-smtp-connection.command"
 
 @CommandHandler(StartSmtpConnectionCommand)

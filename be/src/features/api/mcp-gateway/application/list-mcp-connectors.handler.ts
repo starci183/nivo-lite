@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { McpGatewayAdminService } from "@modules/domain/mcp-gateway"
-import type { ConnectorView } from "@modules/domain/mcp-gateway"
+import { McpGatewayAdminService, type ConnectorView } from "@modules/domain/mcp-gateway"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ListMcpConnectorsQuery } from "./list-mcp-connectors.query"
 
 @QueryHandler(ListMcpConnectorsQuery)

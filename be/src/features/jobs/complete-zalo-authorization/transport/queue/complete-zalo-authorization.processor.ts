@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import { ZALO_AUTHORIZATION_QUEUE } from "@modules/queues/zalo-authorization"
 import { CompleteAuthorizationStep } from "../../steps/complete-authorization.step"
 

@@ -1,5 +1,8 @@
-import { engineTenantIds, persistEngineTenants } from "../../fixtures/builders/entity-engine-tenants.builder"
-import type { EngineTenants } from "../../fixtures/builders/entity-engine-tenants.builder"
+import {
+    engineTenantIds,
+    persistEngineTenants,
+    type EngineTenants,
+} from "../../fixtures/builders/entity-engine-tenants.builder"
 import {
     LEAD_ENTITY,
     changeRecord,
@@ -11,10 +14,18 @@ import {
     unlinkFrom,
     versionOf,
 } from "../../world/entity-engine-records.service"
-import { concurrentScopedTransactions, withBackendTransaction } from "../../world/entity-engine-scope-proof.service"
-import type { ScopeProbe } from "../../world/entity-engine-scope-proof.service"
-import type { CounterKey, RecordData } from "../../fixtures/builders/entity-engine-writes.builder"
-import { insertCounter, insertRecord, linkRecords } from "../../fixtures/builders/entity-engine-writes.builder"
+import {
+    concurrentScopedTransactions,
+    withBackendTransaction,
+    type ScopeProbe,
+} from "../../world/entity-engine-scope-proof.service"
+import {
+    type CounterKey,
+    type RecordData,
+    insertCounter,
+    insertRecord,
+    linkRecords,
+} from "../../fixtures/builders/entity-engine-writes.builder"
 import { useTestWorld } from "../../world/use-test-world"
 
 const world = useTestWorld({ modules: [] })

@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { AgentTemplatesService } from "@modules/domain/agent-templates"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ExportAgentTemplateQuery } from "./export-agent-template.query"
 
 @QueryHandler(ExportAgentTemplateQuery)

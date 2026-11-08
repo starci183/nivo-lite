@@ -1,6 +1,10 @@
 import { builder } from "@starci/jest-preset"
-import type { AuthorityRule, AuthorityRuleRecord, RuleChange } from "@modules/domain/authority-rules"
-import { authorityRulesEntities } from "@modules/domain/authority-rules"
+import {
+    type AuthorityRule,
+    type AuthorityRuleRecord,
+    type RuleChange,
+    authorityRulesEntities,
+} from "@modules/domain/authority-rules"
 
 const AuthorityRuleEntity: (typeof authorityRulesEntities)[0] = authorityRulesEntities[0]
 type AuthorityRuleEntity = InstanceType<typeof AuthorityRuleEntity>

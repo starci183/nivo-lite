@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { InboxFeedService } from "@modules/domain/inbound-events"
-import type { InboundEventFeedRow } from "@modules/domain/inbound-events"
+import { InboxFeedService, type InboundEventFeedRow } from "@modules/domain/inbound-events"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ListInboundEventsQuery } from "./list-inbound-events.query"
 
 @QueryHandler(ListInboundEventsQuery)

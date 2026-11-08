@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { DeskDailyService } from "@modules/domain/accounting"
-import { AdvancingJobStepPolicy, InjectJobClaims } from "@modules/platform/jobs"
-import type { JobClaims, JobStep } from "@modules/platform/jobs"
+import { AdvancingJobStepPolicy, InjectJobClaims, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** Runs the accounting morning for every workspace with a tax profile; each workspace posts its card once per day. */

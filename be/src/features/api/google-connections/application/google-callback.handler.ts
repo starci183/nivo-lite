@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { GoogleConnectionsService } from "@modules/domain/google-connections"
-import type { GoogleCallbackResult } from "@modules/domain/google-connections"
+import { GoogleConnectionsService, type GoogleCallbackResult } from "@modules/domain/google-connections"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GoogleCallbackCommand } from "./google-callback.command"
 
 @CommandHandler(GoogleCallbackCommand)

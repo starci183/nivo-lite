@@ -1,5 +1,4 @@
-import { Injectable, Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Injectable, Module, type DynamicModule } from "@nestjs/common"
 import { AGENT_TURN_EXECUTOR } from "../../modules/domain/agent-work/agent-work.decorators"
 import { AgentWorkHandlersService } from "../../modules/domain/agent-work/agent-work-handlers.service"
 import { AgentWorkModule } from "../../modules/domain/agent-work"

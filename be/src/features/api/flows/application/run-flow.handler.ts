@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { FlowsService } from "@modules/domain/flows"
+import { FlowsService, type FlowResult } from "@modules/domain/flows"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import type { FlowResult } from "@modules/domain/flows"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RunFlowCommand } from "./run-flow.command"
 
 @CommandHandler(RunFlowCommand)

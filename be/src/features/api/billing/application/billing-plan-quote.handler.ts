@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { BillingService } from "@modules/domain/billing"
-import type { PlanQuote } from "@modules/domain/billing"
+import { BillingService, type PlanQuote } from "@modules/domain/billing"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { BillingPlanQuoteQuery } from "./billing-plan-quote.query"
 
 @QueryHandler(BillingPlanQuoteQuery)

@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { PublicKnowledgeService } from "@modules/domain/public-api"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { AddKnowledgeResult } from "./add-knowledge.contracts"
 import { AddKnowledgeCommand } from "./add-knowledge.command"
 

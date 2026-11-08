@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { MarketingInsightsService } from "@modules/domain/content-ai"
-import type { MarketingWeeklyReport } from "@modules/domain/content-ai"
+import { MarketingInsightsService, type MarketingWeeklyReport } from "@modules/domain/content-ai"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetMarketingReportQuery } from "./get-marketing-report.query"
 
 @QueryHandler(GetMarketingReportQuery)

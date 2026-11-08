@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { SetupChatService } from "@modules/domain/modules"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ApplySetupCommand } from "./apply-setup.command"
 
 @CommandHandler(ApplySetupCommand)

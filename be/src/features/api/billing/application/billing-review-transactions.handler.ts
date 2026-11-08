@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { SepayReviewService } from "@modules/domain/sepay-transactions"
-import type { ReviewTransaction } from "@modules/domain/sepay-transactions"
+import { SepayReviewService, type ReviewTransaction } from "@modules/domain/sepay-transactions"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { BillingReviewTransactionsQuery } from "./billing-review-transactions.query"
 
 @QueryHandler(BillingReviewTransactionsQuery)

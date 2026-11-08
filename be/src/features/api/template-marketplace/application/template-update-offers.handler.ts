@@ -2,8 +2,7 @@ import { QueryHandler } from "@nestjs/cqrs"
 import { TemplateUpdatesService } from "@modules/domain/template-marketplace"
 import type { UpdateOffer } from "@nivo-lite/agent-sdk/template"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { TemplateUpdateOffersQuery } from "./template-update-offers.query"
 
 @QueryHandler(TemplateUpdateOffersQuery)

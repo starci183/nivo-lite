@@ -1,5 +1,4 @@
-import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import type { NodeTurn } from "@modules/domain/graph-nodes"
+import { GraphNodeRegistryService, type NodeTurn } from "@modules/domain/graph-nodes"
 import {
     BINH_NAME,
     CONVERSATION_DATA,
@@ -11,8 +10,13 @@ import {
 import { backendRoleSandbox, currentRole } from "../../world/backend-role-sandbox.service"
 import { versionOf } from "../../world/entity-engine-records.service"
 import { API_APP_MODULES } from "../../world/api-app.options"
-import { doorCallsOf, idsOfPage, registerSalesEffects, useSeedConnection } from "../../world/sales-door-world.service"
-import type { DoorPayload } from "../../world/sales-door-world.service"
+import {
+    doorCallsOf,
+    idsOfPage,
+    registerSalesEffects,
+    useSeedConnection,
+    type DoorPayload,
+} from "../../world/sales-door-world.service"
 import { useTestWorld } from "../../world/use-test-world"
 
 /** The real app opens in about a minute on the world; the whole suite shares that one boot. */

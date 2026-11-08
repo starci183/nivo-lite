@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import { DECISIONS_QUEUE, DecisionsJob } from "@modules/queues/decisions"
 import { ExpireApprovalsStep } from "../../steps/expire-approvals.step"
 

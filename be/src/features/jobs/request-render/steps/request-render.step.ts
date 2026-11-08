@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { VideoRenderCommandsService } from "@modules/domain/video"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the render the web app asked for is opened and its render-video job queued, and the asker finds the answer on the command row. */

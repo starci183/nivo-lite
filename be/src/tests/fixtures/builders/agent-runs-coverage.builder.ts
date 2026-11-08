@@ -1,5 +1,4 @@
-import { builder, mock } from "@starci/jest-preset"
-import type { MockOf } from "@starci/jest-preset"
+import { builder, mock, type MockOf } from "@starci/jest-preset"
 import type { AgentRunsService, AgentStepHandler, StepLink } from "@modules/domain/agent-runs"
 import { runViewOf, stepSpecOf, stepViewOf } from "./agent-runs.builder"
 

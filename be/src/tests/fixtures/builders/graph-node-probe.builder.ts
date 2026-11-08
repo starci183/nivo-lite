@@ -1,5 +1,13 @@
-import { defineDataKind, defineEffect, defineNode, defineTool } from "@nivo-lite/agent-sdk/node"
-import type { DataKindDefinition, EffectDefinition, NodeDefinition, ToolDefinition } from "@nivo-lite/agent-sdk/node"
+import {
+    defineDataKind,
+    defineEffect,
+    defineNode,
+    defineTool,
+    type DataKindDefinition,
+    type EffectDefinition,
+    type NodeDefinition,
+    type ToolDefinition,
+} from "@nivo-lite/agent-sdk/node"
 import { isRecord } from "@modules/platform/primitives"
 import {
     PROBE_COUNT,
@@ -11,8 +19,8 @@ import {
     PROBE_RECORD_FIELDS,
     PROBE_SWALLOW_OUTPUT,
     PROBE_UNPING_PAYLOAD,
+    type ProbeSchema,
 } from "@modules/domain/graph-nodes"
-import type { ProbeSchema } from "@modules/domain/graph-nodes"
 
 /** The right to read the `record` kind of the turn. */
 export const READ = { kind: "record", access: "read", scope: "turn", fields: ["id"] } as const

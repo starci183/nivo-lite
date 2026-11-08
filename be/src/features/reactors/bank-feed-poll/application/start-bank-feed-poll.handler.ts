@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { BankFeedPollTriggerService } from "@modules/domain/billing"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { StartBankFeedPollCommand } from "./start-bank-feed-poll.command"
 
 @CommandHandler(StartBankFeedPollCommand)

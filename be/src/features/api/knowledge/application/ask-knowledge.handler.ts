@@ -2,8 +2,7 @@ import { QueryHandler } from "@nestjs/cqrs"
 import { AgentLensesService } from "@modules/domain/agents"
 import type { Passage } from "@modules/domain/knowledge"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AskKnowledgeQuery } from "./ask-knowledge.query"
 
 @QueryHandler(AskKnowledgeQuery)

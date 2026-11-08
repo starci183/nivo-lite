@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { KnowledgeDocumentsService } from "@modules/domain/knowledge"
-import type { OpenedKnowledgeSource } from "@modules/domain/knowledge"
+import { KnowledgeDocumentsService, type OpenedKnowledgeSource } from "@modules/domain/knowledge"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { KnowledgeSourceQuery } from "./knowledge-source.query"
 
 @QueryHandler(KnowledgeSourceQuery)

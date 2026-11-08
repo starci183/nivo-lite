@@ -1,7 +1,6 @@
 import assert from "node:assert/strict"
 import { AuthorityActionsService } from "@modules/domain/authority-actions"
-import { persistGraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
-import type { GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
+import { persistGraphTenant, type GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
 import { ListApproversQuery } from "../../../features/api/decisions/application/list-approvers.query"
 import { ListApproversHandler } from "../../../features/api/decisions/application/list-approvers.handler"
 import { ListMemberGrantsQuery } from "../../../features/api/decisions/application/list-member-grants.query"

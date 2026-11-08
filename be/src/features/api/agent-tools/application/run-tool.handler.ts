@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { AgentToolsService } from "@modules/domain/agent-tools"
-import type { JsonResult } from "@modules/domain/agent-tools"
+import { AgentToolsService, type JsonResult } from "@modules/domain/agent-tools"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RunToolCommand } from "./run-tool.command"
 
 @CommandHandler(RunToolCommand)

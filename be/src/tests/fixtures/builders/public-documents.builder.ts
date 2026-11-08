@@ -7,15 +7,15 @@ import {
 } from "@starci/jest-preset"
 import type { InsertResult } from "typeorm"
 import type { SourceState } from "@modules/domain/knowledge-sources"
-import type {
-    PublicDocumentsService,
-    PublicDocumentKind,
-    PublicDocumentStatus,
-    LeftOut,
-    PublicDocumentDraftRequest,
-    ApproveRequest,
+import {
+    type PublicDocumentsService,
+    type PublicDocumentKind,
+    type PublicDocumentStatus,
+    type LeftOut,
+    type PublicDocumentDraftRequest,
+    type ApproveRequest,
+    publicDocumentsEntities,
 } from "@modules/domain/public-documents"
-import { publicDocumentsEntities } from "@modules/domain/public-documents"
 import { entityRowBuilder } from "./entity-row.builder"
 
 const PublicDocumentEntity: (typeof publicDocumentsEntities)[0] = publicDocumentsEntities[0]

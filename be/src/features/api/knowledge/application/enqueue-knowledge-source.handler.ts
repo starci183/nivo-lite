@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
-import type { SourceRef } from "@modules/domain/knowledge-sources"
+import { KnowledgeSourcesService, type SourceRef } from "@modules/domain/knowledge-sources"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { EnqueueKnowledgeSourceCommand } from "./enqueue-knowledge-source.command"
 
 @CommandHandler(EnqueueKnowledgeSourceCommand)

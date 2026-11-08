@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { HiringScreeningService } from "@modules/domain/hiring"
-import type { RescreenOutput } from "@modules/domain/hiring"
+import { HiringScreeningService, type RescreenOutput } from "@modules/domain/hiring"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RescreenHiringCandidateCommand } from "./rescreen-hiring-candidate.command"
 
 @CommandHandler(RescreenHiringCandidateCommand)

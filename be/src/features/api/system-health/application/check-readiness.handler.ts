@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { ReadinessService } from "@modules/domain/liveness"
-import type { ReadinessReport } from "@modules/domain/liveness"
+import { ReadinessService, type ReadinessReport } from "@modules/domain/liveness"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { CheckReadinessQuery } from "./check-readiness.query"
 
 @QueryHandler(CheckReadinessQuery)

@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { MetaConnectionsService } from "@modules/domain/meta-connections"
+import { MetaConnectionsService, type MetaAuthorization } from "@modules/domain/meta-connections"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import type { MetaAuthorization } from "@modules/domain/meta-connections"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AuthorizeMetaCommand } from "./authorize-meta.command"
 
 @CommandHandler(AuthorizeMetaCommand)

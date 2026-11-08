@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { GatewaySurfaceService } from "@modules/domain/mcp-gateway"
-import type { SurfaceReply } from "@modules/domain/mcp-gateway"
+import { GatewaySurfaceService, type SurfaceReply } from "@modules/domain/mcp-gateway"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AnswerMcpRequestCommand } from "./answer-mcp-request.command"
 
 @CommandHandler(AnswerMcpRequestCommand)

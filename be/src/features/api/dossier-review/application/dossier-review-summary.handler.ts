@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { DossierFindingsService } from "@modules/domain/dossier-review"
-import type { ReviewSummary } from "@modules/domain/dossier-review"
+import { DossierFindingsService, type ReviewSummary } from "@modules/domain/dossier-review"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DossierReviewSummaryQuery } from "./dossier-review-summary.query"
 
 @QueryHandler(DossierReviewSummaryQuery)

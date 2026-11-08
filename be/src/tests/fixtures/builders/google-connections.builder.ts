@@ -1,6 +1,12 @@
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
-import { DRIVE_READ_SCOPE, GoogleError, GoogleErrorCode } from "@modules/integrations/google"
-import type { GoogleTokenSet, OAuthState, SheetEventIn } from "@modules/integrations/google"
+import {
+    DRIVE_READ_SCOPE,
+    GoogleError,
+    GoogleErrorCode,
+    type GoogleTokenSet,
+    type OAuthState,
+    type SheetEventIn,
+} from "@modules/integrations/google"
 import type { GoogleConnectionsService } from "@modules/domain/google-connections"
 
 type GoogleCallbackInput = Parameters<GoogleConnectionsService["complete"]>[0]

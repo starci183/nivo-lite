@@ -1,5 +1,10 @@
-import { WORK_BRANCH_DECIDER, evaluateGate } from "@modules/domain/authority-rules"
-import type { AuthorityRule, BranchRequest, WorkBranchDecider } from "@modules/domain/authority-rules"
+import {
+    WORK_BRANCH_DECIDER,
+    evaluateGate,
+    type AuthorityRule,
+    type BranchRequest,
+    type WorkBranchDecider,
+} from "@modules/domain/authority-rules"
 import type { GraphDocument } from "@modules/domain/agent-graphs"
 import type { WorkItem } from "@modules/domain/decisions"
 import { AMOUNT_FACT, OWNER_EXAMPLE, graphOf } from "../../fixtures/builders/agent-graph.builder"

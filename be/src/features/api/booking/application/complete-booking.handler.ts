@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { BookingDeskService } from "@modules/domain/bookings"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { CompleteBookingResult } from "./complete-booking.contracts"
 import { CompleteBookingCommand } from "./complete-booking.command"
 

@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { BrainDossiersService } from "@modules/domain/brain-dossiers"
-import type { DossierRecord } from "@modules/domain/brain-dossiers"
+import { BrainDossiersService, type DossierRecord } from "@modules/domain/brain-dossiers"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AssignBrainDossierCommand } from "./assign-brain-dossier.command"
 
 @CommandHandler(AssignBrainDossierCommand)

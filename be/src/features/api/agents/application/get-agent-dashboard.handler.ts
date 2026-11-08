@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AgentsService } from "@modules/domain/agents"
-import type { AgentDashboardData } from "@modules/domain/agents"
+import { AgentsService, type AgentDashboardData } from "@modules/domain/agents"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetAgentDashboardQuery } from "./get-agent-dashboard.query"
 
 @QueryHandler(GetAgentDashboardQuery)

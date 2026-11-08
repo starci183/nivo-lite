@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { WorkbenchDoorService } from "@modules/domain/workbench-door"
-import type { DoorAnswer } from "@modules/domain/workbench-door"
+import { WorkbenchDoorService, type DoorAnswer } from "@modules/domain/workbench-door"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { WorkbenchActionCommand } from "./workbench-action.command"
 
 @CommandHandler(WorkbenchActionCommand)

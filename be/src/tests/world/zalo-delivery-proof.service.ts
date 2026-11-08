@@ -1,11 +1,18 @@
-import type { JobClaims, JobProcessorRegistry, FencedProcessor, ClaimedJob, AdvanceWrite } from "@modules/platform/jobs"
+import {
+    type JobClaims,
+    type JobProcessorRegistry,
+    type FencedProcessor,
+    type ClaimedJob,
+    type AdvanceWrite,
+    JOB_CLAIMS,
+    JOB_PROCESSOR_REGISTRY,
+    JobsModule,
+} from "@modules/platform/jobs"
 import assert from "node:assert/strict"
 import { ZaloWebhookGateService } from "@modules/domain/channels"
 import { ZaloInboxService } from "@modules/domain/zalo-inbox"
-import { JOB_CLAIMS, JOB_PROCESSOR_REGISTRY, JobsModule } from "@modules/platform/jobs"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import type { QueueOutbox, QueueWriteOptions } from "@modules/platform/queue"
+import { QUEUE_OUTBOX, type QueueOutbox, type QueueWriteOptions } from "@modules/platform/queue"
 import { ZALO_DELIVERY_QUEUE } from "@modules/queues/zalo-delivery"
 import { ZaloDeliveryQueue, type ZaloDeliveryRecorded } from "../../modules/queues/zalo-delivery/zalo-delivery.queue"
 import { ZaloDeliveryProcessor } from "../../features/jobs/zalo-delivery/transport/queue/zalo-delivery.processor"

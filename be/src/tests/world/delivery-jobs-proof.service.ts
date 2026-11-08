@@ -1,8 +1,13 @@
-import type { JobClaims, FencedProcessor, ClaimedJob, AdvanceWrite } from "@modules/platform/jobs"
+import {
+    type JobClaims,
+    type FencedProcessor,
+    type ClaimedJob,
+    type AdvanceWrite,
+    JOB_CLAIMS,
+} from "@modules/platform/jobs"
 import { MetaInboxService } from "@modules/domain/meta-inbox"
 import { TelegramInboxService } from "@modules/domain/telegram-inbox"
 import { SepayTransactionsService } from "@modules/domain/sepay-transactions"
-import { JOB_CLAIMS } from "@modules/platform/jobs"
 import type { LiteWorld } from "./lite-world.service"
 import {
     cleanupJobs,
@@ -16,8 +21,9 @@ import {
     persistDeliveryWorkspaceRows,
     deliveryIntakeBuilder,
     deliveryClaimBuilder,
+    type DeliveryKind,
+    type DeliveryMessage,
 } from "../fixtures/builders/delivery-jobs.builder"
-import type { DeliveryKind, DeliveryMessage } from "../fixtures/builders/delivery-jobs.builder"
 import { receiptsOf, removeReceipts } from "./receipts-database.service"
 import type { MetaDeliveryRecorded } from "@modules/queues/meta-delivery"
 import type { SepayDeliveryRecorded } from "@modules/queues/sepay-delivery"

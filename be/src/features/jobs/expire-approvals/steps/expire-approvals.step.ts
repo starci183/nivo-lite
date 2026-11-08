@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ApprovalRequestsService } from "@modules/domain/approval-requests"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the requests for approval that ran out of time go to the owner of their agent, and the half-way ones are reminded. */

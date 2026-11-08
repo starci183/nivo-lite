@@ -1,6 +1,5 @@
 import assert from "node:assert/strict"
-import { DataSource } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { DataSource, type EntityManager } from "typeorm"
 import { LeadEffectsService, OrderEffectsService } from "@modules/domain/sales-effects"
 import { WorkbenchDoorService } from "@modules/domain/workbench-door"
 import { PRIMARY_ENTITIES } from "@modules/platform/database/entities"

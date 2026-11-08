@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { TeamChatRoomsService } from "@modules/domain/team-chat"
-import type { ChatUpload, TeamChatResult } from "@modules/domain/team-chat"
+import { TeamChatRoomsService, type ChatUpload, type TeamChatResult } from "@modules/domain/team-chat"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RequestChatFileUploadCommand } from "./request-chat-file-upload.command"
 
 @CommandHandler(RequestChatFileUploadCommand)

@@ -1,10 +1,17 @@
 import type { MockOf } from "@starci/jest-preset"
-import { ChatConversationsService, ChatMessagesService, ChatRecordsErrorCode } from "@modules/domain/chat-records"
-import type { ChatTurnConversation } from "@modules/domain/chat-records"
+import {
+    ChatConversationsService,
+    ChatMessagesService,
+    ChatRecordsErrorCode,
+    type ChatTurnConversation,
+} from "@modules/domain/chat-records"
 import { ChannelReceiptsService } from "@modules/domain/channel-receipts"
 import { ChannelDeliveryService } from "@modules/domain/channels"
-import { InstallationRecordsService } from "@modules/domain/module-installations"
-import type { InstallationRecord, InstallationSettings } from "@modules/domain/module-installations"
+import {
+    InstallationRecordsService,
+    type InstallationRecord,
+    type InstallationSettings,
+} from "@modules/domain/module-installations"
 import type { CustomerOutcomes } from "@modules/domain/conversations"
 
 /** The installation of the conversation agent, carrying the given settings. */

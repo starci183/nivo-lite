@@ -1,5 +1,4 @@
-import { META_CLIENT } from "@modules/integrations/meta"
-import type { MetaClient } from "@modules/integrations/meta"
+import { META_CLIENT, type MetaClient } from "@modules/integrations/meta"
 import { createHmac } from "node:crypto"
 import { META_INBOUND_QUEUE } from "@modules/domain/meta-inbox"
 import { META_DELIVERY_QUEUE } from "@modules/queues/meta-delivery"

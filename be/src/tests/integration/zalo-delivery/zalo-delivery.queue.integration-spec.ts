@@ -1,5 +1,4 @@
-import { ZALO_DELIVERY_QUEUE as PUBLIC_QUEUE } from "@modules/queues/zalo-delivery"
-import type { ZaloDeliveryRecorded } from "@modules/queues/zalo-delivery"
+import { ZALO_DELIVERY_QUEUE as PUBLIC_QUEUE, type ZaloDeliveryRecorded } from "@modules/queues/zalo-delivery"
 import { ZALO_DELIVERY_QUEUE, isZaloDeliveryRecorded } from "../../../modules/queues/zalo-delivery/zalo-delivery.queue"
 import { useTestWorld } from "../../world/use-test-world"
 import {

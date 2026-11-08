@@ -1,5 +1,4 @@
-import { Injectable, Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Injectable, Module, type DynamicModule } from "@nestjs/common"
 import { AgentSchedulesModule } from "../../modules/domain/agent-schedules"
 import { AgentProbesService } from "../../modules/domain/agent-schedules/agent-probes.service"
 import { AgentWorkModule } from "../../modules/domain/agent-work"

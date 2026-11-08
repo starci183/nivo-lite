@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { NivoKnowledgeService } from "@modules/domain/nivo-knowledge"
-import type { NivoEntry } from "@modules/domain/nivo-knowledge"
+import { NivoKnowledgeService, type NivoEntry } from "@modules/domain/nivo-knowledge"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { NivoKnowledgeQuery } from "./nivo-knowledge.query"
 
 @QueryHandler(NivoKnowledgeQuery)

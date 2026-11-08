@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { FencedProcessor, PARKED_JOBS_SWEEP } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, PARKED_JOBS_SWEEP, type ClaimedJob } from "@modules/platform/jobs"
 import { SweepParkedJobsStep } from "../../steps/sweep-parked-jobs.step"
 
 @Injectable()

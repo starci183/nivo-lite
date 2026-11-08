@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { AgentWorkDoorsService } from "@modules/domain/agent-work"
-import type { AgentTriggerRecord } from "@modules/domain/agent-work"
+import { AgentWorkDoorsService, type AgentTriggerRecord } from "@modules/domain/agent-work"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SaveAgentTriggerCommand } from "./save-agent-trigger.command"
 
 @CommandHandler(SaveAgentTriggerCommand)

@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { UpdateKnowledgeSourceCommand } from "./update-knowledge-source.command"
 
 @CommandHandler(UpdateKnowledgeSourceCommand)

@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import type { StaffOption } from "@modules/domain/workspace-members"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { type StaffOption, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SaveStaffCommand } from "./save-staff.command"
 
 @CommandHandler(SaveStaffCommand)

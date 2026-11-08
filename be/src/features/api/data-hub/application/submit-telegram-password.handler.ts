@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { TelegramUserWizardService } from "@modules/domain/data-hub"
-import type { TelegramLoginProgress } from "@modules/domain/data-hub"
+import { TelegramUserWizardService, type TelegramLoginProgress } from "@modules/domain/data-hub"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SubmitTelegramPasswordCommand } from "./submit-telegram-password.command"
 
 @CommandHandler(SubmitTelegramPasswordCommand)

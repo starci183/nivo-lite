@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { PAYMENT_ORDER_REQUEST_QUEUE, PaymentOrderRequestsService } from "@modules/domain/payment-order-requests"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import type { QueueDelivery } from "@modules/platform/queue"
 import { PlaceOrderStep } from "../../steps/place-order.step"
 

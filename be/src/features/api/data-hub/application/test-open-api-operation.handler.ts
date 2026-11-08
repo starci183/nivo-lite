@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { OpenApiWizardService } from "@modules/domain/data-hub"
-import type { OpenApiOperationTestResult } from "@modules/domain/data-hub"
+import { OpenApiWizardService, type OpenApiOperationTestResult } from "@modules/domain/data-hub"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { TestOpenApiOperationQuery } from "./test-open-api-operation.query"
 
 @QueryHandler(TestOpenApiOperationQuery)

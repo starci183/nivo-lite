@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { CreditsService } from "@modules/domain/credits"
-import type { CreditPack } from "@modules/domain/credits"
+import { CreditsService, type CreditPack } from "@modules/domain/credits"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ListCreditPacksQuery } from "./list-credit-packs.query"
 
 @QueryHandler(ListCreditPacksQuery)

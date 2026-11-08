@@ -2,8 +2,7 @@ import { QueryHandler } from "@nestjs/cqrs"
 import type { RecordInstallation } from "@modules/domain/module-installations"
 import { ModuleInstallService } from "@modules/domain/modules"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { InstanceOfRecordQuery } from "./instance-of-record.query"
 
 @QueryHandler(InstanceOfRecordQuery)

@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ChannelConnectionsService } from "@modules/domain/channel-connections"
+import { ChannelConnectionsService, type WizardConnection } from "@modules/domain/channel-connections"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import type { WizardConnection } from "@modules/domain/channel-connections"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { UpdateMoneyConnectionCommand } from "./update-money-connection.command"
 
 @CommandHandler(UpdateMoneyConnectionCommand)

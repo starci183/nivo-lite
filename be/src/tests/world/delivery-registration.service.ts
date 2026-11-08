@@ -1,9 +1,7 @@
-import type { JobProcessorRegistry, FencedProcessor } from "@modules/platform/jobs"
+import { type JobProcessorRegistry, type FencedProcessor, JOB_PROCESSOR_REGISTRY } from "@modules/platform/jobs"
 import assert from "node:assert/strict"
 import type { OnModuleInit } from "@nestjs/common"
-import { JOB_PROCESSOR_REGISTRY } from "@modules/platform/jobs"
-import { QUEUE_WORKER_REGISTRY } from "@modules/platform/queue"
-import type { QueueWorkerRegistry, QueueHandler } from "@modules/platform/queue"
+import { QUEUE_WORKER_REGISTRY, type QueueWorkerRegistry, type QueueHandler } from "@modules/platform/queue"
 import type { LiteWorld } from "./lite-world.service"
 
 type RegisterDeliveryProcessorResultShape = {

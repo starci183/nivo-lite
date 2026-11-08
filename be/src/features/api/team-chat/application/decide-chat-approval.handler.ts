@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { TeamChatDecisionService } from "@modules/domain/team-chat"
-import type { DecideOutcome } from "@modules/domain/team-chat"
+import { TeamChatDecisionService, type DecideOutcome } from "@modules/domain/team-chat"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DecideChatApprovalCommand } from "./decide-chat-approval.command"
 
 @CommandHandler(DecideChatApprovalCommand)

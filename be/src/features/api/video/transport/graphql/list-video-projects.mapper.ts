@@ -11,4 +11,4 @@ export const toListVideoProjectsRequest = (
 
 /** Maps the domain result into the GraphQL type. */
 export const toListVideoProjectsType = (result: ListVideoProjectsResult): Array<VideoProjectType> =>
-    result.map(toVideoProjectType)
+    result.map((project) => toVideoProjectType(project))

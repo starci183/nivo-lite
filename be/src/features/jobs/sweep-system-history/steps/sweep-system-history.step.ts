@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { JobHistoryRetentionService } from "@modules/domain/job-ops"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: finished queue, cron and http history older than its window is deleted in bounded batches, each under the job fence. */

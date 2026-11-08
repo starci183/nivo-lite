@@ -1,13 +1,11 @@
-import { Controller, Headers, Query, Sse } from "@nestjs/common"
-import type { MessageEvent } from "@nestjs/common"
+import { Controller, Headers, Query, Sse, type MessageEvent } from "@nestjs/common"
 import { IsUUID } from "class-validator"
 import type { Observable } from "rxjs"
 import { chatTypingTopic } from "@modules/domain/chat-typing"
 import { CurrentPrincipal } from "@modules/domain/identity"
 import { WorkspaceId } from "@modules/domain/workspace-members"
 import type { Principal } from "@modules/platform/cqrs"
-import { InjectRealtimeHub } from "@modules/platform/realtime"
-import type { RealtimeHub } from "@modules/platform/realtime"
+import { InjectRealtimeHub, type RealtimeHub } from "@modules/platform/realtime"
 
 /** The room of one typing stream. */
 export class ChatTypingStreamQuery {

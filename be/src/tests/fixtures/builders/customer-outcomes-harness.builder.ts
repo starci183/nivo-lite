@@ -1,5 +1,4 @@
-import { mock } from "@starci/jest-preset"
-import type { MockOf } from "@starci/jest-preset"
+import { mock, type MockOf } from "@starci/jest-preset"
 import type { AgentDirectoryService } from "@modules/domain/agents"
 import type { AgentBindingsService } from "@modules/domain/agent-connections"
 import type { AuthorityRulesService } from "@modules/domain/authority-rules"

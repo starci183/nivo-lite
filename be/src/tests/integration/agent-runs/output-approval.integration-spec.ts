@@ -14,8 +14,8 @@ import {
     DecisionsErrorCode,
     DurableWorkService,
     WorkEngineService,
+    type WorkContext,
 } from "@modules/domain/decisions"
-import type { WorkContext } from "@modules/domain/decisions"
 import { CustomerDeliveryService } from "@modules/domain/work-performers"
 import { WorkItemsService, workItemsEntities } from "@modules/domain/work-items"
 import { workspaceMembersEntities } from "@modules/domain/workspace-members"

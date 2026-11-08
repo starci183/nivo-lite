@@ -1,9 +1,12 @@
 import assert from "node:assert/strict"
-import { TeamChatRoomsService } from "@modules/domain/team-chat"
-import type { ChatMemberRef, TeamChatResult } from "@modules/domain/team-chat"
+import { TeamChatRoomsService, type ChatMemberRef, type TeamChatResult } from "@modules/domain/team-chat"
 import { eachInOrder } from "@modules/platform/primitives"
-import { openApprovalRequest, persistTeamChat, teamChatIdentity } from "../../fixtures/builders/team-chat.builder"
-import type { TeamChatIdentity } from "../../fixtures/builders/team-chat.builder"
+import {
+    openApprovalRequest,
+    persistTeamChat,
+    teamChatIdentity,
+    type TeamChatIdentity,
+} from "../../fixtures/builders/team-chat.builder"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { TEAM_CHAT_PROOF_MODULES } from "../../world/team-chat-capabilities.options"
 import { useTestWorld } from "../../world/use-test-world"

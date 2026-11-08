@@ -14,7 +14,7 @@ export const toContentConfigurationRequest = (workspaceId: string): ContentConfi
 
 /** Maps the configuration result to the public GraphQL shape. */
 export const toContentConfigurationType = (result: ContentConfiguration): ContentConfigurationType => ({
-    pillars: result.pillars.map(toContentPillarType),
-    cadence: result.cadence.map(toContentCadenceType),
+    pillars: result.pillars.map((pillar) => toContentPillarType(pillar)),
+    cadence: result.cadence.map((cadence) => toContentCadenceType(cadence)),
     settings: toContentBrandSettingsType(result.settings),
 })

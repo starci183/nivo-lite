@@ -1,6 +1,5 @@
 import { CommandRunner, Option, SubCommand } from "nest-commander"
-import { StdioConsoleClient, WorkspacePruneService } from "@modules/domain/workspaces"
-import type { PruneRequest } from "@modules/domain/workspaces"
+import { StdioConsoleClient, WorkspacePruneService, type PruneRequest } from "@modules/domain/workspaces"
 
 @SubCommand({
     name: "run",

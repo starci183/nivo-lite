@@ -1,7 +1,6 @@
-import type { CredentialPrincipal } from "@modules/domain/identity"
+import { type CredentialPrincipal, Credential, CurrentCredentialPrincipal } from "@modules/domain/identity"
 import type { CommandBus } from "@nestjs/cqrs"
 import { Args, Mutation, Resolver } from "@nestjs/graphql"
-import { Credential, CurrentCredentialPrincipal } from "@modules/domain/identity"
 import { InjectCommandBus } from "@modules/platform/cqrs"
 import { RateLimit, RateTier } from "@modules/platform/http-security"
 import { RespondHiringInterviewCommand } from "../../application/respond-hiring-interview.command"

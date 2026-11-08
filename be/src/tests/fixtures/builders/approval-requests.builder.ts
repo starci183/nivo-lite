@@ -1,11 +1,11 @@
 import { builder } from "@starci/jest-preset"
 import type { ApprovalSetup } from "@modules/domain/authority-rules"
 import type { ApproverRef, DirectoryMember, MemberGrant } from "@modules/domain/member-grants"
-import { approvalRequestsEntities } from "@modules/domain/approval-requests"
-import type {
-    OpenApprovalParams,
-    ApprovalRequestRecord,
-    ApprovalVerdictRecord,
+import {
+    approvalRequestsEntities,
+    type OpenApprovalParams,
+    type ApprovalRequestRecord,
+    type ApprovalVerdictRecord,
 } from "@modules/domain/approval-requests"
 
 const ApprovalRequestEntity: (typeof approvalRequestsEntities)[0] = approvalRequestsEntities[0]

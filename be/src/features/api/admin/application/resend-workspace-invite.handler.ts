@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { AdminSupportService } from "@modules/domain/platform-admin"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { ResendWorkspaceInviteResult } from "./resend-workspace-invite.contracts"
 import { ResendWorkspaceInviteCommand } from "./resend-workspace-invite.command"
 

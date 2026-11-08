@@ -1,7 +1,9 @@
-import { Module } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { CONNECTION_READY_BANK_FEED_POLL_TOPIC_QUEUE, InjectEventConsumerRegistry } from "@modules/platform/event-bus"
-import type { EventConsumerRegistry } from "@modules/platform/event-bus"
+import { Module, type OnModuleInit } from "@nestjs/common"
+import {
+    CONNECTION_READY_BANK_FEED_POLL_TOPIC_QUEUE,
+    InjectEventConsumerRegistry,
+    type EventConsumerRegistry,
+} from "@modules/platform/event-bus"
 import { BankFeedPollReactorModule } from "../../bank-feed-poll.module"
 import { ConfigurableModuleClass } from "./bank-feed-poll-message.module-definition"
 import { ConnectionReadyConsumer } from "./connection-ready.consumer"

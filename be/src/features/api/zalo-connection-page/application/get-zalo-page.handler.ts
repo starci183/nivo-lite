@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { ZaloPageService } from "@modules/domain/channels"
-import type { ZaloPageView } from "@modules/domain/channels"
+import { ZaloPageService, type ZaloPageView } from "@modules/domain/channels"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetZaloPageQuery } from "./get-zalo-page.query"
 
 @QueryHandler(GetZaloPageQuery)

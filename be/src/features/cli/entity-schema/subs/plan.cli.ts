@@ -1,6 +1,5 @@
 import { CommandRunner, Option, SubCommand } from "nest-commander"
-import { EntityPlannerService } from "@modules/domain/entity-planner"
-import type { EntityPlanOptions } from "@modules/domain/entity-planner"
+import { EntityPlannerService, type EntityPlanOptions } from "@modules/domain/entity-planner"
 
 @SubCommand({
     name: "plan",

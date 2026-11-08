@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { DatabaseWizardService } from "@modules/domain/data-hub"
-import type { SavedDatabase } from "@modules/domain/data-hub"
+import { DatabaseWizardService, type SavedDatabase } from "@modules/domain/data-hub"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { LoadDatabaseConnectionQuery } from "./load-database-connection.query"
 
 @QueryHandler(LoadDatabaseConnectionQuery)

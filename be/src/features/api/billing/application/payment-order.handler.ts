@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { BillingReadService } from "@modules/domain/billing"
-import type { BillingPaymentOrderLookup } from "@modules/domain/billing"
+import { BillingReadService, type BillingPaymentOrderLookup } from "@modules/domain/billing"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { PaymentOrderQuery } from "./payment-order.query"
 
 @QueryHandler(PaymentOrderQuery)

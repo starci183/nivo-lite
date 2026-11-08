@@ -2,8 +2,7 @@ import { QueryHandler } from "@nestjs/cqrs"
 import { AuthorityGrantsService } from "@modules/domain/decisions"
 import type { DirectoryMember } from "@modules/domain/member-grants"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ListApproversQuery } from "./list-approvers.query"
 
 @QueryHandler(ListApproversQuery)

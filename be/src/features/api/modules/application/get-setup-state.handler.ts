@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { SetupChatService } from "@modules/domain/modules"
-import type { SetupState } from "@modules/domain/modules"
+import { SetupChatService, type SetupState } from "@modules/domain/modules"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetSetupStateQuery } from "./get-setup-state.query"
 
 @QueryHandler(GetSetupStateQuery)

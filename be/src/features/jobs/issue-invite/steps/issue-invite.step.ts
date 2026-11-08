@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { InviteCommandsService } from "@modules/domain/workspace-invites"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the invitation the web app asked for is created, sent again, linked or re-issued by the platform team, and the asker finds the answer on the command row. */

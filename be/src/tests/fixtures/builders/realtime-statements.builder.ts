@@ -1,5 +1,9 @@
-import { queueQueryBuilders } from "@starci/jest-preset"
-import type { FakeQueryBuilder, MockEntityManager, QueryBuilderCall } from "@starci/jest-preset"
+import {
+    queueQueryBuilders,
+    type FakeQueryBuilder,
+    type MockEntityManager,
+    type QueryBuilderCall,
+} from "@starci/jest-preset"
 
 /** The key of the read that loads the row a notification names. */
 export const SELECT_EVENT = "realtime:select-event"

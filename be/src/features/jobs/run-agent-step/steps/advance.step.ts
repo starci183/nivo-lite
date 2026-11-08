@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AgentStepJobService } from "@modules/domain/agent-runs"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the run the job names is driven until it waits or ends. */

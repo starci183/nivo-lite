@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionCommandsService } from "@modules/domain/connection-commands"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the submitted console command runs as the member who submitted it and its outcome is written to its row. */

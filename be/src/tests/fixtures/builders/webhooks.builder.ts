@@ -12,9 +12,8 @@ import {
     MetaReceiptPolicy,
 } from "@modules/domain/meta-inbox"
 import { MetaThreadsService } from "@modules/domain/meta-threads"
-import type { MetaClient } from "@modules/integrations/meta"
+import { type MetaClient, META_CLIENT } from "@modules/integrations/meta"
 import { QUEUE_OUTBOX, QueueOutboxService } from "@modules/platform/queue"
-import { META_CLIENT } from "@modules/integrations/meta"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import type { EntityManager } from "typeorm"

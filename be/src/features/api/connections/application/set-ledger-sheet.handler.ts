@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { SheetsGrantService } from "@modules/domain/google-connections"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetLedgerSheetCommand } from "./set-ledger-sheet.command"
 import type { GoogleLedgerResult } from "./get-google-state.contracts"
 

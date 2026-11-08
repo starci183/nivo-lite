@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ConnectionHealthService } from "@modules/domain/channels"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: every connection that is set up is judged and a changed verdict is recorded on it. */

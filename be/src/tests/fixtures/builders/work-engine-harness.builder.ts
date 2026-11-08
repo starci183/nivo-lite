@@ -1,6 +1,5 @@
 import type { WorkEngineService, WorkPerformer, WorkSpec } from "@modules/domain/decisions"
-import { mock } from "@starci/jest-preset"
-import type { fakeTransaction, MockOf } from "@starci/jest-preset"
+import { mock, type fakeTransaction, type MockOf } from "@starci/jest-preset"
 import {
     itemOf,
     performedOf,
@@ -13,8 +12,9 @@ import {
     quote,
     durablePreparation,
     ruleOf,
+    type EngineDoubles,
+    type WorkEngineFixtureOptions,
 } from "@tests/fixtures/builders/work-engine.builder"
-import type { EngineDoubles, WorkEngineFixtureOptions } from "@tests/fixtures/builders/work-engine.builder"
 
 type EngineDependencies = ConstructorParameters<typeof WorkEngineService>
 

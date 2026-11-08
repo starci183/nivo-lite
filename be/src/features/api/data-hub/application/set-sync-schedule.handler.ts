@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { DataHubService } from "@modules/domain/data-hub"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetSyncScheduleCommand } from "./set-sync-schedule.command"
 
 @CommandHandler(SetSyncScheduleCommand)

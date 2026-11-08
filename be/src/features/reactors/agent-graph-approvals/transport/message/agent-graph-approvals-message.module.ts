@@ -1,7 +1,9 @@
-import { Module } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { APPROVAL_RESOLVED_AGENT_GRAPHS_TOPIC_QUEUE, InjectEventConsumerRegistry } from "@modules/platform/event-bus"
-import type { EventConsumerRegistry } from "@modules/platform/event-bus"
+import { Module, type OnModuleInit } from "@nestjs/common"
+import {
+    APPROVAL_RESOLVED_AGENT_GRAPHS_TOPIC_QUEUE,
+    InjectEventConsumerRegistry,
+    type EventConsumerRegistry,
+} from "@modules/platform/event-bus"
 import { AgentGraphApprovalsModule } from "../../agent-graph-approvals.module"
 import { ApprovalResolvedConsumer } from "./approval-resolved.consumer"
 import { ConfigurableModuleClass } from "./agent-graph-approvals-message.module-definition"

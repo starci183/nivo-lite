@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { VideoWorkbenchService } from "@modules/domain/video"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ListVideoProjectsQuery } from "./list-video-projects.query"
 import type { ListVideoProjectsResult } from "./list-video-projects.contracts"
 

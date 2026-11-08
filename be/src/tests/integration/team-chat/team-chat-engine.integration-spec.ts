@@ -1,6 +1,5 @@
 import assert from "node:assert/strict"
-import { TeamChatRoomsService } from "@modules/domain/team-chat"
-import type { ChatMemberRef, TeamChatResult } from "@modules/domain/team-chat"
+import { TeamChatRoomsService, type ChatMemberRef, type TeamChatResult } from "@modules/domain/team-chat"
 import {
     TEAM_CHAT_CODES,
     openApprovalRequest,
@@ -8,8 +7,8 @@ import {
     rejectApprovalRequest,
     seatIdOf,
     teamChatIdentity,
+    type TeamChatIdentity,
 } from "../../fixtures/builders/team-chat.builder"
-import type { TeamChatIdentity } from "../../fixtures/builders/team-chat.builder"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { TEAM_CHAT_PROOF_MODULES } from "../../world/team-chat-capabilities.options"
 import { TeamChatProofStorage, TeamChatTagRecorder } from "../../world/team-chat-proof.module"
@@ -388,7 +387,7 @@ describe("files of a room", () => {
         )
         const upload = valueOf(await chat().requestUpload(workspaceId, first, room.id, facts()))
         expect(upload).toMatchObject({ method: "PUT", headers: [{ name: "Content-Type", value: "application/pdf" }] })
-        expect(upload.fileKey).toMatch(new RegExp(`^${workspaceId}/team-chat/${room.id}/[0-9a-f-]{36}/Bao gia\.pdf$`))
+        expect(upload.fileKey).toMatch(new RegExp(`^${workspaceId}/team-chat/${room.id}/[0-9a-f-]{36}/Bao gia\\.pdf$`))
         expect(upload.uploadUrl).toContain(upload.fileKey)
         expect(
             refusalOf(

@@ -1,6 +1,5 @@
 import type { MockOf } from "@starci/jest-preset"
-import { AUTH_ERROR_CODES, AuthError } from "@modules/integrations/passport"
-import type { SignInBudget } from "@modules/integrations/passport"
+import { AUTH_ERROR_CODES, AuthError, type SignInBudget } from "@modules/integrations/passport"
 
 /**
  * Makes a `mock<SignInBudget>()` behave like the package's budget: `admit` refuses an address that is over its limit with the wire

@@ -1,12 +1,13 @@
-import { DataSource } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { BaseEvent, EventBusService, EventConsumerService } from "@modules/platform/event-bus"
-import type {
-    EventBusOptions,
-    EventConsumer,
-    EventDelivery,
-    EventPayload,
-    ParsedEvent,
+import { DataSource, type EntityManager } from "typeorm"
+import {
+    BaseEvent,
+    EventBusService,
+    EventConsumerService,
+    type EventBusOptions,
+    type EventConsumer,
+    type EventDelivery,
+    type EventPayload,
+    type ParsedEvent,
 } from "@modules/platform/event-bus"
 import { InboxService, inboxEntities } from "@modules/platform/inbox"
 import { sql } from "@modules/platform/database"

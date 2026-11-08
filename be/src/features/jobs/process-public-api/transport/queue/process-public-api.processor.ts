@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { PublicApiProcessingService } from "@modules/domain/public-api"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import type { QueueDelivery } from "@modules/platform/queue"
 import { PUBLIC_API_QUEUE, PublicApiQueueJob } from "@modules/queues/public-api"
 import { ProcessPublicApiStep } from "../../steps/process-public-api.step"

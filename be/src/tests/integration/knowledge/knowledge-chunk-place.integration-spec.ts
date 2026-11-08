@@ -4,11 +4,9 @@ import {
     persistKnowledgePlaceChunk,
     persistKnowledgePlaceScene,
     updateKnowledgePlaceChunk,
-} from "../../fixtures/builders/knowledge-chunk-place.builder"
-import type {
-    KnowledgePlaceChunk,
-    KnowledgePlaceTuple,
-    KnowledgePlaceIdentity,
+    type KnowledgePlaceChunk,
+    type KnowledgePlaceTuple,
+    type KnowledgePlaceIdentity,
 } from "../../fixtures/builders/knowledge-chunk-place.builder"
 import { outputProofSandbox } from "../../world/output-proof-sandbox.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"

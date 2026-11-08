@@ -1,8 +1,7 @@
 import { ChatRecordsError, ChatRecordsErrorCode } from "@modules/domain/chat-records"
 import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
-import { queryProblems } from "@nivo-lite/agent-sdk/query"
+import { queryProblems, type FilterExpr, type Query } from "@nivo-lite/agent-sdk/query"
 import type { EngineResult, EntitiesApi, ListPage, PageRow, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import type { FilterExpr, Query } from "@nivo-lite/agent-sdk/query"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 
 /** The workspace of every fake record. */

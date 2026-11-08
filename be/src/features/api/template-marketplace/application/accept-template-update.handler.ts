@@ -2,8 +2,7 @@ import { CommandHandler } from "@nestjs/cqrs"
 import { TemplateUpdatesService } from "@modules/domain/template-marketplace"
 import type { UpdateOffer } from "@nivo-lite/agent-sdk/template"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AcceptTemplateUpdateCommand } from "./accept-template-update.command"
 
 @CommandHandler(AcceptTemplateUpdateCommand)

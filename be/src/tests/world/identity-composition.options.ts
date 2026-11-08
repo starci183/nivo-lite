@@ -1,10 +1,10 @@
-import type {
-    CredentialAuthenticator,
-    CredentialPrincipal,
-    VerifyAccessToken,
-    IdentityErrorCode,
+import {
+    type CredentialAuthenticator,
+    type CredentialPrincipal,
+    type VerifyAccessToken,
+    type IdentityErrorCode,
+    IdentityModule,
 } from "@modules/domain/identity"
-import { IdentityModule } from "@modules/domain/identity"
 import type { DynamicModule } from "@nestjs/common"
 import type { Outcome } from "@modules/platform/primitives"
 import type { Principal } from "@modules/platform/cqrs"

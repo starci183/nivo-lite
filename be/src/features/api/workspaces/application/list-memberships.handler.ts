@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { WorkspacesService } from "@modules/domain/workspaces"
-import type { WorkspaceMembership } from "@modules/domain/workspaces"
+import { WorkspacesService, type WorkspaceMembership } from "@modules/domain/workspaces"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ListMembershipsQuery } from "./list-memberships.query"
 
 @QueryHandler(ListMembershipsQuery)

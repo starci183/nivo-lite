@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AgentProfileService } from "@modules/domain/agent-profile"
-import type { AgentPage } from "@modules/domain/agent-profile"
+import { AgentProfileService, type AgentPage } from "@modules/domain/agent-profile"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetAgentPageQuery } from "./get-agent-page.query"
 
 @QueryHandler(GetAgentPageQuery)

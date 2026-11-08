@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { ImapWizardService } from "@modules/domain/data-hub"
-import type { ImapView } from "@modules/domain/data-hub"
+import { ImapWizardService, type ImapView } from "@modules/domain/data-hub"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { LoadImapConnectionQuery } from "./load-imap-connection.query"
 
 @QueryHandler(LoadImapConnectionQuery)
