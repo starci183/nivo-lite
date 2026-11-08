@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { ChatTurnExtensions, CustomerOutcomes } from "./conversations.contracts"
 
 /** Token of the registry where the owner of the outcomes plugs in. */

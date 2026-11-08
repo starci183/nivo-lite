@@ -1,13 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { CHAT_DELIVERY_UNKNOWN, ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
-import type { ChatConversationTarget } from "@modules/domain/chat-records"
+import {
+    CHAT_DELIVERY_UNKNOWN,
+    ChatConversationsService,
+    ChatMessagesService,
+    type ChatConversationTarget,
+} from "@modules/domain/chat-records"
 import { ConnectionSecretReadsService } from "@modules/domain/connections"
-import { InjectTelegram, TelegramError, TelegramErrorCode } from "@modules/integrations/telegram"
-import type { TelegramClient } from "@modules/integrations/telegram"
-import { InjectZalo } from "@modules/integrations/zalo"
-import type { ZaloClient } from "@modules/integrations/zalo"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectTelegram, TelegramError, TelegramErrorCode, type TelegramClient } from "@modules/integrations/telegram"
+import { InjectZalo, type ZaloClient } from "@modules/integrations/zalo"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { InjectChannelSenderRegistry } from "./channels.decorators"
 import type { ChannelSenderRegistry, DeliveryRequest, DeliveryReceipt, PersonMessage } from "./channels.contracts"
 import { ChannelPlanNoticeService } from "./channel-plan-notice.service"

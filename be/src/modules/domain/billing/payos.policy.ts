@@ -1,7 +1,6 @@
 import { createHmac } from "node:crypto"
 import { sameText } from "./channel-secret.policy"
-import { isJsonObject, fieldTextOf } from "./webhook-body.policy"
-import type { JsonObject } from "./webhook-body.policy"
+import { isJsonObject, fieldTextOf, type JsonObject } from "./webhook-body.policy"
 
 /** The body payOS posts: a code, a success flag, the payment `data` and the `signature` over it. */
 export interface PayosBody {

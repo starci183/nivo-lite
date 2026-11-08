@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager, namesById } from "@modules/platform/database"
 import type { BookingServiceRecord, OptionalBookingServiceTiming } from "./booking-services-read.contracts"
 import { BookingServiceEntity } from "./persistence/entities"

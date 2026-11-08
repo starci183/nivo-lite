@@ -1,9 +1,13 @@
 import { randomInt } from "node:crypto"
 import type { Provider, Type } from "@nestjs/common"
-import { REDIS_CLIENT } from "@modules/integrations/redis"
-import type { RedisClient } from "@modules/integrations/redis"
-import { POLL_LIMITER_STORE, POLL_RANDOM, POLL_REDIS, POLL_REDIS_PREFIX } from "./connection-poll.decorators"
-import type { PollRandom } from "./connection-poll.decorators"
+import { REDIS_CLIENT, type RedisClient } from "@modules/integrations/redis"
+import {
+    POLL_LIMITER_STORE,
+    POLL_RANDOM,
+    POLL_REDIS,
+    POLL_REDIS_PREFIX,
+    type PollRandom,
+} from "./connection-poll.decorators"
 import type { ConnectionPollOptions, PollRedisOptions } from "./connection-poll.options"
 import { FirstPollEnqueueService } from "./first-poll-enqueue.service"
 import { MemoryPollLimiterStore } from "./memory-poll-limiter.adapter"

@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { CustomerTurnsOptions } from "./customer-turns.options"
 
 /** Token of the customer-turns options, exported so a spec can provide it. */

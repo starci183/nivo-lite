@@ -1,17 +1,21 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionPollLogEvent, ConnectionPollRunService, emptyPollSummary } from "@modules/domain/connection-poll"
-import type { ConnectionPoller, PollSummary } from "@modules/domain/connection-poll"
-import { ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionRecord, HealthCandidate } from "@modules/domain/connections"
-import { BankFeedPollerRegistryService } from "@modules/domain/provider-registry"
-import type { BankFeedPoller, PolledCredit } from "@modules/domain/provider-registry"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import {
+    ConnectionPollLogEvent,
+    ConnectionPollRunService,
+    emptyPollSummary,
+    type ConnectionPoller,
+    type PollSummary,
+} from "@modules/domain/connection-poll"
+import { ConnectionsService, type ConnectionRecord, type HealthCandidate } from "@modules/domain/connections"
+import {
+    BankFeedPollerRegistryService,
+    type BankFeedPoller,
+    type PolledCredit,
+} from "@modules/domain/provider-registry"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { InjectTimer } from "@modules/platform/retry"
-import type { Timer } from "@modules/platform/retry"
+import { InjectTimer, type Timer } from "@modules/platform/retry"
 import { isBankFeedPollPayload } from "@modules/queues/bank-feed-poll"
 import { BankFeedReceiptsService } from "./bank-feed-receipts.service"
 

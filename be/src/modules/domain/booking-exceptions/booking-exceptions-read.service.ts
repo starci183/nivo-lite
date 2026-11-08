@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { MoreThanOrEqual } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { MoreThanOrEqual, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { BookingExceptionRecord } from "./booking-exceptions-read.contracts"
 import { BookingExceptionEntity } from "./persistence/entities"

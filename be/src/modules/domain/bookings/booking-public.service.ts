@@ -1,13 +1,11 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { BookingSettingsReadService } from "@modules/domain/booking-settings"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { BookingModelService } from "./booking-model.service"
 import { BookingRemindersService } from "@modules/domain/booking-reminders"
-import { BookingReservationService } from "./booking-reservation.service"
-import type { NewBooking, ReserveOutcome } from "./booking-reservation.service"
+import { BookingReservationService, type NewBooking, type ReserveOutcome } from "./booking-reservation.service"
 import type {
     BookableService,
     BookingModel,

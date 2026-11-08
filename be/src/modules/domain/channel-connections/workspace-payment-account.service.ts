@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionBindingsReadService } from "@modules/domain/connections"
-import type { FeedAccountFacts } from "@modules/domain/connections"
+import { ConnectionBindingsReadService, type FeedAccountFacts } from "@modules/domain/connections"
 import type { OptionalWorkspacePaymentAccount, WorkspacePaymentAccount } from "./channel-connections.contracts"
 import { isAccountNumber } from "./money-provider.policy"
 

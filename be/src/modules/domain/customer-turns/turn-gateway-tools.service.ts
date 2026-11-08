@@ -1,10 +1,8 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { ChatConversationsService } from "@modules/domain/chat-records"
-import type { ChatTurnConversation } from "@modules/domain/chat-records"
+import { ChatConversationsService, type ChatTurnConversation } from "@modules/domain/chat-records"
 import type { GatewayTools, GatewayToolName, JsonResult, ToolArgs, ToolContext } from "@modules/domain/agent-tools"
 import { AgentRunsService } from "@modules/domain/agent-runs"
-import { InjectOutputNodeReader } from "@modules/domain/authority-rules"
-import type { OutputNodeReader, OutputNodes } from "@modules/domain/authority-rules"
+import { InjectOutputNodeReader, type OutputNodeReader, type OutputNodes } from "@modules/domain/authority-rules"
 import type { WorkSpec } from "@modules/domain/decisions"
 import {
     argsHashOf,
@@ -12,10 +10,11 @@ import {
     gatewayDescribeSchema,
     gatewaySearchSchema,
     McpGatewayService,
+    type GatewayCaller,
+    type GatewayJson,
+    type OptionalDescribedTool,
 } from "@modules/domain/mcp-gateway"
-import type { GatewayCaller, GatewayJson, OptionalDescribedTool } from "@modules/domain/mcp-gateway"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { parseJsonText } from "@modules/platform/primitives"
 import type { HubNoteSource } from "./gateway-turns.contracts"
 import { HubNotesService, toolSourcesOf } from "./hub-notes.service"

@@ -1,13 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { AgentDirectoryService, InjectInstallations } from "@modules/domain/agents"
-import type { InstallationDirectory } from "@modules/domain/agents"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { AgentDirectoryService, InjectInstallations, type InstallationDirectory } from "@modules/domain/agents"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import type { EntitiesApi } from "@nivo-lite/agent-sdk/entity/port"
-import { q } from "@nivo-lite/agent-sdk/query"
-import type { FilterExpr } from "@nivo-lite/agent-sdk/query"
+import { q, type FilterExpr } from "@nivo-lite/agent-sdk/query"
 import { patchAfterHandling } from "@nivo-lite/blocks-core/rules/chatbot"
 import { ChatEntitiesService } from "./chat-entities.service"
 import { followersOf } from "./chat-followers.policy"
@@ -24,8 +20,8 @@ import {
     refOf,
     stateOf,
     targetOf,
+    type ConversationFacts,
 } from "./chat-conversation.policy"
-import type { ConversationFacts } from "./chat-conversation.policy"
 import type {
     ChatConversationParty,
     ChatConversationRef,
@@ -241,7 +237,9 @@ export class ChatConversationsService {
             const pages = await Promise.all(
                 chunks.map((chunk) => api.list(conversationQuery(q.in("id", chunk), chunk.length))),
             )
-            return pages.flatMap((page) => page.rows.flatMap((found) => factsOf(found) ?? [])).map(humanOf)
+            return pages
+                .flatMap((page) => page.rows.flatMap((found) => factsOf(found) ?? []))
+                .map((facts) => humanOf(facts))
         })
     }
 
@@ -315,7 +313,7 @@ export class ChatConversationsService {
         const tied = page.rows
             .flatMap((found) => factsOf(found) ?? [])
             .filter((facts) => facts.leadId !== null && wanted.has(facts.leadId))
-            .map(humanOf)
+            .map((facts) => humanOf(facts))
         if (page.next === null || pagesLeft <= 1) return tied
         return [...tied, ...(await this.scanForLeads(api, wanted, page.next, pagesLeft - 1))]
     }

@@ -1,6 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    ConnectionsService,
+    type ConnectionActor,
+    type ConnectionRecord,
+} from "@modules/domain/connections"
 import type { TelegramPageView } from "./telegram-page.contracts"
 
 const MANAGER = ["owner", "manager"] as const

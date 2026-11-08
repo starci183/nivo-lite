@@ -1,5 +1,4 @@
-import { isRecord, ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { isRecord, ok, refused, type Outcome } from "@modules/platform/primitives"
 import { ConversationsErrorCode } from "./errors/conversations.error"
 
 /** The JSON object of a webhook body. */

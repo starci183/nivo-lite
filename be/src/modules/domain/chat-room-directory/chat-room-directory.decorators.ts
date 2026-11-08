@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { ChatRoomDirectory } from "./chat-room-directory.contracts"
 import type { ChatRoomDirectoryOptions } from "./chat-room-directory.options"
 

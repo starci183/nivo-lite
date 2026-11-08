@@ -3,8 +3,7 @@ import { BrainFactsReadService } from "@modules/domain/brain-facts"
 import { DossierFindingsService } from "@modules/domain/dossier-review"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { PublicDocumentsService } from "@modules/domain/public-documents"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
 
 /** Who sees the facts waiting and the customer questions; every member sees the findings. */
 const MANAGERS: ReadonlySet<WorkspaceRole> = new Set(["owner", "manager"])

@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { In, type EntityManager } from "typeorm"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     FactAudience,
@@ -48,7 +46,7 @@ export class BrainFactsReadService {
             order: { updatedAt: "DESC" },
             take: Math.min(filter.limit ?? 500, LIST_MAX),
         })
-        return rows.map(toFactRecord)
+        return rows.map((row) => toFactRecord(row))
     }
 
     /** How many cards of the owner's review the proposals waiting in the workspace make, read as four columns of each and never the evidence. */
@@ -114,7 +112,7 @@ export class BrainFactsReadService {
             .orderBy("f.updatedAt", "DESC")
             .limit(Math.min(limit, LIST_MAX))
             .getMany()
-        return rows.map(toFactRecord)
+        return rows.map((row) => toFactRecord(row))
     }
 
     /** One fact through a manager. */
@@ -137,6 +135,6 @@ export class BrainFactsReadService {
             order: { proposedAt: "DESC" },
             take: 50,
         })
-        return rows.map(toFactRecord)
+        return rows.map((row) => toFactRecord(row))
     }
 }

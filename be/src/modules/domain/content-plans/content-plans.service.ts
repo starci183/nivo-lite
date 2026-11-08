@@ -1,7 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ContentAiStoreService, ContentEditorService } from "@modules/domain/content-items"
-import type { ContentGeneratedPlan, ContentWorkbench, OptionalPlanSummary } from "@modules/domain/content-items"
+import {
+    ContentAiStoreService,
+    ContentEditorService,
+    type ContentGeneratedPlan,
+    type ContentWorkbench,
+    type OptionalPlanSummary,
+} from "@modules/domain/content-items"
 import { advisoryXactLock, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ContentPlansError, ContentPlansErrorCode } from "./errors/content-plans.error"
 import type { ContentPlanApplied } from "./content-plans.contracts"

@@ -1,11 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import type { EntitiesApi, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import { q } from "@nivo-lite/agent-sdk/query"
-import type { FilterExpr, Query } from "@nivo-lite/agent-sdk/query"
+import { q, type FilterExpr, type Query } from "@nivo-lite/agent-sdk/query"
 import { patchAfterLine } from "@nivo-lite/blocks-core/rules/chatbot"
 import { CONVERSATION_ENTITY, plainFactsOf, stateOf } from "./chat-conversation.policy"
 import { ChatEntitiesService } from "./chat-entities.service"
@@ -18,8 +15,8 @@ import {
     replyOf,
     storedMessageOf,
     transcriptOf,
+    type LineFacts,
 } from "./chat-lines.policy"
-import type { LineFacts } from "./chat-lines.policy"
 import type {
     AgentLine,
     ChatCustomerLine,

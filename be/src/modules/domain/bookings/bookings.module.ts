@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { BookingExceptionsModule } from "@modules/domain/booking-exceptions"
 import { BookingHoursModule } from "@modules/domain/booking-hours"
 import { BookingResourcesModule } from "@modules/domain/booking-resources"

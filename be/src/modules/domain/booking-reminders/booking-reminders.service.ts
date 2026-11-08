@@ -1,12 +1,16 @@
 import { Injectable } from "@nestjs/common"
-import { In, LessThanOrEqual } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { AutomationPipelinesService } from "@modules/domain/automation-pipelines"
-import type { PipelineRow } from "@modules/domain/automation-pipelines"
+import { In, LessThanOrEqual, type EntityManager } from "typeorm"
+import { AutomationPipelinesService, type PipelineRow } from "@modules/domain/automation-pipelines"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { BookingReminderEntity } from "./persistence/entities"
-import { cardReminderBody, cardReminderHours, reminderPlan } from "./policies/reminder-plan.policy"
-import type { DueReminder, ReminderCard, ReminderDue } from "./policies/reminder-plan.policy"
+import {
+    cardReminderBody,
+    cardReminderHours,
+    reminderPlan,
+    type DueReminder,
+    type ReminderCard,
+    type ReminderDue,
+} from "./policies/reminder-plan.policy"
 
 /** How a taken reminder ended. */
 export interface ReminderSettlement {

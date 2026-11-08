@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { BookingModelService } from "./booking-model.service"
@@ -21,8 +20,7 @@ import { BookingsError, BookingsErrorCode } from "./errors/bookings.error"
 import { BookingServicesReadService } from "@modules/domain/booking-services"
 import type { BookingStateFacts, BookingStateRowFacts } from "./booking-facts.contracts"
 import { BookingEntity } from "./persistence/entities"
-import { checkSlot } from "./policies/availability.policy"
-import type { SlotCheck } from "./policies/availability.policy"
+import { checkSlot, type SlotCheck } from "./policies/availability.policy"
 import {
     clampParty,
     depositFor,

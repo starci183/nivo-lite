@@ -1,15 +1,12 @@
 import { Injectable } from "@nestjs/common"
-import { And, LessThan, MoreThan, MoreThanOrEqual } from "typeorm"
-import type { EntityManager, FindOptionsWhere } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { And, LessThan, MoreThan, MoreThanOrEqual, type EntityManager, type FindOptionsWhere } from "typeorm"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { DepositsDueFacts, FinishedCountFacts } from "./booking-facts.contracts"
 import { toFigureRow } from "./booking-model.mapper"
 import { BookingModelService } from "./booking-model.service"
-import { ACTIVE_STATUSES } from "./bookings.contracts"
-import type { BookingOverview, OverviewParams } from "./bookings.contracts"
+import { ACTIVE_STATUSES, type BookingOverview, type OverviewParams } from "./bookings.contracts"
 import { BookingEntity } from "./persistence/entities"
 import { utilisation } from "./policies/availability.policy"
 import { noShowShare, startingBetween, summariseRange, weightedUtilisation } from "./policies/booking-rules.policy"
@@ -70,7 +67,7 @@ export class BookingOverviewService {
                 take: WINDOW_LIMIT,
             }),
         ])
-        const weekRows = week.map(toFigureRow)
+        const weekRows = week.map((booking) => toFigureRow(booking))
         const weekly = utilisation(
             model.resources,
             model.hours,
@@ -82,7 +79,7 @@ export class BookingOverviewService {
         )
         const finishedCount = (status: string): number =>
             finished.filter((row) => row.status === status).reduce((sum, row) => sum + row.total, 0)
-        const summary = summariseRange(range.map(toFigureRow))
+        const summary = summariseRange(range.map((booking) => toFigureRow(booking)))
         return {
             figures: {
                 bookingsToday: startingBetween(weekRows, dayStart, dayEnd),

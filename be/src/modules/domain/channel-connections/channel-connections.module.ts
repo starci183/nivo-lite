@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ChannelSeedService } from "./channel-seed.service"
 import { ChannelConnectionsService } from "./channel-connections.service"
 import { SepayConnectionService } from "./sepay-connection.service"

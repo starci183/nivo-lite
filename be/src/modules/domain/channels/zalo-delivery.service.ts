@@ -1,13 +1,16 @@
 import { Injectable } from "@nestjs/common"
-import { ChatMessagesService } from "@modules/domain/chat-records"
-import type { ChatConversationTarget } from "@modules/domain/chat-records"
+import { ChatMessagesService, type ChatConversationTarget } from "@modules/domain/chat-records"
 import { ConnectionsService } from "@modules/domain/connections"
-import { InjectZalo, isZaloMessageRefusal, isZaloTokenRejection, zaloFailureOf } from "@modules/integrations/zalo"
-import type { ZaloClient, ZaloFailure } from "@modules/integrations/zalo"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import {
+    InjectZalo,
+    isZaloMessageRefusal,
+    isZaloTokenRejection,
+    zaloFailureOf,
+    type ZaloClient,
+    type ZaloFailure,
+} from "@modules/integrations/zalo"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { DeliveryRequest, DeliveryResult, OptionalZnsRenewal } from "./channels.contracts"
 import { deliveryFailureFieldsOf } from "./delivery-failure-fields.policy"
 import { ChannelsLogEvent } from "./channels.log-events"

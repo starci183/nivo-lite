@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./booking-settings.module-definition"
 import { BookingSettingsReadService } from "./booking-settings-read.service"
 import { BookingSettingsService } from "./booking-settings.service"

@@ -1,3 +1,4 @@
+import { DomainError } from "@modules/platform/errors"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { CommandBusService } from "@modules/domain/decisions"
@@ -6,6 +7,9 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { MarketingDraft } from "./content-agent.contracts"
 import { MarketingVideoService, scenesOf } from "./marketing-video.service"
+
+/** A failing collaborator of the spec: carries a code, as every error of the application does. */
+class Outage extends DomainError<string> {}
 
 const CTX: WorkContext = { workspaceId: "ws-1", actor: "Owner", locale: "vi" }
 const DRAFT: MarketingDraft = {
@@ -76,7 +80,7 @@ describe("MarketingVideoService", () => {
         await expect(refused.service.delegate(CTX, DRAFT, IMAGES, BRIEF)).resolves.toBe(false)
         expect(refused.logger.warn).toHaveBeenCalled()
 
-        const failed = await build(() => Promise.reject(new Error("down")))
+        const failed = await build(() => Promise.reject(new Outage({ code: "down" })))
         await expect(failed.service.delegate(CTX, DRAFT, IMAGES, BRIEF)).resolves.toBe(false)
         expect(failed.logger.error).toHaveBeenCalled()
 

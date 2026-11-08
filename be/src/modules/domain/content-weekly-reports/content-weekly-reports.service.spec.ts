@@ -42,14 +42,14 @@ const registerReading = () => {
         ])
         const service = await build(em)
 
-        await expect(service.find("ws-1", "2026-10-12")).resolves.toEqual({
+        await expect(service.weekOf("ws-1", "2026-10-12")).resolves.toEqual({
             posts: [POST],
             postCount: 8,
             suggestion: SUGGESTION,
             computedAt: "2026-10-19T03:00:00+00:00",
             postedAt: null,
         })
-        await expect(service.find("ws-1", "2026-10-05")).resolves.toBeNull()
+        await expect(service.weekOf("ws-1", "2026-10-05")).resolves.toBeNull()
         expect(found?.callsOf("where")).toEqual([
             [
                 "r.workspaceId = :workspaceId AND r.weekStart = :weekStart",

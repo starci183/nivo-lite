@@ -1,3 +1,4 @@
+import { DomainError } from "@modules/platform/errors"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { runtimeTurn } from "@tests/fixtures/builders/customer-turn-runtime.builder"
@@ -11,6 +12,9 @@ import type { Logger } from "@modules/platform/logging"
 import { CustomerIntentContextService } from "./customer-intent-context.service"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import { TurnModulesService } from "./turn-modules.service"
+
+/** A failing collaborator of the spec: carries a code, as every error of the application does. */
+class Outage extends DomainError<string> {}
 
 interface Options {
     readonly authority?: () => Promise<never>
@@ -90,7 +94,7 @@ describe("CustomerIntentContextService.contextOf", () => {
     })
 
     it("leaves out a block that cannot be read and logs it, never the turn", async () => {
-        const failing = (): Promise<never> => Promise.reject(new Error("down"))
+        const failing = (): Promise<never> => Promise.reject(new Outage({ code: "down" }))
         const { service, logger } = await build({ authority: failing, hiring: failing, modules: failing })
 
         const context = await service.contextOf(runtimeTurn)

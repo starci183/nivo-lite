@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { DossierReviewRunsService } from "@modules/domain/dossier-review"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { BrainLogEvent } from "./brain.log-events"
 
 @Injectable()

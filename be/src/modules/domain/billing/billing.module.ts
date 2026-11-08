@@ -1,6 +1,5 @@
 import { BankFeedDeliveryService } from "./bank-feed-delivery.service"
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { BankFeedFlowService } from "./bank-feed-flow.service"
 import { BankFeedIntakeService } from "./bank-feed-intake.service"
 import { BankFeedPollSourcesService } from "./bank-feed-poll-sources.service"

@@ -1,5 +1,4 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { AgentPluginsService } from "@modules/domain/agent-plugins"
 import { CUSTOMER_PLUGIN } from "./customer-intents.policy"
 

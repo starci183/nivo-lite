@@ -1,10 +1,12 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { isValidZaloMac, zaloEventNameOf } from "@modules/integrations/zalo"
-import { InjectWebhookProofRegistry } from "@modules/platform/http-security"
-import type { WebhookProof, WebhookProofRegistry, WebhookProofRequest } from "@modules/platform/http-security"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import {
+    InjectWebhookProofRegistry,
+    type WebhookProof,
+    type WebhookProofRegistry,
+    type WebhookProofRequest,
+} from "@modules/platform/http-security"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 

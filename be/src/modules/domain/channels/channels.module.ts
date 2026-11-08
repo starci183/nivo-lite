@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { CHANNEL_SENDER_REGISTRY, ZALO_INBOX_READS } from "./channels.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./channels.module-definition"
 import { ZaloCredentialsService } from "./zalo-credentials.service"

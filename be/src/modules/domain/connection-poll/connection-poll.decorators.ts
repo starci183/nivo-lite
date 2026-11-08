@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { PollLimiterStore, PollRedis } from "./poll-limiter.contracts"
 import type { ConnectionPollOptions } from "./connection-poll.options"
 

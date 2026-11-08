@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { ChannelProvisioningOptions } from "./channel-provisioning.options"
 
 /** Token of the provisioning options, exported so a spec can provide it. */

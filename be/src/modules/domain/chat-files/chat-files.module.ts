@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ChatFileReadsService } from "./chat-file-reads.service"
 import { CHAT_FILES_STORAGE } from "./chat-files.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./chat-files.module-definition"

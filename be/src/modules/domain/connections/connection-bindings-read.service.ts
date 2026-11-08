@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ConnectionBindingFacts,
@@ -11,8 +10,7 @@ import type {
 } from "./connection-bindings-read.contracts"
 import { toConnectionRecord } from "./connections.mapper"
 import type { OptionalConnectionRecord } from "./connections.contracts"
-import { projectConnections } from "./persistence/connection.projection"
-import type { ConnectionProjection } from "./persistence/connection.projection"
+import { projectConnections, type ConnectionProjection } from "./persistence/connection.projection"
 import { ConnectionEntity } from "./persistence/entities"
 
 /** The text a provider reported in the public meta, trimmed; null when it is missing or blank. */
@@ -46,7 +44,7 @@ export class ConnectionBindingsReadService {
             where: { id: In([...new Set(connectionIds)]) },
             take: limit,
         })
-        return rows.map(bindingFactsOf)
+        return rows.map((row) => bindingFactsOf(row))
     }
 
     /** One connection of the workspace as its record, for a read-only app that hands it to a provider port; null when there is none. */

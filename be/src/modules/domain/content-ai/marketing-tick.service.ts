@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ContentSettingsService } from "@modules/domain/content-settings"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { MarketingTickDone, MarketingTickRequest } from "./content-agent.contracts"
 import { ContentAgentLogEvent } from "./content-agent.log-events"

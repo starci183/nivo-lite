@@ -1,12 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    ConnectionsService,
+    type ConnectionActor,
+    type ConnectionRecord,
+} from "@modules/domain/connections"
 import { ChatConversationsService } from "@modules/domain/chat-records"
 import { zaloFailureOf } from "@modules/integrations/zalo"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ChannelDeliveryService } from "./channel-delivery.service"
 import { InjectZaloInboxReads } from "./channels.decorators"
 import type { ZaloInboxReads } from "./channels.port"

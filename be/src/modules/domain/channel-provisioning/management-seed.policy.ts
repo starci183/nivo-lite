@@ -1,7 +1,11 @@
 import { isMailAddress } from "@modules/domain/email-messages"
 import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
-import { MANAGEMENT_CONNECTION_IDS, MANAGEMENT_SEED_SCHEMA } from "./management-seed.contracts"
-import type { ManagementSeed, ManagementSmtp } from "./management-seed.contracts"
+import {
+    MANAGEMENT_CONNECTION_IDS,
+    MANAGEMENT_SEED_SCHEMA,
+    type ManagementSeed,
+    type ManagementSmtp,
+} from "./management-seed.contracts"
 
 const NAME_MAX = 120
 const PORT_MAX = 65_535

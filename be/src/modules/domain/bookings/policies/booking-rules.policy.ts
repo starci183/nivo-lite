@@ -1,12 +1,12 @@
-import { ACTIVE_STATUSES } from "../bookings.contracts"
-import type {
-    BookableService,
-    BookingModel,
-    BookingResource,
-    DeskRefusal,
-    PlanInput,
-    SlotReason,
-    TakenSpan,
+import {
+    ACTIVE_STATUSES,
+    type BookableService,
+    type BookingModel,
+    type BookingResource,
+    type DeskRefusal,
+    type PlanInput,
+    type SlotReason,
+    type TakenSpan,
 } from "../bookings.contracts"
 import type { ResourceUtilisation } from "./availability.policy"
 import { addDays, zonedMs } from "./zoned-time.policy"
@@ -74,7 +74,7 @@ const BOOKED_STATUSES: ReadonlySet<string> = new Set(["confirmed", "rescheduled"
 
 /** A phone number as `84` followed by digits, or null when there is nothing to read. */
 export const normalisePhone = (raw: string): string | null => {
-    const digits = raw.replace(/\D/gu, "")
+    const digits = raw.replaceAll(/\D/gu, "")
     if (digits === "") return null
     if (digits.startsWith("0")) return `84${digits.slice(1)}`
     return !digits.startsWith("84") && digits.length === 9 ? `84${digits}` : digits

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { Like, MoreThanOrEqual } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { Like, MoreThanOrEqual, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { ChannelReceiptEntity } from "./persistence/entities"
 

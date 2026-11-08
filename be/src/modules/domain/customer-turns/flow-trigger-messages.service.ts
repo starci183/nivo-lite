@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { FlowTriggerConversation, FlowTriggerMessage, FlowTriggerMessages } from "@modules/domain/agent-graphs"
-import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
-import type { ChatCustomerLine } from "@modules/domain/chat-records"
+import { ChatConversationsService, ChatMessagesService, type ChatCustomerLine } from "@modules/domain/chat-records"
 
 /** The most unanswered customer messages one run reads. */
 const UNANSWERED_MAX = 30

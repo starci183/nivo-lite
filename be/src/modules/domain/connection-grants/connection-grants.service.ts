@@ -1,16 +1,26 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentAccessLogService } from "@modules/domain/agent-access-log"
-import { AgentBindingsService } from "@modules/domain/agent-connections"
-import type { Access } from "@modules/domain/agent-connections"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionMember } from "@modules/domain/connections"
+import { AgentBindingsService, type Access } from "@modules/domain/agent-connections"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    ConnectionsService,
+    type ConnectionActor,
+    type ConnectionMember,
+} from "@modules/domain/connections"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import { isAccess, normaliseAccess, planExactly, purposeFor } from "./connection-access.policy"
-import type { GrantChange, RequestedGrant } from "./connection-access.policy"
+import {
+    isAccess,
+    normaliseAccess,
+    planExactly,
+    purposeFor,
+    type GrantChange,
+    type RequestedGrant,
+} from "./connection-access.policy"
 import type {
     AgentGrantWish,
     ConnectionBoardEntry,

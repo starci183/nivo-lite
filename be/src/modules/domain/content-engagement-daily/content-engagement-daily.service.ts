@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { And, LessThan, MoreThanOrEqual } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { And, LessThan, MoreThanOrEqual, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { EngagementDayRecord, ReportedDay } from "./content-engagement-daily.contracts"
 import { ContentEngagementDailyEntity } from "./persistence/entities"

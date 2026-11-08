@@ -173,7 +173,7 @@ export const fillReminderBody = (
     neutral: Readonly<Record<string, string>>,
 ): string =>
     body
-        .replace(/\{([a-z_]+)\}/g, (_whole, name: string) => (variables[name] ?? "").trim() || (neutral[name] ?? ""))
-        .replace(/[ \t]{2,}/g, " ")
-        .replace(/[ \t]([.,!?])/g, "$1")
+        .replaceAll(/\{([a-z_]+)\}/g, (_whole, name: string) => (variables[name] ?? "").trim() || (neutral[name] ?? ""))
+        .replaceAll(/[ \t]{2,}/g, " ")
+        .replaceAll(/[ \t]([.,!?])/g, "$1")
         .trim()

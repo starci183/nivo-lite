@@ -67,7 +67,7 @@ export const chatFileNameOf = (name: string, path: string): string => {
     const start = Math.max(name.lastIndexOf("/"), name.lastIndexOf("\\")) + 1
     const clean = name
         .slice(start)
-        .replace(/\p{Cc}/gu, "")
+        .replaceAll(/\p{Cc}/gu, "")
         .trim()
     return clean === "" ? path.slice(path.lastIndexOf("/") + 1) : clean.slice(-NAME_MAX)
 }

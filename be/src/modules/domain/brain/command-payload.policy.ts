@@ -1,5 +1,4 @@
-import { SUBJECT_TYPES } from "@modules/domain/brain-facts"
-import type { BrainSubjectType, Scope } from "@modules/domain/brain-facts"
+import { SUBJECT_TYPES, type BrainSubjectType, type Scope } from "@modules/domain/brain-facts"
 import type { FactDecision, FactForm, KeepCurrentInput, LessonDecision, LessonForm } from "./brain.contracts"
 import { fieldsOf } from "./extraction.policy"
 

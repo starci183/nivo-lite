@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { lineClientIdOf, TeamChatRoomsService } from "@modules/domain/team-chat"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
 import type { MarketingCard } from "./marketing-cards.contracts"
 
 /** The module whose agent (AI Marketing) speaks to the owner. */

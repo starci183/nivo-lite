@@ -1,31 +1,38 @@
 import { Injectable } from "@nestjs/common"
 import { AgentBindingsService, PURPOSES } from "@modules/domain/agent-connections"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { ChatConversationsService } from "@modules/domain/chat-records"
-import type { ChatTurnConversation } from "@modules/domain/chat-records"
+import { ChatConversationsService, type ChatTurnConversation } from "@modules/domain/chat-records"
 import { KnowledgeGapNotesService, viewOf } from "@modules/domain/agent-knowledge"
 import type { CustomerTurn, ChatTurnProposal, CustomerOutcomes, TurnVerdict } from "@modules/domain/conversations"
-import { CommandBusService, EvidenceService, WorkEngineService } from "@modules/domain/decisions"
-import type { WorkContext, WorkItem } from "@modules/domain/decisions"
+import {
+    CommandBusService,
+    EvidenceService,
+    WorkEngineService,
+    type WorkContext,
+    type WorkItem,
+} from "@modules/domain/decisions"
 import { HiringPublicService } from "@modules/domain/hiring"
-import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import type { GraphAnswer } from "@modules/domain/authority-rules"
+import { AuthorityRulesService, type GraphAnswer } from "@modules/domain/authority-rules"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { InvoicesService } from "@modules/domain/invoices"
 import { WorkItemsService } from "@modules/domain/work-items"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { handoffTranscriptOf, isRecentlyPaid, latestQuestionOf } from "./customer-turn.policy"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import type { CustomerChannel, CustomerReply, TurnSettled } from "./customer-turns.contracts"
 import { isKnownPrice } from "./knowledge-price.policy"
 import { HANDOFF_AGENTS_MAX, handoffTagGranted } from "./handoff-tag.policy"
-import { REPLY_ACTION, evidenceOfTurn, replyCheckOf } from "./reply-graph.policy"
-import type { Judged, OpenedReplyItem, ReplyItemSpec, ReplyScope } from "./reply-graph.policy"
+import {
+    REPLY_ACTION,
+    evidenceOfTurn,
+    replyCheckOf,
+    type Judged,
+    type OpenedReplyItem,
+    type ReplyItemSpec,
+    type ReplyScope,
+} from "./reply-graph.policy"
 import { findingsOf, humanReasonOf } from "./reply-reading.policy"
 import { StaffEscalationService } from "./staff-escalation.service"
 import { TurnModulesService } from "./turn-modules.service"

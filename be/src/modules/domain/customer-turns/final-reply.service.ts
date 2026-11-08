@@ -3,12 +3,9 @@ import { RuntimeAgentService } from "@modules/domain/agent-turns"
 import type { AuthorityOutputStep } from "@modules/domain/authority-rules"
 import { UsageGateService } from "@modules/domain/ai-usage-events"
 import type { CustomerTurn } from "@modules/domain/conversations"
-import { InjectOpenclawGateway, threadKeyFor } from "@modules/integrations/openclaw"
-import type { GatewayClient } from "@modules/integrations/openclaw"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectOpenclawGateway, threadKeyFor, type GatewayClient } from "@modules/integrations/openclaw"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { CustomerTurnRuntimeService } from "./customer-turn-runtime.service"
 import { CustomerTurnsLogEvent } from "./customer-turns.log-events"
 import { finalPromptOf, finalTextOf } from "./final-reply.policy"
@@ -54,7 +51,8 @@ export class FinalReplyService {
         key: string,
         planned: string,
     ): Promise<string> {
-        if (outputs.some(isFailed)) return this.catalog.get("customerTurns.finalReply.failed", {}, LOCALE)
+        if (outputs.some((step) => isFailed(step)))
+            return this.catalog.get("customerTurns.finalReply.failed", {}, LOCALE)
         const written = await this.modelTurn(turn, outputs, key, planned).catch((cause: unknown) => {
             this.logger.error(CustomerTurnsLogEvent.FinalReplyFailed, cause, { conversationId: turn.conversation.id })
             return null

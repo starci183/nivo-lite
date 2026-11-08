@@ -1,9 +1,11 @@
-import { Injectable } from "@nestjs/common"
-import type { OnApplicationBootstrap } from "@nestjs/common"
-import { PollSourceRegistryService } from "@modules/domain/connection-poll"
-import type { ConnectionPoller, PollSourceDirectory, ScheduledPollSource } from "@modules/domain/connection-poll"
-import { BankFeedPollerRegistryService } from "@modules/domain/provider-registry"
-import type { PolledCredit } from "@modules/domain/provider-registry"
+import { Injectable, type OnApplicationBootstrap } from "@nestjs/common"
+import {
+    PollSourceRegistryService,
+    type ConnectionPoller,
+    type PollSourceDirectory,
+    type ScheduledPollSource,
+} from "@modules/domain/connection-poll"
+import { BankFeedPollerRegistryService, type PolledCredit } from "@modules/domain/provider-registry"
 import { BankFeedReceiptsService } from "./bank-feed-receipts.service"
 
 @Injectable()

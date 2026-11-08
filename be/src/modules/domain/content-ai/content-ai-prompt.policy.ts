@@ -1,5 +1,10 @@
-import { vietnamClock } from "./content-ai-planning.policy"
-import type { PlanChannel, PlanEvent, PlanPillar, PlanSlot } from "./content-ai-planning.policy"
+import {
+    vietnamClock,
+    type PlanChannel,
+    type PlanEvent,
+    type PlanPillar,
+    type PlanSlot,
+} from "./content-ai-planning.policy"
 import {
     CONTENT_AI_CHANNEL_RULES,
     CONTENT_AI_CLAIMS,
@@ -213,7 +218,7 @@ export const cleanHashtags = (list: ReadonlyArray<string>): Array<string> => [
                 const word = value
                     .trim()
                     .replace(/^#+/u, "")
-                    .replace(/[\s#]+/gu, "")
+                    .replaceAll(/[\s#]+/gu, "")
                 return word === "" ? "" : `#${word}`
             })
             .filter((value) => value !== ""),
@@ -294,7 +299,10 @@ export const isOfferLine = (line: string): boolean => OFFER.test(line)
 
 /** Actual offer lines worth considering, capped to the previous planner's twelve-line limit. */
 export const offerLines = (brand: BrandContext): string => {
-    const hits = brand.knowledge.split("\n").filter(isOfferLine).slice(0, 12)
+    const hits = brand.knowledge
+        .split("\n")
+        .filter((line) => isOfferLine(line))
+        .slice(0, 12)
     return hits.length > 0 ? hits.join("\n") : "No actual offers are recorded. Do not invent any."
 }
 
@@ -426,10 +434,10 @@ export const claimWarnings = (text: string, knowledge?: string): Array<ClaimWarn
         return match === null ? [] : [{ kind: "promise" as const, phrase: match[0] }]
     })
     if (knowledge === undefined) return promises
-    const facts = knowledge.replace(/\s+/gu, "").toLowerCase()
+    const facts = knowledge.replaceAll(/\s+/gu, "").toLowerCase()
     const figures: Array<ClaimWarning> = []
-    text.replace(new RegExp(CONTENT_AI_CLAIMS.figure, "giu"), (match: string, capture: string) => {
-        const figure = capture.replace(/\s+/gu, "").toLowerCase()
+    text.replaceAll(new RegExp(CONTENT_AI_CLAIMS.figure, "giu"), (match: string, capture: string) => {
+        const figure = capture.replaceAll(/\s+/gu, "").toLowerCase()
         if (!facts.includes(figure)) figures.push({ kind: "figure", figure: capture.trim() })
         return match
     })

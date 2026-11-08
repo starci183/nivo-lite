@@ -41,8 +41,8 @@ export const toPlan = (row: PlanEntity, tiers: ReadonlyArray<PlanUsageTierEntity
     individual: row.individual,
     perSeat: row.perSeat,
     listed: row.listed,
-    tiers: tiers.filter((tier) => tier.planCode === row.code && tier.perSeat).map(toPlanTier),
-    packs: tiers.filter((tier) => tier.planCode === row.code && !tier.perSeat).map(toPlanTier),
+    tiers: tiers.filter((tier) => tier.planCode === row.code && tier.perSeat).map((tier) => toPlanTier(tier)),
+    packs: tiers.filter((tier) => tier.planCode === row.code && !tier.perSeat).map((tier) => toPlanTier(tier)),
 })
 
 /** Maps the billing facts of a workspace, its paid period as ISO text. */

@@ -2,8 +2,13 @@ import { Injectable } from "@nestjs/common"
 import { ChannelConnectionsService } from "@modules/domain/channel-connections"
 import { ConnectionGrantsService, purposeFor } from "@modules/domain/connection-grants"
 import { randomSecret } from "@modules/domain/connection-secrets"
-import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
-import type { ConnectionActor, Provider } from "@modules/domain/connections"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    ConnectionsService,
+    type ConnectionActor,
+    type Provider,
+} from "@modules/domain/connections"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { InjectChannelProvisioningOptions } from "./channel-provisioning.decorators"

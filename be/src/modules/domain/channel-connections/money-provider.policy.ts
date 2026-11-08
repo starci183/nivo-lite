@@ -1,5 +1,4 @@
-import { sha256 } from "@modules/domain/connections"
-import type { Environment } from "@modules/domain/connections"
+import { sha256, type Environment } from "@modules/domain/connections"
 import type { MoneyProvider } from "./channel-connections.contracts"
 
 /** What differs between the bank and payment feeds. */
@@ -53,7 +52,7 @@ const TELEGRAM_TOKEN = /^\d{5,}:[A-Za-z0-9_-]{30,}$/u
 const ZALO_APP_ID = /^\d{6,30}$/u
 
 /** Removes every whitespace from an account number. */
-export const squeeze = (value: string): string => value.replace(/\s+/gu, "")
+export const squeeze = (value: string): string => value.replaceAll(/\s+/gu, "")
 
 /** True for a 6 to 20 digit account number. */
 export const isAccountNumber = (value: string): boolean => ACCOUNT.test(value)

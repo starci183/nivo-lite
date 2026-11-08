@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AgentAccessLogModule } from "@modules/domain/agent-access-log"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./connection-grants.module-definition"
 import { ConnectionGrantsService } from "./connection-grants.service"

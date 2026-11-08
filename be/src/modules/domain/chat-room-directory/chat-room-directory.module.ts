@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { CHAT_ROOM_DIRECTORY, CHAT_ROOM_DIRECTORY_OPTIONS } from "./chat-room-directory.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./chat-room-directory.module-definition"
 import { ChatRoomDirectoryService } from "./chat-room-directory.service"

@@ -2,14 +2,15 @@ import type { StepJson, StepSpec } from "@modules/domain/agent-runs"
 import type { AuthorityOutputStep } from "@modules/domain/authority-rules"
 import { gatewayArgumentsSchema } from "@modules/domain/mcp-gateway"
 import { parseJsonText } from "@modules/platform/primitives"
-import { approvedProposalSchema, outputStepSchema } from "./output-steps.schema"
-import type {
-    ApprovalInput,
-    ApprovedProposal,
-    HeldCall,
-    OutputCall,
-    OutputScope,
-    StoredOutput,
+import {
+    approvedProposalSchema,
+    outputStepSchema,
+    type ApprovalInput,
+    type ApprovedProposal,
+    type HeldCall,
+    type OutputCall,
+    type OutputScope,
+    type StoredOutput,
 } from "./output-steps.schema"
 import { gatewaySequenceStepsSchema } from "./turn-gateway-tools.schema"
 

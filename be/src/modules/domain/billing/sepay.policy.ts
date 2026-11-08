@@ -1,5 +1,4 @@
-import { readSepayPayload, vietQrUrl } from "@modules/domain/sepay-provider"
-import type { SepayPayload } from "@modules/domain/sepay-provider"
+import { readSepayPayload, vietQrUrl, type SepayPayload } from "@modules/domain/sepay-provider"
 import type { BankAccountOptions } from "./billing.options"
 import { BillingError, BillingErrorCode } from "./errors/billing.error"
 import type { JsonObject } from "./webhook-body.policy"

@@ -1,12 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import { ChatConversationsService } from "@modules/domain/chat-records"
-import type { ChatTurnConversation } from "@modules/domain/chat-records"
-import { InjectInstallations } from "@modules/domain/agents"
-import type { InstallationDirectory } from "@modules/domain/agents"
-import { McpGatewayService } from "@modules/domain/mcp-gateway"
-import type { CapabilityRole, GatewayCaller, GatewayJson } from "@modules/domain/mcp-gateway"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { ChatConversationsService, type ChatTurnConversation } from "@modules/domain/chat-records"
+import { InjectInstallations, type InstallationDirectory } from "@modules/domain/agents"
+import {
+    McpGatewayService,
+    type CapabilityRole,
+    type GatewayCaller,
+    type GatewayJson,
+} from "@modules/domain/mcp-gateway"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import type { CapturedLead } from "./customer-turns.contracts"
 import type { OptionalPartyContext, PartyContext } from "./gateway-turns.contracts"
 

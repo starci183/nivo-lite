@@ -1,12 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { In, LessThan, MoreThan, Not } from "typeorm"
-import type { EntityManager, FindOptionsWhere } from "typeorm"
-import { BookingResourcesReadService } from "@modules/domain/booking-resources"
-import type { BookingResourceCapacity } from "@modules/domain/booking-resources"
+import { In, LessThan, MoreThan, Not, type EntityManager, type FindOptionsWhere } from "typeorm"
+import { BookingResourcesReadService, type BookingResourceCapacity } from "@modules/domain/booking-resources"
 import { returnedRows, rowShape } from "@modules/platform/database"
 import { toTakenSpan } from "./booking-model.mapper"
-import { ACTIVE_STATUSES } from "./bookings.contracts"
-import type { BookingStatus } from "./bookings.contracts"
+import { ACTIVE_STATUSES, type BookingStatus } from "./bookings.contracts"
 import { BookingsError, BookingsErrorCode } from "./errors/bookings.error"
 import { BookingEntity } from "./persistence/entities"
 import { peakLoad } from "./policies/availability.policy"
@@ -114,7 +111,13 @@ export class BookingReservationService {
         if (resource === null) return { kind: "resource_not_found" }
         if (booking.holdsSlot && !params.force) {
             const spans = await this.spansOf(manager, booking.resourceId, booking.startMs, booking.blockEndMs, null)
-            const load = peakLoad(spans.map(toTakenSpan), booking.resourceId, booking.startMs, booking.blockEndMs, null)
+            const load = peakLoad(
+                spans.map((booking) => toTakenSpan(booking)),
+                booking.resourceId,
+                booking.startMs,
+                booking.blockEndMs,
+                null,
+            )
             if (load + booking.partySize > resource.capacity) return { kind: "full" }
         }
         const inserted = await manager
@@ -164,7 +167,7 @@ export class BookingReservationService {
                 params.bookingId,
             )
             const load = peakLoad(
-                spans.map(toTakenSpan),
+                spans.map((booking) => toTakenSpan(booking)),
                 params.resourceId,
                 params.startMs,
                 params.blockEndMs,

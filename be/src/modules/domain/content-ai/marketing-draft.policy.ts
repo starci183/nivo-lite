@@ -15,7 +15,7 @@ const firstLineOf = (text: string): string => {
 }
 
 const hashtagOf = (value: unknown): string => {
-    const word = textOf(value, 40).replace(/^#+/u, "").replace(/\s+/gu, "")
+    const word = textOf(value, 40).replace(/^#+/u, "").replaceAll(/\s+/gu, "")
     return word === "" ? "" : `#${word}`
 }
 
@@ -101,7 +101,9 @@ export const readDraft = (raw: string): MarketingDraft | null => {
     const caption = textOf(parsed.caption, 2000)
     const images = imagesOf(parsed.images)
     if (caption === "" || images.length === 0) return null
-    const hashtags = (Array.isArray(parsed.hashtags) ? parsed.hashtags : []).map(hashtagOf).filter((tag) => tag !== "")
+    const hashtags = (Array.isArray(parsed.hashtags) ? parsed.hashtags : [])
+        .map((tag) => hashtagOf(tag))
+        .filter((tag) => tag !== "")
     return {
         title: textOf(parsed.title, 120) || firstLineOf(caption).slice(0, 120),
         caption,

@@ -1,8 +1,6 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
 import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
-import { GraphNodeRegistryService, rowsAnswering } from "@modules/domain/graph-nodes"
-import type { NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
+import { GraphNodeRegistryService, rowsAnswering, type NodeRow, type NodeTurn } from "@modules/domain/graph-nodes"
 import { bankDisplayNameOf } from "./bank-name.policy"
 import { WorkspacePaymentAccountService } from "./workspace-payment-account.service"
 

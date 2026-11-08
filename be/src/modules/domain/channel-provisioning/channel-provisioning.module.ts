@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { BrainSeedService } from "./brain-seed.service"
 import { ManagementSeedService } from "./management-seed.service"
 import { RecordsSeedService } from "./records-seed.service"

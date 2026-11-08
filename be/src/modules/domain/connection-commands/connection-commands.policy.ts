@@ -1,6 +1,10 @@
 import type { ChannelConnectionsService } from "@modules/domain/channel-connections"
-import { ConnectionsError, ConnectionsErrorCode } from "@modules/domain/connections"
-import type { ConnectionActor, ConnectionsService } from "@modules/domain/connections"
+import {
+    ConnectionsError,
+    ConnectionsErrorCode,
+    type ConnectionActor,
+    type ConnectionsService,
+} from "@modules/domain/connections"
 import type { ConnectionGrantsService } from "@modules/domain/connection-grants"
 import type { ConnectionLifecycleService } from "@modules/domain/connection-lifecycle"
 import type { GoogleConnectionsService } from "@modules/domain/google-connections"

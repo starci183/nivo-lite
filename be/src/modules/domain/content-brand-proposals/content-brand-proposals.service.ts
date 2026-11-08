@@ -98,7 +98,7 @@ export class ContentBrandProposalsService {
             .orderBy("p.createdAt", "DESC")
             .limit(10)
             .getRawMany()
-        return storedProposals(rows).map(recordOf)
+        return storedProposals(rows).map((raw) => recordOf(raw))
     }
 
     /** Closes a waiting proposal; null when it was decided already. */

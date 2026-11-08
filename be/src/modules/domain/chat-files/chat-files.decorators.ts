@@ -1,6 +1,5 @@
 import type { StorageObjectsPort } from "@modules/integrations/object-storage"
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 
 /** Token of the storage door selected by the app root. */
 export const CHAT_FILES_STORAGE: unique symbol = Symbol("domain.chat-files.storage")

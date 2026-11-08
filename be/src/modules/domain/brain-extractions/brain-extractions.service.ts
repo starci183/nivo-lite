@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ExtractionProgress,

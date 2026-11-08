@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { BillingService } from "@modules/domain/billing"
-import type { PayableOrder, Plan } from "@modules/domain/billing"
+import { BillingService, type PayableOrder, type Plan } from "@modules/domain/billing"
 import { PaymentOrdersService } from "@modules/domain/payment-orders"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     AgentTemplateOrderParams,
@@ -39,7 +37,7 @@ export class CreditsService {
             order: { sort: "ASC" },
             take: 50,
         })
-        return rows.map(toCreditPack)
+        return rows.map((row) => toCreditPack(row))
     }
 
     /** The latest purchased lots of a workspace, proving the caller's owner or manager role. */
@@ -50,7 +48,7 @@ export class CreditsService {
             order: { purchasedAt: "DESC" },
             take: 200,
         })
-        return rows.map(toCreditTopupLot)
+        return rows.map((row) => toCreditTopupLot(row))
     }
 
     /** The add-on packs a workspace paid for this month, for any member. */
@@ -63,7 +61,7 @@ export class CreditsService {
             .orderBy("p.purchasedAt", "DESC")
             .limit(200)
             .getMany()
-        return rows.map(toCreditPackPurchase)
+        return rows.map((row) => toCreditPackPurchase(row))
     }
 
     /**

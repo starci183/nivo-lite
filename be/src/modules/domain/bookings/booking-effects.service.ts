@@ -5,13 +5,10 @@ import { BookingResourcesReadService } from "@modules/domain/booking-resources"
 import { BookingServicesReadService } from "@modules/domain/booking-services"
 import { EventsService } from "@modules/domain/events"
 import { InboundEventsService } from "@modules/domain/inbound-events"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
-import { InjectInbox } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectInbox, type Inbox } from "@modules/platform/inbox"
 import { BookingModelService } from "./booking-model.service"
 import { BookingNoticesService } from "./booking-notices.service"
 import type { BookingNotifier } from "./booking-notice.contracts"
@@ -20,8 +17,14 @@ import { InjectBookingNotifier } from "./bookings.decorators"
 import { EFFECTS_COLUMNS, EFFECTS_WHERE } from "./booking-effects.rows"
 import type { EffectsBaseFacts, EffectsRow } from "./booking-facts.contracts"
 import { BookingEntity } from "./persistence/entities"
-import { feeOf, namedEffects, noticeMark, noticeOf, remindersOf } from "./policies/booking-effects.policy"
-import type { NoticeKind } from "./policies/booking-effects.policy"
+import {
+    feeOf,
+    namedEffects,
+    noticeMark,
+    noticeOf,
+    remindersOf,
+    type NoticeKind,
+} from "./policies/booking-effects.policy"
 
 const STORED_LOCALE = "vi"
 const NO_EFFECTS: BookingEffects = { found: false, reminders: "none", feeVnd: 0, handedOff: false, notified: false }

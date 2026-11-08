@@ -38,7 +38,7 @@ export class ContentWeeklyReportsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** The stored week, or null when nothing was stored for it. */
-    async find(workspaceId: string, weekStart: string): Promise<OptionalStoredWeeklyReport> {
+    async weekOf(workspaceId: string, weekStart: string): Promise<OptionalStoredWeeklyReport> {
         const rows: ReadonlyArray<unknown> = await this.entityManager
             .createQueryBuilder(ContentWeeklyReportEntity, "r")
             .select("r.posts", "posts")
