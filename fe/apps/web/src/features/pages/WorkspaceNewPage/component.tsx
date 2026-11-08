@@ -24,12 +24,12 @@ export const WorkspaceNewPageBase = (props: WorkspaceNewPageBaseProps) => (
             currentStepId="s0"
             artwork={
                 <Mascot
-                    src="/images/entry/onboarding-business.webp"
+                    src="/images/entry/onboarding-business-3d.webp"
                     size="sm"
                     loading="eager"
                     assetSlot="onboarding-business"
-                    assetSha256="b1bad1b482e9dca0e140479816678846fa4e4c896d4d3532e090f417ea5e11be"
-                    assetPrompt="The NIVO unicorn hangs a small blank wooden shop sign on a little storefront awning, transparent ground"
+                    assetSha256="b7241cf5e2a2c49d2f171021ee051007e6fdd1091ce36b71ef349910ddde2050"
+                    assetPrompt="A small pure 3D storefront with a rose-and-white striped awning, a door, a window and a blank rounded sign board, soft clay render, no characters, transparent ground"
                 />
             }
         >

@@ -25,12 +25,12 @@ export const WorkspaceChannelsPageBase = (props: WorkspaceChannelsPageBaseProps)
             currentStepId="s1"
             artwork={
                 <Mascot
-                    src="/images/entry/onboarding-channels.webp"
+                    src="/images/entry/onboarding-channels-3d.webp"
                     size="sm"
                     loading="eager"
                     assetSlot="onboarding-channels"
-                    assetSha256="e0153ebab0414d8c75209691cb02a5c755ba4b6a75283894d10f04c8b2b4d88e"
-                    assetPrompt="The NIVO unicorn juggles three floating rounded chat bubbles (blue, sky blue, green with a small coin), transparent ground"
+                    assetSha256="8889ddfb545665a93bb56c55b4e430d0350c6df6a0352c8f89c81ded7d84d3c1"
+                    assetPrompt="Three floating rounded pure 3D chat bubbles, blue, sky blue and teal green with a small golden coin, soft clay render, no characters, transparent ground"
                 />
             }
         >

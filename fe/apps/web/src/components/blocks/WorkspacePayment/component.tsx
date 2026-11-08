@@ -1,7 +1,7 @@
 import { Alert, Button, Cluster, Image, MediaFrame, Page, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import { WorkspacePaymentDetails } from "@/components/composites/WorkspacePaymentDetails"
 import type { WorkspacePaymentDetailsProps } from "@/components/composites/WorkspacePaymentDetails"
-import { CENTERED_CLASS_NAME, MASCOT_CLASS_NAME, MEASURE_CLASS_NAME } from "./classNames"
+import { CENTERED_CLASS_NAME, ART_CLASS_NAME, MEASURE_CLASS_NAME } from "./classNames"
 
 /** Presentation of a payment step after the connected block resolves its state. */
 export interface WorkspacePaymentBaseProps {
@@ -116,17 +116,17 @@ const PaymentOutcome = (props: WorkspacePaymentBaseProps) => {
     const paid = view.phase === "paid"
     const title = paid ? view.paidTitle : view.expiredTitle
     const description = paid ? view.paidText : view.expiredText
-    const mascot = paid ? "/images/promo/mascot-celebrate.png" : "/images/promo/mascot-night.png"
+    const art = paid ? "/images/promo/payment-paid-3d.webp" : "/images/promo/payment-waiting-3d.webp"
     return (
         <SurfaceCard label={title} headingLevel={2}>
             <div className={CENTERED_CLASS_NAME}>
                 <Stack gap="section" align="center">
-                    <div className={MASCOT_CLASS_NAME}>
+                    <div className={ART_CLASS_NAME}>
                         <MediaFrame
                             treatment="plain"
-                            aspect="portrait"
+                            aspect="square"
                             fit="contain"
-                            media={<Image src={mascot} alt="" aspect="portrait" fit="contain" plate="none" />}
+                            media={<Image src={art} alt="" aspect="square" fit="contain" plate="none" />}
                         />
                     </div>
                     <Text>{description}</Text>

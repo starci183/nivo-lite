@@ -24,12 +24,12 @@ export const WorkspaceHandoverPageBase = (props: WorkspaceHandoverPageBaseProps)
             currentStepId="s2"
             artwork={
                 <Mascot
-                    src="/images/entry/onboarding-ai.webp"
+                    src="/images/entry/onboarding-ai-3d.webp"
                     size="sm"
                     loading="eager"
                     assetSlot="onboarding-ai"
-                    assetSha256="80f259a7ea38a66a5dba4de2c03a38282e553f49004b0b1d41b6b2b409382e38"
-                    assetPrompt="The NIVO unicorn sits beside a small friendly white robot helper, both looking at a clipboard with red check marks, transparent ground"
+                    assetSha256="2d27aafdeb36d7511fd0a28db77296995acccded279058671d1a8bdc80f8859c"
+                    assetPrompt="A rounded pure 3D assistant chip with a rose glow ring beside a rose shield with a white check mark, soft clay render, no characters, transparent ground"
                 />
             }
         >

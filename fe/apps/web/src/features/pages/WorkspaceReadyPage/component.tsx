@@ -24,12 +24,12 @@ export const WorkspaceReadyPageBase = (props: WorkspaceReadyPageBaseProps) => (
             currentStepId="s3"
             artwork={
                 <Mascot
-                    src="/images/entry/onboarding-done.webp"
+                    src="/images/entry/onboarding-done-3d.webp"
                     size="md"
                     loading="eager"
                     assetSlot="onboarding-done"
-                    assetSha256="0ba20963eb51e1c739572fee20fdb0e00fcff24937dfde30857337491943d861"
-                    assetPrompt="The NIVO unicorn leaps in celebration with red and pink confetti and a few golden stars, transparent ground"
+                    assetSha256="ca22f750eb5c5bdbaa6b6bab882a7d3a4fa4bb1321a61232ba1d533b08dd832e"
+                    assetPrompt="A large rose pure 3D check mark badge with rose and pink confetti and small golden stars, soft clay render, no characters, transparent ground"
                 />
             }
         >

@@ -23,19 +23,19 @@ export interface WorkspacesOverviewBaseProps {
 /** What the welcome card draws from: the words of the overview, and whether they are placeholders. */
 type WelcomeProps = Pick<WorkspacesOverviewBaseProps, "props"> & { readonly isSkeleton: boolean }
 
-/** Draws the first-run welcome card on the soft surface with the lobby mascot; in skeleton its words rest as shapes. */
+/** Draws the first-run welcome card on the soft surface with the lobby art; in skeleton its words rest as shapes. */
 const Welcome = (props: WelcomeProps) => (
     <SurfaceCard
         ariaLabel={props.props.welcomeTitle}
         treatment="soft"
         artwork={
             <Mascot
-                src="/images/entry/lobby-welcome.webp"
+                src="/images/entry/lobby-welcome-3d.webp"
                 size="lg"
                 loading="eager"
                 assetSlot="lobby-welcome"
-                assetSha256="b2a5858380490746ec3d76a43d669439e518f9d8af80545fcbedd89ef566899b"
-                assetPrompt="The NIVO unicorn waves hello and holds a small golden heart key, sparkles, transparent ground"
+                assetSha256="d5449ae1a2ec4b93ace1d36b2e039943d9b38bf4f36536bd93f240fd3259af2f"
+                assetPrompt="A golden pure 3D key with a heart-shaped bow and small sparkles, soft clay render, no characters, transparent ground"
             />
         }
     >
