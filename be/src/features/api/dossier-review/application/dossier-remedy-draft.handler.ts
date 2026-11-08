@@ -1,10 +1,8 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { DossierRemedyDraftsService } from "@modules/domain/dossier-review"
-import type { OptionalRemedyDraft } from "./dossier-remedy-draft.query"
+import { type OptionalRemedyDraft, DossierRemedyDraftQuery } from "./dossier-remedy-draft.query"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { DossierRemedyDraftQuery } from "./dossier-remedy-draft.query"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 
 @QueryHandler(DossierRemedyDraftQuery)
 /** Reads one remedy draft, or nothing when it does not exist in the workspace. */

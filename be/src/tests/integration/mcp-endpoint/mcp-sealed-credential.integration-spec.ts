@@ -6,8 +6,7 @@ import { MCP_SEALED_CREDENTIAL_MODULES } from "../../world/mcp-sealed-credential
 import { createRemoteServer } from "../../world/mcp-remote-server.service"
 import { cleanupWorkspace } from "../../world/proof-database.service"
 import { useTestWorld } from "../../world/use-test-world"
-import { mcpCallsOfAgent, storedCredentialOf } from "../../world/inbox-database.service"
-import type { StoredCredentialRow } from "../../world/inbox-database.service"
+import { mcpCallsOfAgent, storedCredentialOf, type StoredCredentialRow } from "../../world/inbox-database.service"
 
 const world = useTestWorld({ modules: MCP_SEALED_CREDENTIAL_MODULES })
 

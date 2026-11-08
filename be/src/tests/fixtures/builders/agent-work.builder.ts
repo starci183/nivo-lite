@@ -1,12 +1,12 @@
 import { builder } from "@starci/jest-preset"
 import type { EntityManager } from "typeorm"
-import { agentWorkEntities } from "@modules/domain/agent-work"
-import type {
-    AgentGoalWrite,
-    AgentTriggerWrite,
-    AgentTurnView,
-    AgentWake,
-    AgentWakeView,
+import {
+    agentWorkEntities,
+    type AgentGoalWrite,
+    type AgentTriggerWrite,
+    type AgentTurnView,
+    type AgentWake,
+    type AgentWakeView,
 } from "@modules/domain/agent-work"
 
 const AgentWorkSettingsEntity: (typeof agentWorkEntities)[0] = agentWorkEntities[0]

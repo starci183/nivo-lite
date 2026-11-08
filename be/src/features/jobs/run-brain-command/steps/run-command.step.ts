@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { BrainCommandRunnerService, BrainLogEvent } from "@modules/domain/brain"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the command of the claimed job is carried out and its row closed. */

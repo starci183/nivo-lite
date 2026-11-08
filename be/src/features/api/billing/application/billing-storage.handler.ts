@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { EntitlementsService } from "@modules/domain/billing"
-import type { WorkspaceStorage } from "@modules/domain/billing"
+import { EntitlementsService, type WorkspaceStorage } from "@modules/domain/billing"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { BillingStorageQuery } from "./billing-storage.query"
 
 @QueryHandler(BillingStorageQuery)

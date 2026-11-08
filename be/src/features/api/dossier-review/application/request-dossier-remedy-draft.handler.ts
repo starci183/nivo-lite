@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { DossierRemedyDraftsService } from "@modules/domain/dossier-review"
-import type { RemedyDraftRecord } from "@modules/domain/dossier-review"
+import { DossierRemedyDraftsService, type RemedyDraftRecord } from "@modules/domain/dossier-review"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RequestDossierRemedyDraftCommand } from "./request-dossier-remedy-draft.command"
 
 @CommandHandler(RequestDossierRemedyDraftCommand)

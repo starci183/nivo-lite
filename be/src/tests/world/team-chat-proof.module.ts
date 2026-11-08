@@ -1,5 +1,4 @@
-import { Injectable, Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Injectable, Module, type DynamicModule } from "@nestjs/common"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { ApprovalRequestsReadService } from "@modules/domain/approval-requests"
 import {
@@ -12,8 +11,8 @@ import {
     TeamChatRoomsService,
     TeamChatStoreService,
     TeamChatViewsService,
+    type TeamChatTags,
 } from "@modules/domain/team-chat"
-import type { TeamChatTags } from "@modules/domain/team-chat"
 import { OBJECT_STORAGE_ERROR_CODES } from "@starci/object-storage"
 import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 

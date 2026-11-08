@@ -1,6 +1,5 @@
-import type { QueueOutbox, QueueDelivery } from "@modules/platform/queue"
+import { type QueueOutbox, type QueueDelivery, deliveryOf } from "@modules/platform/queue"
 import type { EntityManager } from "typeorm"
-import { deliveryOf } from "@modules/platform/queue"
 import { CONTENT_TICK_QUEUE } from "@modules/queues/content-tick"
 
 /** The broker-bound envelope fields a delivery is observed from. */

@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { AgentsService } from "@modules/domain/agents"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetAgentTextsCommand } from "./set-agent-texts.command"
 
 @CommandHandler(SetAgentTextsCommand)

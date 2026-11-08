@@ -1,10 +1,8 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { VideoProjectEditorService } from "@modules/domain/video"
+import { VideoProjectEditorService, type BrandKit } from "@modules/domain/video"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SaveVideoBrandCommand } from "./save-video-brand.command"
-import type { BrandKit } from "@modules/domain/video"
 
 @CommandHandler(SaveVideoBrandCommand)
 /** Dispatches saveVideoBrand through its checked domain use case. */

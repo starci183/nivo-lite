@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { DossierReviewRunsService } from "@modules/domain/dossier-review"
-import type { ReviewRunRecord } from "@modules/domain/dossier-review"
+import { DossierReviewRunsService, type ReviewRunRecord } from "@modules/domain/dossier-review"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RequestDossierReviewCommand } from "./request-dossier-review.command"
 
 @CommandHandler(RequestDossierReviewCommand)

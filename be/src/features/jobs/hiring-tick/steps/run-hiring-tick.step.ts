@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { HiringTickService } from "@modules/domain/hiring"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the reminders, lapsing, closing and retention of one workspace hiring. */

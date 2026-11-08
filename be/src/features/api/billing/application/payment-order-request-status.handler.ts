@@ -1,9 +1,10 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { PaymentOrderRequestsService } from "@modules/domain/payment-order-requests"
-import type { PaymentOrderRequestStatusLookup } from "@modules/domain/payment-order-requests"
+import {
+    PaymentOrderRequestsService,
+    type PaymentOrderRequestStatusLookup,
+} from "@modules/domain/payment-order-requests"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { PaymentOrderRequestStatusQuery } from "./payment-order-request-status.query"
 
 @QueryHandler(PaymentOrderRequestStatusQuery)

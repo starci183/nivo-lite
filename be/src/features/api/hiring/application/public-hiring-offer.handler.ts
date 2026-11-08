@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { HiringOffersService } from "@modules/domain/hiring"
-import type { PublicOfferOutput } from "@modules/domain/hiring"
+import { HiringOffersService, type PublicOfferOutput } from "@modules/domain/hiring"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { PublicHiringOfferQuery } from "./public-hiring-offer.query"
 
 @QueryHandler(PublicHiringOfferQuery)

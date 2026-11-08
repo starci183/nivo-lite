@@ -1,7 +1,6 @@
 import { builder } from "@starci/jest-preset"
 import { In, type FindOperator } from "typeorm"
-import { bookingRemindersEntities } from "@modules/domain/booking-reminders"
-import type { ReminderTarget } from "@modules/domain/booking-reminders"
+import { bookingRemindersEntities, type ReminderTarget } from "@modules/domain/booking-reminders"
 
 const BookingReminderEntity: (typeof bookingRemindersEntities)[0] = bookingRemindersEntities[0]
 type BookingReminderEntity = InstanceType<typeof BookingReminderEntity>

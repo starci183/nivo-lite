@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { HiringOffersService } from "@modules/domain/hiring"
-import type { RespondOfferOutput } from "@modules/domain/hiring"
+import { HiringOffersService, type RespondOfferOutput } from "@modules/domain/hiring"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RespondHiringOfferCommand } from "./respond-hiring-offer.command"
 
 @CommandHandler(RespondHiringOfferCommand)

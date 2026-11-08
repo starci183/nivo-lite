@@ -1,5 +1,4 @@
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { jobsEntities } from "@modules/platform/jobs"
 import { messagesEntities } from "@modules/domain/messages"
 import { agentWorkEntities } from "../../modules/domain/agent-work"
@@ -35,12 +34,12 @@ export const wakesOfFact = (manager: EntityManager, agentId: string, eventKey: s
     manager.countBy(AgentWakeEntity, { agentId, eventKey })
 
 /** The drain jobs the outbox holds under one dedupe key. */
-export const drainJobsOf = (manager: EntityManager, dedupeKey: string): Promise<Array<JobOutboxEntity>> =>
-    manager.find(JobOutboxEntity, { where: { queue: "agent_turn", dedupeKey }, take: ROWS_MAX })
+export const drainJobsOf = async (manager: EntityManager, dedupeKey: string): Promise<Array<JobOutboxEntity>> =>
+    await manager.find(JobOutboxEntity, { where: { queue: "agent_turn", dedupeKey }, take: ROWS_MAX })
 
 /** The turns a wake has been run as, newest fence last. */
-export const turnsOfWake = (manager: EntityManager, wakeId: string): Promise<Array<AgentTurnEntity>> =>
-    manager.find(AgentTurnEntity, { where: { wakeId }, order: { fence: "ASC" }, take: ROWS_MAX })
+export const turnsOfWake = async (manager: EntityManager, wakeId: string): Promise<Array<AgentTurnEntity>> =>
+    await manager.find(AgentTurnEntity, { where: { wakeId }, order: { fence: "ASC" }, take: ROWS_MAX })
 
 /** Lets the lease of a scope lapse, the way a worker that died would. */
 export const lapseLease = async (manager: EntityManager, agentId: string, scopeKey: string): Promise<void> => {
@@ -70,5 +69,5 @@ export const removeDrainJobs = async (manager: EntityManager, workspaceId: strin
 }
 
 /** The lines of the workspace's chat, oldest first. */
-export const linesOfWorkspace = (manager: EntityManager, workspaceId: string): Promise<Array<MessageEntity>> =>
-    manager.find(MessageEntity, { where: { workspaceId }, order: { createdAt: "ASC" }, take: ROWS_MAX })
+export const linesOfWorkspace = async (manager: EntityManager, workspaceId: string): Promise<Array<MessageEntity>> =>
+    await manager.find(MessageEntity, { where: { workspaceId }, order: { createdAt: "ASC" }, take: ROWS_MAX })

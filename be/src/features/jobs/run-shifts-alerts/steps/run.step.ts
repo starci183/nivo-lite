@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ShiftsAlertsService } from "@modules/domain/shifts"
-import { AdvancingJobStepPolicy, InjectJobClaims } from "@modules/platform/jobs"
-import type { JobClaims, JobStep } from "@modules/platform/jobs"
+import { AdvancingJobStepPolicy, InjectJobClaims, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** Runs one shift-alerts job through the shifts capability: the minute tick, a reminder or a no-show check. */

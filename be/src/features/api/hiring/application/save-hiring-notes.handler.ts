@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { HiringCandidatesService } from "@modules/domain/hiring"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SaveHiringNotesCommand } from "./save-hiring-notes.command"
 
 @CommandHandler(SaveHiringNotesCommand)

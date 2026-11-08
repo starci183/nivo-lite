@@ -1,7 +1,6 @@
 import { CommandRunner, SubCommand } from "nest-commander"
 import { ModulesService } from "@modules/domain/modules"
-import { InjectLogger, LoggingLogEvent } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, LoggingLogEvent, type Logger } from "@modules/platform/logging"
 
 @SubCommand({ name: "run", description: "Upsert every module and authority action of the catalogue; deletes nothing" })
 /** `cli seed-modules run`: mirrors the typed catalogue into the database and reports the rows it no longer lists. */

@@ -1,5 +1,10 @@
-import { IntentRegistryService, requestFrameOf } from "@modules/domain/intent-contracts"
-import type { IntentCheck, IntentFrame, IntentResultSchema } from "@modules/domain/intent-contracts"
+import {
+    IntentRegistryService,
+    requestFrameOf,
+    type IntentCheck,
+    type IntentFrame,
+    type IntentResultSchema,
+} from "@modules/domain/intent-contracts"
 
 /** What a domain hands the registry. */
 type TestDomain = Parameters<IntentRegistryService["add"]>[0]

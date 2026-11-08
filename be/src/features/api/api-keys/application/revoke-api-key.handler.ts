@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { RevokeApiKeyResult } from "./revoke-api-key.contracts"
 import { RevokeApiKeyCommand } from "./revoke-api-key.command"
 

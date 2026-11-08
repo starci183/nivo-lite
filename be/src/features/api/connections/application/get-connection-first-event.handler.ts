@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { ConnectionsService } from "@modules/domain/connections"
+import { ConnectionsService, type FirstEventState } from "@modules/domain/connections"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import type { FirstEventState } from "@modules/domain/connections"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetConnectionFirstEventQuery } from "./get-connection-first-event.query"
 
 @QueryHandler(GetConnectionFirstEventQuery)

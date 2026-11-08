@@ -1,5 +1,4 @@
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { callDbFunction } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { agentsEntities } from "@modules/domain/agents"

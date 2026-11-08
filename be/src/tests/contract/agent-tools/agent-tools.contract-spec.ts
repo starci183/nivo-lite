@@ -1,6 +1,12 @@
 import type { ExecutionContext } from "@nestjs/common"
-import { CommandBus, CommandHandler, CqrsModule, QueryHandler } from "@nestjs/cqrs"
-import type { ICommandHandler, IQueryHandler } from "@nestjs/cqrs"
+import {
+    CommandBus,
+    CommandHandler,
+    CqrsModule,
+    QueryHandler,
+    type ICommandHandler,
+    type IQueryHandler,
+} from "@nestjs/cqrs"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import {

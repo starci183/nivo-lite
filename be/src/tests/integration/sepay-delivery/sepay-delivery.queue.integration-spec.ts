@@ -1,6 +1,5 @@
 import assert from "node:assert/strict"
-import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
+import { QUEUE_OUTBOX, type QueueOutbox } from "@modules/platform/queue"
 import {
     SEPAY_DELIVERY_QUEUE as DOMAIN_QUEUE,
     SEPAY_DELIVERY_QUEUE,

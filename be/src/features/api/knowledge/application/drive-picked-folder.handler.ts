@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { KnowledgeDriveService } from "@modules/domain/knowledge"
-import type { PickedFolder } from "@modules/domain/knowledge"
+import { KnowledgeDriveService, type PickedFolder } from "@modules/domain/knowledge"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DrivePickedFolderQuery } from "./drive-picked-folder.query"
 
 @QueryHandler(DrivePickedFolderQuery)

@@ -1,6 +1,5 @@
-import type { MockOf, MockEntityManager } from "@starci/jest-preset"
+import { type MockOf, type MockEntityManager, builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { WorkPerformer, WorkItem } from "@modules/domain/decisions"
-import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import type { AfterCommit, CommitTask } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { itemOf } from "./work-engine.builder"

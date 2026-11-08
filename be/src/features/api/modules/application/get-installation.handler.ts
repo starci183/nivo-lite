@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { ModuleInstallService } from "@modules/domain/modules"
-import type { InstallationView } from "@modules/domain/modules"
+import { ModuleInstallService, type InstallationView } from "@modules/domain/modules"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetInstallationQuery } from "./get-installation.query"
 
 @QueryHandler(GetInstallationQuery)

@@ -1,10 +1,8 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { VideoWorkbenchService } from "@modules/domain/video"
+import { VideoWorkbenchService, type WorkbenchFigures } from "@modules/domain/video"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetVideoFiguresQuery } from "./get-video-figures.query"
-import type { WorkbenchFigures } from "@modules/domain/video"
 
 @QueryHandler(GetVideoFiguresQuery)
 /** Dispatches videoFigures through its checked domain use case. */

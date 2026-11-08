@@ -1,7 +1,6 @@
 import { CommandRunner, Option, SubCommand } from "nest-commander"
 import { NivoSeedService } from "@modules/domain/nivo-knowledge"
-import { InjectLogger, LoggingLogEvent } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, LoggingLogEvent, type Logger } from "@modules/platform/logging"
 
 /** The options of the seed command. */
 interface RunOptions {

@@ -4,8 +4,7 @@ import { ModuleJobRunnerService } from "@modules/domain/entity-engine"
 import { JobRetry } from "@nivo-lite/agent-sdk/mutation"
 import { mcpCallLogEntities } from "@modules/domain/mcp-call-log"
 import { mcpToolGrantsEntities } from "@modules/domain/mcp-tool-grants"
-import { persistGraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
-import type { GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
+import { persistGraphTenant, type GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { backendRoleSandbox } from "../../world/backend-role-sandbox.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
@@ -42,8 +41,12 @@ const [McpToolGrantEntity] = mcpToolGrantsEntities
 const [McpCallLogEntity] = mcpCallLogEntities
 
 /** The seeded nivo agents of the workspace. */
-const nivoAgentsOf = (workspaceId: string) =>
-    seed.manager.find(AgentEntity, { select: { id: true }, where: { workspaceId, module: "nivo" }, take: ROWS_MAX })
+const nivoAgentsOf = async (workspaceId: string) =>
+    await seed.manager.find(AgentEntity, {
+        select: { id: true },
+        where: { workspaceId, module: "nivo" },
+        take: ROWS_MAX,
+    })
 
 /** The grants of the seeded nivo agent, by tool. */
 const grantsOf = async (workspaceId: string, agentId: string) =>

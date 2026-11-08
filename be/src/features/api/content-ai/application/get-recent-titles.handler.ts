@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { ContentAiService } from "@modules/domain/content-ai"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetRecentTitlesQuery } from "./get-recent-titles.query"
 
 @QueryHandler(GetRecentTitlesQuery)

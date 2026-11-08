@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import type { QueueDelivery } from "@modules/platform/queue"
 import { RENDER_REQUEST_QUEUE } from "@modules/queues/render-request"
 import { RequestRenderStep } from "../../steps/request-render.step"

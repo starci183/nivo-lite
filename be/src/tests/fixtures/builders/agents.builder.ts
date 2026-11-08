@@ -1,6 +1,5 @@
 import { builder } from "@starci/jest-preset"
-import { agentsEntities } from "@modules/domain/agents"
-import type { Installation } from "@modules/domain/agents"
+import { agentsEntities, type Installation } from "@modules/domain/agents"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 
 const AgentEntity: (typeof agentsEntities)[0] = agentsEntities[0]

@@ -1,5 +1,9 @@
-import { ContentAutomationMarksMapper } from "@modules/domain/content-settings"
-import type { ContentBrandSettings, ContentCadence, ContentPillar } from "@modules/domain/content-settings"
+import {
+    ContentAutomationMarksMapper,
+    type ContentBrandSettings,
+    type ContentCadence,
+    type ContentPillar,
+} from "@modules/domain/content-settings"
 import type { ContentBrandSettingsType } from "./dto/content-brand-settings.type"
 import type { ContentCadenceType } from "./dto/content-cadence.type"
 import type { ContentPillarType } from "./dto/content-pillar.type"

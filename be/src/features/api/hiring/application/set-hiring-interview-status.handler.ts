@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { HiringInterviewsService } from "@modules/domain/hiring"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetHiringInterviewStatusCommand } from "./set-hiring-interview-status.command"
 
 @CommandHandler(SetHiringInterviewStatusCommand)

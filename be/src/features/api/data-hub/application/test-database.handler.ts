@@ -2,8 +2,7 @@ import { QueryHandler } from "@nestjs/cqrs"
 import { DatabaseWizardService } from "@modules/domain/data-hub"
 import type { DatabaseTable } from "@modules/integrations/data-sources"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { TestDatabaseQuery } from "./test-database.query"
 
 @QueryHandler(TestDatabaseQuery)

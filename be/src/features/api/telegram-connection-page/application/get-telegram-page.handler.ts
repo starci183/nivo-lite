@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { TelegramPageService } from "@modules/domain/channels"
-import type { TelegramPageView } from "@modules/domain/channels"
+import { TelegramPageService, type TelegramPageView } from "@modules/domain/channels"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetTelegramPageQuery } from "./get-telegram-page.query"
 
 @QueryHandler(GetTelegramPageQuery)

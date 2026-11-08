@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { META_INBOUND_QUEUE } from "@modules/domain/meta-inbox"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import { DeliverEventStep } from "../../steps/deliver-event.step"
 
 @Injectable()

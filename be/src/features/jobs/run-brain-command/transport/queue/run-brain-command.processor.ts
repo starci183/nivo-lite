@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { BrainCommandRunnerService } from "@modules/domain/brain"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import type { QueueDelivery } from "@modules/platform/queue"
 import { KNOWLEDGE_QUEUE, KnowledgeJob } from "@modules/queues/knowledge"
 import { RunCommandStep } from "../../steps/run-command.step"

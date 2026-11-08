@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { AgentRunOwnerResumeService } from "@modules/domain/agent-runs"
-import type { OwnerResumeAnswer } from "@modules/domain/agent-runs"
+import { AgentRunOwnerResumeService, type OwnerResumeAnswer } from "@modules/domain/agent-runs"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ResumeAgentRunCommand } from "./resume-agent-run.command"
 
 @CommandHandler(ResumeAgentRunCommand)

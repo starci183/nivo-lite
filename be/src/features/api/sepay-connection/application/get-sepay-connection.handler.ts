@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { SepayConnectionService } from "@modules/domain/channel-connections"
-import type { SepayConnectionView } from "@modules/domain/channel-connections"
+import { SepayConnectionService, type SepayConnectionView } from "@modules/domain/channel-connections"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetSepayConnectionQuery } from "./get-sepay-connection.query"
 
 @QueryHandler(GetSepayConnectionQuery)

@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ChannelConnectionsService } from "@modules/domain/channel-connections"
+import { ChannelConnectionsService, type ConnectionCheck } from "@modules/domain/channel-connections"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import type { ConnectionCheck } from "@modules/domain/channel-connections"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { CheckConnectionCommand } from "./check-connection.command"
 
 @CommandHandler(CheckConnectionCommand)

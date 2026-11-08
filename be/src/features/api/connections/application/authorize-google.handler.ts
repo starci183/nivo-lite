@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { GoogleConnectionsService } from "@modules/domain/google-connections"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { AuthorizeGoogleResult } from "./authorize-google.contracts"
 import { AuthorizeGoogleCommand } from "./authorize-google.command"
 

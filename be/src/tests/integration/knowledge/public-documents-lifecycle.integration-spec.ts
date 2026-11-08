@@ -20,8 +20,8 @@ import {
     persistPublicIndexedPassage,
     persistPublicLifecycleScene,
     PUBLIC_HOURS,
+    type PublicLifecycleIdentity,
 } from "../../fixtures/builders/public-documents-lifecycle.builder"
-import type { PublicLifecycleIdentity } from "../../fixtures/builders/public-documents-lifecycle.builder"
 import { withBackendRole } from "../../world/backend-role-proof.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { enforcePublicApprovalPointer, enforcePublicHistoryParent } from "../../world/public-documents-database.service"
@@ -59,16 +59,16 @@ const fixture = async (): Promise<PublicLifecycleIdentity> => {
     await persistPublicLifecycleScene(world.db.primary, id)
     return id
 }
-const approvals = (documentId: string) =>
-    world.db.primary.find(PublicDocumentApprovalEntity, {
+const approvals = async (documentId: string) =>
+    await world.db.primary.find(PublicDocumentApprovalEntity, {
         where: { documentId },
         order: { draftRevision: "ASC" },
         take: 20,
     })
 const source = (workspaceId: string, id: string) =>
     world.db.primary.findOne(KnowledgeSourceEntity, { where: { workspaceId, id } })
-const indexJobs = (workspaceId: string) =>
-    world.db.primary.find(JobOutboxEntity, {
+const indexJobs = async (workspaceId: string) =>
+    await world.db.primary.find(JobOutboxEntity, {
         select: { name: true, payload: true },
         where: { workspaceId, name: "knowledge.index" },
         take: 20,

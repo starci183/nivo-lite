@@ -6,8 +6,7 @@ import type { ConnectionsService } from "@modules/domain/connections"
 import type { AgentTriggersService } from "@modules/domain/agent-work"
 import type { GraphDocument } from "@modules/domain/agent-graphs"
 import { nodeOf } from "./agent-graph.builder"
-import { persistGraph, persistGraphTenant } from "./agent-graph-world.builder"
-import type { GraphTenant } from "./agent-graph-world.builder"
+import { persistGraph, persistGraphTenant, type GraphTenant } from "./agent-graph-world.builder"
 
 const InstallationEntity: (typeof moduleInstallationsEntities)[0] = moduleInstallationsEntities[0]
 

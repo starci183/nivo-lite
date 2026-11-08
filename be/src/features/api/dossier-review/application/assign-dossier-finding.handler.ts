@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { DossierFindingsService } from "@modules/domain/dossier-review"
-import type { FindingRecord } from "@modules/domain/dossier-review"
+import { DossierFindingsService, type FindingRecord } from "@modules/domain/dossier-review"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AssignDossierFindingCommand } from "./assign-dossier-finding.command"
 
 @CommandHandler(AssignDossierFindingCommand)

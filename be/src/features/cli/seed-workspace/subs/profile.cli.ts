@@ -1,6 +1,5 @@
 import { CommandRunner, Option, SubCommand } from "nest-commander"
-import { WorkspaceProfileService } from "@modules/domain/workspace-seed"
-import type { ProfileCommand } from "@modules/domain/workspace-seed"
+import { WorkspaceProfileService, type ProfileCommand } from "@modules/domain/workspace-seed"
 
 @SubCommand({
     name: "profile",

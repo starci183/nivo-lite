@@ -1,10 +1,9 @@
-import { Module } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Module, type OnModuleInit } from "@nestjs/common"
 import {
     BOOKING_STATUS_CHANGED_BOOKING_EFFECTS_TOPIC_QUEUE,
     InjectEventConsumerRegistry,
+    type EventConsumerRegistry,
 } from "@modules/platform/event-bus"
-import type { EventConsumerRegistry } from "@modules/platform/event-bus"
 import { BookingEffectsModule } from "../../booking-effects.module"
 import { BookingStatusChangedConsumer } from "./booking-status-changed.consumer"
 import { ConfigurableModuleClass } from "./booking-effects-message.module-definition"

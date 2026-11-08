@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { TemplateListingsService } from "@modules/domain/template-marketplace"
-import type { ListingView } from "@modules/domain/template-marketplace"
+import { TemplateListingsService, type ListingView } from "@modules/domain/template-marketplace"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SubmitTemplateListingCommand } from "./submit-template-listing.command"
 
 @CommandHandler(SubmitTemplateListingCommand)

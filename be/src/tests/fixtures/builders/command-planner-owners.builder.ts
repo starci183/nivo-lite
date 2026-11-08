@@ -1,5 +1,4 @@
-import { mock, mockEntityManager } from "@starci/jest-preset"
-import type { MockEntityManager, MockOf } from "@starci/jest-preset"
+import { mock, mockEntityManager, type MockEntityManager, type MockOf } from "@starci/jest-preset"
 import type { AgentCard, AgentDirectoryService } from "@modules/domain/agents"
 import type { InstallationRecord, InstallationRecordsService } from "@modules/domain/module-installations"
 import type { WorkItemsChainReadService } from "@modules/domain/work-items"

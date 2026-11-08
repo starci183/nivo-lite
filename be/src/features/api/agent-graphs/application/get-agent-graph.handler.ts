@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AgentGraphAdminService } from "@modules/domain/agent-graphs"
-import type { AgentGraphWire } from "@modules/domain/agent-graphs"
+import { AgentGraphAdminService, type AgentGraphWire } from "@modules/domain/agent-graphs"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetAgentGraphQuery } from "./get-agent-graph.query"
 
 @QueryHandler(GetAgentGraphQuery)

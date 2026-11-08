@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ContentMediaService } from "@modules/domain/content-media"
-import type { ContentMediaUpload } from "@modules/domain/content-media"
+import { ContentMediaService, type ContentMediaUpload } from "@modules/domain/content-media"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RequestContentMediaUploadCommand } from "./request-content-media-upload.command"
 
 @CommandHandler(RequestContentMediaUploadCommand)

@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { SepayTransactionsService } from "@modules/domain/sepay-transactions"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The fenced step that resolves a committed sepay receipt. */

@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { BrandKitService } from "@modules/domain/content-ai"
-import type { BrandProposal } from "@modules/domain/content-ai"
+import { BrandKitService, type BrandProposal } from "@modules/domain/content-ai"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ProposeBrandKitCommand } from "./propose-brand-kit.command"
 
 @CommandHandler(ProposeBrandKitCommand)

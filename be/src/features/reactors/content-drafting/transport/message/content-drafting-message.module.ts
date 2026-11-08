@@ -1,7 +1,9 @@
-import { Module } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { AI_GENERATION_COMPLETED_CONTENT_TOPIC_QUEUE, InjectEventConsumerRegistry } from "@modules/platform/event-bus"
-import type { EventConsumerRegistry } from "@modules/platform/event-bus"
+import { Module, type OnModuleInit } from "@nestjs/common"
+import {
+    AI_GENERATION_COMPLETED_CONTENT_TOPIC_QUEUE,
+    InjectEventConsumerRegistry,
+    type EventConsumerRegistry,
+} from "@modules/platform/event-bus"
 import { ContentDraftingModule } from "../../content-drafting.module"
 import { AiGenerationCompletedConsumer } from "./ai-generation-completed.consumer"
 import { ConfigurableModuleClass } from "./content-drafting-message.module-definition"

@@ -5,8 +5,8 @@ import {
     GenericWebhookJob,
     GenericWebhookQueue,
     genericWebhookKey,
+    type GenericWebhookPayload,
 } from "@modules/queues/generic-webhook"
-import type { GenericWebhookPayload } from "@modules/queues/generic-webhook"
 import { useTestWorld } from "@tests/world/use-test-world"
 import {
     GENERIC_WEBHOOK_QUEUE_MODULES,

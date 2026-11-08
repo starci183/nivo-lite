@@ -1,17 +1,9 @@
-import type { ChatTypingFrame } from "@modules/domain/chat-typing"
 import assert from "node:assert/strict"
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { APP_FILTER, APP_GUARD } from "@nestjs/core"
 import { Test } from "@nestjs/testing"
 import type { EntityManager } from "typeorm"
 import * as typingContract from "@modules/domain/chat-typing"
-import {
-    CHAT_TYPING_ERROR_KINDS,
-    CHAT_TYPING_MESSAGES,
-    ChatTypingModule,
-    ChatTypingService,
-} from "@modules/domain/chat-typing"
 import { TeamChatRoomsService } from "@modules/domain/team-chat"
 import {
     AuthGuard,
@@ -19,8 +11,8 @@ import {
     IDENTITY_MESSAGES,
     IdentityModule,
     refuseSessions,
+    type VerifyAccessToken,
 } from "@modules/domain/identity"
-import type { VerifyAccessToken } from "@modules/domain/identity"
 import { WORKSPACE_MEMBERS_ERROR_KINDS, WORKSPACE_MEMBERS_MESSAGES } from "@modules/domain/workspace-members"
 import { ChatTypingSseModule } from "@features/realtime/chat-typing"
 import { ClockModule } from "@modules/platform/clock"
@@ -33,15 +25,13 @@ import { LoggingModule } from "@modules/platform/logging"
 import { ok } from "@modules/platform/primitives"
 import { RetryModule } from "@modules/platform/retry"
 import * as realtimeContract from "@modules/platform/realtime"
-import { RealtimeModule } from "@modules/platform/realtime"
 import type { TeamChatIdentity } from "../fixtures/builders/team-chat.builder"
 import { TeamChatProofModule } from "./team-chat-proof.module"
 import { TEAM_CHAT_PROOF_MODULES } from "./team-chat-capabilities.options"
 import type { LiteWorld } from "./lite-world.service"
 import { CHAT_ACTIVITY_PROOF_MODULES } from "./chat-activity-proof.module"
 import { redisProofOptions } from "./redis-capabilities.options"
-import { openTypingStream } from "./realtime-stream-proof.service"
-import type { TypingStreamClient, TypingStreamOptions } from "./realtime-stream-proof.service"
+import { openTypingStream, type TypingStreamClient, type TypingStreamOptions } from "./realtime-stream-proof.service"
 
 /** Minimal contract shapes keep this TDD proof compilable before the hub and door lanes merge. No runtime double is supplied. */
 interface ProofTopic {
@@ -146,7 +136,7 @@ const platformModules = (retry: RetryContract): Array<DynamicModule> => [
             ERRORS_MESSAGES,
             IDENTITY_MESSAGES,
             WORKSPACE_MEMBERS_MESSAGES,
-            CHAT_TYPING_MESSAGES,
+            typingContract.CHAT_TYPING_MESSAGES,
             HTTP_SECURITY_MESSAGES,
         ],
     }),
@@ -155,7 +145,7 @@ const platformModules = (retry: RetryContract): Array<DynamicModule> => [
         kinds: [
             IDENTITY_ERROR_KINDS,
             WORKSPACE_MEMBERS_ERROR_KINDS,
-            CHAT_TYPING_ERROR_KINDS,
+            typingContract.CHAT_TYPING_ERROR_KINDS,
             HTTP_SECURITY_ERROR_KINDS,
         ],
     }),
@@ -180,9 +170,9 @@ const compileReplica = (world: LiteWorld, identity: TeamChatIdentity, prefix: st
             ...platformModules(contracts.retry),
             ...TEAM_CHAT_PROOF_MODULES,
             IdentityModule.register({ isGlobal: true, verifyAccessToken: verifierFor(identity) }),
-            RealtimeModule.register(options),
+            realtimeContract.RealtimeModule.register(options),
             ...CHAT_ACTIVITY_PROOF_MODULES,
-            ChatTypingModule.register({ isGlobal: true }),
+            typingContract.ChatTypingModule.register({ isGlobal: true }),
             contracts.door.ChatTypingSseModule.register({}),
         ],
         providers: [
@@ -197,7 +187,7 @@ type StartTypingReplicaResultShape = {
     origin: string
     typing: typingContract.ChatTypingService
     team: TeamChatRoomsService
-    topic: (recipientId: string, roomId: string) => realtimeContract.RealtimeTopic<ChatTypingFrame>
+    topic: (recipientId: string, roomId: string) => realtimeContract.RealtimeTopic<typingContract.ChatTypingFrame>
     open: (streamOptions: TypingStreamOptions) => Promise<TypingStreamClient>
     close: () => Promise<void>
 }
@@ -220,7 +210,7 @@ export const startTypingReplica = async (
         return {
             hub,
             origin,
-            typing: app.get(ChatTypingService),
+            typing: app.get(typingContract.ChatTypingService),
             team: app.get(TeamChatRoomsService),
             topic: (recipientId: string, roomId: string) =>
                 contracts.topicOf(recipientId, identity.workspaceId, roomId),

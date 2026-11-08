@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AGENTS_ROOMS, AgentOwnershipService, AgentsModule } from "@modules/domain/agents"
 import {
     APPROVAL_REQUESTS_ERROR_KINDS,
@@ -18,9 +17,8 @@ import { ChatRoomDirectoryModule, ChatRoomDirectoryService } from "@modules/doma
 import { teamChatEntities } from "@modules/domain/team-chat"
 import { MEMBER_GRANTS_ERROR_KINDS, MEMBER_GRANTS_MESSAGES, MemberGrantsModule } from "@modules/domain/member-grants"
 import { StaffModule } from "@modules/domain/staff"
-import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
+import { WorkspaceMembersModule, type AccountDirectory } from "@modules/domain/workspace-members"
 import { WorkspacesModule } from "@modules/domain/workspaces"
-import type { AccountDirectory } from "@modules/domain/workspace-members"
 import { ERRORS_MESSAGES, ErrorsModule } from "@modules/platform/errors"
 import { I18nModule } from "@modules/platform/i18n"
 import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
@@ -32,8 +30,7 @@ const OFFICE_ACCOUNTS = Symbol("proof.office-chain.accounts")
 /** The Auth account directory of the office chain: no path of the chain reads an account, so a read is a failed proof. */
 class UnreadAccountDirectory implements AccountDirectory {
     accountOf(): ReturnType<AccountDirectory["accountOf"]> {
-        const unread: Error = new TestWorldError({ code: TestWorldErrorCode.AccountsUnread })
-        return Promise.reject(unread)
+        return Promise.reject(new TestWorldError({ code: TestWorldErrorCode.AccountsUnread }))
     }
 }
 

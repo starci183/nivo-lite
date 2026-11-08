@@ -1,6 +1,10 @@
 import { builder } from "@starci/jest-preset"
-import type { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
-import { StoredNote, contentHashOf, knowledgeSourcesEntities } from "@modules/domain/knowledge-sources"
+import {
+    type KnowledgeSourcesService,
+    StoredNote,
+    contentHashOf,
+    knowledgeSourcesEntities,
+} from "@modules/domain/knowledge-sources"
 
 const KnowledgeSourceEntity: (typeof knowledgeSourcesEntities)[0] = knowledgeSourcesEntities[0]
 type KnowledgeSourceEntity = InstanceType<typeof KnowledgeSourceEntity>

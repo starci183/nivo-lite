@@ -3,21 +3,25 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
-import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import { graphSpecSchema, type GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import type { EffectPayload, NodeModelRequest, NodeQuery, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
-import { AgentRunHandlersService, AgentRunsService } from "@modules/domain/agent-runs"
-import type { StepJson, StepSpec, StepView } from "@modules/domain/agent-runs"
-import { AgentWorkHandlersService } from "@modules/domain/agent-work"
-import type { AgentWakeContext } from "@modules/domain/agent-work"
+import {
+    AgentRunHandlersService,
+    AgentRunsService,
+    type StepJson,
+    type StepSpec,
+    type StepView,
+} from "@modules/domain/agent-runs"
+import { AgentWorkHandlersService, type AgentWakeContext } from "@modules/domain/agent-work"
 import {
     AgentGraphFlowRunsService,
     AgentGraphNodeStepService,
     AgentGraphsService,
     GRAPH_FLOW_TRIGGER_MESSAGES,
+    type FlowTriggerMessages,
+    type FlowWake,
 } from "@modules/domain/agent-graphs"
-import type { FlowTriggerMessages, FlowWake } from "@modules/domain/agent-graphs"
 import {
     GRAPH_NODE_MODEL,
     GRAPH_NODE_TOOL_DOOR,
@@ -25,13 +29,16 @@ import {
     GraphNodeEffectsService,
     GraphNodeHostService,
     GraphNodeRegistryService,
+    type NodeModelDoor,
+    type NodeRow,
+    type NodeToolDoor,
+    type NodeTurn,
 } from "@modules/domain/graph-nodes"
-import type { NodeModelDoor, NodeRow, NodeToolDoor, NodeTurn } from "@modules/domain/graph-nodes"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { HttpError, HttpErrorCode } from "@modules/platform/http"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
-import { LOGGER } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { LOGGER, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { stepViewOf } from "./agent-runs.builder"
 import { agentTurnViewOf } from "./agent-work.builder"
@@ -95,7 +102,7 @@ const SUBJECT_KINDS: Readonly<Record<string, string>> = {
 export const flowWorldOf = (store: Record<string, Array<NodeRow>>, failOn: string | null = null): FlowWorld => {
     const ran: Array<FlowRan> = []
     const execute = (effect: string, payload: EffectPayload): Promise<SubjectRef> => {
-        if (effect === failOn) return Promise.reject(new Error(`${effect} is down`))
+        if (effect === failOn) return Promise.reject(new HttpError({ code: HttpErrorCode.Network }))
         const kind = SUBJECT_KINDS[effect] ?? effect
         const subject = { kind, id: `${kind}-${ran.length + 1}` }
         if (effect === "order.record") {

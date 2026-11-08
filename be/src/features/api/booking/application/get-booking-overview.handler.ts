@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { BookingOverviewService } from "@modules/domain/bookings"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { GetBookingOverviewResult } from "./get-booking-overview.contracts"
 import { GetBookingOverviewQuery } from "./get-booking-overview.query"
 

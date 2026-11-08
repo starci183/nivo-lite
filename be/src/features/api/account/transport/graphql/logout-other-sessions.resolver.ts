@@ -1,8 +1,7 @@
 import type { CommandBus } from "@nestjs/cqrs"
 import { Mutation, Resolver } from "@nestjs/graphql"
 import { CurrentPrincipal } from "@modules/domain/identity"
-import { InjectCommandBus } from "@modules/platform/cqrs"
-import type { Principal } from "@modules/platform/cqrs"
+import { InjectCommandBus, type Principal } from "@modules/platform/cqrs"
 import { LogoutOtherSessionsCommand } from "../../application/logout-other-sessions.command"
 
 @Resolver()

@@ -1,6 +1,5 @@
 import { timingSafeEqual } from "node:crypto"
-import { createServer } from "node:http"
-import type { IncomingMessage, Server as HttpServer, ServerResponse } from "node:http"
+import { createServer, type IncomingMessage, type Server as HttpServer, type ServerResponse } from "node:http"
 import { parseJsonText } from "@modules/platform/primitives"
 import { allowingLoopback } from "./loopback-mcp.adapter"
 

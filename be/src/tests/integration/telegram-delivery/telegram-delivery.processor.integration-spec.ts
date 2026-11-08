@@ -8,8 +8,7 @@ import { jobSnapshot } from "../../world/proof-database.service"
 import { refuseNextDeliveryTransaction } from "../../world/delivery-failure.service"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import type { LiteWorld } from "../../world/lite-world.service"
-import { registerDeliveryProcessor } from "../../world/delivery-registration.service"
-import type { RegisteredDelivery } from "../../world/delivery-registration.service"
+import { registerDeliveryProcessor, type RegisteredDelivery } from "../../world/delivery-registration.service"
 
 type ResolveDelivery = () => RegisteredDelivery
 type BuildDelivery = () => ReturnType<typeof deliveryJobBuilder>

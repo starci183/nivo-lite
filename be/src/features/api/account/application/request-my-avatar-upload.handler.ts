@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { AvatarsService } from "@modules/domain/avatars"
-import type { AvatarUpload } from "@modules/domain/avatars"
+import { AvatarsService, type AvatarUpload } from "@modules/domain/avatars"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RequestMyAvatarUploadCommand } from "./request-my-avatar-upload.command"
 
 @CommandHandler(RequestMyAvatarUploadCommand)

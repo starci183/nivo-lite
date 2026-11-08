@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { BrainBulkService } from "@modules/domain/brain"
-import type { BulkUndone } from "@modules/domain/brain"
+import { BrainBulkService, type BulkUndone } from "@modules/domain/brain"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { UndoBrainFactBatchCommand } from "./undo-brain-fact-batch.command"
 
 @CommandHandler(UndoBrainFactBatchCommand)

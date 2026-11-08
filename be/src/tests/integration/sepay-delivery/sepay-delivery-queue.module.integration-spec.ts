@@ -1,5 +1,4 @@
-import { JOB_PROCESSOR_REGISTRY } from "@modules/platform/jobs"
-import type { JobProcessorRegistry } from "@modules/platform/jobs"
+import { JOB_PROCESSOR_REGISTRY, type JobProcessorRegistry } from "@modules/platform/jobs"
 import { SEPAY_DELIVERY_QUEUE } from "@modules/queues/sepay-delivery"
 import { SepayDeliveryQueueModule } from "../../../features/jobs/sepay-delivery/transport/queue/sepay-delivery-queue.module"
 import { SepayDeliveryProcessor } from "../../../features/jobs/sepay-delivery/transport/queue/sepay-delivery.processor"

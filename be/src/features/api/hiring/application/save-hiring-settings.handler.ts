@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { HiringSettingsService } from "@modules/domain/hiring"
-import type { EnsureSettingsOutput } from "@modules/domain/hiring"
+import { HiringSettingsService, type EnsureSettingsOutput } from "@modules/domain/hiring"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SaveHiringSettingsCommand } from "./save-hiring-settings.command"
 
 @CommandHandler(SaveHiringSettingsCommand)

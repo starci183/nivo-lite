@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { EventsService } from "@modules/domain/events"
@@ -15,10 +14,9 @@ import {
     ACCOUNT_DIRECTORY,
     WorkspaceMembersReadService,
     WorkspaceMembersService,
+    type AccountDirectory,
 } from "@modules/domain/workspace-members"
-import type { AccountDirectory } from "@modules/domain/workspace-members"
-import { MESSAGE_CATALOG } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { MESSAGE_CATALOG, type MessageCatalog } from "@modules/platform/i18n"
 
 @Module({
     providers: [

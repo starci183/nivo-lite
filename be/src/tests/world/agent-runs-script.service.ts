@@ -1,5 +1,4 @@
-import { Injectable, Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Injectable, Module, type DynamicModule } from "@nestjs/common"
 import { AGENT_RUN_WAIT_TIMEOUT } from "../../modules/domain/agent-runs/agent-runs.decorators"
 import { AgentRunHandlersService } from "../../modules/domain/agent-runs/agent-run-handlers.service"
 import { TOOL_OUTCOME_UNKNOWN } from "../../modules/domain/agent-runs/policies/agent-runs.policy"

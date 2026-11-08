@@ -1,6 +1,5 @@
 import { entityEngineEntities } from "@modules/domain/entity-engine"
-import { persistGraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
-import type { GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
+import { persistGraphTenant, type GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
 import { saveRecord } from "../../fixtures/builders/sales-door.builder"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { backendRoleSandbox, currentRole } from "../../world/backend-role-sandbox.service"

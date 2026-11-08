@@ -2,8 +2,7 @@ import { CommandHandler } from "@nestjs/cqrs"
 import { AuthorityGrantsService } from "@modules/domain/decisions"
 import type { MemberGrant } from "@modules/domain/member-grants"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SaveMemberGrantsCommand } from "./save-member-grants.command"
 
 @CommandHandler(SaveMemberGrantsCommand)

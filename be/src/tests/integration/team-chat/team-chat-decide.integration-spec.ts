@@ -1,16 +1,14 @@
 import assert from "node:assert/strict"
-import { TeamChatRoomsService } from "@modules/domain/team-chat"
-import type { DecideOutcome, TeamChatResult } from "@modules/domain/team-chat"
+import { TeamChatRoomsService, type DecideOutcome, type TeamChatResult } from "@modules/domain/team-chat"
 import { DecideChatApprovalCommand } from "../../../features/api/team-chat/application/decide-chat-approval.command"
 import { DecideChatApprovalHandler } from "../../../features/api/team-chat/application/decide-chat-approval.handler"
-import { persistGraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
+import { persistGraphTenant, type GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
 import {
     openApprovalRequest,
     persistStaffSeat,
     persistStranger,
     seatIdOf,
 } from "../../fixtures/builders/team-chat.builder"
-import type { GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { backendRoleSandbox, currentRole } from "../../world/backend-role-sandbox.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"

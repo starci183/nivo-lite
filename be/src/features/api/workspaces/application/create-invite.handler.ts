@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { WorkspaceInvitesService } from "@modules/domain/workspace-invites"
-import type { InviteResult } from "@modules/domain/workspace-invites"
+import { WorkspaceInvitesService, type InviteResult } from "@modules/domain/workspace-invites"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { CreateInviteCommand } from "./create-invite.command"
 
 @CommandHandler(CreateInviteCommand)

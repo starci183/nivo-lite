@@ -1,6 +1,5 @@
 import type { EntityManager } from "typeorm"
-import { EntityEngineService, entityEngineEntities } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
+import { EntityEngineService, entityEngineEntities, type ScopedTx } from "@modules/domain/entity-engine"
 import { jobsEntities } from "@modules/platform/jobs"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
@@ -37,8 +36,8 @@ export const removeStepJobs = async (manager: EntityManager, workspaceId: string
 }
 
 /** The advance jobs the outbox holds for a workspace. */
-export const stepJobsOf = (manager: EntityManager, workspaceId: string): Promise<Array<JobOutboxEntity>> =>
-    manager.find(JobOutboxEntity, { where: { queue: "agent_step", workspaceId }, take: ROWS_MAX })
+export const stepJobsOf = async (manager: EntityManager, workspaceId: string): Promise<Array<JobOutboxEntity>> =>
+    await manager.find(JobOutboxEntity, { where: { queue: "agent_step", workspaceId }, take: ROWS_MAX })
 
 /**
  * Removes every run and step record of a workspace, as the world's superuser: the links first (a step's link to its run restricts the

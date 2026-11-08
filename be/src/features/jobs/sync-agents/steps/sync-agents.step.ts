@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the OpenClaw copy of the agents the payload names is rebuilt (an unchanged copy only moves its check time). */

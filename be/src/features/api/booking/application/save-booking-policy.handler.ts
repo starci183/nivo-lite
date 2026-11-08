@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { BookingSetupService } from "@modules/domain/bookings"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { SaveBookingPolicyResult } from "./save-booking-policy.contracts"
 import { SaveBookingPolicyCommand } from "./save-booking-policy.command"
 

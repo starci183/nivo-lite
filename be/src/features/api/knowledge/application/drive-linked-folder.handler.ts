@@ -2,8 +2,7 @@ import { QueryHandler } from "@nestjs/cqrs"
 import { KnowledgeDriveService } from "@modules/domain/knowledge"
 import type { DriveFolderListing } from "@modules/integrations/documents"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DriveLinkedFolderQuery } from "./drive-linked-folder.query"
 
 @QueryHandler(DriveLinkedFolderQuery)

@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { PollSchedulerService } from "@modules/domain/connection-poll"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the connections that are due now are polled, under each provider's limits, and planned again. */

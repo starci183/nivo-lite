@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { MetaConnectionsService } from "@modules/domain/meta-connections"
+import { MetaConnectionsService, type MetaWizardConnection } from "@modules/domain/meta-connections"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import type { MetaWizardConnection } from "@modules/domain/meta-connections"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetMetaConnectionQuery } from "./get-meta-connection.query"
 
 @QueryHandler(GetMetaConnectionQuery)

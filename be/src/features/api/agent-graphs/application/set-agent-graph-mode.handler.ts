@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { AgentGraphAdminService } from "@modules/domain/agent-graphs"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetAgentGraphModeCommand } from "./set-agent-graph-mode.command"
 
 @CommandHandler(SetAgentGraphModeCommand)

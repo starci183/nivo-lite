@@ -2,8 +2,7 @@ import { CommandHandler } from "@nestjs/cqrs"
 import { DecisionsService } from "@modules/domain/decisions"
 import type { AuthorityRuleRecord } from "@modules/domain/authority-rules"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SaveRuleCommand } from "./save-rule.command"
 
 @CommandHandler(SaveRuleCommand)

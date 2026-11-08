@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ChatMessageProposeExecutorService } from "@modules/domain/chat-node-ports"
 import { workbenchDoorProofModules } from "./workbench-door-proof.module"
 

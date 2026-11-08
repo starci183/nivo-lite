@@ -1,5 +1,4 @@
-import { In } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, type EntityManager } from "typeorm"
 import { bankFeedInboxEntities } from "@modules/domain/bank-feed-inbox"
 import { jobsEntities } from "@modules/platform/jobs"
 

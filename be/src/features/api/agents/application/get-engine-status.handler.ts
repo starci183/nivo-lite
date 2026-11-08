@@ -2,8 +2,7 @@ import { QueryHandler } from "@nestjs/cqrs"
 import type { EngineStatus } from "@modules/domain/agents"
 import { AgentSyncChecksService } from "@modules/domain/openclaw-agent-sync"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetEngineStatusQuery } from "./get-engine-status.query"
 
 @QueryHandler(GetEngineStatusQuery)

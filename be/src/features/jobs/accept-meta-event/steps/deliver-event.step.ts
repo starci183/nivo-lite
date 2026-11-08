@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { MetaInboxService } from "@modules/domain/meta-inbox"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /**

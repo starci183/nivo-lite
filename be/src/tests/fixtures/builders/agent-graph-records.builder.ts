@@ -1,6 +1,5 @@
 import { mock } from "@starci/jest-preset"
-import { EntityEngineService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
+import { EntityEngineService, type ScopedTx } from "@modules/domain/entity-engine"
 import type { ListPage, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 
 /** The scope every spec of the graph store runs in. */

@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { GenerationsService } from "@modules/domain/ai-generations"
-import type { GenerationStatus } from "@modules/domain/ai-generations"
+import { GenerationsService, type GenerationStatus } from "@modules/domain/ai-generations"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetGenerationStatusQuery } from "./get-generation-status.query"
 
 @QueryHandler(GetGenerationStatusQuery)

@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { ModulesService } from "@modules/domain/modules"
-import type { ModulesCatalog } from "@modules/domain/modules"
+import { ModulesService, type ModulesCatalog } from "@modules/domain/modules"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetCatalogQuery } from "./get-catalog.query"
 
 @QueryHandler(GetCatalogQuery)

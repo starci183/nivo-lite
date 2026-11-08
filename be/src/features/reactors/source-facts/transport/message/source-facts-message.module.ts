@@ -1,7 +1,9 @@
-import { Module } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { KNOWLEDGE_SOURCE_INDEXED_BRAIN_TOPIC_QUEUE, InjectEventConsumerRegistry } from "@modules/platform/event-bus"
-import type { EventConsumerRegistry } from "@modules/platform/event-bus"
+import { Module, type OnModuleInit } from "@nestjs/common"
+import {
+    KNOWLEDGE_SOURCE_INDEXED_BRAIN_TOPIC_QUEUE,
+    InjectEventConsumerRegistry,
+    type EventConsumerRegistry,
+} from "@modules/platform/event-bus"
 import { SourceFactsModule } from "../../source-facts.module"
 import { KnowledgeSourceIndexedConsumer } from "./knowledge-source-indexed.consumer"
 import { ConfigurableModuleClass } from "./source-facts-message.module-definition"

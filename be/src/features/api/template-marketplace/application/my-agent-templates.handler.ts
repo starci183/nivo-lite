@@ -2,8 +2,7 @@ import { QueryHandler } from "@nestjs/cqrs"
 import { AgentTemplatesService } from "@modules/domain/agent-templates"
 import type { TemplateView } from "@nivo-lite/agent-sdk/template"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { MyAgentTemplatesQuery } from "./my-agent-templates.query"
 
 @QueryHandler(MyAgentTemplatesQuery)

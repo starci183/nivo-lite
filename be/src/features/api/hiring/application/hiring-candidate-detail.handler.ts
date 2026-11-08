@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { HiringWorkbenchService } from "@modules/domain/hiring"
-import type { HiringCandidateDetailView } from "@modules/domain/hiring"
+import { HiringWorkbenchService, type HiringCandidateDetailView } from "@modules/domain/hiring"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { HiringCandidateDetailQuery } from "./hiring-candidate-detail.query"
 
 @QueryHandler(HiringCandidateDetailQuery)

@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ContentAiService } from "@modules/domain/content-ai"
-import type { ContentAiRequested } from "@modules/domain/content-ai"
+import { ContentAiService, type ContentAiRequested } from "@modules/domain/content-ai"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RequestContentQuickDraftCommand } from "./request-content-quick-draft.command"
 
 @CommandHandler(RequestContentQuickDraftCommand)

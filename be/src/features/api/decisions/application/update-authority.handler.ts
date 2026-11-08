@@ -2,8 +2,7 @@ import { CommandHandler } from "@nestjs/cqrs"
 import { DecisionsService } from "@modules/domain/decisions"
 import type { AuthorityProfile } from "@modules/domain/authority"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { UpdateAuthorityCommand } from "./update-authority.command"
 
 @CommandHandler(UpdateAuthorityCommand)

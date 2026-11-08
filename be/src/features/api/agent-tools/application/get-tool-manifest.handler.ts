@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { AgentToolsService } from "@modules/domain/agent-tools"
-import type { ToolManifestEntry } from "@modules/domain/agent-tools"
+import { AgentToolsService, type ToolManifestEntry } from "@modules/domain/agent-tools"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetToolManifestQuery } from "./get-tool-manifest.query"
 
 @QueryHandler(GetToolManifestQuery)

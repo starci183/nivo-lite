@@ -1,13 +1,12 @@
-import { Module } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Module, type OnModuleInit } from "@nestjs/common"
 import {
     BANK_CREDIT_BOOKED_AGENT_WAKES_TOPIC_QUEUE,
     INSTALLATION_CHANGED_AGENT_WAKES_TOPIC_QUEUE,
     InjectEventConsumerRegistry,
     KNOWLEDGE_SOURCE_INDEXED_AGENT_WAKES_TOPIC_QUEUE,
     PAYMENT_RECONCILED_AGENT_WAKES_TOPIC_QUEUE,
+    type EventConsumerRegistry,
 } from "@modules/platform/event-bus"
-import type { EventConsumerRegistry } from "@modules/platform/event-bus"
 import { AgentWakesModule } from "../../agent-wakes.module"
 import { BankCreditBookedConsumer } from "./bank-credit-booked.consumer"
 import { InstallationChangedConsumer } from "./installation-changed.consumer"

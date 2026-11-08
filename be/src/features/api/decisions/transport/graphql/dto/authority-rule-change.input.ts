@@ -14,8 +14,7 @@ import {
     Min,
     MinLength,
 } from "class-validator"
-import { APPROVAL_POLICIES, RULE_UNITS } from "@modules/domain/authority-rules"
-import type { ApprovalPolicy, RuleUnit } from "@modules/domain/authority-rules"
+import { APPROVAL_POLICIES, RULE_UNITS, type ApprovalPolicy, type RuleUnit } from "@modules/domain/authority-rules"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 
 @InputType()

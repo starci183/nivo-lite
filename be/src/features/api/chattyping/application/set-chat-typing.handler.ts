@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ChatTypingService } from "@modules/domain/chat-typing"
-import type { ChatTypingSignal } from "@modules/domain/chat-typing"
+import { ChatTypingService, type ChatTypingSignal } from "@modules/domain/chat-typing"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetChatTypingCommand } from "./set-chat-typing.command"
 
 @CommandHandler(SetChatTypingCommand)

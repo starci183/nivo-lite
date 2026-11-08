@@ -1,5 +1,4 @@
-import { CLOCK } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { CLOCK, type Clock } from "@modules/platform/clock"
 import { approvalRequestsEntities } from "@modules/domain/approval-requests"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { DecisionLogReadService, WorkRecorderService } from "@modules/domain/decisions"
@@ -13,8 +12,8 @@ import {
     persistWaitsAsk,
     persistWaitsFixture,
     persistWaitsItem,
+    type WaitsFixtureBranch,
 } from "../../fixtures/builders/agent-runs-waits.builder"
-import type { WaitsFixtureBranch } from "../../fixtures/builders/agent-runs-waits.builder"
 import { useTestWorld } from "../../world/use-test-world"
 import { WAIT_RUNS_MODULES } from "../../world/agent-runs-capabilities.options"
 import { WaitsExtensionActivity, waitsExtensionStep } from "../../world/agent-runs-waits.module"

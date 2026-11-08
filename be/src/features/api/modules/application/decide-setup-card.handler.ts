@@ -2,8 +2,7 @@ import { CommandHandler } from "@nestjs/cqrs"
 import { SetupCardsService } from "@modules/domain/modules"
 import type { CardRecord } from "@modules/domain/module-setup-writes"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DecideSetupCardCommand } from "./decide-setup-card.command"
 
 @CommandHandler(DecideSetupCardCommand)

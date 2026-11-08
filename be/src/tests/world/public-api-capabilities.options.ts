@@ -1,23 +1,26 @@
 import { ConnectionsModule } from "@modules/domain/connections"
 import { ConnectionSecretsModule } from "@modules/domain/connection-secrets"
 import { DataRecordsReadService } from "@modules/domain/data-records"
-import { Injectable, Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Injectable, Module, type DynamicModule } from "@nestjs/common"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { AGENTS_INSTALLATIONS, AgentsModule, AgentsService } from "@modules/domain/agents"
 import { AuthorityService } from "@modules/domain/authority"
 import { AuthorityActionsModule } from "@modules/domain/authority-actions"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { ChatRecordsModule } from "@modules/domain/chat-records"
-import { DurableWorkService, EvidenceService, WorkEngineService } from "@modules/domain/decisions"
-import type { InboundEventStatus, OutboundAccessGate } from "@modules/domain/decisions"
+import {
+    DurableWorkService,
+    EvidenceService,
+    WorkEngineService,
+    type InboundEventStatus,
+    type OutboundAccessGate,
+} from "@modules/domain/decisions"
 import { EntityEngineModule, ReadOnlyEngineAlertsService } from "@modules/domain/entity-engine"
 import { EventsModule } from "@modules/domain/events"
 import { InboundEventsService } from "@modules/domain/inbound-events"
 import { ApiKnowledgeSourcesService, SourceQuotaService } from "@modules/domain/knowledge-sources"
 import { KNOWLEDGE_STORAGE } from "../../modules/domain/knowledge-sources/knowledge-sources.decorators"
-import { AGENT_DIRECTORY, OfficeLinesService } from "@modules/domain/messages"
-import type { AgentDirectory } from "@modules/domain/messages"
+import { AGENT_DIRECTORY, OfficeLinesService, type AgentDirectory } from "@modules/domain/messages"
 import { MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule, ModulesService } from "@modules/domain/modules"
 import { PublicApiModule } from "@modules/domain/public-api"
 import { StaffModule } from "@modules/domain/staff"
@@ -25,13 +28,11 @@ import { WorkspacesModule } from "@modules/domain/workspaces"
 import type { StorageObjectsPort } from "@modules/integrations/object-storage"
 import { refused } from "@modules/platform/primitives"
 import { Secret } from "@modules/platform/config"
-import { EVENT_BUS } from "@modules/platform/event-bus"
-import type { EventBus } from "@modules/platform/event-bus"
+import { EVENT_BUS, type EventBus } from "@modules/platform/event-bus"
 import { WebhookEventsService } from "@modules/domain/webhook-connections"
 import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
 import { MODULE_JOBS } from "@nivo-lite/blocks-core/modules"
-import { WorkspaceMembersModule } from "@modules/domain/workspace-members"
-import type { AccountDirectory } from "@modules/domain/workspace-members"
+import { WorkspaceMembersModule, type AccountDirectory } from "@modules/domain/workspace-members"
 import { InstallationOperationsService, InstallationRecordsService } from "@modules/domain/module-installations"
 import { InvoicesLedgerService } from "@modules/domain/invoices"
 import { WorkItemsChainReadService, WorkItemsService } from "@modules/domain/work-items"
@@ -40,8 +41,7 @@ import { I18nModule } from "@modules/platform/i18n"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { IdsModule } from "@modules/platform/ids"
 import { JobsModule } from "@modules/platform/jobs"
-import { QueueModule } from "@modules/platform/queue"
-import type { QueueOptions } from "@modules/platform/queue"
+import { QueueModule, type QueueOptions } from "@modules/platform/queue"
 import { KnowledgeQueueModule } from "@modules/queues/knowledge"
 import { CommandPlannerService } from "../../modules/domain/decisions/command-planner.service"
 import { ModuleCatalogService } from "../../modules/domain/decisions/module-catalog.service"
@@ -66,8 +66,7 @@ import { PerformerKitService } from "../../modules/domain/work-performers/perfor
 import { TeamChatProofModule } from "./team-chat-proof.module"
 import { queueOptions } from "./test-capabilities.options"
 import { QUIET_INSTALLATIONS } from "./quiet-peers.options"
-import { TestWorldErrorCode } from "./test-world.error"
-import { testWorldFailure } from "./test-world-failure.policy"
+import { TestWorldError, TestWorldErrorCode } from "./test-world.error"
 
 @Injectable()
 /** No agent or authentication account lookup is needed to admit an API request. */
@@ -81,7 +80,7 @@ export class PublicApiProofDirectory implements AgentDirectory, AccountDirectory
     }
 
     accountOf(): ReturnType<AccountDirectory["accountOf"]> {
-        return Promise.reject(testWorldFailure(TestWorldErrorCode.AccountsUnread))
+        return Promise.reject(new TestWorldError({ code: TestWorldErrorCode.AccountsUnread }))
     }
 }
 

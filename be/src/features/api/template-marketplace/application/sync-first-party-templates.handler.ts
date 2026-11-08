@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { FirstPartyTemplatesService } from "@modules/domain/template-marketplace"
-import type { FirstPartySyncReport } from "@modules/domain/template-marketplace"
+import { FirstPartyTemplatesService, type FirstPartySyncReport } from "@modules/domain/template-marketplace"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SyncFirstPartyTemplatesCommand } from "./sync-first-party-templates.command"
 
 @CommandHandler(SyncFirstPartyTemplatesCommand)

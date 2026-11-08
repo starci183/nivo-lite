@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { HiringPublicService } from "@modules/domain/hiring"
-import type { ApplyOutput } from "@modules/domain/hiring"
+import { HiringPublicService, type ApplyOutput } from "@modules/domain/hiring"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ApplyToHiringJobCommand } from "./apply-to-hiring-job.command"
 
 @CommandHandler(ApplyToHiringJobCommand)

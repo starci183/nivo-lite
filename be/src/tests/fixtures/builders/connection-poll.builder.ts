@@ -1,6 +1,5 @@
 import { builder } from "@starci/jest-preset"
-import { connectionPollEntities } from "@modules/domain/connection-poll"
-import type { PollPage, PollScheduleRow } from "@modules/domain/connection-poll"
+import { connectionPollEntities, type PollPage, type PollScheduleRow } from "@modules/domain/connection-poll"
 import type { ConnectionRecord } from "@modules/domain/connections"
 
 const ConnectionPollScheduleEntity: (typeof connectionPollEntities)[0] = connectionPollEntities[0]

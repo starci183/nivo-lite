@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { MarketingTickService } from "@modules/domain/content-ai"
-import { AdvancingJobStepPolicy, InjectJobClaims } from "@modules/platform/jobs"
-import type { JobClaims, JobStep } from "@modules/platform/jobs"
+import { AdvancingJobStepPolicy, InjectJobClaims, type JobClaims, type JobStep } from "@modules/platform/jobs"
 import { marketingTickPayloadOf } from "@modules/queues/marketing-tick"
 
 @Injectable()

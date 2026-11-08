@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { KnowledgeJobsService } from "@modules/domain/knowledge"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import type { QueueDelivery } from "@modules/platform/queue"
 import { KNOWLEDGE_QUEUE, KnowledgeJob } from "@modules/queues/knowledge"
 import { IndexSourceStep } from "../../steps/index-source.step"

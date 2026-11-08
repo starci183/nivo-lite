@@ -1,5 +1,4 @@
-import { QueueModule } from "@modules/platform/queue"
-import type { QueueOptions } from "@modules/platform/queue"
+import { QueueModule, type QueueOptions } from "@modules/platform/queue"
 import { JobsModule } from "@modules/platform/jobs"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MetaModule } from "@modules/integrations/meta"

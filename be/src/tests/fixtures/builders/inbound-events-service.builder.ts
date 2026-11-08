@@ -1,7 +1,5 @@
-import { builder } from "@starci/jest-preset"
-import { inboundEventsEntities } from "@modules/domain/inbound-events"
-import type { InboundEventsService } from "@modules/domain/inbound-events"
-import type { MockEntityManager } from "@starci/jest-preset"
+import { builder, type MockEntityManager } from "@starci/jest-preset"
+import { inboundEventsEntities, type InboundEventsService } from "@modules/domain/inbound-events"
 import type { QueryBuilderAnswers } from "./entity-query-builder-fake.builder"
 
 const InboundEventEntity: (typeof inboundEventsEntities)[0] = inboundEventsEntities[0]

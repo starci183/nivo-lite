@@ -1,10 +1,13 @@
 import assert from "node:assert/strict"
 import type { EntitiesApi } from "@nivo-lite/agent-sdk/entity/port"
 import { EntityEngineService, EntityPortsService, ModuleJobRunnerService } from "@modules/domain/entity-engine"
-import { CLOCK } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { ORDER_AMOUNT, writeScene } from "../../fixtures/builders/accounting-scene.builder"
-import type { SceneRecords, SceneWorkspace } from "../../fixtures/builders/accounting-scene.builder"
+import { CLOCK, type Clock } from "@modules/platform/clock"
+import {
+    ORDER_AMOUNT,
+    writeScene,
+    type SceneRecords,
+    type SceneWorkspace,
+} from "../../fixtures/builders/accounting-scene.builder"
 import { backendSandbox, workbenchDoorProofModules } from "../../world/workbench-door-proof.module"
 import { refusedFieldsOf, rowsOf, useDoorProof } from "../../world/workbench-door-proof.service"
 import { useTestWorld } from "../../world/use-test-world"

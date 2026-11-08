@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { ConnectionGrantsService } from "@modules/domain/connection-grants"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetConnectionGrantCommand } from "./set-connection-grant.command"
 
 @CommandHandler(SetConnectionGrantCommand)

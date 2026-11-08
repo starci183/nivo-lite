@@ -1,7 +1,10 @@
 import { mockEntityManager, type MockEntityManager } from "@starci/jest-preset"
 import type { InvoiceRow, NewInvoice, NewRenewalInvoice } from "@modules/domain/invoices"
-import { queueQueryBuilders } from "./entity-query-builder-fake.builder"
-import type { FakeQueryBuilder, QueryBuilderAnswers } from "./entity-query-builder-fake.builder"
+import {
+    queueQueryBuilders,
+    type FakeQueryBuilder,
+    type QueryBuilderAnswers,
+} from "./entity-query-builder-fake.builder"
 
 export const WS = "11111111-1111-4111-8111-111111111111"
 export const INVOICE: InvoiceRow = {

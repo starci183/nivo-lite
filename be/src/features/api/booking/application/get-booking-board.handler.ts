@@ -1,8 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { BookingBoardService } from "@modules/domain/bookings"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { GetBookingBoardResult } from "./get-booking-board.contracts"
 import { GetBookingBoardQuery } from "./get-booking-board.query"
 

@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { SmtpWizardService } from "@modules/domain/email-messages"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetDefaultSmtpCommand } from "./set-default-smtp.command"
 
 @CommandHandler(SetDefaultSmtpCommand)

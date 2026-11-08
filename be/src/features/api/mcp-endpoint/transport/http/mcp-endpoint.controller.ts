@@ -1,7 +1,6 @@
 import { Body, Controller, HttpCode, Param, Post } from "@nestjs/common"
 import type { CommandBus } from "@nestjs/cqrs"
-import { Credential, CurrentCredentialPrincipal } from "@modules/domain/identity"
-import type { CredentialPrincipal } from "@modules/domain/identity"
+import { Credential, CurrentCredentialPrincipal, type CredentialPrincipal } from "@modules/domain/identity"
 import { InjectCommandBus } from "@modules/platform/cqrs"
 import { AnswerMcpRequestCommand } from "../../application/answer-mcp-request.command"
 import { McpEndpointPathRequest } from "./dto/mcp-endpoint-path.request"

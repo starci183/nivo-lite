@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import { AGENT_STEP_QUEUE, AgentStepJob } from "@modules/queues/agent-step"
 import { AdvanceStep } from "../../steps/advance.step"
 

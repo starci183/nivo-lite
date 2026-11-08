@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ContentConfigurationService } from "@modules/domain/content-settings"
-import type { SavedContentRows } from "@modules/domain/content-settings"
+import { ContentConfigurationService, type SavedContentRows } from "@modules/domain/content-settings"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ApplyContentCadencePresetsCommand } from "./apply-content-cadence-presets.command"
 
 @CommandHandler(ApplyContentCadencePresetsCommand)

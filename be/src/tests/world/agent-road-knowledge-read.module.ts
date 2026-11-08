@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 
 @Module({})

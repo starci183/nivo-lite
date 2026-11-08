@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { CreditsService } from "@modules/domain/credits"
-import type { CreditTopupLot } from "@modules/domain/credits"
+import { CreditsService, type CreditTopupLot } from "@modules/domain/credits"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ListCreditTopupLotsQuery } from "./list-credit-topup-lots.query"
 
 @QueryHandler(ListCreditTopupLotsQuery)

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
-import { WorkEngineService, WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
-import type { WorkPerformer, WorkPerformerRegistry } from "@modules/domain/decisions"
+import {
+    WorkEngineService,
+    WORK_PERFORMER_REGISTRY,
+    type WorkPerformer,
+    type WorkPerformerRegistry,
+} from "@modules/domain/decisions"
 import { ChatConversationsService } from "@modules/domain/chat-records"
 import { PublicMessagesService } from "@modules/domain/public-api"
 import { persistPublicApiConversation } from "../../fixtures/builders/public-api.builder"

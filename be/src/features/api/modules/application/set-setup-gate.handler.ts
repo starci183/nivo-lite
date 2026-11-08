@@ -2,8 +2,7 @@ import { CommandHandler } from "@nestjs/cqrs"
 import { SetupChatService } from "@modules/domain/modules"
 import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetSetupGateCommand } from "./set-setup-gate.command"
 
 @CommandHandler(SetSetupGateCommand)

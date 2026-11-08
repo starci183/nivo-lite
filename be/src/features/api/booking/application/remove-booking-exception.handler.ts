@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { BookingSetupService } from "@modules/domain/bookings"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { RemoveBookingExceptionResult } from "./remove-booking-exception.contracts"
 import { RemoveBookingExceptionCommand } from "./remove-booking-exception.command"
 

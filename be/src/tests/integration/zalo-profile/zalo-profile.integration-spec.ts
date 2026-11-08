@@ -4,15 +4,14 @@ import { ChatConversationsService } from "@modules/domain/chat-records"
 import { PollLimiterService } from "@modules/domain/connection-poll"
 import { mcpCallLogEntities } from "@modules/domain/mcp-call-log"
 import { ZaloReconcileService } from "@modules/domain/zalo-provider"
-import { ZALO } from "@modules/integrations/zalo"
-import type { ZaloClient } from "@modules/integrations/zalo"
+import { ZALO, type ZaloClient } from "@modules/integrations/zalo"
 import { eachInOrder } from "@modules/platform/primitives"
-import { persistGraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
-import type { GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
+import { persistGraphTenant, type GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { backendRoleSandbox } from "../../world/backend-role-sandbox.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { useSeedConnection } from "../../world/sales-door-world.service"
+import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { useTestWorld } from "../../world/use-test-world"
 
 /** The real app opens in about a minute on the world; the whole suite shares that one boot. */
@@ -64,7 +63,10 @@ beforeEach(() => {
     jest.spyOn(world.resolve<ZaloClient>(ZALO), "userProfile").mockImplementation((token, userId) => {
         asked.push({ token, userId })
         const profile = profiles.get(userId)
-        return profile === undefined ? Promise.reject(new Error("zalo refused")) : Promise.resolve(profile)
+        return new Promise((resolve, reject) => {
+            if (profile === undefined) reject(new TestWorldError({ code: TestWorldErrorCode.ProviderDown }))
+            else resolve(profile)
+        })
     })
 })
 

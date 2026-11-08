@@ -1,6 +1,9 @@
 import type { EntityManager } from "typeorm"
-import { GENERIC_WEBHOOK_QUEUE, GenericWebhookQueueModule } from "@modules/queues/generic-webhook"
-import type { GenericWebhookPayload } from "@modules/queues/generic-webhook"
+import {
+    GENERIC_WEBHOOK_QUEUE,
+    GenericWebhookQueueModule,
+    type GenericWebhookPayload,
+} from "@modules/queues/generic-webhook"
 import type { LiteWorld } from "./lite-world.service"
 import { QUEUE_MODULES } from "./test-capabilities.options"
 import { deliveryPublications } from "./proof-database.service"

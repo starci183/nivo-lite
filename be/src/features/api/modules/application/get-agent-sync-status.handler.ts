@@ -2,8 +2,7 @@ import { QueryHandler } from "@nestjs/cqrs"
 import { ModuleInstallService } from "@modules/domain/modules"
 import type { AgentSyncStatus } from "@modules/domain/module-installations"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetAgentSyncStatusQuery } from "./get-agent-sync-status.query"
 
 @QueryHandler(GetAgentSyncStatusQuery)

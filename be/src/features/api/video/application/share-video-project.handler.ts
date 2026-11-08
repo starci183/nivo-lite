@@ -1,10 +1,8 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { VideoSharingService } from "@modules/domain/video"
+import { VideoSharingService, type VideoShareResult } from "@modules/domain/video"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { ShareVideoProjectCommand } from "./share-video-project.command"
-import type { VideoShareResult } from "@modules/domain/video"
 
 @CommandHandler(ShareVideoProjectCommand)
 /** Executes shareVideoProject through the manager checked capability. */

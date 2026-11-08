@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ZaloDeliveryPolicy, ZaloInboxService } from "@modules/domain/zalo-inbox"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The fenced step that resolves a committed zalo receipt. */

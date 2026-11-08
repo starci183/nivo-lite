@@ -1,15 +1,20 @@
-import type { PublicApiOutboxState, PublicApiInboxState, PublicApiSourceState } from "./public-api-database.service"
+import {
+    type PublicApiOutboxState,
+    type PublicApiInboxState,
+    type PublicApiSourceState,
+    apiInbox,
+    apiOutbox,
+    apiSource,
+} from "./public-api-database.service"
 import assert from "node:assert/strict"
 import { ProcessPublicApiQueueModule } from "@features/jobs/process-public-api"
 import { ModulesService } from "@modules/domain/modules"
 import { PUBLIC_API_QUEUE } from "@modules/queues/public-api"
 import type { PublicApiIdentity } from "../fixtures/builders/public-api.builder"
-import { apiInbox, apiOutbox, apiSource } from "./public-api-database.service"
 import type { LiteWorld } from "./lite-world.service"
 import { PublicApiProofAccess } from "./public-api-capabilities.options"
 import { openPublicApiProof } from "./public-api-proof.service"
-import { registerPublicApiProcessors } from "./public-api-registration.service"
-import type { RegisteredPublicApi } from "./public-api-registration.service"
+import { registerPublicApiProcessors, type RegisteredPublicApi } from "./public-api-registration.service"
 
 const fixture = async (world: LiteWorld): Promise<PublicApiIdentity & { readonly authorization: string }> => {
     const identity = {

@@ -1,7 +1,6 @@
-import type { QueueOutbox } from "@modules/platform/queue"
+import { type QueueOutbox, QUEUE_OUTBOX } from "@modules/platform/queue"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import assert from "node:assert/strict"
-import { QUEUE_OUTBOX } from "@modules/platform/queue"
 import { CONTENT_TICK_QUEUE } from "@modules/queues/content-tick"
 import { queueBuilder } from "../../fixtures/builders/queue.builder"
 import { useTestWorld } from "../../world/use-test-world"

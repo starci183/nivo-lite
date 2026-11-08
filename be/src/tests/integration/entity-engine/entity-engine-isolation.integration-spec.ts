@@ -1,6 +1,9 @@
 import { eachInOrder } from "@modules/platform/primitives"
-import { engineTenantIds, persistEngineTenants } from "../../fixtures/builders/entity-engine-tenants.builder"
-import type { EngineTenants } from "../../fixtures/builders/entity-engine-tenants.builder"
+import {
+    engineTenantIds,
+    persistEngineTenants,
+    type EngineTenants,
+} from "../../fixtures/builders/entity-engine-tenants.builder"
 import {
     BECOME_BACKEND,
     BECOME_POSTGRES,

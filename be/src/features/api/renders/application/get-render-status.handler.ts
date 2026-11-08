@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { VideoRenderStatusService } from "@modules/domain/video-renders"
-import type { RenderStatus } from "@modules/domain/video-renders"
+import { VideoRenderStatusService, type RenderStatus } from "@modules/domain/video-renders"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { GetRenderStatusQuery } from "./get-render-status.query"
 
 @QueryHandler(GetRenderStatusQuery)

@@ -1,5 +1,4 @@
-import { createServer } from "node:http"
-import type { IncomingMessage, ServerResponse } from "node:http"
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http"
 import { parseJsonText } from "@modules/platform/primitives"
 import { allowingLoopback } from "./loopback-mcp.adapter"
 

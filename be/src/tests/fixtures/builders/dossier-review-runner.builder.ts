@@ -1,6 +1,5 @@
-import type { ReasonedFinding, ReasonedReview } from "@modules/domain/dossier-review"
+import { type ReasonedFinding, type ReasonedReview, dossierReviewEntities } from "@modules/domain/dossier-review"
 import { builder } from "@starci/jest-preset"
-import { dossierReviewEntities } from "@modules/domain/dossier-review"
 
 const DossierReviewRunEntity: (typeof dossierReviewEntities)[0] = dossierReviewEntities[0]
 const DossierFindingEntity: (typeof dossierReviewEntities)[1] = dossierReviewEntities[1]

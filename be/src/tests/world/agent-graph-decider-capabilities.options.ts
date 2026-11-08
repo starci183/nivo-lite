@@ -1,8 +1,12 @@
-import { Injectable, Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
-import { AgentGraphsModule } from "@modules/domain/agent-graphs"
+import { Injectable, Module, type DynamicModule } from "@nestjs/common"
+import {
+    AgentGraphsModule,
+    type FactSpec,
+    type FactSubject,
+    type FactValues,
+    type GraphFactReader,
+} from "@modules/domain/agent-graphs"
 import { ProposalsProofModule } from "./agent-graph-proposals-proof.module"
-import type { FactSpec, FactSubject, FactValues, GraphFactReader } from "@modules/domain/agent-graphs"
 import { EventsModule } from "@modules/domain/events"
 import { StaffModule } from "@modules/domain/staff"
 import { WorkspaceMembersModule } from "@modules/domain/workspace-members"

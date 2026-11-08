@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { GenericWebhookJobService } from "@modules/domain/agent-inbound"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 
 @Injectable()
 /** The one effect of the job: the event the job names is handed to the door that wakes the agents. */

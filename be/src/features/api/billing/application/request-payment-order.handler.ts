@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { PaymentOrderRequestsService } from "@modules/domain/payment-order-requests"
-import type { QueuedPaymentOrderRequest } from "@modules/domain/payment-order-requests"
+import { PaymentOrderRequestsService, type QueuedPaymentOrderRequest } from "@modules/domain/payment-order-requests"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RequestPaymentOrderCommand } from "./request-payment-order.command"
 
 @CommandHandler(RequestPaymentOrderCommand)

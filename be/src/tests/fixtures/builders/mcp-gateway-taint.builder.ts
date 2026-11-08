@@ -1,13 +1,13 @@
-import type {
-    GatewayCaller,
-    McpGatewayService,
-    NativeAdapter,
-    NativeConnectorManifest,
-    GatewayCallResult,
+import {
+    type GatewayCaller,
+    type McpGatewayService,
+    type NativeAdapter,
+    type NativeConnectorManifest,
+    type GatewayCallResult,
+    SEPAY_MANIFEST,
 } from "@modules/domain/mcp-gateway"
 import type { FakeClock, MockOf } from "@starci/jest-preset"
 import { eachInOrder } from "@modules/platform/primitives"
-import { SEPAY_MANIFEST } from "@modules/domain/mcp-gateway"
 import type { McpRemote } from "@modules/integrations/mcp"
 import { GATEWAY_CALLER } from "./mcp-gateway.builder"
 

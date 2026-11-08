@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { ImapWizardService } from "@modules/domain/data-hub"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SaveImapConnectionCommand } from "./save-imap-connection.command"
 
 @CommandHandler(SaveImapConnectionCommand)

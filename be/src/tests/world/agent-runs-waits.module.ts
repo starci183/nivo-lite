@@ -1,13 +1,12 @@
-import { Injectable, Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
-import { AgentRunHandlersService } from "@modules/domain/agent-runs"
-import type {
-    AgentStepHandler,
-    StepAnswer,
-    StepDecision,
-    StepJson,
-    StepSpec,
-    StepView,
+import { Injectable, Module, type DynamicModule } from "@nestjs/common"
+import {
+    AgentRunHandlersService,
+    type AgentStepHandler,
+    type StepAnswer,
+    type StepDecision,
+    type StepJson,
+    type StepSpec,
+    type StepView,
 } from "@modules/domain/agent-runs"
 
 @Injectable()

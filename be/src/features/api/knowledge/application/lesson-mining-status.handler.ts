@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { BrainPageService } from "@modules/domain/brain"
-import type { LessonMiningState } from "@modules/domain/brain"
+import { BrainPageService, type LessonMiningState } from "@modules/domain/brain"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { LessonMiningStatusQuery } from "./lesson-mining-status.query"
 
 @QueryHandler(LessonMiningStatusQuery)

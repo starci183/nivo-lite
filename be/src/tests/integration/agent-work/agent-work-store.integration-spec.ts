@@ -8,8 +8,7 @@ import { AgentWakeService } from "../../../modules/domain/agent-work/agent-wake.
 import { AgentWorkSettingsService } from "../../../modules/domain/agent-work/agent-work-settings.service"
 import type { AgentWake } from "../../../modules/domain/agent-work/agent-work.contracts"
 import { agentWakeOf } from "../../fixtures/builders/agent-work.builder"
-import { persistOfficeRows } from "../../fixtures/builders/office-chain.builder"
-import type { OfficeIdentity } from "../../fixtures/builders/office-chain.builder"
+import { persistOfficeRows, type OfficeIdentity } from "../../fixtures/builders/office-chain.builder"
 import { AGENT_WORK_MODULES, ScriptedAgentWork } from "../../world/agent-work-capabilities.options"
 import {
     drainJobsOf,
@@ -22,7 +21,6 @@ import {
     wakesOfFact,
 } from "../../world/agent-work-database.service"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
-import { testWorldFailure } from "../../world/test-world-failure.policy"
 import { ageWake, flowBurstOf, stampBurst } from "../../world/agent-work-burst.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { useTestWorld } from "../../world/use-test-world"
@@ -227,9 +225,13 @@ describe("agent-work/fence: a lost lease and a poison wake", () => {
         const next = wakeOf("poison-next")
         scripted().script = {
             run: (turn) =>
-                turn.eventKey === poison.eventKey
-                    ? Promise.reject(testWorldFailure(TestWorldErrorCode.ProviderDown))
-                    : Promise.resolve({ kind: "proposal", proposal: { reply: "ok" }, usage: null }),
+                new Promise((resolve, reject) => {
+                    if (turn.eventKey === poison.eventKey) {
+                        reject(new TestWorldError({ code: TestWorldErrorCode.ProviderDown }))
+                    } else {
+                        resolve({ kind: "proposal", proposal: { reply: "ok" }, usage: null })
+                    }
+                }),
         }
         await post(poison)
         await drain()

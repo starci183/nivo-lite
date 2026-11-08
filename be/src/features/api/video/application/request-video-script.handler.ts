@@ -1,10 +1,8 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { VideoScriptingService } from "@modules/domain/video"
+import { VideoScriptingService, type VideoScriptRequest } from "@modules/domain/video"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { RequestVideoScriptCommand } from "./request-video-script.command"
-import type { VideoScriptRequest } from "@modules/domain/video"
 
 @CommandHandler(RequestVideoScriptCommand)
 /** Starts the script job through the workspace-checked domain use case. */

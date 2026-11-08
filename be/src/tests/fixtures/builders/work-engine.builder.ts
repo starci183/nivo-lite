@@ -8,24 +8,23 @@ import type {
     GraphCheck,
     AuthorityRule,
 } from "@modules/domain/authority-rules"
-import type {
-    WorkContext,
-    ActionEntry,
-    OutboundAccess,
-    OutboundAccessGate,
-    WorkPerformer,
-    Proposal,
-    WorkItem,
-    Performed,
-    Prepared,
-    ModuleCatalogService,
-    WorkEngineService,
-    WorkSpec,
+import {
+    type WorkContext,
+    type ActionEntry,
+    type OutboundAccess,
+    type OutboundAccessGate,
+    type WorkPerformer,
+    type Proposal,
+    type WorkItem,
+    type Performed,
+    type Prepared,
+    type ModuleCatalogService,
+    type WorkEngineService,
+    type WorkSpec,
+    DecisionsErrorCode,
 } from "@modules/domain/decisions"
-import { builder, mock } from "@starci/jest-preset"
-import type { MockOf } from "@starci/jest-preset"
+import { builder, mock, type MockOf } from "@starci/jest-preset"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { DecisionsErrorCode } from "@modules/domain/decisions"
 
 /** The workspace and actor shared by work-engine scenarios. */
 export const ctx: WorkContext = { workspaceId: "ws-1", actor: "An", locale: "en" }

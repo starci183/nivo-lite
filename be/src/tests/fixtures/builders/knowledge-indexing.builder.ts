@@ -1,6 +1,5 @@
 import { builder } from "@starci/jest-preset"
-import { passageHashOf } from "@modules/domain/knowledge-chunks"
-import type { EmbeddedChunk } from "@modules/domain/knowledge-chunks"
+import { passageHashOf, type EmbeddedChunk } from "@modules/domain/knowledge-chunks"
 import { StoredNote, type SourceRecord } from "@modules/domain/knowledge-sources"
 
 /** The workspace of the indexing specs. */

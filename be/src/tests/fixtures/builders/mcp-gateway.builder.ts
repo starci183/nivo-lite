@@ -11,8 +11,7 @@ import type {
     CapabilityRole,
 } from "@modules/domain/mcp-gateway"
 import { createHash } from "node:crypto"
-import { builder } from "@starci/jest-preset"
-import type { FakeClock, MockOf } from "@starci/jest-preset"
+import { builder, type FakeClock, type MockOf } from "@starci/jest-preset"
 import type { CallLogLine, McpCallLogService } from "@modules/domain/mcp-call-log"
 import type { McpConnectorRow, McpConnectorsService } from "@modules/domain/mcp-connectors"
 import type { McpToolGrantView, McpToolGrantsService } from "@modules/domain/mcp-tool-grants"

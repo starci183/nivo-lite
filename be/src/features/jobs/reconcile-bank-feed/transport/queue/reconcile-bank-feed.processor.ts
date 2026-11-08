@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { FencedProcessor } from "@modules/platform/jobs"
-import type { ClaimedJob } from "@modules/platform/jobs"
+import { FencedProcessor, type ClaimedJob } from "@modules/platform/jobs"
 import { BANK_FEED_POLL_QUEUE } from "@modules/queues/bank-feed-poll"
 import { ReconcileFeedStep } from "../../steps/reconcile-feed.step"
 

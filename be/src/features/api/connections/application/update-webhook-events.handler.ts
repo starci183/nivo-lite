@@ -1,8 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
 import { WebhookConnectionsService } from "@modules/domain/webhook-connections"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { UpdateWebhookEventsCommand } from "./update-webhook-events.command"
 
 @CommandHandler(UpdateWebhookEventsCommand)

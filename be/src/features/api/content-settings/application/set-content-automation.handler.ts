@@ -1,9 +1,7 @@
 import { CommandHandler } from "@nestjs/cqrs"
-import { ContentConfigurationService } from "@modules/domain/content-settings"
-import type { ContentBrandSettings } from "@modules/domain/content-settings"
+import { ContentConfigurationService, type ContentBrandSettings } from "@modules/domain/content-settings"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { SetContentAutomationCommand } from "./set-content-automation.command"
 
 @CommandHandler(SetContentAutomationCommand)

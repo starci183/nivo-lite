@@ -1,8 +1,12 @@
 import assert from "node:assert/strict"
-import { JOB_CLAIMS, JobRunnerService } from "@modules/platform/jobs"
-import type { ClaimedJob, FencedProcessor, JobClaims } from "@modules/platform/jobs"
-import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import type { QueueOutbox } from "@modules/platform/queue"
+import {
+    JOB_CLAIMS,
+    JobRunnerService,
+    type ClaimedJob,
+    type FencedProcessor,
+    type JobClaims,
+} from "@modules/platform/jobs"
+import { QUEUE_OUTBOX, type QueueOutbox } from "@modules/platform/queue"
 import { jobSnapshot } from "../../world/proof-database.service"
 import { worldIds } from "../../world/lite-world.service"
 import { redisJobsModules } from "../../world/redis-capabilities.options"

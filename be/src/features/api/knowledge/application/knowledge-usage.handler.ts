@@ -1,9 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
-import { SourceQuotaService } from "@modules/domain/knowledge-sources"
-import type { KnowledgeUsage } from "@modules/domain/knowledge-sources"
+import { SourceQuotaService, type KnowledgeUsage } from "@modules/domain/knowledge-sources"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { KnowledgeUsageQuery } from "./knowledge-usage.query"
 
 @QueryHandler(KnowledgeUsageQuery)

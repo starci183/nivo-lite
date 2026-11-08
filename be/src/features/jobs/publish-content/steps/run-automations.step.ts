@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { ContentService } from "@modules/domain/content"
-import { InjectJobClaims } from "@modules/platform/jobs"
-import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { InjectJobClaims, type ClaimedJob, type JobClaims, type JobStep } from "@modules/platform/jobs"
 import { contentTickPayloadOf } from "@modules/queues/content-tick"
 
 @Injectable()
