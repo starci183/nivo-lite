@@ -82,7 +82,7 @@ const build = async (scenario: Scenario = {}) => {
     workspaces.list.mockResolvedValue(scenario.workspaces ?? [{ id: "ws-1", name: "NIVO" }])
     workspaces.ownerIdOf.mockResolvedValue(scenario.owner === undefined ? "owner-1" : scenario.owner)
     const modules = mock<ModulesService>()
-    modules.find.mockResolvedValue(MODULE)
+    modules.findByKey.mockResolvedValue(MODULE)
     modules.sync.mockResolvedValue({ modules: 1, actions: 1, staleModules: [], staleActions: [] })
     const installations = mock<InstallationRecordsService>()
     const held = [...(scenario.held ?? [record()])]
@@ -378,7 +378,7 @@ describe("GraphSeedService > connection assignment", () => {
 
     const asModule = async (key: string, scenario: Scenario = {}) => {
         const built = await build({ held: [record({ moduleKey: key })], ...scenario })
-        built.modules.find.mockResolvedValue(moduleOf(key))
+        built.modules.findByKey.mockResolvedValue(moduleOf(key))
         const statuses: ProfileStatuses = { [key]: "live" }
         built.activation.activate.mockResolvedValue(statuses)
         const text = `${JSON.stringify({ documents: [{ path: `data/graphs/${key}.json`, document: { ...SPEC, moduleKey: key } }] })}

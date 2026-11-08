@@ -189,7 +189,7 @@ export class SetupCardsService {
         const installation =
             session === null ? null : await this.installations.find(workspaceId, session.installationId)
         if (installation === null) throw new ModulesError({ code: ModulesErrorCode.InstallationNotFound })
-        const module = await this.modules.find(installation.moduleKey)
+        const module = await this.modules.findByKey(installation.moduleKey)
         const close = async (
             status: "applied" | "rejected",
             payload: FactCardPayload | RuleCardPayload | BranchCardPayload,

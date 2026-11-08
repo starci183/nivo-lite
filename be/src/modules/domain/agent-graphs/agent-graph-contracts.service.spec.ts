@@ -49,7 +49,7 @@ const build = async (state: OptionalGraphState, installed = true) => {
         findById: jest.fn().mockResolvedValue(installed ? { id: "inst-1", moduleKey: "chatbot" } : null),
     })
     const modules = mock<ModulesService>({
-        find: jest.fn().mockResolvedValue({ authorityActions: CATALOG_ACTIONS }),
+        findByKey: jest.fn().mockResolvedValue({ authorityActions: CATALOG_ACTIONS }),
     })
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
     const logger = mock<Logger>()

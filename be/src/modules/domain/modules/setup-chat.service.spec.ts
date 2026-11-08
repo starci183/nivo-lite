@@ -78,7 +78,7 @@ const build = async () => {
         status: "active",
     })
     const modules = mock<ModulesService>()
-    modules.find.mockResolvedValue(ACCOUNTING_MODULE)
+    modules.findByKey.mockResolvedValue(ACCOUNTING_MODULE)
     const agents = mock<AgentsService>()
     const events = mock<EventsService>()
     const sync = mock<InstallationChangesService>()

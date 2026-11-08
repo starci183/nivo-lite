@@ -91,7 +91,7 @@ export class SetupTurnService {
         const { session, message, chat, at } = open
         const installation = await this.installations.find(job.workspaceId, session.installationId)
         if (installation === null) return
-        const module = await this.modules.find(installation.moduleKey)
+        const module = await this.modules.findByKey(installation.moduleKey)
         const onRecord = await this.onRecordOf(job.workspaceId, module.key, installation, message.body)
         const input = {
             module,

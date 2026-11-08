@@ -54,7 +54,7 @@ export class ModulesService {
     }
 
     /** One module of the catalogue by key; an unknown key is a typed not-found result. */
-    find(key: string): Promise<ModuleDefinition> {
+    findByKey(key: string): Promise<ModuleDefinition> {
         const found = this.options.catalog.find((module) => module.key === key)
         return found === undefined
             ? Promise.reject(new ModulesError({ code: ModulesErrorCode.NotFound, params: { key } }))

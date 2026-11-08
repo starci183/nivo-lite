@@ -32,7 +32,7 @@ export class ModuleReadinessService {
 
     /** The required roles of a module that the workspace cannot play now, each with the connectors that could play it. */
     async needsOf(workspaceId: string, moduleKey: string): Promise<ReadonlyArray<ConnectionNeed>> {
-        const module = await this.catalog.find(moduleKey)
+        const module = await this.catalog.findByKey(moduleKey)
         const required = module.requires.roles?.requires ?? []
         if (required.length === 0) return []
         const readiness = await this.gateway.readiness(workspaceId, required)
@@ -48,7 +48,7 @@ export class ModuleReadinessService {
             this.versions.numbersOf(record.activeContextVersionId === null ? [] : [record.activeContextVersionId]),
             this.sessions.latest(record.id),
         ])
-        const module = await this.catalog.find(moduleKey)
+        const module = await this.catalog.findByKey(moduleKey)
         const setupProgress = setupProgressOf(module, session?.gateEvidence ?? {})
         return {
             ...record,

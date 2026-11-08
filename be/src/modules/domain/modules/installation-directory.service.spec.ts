@@ -128,7 +128,7 @@ describe("InstallationDirectoryService > contextVersionOf", () => {
         const { service, versions, installations, catalog } = await build()
         versions.find.mockResolvedValue(versionOf())
         installations.findById.mockResolvedValue(recordOf())
-        catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
+        catalog.findByKey.mockResolvedValue(ACCOUNTING_MODULE)
 
         await expect(service.contextVersionOf("version-1")).resolves.toEqual({
             version: 3,
@@ -137,7 +137,7 @@ describe("InstallationDirectoryService > contextVersionOf", () => {
             facts: ["Open 7 to 21", "VAT 8 percent"],
             toneEvidence: "Warm and short",
         })
-        expect(catalog.find).toHaveBeenCalledWith("accounting")
+        expect(catalog.findByKey).toHaveBeenCalledWith("accounting")
     })
 
     it("keeps empty confirmed evidence and uses catalog order rather than snapshot insertion order", async () => {
@@ -157,7 +157,7 @@ describe("InstallationDirectoryService > contextVersionOf", () => {
             }),
         )
         installations.findById.mockResolvedValue(recordOf())
-        catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
+        catalog.findByKey.mockResolvedValue(ACCOUNTING_MODULE)
 
         await expect(service.contextVersionOf("version-1")).resolves.toEqual({
             version: 3,
@@ -191,7 +191,7 @@ describe("InstallationDirectoryService > contextVersionOf", () => {
             else Object.defineProperty(scope, "evidence", { value: evidence })
             versions.find.mockResolvedValue(version)
             installations.findById.mockResolvedValue(recordOf())
-            catalog.find.mockResolvedValue(ACCOUNTING_MODULE)
+            catalog.findByKey.mockResolvedValue(ACCOUNTING_MODULE)
 
             await expect(service.contextVersionOf("version-1")).resolves.toEqual({
                 version: 3,
@@ -219,6 +219,6 @@ describe("InstallationDirectoryService > contextVersionOf", () => {
             facts: [],
             toneEvidence: "",
         })
-        expect(catalog.find).not.toHaveBeenCalled()
+        expect(catalog.findByKey).not.toHaveBeenCalled()
     })
 })

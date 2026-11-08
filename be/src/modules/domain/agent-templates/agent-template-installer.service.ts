@@ -112,7 +112,7 @@ export class AgentTemplateInstallerService {
                 params: { count: resolved.problems.length },
             })
         }
-        const module = await this.modules.find(pkg.baseModule)
+        const module = await this.modules.findByKey(pkg.baseModule)
         const present = await this.installations.firstOfModule(request.workspaceId, module.key)
         if (present !== null && !module.multiInstance) {
             throw new AgentTemplatesError({ code: AgentTemplatesErrorCode.BaseAgentExists })

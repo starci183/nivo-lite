@@ -133,7 +133,7 @@ export class SetupChatService {
         const member = await this.members.require(principalId, workspaceId, GOVERNORS)
         const session = await this.draftOf(workspaceId, sessionId)
         const installation = await this.installationOf(workspaceId, session.installationId)
-        const module = await this.modules.find(installation.moduleKey)
+        const module = await this.modules.findByKey(installation.moduleKey)
         if (!module.gates.some((gate) => gate.key === gateKey)) {
             throw new ModulesError({ code: ModulesErrorCode.GateUnknown })
         }
@@ -162,7 +162,7 @@ export class SetupChatService {
         const member = await this.members.require(principalId, workspaceId, GOVERNORS)
         const installation = await this.installationOf(workspaceId, installationId)
         if (installation.status === "removed") throw new ModulesError({ code: ModulesErrorCode.InstallationRemoved })
-        const module = await this.modules.find(installation.moduleKey)
+        const module = await this.modules.findByKey(installation.moduleKey)
         const draft = await this.openDraft(installation, locale)
         if (!allGatesConfirmed(module, draft.gateEvidence)) {
             throw new ModulesError({ code: ModulesErrorCode.GatesUnconfirmed })
@@ -249,7 +249,7 @@ export class SetupChatService {
         session: SetupSessionRecord,
         locale: Locale,
     ): Promise<void> {
-        const module = await this.modules.find(installation.moduleKey)
+        const module = await this.modules.findByKey(installation.moduleKey)
         const typeName = module.name[locale]
         await this.messages.post({
             workspaceId: installation.workspaceId,

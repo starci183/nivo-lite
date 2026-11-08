@@ -33,7 +33,7 @@ const build = async () => {
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue(MEMBER)
     const catalog = mock<ModulesService>()
-    catalog.find.mockResolvedValue(CHATBOT_MODULE)
+    catalog.findByKey.mockResolvedValue(CHATBOT_MODULE)
     const agents = mock<AgentsService>()
     const identity = mock<AgentIdentityService>()
     const rules = mock<AuthorityRulesService>()
@@ -93,7 +93,7 @@ describe("ModuleInstallService > install", () => {
         ],
     ] as const)("refuses %s", async (_case, module, patch, code) => {
         const { service, catalog } = await build()
-        catalog.find.mockResolvedValue(module)
+        catalog.findByKey.mockResolvedValue(module)
         await expect(service.install("u1", requestOf(patch))).rejects.toMatchObject({ code })
     })
 

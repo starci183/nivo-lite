@@ -61,7 +61,7 @@ export class AgentGraphContextService {
     async contextOf(scope: ContextScope, graph: GraphDocument): Promise<GraphContext> {
         const actions = graph.nodes.flatMap((node) => (node.decide === undefined ? [] : [node.decide.intent]))
         const [catalog, grants, directory] = await Promise.all([
-            this.modules.find(String(scope.moduleKey)),
+            this.modules.findByKey(scope.moduleKey),
             this.gateway.grantsOf(scope.workspaceId, scope.agentId),
             this.members.directory(scope.workspaceId),
         ])

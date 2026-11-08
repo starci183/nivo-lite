@@ -17,7 +17,7 @@ const build = async (installed: ReadonlyArray<InstallationRecord>) => {
     const installations = mock<InstallationRecordsService>()
     installations.list.mockResolvedValue([...installed])
     const catalog = mock<ModulesService>()
-    catalog.find.mockImplementation((key) =>
+    catalog.findByKey.mockImplementation((key) =>
         Promise.resolve(
             [CHATBOT_MODULE, SALES_MODULE, ACCOUNTING_MODULE].find((module) => module.key === key) ?? SALES_MODULE,
         ),

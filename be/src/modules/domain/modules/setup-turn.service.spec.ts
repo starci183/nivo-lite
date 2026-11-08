@@ -142,7 +142,7 @@ const build = async () => {
     messages.find.mockResolvedValue(lineOf())
     messages.ofSession.mockResolvedValue([lineOf({ id: "m-1", body: "Hi" }), lineOf()])
     const modules = mock<ModulesService>()
-    modules.find.mockResolvedValue(CHATBOT_MODULE)
+    modules.findByKey.mockResolvedValue(CHATBOT_MODULE)
     const cards = mock<SetupCardsService>()
     cards.openGapsOf.mockResolvedValue([])
     const facts = mock<BrainFactsService>()
@@ -358,7 +358,7 @@ describe("SetupTurnService facts on record", () => {
 describe("SetupTurnService conflict notes", () => {
     it("appends one note when a write differs from the record and the reply does not name it", async () => {
         const { service, facts, generations, messages, catalog, modules } = await build()
-        modules.find.mockResolvedValue(WRITES_MODULE)
+        modules.findByKey.mockResolvedValue(WRITES_MODULE)
         facts.forView.mockResolvedValue([factOf()])
         generations.run.mockResolvedValue({
             ok: true,
@@ -380,7 +380,7 @@ describe("SetupTurnService conflict notes", () => {
 
     it("appends nothing when the reply names the current value", async () => {
         const { service, facts, generations, messages, modules } = await build()
-        modules.find.mockResolvedValue(WRITES_MODULE)
+        modules.findByKey.mockResolvedValue(WRITES_MODULE)
         facts.forView.mockResolvedValue([factOf()])
         generations.run.mockResolvedValue({
             ok: true,
@@ -397,7 +397,7 @@ describe("SetupTurnService conflict notes", () => {
 
     it("appends at most two notes", async () => {
         const { service, facts, generations, messages, modules } = await build()
-        modules.find.mockResolvedValue(WRITES_MODULE)
+        modules.findByKey.mockResolvedValue(WRITES_MODULE)
         facts.forView.mockResolvedValue([
             factOf(),
             factOf({ id: "f-2", attribute: "phone", attributeLabel: "Phone", value: "111" }),

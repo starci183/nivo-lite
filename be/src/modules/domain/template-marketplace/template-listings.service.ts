@@ -209,7 +209,7 @@ export class TemplateListingsService {
     }
 
     private async checksOf(pkg: AgentTemplatePackage): Promise<ReadonlyArray<ListingCheck>> {
-        const module = await this.modules.find(pkg.baseModule)
+        const module = await this.modules.findByKey(pkg.baseModule)
         const allowed = new Set(
             ["brain", ...module.connectionProviders].flatMap((provider) => {
                 const kind = KINDS_OF_PROVIDER[provider]

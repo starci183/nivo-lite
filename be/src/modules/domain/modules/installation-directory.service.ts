@@ -68,7 +68,7 @@ export class InstallationDirectoryService implements InstallationDirectory {
         const version = await this.versions.find(versionId)
         if (version === null) return null
         const installation = await this.installations.findById(version.installationId)
-        const module = installation === null ? null : await this.catalog.find(installation.moduleKey)
+        const module = installation === null ? null : await this.catalog.findByKey(installation.moduleKey)
         const { gates, facts, summary } = version.snapshot
         return {
             version: version.version,

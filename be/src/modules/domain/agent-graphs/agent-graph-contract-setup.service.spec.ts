@@ -123,7 +123,7 @@ const build = async (options: Options = {}) => {
         options.installed === false ? null : { id: "inst-1", moduleKey: "chatbot", isMulti: options.multi !== false }
     const graphs = mock<AgentGraphsService>({ stateOfInstallation: jest.fn().mockResolvedValue(state) })
     const installations = mock<InstallationRecordsService>({ findById: jest.fn().mockResolvedValue(installation) })
-    const modules = mock<ModulesService>({ find: jest.fn().mockResolvedValue({ authorityActions: ACTIONS }) })
+    const modules = mock<ModulesService>({ findByKey: jest.fn().mockResolvedValue({ authorityActions: ACTIONS }) })
     const facts = mock<BrainFactsService>({ forView: jest.fn().mockResolvedValue(options.records ?? [RECORD]) })
     const generations = mock<DirectGenerationService>({ run: jest.fn().mockResolvedValue(options.generation ?? MODEL) })
     const proposals = mock<AgentGraphProposalsService>({

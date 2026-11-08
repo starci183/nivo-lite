@@ -67,7 +67,7 @@ export class AgentGraphContractSetupService {
     private async raiseContracts(state: GraphState, active: NonNullable<GraphState["active"]>): Promise<number> {
         const installation = await this.installations.findById(state.installationId)
         if (installation === null) return 0
-        const catalog = await this.modules.find(installation.moduleKey)
+        const catalog = await this.modules.findByKey(installation.moduleKey)
         const actions = catalog.authorityActions.map((entry) => ({
             action: entry.action,
             amountLimit: entry.amountLimit,

@@ -71,11 +71,11 @@ describe("ModulesService > find", () => {
     it("answers the module with the key", async () => {
         const sales = MODULE_CATALOG.find((module) => module.key === "sales")
 
-        await expect((await build()).service.find("sales")).resolves.toBe(sales)
+        await expect((await build()).service.findByKey("sales")).resolves.toBe(sales)
     })
 
     it("answers a typed not-found result for a key the catalogue does not list", async () => {
-        await expect((await build()).service.find("nope")).rejects.toMatchObject({
+        await expect((await build()).service.findByKey("nope")).rejects.toMatchObject({
             code: ModulesErrorCode.NotFound,
             params: { key: "nope" },
         })

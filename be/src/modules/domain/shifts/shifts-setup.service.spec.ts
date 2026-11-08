@@ -218,7 +218,12 @@ describe("ShiftsSetupService staff without a staff row", () => {
         const em = mockEntityManager()
         const [update] = queueQueryBuilders(em, [saved("profile-1")])
         const { setup } = await build(em)
-        const request = { id: "profile-1", name: "Lan", positionIds: ["position-1"], staffRowId }
+        const request = {
+            id: "profile-1",
+            name: "Lan",
+            positionIds: ["position-1"],
+            ...(staffRowId === undefined ? {} : { staffRowId }),
+        }
         await expect(setup.saveStaff("user-1", "ws-1", request)).resolves.toEqual({ id: "profile-1" })
         expect(update?.callsOf("set")[0]).toEqual([expect.objectContaining({ staffId: null })])
     })

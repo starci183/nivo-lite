@@ -63,7 +63,7 @@ const build = async (options: Options = {}) => {
     })
     const likeness = mock<TemplateLikenessService>({ covers: jest.fn().mockResolvedValue(options.consented ?? true) })
     const modules = mock<ModulesService>({
-        find: jest.fn().mockResolvedValue({
+        findByKey: jest.fn().mockResolvedValue({
             key: "accounting",
             connectionProviders: ["sepay", "dossier", "unknown"],
             authorityActions: [{ action: "pay_supplier", maxMode: null }],

@@ -20,12 +20,12 @@ export class ModuleTagGrantsService {
 
     /** Grants the rights between the agent of `moduleKey` and the agents already installed in the workspace. */
     async grantFor(workspaceId: string, moduleKey: string, agentId: string): Promise<void> {
-        const module = await this.catalog.find(moduleKey)
+        const module = await this.catalog.findByKey(moduleKey)
         const peers = (await this.installations.list(workspaceId)).flatMap((record) =>
             record.agentId === null ? [] : [{ agentId: record.agentId, moduleKey: record.moduleKey }],
         )
         const peerModules = await Promise.all(
-            [...new Set(peers.map((peer) => peer.moduleKey))].map(async (key) => await this.catalog.find(key)),
+            [...new Set(peers.map((peer) => peer.moduleKey))].map(async (key) => await this.catalog.findByKey(key)),
         )
         const tagsOf = (key: string): ReadonlyArray<string> =>
             peerModules.filter((peer) => peer.key === key).flatMap((peer) => peer.tags ?? [])

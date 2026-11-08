@@ -59,7 +59,9 @@ const build = async () => {
     installations.find.mockResolvedValue(recordOf())
     installations.settleConnection.mockResolvedValue(null)
     const catalog = mock<ModulesService>()
-    catalog.find.mockImplementation((key) => Promise.resolve(key === "accounting" ? ACCOUNTING_MODULE : CHATBOT_MODULE))
+    catalog.findByKey.mockImplementation((key) =>
+        Promise.resolve(key === "accounting" ? ACCOUNTING_MODULE : CHATBOT_MODULE),
+    )
     const gateway = mock<McpGatewayService>()
     gateway.readiness.mockResolvedValue(readinessOf())
     const agents = mock<AgentDirectoryService>()
@@ -113,7 +115,7 @@ describe("ModuleReadinessService.needsOf", () => {
 
     it("needs nothing for a module that declares no roles", async () => {
         const { readiness, catalog, gateway } = await build()
-        catalog.find.mockResolvedValue({ ...CHATBOT_MODULE, requires: { capabilities: [], connections: [] } })
+        catalog.findByKey.mockResolvedValue({ ...CHATBOT_MODULE, requires: { capabilities: [], connections: [] } })
 
         await expect(readiness.needsOf("ws-1", "chatbot")).resolves.toEqual([])
         expect(gateway.readiness).not.toHaveBeenCalled()

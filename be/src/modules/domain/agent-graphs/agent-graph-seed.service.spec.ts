@@ -91,7 +91,7 @@ const build = async (
         ),
     })
     const modules = mock<ModulesService>({
-        find: jest.fn().mockResolvedValue({
+        findByKey: jest.fn().mockResolvedValue({
             ...MODULE,
             authorityActions: [{ ...MODULE.authorityActions[0], action: options.action ?? "pay_supplier" }],
         }),

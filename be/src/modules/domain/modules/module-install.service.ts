@@ -96,7 +96,7 @@ export class ModuleInstallService {
      */
     async install(principalId: string, request: InstallRequest): Promise<InstallResult> {
         const member = await this.members.require(principalId, request.workspaceId, GOVERNORS)
-        const module = await this.catalog.find(request.moduleKey)
+        const module = await this.catalog.findByKey(request.moduleKey)
         const wanted = request.name === null ? null : cleanInstanceName(request.name)
         if (request.name !== null && wanted === null) {
             throw new ModulesError({ code: ModulesErrorCode.InstanceNameInvalid })

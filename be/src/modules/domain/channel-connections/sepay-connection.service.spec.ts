@@ -48,16 +48,18 @@ const build = async (connection: ConnectionRecord = feed()) => {
     connections.patch.mockResolvedValue(undefined)
     const manager = mockEntityManager()
     let answer: ReadonlyArray<unknown> = []
-    let failure: Outage | null = null
+    let failing = false
+    const rejected = jest.fn<Promise<never>, []>()
     const seen = answerByTable(manager, {
-        "": () => (failure === null ? answer : Promise.reject(failure)),
+        "": () => (failing ? rejected() : answer),
     })
     const rows = {
         set: (next: ReadonlyArray<unknown>) => {
             answer = next
         },
-        fail: (error: Outage) => {
-            failure = error
+        fail: (reason: unknown) => {
+            failing = true
+            rejected.mockRejectedValue(reason)
         },
     }
     const logger = mock<Logger>()

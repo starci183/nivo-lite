@@ -57,7 +57,7 @@ const build = async () => {
     })
     const modules = mock<ModulesService>()
     modules.catalog.mockResolvedValue({ categories: [], modules: [ACCOUNTING_MODULE] })
-    modules.find.mockResolvedValue(ACCOUNTING_MODULE)
+    modules.findByKey.mockResolvedValue(ACCOUNTING_MODULE)
     const facts = mock<BrainFactsService>()
     facts.byKey.mockResolvedValue([])
     facts.propose.mockResolvedValue({ fact: factOf(), outcome: "applied" })

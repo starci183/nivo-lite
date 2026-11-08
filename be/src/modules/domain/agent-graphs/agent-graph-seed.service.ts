@@ -164,7 +164,7 @@ export class AgentGraphSeedService {
         agentId: string,
         locale: Locale,
     ): Promise<GraphDocument> {
-        const module = await this.modules.find(moduleKey)
+        const module = await this.modules.findByKey(moduleKey)
         const templates = (await this.templates.listTemplates()).filter((template) => template.moduleKey === moduleKey)
         const rules = await Promise.all(
             module.authorityActions.map((action) => this.seedRuleOf(workspaceId, installationId, agentId, action)),

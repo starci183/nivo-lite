@@ -82,7 +82,7 @@ const build = async (options: { audience?: "customer" | "internal"; rule?: "none
         forAction: jest.fn().mockResolvedValue([grant("dinh", 20_000_000)]),
     })
     const modules = mock<ModulesService>({
-        find: jest.fn().mockResolvedValue({
+        findByKey: jest.fn().mockResolvedValue({
             audience: options.audience ?? "internal",
             authorityActions:
                 options.unlisted === true
@@ -118,7 +118,7 @@ describe("AgentGraphContextService.contextOf ceilings and facts", () => {
             { action: "pay_supplier", mode: "auto", limitVnd: 5_000_000, autoMax: 20_000_000, maxMode: "ask" },
         ])
         expect(rules.ownerRuleFor).toHaveBeenCalledWith(SCOPE, "pay_supplier", "agent-1")
-        expect(modules.find).toHaveBeenCalledWith("accounting")
+        expect(modules.findByKey).toHaveBeenCalledWith("accounting")
     })
 
     it("reads an action with no rule as one that never runs", async () => {

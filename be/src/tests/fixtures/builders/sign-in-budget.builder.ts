@@ -6,9 +6,8 @@ import { AUTH_ERROR_CODES, AuthError, type SignInBudget } from "@modules/integra
  * code, and `counted` admits, runs the check and clears the address only when the check passed.
  */
 export const behaveAsSignInBudget = (budget: MockOf<SignInBudget>, allowed: boolean): void => {
-    budget.admit.mockImplementation(() =>
-        allowed ? Promise.resolve() : Promise.reject(new AuthError(AUTH_ERROR_CODES.TooManyAttempts)),
-    )
+    if (allowed) budget.admit.mockResolvedValue(undefined)
+    else budget.admit.mockRejectedValue(new AuthError(AUTH_ERROR_CODES.TooManyAttempts))
     budget.clear.mockResolvedValue(undefined)
     budget.counted.mockImplementation(async (kind, address, check) => {
         await budget.admit(kind, address)

@@ -15,6 +15,6 @@ export class GetModuleHandler extends ICQRSHandler<GetModuleQuery, ModuleDefinit
     }
 
     protected override process(query: GetModuleQuery): Promise<ModuleDefinition> {
-        return this.modulesService.find(query.params.request.key)
+        return this.modulesService.findByKey(query.params.request.key)
     }
 }

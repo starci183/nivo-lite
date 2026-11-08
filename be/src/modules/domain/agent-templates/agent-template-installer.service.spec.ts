@@ -76,7 +76,7 @@ const build = async (options: Options = {}) => {
         idOf: jest.fn().mockResolvedValue("member-owner"),
     })
     const modules = mock<ModulesService>({
-        find: jest.fn().mockResolvedValue({ key: "accounting", multiInstance: false, ...options.module }),
+        findByKey: jest.fn().mockResolvedValue({ key: "accounting", multiInstance: false, ...options.module }),
     })
     const moduleInstall = mock<ModuleInstallService>({
         install: jest.fn().mockResolvedValue({ installationId: "inst-new", agentId: "agent-new", created: true }),

@@ -62,7 +62,7 @@ export class AgentGraphContractsService {
             return null
         const installation = await this.installations.findById(state.installationId)
         if (installation === null) return null
-        const catalog = await this.modules.find(installation.moduleKey)
+        const catalog = await this.modules.findByKey(installation.moduleKey)
         const actions = catalog.authorityActions.map((entry) => ({
             action: entry.action,
             amountLimit: entry.amountLimit,

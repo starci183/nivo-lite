@@ -86,7 +86,7 @@ export class GraphSeedService {
     /** Seeds one graph into its module's agent: the rights first, then the rules, the activation and the published graph. */
     private async seedGraph(seat: SeedSeat, spec: GraphSpec): Promise<void> {
         const { workspaceId, ownerId, installed } = seat
-        const module = await this.modules.find(spec.moduleKey)
+        const module = await this.modules.findByKey(spec.moduleKey)
         const { installation, agentId } = await this.seatOf(workspaceId, module)
         // Before the fast path: an agent seeded by an earlier run, or before tag rights existed, gets them on any rerun.
         await this.tagGrants.grantFor(workspaceId, module.key, agentId)
