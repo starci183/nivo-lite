@@ -1,5 +1,5 @@
-{"findings":[],"hash":"c864a56b9edb4cf8728489439454b5b274d9ed4b505d82c09716061a743d3791","path":"packages/plugin-registry/src/client/blocks.ts","step":"prettier"}
+{"findings":[],"hash":"76278b163fa4ff8cc855d0fc4a7923e024982be147d2acafaa626b048da6ebf9","path":"packages/plugin-registry/src/client/blocks.ts","step":"prettier"}
 {"findings":[],"hash":"df411796a2640be66fee3d60aa1d08f56121611cdcae4329b1c9471d3ead7281","path":"packages/plugin-registry/src/client/index.ts","step":"prettier"}
 {"findings":[],"hash":"bd1b8b94be3dd92ce11c78f866acad10f6f9d69f5e2288a797d80a8121e60d80","path":"packages/plugin-registry/src/index.ts","step":"prettier"}
 {"findings":[],"hash":"4975f066e8e9467cc0f27ba0251e926516192cb2afa40b6456a785f90d08a8e1","path":"packages/plugin-registry/src/installed.spec.ts","step":"prettier"}
-{"findings":[],"hash":"eda68ae0c17872bfe563de5ca980ffc26798307b66ab00a57184ede5768c6030","path":"packages/plugin-registry/src/installed.ts","step":"prettier"}
+{"findings":[],"hash":"417d4477408654727cc78bcb556e4a1b4bf3119bbf738889dec855ab528cac46","path":"packages/plugin-registry/src/installed.ts","step":"prettier"}

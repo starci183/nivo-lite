@@ -1,7 +1,7 @@
-{"findings":[],"hash":"5501215c650b944cbdf1bbbec289dbc0f1004c821d1825784e0a40f09e99c407","path":"be/apps/mcp/Dockerfile","step":"prettier"}
-{"findings":[],"hash":"f35751e1fbb9be9941b0d823b07fa18744980bc6da10d8548377a59cdedb9ec3","path":"be/apps/mcp/src/app.module.ts","step":"prettier"}
+{"findings":[],"hash":"6d1bcea783731a6277edd69ae837bffb495152e403afa330bf6551f0515d19fc","path":"be/apps/mcp/Dockerfile","step":"prettier"}
+{"findings":[],"hash":"2bb9c3f798537497aab3e55312e1ae3e78405a0cb93542a582d01e6dff507f80","path":"be/apps/mcp/src/app.module.ts","step":"prettier"}
 {"findings":[],"hash":"cdabd6c3a19de04abbc4dd3954560d40f3a0f28e734f9e3bec9090e7cc49a1d1","path":"be/apps/mcp/src/compose/knowledge.ts","step":"prettier"}
 {"findings":[],"hash":"0d36fb112989a0b93f789fc012cb63f58b4d8088bd58eab051978b338ecf0e62","path":"be/apps/mcp/src/compose/modules.ts","step":"prettier"}
 {"findings":[],"hash":"918b717b6ce6cbf51755bbb35c38df23861774e6484ad3070bd99b19f3030f86","path":"be/apps/mcp/src/main.ts","step":"prettier"}
-{"findings":[],"hash":"7b37ffabd342ce9f82941e0b6b0ec3bb8eaed787a2c4d4d60c4681ecd0b002b6","path":"be/apps/mcp/src/mcp.env.ts","step":"prettier"}
+{"findings":[],"hash":"83f8a3ec7d8d2aa5e486e1718d2f6a38aa6906d47b1da660e72a5a5d425ea746","path":"be/apps/mcp/src/mcp.env.ts","step":"prettier"}
 {"findings":[],"hash":"26585c2a5490482cbd0685086e51c9034274e93f2c4cf0429423450faf09ea0c","path":"be/apps/mcp/src/mcp.options.ts","step":"prettier"}

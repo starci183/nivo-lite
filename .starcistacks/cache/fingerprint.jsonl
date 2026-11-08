@@ -29,7 +29,7 @@
 {"name":"file:packages/plugin-registry/tsconfig.build.json","sha256":"44d4b0254dec07370f85674851dbf19c2dc0ed0c9260d93a0b65a03a4bed7ca9"}
 {"name":"file:packages/plugin-registry/tsconfig.json","sha256":"7c6305fa928ac1212c5fd25789aa6ee2fc47052734e17ad884a9367c93e3f6bc"}
 {"name":"file:sonar-project.properties","sha256":"7aba560e675d3996714a7945d344e102c8d4c40e6fead7104c5188525a8a25a0"}
-{"name":"hfs","sha256":"a108f5ce668d43f29c6edb73594f0fa5922a095bbec3e6178323de0ca5a9821e"}
+{"name":"hfs","sha256":"117ce2eac1a9c122ce526b084a7ba3760629d84501daccfe131c71b0f825ad49"}
 {"name":"lock:format","sha256":"275d51588fe77bd48bc71d50a0fee3ba59de74b5b462fb49d464a1569040b0ba"}
 {"name":"lock:lint","sha256":"a72808b75cc4b2976a6de4867ec9f0912ea5a9aa7aaa181d5603c286b86120aa"}
 {"name":"lock:test","sha256":"14de6775e9d57ab1212d22b7301c1354fa6798d0014d417a3d754fc8a808dd93"}
@@ -37,15 +37,15 @@
 {"name":"pkg:@starci/ai-router","sha256":"264936db522dc20b85d2bc1b30314cacac0e9e668a7d48fafbfe874cb090c993"}
 {"name":"pkg:@starci/auth","sha256":"8786bbaebfbeac9b41dc8c367893a60f19e1dbac3d616fbca63f6371ec4094ff"}
 {"name":"pkg:@starci/auth-oidc","sha256":"82193e29eca9ebd8bfe2a657ec48b5b07207d6fd647eeed75e72032a0d90d53c"}
-{"name":"pkg:@starci/eslint-canon-be","sha256":"34958e07fefcf0e18881f050d448de56734dfa8705f8cd19007b413a8dc98255"}
-{"name":"pkg:@starci/eslint-canon-fe","sha256":"f69b9ca53db803c0b1b37246663e10a65a72b0e72bf9472229305807c6a24bd0"}
+{"name":"pkg:@starci/eslint-canon-be","sha256":"dfd2c75c27d953e34639d7d244a6373ea1543042223396710350feb35d79ac76"}
+{"name":"pkg:@starci/eslint-canon-fe","sha256":"ecebb879d6dd7d49f0ea40a284e6f9b71cb33c52ff95308175b0faf01f611f0d"}
 {"name":"pkg:@starci/eslint-grammar-core","sha256":"14652967d8dbdc2ac7830a0589db715603c2f470c48df4753f72ae4a50c04147"}
 {"name":"pkg:@starci/eslint-grammar-offset-pop","sha256":"85eb9c6ae18fc532999a685ea34cb415fe23668933ecfa9852b6286f10219bb4"}
 {"name":"pkg:@starci/event-stream","sha256":"a0dc3cf5d708b5012bde8570991f9b97045a4ab3667f30cddb1b2f16cea3dbf6"}
 {"name":"pkg:@starci/grammar","sha256":"ec742301cf7bbb4080980c7af79cb1400d38e16d568d4dac71f951cb55d097db"}
 {"name":"pkg:@starci/heroicons","sha256":"451a7bfbcf899096b75166ef936da856ff220e78d8d65e3dae1132f9cfeadd60"}
-{"name":"pkg:@starci/hfs","sha256":"736194c446af1beccb47978b60c2702f8896c92db1fa53d3aae27c51fe4c021a"}
-{"name":"pkg:@starci/jest-preset","sha256":"dd4bc49aa1c552d531bdea3b1f4dcd9e9c59894dbab8bf66b3f091bb626802cb"}
+{"name":"pkg:@starci/hfs","sha256":"08fc65f6be352edc52afbd79aefc087db8e9bfe1cee52f556208f78a5199ea6e"}
+{"name":"pkg:@starci/jest-preset","sha256":"5024b8b97d0d882751852f7a30b725dee951e67fe89b38e602b958773da4dd77"}
 {"name":"pkg:@starci/mail","sha256":"4a83cfd40bd8228a5b6bde20883d24f60649cde9d802402a717f440ae91c07a1"}
 {"name":"pkg:@starci/nest-kit","sha256":"249d882c14813331e8fed7f8d0383ff273e1720696a160d02e4dfa20e05eb828"}
 {"name":"pkg:@starci/next-data","sha256":"a37bf997c9b3f6ec0ebbc9371ffff9f193c0fc5da78c7cf50a8909594cd784a0"}
@@ -62,5 +62,5 @@
 {"name":"shape:fe/packages/nivo-offer/package.json","sha256":"fb357e7cec585ba2618e8bddb8cb013bada17e037998bba914db5f46120e5145"}
 {"name":"shape:package.json","sha256":"d83e9b35c7297c97e9d04fada4e97965038195f71072146db1b6d1bf25ad3877"}
 {"name":"shape:packages/agent-sdk/package.json","sha256":"39facf8c22ef0e979944aa8bdf0bc9cd4b2719e8708f249b226561be1a2db8d8"}
-{"name":"shape:packages/blocks-core/package.json","sha256":"b0c2957b3cb99be0056a28f100e819e6b81dcb09a869b5c876ccda26aac8ea29"}
+{"name":"shape:packages/blocks-core/package.json","sha256":"7d34f1d7e50865e73aba5f44ba2118d2eaeb57559156267b18bc906b05a4061c"}
 {"name":"shape:packages/plugin-registry/package.json","sha256":"6ddb0945f013931575e52f9d9802f860ab0d7dfa1c9cf123bc0152967be5f168"}
