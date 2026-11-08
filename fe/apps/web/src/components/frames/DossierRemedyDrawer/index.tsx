@@ -36,14 +36,12 @@ interface DraftProps extends DossierRemedyDrawerProps {
 const Draft = (props: DraftProps) => {
     const view = props.props
     const isReadOnly = !view.canDecide
+    const noticeDescription = view.notice?.description === undefined ? {} : { description: view.notice.description }
+    const findingDescription = view.findingTitle === null ? {} : { description: view.findingTitle }
     return (
         <Stack gap="section">
             {view.notice === null ? null : (
-                <Alert
-                    tone={view.notice.tone}
-                    title={view.notice.title}
-                    {...(view.notice.description === undefined ? {} : { description: view.notice.description })}
-                />
+                <Alert tone={view.notice.tone} title={view.notice.title} {...noticeDescription} />
             )}
             <Text tone="muted">{view.note}</Text>
             <Form id={FORM_ID} label={view.title} isPending={view.isPending} onSubmit={props.on.approve}>
@@ -78,11 +76,7 @@ const Draft = (props: DraftProps) => {
                 </Section>
             )}
             {view.evidence.length === 0 ? null : (
-                <Section
-                    title={view.evidenceTitle}
-                    headingLevel={3}
-                    {...(view.findingTitle === null ? {} : { description: view.findingTitle })}
-                >
+                <Section title={view.evidenceTitle} headingLevel={3} {...findingDescription}>
                     <DossierStaticRows label={view.evidenceTitle} items={view.evidence} />
                 </Section>
             )}

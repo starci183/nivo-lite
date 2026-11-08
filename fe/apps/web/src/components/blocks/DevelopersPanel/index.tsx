@@ -42,7 +42,6 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
     const workspaceId = useWorkspaceId()
     return (
         <DevelopersPanelBase
-            children={props.children}
             props={{
                 access: isManager(member) ? { items: true } : { isForbidden: true },
                 webhooks: sortRows(webhooks).map((connection) => ({
@@ -82,6 +81,8 @@ export const DevelopersPanel = (props: DevelopersPanelProps) => {
                 add: () => overlays.openWizard("webhook"),
                 edit: (connectionId) => overlays.openWizard("webhook", connectionId),
             }}
-        />
+        >
+            {props.children}
+        </DevelopersPanelBase>
     )
 }

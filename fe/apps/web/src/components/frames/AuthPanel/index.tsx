@@ -14,20 +14,23 @@ interface AuthPanelProps {
 }
 
 /** The auth card: a heading, an optional line of text and the form or message below them. */
-export const AuthPanel = (props: AuthPanelProps) => (
-    <SurfaceCard ariaLabel={props.label}>
-        <Stack gap="region">
-            <Stack gap="inline">
-                <Heading level={props.level ?? 2} {...(props.isLoading === true ? { isLoading: true } : {})}>
-                    {props.title}
-                </Heading>
-                {props.text === undefined ? null : (
-                    <Text tone="muted" {...(props.isLoading === true ? { isLoading: true } : {})}>
-                        {props.text}
-                    </Text>
-                )}
+export const AuthPanel = (props: AuthPanelProps) => {
+    const loading = props.isLoading === true ? { isLoading: true } : {}
+    return (
+        <SurfaceCard ariaLabel={props.label}>
+            <Stack gap="region">
+                <Stack gap="inline">
+                    <Heading level={props.level ?? 2} {...loading}>
+                        {props.title}
+                    </Heading>
+                    {props.text === undefined ? null : (
+                        <Text tone="muted" {...loading}>
+                            {props.text}
+                        </Text>
+                    )}
+                </Stack>
+                {props.children}
             </Stack>
-            {props.children}
-        </Stack>
-    </SurfaceCard>
-)
+        </SurfaceCard>
+    )
+}

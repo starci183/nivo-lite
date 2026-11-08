@@ -39,7 +39,6 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
 
     return (
         <AgentProfileHeadBase
-            children={props.children}
             props={{
                 crumbLabel: t("crumbLabel"),
                 menu: {
@@ -53,7 +52,9 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
                         ? loadingHeadOf({ t, moduleName, agentId: props.agentId, workspaceId })
                         : profileHeadOf(agent, { t, moduleName, agentId: props.agentId, workspaceId }),
             }}
-        />
+        >
+            {props.children}
+        </AgentProfileHeadBase>
     )
 }
 

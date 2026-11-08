@@ -16,11 +16,6 @@ import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { HiringReplyOutcome } from "@/components/composites/HiringReplyOutcome"
 import { PublicShell } from "@/components/frames/PublicShell"
 import type { DataSlot, HiringSay, SlotLabels } from "@/modules/types"
-/** The interview shapes: times proposed to pick from, one confirmed, or the invitation closed. */
-export const HIRING_INTERVIEW_REPLY_SHAPES = ["proposed", "confirmed", "closed"] as const
-/** One drawing per state of the invitation. */
-export type HiringInterviewReplyShape = (typeof HIRING_INTERVIEW_REPLY_SHAPES)[number]
-
 /** The invitation the candidate reads, with its display text resolved. */
 export interface HiringInterviewInviteView {
     readonly shop: string
@@ -43,7 +38,6 @@ const INVITE_PLACEHOLDER: HiringInterviewInviteView = {
 
 /** What the connected block settled for the candidate's interview link. */
 export interface HiringInterviewReplyBaseProps {
-    readonly shape: HiringInterviewReplyShape
     readonly props: {
         readonly say: HiringSay
         readonly slot: DataSlot<HiringInterviewInviteView>

@@ -49,7 +49,7 @@ export const SepayChecklistBody = (props: SepayChecklistBodyProps) => (
         labels={props.props.labels}
         onRetry={props.on.retry}
         render={(steps, isSkeleton) => {
-            const current = steps.find((step) => step.state === "current") ?? steps[steps.length - 1]
+            const current = steps.find((step) => step.state === "current") ?? steps.at(-1)
             return (
                 <Stepper
                     label={props.props.stepsLabel}

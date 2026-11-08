@@ -114,6 +114,7 @@ export const BrainPanes = <Entry extends BrainPanesEntry>(props: BrainPanesProps
         ? (props.placeholder[0] ?? null)
         : (items.find((one) => one.id === props.selectedId) ?? null)
     const actions = "isError" in slot ? { review: null, add: null } : props.header.actions
+    const emptyAction = actions.add === null ? {} : { emptyAction: { label: copy.emptyAction, onAction: props.on.add } }
     return (
         <Page
             chrome="panes"
@@ -140,9 +141,7 @@ export const BrainPanes = <Entry extends BrainPanesEntry>(props: BrainPanesProps
                             labels={props.slotLabels}
                             errorBody={copy.errorBody}
                             emptyBody={copy.emptyBody}
-                            {...(actions.add === null
-                                ? {}
-                                : { emptyAction: { label: copy.emptyAction, onAction: props.on.add } })}
+                            {...emptyAction}
                             onRetry={props.on.retry}
                         />
                     </Pane>

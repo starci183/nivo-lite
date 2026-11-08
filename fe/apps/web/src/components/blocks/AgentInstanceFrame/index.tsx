@@ -84,7 +84,6 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
     const workspaceId = useWorkspaceId()
     return (
         <AgentInstanceFrameBase
-            children={props.children}
             props={{
                 hasPanes: PANES_TABS.has(selected),
                 ariaLabel: header.name === "" ? header.typeName : header.name,
@@ -142,6 +141,8 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                           },
             }}
             on={{ retry: header.retry }}
-        />
+        >
+            {props.children}
+        </AgentInstanceFrameBase>
     )
 }

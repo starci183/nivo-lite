@@ -61,14 +61,12 @@ const emptyNoticeOf = (empty: PaneListEmpty) => (
  */
 export const PaneList = (props: PaneListProps) => {
     const isLoading = props.isLoading === true
+    const search = props.search === undefined ? {} : { search: props.search }
+    const choice = props.choice === undefined ? {} : { choice: props.choice }
     return (
         <Stack gap="row">
             {props.search === undefined && props.choice === undefined ? null : (
-                <FilterGroup
-                    {...(props.search === undefined ? {} : { search: props.search })}
-                    {...(props.choice === undefined ? {} : { choice: props.choice })}
-                    isLoading={isLoading}
-                />
+                <FilterGroup {...search} {...choice} isLoading={isLoading} />
             )}
             {props.summary === undefined ? null : (
                 <Text size="xs" tone="muted" isLoading={isLoading}>

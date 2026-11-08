@@ -36,22 +36,20 @@ export const LandingPageBase = (props: LandingPageBaseProps) => (
             </>
         }
         body={
-            <>
-                <Page measure="product">
-                    <Stack gap="region">
-                        <LandingHero />
-                        <LandingTrustStrip />
-                        <LandingProduct />
-                        <LandingFlow />
-                        <LandingConnect />
-                        <LandingOffer />
-                        <LandingCommitment />
-                        <LandingFinalCta />
-                        <LandingFaq />
-                        <LandingFooter anchorBase="" />
-                    </Stack>
-                </Page>
-            </>
+            <Page measure="product">
+                <Stack gap="region">
+                    <LandingHero />
+                    <LandingTrustStrip />
+                    <LandingProduct />
+                    <LandingFlow />
+                    <LandingConnect />
+                    <LandingOffer />
+                    <LandingCommitment />
+                    <LandingFinalCta />
+                    <LandingFaq />
+                    <LandingFooter anchorBase="" />
+                </Stack>
+            </Page>
         }
     />
 )

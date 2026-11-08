@@ -49,7 +49,9 @@ interface BuildMailboxAccountViewContext {
 interface BuildImapWizardViewContext extends BuildMailboxAccountViewContext {
     readonly tc: ReturnType<typeof useTranslations<"connections">>
     readonly tw: ReturnType<typeof useTranslations<"connectionWizard">>
-    readonly props: ImapWizardProps
+    readonly dependencyReads: ImapWizardProps["dependencyReads"]
+    readonly agents: ImapWizardProps["agents"]
+    readonly resumeId: ImapWizardProps["resumeId"]
     readonly slotLabelsOf: (empty: string) => SlotLabels
 }
 
@@ -80,7 +82,9 @@ export const ImapWizard = (props: ImapWizardProps) => {
         isCustom,
         isPending,
         format,
-        props,
+        dependencyReads: props.dependencyReads,
+        agents: props.agents,
+        resumeId: props.resumeId,
         slotLabelsOf,
     }
     return (
@@ -150,12 +154,14 @@ const buildImapWizardView = ({
     isCustom,
     isPending,
     format,
-    props,
+    dependencyReads,
+    agents,
+    resumeId,
     slotLabelsOf,
 }: BuildImapWizardViewContext) =>
     ({
-        resume: slotOfReads([...props.dependencyReads, ...wizard.reads], () => ({
-            isResumed: props.resumeId !== undefined,
+        resume: slotOfReads([...dependencyReads, ...wizard.reads], () => ({
+            isResumed: resumeId !== undefined,
         })),
         slotLabels: { ...slotLabelsOf(""), ...(wizard.loadError === null ? {} : { error: wizard.loadError }) },
         title: tc(providerKey("imap", "title")),
@@ -181,7 +187,7 @@ const buildImapWizardView = ({
         agentStep: {
             title: t("agentTitle"),
             notice: null,
-            agents: agentChoicesOf(props.agents, "imap", tw),
+            agents: agentChoicesOf(agents, "imap", tw),
             value: wizard.agentIds,
             hint: tw("agentHint"),
             none: tw("agentNone"),

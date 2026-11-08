@@ -80,7 +80,8 @@ export const AdminWorkspaceScreen = (props: AdminWorkspaceScreenProps) => {
                 errorHint: t("loadFailedHint"),
             }}
             on={{ retry: reload, openSupport: () => drawer.setOpen(true) }}
-            children={props.children}
-        />
+        >
+            {props.children}
+        </AdminWorkspaceScreenBase>
     )
 }

@@ -1,5 +1,4 @@
 import type { ComponentType, ReactElement, ReactNode } from "react"
-import { createElement } from "react"
 import { createReadLocaleSegment } from "@starci/next-i18n/layout"
 import type { ReadLocaleSegment } from "@starci/next-i18n/layout"
 import { i18n } from "./routing"
@@ -39,8 +38,14 @@ export const createLocaleLayout =
     (parts: LocaleLayoutParts): ((props: LocaleLayoutProps) => Promise<ReactElement>) =>
     async (props: LocaleLayoutProps): Promise<ReactElement> => {
         const { locale, messages, timeZone } = await readLocaleSegment(props.params)
-        return createElement(parts.chrome, {
-            locale,
-            content: createElement(parts.providers, { locale, messages, timeZone, children: props.children }),
-        })
+        return (
+            <parts.chrome
+                locale={locale}
+                content={
+                    <parts.providers locale={locale} messages={messages} timeZone={timeZone}>
+                        {props.children}
+                    </parts.providers>
+                }
+            />
+        )
     }
