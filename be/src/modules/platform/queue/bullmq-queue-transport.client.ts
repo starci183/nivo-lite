@@ -21,6 +21,7 @@ import {
     isQueueMemoryBounded,
     isUnrecoverable,
     reasonOf,
+    rejectionOf,
     slotOf,
 } from "./queue.policy"
 import type {
@@ -209,7 +210,7 @@ export class BullmqQueueTransportClient implements QueueTransport {
                     cause,
                     { queue: handler.queue, jobId: delivery.id, job: delivery.job, attempt: delivery.attempt },
                 )
-                throw dead ? new UnrecoverableError(reasonOf(cause)) : cause
+                return rejectionOf(dead ? new UnrecoverableError(reasonOf(cause)) : cause)
             })
     }
 

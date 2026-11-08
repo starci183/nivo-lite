@@ -22,7 +22,7 @@ import {
     wakesOfFact,
 } from "../../world/agent-work-database.service"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
-import { testWorldFailure } from "../../world/test-world-failure"
+import { testWorldFailure } from "../../world/test-world-failure.policy"
 import { ageWake, flowBurstOf, stampBurst } from "../../world/agent-work-burst.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { useTestWorld } from "../../world/use-test-world"

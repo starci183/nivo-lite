@@ -16,7 +16,7 @@ import {
     wakeOfFact,
 } from "../../world/agent-work-database.service"
 import { TestWorldErrorCode } from "../../world/test-world.error"
-import { testWorldFailure } from "../../world/test-world-failure"
+import { testWorldFailure } from "../../world/test-world-failure.policy"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { useTestWorld } from "../../world/use-test-world"
 

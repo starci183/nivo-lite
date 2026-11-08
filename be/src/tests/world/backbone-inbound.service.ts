@@ -278,7 +278,10 @@ const webhooksOf = (
         ): Promise<InboundEvent | null> => deliverWebhook(world, eventOf, state, key, valid, claims),
         receipts: (): Promise<Array<JobOutboxEntity>> =>
             world.db.primary.find(JobOutboxEntity, {
-                where: { queue: "generic_webhook", dedupeKey: In([...state.deliveryIds].map((deliveryId) => genericWebhookKey(deliveryId))) },
+                where: {
+                    queue: "generic_webhook",
+                    dedupeKey: In([...state.deliveryIds].map((deliveryId) => genericWebhookKey(deliveryId))),
+                },
                 take: ROWS_MAX,
             }),
     }

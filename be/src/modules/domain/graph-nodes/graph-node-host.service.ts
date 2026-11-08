@@ -60,11 +60,18 @@ export class GraphNodeHostService {
             },
             this.portsOf(turn, input.approval ?? null, asks),
         ).catch((cause: unknown) => {
-            throw asks[0] ?? cause
+            const [stopped] = asks
+            if (stopped === undefined) throw cause
+            return this.stop(stopped)
         })
         const [ask] = asks
         if (ask !== undefined) throw ask
         return ran
+    }
+
+    /** Stops the node with the ask its tool raised, which wins over whatever the node made of the refusal. */
+    private stop(ask: GraphNodesError): Promise<never> {
+        return Promise.reject(ask)
     }
 
     /**
