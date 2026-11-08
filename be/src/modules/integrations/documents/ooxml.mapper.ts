@@ -25,13 +25,13 @@ const fromCode = (code: number): string => (code > 0 && code <= 0x10ffff ? Strin
 /** The XML entities of a text decoded: numeric ones first, `&amp;` last so a decoded ampersand is never decoded twice. */
 const decodeEntities = (text: string): string =>
     text
-        .replace(/&#x([0-9a-f]+);/giu, (_match, hex: string) => fromCode(Number.parseInt(hex, 16)))
-        .replace(/&#(\d+);/gu, (_match, decimal: string) => fromCode(Number.parseInt(decimal, 10)))
-        .replace(/&lt;/giu, "<")
-        .replace(/&gt;/giu, ">")
-        .replace(/&quot;/giu, '"')
-        .replace(/&apos;/giu, "'")
-        .replace(/&amp;/giu, "&")
+        .replaceAll(/&#x([0-9a-f]+);/giu, (_match, hex: string) => fromCode(Number.parseInt(hex, 16)))
+        .replaceAll(/&#(\d+);/gu, (_match, decimal: string) => fromCode(Number.parseInt(decimal, 10)))
+        .replaceAll(/&lt;/giu, "<")
+        .replaceAll(/&gt;/giu, ">")
+        .replaceAll(/&quot;/giu, '"')
+        .replaceAll(/&apos;/giu, "'")
+        .replaceAll(/&amp;/giu, "&")
 
 /** The decoded value of one attribute of a tag, or null when the tag does not carry it. */
 const attributeOf = (tag: string, name: string): string | null => {
@@ -75,7 +75,7 @@ const relationshipTargets = (xml: string): Map<string, string> => {
 /** The shared strings of a workbook, phonetic runs left out. */
 const sharedStringsOf = (xml: string): Array<string> =>
     [...xml.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/gu)].map((match) =>
-        textRuns(captured(match, 1).replace(/<rPh\b[\s\S]*?<\/rPh>/gu, ""), "t"),
+        textRuns(captured(match, 1).replaceAll(/<rPh\b[\s\S]*?<\/rPh>/gu, ""), "t"),
     )
 
 /** The text of one cell: a shared string, an inline string, a boolean or the stored value. */
@@ -98,7 +98,7 @@ const rowCells = (row: string, shared: ReadonlyArray<string>): Array<string> => 
         const at = reference === null ? next : columnOf(reference)
         next = at + 1
         while (cells.length < at) cells.push("")
-        cells[at] = cellText(attributeOf(attributes, "t"), captured(cell, 2), shared).replace(/\s+/gu, " ").trim()
+        cells[at] = cellText(attributeOf(attributes, "t"), captured(cell, 2), shared).replaceAll(/\s+/gu, " ").trim()
     }
     while (cells.length > 0 && cells.at(-1) === "") cells.pop()
     return cells
@@ -157,13 +157,17 @@ export const xlsxToText = (bytes: Uint8Array): string => joinedText(xlsxSheets(b
 
 /** The paragraphs of a slide, one line each; the slide number field is left out. */
 const paragraphs = (xml: string): string =>
-    [...xml.replace(/<a:fld\b[^>]*type="slidenum"[\s\S]*?<\/a:fld>/gu, "").matchAll(/<a:p\b[^>]*>([\s\S]*?)<\/a:p>/gu)]
-        .map((match) => textRuns(captured(match, 1).replace(/<a:br\s*\/>/gu, "<a:t>\n</a:t>"), "a:t").trim())
+    [
+        ...xml
+            .replaceAll(/<a:fld\b[^>]*type="slidenum"[\s\S]*?<\/a:fld>/gu, "")
+            .matchAll(/<a:p\b[^>]*>([\s\S]*?)<\/a:p>/gu),
+    ]
+        .map((match) => textRuns(captured(match, 1).replaceAll(/<a:br\s*\/>/gu, "<a:t>\n</a:t>"), "a:t").trim())
         .filter((line) => line !== "")
         .join("\n")
 
 /** The number in the file name of a slide part (`slide12.xml` is 12). */
-const slideNumber = (part: string): number => Number(part.replace(/\D/gu, ""))
+const slideNumber = (part: string): number => Number(part.replaceAll(/\D/gu, ""))
 
 /** The speaker notes of a slide: the notes part its relationships name, as paragraphs. */
 const notesOf = (parts: Readonly<Record<string, string>>, slidePart: string): string => {

@@ -1,13 +1,10 @@
 import { Injectable, Optional } from "@nestjs/common"
 import { DelayedError, UnrecoverableError } from "bullmq"
 import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
-import { InjectErrorReporter } from "@modules/platform/errors"
-import type { ErrorReporter } from "@modules/platform/errors"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectErrorReporter, type ErrorReporter } from "@modules/platform/errors"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { QueueErrorCode } from "./errors/queue.error"
 import type { QueueDelivery, QueueHandler } from "./queue.contracts"
 import { InjectQueueOptions } from "./queue.decorators"
@@ -21,7 +18,6 @@ import {
     isExhausted,
     isUnrecoverable,
     reasonOf,
-    rejectionOf,
     secondsOf,
     workspaceOf,
 } from "./queue.policy"
@@ -91,7 +87,7 @@ export class BullmqQueueDeliveryClient {
         const id = job.id
         if (id === undefined) {
             this.logger.warn(QueueLogEvent.SettleFailed, { queue: handler.queue, job: job.name })
-            return rejectionOf(new UnrecoverableError(QueueErrorCode.Unrecoverable))
+            throw new UnrecoverableError(QueueErrorCode.Unrecoverable)
         }
         await redis.command(redis.ready(handler.queue))
         const [started] = await callDbFunction<QueueStartRow>(this.entityManager, "public.job_start", [
@@ -101,47 +97,38 @@ export class BullmqQueueDeliveryClient {
             secondsOf(this.options.visibilityTimeoutMs),
         ])
         if (started === undefined || started.outcome === "missing") {
-            return rejectionOf(new UnrecoverableError(QueueErrorCode.Unrecoverable))
+            throw new UnrecoverableError(QueueErrorCode.Unrecoverable)
         }
         if (started.outcome === "terminal") {
-            return started.state === "failed"
-                ? rejectionOf(new UnrecoverableError(QueueErrorCode.Unrecoverable))
-                : undefined
+            if (started.state === "failed") throw new UnrecoverableError(QueueErrorCode.Unrecoverable)
+            return undefined
         }
         if (started.outcome !== "started") return this.defer(job, token, deferMsOf(id), redis)
         const delivery = deliveryOf(handler.queue, job, started.attempt, signal)
-        const failure = await this.handled(handler, delivery, started.run_token)
-        if (failure === null) return this.complete(handler.queue, id, started.run_token)
-        return this.settleFailure(handler, delivery, job, token, started.run_token, failure.cause, redis).catch(
-            (cause: unknown) => {
-                if (
-                    cause !== failure.cause &&
-                    !(cause instanceof DelayedError) &&
-                    !(cause instanceof UnrecoverableError)
-                ) {
-                    this.logger.error(QueueLogEvent.SettleFailed, cause, { queue: handler.queue, jobId: id })
+        try {
+            await this.handled(handler, delivery, started.run_token)
+        } catch (cause: unknown) {
+            try {
+                await this.settleFailure(handler, delivery, job, token, started.run_token, cause, redis)
+            } catch (error: unknown) {
+                if (!(error instanceof DelayedError) && !(error instanceof UnrecoverableError)) {
+                    this.logger.error(QueueLogEvent.SettleFailed, error, { queue: handler.queue, jobId: id })
                 }
-                throw cause
-            },
-        )
+                throw error
+            }
+            throw cause
+        }
+        return this.complete(handler.queue, id, started.run_token)
     }
 
     /** Runs the handler while the slot is renewed; the heartbeat ends whether the handler throws or rejects. */
-    private handled(
-        handler: QueueHandler,
-        delivery: QueueDelivery,
-        runToken: string,
-    ): Promise<{ cause: unknown } | null> {
+    private handled(handler: QueueHandler, delivery: QueueDelivery, runToken: string): Promise<void> {
         const heartbeat = setInterval(
             () => void this.touch(delivery.id, handler.queue, runToken),
             Math.ceil(this.options.visibilityTimeoutMs / TOUCHES_PER_TIMEOUT),
         )
         return Promise.resolve()
             .then(() => handler.handle(delivery))
-            .then(
-                () => null,
-                (cause: unknown) => ({ cause }),
-            )
             .finally(() => clearInterval(heartbeat))
     }
 
@@ -204,17 +191,16 @@ export class BullmqQueueDeliveryClient {
             })
             await this.notifyFailed(handler, delivery, cause)
             await callDbFunction(this.entityManager, "public.job_dead", [delivery.id, reasonOf(cause), runToken])
-            return rejectionOf(new UnrecoverableError(reasonOf(cause)))
+            throw new UnrecoverableError(reasonOf(cause))
         }
         this.logger.error(QueueLogEvent.DeliveryFailed, cause, fields)
         await callDbFunction(this.entityManager, "public.job_retry", [delivery.id, reasonOf(cause), runToken])
-        return rejectionOf(cause)
     }
 
     /** Moves a delivery back without spending a broker attempt. */
     private async defer(job: BullmqJob, token: string | undefined, ms: number, redis: QueueRedisGuard): Promise<void> {
         await redis.command(job.moveToDelayed(this.clock.now().getTime() + ms, token))
-        return rejectionOf(new DelayedError())
+        throw new DelayedError()
     }
 
     /** Runs the failure hook of the handler once; a hook that throws is logged and does not keep the job from ending failed. */

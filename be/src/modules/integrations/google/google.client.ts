@@ -1,31 +1,29 @@
 import { Injectable } from "@nestjs/common"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { parseJsonText } from "@modules/platform/primitives"
 import { GoogleLogEvent } from "./google.log-events"
 import { GoogleError, GoogleErrorCode } from "./errors/google.error"
 import { InjectGoogleOptions } from "./google.decorators"
 import type { GoogleOptions } from "./google.options"
-import { GOOGLE_SCOPE, RENEWAL_GRANT_FIELD } from "./google.contracts"
-import type {
-    CreatedSpreadsheet,
-    GoogleIdentityTokens,
-    GoogleTokenSet,
-    OAuthStateInput,
-    OptionalAccountEmail,
-    OptionalConsentUrl,
-    OptionalOAuthState,
-    ReceivedText,
-    SheetCell,
-    SheetConfig,
-    SheetEventIn,
-    SheetEventResult,
-    SheetRowRef,
-    SheetsApi,
+import {
+    GOOGLE_SCOPE,
+    RENEWAL_GRANT_FIELD,
+    type CreatedSpreadsheet,
+    type GoogleIdentityTokens,
+    type GoogleTokenSet,
+    type OAuthStateInput,
+    type OptionalAccountEmail,
+    type OptionalConsentUrl,
+    type OptionalOAuthState,
+    type ReceivedText,
+    type SheetCell,
+    type SheetConfig,
+    type SheetEventIn,
+    type SheetEventResult,
+    type SheetRowRef,
+    type SheetsApi,
 } from "./google.contracts"
 import { applySheetEvent, buildCreateBody, buildFormatBody, ordersTab } from "./google-sheet.policy"
 import { signState, stateKey, verifyState } from "./google-state.policy"
@@ -36,6 +34,12 @@ type Json = Readonly<Record<string, unknown>>
 const isJson = (value: unknown): value is Json => typeof value === "object" && value !== null && !Array.isArray(value)
 
 const textOf = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined)
+
+/** The text of a value, or null when it is not text or is empty. */
+const filledTextOf = (value: unknown): string | null => {
+    const text = textOf(value)
+    return text === undefined || text === "" ? null : text
+}
 
 const a1 = (tab: string, range: string): string => encodeURIComponent(`'${tab}'!${range}`)
 
@@ -130,7 +134,7 @@ export class GoogleClient {
                 url: userinfoEndpoint(this.options),
                 headers: { authorization: `Bearer ${tokens.accessToken}` },
             })
-            return textOf(body.email) || null
+            return filledTextOf(body.email)
         } catch (cause) {
             this.logger.error(GoogleLogEvent.EmailUnavailable, cause)
             return null
@@ -277,7 +281,7 @@ export class GoogleClient {
     private emailOfIdToken(idToken: string | null): string | null {
         if (idToken === null) return null
         const read = parseJsonText(Buffer.from(idToken.split(".")[1] ?? "", "base64url").toString("utf8"))
-        return read.ok && isJson(read.value) ? textOf(read.value.email) || null : null
+        return read.ok && isJson(read.value) ? filledTextOf(read.value.email) : null
     }
 
     private bearer(token: string): Record<string, string> {

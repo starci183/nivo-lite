@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { FfmpegOptions } from "./ffmpeg.options"
 import type { Ffmpeg } from "./ffmpeg.port"
 

@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { IDS } from "./ids.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./ids.module-definition"
 import { RandomIdsService } from "./random-ids.service"

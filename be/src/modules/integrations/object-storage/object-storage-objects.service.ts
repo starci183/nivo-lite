@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { OBJECT_STORAGE_ERROR_CODES, ObjectStorageError as StoreFailure } from "@starci/object-storage"
-import type { ObjectStorage } from "@starci/object-storage"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { eachInOrder, ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import {
+    OBJECT_STORAGE_ERROR_CODES,
+    ObjectStorageError as StoreFailure,
+    type ObjectStorage,
+} from "@starci/object-storage"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { eachInOrder, ok, refused, type Outcome } from "@modules/platform/primitives"
 import { ObjectStorageError } from "./errors/object-storage.error"
 import type { SignedObjectUrl, StorageFailureCode } from "./object-storage.contracts"
 import { InjectObjectStorage, InjectStorageOptions } from "./object-storage.decorators"

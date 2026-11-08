@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
 import { McpError, McpErrorCode } from "./errors/mcp.error"
 import { publicAddressOf } from "./public-endpoint.policy"
 

@@ -1,8 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import { Injectable } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { parseJsonText } from "@modules/platform/primitives"
 import { McpError, McpErrorCode } from "./errors/mcp.error"
 import type {

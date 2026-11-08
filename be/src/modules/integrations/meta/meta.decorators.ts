@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { MetaClient } from "./meta.client"
 import type { MetaOptions } from "./meta.options"
 

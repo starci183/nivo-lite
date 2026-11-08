@@ -1,18 +1,17 @@
 import { Injectable } from "@nestjs/common"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
 import { isRecord } from "@modules/platform/primitives"
 import { ZaloError, ZaloErrorCode } from "./errors/zalo.error"
 import { InjectZaloOptions } from "./zalo.decorators"
-import { RENEWAL_GRANT_FIELD } from "./zalo.contracts"
-import type {
-    ZaloChatMessage,
-    ZaloData,
-    ZaloMethod,
-    ZaloTokens,
-    ZaloUserProfile,
-    ZnsMessage,
-    ZnsReceipt,
+import {
+    RENEWAL_GRANT_FIELD,
+    type ZaloChatMessage,
+    type ZaloData,
+    type ZaloMethod,
+    type ZaloTokens,
+    type ZaloUserProfile,
+    type ZnsMessage,
+    type ZnsReceipt,
 } from "./zalo.contracts"
 import type { ZaloOptions } from "./zalo.options"
 import { zaloErrorCodeOf } from "./zalo-failure.policy"

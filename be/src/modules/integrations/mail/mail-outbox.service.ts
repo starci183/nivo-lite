@@ -2,15 +2,18 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import type { Writable } from "node:stream"
 import { Injectable } from "@nestjs/common"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectIds } from "@modules/platform/ids"
-import type { Ids } from "@modules/platform/ids"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectIds, type Ids } from "@modules/platform/ids"
 import { isRecord, parseJsonText } from "@modules/platform/primitives"
 import { InjectMailSettings } from "./mail.decorators"
 import type { MailOptions } from "./mail.options"
-import { outboxEntryOf, parseOutboxEntry, selectEntries } from "./mail-outbox.policy"
-import type { OutboxEntry, OutboxQuery } from "./mail-outbox.policy"
+import {
+    outboxEntryOf,
+    parseOutboxEntry,
+    selectEntries,
+    type OutboxEntry,
+    type OutboxQuery,
+} from "./mail-outbox.policy"
 
 const EXTENSION = ".json"
 

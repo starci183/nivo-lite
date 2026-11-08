@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { GoogleClient } from "./google.client"
 import { GOOGLE_CLIENT } from "./google.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./google.module-definition"

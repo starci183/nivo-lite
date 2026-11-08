@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ChannelSetupClient } from "./channel-setup.client"
 import { CHANNEL_SETUP_CLIENT } from "./channel-setup.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./channel-setup.module-definition"

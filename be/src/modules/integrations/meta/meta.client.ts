@@ -2,31 +2,32 @@ import { MetaPublishingClient } from "./meta-publishing.client"
 import { Injectable } from "@nestjs/common"
 import { MetaLogEvent } from "./meta.log-events"
 import { MetaError, MetaErrorCode } from "./errors/meta.error"
-import { INSTAGRAM_FIELDS, PAGE_FIELDS, PAGE_REQUESTS_MAX } from "./meta.contracts"
-import type {
-    AppSubscriptionResult,
-    MetaEvent,
-    MetaLead,
-    MetaPageChoice,
-    MetaPlatform,
-    MetaStateInput,
-    MetaSubscriptionStatus,
-    AppObject,
-    MetaInstagramAccess,
-    MetaMention,
-    MetaPageCredentials,
-    MetaPageToken,
-    OptionalChallenge,
-    OptionalMetaState,
-    OptionalMetaUrl,
-    OptionalProfileName,
-    ReceivedText,
+import {
+    INSTAGRAM_FIELDS,
+    PAGE_FIELDS,
+    PAGE_REQUESTS_MAX,
+    type AppSubscriptionResult,
+    type MetaEvent,
+    type MetaLead,
+    type MetaPageChoice,
+    type MetaPlatform,
+    type MetaStateInput,
+    type MetaSubscriptionStatus,
+    type AppObject,
+    type MetaInstagramAccess,
+    type MetaMention,
+    type MetaPageCredentials,
+    type MetaPageToken,
+    type OptionalChallenge,
+    type OptionalMetaState,
+    type OptionalMetaUrl,
+    type OptionalProfileName,
+    type ReceivedText,
 } from "./meta.contracts"
 import type { MetaApp } from "./meta.options"
 import { authorizeUrl, isPublicSite, redirectUri, webhookUrl } from "./meta-url.policy"
 import { metaStateKey, signMetaState, verifyMetaState } from "./meta-state.policy"
-import { parseLead, parseWebhook, verifyChallenge, verifySignature } from "./meta-webhook.policy"
-import type { HubQuery } from "./meta-webhook.policy"
+import { parseLead, parseWebhook, verifyChallenge, verifySignature, type HubQuery } from "./meta-webhook.policy"
 
 type Json = Readonly<Record<string, unknown>>
 
@@ -35,6 +36,9 @@ const isJson = (value: unknown): value is Json => typeof value === "object" && v
 const rows = (value: unknown): ReadonlyArray<Json> => (Array.isArray(value) ? value.filter(isJson) : [])
 
 const textOf = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined)
+
+/** The text itself, or undefined when it is empty. */
+const filled = (value: string | undefined): string | undefined => (value === "" ? undefined : value)
 
 const isText = (value: unknown): value is string => typeof value === "string"
 
@@ -153,7 +157,7 @@ export class MetaClient extends MetaPublishingClient {
                 ...(after ? { after } : {}),
             },
         })
-        const pages = rows(res.data).flatMap(pageChoicesOf)
+        const pages = rows(res.data).flatMap((row) => pageChoicesOf(row))
         const paging = isJson(res.paging) ? res.paging : {}
         const cursors = isJson(paging.cursors) ? paging.cursors : {}
         const next = paging.next ? textOf(cursors.after) : undefined
@@ -266,7 +270,7 @@ export class MetaClient extends MetaPublishingClient {
                 timeoutMs: 5000,
             })
             const full = [textOf(res.first_name), textOf(res.last_name)].filter(Boolean).join(" ").trim()
-            return textOf(res.name)?.trim() || full || textOf(res.username)?.trim() || null
+            return filled(textOf(res.name)?.trim()) ?? filled(full) ?? filled(textOf(res.username)?.trim()) ?? null
         } catch (cause) {
             this.logger.error(MetaLogEvent.ProfileUnavailable, cause)
             return null

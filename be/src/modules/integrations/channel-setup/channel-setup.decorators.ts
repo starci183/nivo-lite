@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { ChannelSetupClient } from "./channel-setup.client"
 import type { ChannelSetupOptions } from "./channel-setup.options"
 

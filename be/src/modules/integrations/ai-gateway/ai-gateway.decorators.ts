@@ -1,6 +1,5 @@
 import type { AiRouterService } from "@starci/ai-router"
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { AiGatewayOptions } from "./ai-gateway.options"
 
 /** The router, or null when the pool has no key at all (no router is registered then). */

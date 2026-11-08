@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mockEntityManager } from "@starci/jest-preset"
-import { QueueErrorCode } from "./errors/queue.error"
+import { QueueError, QueueErrorCode } from "./errors/queue.error"
 import { QueueOutboxService } from "./queue-outbox.service"
 
 const ENQUEUE = 'SELECT * FROM "public"."job_enqueue"($1, $2, $3, $4, $5)'
@@ -107,12 +107,12 @@ describe("QueueOutboxService refusals", () => {
                     ],
                 }),
             )
-            const failure = new Error("the change failed")
+            const failure = new QueueError({ code: QueueErrorCode.FlowFailure })
 
             await expect(
                 tx.em.transaction(async (manager) => {
                     await outbox.write(manager, "mail", { id: "m-1" })
-                    return Promise.reject(failure)
+                    throw failure
                 }),
             ).rejects.toBe(failure)
 

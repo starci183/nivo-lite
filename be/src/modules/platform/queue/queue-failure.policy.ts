@@ -71,8 +71,8 @@ const classOfDomainError = (cause: unknown): FailureClass | undefined => {
  */
 export const classifyFailure = (cause: unknown): FailureClass => {
     const chain = chainOf(cause)
-    const named = chain.map(namedClassOf).find((candidate) => candidate !== undefined)
+    const named = chain.map((link) => namedClassOf(link)).find((candidate) => candidate !== undefined)
     if (named !== undefined) return named
-    if (chain.some(isTransientLink)) return "transient"
+    if (chain.some((link) => isTransientLink(link))) return "transient"
     return classOfDomainError(cause) ?? "code"
 }

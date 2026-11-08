@@ -17,8 +17,7 @@ import { resolveLink } from "./drive-link.policy"
 import { DocumentsError, DocumentsErrorCode } from "./errors/documents.error"
 import { PublicLinkClient } from "./public-link.client"
 import { placedFromBytes, textFromBytes } from "./text-extraction.mapper"
-import { fileTextKind, hasExtension, sniffTextKind } from "./text-kind.policy"
-import type { TextKind } from "./text-kind.policy"
+import { fileTextKind, hasExtension, sniffTextKind, type TextKind } from "./text-kind.policy"
 
 /** The longest title taken from a page or file name. */
 const TITLE_CHARS = 160

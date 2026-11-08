@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
+import { RealtimeError, RealtimeErrorCode } from "./errors/realtime.error"
 import { REPLAY_TTL_MS, SWEEP_BATCH, SWEEP_MAX_BATCHES } from "./realtime.contracts"
 import { REALTIME_MANAGERS } from "./realtime.decorators"
 import { RealtimeRetentionService } from "./realtime-retention.service"
@@ -71,7 +72,11 @@ describe("RealtimeRetentionService.sweep", () => {
     it("deletes nothing when the fence refuses a batch", async () => {
         const { retention, em } = await build(2)
 
-        await expect(retention.sweep(() => Promise.reject(new Error("fenced out")))).rejects.toThrow("fenced out")
+        const refusing = jest
+            .fn<Promise<void>, []>()
+            .mockRejectedValue(new RealtimeError({ code: RealtimeErrorCode.ListenDropped }))
+
+        await expect(retention.sweep(refusing)).rejects.toThrow(RealtimeErrorCode.ListenDropped)
 
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })

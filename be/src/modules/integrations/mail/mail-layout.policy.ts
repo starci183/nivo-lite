@@ -43,7 +43,7 @@ const blocksOf = (text: string): ReadonlyArray<Block> =>
     text
         .replaceAll("\r\n", "\n")
         .split(/\n{2,}/u)
-        .flatMap(blocksOfParagraph)
+        .flatMap((paragraph) => blocksOfParagraph(paragraph))
 
 /** Wraps an already rendered plain body in the shop layout; `accent` must be a #rrggbb colour, anything else falls back to the default. */
 export const renderEmail = (input: EmailLayoutInput): RenderedEmail => {
@@ -55,7 +55,7 @@ export const renderEmail = (input: EmailLayoutInput): RenderedEmail => {
                 const items = block.items.map((item) => `<li style="margin:0 0 6px">${escapeHtml(item)}</li>`).join("")
                 return `<ul style="margin:0 0 16px;padding-left:20px">${items}</ul>`
             }
-            return `<p style="margin:0 0 16px">${block.lines.map(escapeHtml).join("<br>")}</p>`
+            return `<p style="margin:0 0 16px">${block.lines.map((line) => escapeHtml(line)).join("<br>")}</p>`
         })
         .join("")
     const footer = escapeHtml(input.footer)

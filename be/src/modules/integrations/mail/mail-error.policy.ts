@@ -1,5 +1,4 @@
-import { MailError as PackageMailError } from "@starci/mail"
-import type { MailErrorCode as PackageMailErrorCode } from "@starci/mail"
+import { MailError as PackageMailError, type MailErrorCode as PackageMailErrorCode } from "@starci/mail"
 import { MailError, MailErrorCode } from "./errors/mail.error"
 
 /** Every wire code of the package, and the code of the integration that carries it: a code the package adds fails the build here. */

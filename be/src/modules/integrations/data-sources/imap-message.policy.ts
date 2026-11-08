@@ -77,7 +77,7 @@ const stripHtml = (html: string): string =>
         .replaceAll("&amp;", "&")
         .replaceAll("&lt;", "<")
         .replaceAll("&gt;", ">")
-        .replace(/\s+/gu, " ")
+        .replaceAll(/\s+/gu, " ")
         .trim()
 
 type MailDate = Date | string | null | undefined

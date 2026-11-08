@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { DataSource } from "typeorm"
+import { DomainError } from "@modules/platform/errors"
 import type { PostgresSessionTarget } from "./postgres-session.contracts"
 import { openPostgresSession } from "./postgres-session.client"
 
@@ -20,10 +21,13 @@ const buildSubject = async () => {
     return moduleRef.get<PolicySubject>(SUBJECT)
 }
 
+/** The failure the fake driver raises. */
+class DriverStandInError extends DomainError<string> {}
+
 /** How one fake connection answers: the failures to raise and the queries it saw. */
 class DriverControl {
-    connectError: Error | undefined = undefined
-    destroyError: Error | undefined = undefined
+    connectError: DriverStandInError | undefined = undefined
+    destroyError: DriverStandInError | undefined = undefined
 }
 
 interface PostgresOpened {
@@ -49,7 +53,10 @@ const registerPostgresDoubles = () => {
         opened.length = 0
         jest.spyOn(DataSource.prototype, "initialize").mockImplementation(function (this: DataSource) {
             recordOf(this)
-            return control.connectError === undefined ? Promise.resolve(this) : Promise.reject(control.connectError)
+            return Promise.resolve().then(() => {
+                if (control.connectError !== undefined) throw control.connectError
+                return this
+            })
         })
         jest.spyOn(DataSource.prototype, "query").mockImplementation(function (
             this: DataSource,
@@ -61,7 +68,9 @@ const registerPostgresDoubles = () => {
         })
         jest.spyOn(DataSource.prototype, "destroy").mockImplementation(function (this: DataSource) {
             recordOf(this).destroyed = true
-            return control.destroyError === undefined ? Promise.resolve() : Promise.reject(control.destroyError)
+            return Promise.resolve().then(() => {
+                if (control.destroyError !== undefined) throw control.destroyError
+            })
         })
     })
 
@@ -113,7 +122,7 @@ const registerPostgresSessions = () => {
 const registerPostgresFailures = () => {
     it("propagates a refused connect", async () => {
         const subject = await buildSubject()
-        const refused = new Error("connect")
+        const refused = new DriverStandInError({ code: "connect" })
         control.connectError = refused
 
         await expect(subject.openPostgresSession(target())).rejects.toBe(refused)
@@ -122,7 +131,7 @@ const registerPostgresFailures = () => {
     it("swallows a failure while closing a live session", async () => {
         const subject = await buildSubject()
         const session = await subject.openPostgresSession(target())
-        control.destroyError = new Error("destroy")
+        control.destroyError = new DriverStandInError({ code: "destroy" })
 
         await expect(session.close()).resolves.toBeUndefined()
     })

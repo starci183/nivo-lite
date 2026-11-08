@@ -1,7 +1,14 @@
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
 import { TABLE_COPY } from "./messages/table.messages"
-import { TABLE_CELL_MAX, TABLE_MAX_BYTES, TABLE_MAX_COLUMNS, TABLE_MAX_ROWS } from "./table-shapes.contracts"
-import type { DocumentKind, Table, TableFileKind } from "./table-shapes.contracts"
+import {
+    TABLE_CELL_MAX,
+    TABLE_MAX_BYTES,
+    TABLE_MAX_COLUMNS,
+    TABLE_MAX_ROWS,
+    type DocumentKind,
+    type Table,
+    type TableFileKind,
+} from "./table-shapes.contracts"
 
 const ROW_FORMAT = new Intl.NumberFormat("vi-VN")
 
@@ -40,7 +47,7 @@ export const tableFromRows = (
     raw: ReadonlyArray<ReadonlyArray<unknown>>,
     extra: Pick<Table, "delimiter" | "sheets" | "sheet">,
 ): Table => {
-    const all = raw.map((row) => row.map(cellText))
+    const all = raw.map((row) => row.map((cell) => cellText(cell)))
     const first = all.findIndex((row) => row.some(Boolean))
     const head = first < 0 ? undefined : all[first]
     if (head === undefined) throw rejected(TABLE_COPY.noData)

@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { AgentRegistryService } from "./agent-registry.service"
 import type { GatewayAdminClient } from "./gateway-admin.client"
 import type { GatewayHistoryClient } from "./gateway-history.client"

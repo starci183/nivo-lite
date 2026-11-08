@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { DataSource } from "typeorm"
+import { DomainError } from "@modules/platform/errors"
 import type { CustomerSession } from "./customer-sessions.contracts"
 import type { PostgresSessionTarget } from "./postgres-session.contracts"
 import { openMssqlSession, openMysqlSession, selectRows } from "./customer-sessions.client"
@@ -19,12 +20,15 @@ const buildSubject = async () => {
     return moduleRef.get<PolicySubject>(SUBJECT)
 }
 
+/** The failure the fake driver raises. */
+class DriverStandInError extends DomainError<string> {}
+
 /** How the fake connections answer: the failures to raise and the answer to give. */
 class DriverControl {
-    connectError: Error | undefined = undefined
-    setError: Error | undefined = undefined
-    executionError: Error | undefined = undefined
-    destroyError: Error | undefined = undefined
+    connectError: DriverStandInError | undefined = undefined
+    setError: DriverStandInError | undefined = undefined
+    executionError: DriverStandInError | undefined = undefined
+    destroyError: DriverStandInError | undefined = undefined
     answer: unknown = [{ id: "1" }]
 }
 
@@ -45,15 +49,14 @@ const recordOf = (source: DataSource): Opened => {
     return record
 }
 
-const answerTo = (sql: string): Promise<unknown> => {
-    if (sql.startsWith("SET SESSION TRANSACTION") && control.setError !== undefined) {
-        return Promise.reject(control.setError)
-    }
-    if (sql.startsWith("SET SESSION MAX_EXECUTION_TIME") && control.executionError !== undefined) {
-        return Promise.reject(control.executionError)
-    }
-    return Promise.resolve(control.answer)
-}
+const answerTo = (sql: string): Promise<unknown> =>
+    Promise.resolve().then(() => {
+        if (sql.startsWith("SET SESSION TRANSACTION") && control.setError !== undefined) throw control.setError
+        if (sql.startsWith("SET SESSION MAX_EXECUTION_TIME") && control.executionError !== undefined) {
+            throw control.executionError
+        }
+        return control.answer
+    })
 
 const registerDoubles = () => {
     beforeEach(() => {
@@ -61,7 +64,10 @@ const registerDoubles = () => {
         opened.length = 0
         jest.spyOn(DataSource.prototype, "initialize").mockImplementation(function (this: DataSource) {
             recordOf(this)
-            return control.connectError === undefined ? Promise.resolve(this) : Promise.reject(control.connectError)
+            return Promise.resolve().then(() => {
+                if (control.connectError !== undefined) throw control.connectError
+                return this
+            })
         })
         jest.spyOn(DataSource.prototype, "query").mockImplementation(function (
             this: DataSource,
@@ -73,7 +79,9 @@ const registerDoubles = () => {
         })
         jest.spyOn(DataSource.prototype, "destroy").mockImplementation(function (this: DataSource) {
             recordOf(this).destroyed = true
-            return control.destroyError === undefined ? Promise.resolve() : Promise.reject(control.destroyError)
+            return Promise.resolve().then(() => {
+                if (control.destroyError !== undefined) throw control.destroyError
+            })
         })
     })
 
@@ -121,7 +129,7 @@ const registerMysql = () => {
     describe("openMysqlSession", () => {
         it("opens one read only connection with the limits of the target and answers rows", async () => {
             const subject = await buildSubject()
-            control.executionError = new Error("unknown variable")
+            control.executionError = new DriverStandInError({ code: "unknown variable" })
 
             const session = await subject.openMysqlSession(target())
 
@@ -168,9 +176,9 @@ const registerMysql = () => {
 
         it("closes the connection when the read-only setting is refused, even if closing fails", async () => {
             const subject = await buildSubject()
-            const refused = new Error("readonly")
+            const refused = new DriverStandInError({ code: "readonly" })
             control.setError = refused
-            control.destroyError = new Error("destroy")
+            control.destroyError = new DriverStandInError({ code: "destroy" })
 
             await expect(subject.openMysqlSession(target())).rejects.toBe(refused)
             expect(opened[0]?.destroyed).toBe(true)
@@ -178,7 +186,7 @@ const registerMysql = () => {
 
         it("propagates a refused connect", async () => {
             const subject = await buildSubject()
-            const refused = new Error("connect")
+            const refused = new DriverStandInError({ code: "connect" })
             control.connectError = refused
 
             await expect(subject.openMysqlSession(target())).rejects.toBe(refused)
@@ -187,7 +195,7 @@ const registerMysql = () => {
         it("swallows a failure while closing a live session", async () => {
             const subject = await buildSubject()
             const session = await subject.openMysqlSession(target())
-            control.destroyError = new Error("destroy")
+            control.destroyError = new DriverStandInError({ code: "destroy" })
 
             await expect(session.close()).resolves.toBeUndefined()
         })
@@ -235,7 +243,7 @@ const registerMssql = () => {
 
         it("propagates a refused connect", async () => {
             const subject = await buildSubject()
-            const refused = new Error("connect")
+            const refused = new DriverStandInError({ code: "connect" })
             control.connectError = refused
 
             await expect(subject.openMssqlSession(target())).rejects.toBe(refused)

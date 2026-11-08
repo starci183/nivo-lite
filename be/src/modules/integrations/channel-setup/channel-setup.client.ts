@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
 import { ChannelSetupError, ChannelSetupErrorCode } from "./errors/channel-setup.error"
 import { InjectChannelSetupOptions } from "./channel-setup.decorators"
 import type { OptionalZaloUrl, PayosCredential, TelegramBot, TelegramWebhookInfo } from "./channel-setup.contracts"

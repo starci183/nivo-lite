@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
 import { isRecord } from "@modules/platform/primitives"
 import { TelegramError, TelegramErrorCode } from "./errors/telegram.error"
 import type { TelegramParams } from "./telegram.contracts"

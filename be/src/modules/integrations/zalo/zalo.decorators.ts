@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { ZaloArticleClient } from "./zalo-article.client"
 import type { ZaloClient } from "./zalo.client"
 import type { ZaloOptions } from "./zalo.options"

@@ -101,7 +101,7 @@ export const toDatabaseError = (error: unknown): DataSourcesError => {
     if (error instanceof DataSourcesError) return error
     const facts = factsOf(error)
     const rule = RULES.find((candidate) => candidate.test(facts))
-    const detail = rule?.text ?? DATABASE_COPY.unreadable(facts.message.replace(/\s+/gu, " ").slice(0, 200))
+    const detail = rule?.text ?? DATABASE_COPY.unreadable(facts.message.replaceAll(/\s+/gu, " ").slice(0, 200))
     return new DataSourcesError({
         code: rule?.unavailable === true ? DataSourcesErrorCode.Unavailable : DataSourcesErrorCode.Rejected,
         params: { detail },

@@ -1,5 +1,4 @@
-import { createParamDecorator } from "@nestjs/common"
-import type { ExecutionContext } from "@nestjs/common"
+import { createParamDecorator, type ExecutionContext } from "@nestjs/common"
 import { GqlExecutionContext } from "@nestjs/graphql"
 import type { AcceptLanguage, Locale } from "./i18n.contracts"
 import { pickLocale } from "./request-locale.policy"

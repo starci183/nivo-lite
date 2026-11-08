@@ -1,11 +1,17 @@
 import { Injectable } from "@nestjs/common"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { OpenclawError, OpenclawErrorCode } from "./errors/openclaw.error"
-import { connectParams, frameOf, looksFinal, readSessionMessage, statusOf } from "./gateway-frame.mapper"
-import type { GatewayErrorBody, MessageUsage, OptionalGatewayFrame } from "./gateway-frame.mapper"
+import {
+    connectParams,
+    frameOf,
+    looksFinal,
+    readSessionMessage,
+    statusOf,
+    type GatewayErrorBody,
+    type MessageUsage,
+    type OptionalGatewayFrame,
+} from "./gateway-frame.mapper"
 import type { ReceiverOptions, RunTally, RunUsage, TurnRequest, TurnResult } from "./openclaw.contracts"
 import { InjectOpenclawOptions, InjectOpenclawSocketFactory } from "./openclaw.decorators"
 import { OpenclawLogEvent } from "./openclaw.log-events"

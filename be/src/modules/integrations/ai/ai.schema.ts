@@ -1,5 +1,4 @@
-import { z } from "zod"
-import type { ZodType } from "zod"
+import { z, type ZodType } from "zod"
 
 /** The shape a JSON answer is parsed into by structured output. */
 export type AiSchema = ZodType

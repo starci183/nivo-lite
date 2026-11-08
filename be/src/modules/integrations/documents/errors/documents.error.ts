@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the documents integration: why a link, a file or a Drive item could not be turned into text. */
 export enum DocumentsErrorCode {

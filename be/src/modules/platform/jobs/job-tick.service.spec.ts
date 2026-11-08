@@ -5,7 +5,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { QUEUE_OUTBOX } from "@modules/platform/queue"
-import { JobsErrorCode } from "./errors/jobs.error"
+import { JobsError, JobsErrorCode } from "./errors/jobs.error"
 import { JOB_TICKS } from "./job-ticks.contracts"
 import type { JobTick } from "./job-ticks.contracts"
 import { JOB_TICK_SCHEDULER, JOBS_MANAGERS } from "./jobs.decorators"
@@ -122,7 +122,7 @@ describe("JobTickService", () => {
 
     it("logs a failed firing by the name of the tick", async () => {
         const { ticks, logger, scheduler } = await build(true)
-        const cause = new Error("redis down")
+        const cause = new JobsError({ code: JobsErrorCode.ConnectionMissing })
         ticks.onApplicationBootstrap()
         const [, , onError] = scheduler.schedule.mock.calls[0] ?? []
 
@@ -163,7 +163,7 @@ describe("cronSchedulerOf", () => {
         const cause = new Error("redis down")
         const onError = jest.fn()
 
-        cronSchedulerOf(registry).schedule(TICK, () => Promise.reject(cause), onError)
+        cronSchedulerOf(registry).schedule(TICK, jest.fn<Promise<never>, []>().mockRejectedValue(cause), onError)
         const [, job] = registry.addCronJob.mock.calls[0] ?? []
         await job?.fireOnTick()
         void job?.stop()

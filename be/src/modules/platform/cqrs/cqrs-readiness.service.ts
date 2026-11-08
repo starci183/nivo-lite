@@ -1,5 +1,4 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import type { ModulesContainer } from "@nestjs/core"
 import { CqrsModule as NestCqrsModule } from "@nestjs/cqrs"
 import { InjectModulesContainer } from "./cqrs-modules.decorators"

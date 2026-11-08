@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { McpPublicFetchClient } from "./mcp-public-fetch.client"
 import { McpRemoteClient } from "./mcp-remote.client"
 import { McpServerService } from "./mcp-server.service"

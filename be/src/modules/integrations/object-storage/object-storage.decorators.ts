@@ -1,7 +1,5 @@
-import { OBJECT_STORAGE } from "@starci/object-storage"
-import type { ObjectStorage } from "@starci/object-storage"
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { OBJECT_STORAGE, type ObjectStorage } from "@starci/object-storage"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { ObjectStorageOptions } from "./object-storage.options"
 import type { StorageAssetsPort, StorageObjectsPort } from "./object-storage.port"
 

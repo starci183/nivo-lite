@@ -1,7 +1,6 @@
 import { posix } from "node:path"
 import { Injectable } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { OpenclawError, OpenclawErrorCode } from "./errors/openclaw.error"
 import { agentListOf, agentsOf, hasDefaultAgent, isAgentEntry, isJsonObject } from "./json.mapper"
 import type { AgentEntry, OptionalJsonObject, OptionalWorkspaceDirs, WorkspaceDirs } from "./openclaw.contracts"

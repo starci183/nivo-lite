@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { UnrecoverableError } from "bullmq"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { BullmqQueueDeliveryClient } from "./bullmq-queue-delivery.client"
 import { QueueError, QueueErrorCode } from "./errors/queue.error"
 import type { OptionalSlot, QueueHandler, QueueSchedule } from "./queue.contracts"
@@ -21,7 +20,6 @@ import {
     isQueueMemoryBounded,
     isUnrecoverable,
     reasonOf,
-    rejectionOf,
     slotOf,
 } from "./queue.policy"
 import type {
@@ -210,7 +208,8 @@ export class BullmqQueueTransportClient implements QueueTransport {
                     cause,
                     { queue: handler.queue, jobId: delivery.id, job: delivery.job, attempt: delivery.attempt },
                 )
-                return rejectionOf(dead ? new UnrecoverableError(reasonOf(cause)) : cause)
+                if (dead) throw new UnrecoverableError(reasonOf(cause))
+                throw cause
             })
     }
 

@@ -18,7 +18,7 @@ const providerOf = (provider: AiGatewayProvider, models: ReadonlyArray<ModelConf
     id: provider.id,
     baseUrl: provider.baseUrl,
     headers: { "X-Title": "NIVO OS" },
-    keys: provider.keys.map(keyOf),
+    keys: provider.keys.map((key) => keyOf(key)),
     models,
 })
 

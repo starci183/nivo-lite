@@ -1,7 +1,5 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { isRecord } from "@modules/platform/primitives"
 import type {
     ContextPassage,
@@ -11,8 +9,7 @@ import type {
     AiEmbeddingResult,
     PassageSearch,
 } from "./ai.contracts"
-import { InjectAiOptions, InjectAiRunner } from "./ai.decorators"
-import type { OptionalAiRunner } from "./ai.decorators"
+import { InjectAiOptions, InjectAiRunner, type OptionalAiRunner } from "./ai.decorators"
 import { AiLogEvent } from "./ai.log-events"
 import type { AiOptions } from "./ai.options"
 import { fieldOf, modelOf, textOf, usageOf, vectorsOf } from "./reply.policy"

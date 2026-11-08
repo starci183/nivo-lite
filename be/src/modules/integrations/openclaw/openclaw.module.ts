@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AgentRegistryService } from "./agent-registry.service"
 import { GatewayAdminClient } from "./gateway-admin.client"
 import { GatewayClient } from "./gateway.client"

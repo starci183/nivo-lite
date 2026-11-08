@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { TelegramClient } from "./telegram.client"
 import { TELEGRAM } from "./telegram.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./telegram.module-definition"

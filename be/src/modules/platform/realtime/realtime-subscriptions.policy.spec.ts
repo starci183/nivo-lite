@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { RealtimeError, RealtimeErrorCode } from "./errors/realtime.error"
 import { RealtimeSubscriptionsPolicy } from "./realtime-subscriptions.policy"
 import type { Entry, Replay } from "./realtime-subscriptions.policy"
 import type { RealtimeTopic } from "./realtime.port"
@@ -156,11 +157,15 @@ describe("RealtimeSubscriptionsPolicy replay", () => {
 
     it("fails the read of a stream whose replay could not be loaded, with the cause the store gave", async () => {
         const subscriptions = await build()
-        const reader = subscriptions.join(topicOf("t:broken"), Promise.reject(new Error("db down")))
+        const cause = new RealtimeError({ code: RealtimeErrorCode.ListenDropped })
+        const reader = subscriptions.join(
+            topicOf("t:broken"),
+            jest.fn<Promise<Replay>, []>().mockRejectedValue(cause)(),
+        )
 
         await expect(reader.next()).rejects.toMatchObject({
             code: "REALTIME_REPLAY_FAILED",
-            cause: new Error("db down"),
+            cause,
         })
         expect(subscriptions.count("t:broken")).toBe(0)
         expect(subscriptions.topics()).toEqual([])

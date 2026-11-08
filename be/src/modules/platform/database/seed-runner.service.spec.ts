@@ -3,8 +3,12 @@ import type { PathLike } from "node:fs"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
+import { DomainError } from "@modules/platform/errors"
 import { PRIMARY_ENTITY_MANAGER } from "./primary.decorators"
 import { DEFAULT_SEED_ENV, SeedRunnerService, seedDirectoryOf } from "./seed-runner.service"
+
+/** The failure of the fake file system: its `code` is the errno. */
+class FileSystemStandInError extends DomainError<string> {}
 
 const SHARED = ".starcistacks/seeds/sql"
 const OWN = ".starcistacks/dev/seeds/sql"
@@ -27,11 +31,13 @@ interface FileReader {
 const pathOf = (path: PathLike): string => (typeof path === "string" ? path : path.toString())
 
 const build = async (entityManager: MockEntityManager, folders: Folders) => {
-    jest.spyOn<FolderReader, "readdir">(fsPromises, "readdir").mockImplementation((directory) => {
-        const files = folders[pathOf(directory).replaceAll("\\", "/")]
-        if (files === undefined) return Promise.reject(Object.assign(new Error("no such folder"), { code: "ENOENT" }))
-        return Promise.resolve(Object.keys(files))
-    })
+    jest.spyOn<FolderReader, "readdir">(fsPromises, "readdir").mockImplementation((directory) =>
+        Promise.resolve().then(() => {
+            const files = folders[pathOf(directory).replaceAll("\\", "/")]
+            if (files === undefined) throw new FileSystemStandInError({ code: "ENOENT" })
+            return Object.keys(files)
+        }),
+    )
     jest.spyOn<FileReader, "readFile">(fsPromises, "readFile").mockImplementation((file) => {
         const path = pathOf(file).replaceAll("\\", "/")
         const text = Object.values(folders).flatMap((files) =>
