@@ -1,5 +1,5 @@
 {"data":{},"findings":[],"hash":"b069a1586246fafe36bbe958b4626025d85cbeddd99298db4950c29e8444657c","path":"packages/agent-sdk/README.md","step":"file-rules"}
-{"data":{},"findings":[],"hash":"c979fa69c13f8f73e5199f95a834a06ffe0d8fa897a154b39e1c3ef6070bd6a9","path":"packages/agent-sdk/package.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"2bc7204c7d1c0031c0694e906c95688bd9395296e1cd7cb98ec27d123652307b","path":"packages/agent-sdk/package.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"1abc7efbf3b0f1a6ff66cda9c8e1f916307ed56cf1848c03bc95da7e55a7019b","path":"packages/agent-sdk/slots.yaml","step":"file-rules"}
 {"data":{},"findings":[],"hash":"31982ba0923161cbe60924f6eb927e56dcefcb97bf0e3bd3f1b2ee0ad2d93eae","path":"packages/agent-sdk/src/block/block.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"77cb756cb960ca3564c8e6be2cce8c49bad7a5eaa2537b2e8695087809555267","path":"packages/agent-sdk/src/block/block.ts","step":"file-rules"}

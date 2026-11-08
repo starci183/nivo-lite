@@ -1,4 +1,4 @@
-{"findings":[],"hash":"c2503cdf38c4e5fcd6a04f3a7808f9b58fd81b4cf1d3ca8394dbbbd46af1e579","path":"packages/plugin-registry/package.json","step":"prettier"}
+{"findings":[],"hash":"2b75e028141f420eb27c48cb3d9a02a365cb1bbaf5cbb3bc90172e6de05b5e17","path":"packages/plugin-registry/package.json","step":"prettier"}
 {"findings":[],"hash":"c5c955df747208b1f72e578094c12f25ea40af19a0b7dff8f04acfe7cff55067","path":"packages/plugin-registry/slots.yaml","step":"prettier"}
 {"findings":[],"hash":"68d9a4f77254d026e1f5b42413d260fc0ed5578ecefb81ecb1ee820504ffa81b","path":"packages/plugin-registry/tsconfig.build.client.json","step":"prettier"}
 {"findings":[],"hash":"44d4b0254dec07370f85674851dbf19c2dc0ed0c9260d93a0b65a03a4bed7ca9","path":"packages/plugin-registry/tsconfig.build.json","step":"prettier"}

@@ -1,4 +1,4 @@
-{"data":{},"findings":[],"hash":"07a7048d9c2c3ae55ba34a8d2433d74cf0f088cc23f642cd1bb260c060f00677","path":"packages/blocks-core/package.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"ee68f47597a4ece8e03d0e6a81dd664757f7ff7a9f74424ff8598c8592ce59cc","path":"packages/blocks-core/package.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"8bf62a311aa98249d0af0722efa30dc2c57cf45e6a5cf67cd819d801cd2febc5","path":"packages/blocks-core/slots.yaml","step":"file-rules"}
 {"data":{},"findings":[],"hash":"1142f9c39e5cbd43915415c6efd2c468fc333edbb00936fb92f996d90a3612ad","path":"packages/blocks-core/src/blocks/accounting/accounting-blocks.spec.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"6cd5bd71795a0d3fc6c9cd8e3202c85fbbfb395f7333775ce18780e93f9a0cdd","path":"packages/blocks-core/src/blocks/accounting/accounting-blocks.ts","step":"file-rules"}

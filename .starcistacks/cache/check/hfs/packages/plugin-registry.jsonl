@@ -1,4 +1,4 @@
-{"data":{},"findings":[],"hash":"0ecff7b35729cb6a50296034246c808f00ffe1a08f873059a5cabab44486e5ac","path":"packages/plugin-registry/package.json","step":"file-rules"}
+{"data":{},"findings":[],"hash":"de7de6cdfa0313f1e658e0b9468e17d75267576deb0cdb9ad09e8d770ce24bd8","path":"packages/plugin-registry/package.json","step":"file-rules"}
 {"data":{},"findings":[],"hash":"02da07390ce766916a809f86a7a4aac797faf863b0c33c7c8be426a72e5ce9ee","path":"packages/plugin-registry/slots.yaml","step":"file-rules"}
 {"data":{},"findings":[],"hash":"afa3426fdf47e95e057710cf9fb80d323ea8eeba958a8e47d14d32157fb9677d","path":"packages/plugin-registry/src/client/blocks.ts","step":"file-rules"}
 {"data":{},"findings":[],"hash":"9ac25307db4cc2d0b4ed469ab75d0a07090a65194ecb29297e35cf8d2e3e300f","path":"packages/plugin-registry/src/client/index.ts","step":"file-rules"}

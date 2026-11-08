@@ -1,0 +1,4 @@
+{"data":{"verdict":"green"},"findings":[],"hash":"f24f07a5e18d2596dfdb8a128b8a7b34e2387658a33a0732865d8bae96af07df","path":"build/build be","step":"ci-step"}
+{"data":{"verdict":"green"},"findings":[],"hash":"21ee74d1db486f8cb7563747129330b05cea7c624fac0c2c7a532cdfc7fd0df0","path":"build/build fe landing","step":"ci-step"}
+{"data":{"verdict":"green"},"findings":[],"hash":"9ece1e4679169848b5d2e4d15686e27cf0f795e0d996c3fa7f395c689380c219","path":"build/build fe web","step":"ci-step"}
+{"data":{"verdict":"green"},"findings":[],"hash":"8c86ced6ae8e31d90531234b979a8e310fa4d028a8f2c352f24702688ce1f248","path":"build/database migration checks","step":"ci-step"}
