@@ -1,5 +1,4 @@
-import { Alert, AlertDialog, IconTile, Stack } from "@starci/grammar/common"
-import type { ListBoxItem } from "@starci/grammar/common"
+import { Alert, AlertDialog, IconTile, Stack, type ListBoxItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { FactDetail } from "@/components/composites/FactDetail"
 import { RowTrailing } from "@/components/composites/RowTrailing"

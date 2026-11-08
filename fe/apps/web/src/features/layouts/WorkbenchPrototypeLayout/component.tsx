@@ -1,8 +1,6 @@
-import { WorkbenchHostProvider } from "@nivo-lite/agent-sdk/client"
-import type { BlockRenderer, WorkbenchHost } from "@nivo-lite/agent-sdk/client"
+import { WorkbenchHostProvider, type BlockRenderer, type WorkbenchHost } from "@nivo-lite/agent-sdk/client"
 import type { ReactNode } from "react"
-import { FixtureTablesContext } from "@/modules/workbench-host"
-import type { FixtureTables } from "@/modules/workbench-host"
+import { FixtureTablesContext, type FixtureTables } from "@/modules/workbench-host"
 
 /** What the pure half takes: the host, the installed blocks, the enabled modules and the fixtures to mount, and what they wrap. */
 export interface WorkbenchPrototypeLayoutBaseProps {

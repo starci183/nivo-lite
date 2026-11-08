@@ -6,8 +6,8 @@ export const normalize = (value: string): string =>
         .toLowerCase()
         .replaceAll(String.fromCodePoint(0x111), "d")
         .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
-        .replace(/[^a-z0-9@.]+/gu, " ")
+        .replaceAll(/\p{Diacritic}/gu, "")
+        .replaceAll(/[^a-z0-9@.]+/gu, " ")
         .trim()
 
 /** The search phrases of a page, by page id. */

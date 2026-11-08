@@ -5,8 +5,7 @@ import { useState } from "react"
 import { useAgentInstallation, useAgentRights, useChooseLive } from "@/hooks/agentSettings"
 import { setupLabelKey } from "@/hooks/installations"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AgentLiveCardBase } from "./component"
-import type { LiveView } from "./component"
+import { AgentLiveCardBase, type LiveView } from "./component"
 
 /** The installation the card switches. */
 type AgentLiveCardProps = {

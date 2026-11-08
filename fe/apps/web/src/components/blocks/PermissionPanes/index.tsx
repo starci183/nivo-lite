@@ -7,8 +7,7 @@ import { usePermissionBoard, usePermissionDrawer } from "@/hooks/permissions"
 import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
-import { PermissionPanesBase } from "./component"
-import type { PermissionPanesCopy } from "./component"
+import { PermissionPanesBase, type PermissionPanesCopy } from "./component"
 import { useWorkspaceId } from "@/hooks/workspaces"
 
 /** The words of the panes: the page, the list, the search and the blank. */

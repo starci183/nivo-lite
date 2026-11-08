@@ -1,7 +1,6 @@
 import type { AuthFailureKind, AuthOutcome } from "@starci/auth/contracts"
 import { authFailure, authOk } from "@starci/auth/client"
-import { authClient, sendEmailDoor } from "@/modules/auth"
-import type { AuthFailure } from "@/modules/auth"
+import { authClient, sendEmailDoor, type AuthFailure } from "@/modules/auth"
 import { apiUrl } from "@/modules/config"
 import { APP_ROUTES, safeNext } from "@/modules/routes"
 import { parseEmailRequest, parsePassword, parseSignUp } from "./auth.mapper"

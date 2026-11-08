@@ -1,5 +1,4 @@
-import { ListBox } from "@starci/grammar/common"
-import type { ListBoxSection } from "@starci/grammar/common"
+import { ListBox, type ListBoxSection } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 
 /** What a pane's sectioned list draws and does. */
@@ -23,7 +22,7 @@ export const PaneSections = (props: PaneSectionsProps) => (
         selectionIndicator="none"
         selectedIds={props.selectedId === null ? [] : [props.selectedId]}
         onAction={props.onSelect}
-        onSelectionChange={(ids) => ids.slice(0, 1).forEach(props.onSelect)}
+        onSelectionChange={(ids) => ids.slice(0, 1).forEach((id) => props.onSelect(id))}
         isLoading={props.isLoading}
         emptyContent={props.empty}
         sections={props.sections}

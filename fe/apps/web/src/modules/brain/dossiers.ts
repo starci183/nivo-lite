@@ -89,7 +89,7 @@ export const categoryLabelOf = (topic: string): string => {
     const lower = topic
         .normalize("NFC")
         .trim()
-        .replace(/\p{L}+/gu, (word) => (hasVowel(word) ? word.toLocaleLowerCase("vi") : word))
+        .replaceAll(/\p{L}+/gu, (word) => (hasVowel(word) ? word.toLocaleLowerCase("vi") : word))
     return lower.charAt(0).toLocaleUpperCase("vi") + lower.slice(1)
 }
 

@@ -3,10 +3,8 @@ import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
 import { brainPartOf, brainTabOf, legacyBrainHrefOf } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
-import type { BrainTab } from "@/modules/routes"
-import { BrainPageBase } from "./component"
-import type { BrainPageBaseProps } from "./component"
+import { CONSOLE_ROUTES, workspaceHref, type BrainTab } from "@/modules/routes"
+import { BrainPageBase, type BrainPageBaseProps } from "./component"
 
 /** The document title of the page. */
 export const brainMetadata = async (): Promise<Metadata> => {

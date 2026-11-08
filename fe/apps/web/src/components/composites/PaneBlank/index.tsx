@@ -1,5 +1,4 @@
-import { EmptyNotice, PaneSection } from "@starci/grammar/common"
-import type { IconSource } from "@starci/grammar/common"
+import { EmptyNotice, PaneSection, type IconSource } from "@starci/grammar/common"
 
 /** What the main pane says while nothing is open. */
 interface PaneBlankProps {

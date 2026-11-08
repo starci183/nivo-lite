@@ -1,5 +1,4 @@
-import { Avatar } from "@starci/grammar/common"
-import type { AvatarSize } from "@starci/grammar/common"
+import { Avatar, type AvatarSize } from "@starci/grammar/common"
 import { withoutParentheses } from "@/modules/i18n"
 
 /** What the avatar draws for one person. */

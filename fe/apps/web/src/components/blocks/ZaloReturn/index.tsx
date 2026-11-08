@@ -1,8 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useQueryZaloReturnSwr } from "@/hooks/connections"
-import type { ZaloReturnInput } from "@/hooks/connections"
+import { useQueryZaloReturnSwr, type ZaloReturnInput } from "@/hooks/connections"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"

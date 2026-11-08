@@ -1,5 +1,4 @@
-import { Alert, Page, Stack, SurfaceCard } from "@starci/grammar/common"
-import type { BreadcrumbItem } from "@starci/grammar/common"
+import { Alert, Page, Stack, SurfaceCard, type BreadcrumbItem } from "@starci/grammar/common"
 
 /** Copy, trail and the retry command supplied by the connected route error block. */
 export interface RouteErrorBaseProps {

@@ -1,6 +1,5 @@
 import { bytesDetailOf } from "./queue-bytes"
-import { canRetry } from "./queue"
-import type { QueueItem } from "./queue"
+import { canRetry, type QueueItem } from "./queue"
 
 /** The words a queue row is said with. */
 type RowSay = (key: string, values?: Record<string, string | number>) => string

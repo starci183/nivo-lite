@@ -1,9 +1,8 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useProfileRegion } from "@/hooks/agentProfile"
+import { useProfileRegion, type AuthorityMode } from "@/hooks/agentProfile"
 import { mapSlot } from "@/hooks/slot"
-import type { AuthorityMode } from "@/hooks/agentProfile"
 import { AgentProfileRulesBase } from "./component"
 import { actionWordOf } from "@/hooks/actionWord"
 

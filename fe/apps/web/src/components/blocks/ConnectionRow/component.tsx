@@ -1,7 +1,6 @@
 import { Badge, Button, Cluster, DropdownMenu, IconButton, Link, Stack, Text } from "@starci/grammar/common"
 import { ConnectionAccessMenu } from "@/components/composites/ConnectionAccessMenu"
-import { ConnectionRowBody, rowMenuEntriesOf } from "@/components/frames/ConnectionRowBody"
-import type { RowCommandSet } from "@/components/frames/ConnectionRowBody"
+import { ConnectionRowBody, rowMenuEntriesOf, type RowCommandSet } from "@/components/frames/ConnectionRowBody"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import type { RowView } from "@/modules/types"
 import { nivoIconSource } from "@/components/leaves/Icon"

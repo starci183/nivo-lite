@@ -1,5 +1,4 @@
-import { MODULE_KEYS, isModuleKey } from "@/modules/catalog"
-import type { ModuleKey } from "@/modules/catalog"
+import { MODULE_KEYS, isModuleKey, type ModuleKey } from "@/modules/catalog"
 import type { KnowledgeDocument, DocumentStatus } from "@/modules/types"
 
 /** Statuses a worker still has to move on: the live list and the Second Brain notice watch these. */

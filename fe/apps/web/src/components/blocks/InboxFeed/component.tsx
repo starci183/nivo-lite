@@ -8,8 +8,8 @@ import {
     PaneGrid,
     Quote,
     SurfaceCard,
+    type ListBoxItem,
 } from "@starci/grammar/common"
-import type { ListBoxItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { RowTrailing } from "@/components/composites/RowTrailing"
 import { PaneBlank } from "@/components/composites/PaneBlank"

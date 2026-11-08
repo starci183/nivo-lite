@@ -1,10 +1,8 @@
 import { Button, CheckboxGroup, ChoiceChips, Cluster, Stack } from "@starci/grammar/common"
 import type { ReactNode } from "react"
-import { PermissionBandsFields } from "@/components/branches/PermissionBandsFields"
-import type { PermissionBandsFieldsProps } from "@/components/branches/PermissionBandsFields"
+import { PermissionBandsFields, type PermissionBandsFieldsProps } from "@/components/branches/PermissionBandsFields"
 import type { PermissionGrantsFieldsProps } from "@/components/branches/PermissionGrantsFields"
-import { PermissionGroupFields } from "@/components/branches/PermissionGroupFields"
-import type { PermissionGroupFieldsProps } from "@/components/branches/PermissionGroupFields"
+import { PermissionGroupFields, type PermissionGroupFieldsProps } from "@/components/branches/PermissionGroupFields"
 
 /** One choice of a list, already worded. */
 interface ChoiceView {

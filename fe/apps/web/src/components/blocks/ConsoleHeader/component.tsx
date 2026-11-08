@@ -1,5 +1,13 @@
-import type { DropdownMenuEntry, DropdownMenuItem } from "@starci/grammar/common"
-import { AvatarButton, Cluster, DropdownMenu, IconButton, TopBar, Switch } from "@starci/grammar/common"
+import {
+    type DropdownMenuEntry,
+    type DropdownMenuItem,
+    AvatarButton,
+    Cluster,
+    DropdownMenu,
+    IconButton,
+    TopBar,
+    Switch,
+} from "@starci/grammar/common"
 import { ACCOUNT_ITEM, SIGN_OUT_ITEM } from "@/modules/types"
 import { ConsoleWorkspaceMenu } from "../../composites/ConsoleWorkspaceMenu"
 import { FoundingBadge } from "../../composites/FoundingBadge"
@@ -71,7 +79,9 @@ const withCommandLook = (item: DropdownMenuItem): DropdownMenuItem => {
 /** Gives the account page and sign-out items their leading glyph (sign out marked destructive). */
 const withLooks = (entries: ReadonlyArray<DropdownMenuEntry>): ReadonlyArray<DropdownMenuEntry> =>
     entries.map((entry) =>
-        entry.kind === "section" ? { ...entry, items: entry.items.map(withCommandLook) } : withCommandLook(entry),
+        entry.kind === "section"
+            ? { ...entry, items: entry.items.map((item) => withCommandLook(item)) }
+            : withCommandLook(entry),
     )
 
 const Actions = ({ props, on }: ConsoleHeaderBaseProps) => (

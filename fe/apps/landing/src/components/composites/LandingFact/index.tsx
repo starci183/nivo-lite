@@ -1,6 +1,5 @@
 import { Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import { IconGlyph } from "@/components/leaves/Icon"
-import type { IconGlyphName } from "@/components/leaves/Icon"
+import { IconGlyph, type IconGlyphName } from "@/components/leaves/Icon"
 
 /** One scope fact: its glyph, a value and its explanation. */
 interface LandingFactProps {

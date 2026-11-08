@@ -10,12 +10,12 @@ import {
     SurfaceCard,
     Text,
     TextAction,
+    type FooterZone,
+    type HeaderZone,
 } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { parseDate } from "@internationalized/date"
-import type { FooterZone, HeaderZone } from "@starci/grammar/common"
-import { PublicBookingContact } from "@/components/branches/PublicBookingContact"
-import type { PublicBookingContactProps } from "@/components/branches/PublicBookingContact"
+import { PublicBookingContact, type PublicBookingContactProps } from "@/components/branches/PublicBookingContact"
 
 import type { PublicBookingFormProps } from "./index"
 

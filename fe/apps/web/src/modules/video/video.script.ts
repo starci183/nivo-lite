@@ -5,7 +5,7 @@ const MARKS = new RegExp(`[${String.fromCodePoint(0x300)}-${String.fromCodePoint
 const D_BAR = new RegExp(String.fromCodePoint(0x111), "gi")
 
 /** The text without accents (and the barred d folded to d), for matching and for file names. */
-export const asciiFold = (text: string): string => text.normalize("NFD").replace(MARKS, "").replace(D_BAR, "d")
+export const asciiFold = (text: string): string => text.normalize("NFD").replaceAll(MARKS, "").replaceAll(D_BAR, "d")
 
 /** The empty inputs of a new project. */
 export const EMPTY_INPUTS: ProjectInputs = { sourceIds: [], notes: "", media: [], auto: false }
@@ -94,7 +94,7 @@ export const newScene = (role: SceneRole = "body"): ScriptScene => ({
 })
 
 const clip = (value: unknown, max: number): string =>
-    typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : ""
+    typeof value === "string" ? value.replaceAll(/\s+/g, " ").trim().slice(0, max) : ""
 
 const roleOf = (value: unknown): SceneRole => ROLES.find((role) => role === value) ?? "body"
 
@@ -117,7 +117,7 @@ const sceneOf = (raw: unknown): ReadonlyArray<ScriptScene> => {
 
 /** Whatever is stored or typed becomes clean scenes (at most 12). Never throws. */
 export const readScript = (raw: unknown): ReadonlyArray<ScriptScene> =>
-    Array.isArray(raw) ? raw.slice(0, SCRIPT_MAX_SCENES).flatMap(sceneOf) : []
+    Array.isArray(raw) ? raw.slice(0, SCRIPT_MAX_SCENES).flatMap((scene) => sceneOf(scene)) : []
 
 /** The closers a repaired object still owes, innermost first. */
 const closersOf = (stack: ReadonlyArray<string>, upTo: string): string => {
@@ -155,7 +155,7 @@ const closeJsonBracket = (stack: Array<string>, out: string, char: string): stri
  * before a bracket is the usual slip). Null when the object is cut off: half a scene is worse than asking again.
  */
 export const extractJsonObject = (text: string): string | null => {
-    const body = text.replace(/```(?:json)?/gi, "").trim()
+    const body = text.replaceAll(/```(?:json)?/gi, "").trim()
     const start = body.indexOf("{")
     if (start < 0) return null
     const stack: Array<string> = []

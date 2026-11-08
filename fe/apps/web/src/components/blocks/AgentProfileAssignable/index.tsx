@@ -3,8 +3,7 @@
 import { useTranslations } from "next-intl"
 import { useAgentProfile } from "@/hooks/agentProfile"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AgentProfileAssignableBase } from "./component"
-import type { AssignerRow } from "./component"
+import { AgentProfileAssignableBase, type AssignerRow } from "./component"
 
 /** The agent whose assigners the card shows. */
 type AgentProfileAssignableProps = {

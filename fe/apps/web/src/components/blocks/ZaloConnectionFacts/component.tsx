@@ -1,5 +1,4 @@
-import { ConnectionFactsPane } from "@/components/frames/ConnectionFactsPane"
-import type { ConnectionFactsPaneProps } from "@/components/frames/ConnectionFactsPane"
+import { ConnectionFactsPane, type ConnectionFactsPaneProps } from "@/components/frames/ConnectionFactsPane"
 
 /** Copy and slot of the health tiles. */
 export interface ZaloConnectionFactsBaseProps {

@@ -16,8 +16,7 @@ import {
 } from "@/hooks/authority"
 import { useAuthorityScopeForm } from "@/hooks/rhf"
 import { slotOfReads, useSlotLabels } from "@/hooks/slot"
-import { AuthorityScopeBase } from "./component"
-import type { ScopeGroupView } from "./component"
+import { AuthorityScopeBase, type ScopeGroupView } from "./component"
 import { actionWordOf } from "@/hooks/actionWord"
 
 /** The automation scope: modes and VND limits are edited in a react-hook-form form and saved rule by rule through the back end. */

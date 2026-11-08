@@ -3,8 +3,13 @@ import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Alert, CheckboxGroup, EmptyNotice, Input, Section, Stack, Text } from "@starci/grammar/common"
 import { ConnectionCopyInput } from "@/components/composites/ConnectionCopyInput"
 import { WizardCodeBlock } from "@/components/composites/WizardCodeBlock"
-import { backAction, closeAction, nextAction, WizardFooter } from "@/components/branches/WizardFooter"
-import type { WizardAction } from "@/components/branches/WizardFooter"
+import {
+    backAction,
+    closeAction,
+    nextAction,
+    WizardFooter,
+    type WizardAction,
+} from "@/components/branches/WizardFooter"
 import { WizardFrame } from "@/components/frames/WizardFrame"
 import { WizardTestAlert } from "@/components/composites/WizardTestAlert"
 
@@ -101,44 +106,40 @@ const actionsOf = ({ props, on }: WebhookWizardBaseProps): ReadonlyArray<WizardA
 
 const addressOf = (props: WebhookWizardDrawLoadingProps) => {
     const { props: view, on } = props
-    return (
+    return view.step === "address" ? (
         <>
-            {view.step === "address" ? (
-                <>
-                    <Stack gap="row">
-                        <Input
-                            id="webhook-name"
-                            name="name"
-                            label={view.text.fieldName}
-                            isDisabled={view.isPending}
-                            value={view.form.name}
-                            onValueChange={on.name}
-                            isLoading={props.isLoading}
-                        />
-                        <Input
-                            id="webhook-url"
-                            name="url"
-                            label={view.text.fieldUrl}
-                            placeholder={view.text.urlPlaceholder}
-                            description={view.text.urlHint}
-                            isDisabled={view.isPending}
-                            value={view.form.url}
-                            onValueChange={on.url}
-                            isLoading={props.isLoading}
-                        />
-                    </Stack>
-                    <CheckboxGroup
-                        label={view.text.eventsLabel}
-                        isDisabled={view.isPending}
-                        options={[...view.eventOptions]}
-                        value={[...view.events]}
-                        onValueChange={(events) => on.events(events)}
-                        isLoading={props.isLoading}
-                    />
-                </>
-            ) : null}
+            <Stack gap="row">
+                <Input
+                    id="webhook-name"
+                    name="name"
+                    label={view.text.fieldName}
+                    isDisabled={view.isPending}
+                    value={view.form.name}
+                    onValueChange={on.name}
+                    isLoading={props.isLoading}
+                />
+                <Input
+                    id="webhook-url"
+                    name="url"
+                    label={view.text.fieldUrl}
+                    placeholder={view.text.urlPlaceholder}
+                    description={view.text.urlHint}
+                    isDisabled={view.isPending}
+                    value={view.form.url}
+                    onValueChange={on.url}
+                    isLoading={props.isLoading}
+                />
+            </Stack>
+            <CheckboxGroup
+                label={view.text.eventsLabel}
+                isDisabled={view.isPending}
+                options={[...view.eventOptions]}
+                value={[...view.events]}
+                onValueChange={(events) => on.events(events)}
+                isLoading={props.isLoading}
+            />
         </>
-    )
+    ) : null
 }
 
 /** n8n / Make / Zapier webhook in the shared wizard frame: address and events, signing key, a test send, done. */

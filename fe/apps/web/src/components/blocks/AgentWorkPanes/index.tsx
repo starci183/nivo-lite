@@ -14,8 +14,7 @@ import {
 } from "@/hooks/agentWork"
 import { useSlotLabels } from "@/hooks/slot"
 import type { AgentWorkPreset } from "@/modules/types"
-import { AgentWorkPanesBase } from "./component"
-import type { AgentWorkCopy } from "./component"
+import { AgentWorkPanesBase, type AgentWorkCopy } from "./component"
 
 /** The instance whose work the tab shows. */
 type AgentWorkPanesProps = {

@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
-import { Button, IconButton, PaneHeader, PaneSection } from "@starci/grammar/common"
+import { Button, IconButton, PaneHeader, PaneSection, type PaneHeaderProps } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import type { PaneHeaderProps } from "@starci/grammar/common"
 import { WIDE_ONLY_CLASS_NAME } from "./classNames"
 
 /** The one filled command of a pane: where it is drawn depends on the width. */

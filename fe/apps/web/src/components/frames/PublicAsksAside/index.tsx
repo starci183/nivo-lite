@@ -1,5 +1,4 @@
-import { Button, Cluster, EmptyNotice, PaneSection, Section, Text } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { Button, Cluster, EmptyNotice, PaneSection, Section, Text, type ListRowData } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PaneHead } from "@/components/composites/PaneHead"
 import type { DataSlot, PublicAskView, PublicBrainCopy, SlotLabels } from "@/modules/types"

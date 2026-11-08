@@ -1,8 +1,7 @@
 import { eventStreamUrl } from "@/modules/config"
 import { openWorkspaceId } from "@/modules/routes"
 import type { EventStreamHandle } from "@starci/event-stream"
-import { eventStream } from "../clients/event-stream"
-import type { StreamReporter } from "../clients/event-stream"
+import { eventStream, type StreamReporter } from "../clients/event-stream"
 
 /** The stages a worker moves a source through while it indexes it, in order. */
 export type KnowledgeProgressStage = "read" | "chunk" | "embed" | "store" | "facts" | "critic"

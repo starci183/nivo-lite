@@ -6,9 +6,9 @@ export const keyOf = (text: string): string =>
         .toLowerCase()
         .replaceAll(String.fromCodePoint(0x111), "d")
         .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "")
+        .replaceAll(/\p{Diacritic}/gu, "")
+        .replaceAll(/[^a-z0-9]+/g, "-")
+        .replaceAll(/^-|-$/g, "")
         .slice(0, 120)
 
 /** How far a source is believed, 0 to 100. */
@@ -32,14 +32,14 @@ const scaleOf = (word: string): number => {
 
 /** A number written the Vietnamese way ("650.000", "1,2 tr", "8tr", "1.5k") or null. */
 const numberOf = (raw: string): number | null => {
-    const match = NUMBER_WITH_SCALE.exec(raw.toLowerCase().replace(/\s+/g, " ").trim())
+    const match = NUMBER_WITH_SCALE.exec(raw.toLowerCase().replaceAll(/\s+/g, " ").trim())
     if (match === null) return null
     const digits = match[1] ?? ""
     const scale = scaleOf(match[2] ?? "")
     const amount =
         scale > 1
             ? Number(digits.replace(",", "."))
-            : Number(digits.replace(/[.,](?=\d{3}(\D|$))/g, "").replace(",", "."))
+            : Number(digits.replaceAll(/[.,](?=\d{3}(\D|$))/g, "").replace(",", "."))
     return Number.isFinite(amount) ? Math.round(amount * scale * 100) / 100 : null
 }
 
@@ -47,7 +47,7 @@ const numberOf = (raw: string): number | null => {
 export const sameValue = (first: string, second: string): boolean => {
     const a = numberOf(first)
     const b = numberOf(second)
-    const wording = (text: string): string => keyOf(text.replace(/[\d.,\s]/g, ""))
+    const wording = (text: string): string => keyOf(text.replaceAll(/[\d.,\s]/g, ""))
     if (a !== null && b !== null && wording(first) === wording(second)) return a === b
     return keyOf(first) === keyOf(second)
 }

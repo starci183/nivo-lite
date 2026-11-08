@@ -1,16 +1,16 @@
 import { brainTabHref, workspaceHref } from "@/modules/routes"
-import { FACT_SUBJECT_TYPES } from "@/modules/types"
-import type {
-    BrainChipView,
-    BrainFilterView,
-    BrainFact,
-    BrainLens,
-    FactDetailView,
-    FactEntryView,
-    FactHistoryView,
-    FactScope,
-    FactSource,
-    FactSubjectType,
+import {
+    FACT_SUBJECT_TYPES,
+    type BrainChipView,
+    type BrainFilterView,
+    type BrainFact,
+    type BrainLens,
+    type FactDetailView,
+    type FactEntryView,
+    type FactHistoryView,
+    type FactScope,
+    type FactSource,
+    type FactSubjectType,
 } from "@/modules/types"
 import { filterTabsOf } from "./entries"
 
@@ -166,7 +166,9 @@ const detailOf = (fact: BrainFact, input: FactEntriesInput): FactDetailView => (
 /** The rows of the facts list, each with the detail that opens beside it. */
 export const factEntriesOf = (input: FactEntriesInput): ReadonlyArray<FactEntryView> => {
     const proposed = new Set(
-        input.facts.filter((fact) => fact.status === "proposed" && fact.proposalKind === "set").map(keyOf),
+        input.facts
+            .filter((fact) => fact.status === "proposed" && fact.proposalKind === "set")
+            .map((fact) => keyOf(fact)),
     )
     return shownFactsOf(input.facts).map((fact) => {
         const badge: BrainChipView = { label: input.words.scopeOf(fact.scope), tone: SCOPE_CHIP_TONE[fact.scope] }

@@ -9,8 +9,8 @@ import {
     Stack,
     SurfaceCard,
     Text,
+    type ListRowData,
 } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { AccountSignInView, DataSlot, SlotLabels } from "@/modules/types"

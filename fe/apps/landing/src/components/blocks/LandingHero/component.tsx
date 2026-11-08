@@ -9,10 +9,10 @@ import {
     Stack,
     SurfaceCard,
     Text,
+    type ListRowData,
 } from "@starci/grammar/common"
 import { LandingBrowserFrame } from "@/components/composites/LandingBrowserFrame"
 import { IconGlyph } from "@/components/leaves/Icon"
-import type { ListRowData } from "@starci/grammar/common"
 
 /** One row of the "what NIVO follows today" card. */
 interface LandingHeroRow {

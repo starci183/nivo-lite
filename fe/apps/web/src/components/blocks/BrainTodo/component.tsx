@@ -1,9 +1,11 @@
-import { Alert, Button, IconTile, Page, Pane, PaneGrid, Stack } from "@starci/grammar/common"
-import type { ListBoxItem } from "@starci/grammar/common"
+import { Alert, Button, IconTile, Page, Pane, PaneGrid, Stack, type ListBoxItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { BrainHeaderActions, brainHeaderTabs } from "@/components/composites/BrainHeaderActions"
-import { DossierFindingDialogs } from "@/components/composites/DossierFindingDialogs"
-import type { FindingDialogValues, FindingDialogView } from "@/components/composites/DossierFindingDialogs"
+import {
+    DossierFindingDialogs,
+    type FindingDialogValues,
+    type FindingDialogView,
+} from "@/components/composites/DossierFindingDialogs"
 import { PaneBlank } from "@/components/composites/PaneBlank"
 import { QueueDetail } from "@/components/composites/QueueDetail"
 import { RowTrailing } from "@/components/composites/RowTrailing"

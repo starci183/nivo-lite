@@ -1,5 +1,4 @@
-import { Alert, PaneSection } from "@starci/grammar/common"
-import type { PresentationState } from "@starci/grammar/common"
+import { Alert, PaneSection, type PresentationState } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { ConnectionPaneLayoutNotice } from "@/components/frames/ConnectionPaneLayout"
 import type { ConnectionRefusalView, DataSlot, SlotLabels, ZaloHeadView } from "@/modules/types"

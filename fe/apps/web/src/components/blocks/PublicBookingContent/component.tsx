@@ -1,8 +1,7 @@
 import { Avatar, Grid, PageIntro, Page } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 
-import { PublicBookingForm } from "@/components/composites/PublicBookingForm"
-import type { PublicBookingFormProps } from "@/components/composites/PublicBookingForm"
+import { PublicBookingForm, type PublicBookingFormProps } from "@/components/composites/PublicBookingForm"
 import { PublicShell } from "@/components/frames/PublicShell"
 import type { DataSlot, PublicBookingPageData, SlotLabels } from "@/modules/types"
 

@@ -1,6 +1,5 @@
 import { IconTile } from "@starci/grammar/common"
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { IconName } from "@/components/leaves/Icon"
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 import type { DocGlyph } from "@/modules/types"
 
 /** The glyph of each kind of row. */

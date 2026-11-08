@@ -1,15 +1,19 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useCatalogEntries, useInstallAgent, isSetupPending, setupLabelKey } from "@/hooks/installations"
-import type { CatalogRole } from "@/hooks/installations"
+import {
+    useCatalogEntries,
+    useInstallAgent,
+    isSetupPending,
+    setupLabelKey,
+    type CatalogRole,
+} from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { ALL_CATEGORIES, useCatalogView } from "@/hooks/modules"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { AGENT_ROLES_ANCHOR } from "@/modules/routes"
-import { AgentCatalogBase } from "./component"
-import type { AgentCatalogData } from "./component"
+import { AgentCatalogBase, type AgentCatalogData } from "./component"
 
 /** The translator of the catalogue copy. */
 type CatalogCopy = ReturnType<typeof useTranslations<"modulesCore">>
@@ -70,8 +74,8 @@ const placeholderAgentOf = (key: string): AgentCatalogData["team"][number] => ({
 })
 
 const PLACEHOLDER: AgentCatalogData = {
-    team: ["a", "b", "c"].map(placeholderAgentOf),
-    roles: ["a", "b", "c"].map(placeholderRoleOf),
+    team: ["a", "b", "c"].map((key) => placeholderAgentOf(key)),
+    roles: ["a", "b", "c"].map((key) => placeholderRoleOf(key)),
 }
 
 /**

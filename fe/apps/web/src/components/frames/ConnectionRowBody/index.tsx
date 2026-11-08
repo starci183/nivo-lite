@@ -1,5 +1,4 @@
-import { Alert, AlertDialog, Stack, Text } from "@starci/grammar/common"
-import type { DropdownMenuEntry } from "@starci/grammar/common"
+import { Alert, AlertDialog, Stack, Text, type DropdownMenuEntry } from "@starci/grammar/common"
 import { ConnectionAccessMenu } from "@/components/composites/ConnectionAccessMenu"
 import { ConnectionCopyInput } from "@/components/composites/ConnectionCopyInput"
 import { ConnectionSmtpPanel } from "@/components/composites/ConnectionSmtpPanel"

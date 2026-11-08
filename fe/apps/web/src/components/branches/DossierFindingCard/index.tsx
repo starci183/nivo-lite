@@ -1,5 +1,5 @@
-import type { BadgeTone } from "@starci/grammar/common"
 import {
+    type BadgeTone,
     Badge,
     Button,
     Cluster,
@@ -13,8 +13,7 @@ import {
     Stack,
     Text,
 } from "@starci/grammar/common"
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { IconName } from "@/components/leaves/Icon"
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 
 /** One command of a card: a destination or a command, named by the id the caller answers to. */
 interface CardAction<Id extends string> {

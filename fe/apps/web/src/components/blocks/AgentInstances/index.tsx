@@ -2,15 +2,19 @@
 
 import { useTranslations } from "next-intl"
 import { useState } from "react"
-import { useAddInstance, useConnectionNeedsCopy, useInstanceList, isSetupPending } from "@/hooks/installations"
-import type { ModuleKey } from "@/hooks/installations"
+import {
+    useAddInstance,
+    useConnectionNeedsCopy,
+    useInstanceList,
+    isSetupPending,
+    type ModuleKey,
+} from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { useAddInstanceForm } from "@/hooks/rhf"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { AGENTS_ROUTE, APP_ROUTES, workspaceHref } from "@/modules/routes"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AgentInstancesBase } from "./component"
-import type { InstanceRowView } from "./component"
+import { AgentInstancesBase, type InstanceRowView } from "./component"
 
 const PLACEHOLDER: ReadonlyArray<InstanceRowView> = [
     {
@@ -67,7 +71,7 @@ export const AgentInstances = (props: AgentInstancesProps) => {
     const { add, isAdding } = useAddInstance()
     const needs = useConnectionNeedsCopy()
     const slotLabels = useSlotLabels()
-    const [isOpen, setOpen] = useState(false)
+    const [isOpen, setIsOpen] = useState(false)
     const form = useAddInstanceForm(list.defaultName, list.names)
     const submit = form.handleSubmit(async (values) => {
         await add(props.module, values.name)
@@ -111,7 +115,7 @@ export const AgentInstances = (props: AgentInstancesProps) => {
                           on: {
                               setName: (value) => form.setValue("name", value, { shouldValidate: true }),
                               create: () => void submit(),
-                              close: () => setOpen(false),
+                              close: () => setIsOpen(false),
                           },
                       }
                     : null,
@@ -120,7 +124,7 @@ export const AgentInstances = (props: AgentInstancesProps) => {
                 add: () => {
                     form.reset({ name: list.defaultName })
                     void form.trigger("name")
-                    setOpen(true)
+                    setIsOpen(true)
                 },
             }}
         />

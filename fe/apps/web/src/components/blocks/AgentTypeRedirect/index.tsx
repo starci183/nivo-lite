@@ -1,11 +1,10 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useModuleName, useTypeRoute } from "@/hooks/installations"
+import { useModuleName, useTypeRoute, type AgentTab, type ModuleKey } from "@/hooks/installations"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
 import { AGENTS_ROUTE, workspaceHref } from "@/modules/routes"
-import type { AgentTab, ModuleKey } from "@/hooks/installations"
 import { AgentTypeRedirectBase } from "./component"
 
 const PLACEHOLDER: ReadonlyArray<{ readonly id: string; readonly text: string }> = [

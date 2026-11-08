@@ -1,6 +1,15 @@
 import type { ReactNode } from "react"
-import { Badge, Button, DropdownMenu, EmptyNotice, IconButton, PaneSection } from "@starci/grammar/common"
-import type { BadgeTone, DropdownMenuEntry, PaneHeaderProps } from "@starci/grammar/common"
+import {
+    Badge,
+    Button,
+    DropdownMenu,
+    EmptyNotice,
+    IconButton,
+    PaneSection,
+    type BadgeTone,
+    type DropdownMenuEntry,
+    type PaneHeaderProps,
+} from "@starci/grammar/common"
 import { PaneHead } from "@/components/composites/PaneHead"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { ConnectionRefusalView } from "@/modules/types"
@@ -45,15 +54,11 @@ export const ConnectionHeadBand = (props: ConnectionHeadBandProps) => (
         headingLevel={1}
         description={props.facts}
         mark={props.mark}
-        status={
-            <>
-                {props.statuses.map((chip) => (
-                    <Badge key={chip.label} tone={chip.tone} isDot={chip.isDot === true}>
-                        {chip.label}
-                    </Badge>
-                ))}
-            </>
-        }
+        status={props.statuses.map((chip) => (
+            <Badge key={chip.label} tone={chip.tone} isDot={chip.isDot === true}>
+                {chip.label}
+            </Badge>
+        ))}
         isLoading={props.isLoading}
         back={props.back}
         {...(props.railLabel === undefined

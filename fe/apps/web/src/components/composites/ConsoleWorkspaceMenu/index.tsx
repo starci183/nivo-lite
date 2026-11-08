@@ -1,5 +1,4 @@
-import { DropdownMenu, IdentityLockup } from "@starci/grammar/common"
-import type { DropdownMenuEntry } from "@starci/grammar/common"
+import { DropdownMenu, IdentityLockup, type DropdownMenuEntry } from "@starci/grammar/common"
 
 /** What the workspace lockup draws and opens. */
 type ConsoleWorkspaceMenuProps = {

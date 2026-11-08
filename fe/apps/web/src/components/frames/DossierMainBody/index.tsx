@@ -1,8 +1,14 @@
 import { Stack } from "@starci/grammar/common"
-import { DossierFindingBoard } from "@/components/composites/DossierFindingBoard"
-import type { DossierFindingsPane, FindingAction } from "@/components/composites/DossierFindingBoard"
-import { DossierFindingDialogs } from "@/components/composites/DossierFindingDialogs"
-import type { FindingDialogValues, FindingDialogView } from "@/components/composites/DossierFindingDialogs"
+import {
+    DossierFindingBoard,
+    type DossierFindingsPane,
+    type FindingAction,
+} from "@/components/composites/DossierFindingBoard"
+import {
+    DossierFindingDialogs,
+    type FindingDialogValues,
+    type FindingDialogView,
+} from "@/components/composites/DossierFindingDialogs"
 
 /** The words of the findings of the open dossier. */
 interface DossierMainBodyCopy {

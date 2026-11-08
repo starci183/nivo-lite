@@ -1,13 +1,9 @@
 import { Alert, Button } from "@starci/grammar/common"
 import { ConnectionSteps, stepsWithBodies } from "@/components/composites/ConnectionSteps"
-import { ConnectionGrantsBand } from "@/components/frames/ConnectionGrantsBand"
-import type { ConnectionGrantsBandProps } from "@/components/frames/ConnectionGrantsBand"
-import { ConnectionSavedFacts } from "@/components/frames/ConnectionSavedFacts"
-import type { ConnectionSavedFactsProps } from "@/components/frames/ConnectionSavedFacts"
-import { ZaloChecksBody } from "@/components/frames/ZaloChecksBody"
-import type { ZaloChecksBodyProps } from "@/components/frames/ZaloChecksBody"
-import { ZaloPasteBody } from "@/components/frames/ZaloPasteBody"
-import type { ZaloPasteBodyProps } from "@/components/frames/ZaloPasteBody"
+import { ConnectionGrantsBand, type ConnectionGrantsBandProps } from "@/components/frames/ConnectionGrantsBand"
+import { ConnectionSavedFacts, type ConnectionSavedFactsProps } from "@/components/frames/ConnectionSavedFacts"
+import { ZaloChecksBody, type ZaloChecksBodyProps } from "@/components/frames/ZaloChecksBody"
+import { ZaloPasteBody, type ZaloPasteBodyProps } from "@/components/frames/ZaloPasteBody"
 
 /** One setup step as it is worded: its title, the summary beside it, the guidance under it, and where it stands. */
 interface ZaloStepView {

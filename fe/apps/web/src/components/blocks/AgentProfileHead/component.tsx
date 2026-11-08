@@ -1,5 +1,12 @@
-import { Badge, DropdownMenu, IconButton, Page, Stack } from "@starci/grammar/common"
-import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
+import {
+    Badge,
+    DropdownMenu,
+    IconButton,
+    Page,
+    Stack,
+    type BadgeTone,
+    type BreadcrumbItem,
+} from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { AgentMark } from "@/components/leaves/AgentMark"
 import { nivoIconSource } from "@/components/leaves/Icon"

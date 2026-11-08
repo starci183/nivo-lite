@@ -8,8 +8,13 @@ import type {
     RetrievedPassageType,
 } from "@/modules/api"
 import { isModuleKey } from "@/modules/catalog"
-import type { Installation, InstallationStatus, OperatingMode } from "@/modules/installations"
-import { displayNameOf, installationLifecycleOf } from "@/modules/installations"
+import {
+    type Installation,
+    type InstallationStatus,
+    type OperatingMode,
+    displayNameOf,
+    installationLifecycleOf,
+} from "@/modules/installations"
 import type {
     DocumentKind,
     DocumentPassage,

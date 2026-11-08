@@ -1,5 +1,4 @@
-import { AlertDialog, Button, EmptyNotice, SurfaceCard } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { AlertDialog, Button, EmptyNotice, SurfaceCard, type ListRowData } from "@starci/grammar/common"
 import { FormNotice } from "@/components/composites/FormNotice"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import { SlotView } from "@nivo-lite/agent-sdk/client"

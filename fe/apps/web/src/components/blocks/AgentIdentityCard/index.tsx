@@ -11,8 +11,7 @@ import {
     useSaveAgentName,
 } from "@/hooks/agentSettings"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AgentIdentityCardBase } from "./component"
-import type { IdentityView } from "./component"
+import { AgentIdentityCardBase, type IdentityView } from "./component"
 
 /** The agent the card names: the instance of the url, and the glyph of its type. */
 type AgentIdentityCardProps = {

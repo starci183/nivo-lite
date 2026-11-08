@@ -1,5 +1,4 @@
-import { MODULE_REGISTRY } from "@/modules/catalog"
-import type { ModuleKey, RegistryGate } from "@/modules/catalog"
+import { MODULE_REGISTRY, type ModuleKey, type RegistryGate } from "@/modules/catalog"
 import type { ContextSnapshot, DraftSnapshot, GateEntry, GateEvidence } from "./installations.types"
 
 /** What a module must know before it may act. Every gate is required to apply a setup. */

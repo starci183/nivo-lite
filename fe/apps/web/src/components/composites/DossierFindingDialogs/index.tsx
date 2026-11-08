@@ -1,12 +1,12 @@
 import { Stack, Button, DateField, Dialog, Form, Select, Textarea } from "@starci/grammar/common"
 import { parseDate } from "@internationalized/date"
 
-import { NO_ASSIGNEE } from "@/hooks/brain"
-import type {
-    FindingAssignFieldsView,
-    FindingDialogValues,
-    FindingDialogView,
-    FindingTextFieldView,
+import {
+    NO_ASSIGNEE,
+    type FindingAssignFieldsView,
+    type FindingDialogValues,
+    type FindingDialogView,
+    type FindingTextFieldView,
 } from "@/hooks/brain"
 
 export type { FindingDialogValues, FindingDialogView } from "@/hooks/brain"

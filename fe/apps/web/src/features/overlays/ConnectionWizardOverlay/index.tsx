@@ -16,8 +16,7 @@ import {
 } from "@/hooks/connections"
 import { slotOfReads, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import type { AgentOption, Connection, DataSlot } from "@/modules/types"
-import { ConnectionWizardOverlayBase } from "./component"
-import type { WizardBoard, WizardTargetView } from "./component"
+import { ConnectionWizardOverlayBase, type WizardBoard, type WizardTargetView } from "./component"
 
 /**
  * What a page that already read the workspace may hand the wizard drawer. A route that mounts the drawer on its own passes nothing:

@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { Button, Cluster, FileDropzone, Input, Progress, Stack, Text } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { Button, Cluster, FileDropzone, Input, Progress, Stack, Text, type ListRowData } from "@starci/grammar/common"
 import { Icon } from "@/components/leaves/Icon"
 import type { BatchBytesView, LinkRowView, QueueRowView, StoppedUploadsView } from "@/modules/types"
 
@@ -65,27 +64,24 @@ const LinkRows = (props: LinkRowsProps) => (
 /** The notice that an earlier page's uploads stopped, with the ways to go on. */
 type StoppedNoticeProps = Pick<AddFilesPanelProps, "stopped" | "isBusy" | "onDismissStopped">
 
-const StoppedNotice = (props: StoppedNoticeProps) => (
-    <>
-        {props.stopped === undefined ? null : (
-            <>
-                <Text size="sm" tone="muted" live="polite">
-                    {props.stopped.text}
-                </Text>
-                <Button
-                    intent="commit"
-                    isDisabled={props.isBusy}
-                    onPress={() => document.getElementById("knowledge-add-files")?.click()}
-                >
-                    {props.stopped.pickLabel}
-                </Button>
-                <Button intent="neutral" onPress={props.onDismissStopped}>
-                    {props.stopped.dismissLabel}
-                </Button>
-            </>
-        )}
-    </>
-)
+const StoppedNotice = (props: StoppedNoticeProps) =>
+    props.stopped === undefined ? null : (
+        <>
+            <Text size="sm" tone="muted" live="polite">
+                {props.stopped.text}
+            </Text>
+            <Button
+                intent="commit"
+                isDisabled={props.isBusy}
+                onPress={() => document.getElementById("knowledge-add-files")?.click()}
+            >
+                {props.stopped.pickLabel}
+            </Button>
+            <Button intent="neutral" onPress={props.onDismissStopped}>
+                {props.stopped.dismissLabel}
+            </Button>
+        </>
+    )
 
 /** The file queue's item data and actions, consumed by the containing card's final collection band. */
 interface KnowledgeUploadRowsProps {

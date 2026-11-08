@@ -1,7 +1,6 @@
 "use client"
 
-import { Avatar } from "@starci/grammar/common"
-import type { AvatarSize } from "@starci/grammar/common"
+import { Avatar, type AvatarSize } from "@starci/grammar/common"
 /** The approved default picture of an agent that has no owner-uploaded image. */
 export const AGENT_MARK_MASCOT_SRC = "/images/agents/mascot-avatar.webp"
 
@@ -33,7 +32,7 @@ export const AgentMark = (props: AgentMarkProps) => (
         name={props.label}
         kind="agent"
         seed={props.seed}
-        src={props.src ? props.src : AGENT_MARK_MASCOT_SRC}
+        src={props.src === "" ? AGENT_MARK_MASCOT_SRC : (props.src ?? AGENT_MARK_MASCOT_SRC)}
         size={AVATAR_SIZE[props.size ?? "md"]}
         isLoading={props.isLoading === true}
     />

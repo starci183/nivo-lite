@@ -1,9 +1,7 @@
-import { Badge, DropdownMenu, IconButton, IconTile, PaneSection } from "@starci/grammar/common"
-import type { DropdownMenuEntry } from "@starci/grammar/common"
+import { Badge, DropdownMenu, IconButton, IconTile, PaneSection, type DropdownMenuEntry } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PaneHead } from "@/components/composites/PaneHead"
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { IconName } from "@/components/leaves/Icon"
+import { nivoIconSource, type IconName } from "@/components/leaves/Icon"
 import type { QueueEntryView, QueueGlyph, QueueView } from "@/modules/types"
 
 /** The glyph of a row: what kind of work it is. */

@@ -1,5 +1,15 @@
-import { Alert, AlertDialog, Button, Cluster, Heading, Page, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import type { HeaderZone } from "@starci/grammar/common"
+import {
+    Alert,
+    AlertDialog,
+    Button,
+    Cluster,
+    Heading,
+    Page,
+    Stack,
+    SurfaceCard,
+    Text,
+    type HeaderZone,
+} from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { HiringReplyOutcome } from "@/components/composites/HiringReplyOutcome"
 import { PublicShell } from "@/components/frames/PublicShell"

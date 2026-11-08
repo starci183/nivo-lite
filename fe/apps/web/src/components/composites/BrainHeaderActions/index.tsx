@@ -1,5 +1,4 @@
-import { Button, DropdownMenu, IconButton } from "@starci/grammar/common"
-import type { PageHeaderContent } from "@starci/grammar/common"
+import { Button, DropdownMenu, IconButton, type PageHeaderContent } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { BrainPageHeaderView } from "@/modules/types"
 

@@ -13,13 +13,12 @@ import {
     useInstanceTabs,
     isSetupPending,
     setupLabelKey,
+    type ModuleKey,
 } from "@/hooks/installations"
-import type { ModuleKey } from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { AGENT_ROLES_HREF, AGENTS_ROUTE, APP_ROUTES, workspaceHref } from "@/modules/routes"
-import { AgentInstanceFrameBase } from "./component"
-import type { InstanceHeaderView, InstanceSwitch } from "./component"
+import { AgentInstanceFrameBase, type InstanceHeaderView, type InstanceSwitch } from "./component"
 
 const PLACEHOLDER: InstanceHeaderView = {
     name: "-",

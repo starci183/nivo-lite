@@ -1,5 +1,4 @@
-import { authClient } from "@/modules/auth"
-import type { AuthSession } from "@/modules/auth"
+import { authClient, type AuthSession } from "@/modules/auth"
 
 /** The signed-in person as the console reads it: the id and the address (empty when the account has none). */
 export interface SessionPerson {

@@ -4,11 +4,9 @@ import * as Outline from "@heroicons/react/24/outline"
 import * as Solid from "@heroicons/react/16/solid"
 import * as StarciSolid from "@starci/heroicons/16/solid"
 import * as StarciOutline from "@starci/heroicons/24/outline"
-import { Icon as GrammarIcon } from "@starci/grammar/common"
-import type { IconUsage } from "@starci/grammar/common"
+import { Icon as GrammarIcon, type IconUsage } from "@starci/grammar/common"
 import type { SVGProps, ReactElement } from "react"
-import { GoogleMark } from "./component"
-import type { IconName } from "./component"
+import { GoogleMark, type IconName } from "./component"
 
 export type { IconName } from "./component"
 /** Every source in this registry is callable (Heroicons are forward-ref callables; custom marks are functions). */

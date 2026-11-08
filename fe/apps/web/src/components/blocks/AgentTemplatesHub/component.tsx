@@ -1,5 +1,14 @@
-import { Alert, Button, Dialog, EmptyNotice, Input, Stack, SurfaceCard, Textarea } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import {
+    Alert,
+    Button,
+    Dialog,
+    EmptyNotice,
+    Input,
+    Stack,
+    SurfaceCard,
+    Textarea,
+    type ListRowData,
+} from "@starci/grammar/common"
 import type { ReactElement } from "react"
 import { AGENT_MARK_MASCOT_SRC } from "@/components/leaves/AgentMark"
 import { SlotView } from "@nivo-lite/agent-sdk/client"

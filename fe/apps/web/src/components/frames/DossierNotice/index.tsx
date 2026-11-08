@@ -1,5 +1,4 @@
-import { PaneSection } from "@starci/grammar/common"
-import type { IconSource } from "@starci/grammar/common"
+import { PaneSection, type IconSource } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DossierDeskView } from "@/hooks/brain"
 

@@ -2,8 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useCreditsPayDrawer, useCreditsPaymentState, useRetainedWhileClosing } from "@/hooks/credits"
-import { PayDrawerBase } from "./component"
-import type { PayDrawerContent, PayDrawerShape } from "./component"
+import { PayDrawerBase, type PayDrawerContent, type PayDrawerShape } from "./component"
 
 const clock = (ms: number) => {
     const seconds = Math.max(0, Math.floor(ms / 1000))

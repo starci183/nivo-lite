@@ -71,7 +71,7 @@ export const BLANK_SERVICE_FIELDS: ServiceFields = {
 
 /** Reads a whole VND or day count from its editable text. */
 export const bookingServiceDigits = (value: string): number | null => {
-    const only = value.replace(/[^\d]/gu, "")
+    const only = value.replaceAll(/[^\d]/gu, "")
     return only === "" ? null : Number(only)
 }
 
@@ -226,7 +226,7 @@ const detailItems = (booking: BookingView, words: DeskWords): ReadonlyArray<Book
 
 /** The one next step of a booking, when its status has one: the dialog commits to it. */
 const nextOf = (booking: BookingView, words: DeskWords) => {
-    const action = actionsOf(booking.status, booking.checkedIn).find(isNextAction)
+    const action = actionsOf(booking.status, booking.checkedIn).find((action) => isNextAction(action))
     return action === undefined ? {} : { next: { id: action, label: words.say(ACTION_KEY[action]) } }
 }
 

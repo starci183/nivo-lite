@@ -2,12 +2,10 @@
 
 import { useTranslations } from "next-intl"
 import { useHiringFormat, useHiringSay } from "@/hooks/hiring"
-import { useHiringOfferReply, usePublicHiringOffer } from "@/hooks/hiringPublic"
-import type { PublicOfferView } from "@/hooks/hiringPublic"
+import { useHiringOfferReply, usePublicHiringOffer, type PublicOfferView } from "@/hooks/hiringPublic"
 import { useLocaleSwitch } from "@/hooks/locale"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
-import { HiringOfferReplyBase } from "./component"
-import type { HiringOfferReplyShape } from "./component"
+import { HiringOfferReplyBase, type HiringOfferReplyShape } from "./component"
 
 /** The token of the candidate's own link. */
 interface HiringOfferReplyProps {

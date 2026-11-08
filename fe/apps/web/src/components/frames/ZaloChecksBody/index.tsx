@@ -1,7 +1,6 @@
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { ConnectionLines } from "@/components/composites/ConnectionLines"
-import { ZaloTestSend } from "@/components/composites/ZaloTestSend"
-import type { ZaloTestSendProps } from "@/components/composites/ZaloTestSend"
+import { ZaloTestSend, type ZaloTestSendProps } from "@/components/composites/ZaloTestSend"
 import type { DataSlot, SlotLabels, ZaloCheckLineView, ZaloSendView } from "@/modules/types"
 
 /** Fake rows of the same shape: the skeleton reuses the ready tree. */

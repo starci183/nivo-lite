@@ -1,6 +1,14 @@
 import { AGENT_MARK_MASCOT_SRC } from "@/components/leaves/AgentMark"
-import { EmptyNotice, Grid, SearchField, SurfaceCard, Section, Tabs } from "@starci/grammar/common"
-import type { BadgeTone, ListRowData } from "@starci/grammar/common"
+import {
+    EmptyNotice,
+    Grid,
+    SearchField,
+    SurfaceCard,
+    Section,
+    Tabs,
+    type BadgeTone,
+    type ListRowData,
+} from "@starci/grammar/common"
 import { AgentCatalogCard, type AgentCatalogCardProps } from "@/components/composites/AgentCatalogCard"
 import { AgentTeamRow } from "@/components/composites/AgentTeamRow"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -35,7 +43,14 @@ const teamItemOf = (row: AgentCatalogTeamRow, id: string, detail: ListRowData["d
     id,
     title: row.name,
     description: row.description,
-    leading: { avatar: { name: row.name, seed: row.seed, src: row.avatarUrl || AGENT_MARK_MASCOT_SRC, kind: "agent" } },
+    leading: {
+        avatar: {
+            name: row.name,
+            seed: row.seed,
+            src: row.avatarUrl === "" ? AGENT_MARK_MASCOT_SRC : (row.avatarUrl ?? AGENT_MARK_MASCOT_SRC),
+            kind: "agent",
+        },
+    },
     badges: [{ label: row.statusLabel, tone: row.statusTone, isDot: true }],
     action: { label: row.actionLabel, intent: "neutral", href: row.href },
     detail,

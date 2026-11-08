@@ -1,14 +1,20 @@
 import type { DataSlot, SlotLabels, AgentStepView, WizardNote } from "@/modules/types"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { Stack, Alert, Input, Select, Text, Textarea } from "@starci/grammar/common"
+import { Stack, Alert, Select, Text } from "@starci/grammar/common"
 
 import { OpenApiAuthStep } from "@/components/composites/OpenApiAuthStep"
 import { OpenApiPullsStep } from "@/components/composites/OpenApiPullsStep"
+import { OpenApiSourceStep } from "@/components/composites/OpenApiSourceStep"
 import { OpenApiTestStep } from "@/components/composites/OpenApiTestStep"
 import { OpenApiToolsStep } from "@/components/composites/OpenApiToolsStep"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { backAction, closeAction, nextAction, WizardFooter } from "@/components/branches/WizardFooter"
-import type { WizardAction } from "@/components/branches/WizardFooter"
+import {
+    backAction,
+    closeAction,
+    nextAction,
+    WizardFooter,
+    type WizardAction,
+} from "@/components/branches/WizardFooter"
 import { WizardFrame } from "@/components/frames/WizardFrame"
 
 /** The ready drawing with its canonical first-read loading atom. */
@@ -171,42 +177,6 @@ const actionsOf = ({ props, on }: OpenApiWizardBaseProps): ReadonlyArray<WizardA
     return [next(false), back]
 }
 
-/** Step "source": the connection name, the spec link or the pasted spec. */
-const SourceStep = ({ props, on, isLoading }: OpenApiWizardDrawLoadingProps) => (
-    <Stack gap="section">
-        <Input
-            id="oa-name"
-            name="name"
-            label={props.text.name}
-            description={props.text.nameHint}
-            isDisabled={props.isPending}
-            value={props.source.name}
-            onValueChange={on.name}
-            isLoading={isLoading}
-        />
-        <Input
-            id="oa-url"
-            name="specUrl"
-            label={props.text.specUrl}
-            description={props.text.specUrlHint}
-            isDisabled={props.isPending}
-            value={props.source.specUrl}
-            onValueChange={on.specUrl}
-            isLoading={isLoading}
-        />
-        <Textarea
-            id="oa-text"
-            label={props.text.specText}
-            description={props.text.specTextHint}
-            rows={6}
-            isDisabled={props.isPending}
-            value={props.source.specText}
-            onValueChange={on.specText}
-            isLoading={isLoading}
-        />
-    </Stack>
-)
-
 /** Step "schedule": how often the pulled endpoints are read again. */
 const ScheduleStep = ({ props, on, isLoading }: OpenApiWizardDrawLoadingProps) => (
     <Stack gap="section">
@@ -235,7 +205,19 @@ const renderOpenApiWizard = (props: OpenApiWizardBaseProps, isLoading: boolean) 
             index={view.index}
             footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
         >
-            {view.step === "source" ? <SourceStep {...props} isLoading={isLoading} /> : null}
+            {view.step === "source" ? (
+                <OpenApiSourceStep
+                    isLoading={isLoading}
+                    isDisabled={view.isPending}
+                    name={view.source.name}
+                    specUrl={view.source.specUrl}
+                    specText={view.source.specText}
+                    text={view.text}
+                    onName={on.name}
+                    onSpecUrl={on.specUrl}
+                    onSpecText={on.specText}
+                />
+            ) : null}
             {view.step === "auth" ? (
                 <OpenApiAuthStep
                     {...view.auth}

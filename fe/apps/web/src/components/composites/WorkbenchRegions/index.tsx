@@ -1,6 +1,15 @@
 import type { ReactNode } from "react"
-import { Badge, Disclosure, EmptyNotice, Link, Section, Stack, Text } from "@starci/grammar/common"
-import type { BadgeTone, ListRowData } from "@starci/grammar/common"
+import {
+    Badge,
+    Disclosure,
+    EmptyNotice,
+    Link,
+    Section,
+    Stack,
+    Text,
+    type BadgeTone,
+    type ListRowData,
+} from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { WorkbenchDashboardRegions } from "@/modules/types"
 

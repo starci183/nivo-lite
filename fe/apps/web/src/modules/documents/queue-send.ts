@@ -1,6 +1,5 @@
 import { itemOfFile, itemOfLink } from "./queue-items"
-import { UPLOAD_PARALLEL, stripExt } from "./queue"
-import type { BatchMeta, QueueActions, QueueItem } from "./queue"
+import { UPLOAD_PARALLEL, stripExt, type BatchMeta, type QueueActions, type QueueItem } from "./queue"
 import { forgetUploads, rememberUploads } from "./upload-marker"
 
 /** A link chosen in a service: its address and the name the document is stored under. */
@@ -22,7 +21,7 @@ export const withFiles = (queued: ReadonlyArray<QueueItem>, files: ReadonlyArray
                 : [...kept, file],
         [],
     )
-    return [...queued, ...fresh.map(itemOfFile)]
+    return [...queued, ...fresh.map((file) => itemOfFile(file))]
 }
 
 /** The queue items of links chosen in a service, leaving out the ones already queued. */

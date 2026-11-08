@@ -2,11 +2,9 @@
 
 import { useTranslations } from "next-intl"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { useAuthorityStaff } from "@/hooks/authority"
-import type { StaffRow } from "@/hooks/authority"
+import { useAuthorityStaff, type StaffRow } from "@/hooks/authority"
 import { teamInviteHref, workspaceHref } from "@/modules/routes"
-import { AuthorityStaffBase } from "./component"
-import type { StaffRowView } from "./component"
+import { AuthorityStaffBase, type StaffRowView } from "./component"
 import { useWorkspaceId } from "@/hooks/workspaces"
 
 const SKELETON_ROWS: ReadonlyArray<StaffRowView> = [0, 1, 2].map((n) => ({
@@ -38,7 +36,7 @@ export const AuthorityStaff = () => {
                 note: t("staffReadOnly"),
                 hasAccountLabel: t("staffHasAccount"),
                 inviteLabel: t("staffInvite"),
-                slot: mapSlot(slot, (rows) => rows.map(rowOf)),
+                slot: mapSlot(slot, (rows) => rows.map((row) => rowOf(row))),
                 placeholder: SKELETON_ROWS,
                 slotLabels: slotLabels(t("staffEmpty")),
             }}

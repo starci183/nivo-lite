@@ -1,8 +1,6 @@
 "use client"
 
-import type { SlotRead } from "@/hooks/slot"
-
-import { slotOfReads, useSlotLabels } from "@/hooks/slot"
+import { type SlotRead, slotOfReads, useSlotLabels } from "@/hooks/slot"
 
 import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"

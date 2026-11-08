@@ -8,8 +8,7 @@ import { useAvatarEditorView } from "@/hooks/avatar"
 import { IDENTITY_PARAM } from "@/hooks/installations"
 import { isManager, useMember } from "@/hooks/member"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AgentProfileIdentityBase } from "./component"
-import type { ProfileIdentityView } from "./component"
+import { AgentProfileIdentityBase, type ProfileIdentityView } from "./component"
 
 const PLACEHOLDER: ProfileIdentityView = { picture: null, name: "-", nameHint: "-" }
 

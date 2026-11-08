@@ -1,6 +1,5 @@
 import { Button, NumberField, Textarea, Grid } from "@starci/grammar/common"
-import { AuthoritySection } from "@/components/frames/AuthoritySection"
-import type { AuthoritySectionView } from "@/components/frames/AuthoritySection"
+import { AuthoritySection, type AuthoritySectionView } from "@/components/frames/AuthoritySection"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 

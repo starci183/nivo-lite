@@ -1,5 +1,4 @@
-import { Button, DropdownMenu, Text } from "@starci/grammar/common"
-import type { DropdownMenuEntry } from "@starci/grammar/common"
+import { Button, DropdownMenu, Text, type DropdownMenuEntry } from "@starci/grammar/common"
 import type { AccessAgentView, AccessView } from "@/modules/types"
 
 /** The picker (see AccessView) and the handler of a pick. */

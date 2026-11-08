@@ -13,12 +13,10 @@ import type {
     AgentGraphTermView,
     AgentGraphThen,
 } from "@/modules/types"
-import { opsOfFact, termsWords } from "./agent-graph-condition"
-import type { AgentGraphConditionWords } from "./agent-graph-condition"
+import { opsOfFact, termsWords, type AgentGraphConditionWords } from "./agent-graph-condition"
 import { KEEP_GROUP, MAX_ROWS, MAX_TERMS } from "./agent-graph-decide-form"
 import { problemLinesOf } from "./agent-graph-problems"
-import { thenWordOf, timeoutWordOf } from "./agent-graph-words"
-import type { AgentGraphContext, AgentGraphT } from "./agent-graph-words"
+import { thenWordOf, timeoutWordOf, type AgentGraphContext, type AgentGraphT } from "./agent-graph-words"
 
 const THENS: ReadonlyArray<AgentGraphThen> = ["auto", "ask", "stop"]
 const TIMEOUTS: ReadonlyArray<AgentGraphOnTimeout> = ["backup", "stop", "agent_owner", "unset"]

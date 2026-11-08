@@ -1,5 +1,12 @@
-import { OPEN_API_AUTH_TYPES, OPEN_API_PULL_ENTITIES, OPEN_API_SCHEDULES } from "./spec"
-import type { OpenApiAuthType, OpenApiConfigView, OpenApiOp, OpenApiPullDef } from "./spec"
+import {
+    OPEN_API_AUTH_TYPES,
+    OPEN_API_PULL_ENTITIES,
+    OPEN_API_SCHEDULES,
+    type OpenApiAuthType,
+    type OpenApiConfigView,
+    type OpenApiOp,
+    type OpenApiPullDef,
+} from "./spec"
 
 /** The most operations one list shows; a search narrows the rest. */
 export const OPEN_API_SHOWN = 200

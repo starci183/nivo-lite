@@ -1,5 +1,4 @@
-import { Button, DescriptionList, EmptyNotice, Link, Section, Text } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
+import { Button, DescriptionList, EmptyNotice, Link, Section, Text, type ListRowData } from "@starci/grammar/common"
 import type { DocFactView, DocIdeaView, DocIdeasView } from "@/modules/types"
 
 /** What the facts of the opened item and the suggestions draw and call. */

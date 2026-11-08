@@ -2,11 +2,9 @@
 
 import { useLocale, useTranslations } from "next-intl"
 import { useState } from "react"
-import { kindOf, parameterErrorOf, useMarketplace } from "@/hooks/templates"
-import type { ParameterRule, ParameterWords } from "@/hooks/templates"
+import { kindOf, parameterErrorOf, useMarketplace, type ParameterRule, type ParameterWords } from "@/hooks/templates"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AgentMarketplaceBase } from "./component"
-import type { AgentMarketplaceBaseProps } from "./component"
+import { AgentMarketplaceBase, type AgentMarketplaceBaseProps } from "./component"
 
 /** The shape of a listing while the first read loads: the skeleton reuses the ready tree. */
 const PLACEHOLDER: AgentMarketplaceBaseProps["props"]["placeholder"] = [
@@ -78,7 +76,7 @@ export const AgentMarketplace = () => {
     const slotLabels = useSlotLabels()
     const market = useMarketplace()
     const [installingId, setInstallingId] = useState<string | null>(null)
-    const [isAsked, setAsked] = useState(false)
+    const [isAsked, setIsAsked] = useState(false)
     const pick = (text: LocalizedText): string => (locale === "vi" ? text.vi : text.en)
     const order = market.order
     const words: ParameterWords = {
@@ -119,13 +117,13 @@ export const AgentMarketplace = () => {
                 retry: market.reload,
                 openInstall: (id) => {
                     setInstallingId(id)
-                    setAsked(false)
+                    setIsAsked(false)
                 },
                 setValue: market.setValue,
                 install: (listingId) => {
                     const found =
                         "items" in market.slot ? market.slot.items.find((entry) => entry.id === listingId) : undefined
-                    setAsked(true)
+                    setIsAsked(true)
                     if (found === undefined) return
                     // Once asked, a missing required value counts too, so the dialog stays open and shows what is wrong.
                     const isBlocked = found.parameters.some(
@@ -140,7 +138,7 @@ export const AgentMarketplace = () => {
                     if (isBlocked) return
                     void market.install(listingId, found.parameters)
                     setInstallingId(null)
-                    setAsked(false)
+                    setIsAsked(false)
                 },
                 pay: (listingId) => void market.pay(listingId),
             }}

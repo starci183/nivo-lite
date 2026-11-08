@@ -9,8 +9,7 @@ import { PROVIDER_LOGO } from "@/hooks/connection-providers"
 import { useConnectionRefusal, useConnectionsRole } from "@/hooks/connections"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { navigation } from "@/modules/i18n"
-import { SepayConsoleBase } from "./component"
-import type { SepayHeaderView } from "./component"
+import { SepayConsoleBase, type SepayHeaderView } from "./component"
 
 /** What the page hands the head band: the connection of the url and where the back control leads. */
 type SepayConsoleProps = {
@@ -42,8 +41,8 @@ export const SepayConsole = (props: SepayConsoleProps) => {
     const commands = useSepayCommands(props.connectionId)
     const placeholder = useSepayPlaceholder()
     const { role } = useConnectionsRole()
-    const [isPending, setPending] = useState(false)
-    const [isAsking, setAsking] = useState(false)
+    const [isPending, setIsPending] = useState(false)
+    const [isAsking, setIsAsking] = useState(false)
     const connection = "items" in slot ? slot.items : undefined
     const refusal = useConnectionRefusal()
     if (isMissing && refusal === undefined) notFound()
@@ -77,16 +76,16 @@ export const SepayConsole = (props: SepayConsoleProps) => {
                 },
             }}
             on={{
-                askDisconnect: () => setAsking(true),
+                askDisconnect: () => setIsAsking(true),
                 confirmDisconnect: () => {
-                    setPending(true)
+                    setIsPending(true)
                     void commands.disconnect().then((settled) => {
-                        setPending(false)
-                        setAsking(false)
+                        setIsPending(false)
+                        setIsAsking(false)
                         if (settled.kind === "ok") router.replace(props.hubHref)
                     })
                 },
-                dismiss: () => setAsking(false),
+                dismiss: () => setIsAsking(false),
                 back: () => router.push(props.hubHref),
             }}
         />

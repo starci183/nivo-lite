@@ -1,13 +1,10 @@
 "use client"
 
-import type { SlotRead } from "@/hooks/slot"
-
-import { slotOfReads, useSlotLabels } from "@/hooks/slot"
+import { type SlotRead, slotOfReads, useSlotLabels } from "@/hooks/slot"
 
 import { useTranslations } from "next-intl"
 import { useCopyLabels } from "@/hooks/connection-wizard"
-import { useWebhookWizard, WEBHOOK_EVENTS, WEBHOOK_STEPS } from "@/hooks/webhook-wizard"
-import type { WebhookEvent } from "@/hooks/webhook-wizard"
+import { useWebhookWizard, WEBHOOK_EVENTS, WEBHOOK_STEPS, type WebhookEvent } from "@/hooks/webhook-wizard"
 import type { WebhookTestVerdict } from "@/modules/types"
 import { WebhookWizardBase } from "./component"
 

@@ -3,14 +3,12 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useHiringFormat, useHiringSay } from "@/hooks/hiring"
-import { CV_ACCEPT, useHiringApply, usePublicHiringJob } from "@/hooks/hiringPublic"
-import type { PublicJobView } from "@/hooks/hiringPublic"
+import { CV_ACCEPT, useHiringApply, usePublicHiringJob, type PublicJobView } from "@/hooks/hiringPublic"
 import type { ApplyValues, HiringSay } from "@/modules/types"
 import { useLocaleSwitch } from "@/hooks/locale"
 import { useHiringApplyForm } from "@/hooks/rhf"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
-import { HiringApplyFormBase } from "./component"
-import type { HiringApplyDone } from "./component"
+import { HiringApplyFormBase, type HiringApplyDone } from "./component"
 
 /** The workspace slug and the job slug of the public link. */
 interface HiringApplyFormProps {

@@ -1,5 +1,4 @@
-import { EmptyNotice, IconTile, ListBox, Section, Stack, Tabs } from "@starci/grammar/common"
-import type { ListBoxSection } from "@starci/grammar/common"
+import { EmptyNotice, IconTile, ListBox, Section, Stack, Tabs, type ListBoxSection } from "@starci/grammar/common"
 import { RowTrailing } from "@/components/composites/RowTrailing"
 import { FilterGroup } from "@/components/composites/FilterGroup"
 import { nivoIconSource } from "@/components/leaves/Icon"

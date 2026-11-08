@@ -1,5 +1,4 @@
-import { MODULE_KEYS, MODULE_REGISTRY, actionDef } from "@/modules/catalog"
-import type { ActionKey, ModuleKey } from "@/modules/catalog"
+import { MODULE_KEYS, MODULE_REGISTRY, actionDef, type ActionKey, type ModuleKey } from "@/modules/catalog"
 
 /** How far an action may run without a person. */
 export type AuthorityMode = "auto" | "ask" | "never"

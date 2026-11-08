@@ -1,8 +1,7 @@
 import type { ReactElement } from "react"
 import { HiringWorkbenchPage as WorkbenchHiring } from "@/features/pages/HiringWorkbenchPage"
 import { BookingWorkbenchPage } from "@/features/pages/BookingWorkbenchPage"
-import { AgentWorkbenchPage } from "@/features/pages/AgentWorkbenchPage"
-import type { WorkbenchComponent } from "@/features/pages/AgentWorkbenchPage"
+import { AgentWorkbenchPage, type WorkbenchComponent } from "@/features/pages/AgentWorkbenchPage"
 import { VideoWorkbenchPage as WorkbenchVideo } from "@/features/pages/VideoWorkbenchPage"
 
 /** The document title of the workbench tab. */
@@ -24,8 +23,10 @@ const WORKBENCHES: Readonly<Record<string, WorkbenchComponent>> = {
     hiring: WorkbenchHiring,
 }
 
-const first = (value: string | string[] | undefined): string | null =>
-    (Array.isArray(value) ? (value[0] ?? null) : (value ?? null)) || null
+const first = (value: string | string[] | undefined): string | null => {
+    const picked = Array.isArray(value) ? (value[0] ?? null) : (value ?? null)
+    return picked === "" ? null : picked
+}
 
 /** The workbench slot of one agent instance; the tab and focus of the query are the deep link contract of the agent dashboard frame. */
 const Page = async (props: PageProps): Promise<ReactElement> => {

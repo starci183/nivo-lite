@@ -1,5 +1,14 @@
-import { Alert, Badge, Page, Pane, PaneGrid, Stack } from "@starci/grammar/common"
-import type { BreadcrumbItem, ListBoxItem, PageHeaderTabs } from "@starci/grammar/common"
+import {
+    Alert,
+    Badge,
+    Page,
+    Pane,
+    PaneGrid,
+    Stack,
+    type BreadcrumbItem,
+    type ListBoxItem,
+    type PageHeaderTabs,
+} from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"

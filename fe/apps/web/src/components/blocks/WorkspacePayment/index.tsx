@@ -1,11 +1,9 @@
 "use client"
 
 import { useFormatter, useLocale, useTranslations } from "next-intl"
-import { useWorkspacePayment } from "@/hooks/billing"
-import type { WorkspacePaymentSelectors } from "@/hooks/billing"
+import { useWorkspacePayment, type WorkspacePaymentSelectors } from "@/hooks/billing"
 import { AUTH_ROUTES } from "@/modules/routes"
-import { WorkspacePaymentBase } from "./component"
-import type { WorkspacePaymentBaseProps } from "./component"
+import { WorkspacePaymentBase, type WorkspacePaymentBaseProps } from "./component"
 
 /** The payment URL selectors supplied to the connected block. */
 type WorkspacePaymentProps = WorkspacePaymentSelectors
