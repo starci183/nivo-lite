@@ -60,7 +60,7 @@
 {"name":"shape:fe/apps/web/package.json","sha256":"53fc7279dfab3804b1758315c64320cb16468d82a13f971f03cf726aeb6c40b4"}
 {"name":"shape:fe/packages/nivo-i18n/package.json","sha256":"043ba6e073360fbce591424c1e0948e6030d4329185c2ce01a3ab8de0b47a1be"}
 {"name":"shape:fe/packages/nivo-offer/package.json","sha256":"fb357e7cec585ba2618e8bddb8cb013bada17e037998bba914db5f46120e5145"}
-{"name":"shape:package.json","sha256":"d83e9b35c7297c97e9d04fada4e97965038195f71072146db1b6d1bf25ad3877"}
+{"name":"shape:package.json","sha256":"20df33fcf83e7ecfc468e2eb145209d8ab4c8d93c5da282bd1eabab004363f4d"}
 {"name":"shape:packages/agent-sdk/package.json","sha256":"39facf8c22ef0e979944aa8bdf0bc9cd4b2719e8708f249b226561be1a2db8d8"}
 {"name":"shape:packages/blocks-core/package.json","sha256":"7d34f1d7e50865e73aba5f44ba2118d2eaeb57559156267b18bc906b05a4061c"}
 {"name":"shape:packages/plugin-registry/package.json","sha256":"6ddb0945f013931575e52f9d9802f860ab0d7dfa1c9cf123bc0152967be5f168"}
