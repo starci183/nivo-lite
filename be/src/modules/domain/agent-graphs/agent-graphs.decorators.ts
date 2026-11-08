@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
 import type { AgentGraphsOptions } from "./agent-graphs.options"
 import type { AgentGraphBrief, FlowTriggerMessages, GraphFactReader } from "./agent-graphs.port"

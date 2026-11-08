@@ -1,29 +1,43 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { nextKeyOf, STOP_STEP } from "@nivo-lite/agent-sdk/graph"
-import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
-import { NodeRunError, resolveInput, RightsDeniedError, ToolUndeclaredError } from "@nivo-lite/agent-sdk/node"
-import type { NodeRun } from "@nivo-lite/agent-sdk/node"
-import { AgentRunHandlersService } from "@modules/domain/agent-runs"
+import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
+import { nextKeyOf, STOP_STEP, type GraphSpec, type GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
+import {
+    NodeRunError,
+    resolveInput,
+    RightsDeniedError,
+    ToolUndeclaredError,
+    type NodeRun,
+} from "@nivo-lite/agent-sdk/node"
+import {
+    AgentRunHandlersService,
+    type AgentStepHandler,
+    type StepAnswer,
+    type StepDecision,
+    type StepJson,
+    type StepView,
+} from "@modules/domain/agent-runs"
 import { AgentTagService } from "@modules/domain/agent-work"
-import type { AgentStepHandler, StepAnswer, StepDecision, StepJson, StepView } from "@modules/domain/agent-runs"
 import {
     GraphNodeHostService,
     GraphNodeRegistryService,
     GraphNodesError,
     GraphNodesErrorCode,
+    type NodeToolApproval,
+    type NodeTurn,
 } from "@modules/domain/graph-nodes"
-import type { NodeToolApproval, NodeTurn } from "@modules/domain/graph-nodes"
-import { InjectClock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { isDomainError } from "@modules/platform/errors"
-import type { Clock } from "@modules/platform/clock"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
 import { askedSchema, doneSchema, stepInputSchema, subjectSchema } from "./agent-graph-node-step.schema"
-import { APPROVED_STEP_MARK, GRAPH_NODE_STEP_KIND, localeOf, outputsOf } from "./policies/graph-flow.policy"
-import type { GraphNodeApproval, GraphNodeStepInput } from "./policies/graph-flow.policy"
+import {
+    APPROVED_STEP_MARK,
+    GRAPH_NODE_STEP_KIND,
+    localeOf,
+    outputsOf,
+    type GraphNodeApproval,
+    type GraphNodeStepInput,
+} from "./policies/graph-flow.policy"
 
 /** The effect a dead run raises the owner's review through, and the action of that work. */
 const RAISE_EFFECT = "work-item.raise"

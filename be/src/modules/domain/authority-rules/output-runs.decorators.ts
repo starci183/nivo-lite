@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { OutputNodeReader } from "./output-runs.port"
 
 /** Token of the reader of output nodes: absent until the action graph binds one. */

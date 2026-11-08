@@ -36,8 +36,14 @@ import { AgentToolsError, AgentToolsErrorCode } from "./errors/agent-tools.error
 import { agentHandoffOf, approvalOf, clipText, leadOf, queryOf } from "./tool-args.policy"
 import { BridgeCallsService } from "./bridge-calls.service"
 import { bearerTokenOf, isBridgeToken } from "./tool-bearer.policy"
-import { isBookingTool, isGatewayTool, isReadTool, isToolName, TOOL_MANIFEST } from "./tool-manifest.policy"
-import type { ToolName } from "./tool-manifest.policy"
+import {
+    isBookingTool,
+    isGatewayTool,
+    isReadTool,
+    isToolName,
+    TOOL_MANIFEST,
+    type ToolName,
+} from "./tool-manifest.policy"
 
 /** What the evidence line of a connector meta-tool names: the query of a search, the tool of a call, the sequence as such. */
 const subjectOf = (tool: GatewayToolName, args: ToolArgs): unknown => {

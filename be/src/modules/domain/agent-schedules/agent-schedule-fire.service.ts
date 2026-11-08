@@ -2,10 +2,8 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentTriggersService, AgentWakeService } from "@modules/domain/agent-work"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { InjectQueueSchedules } from "@modules/platform/queue"
-import type { QueueSchedules } from "@modules/platform/queue"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { InjectQueueSchedules, type QueueSchedules } from "@modules/platform/queue"
 import {
     AGENT_SCHEDULE_FIRE_QUEUE,
     agentTriggerSchedulerId,

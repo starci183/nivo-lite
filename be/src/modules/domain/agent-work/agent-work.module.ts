@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AgentTurnQueueModule } from "@modules/queues/agent-turn"
 import { AgentDrainService } from "./agent-drain.service"
 import { AgentWakeInterruptionService } from "./agent-wake-interruption.service"

@@ -1,17 +1,16 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { buildIntentPrompt, IntentRegistryService } from "@modules/domain/intent-contracts"
-import type {
-    InboundTrust,
-    IntentGap,
-    IntentInputPart,
-    IntentReading,
-    IntentTrace,
-    IntentTrigger,
+import {
+    buildIntentPrompt,
+    IntentRegistryService,
+    type InboundTrust,
+    type IntentGap,
+    type IntentInputPart,
+    type IntentReading,
+    type IntentTrace,
+    type IntentTrigger,
 } from "@modules/domain/intent-contracts"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
-import { InjectAgentGraphBrief } from "@modules/domain/agent-graphs"
-import type { AgentGraphBrief, IntentNodeKeys } from "@modules/domain/agent-graphs"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectAgentGraphBrief, type AgentGraphBrief, type IntentNodeKeys } from "@modules/domain/agent-graphs"
 import { InjectIntentFiles } from "./agent-turns.decorators"
 import { AgentWriteRightService } from "./agent-write-right.service"
 import { offeredOf, tagTrustOf, traceOf, triggerOf } from "./intent-turn.policy"

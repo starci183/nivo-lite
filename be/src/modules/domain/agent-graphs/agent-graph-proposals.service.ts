@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { EntityEngineService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
+import { EntityEngineService, type ScopedTx } from "@modules/domain/entity-engine"
 import type { IntentBusiness, IntentGap } from "@modules/domain/intent-contracts"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
 import { AgentGraphRecordsService } from "./agent-graph-records.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
@@ -186,7 +184,7 @@ export class AgentGraphProposalsService {
     /** The proposals still open for the agent, newest first. */
     openOf(workspaceId: string, agentId: string): Promise<ReadonlyArray<GraphProposalView>> {
         return this.engine.scoped(workspaceId, async (tx) =>
-            (await this.records.openProposalsOf(tx, agentId, PROPOSAL_LIMIT)).map(viewOf),
+            (await this.records.openProposalsOf(tx, agentId, PROPOSAL_LIMIT)).map((item) => viewOf(item)),
         )
     }
 

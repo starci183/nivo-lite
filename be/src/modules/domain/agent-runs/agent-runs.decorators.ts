@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { AgentRunItemVerdicts, AgentRunWaitTimeout } from "./agent-runs-engine.contracts"
 import type { AgentRunsOptions } from "./agent-runs.options"
 

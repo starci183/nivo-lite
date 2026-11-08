@@ -1,12 +1,10 @@
 import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import type { GraphAnswer, GraphCheck } from "@modules/domain/authority-rules"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
-import { AgentGraphsService } from "./agent-graphs.service"
-import type { GraphState } from "./agent-graphs.service"
+import { AgentGraphsService, type GraphState } from "./agent-graphs.service"
 import type {
     DecisionClosedAs,
     DecisionOutcome,
@@ -19,8 +17,7 @@ import type { FactSubject } from "./agent-graphs.port"
 import { GraphFactsService } from "./graph-facts.service"
 import { evidenceAccepted } from "./policies/evidence.policy"
 import { isFlowOnly } from "./policies/flow.policy"
-import { factsOfWalk, walkGraph } from "./policies/graph-walk.policy"
-import type { WalkOptions } from "./policies/graph-walk.policy"
+import { factsOfWalk, walkGraph, type WalkOptions } from "./policies/graph-walk.policy"
 
 /** A walk with the facts it read and the registry that names them. */
 export interface WalkRead {

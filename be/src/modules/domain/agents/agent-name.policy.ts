@@ -6,7 +6,7 @@ export const AGENT_DISPLAY_NAME_LIMITS = { min: 2, max: 40 } as const
  * whitespace folded to one space; null when it is shorter or longer than the limits.
  */
 export const cleanAgentName = (name: string): string | null => {
-    const clean = name.replace(/\s+/g, " ").trim()
+    const clean = name.replaceAll(/\s+/g, " ").trim()
     return clean.length >= AGENT_DISPLAY_NAME_LIMITS.min && clean.length <= AGENT_DISPLAY_NAME_LIMITS.max ? clean : null
 }
 

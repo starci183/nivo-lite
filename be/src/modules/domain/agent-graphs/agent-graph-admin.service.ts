@@ -3,29 +3,26 @@ import { BrainFactsService } from "@modules/domain/brain-facts"
 import type { IntentBusiness } from "@modules/domain/intent-contracts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
-import { AgentGraphContextService } from "./agent-graph-context.service"
-import type { AskCoverage } from "./agent-graph-context.service"
+import { AgentGraphContextService, type AskCoverage } from "./agent-graph-context.service"
 import { AgentGraphProposalsService } from "./agent-graph-proposals.service"
-import { AgentGraphPublishService } from "./agent-graph-publish.service"
-import type { Publisher } from "./agent-graph-publish.service"
+import { AgentGraphPublishService, type Publisher } from "./agent-graph-publish.service"
 import { AgentGraphRunService } from "./agent-graph-run.service"
 import { AgentGraphSeedService } from "./agent-graph-seed.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
-import { AgentGraphsService } from "./agent-graphs.service"
+import { AgentGraphsService, type GraphState } from "./agent-graphs.service"
 import type { GraphDocument, GraphMode, GraphVersionView } from "./agent-graphs.contracts"
-import type { GraphState } from "./agent-graphs.service"
-import { applyConflict } from "./policies/conflict-patch.policy"
-import type { ConflictPatch } from "./policies/conflict-patch.policy"
+import { applyConflict, type ConflictPatch } from "./policies/conflict-patch.policy"
 import { applyContract } from "./policies/contract-patch.policy"
-import { localeOf, wireOfView } from "./policies/graph-wire.policy"
-import { applyLearned } from "./policies/proposal-patch.policy"
-import type {
-    AgentGraphRunEntryWire,
-    AgentGraphRunWire,
-    AgentGraphWire,
-    OptionalLanguage,
+import {
+    localeOf,
+    wireOfView,
+    type AgentGraphRunEntryWire,
+    type AgentGraphRunWire,
+    type AgentGraphWire,
+    type OptionalLanguage,
 } from "./policies/graph-wire.policy"
+import { applyLearned } from "./policies/proposal-patch.policy"
 
 /** Who asks: the account and the workspace it acts in. */
 export interface GraphActor {

@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { AccountingGateway } from "./accounting-gateway.port"
 
 /** Token of the accounting gateway port; the app root binds it to the MCP gateway adapter. */

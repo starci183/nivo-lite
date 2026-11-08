@@ -1,12 +1,11 @@
-import { graphSpecProblems } from "@nivo-lite/agent-sdk/graph"
-import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import { graphSpecProblems, type GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import type { NodeIndex } from "@nivo-lite/agent-sdk/node"
 import { AgentGraphsError, AgentGraphsErrorCode } from "../errors/agent-graphs.error"
 import type { GraphDocument } from "../agent-graphs.contracts"
 
 /** The text of a value with the keys of every object in order: the database keeps a document with its keys in its own order, so equal content must compare equal. */
 const canonicalText = (value: unknown): string => {
-    if (Array.isArray(value)) return `[${value.map(canonicalText).join(",")}]`
+    if (Array.isArray(value)) return `[${value.map((item) => canonicalText(item)).join(",")}]`
     if (value === null || typeof value !== "object") return String(JSON.stringify(value))
     const entries = Object.entries(value)
         .filter(([, member]) => member !== undefined)

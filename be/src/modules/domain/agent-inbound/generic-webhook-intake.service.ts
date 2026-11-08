@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectInbox } from "@modules/platform/inbox"
-import type { Inbox } from "@modules/platform/inbox"
-import { InjectGenericWebhookQueue } from "@modules/queues/generic-webhook"
-import type { GenericWebhookQueue } from "@modules/queues/generic-webhook"
+import { InjectInbox, type Inbox } from "@modules/platform/inbox"
+import { InjectGenericWebhookQueue, type GenericWebhookQueue } from "@modules/queues/generic-webhook"
 import { GENERIC_WEBHOOK, receiveGenericWebhook } from "./generic-webhook.adapter"
 import type { VerifiedDelivery } from "./agent-inbound-door.contracts"
 

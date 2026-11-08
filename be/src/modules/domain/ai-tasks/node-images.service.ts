@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common"
-import { InjectRemoteFiles } from "@modules/integrations/remote-files"
-import type { RemoteFiles } from "@modules/integrations/remote-files"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectRemoteFiles, type RemoteFiles } from "@modules/integrations/remote-files"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AiTasksLogEvent } from "./ai-tasks.log-events"
 
 /** The largest picture a model call carries, bytes: a larger one is left out and logged. */

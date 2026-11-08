@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
-import type { EntityManager, FindOptionsWhere } from "typeorm"
+import { In, type EntityManager, type FindOptionsWhere } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"

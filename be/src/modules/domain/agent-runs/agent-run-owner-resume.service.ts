@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
+import { WorkspaceMembersService, type WorkspaceRole } from "@modules/domain/workspace-members"
 import { AgentRunResumeService } from "./agent-run-resume.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import type { OwnerResumeAnswer, OwnerResumeRequest, ResumeResult } from "./agent-runs-engine.contracts"

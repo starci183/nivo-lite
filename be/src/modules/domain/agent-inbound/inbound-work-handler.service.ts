@@ -1,5 +1,4 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { AgentRunsService } from "@modules/domain/agent-runs"
 import {
     IntentPipelineService,
@@ -8,28 +7,32 @@ import {
     internalTimeoutMsOf,
     pinnedOf,
     proposalTextOf,
+    type IntentPlan,
 } from "@modules/domain/agent-turns"
 import type { AgentGraphBrief } from "@modules/domain/agent-graphs"
-import type { IntentPlan } from "@modules/domain/agent-turns"
 import type { IntentTrigger } from "@modules/domain/intent-contracts"
-import { AgentTurnsService, AgentWorkHandlersService, wakeSources } from "@modules/domain/agent-work"
-import { decodeInbound } from "@modules/domain/agent-wake-rules"
-import type {
-    AgentHandlerEnding,
-    AgentTurnPrep,
-    AgentTurnView,
-    AgentWakeSource,
-    AgentWakeView,
-    AgentWorkFallback,
+import {
+    AgentTurnsService,
+    AgentWorkHandlersService,
+    wakeSources,
+    type AgentHandlerEnding,
+    type AgentTurnPrep,
+    type AgentTurnView,
+    type AgentWakeSource,
+    type AgentWakeView,
+    type AgentWorkFallback,
 } from "@modules/domain/agent-work"
-import type { AgentWakeInbound } from "@modules/domain/agent-wake-rules"
-import { AgentDirectoryService, AgentsService, InjectInstallations } from "@modules/domain/agents"
-import type { Installation, InstallationDirectory } from "@modules/domain/agents"
+import { decodeInbound, type AgentWakeInbound } from "@modules/domain/agent-wake-rules"
+import {
+    AgentDirectoryService,
+    AgentsService,
+    InjectInstallations,
+    type Installation,
+    type InstallationDirectory,
+} from "@modules/domain/agents"
 import { threadKeyFor } from "@modules/integrations/openclaw"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { InjectInboundAdapterRegistry, InjectInboundGraphBrief } from "./agent-inbound.decorators"
 import { AgentInboundLogEvent } from "./agent-inbound.log-events"
 import { eventPartsOf, trustOfWake, heldBy, offeredIn, skippedBy, triggerOfEvent } from "./inbound-turn.policy"

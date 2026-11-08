@@ -1,7 +1,5 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
-import { AGENT_GRAPH_BRIEF } from "@modules/domain/agent-graphs"
-import type { AgentGraphBrief } from "@modules/domain/agent-graphs"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
+import { AGENT_GRAPH_BRIEF, type AgentGraphBrief } from "@modules/domain/agent-graphs"
 import type { InboundStopReporter } from "./agent-inbound-door.contracts"
 import type { InboundAdapterRegistry } from "./agent-inbound.port"
 

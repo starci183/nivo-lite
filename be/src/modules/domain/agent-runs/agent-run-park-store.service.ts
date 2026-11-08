@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { ScopedTx } from "@modules/domain/entity-engine"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -153,7 +152,7 @@ export class AgentRunParkStoreService {
             const found: Array<ParkedRef> = []
             await eachInOrder(due, async (run) => {
                 if (found.length >= query.limit) return
-                const steps = (await this.records.stepsOf(scoped, run.id)).map(stepViewOf)
+                const steps = (await this.records.stepsOf(scoped, run.id)).map((item) => stepViewOf(item))
                 if (steps.some((step) => step.status === "failed" && !query.exclude.includes(step.errorCode ?? "")))
                     found.push({ runId: run.id, workspaceId: query.workspaceId })
             })

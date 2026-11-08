@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ApprovalAnnouncerService } from "./approval-announcer.service"
 import { ApprovalDecidingService } from "./approval-deciding.service"
 import { ApprovalEscalationService } from "./approval-escalation.service"

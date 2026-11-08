@@ -1,7 +1,6 @@
 import { AGENT_BURST_POLICY } from "@modules/domain/agent-work"
 import { AgentGraphBurstService } from "./agent-graph-burst.service"
-import { Module } from "@nestjs/common"
-import type { DynamicModule, Provider, Type } from "@nestjs/common"
+import { Module, type DynamicModule, type Provider, type Type } from "@nestjs/common"
 import { SETUP_GRAPH } from "@modules/domain/modules"
 import { OUTPUT_NODE_READER, WORK_BRANCH_DECIDER } from "@modules/domain/authority-rules"
 import { DATA_RIGHTS_GATE, TOOL_GRAPH_GATE } from "@modules/domain/mcp-gateway"

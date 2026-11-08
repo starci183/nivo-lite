@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import type { AgentRunWaitTimeout, WaitExpiry } from "@modules/domain/agent-runs"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { AgentGraphAsksService } from "./agent-graph-asks.service"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
 

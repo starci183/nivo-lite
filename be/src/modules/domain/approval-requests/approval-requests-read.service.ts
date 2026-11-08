@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, Not, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { OptionalRequestCard, RequestStanding, SettledRequest } from "./approval-requests-read.contracts"
 import { ApprovalRequestEntity } from "./persistence/entities"

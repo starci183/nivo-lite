@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AVATARS_ACCOUNTS, AVATARS_STORAGE } from "./avatars.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./avatars.module-definition"
 import { AvatarsService } from "./avatars.service"

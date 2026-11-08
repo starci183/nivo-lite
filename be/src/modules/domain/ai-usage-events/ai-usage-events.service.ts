@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { noticeBody, noticeLevelOf } from "./notice.policy"
 import { AiUsageEventEntity } from "./persistence/entities"
 import { quotaFiguresOf, quotaLookupOf, quotaOf, stopsCall } from "./quota.policy"
@@ -16,8 +15,7 @@ import type {
 } from "./ai-usage-events.contracts"
 import { AiUsageEventsLogEvent } from "./ai-usage-events.log-events"
 import { CREDIT_USD_VALUE, figuresOf } from "./usage-cost.policy"
-import { toDailyModuleUsage, toUsageSummary } from "./usage-summary.mapper"
-import type { MonthlyUsageAggregate } from "./usage-summary.mapper"
+import { toDailyModuleUsage, toUsageSummary, type MonthlyUsageAggregate } from "./usage-summary.mapper"
 
 /** The most day-and-module rollups the billing card reads. */
 const MONTHLY_ROW_LIMIT = 2000
@@ -67,7 +65,7 @@ export class AiUsageEventsService {
 
     /** The browser's quota read: absence is nullable, while a database failure propagates to the caller. */
     async readQuotaStatus(workspaceId: string): Promise<QuotaLookup> {
-        return quotaLookupOf((await this.quotaRecords(workspaceId)).map(quotaFiguresOf))
+        return quotaLookupOf((await this.quotaRecords(workspaceId)).map((item) => quotaFiguresOf(item)))
     }
 
     /** Current-month use for the billing card, after the application proves the caller's manager role. */
@@ -91,7 +89,10 @@ export class AiUsageEventsService {
             .addOrderBy("module", "ASC")
             .limit(MONTHLY_ROW_LIMIT)
             .getRawMany<MonthlyUsageAggregate>()
-        return toUsageSummary(status, rows.map(toDailyModuleUsage))
+        return toUsageSummary(
+            status,
+            rows.map((item) => toDailyModuleUsage(item)),
+        )
     }
 
     /** The model cost from a selected day onward, used by the credits run-out forecast. */

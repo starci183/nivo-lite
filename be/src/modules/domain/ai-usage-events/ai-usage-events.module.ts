@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./ai-usage-events.module-definition"
 import { AiUsageEventsService } from "./ai-usage-events.service"
 import { AiUsageOverviewService } from "./ai-usage-overview.service"

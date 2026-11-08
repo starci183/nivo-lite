@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { EntityEngineService, EntityMutationService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
+import { EntityEngineService, EntityMutationService, type ScopedTx } from "@modules/domain/entity-engine"
 import type { EngineResult, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { MutationValues } from "@nivo-lite/agent-sdk/mutation"
 import type { FilterExpr, OrderBy, Query } from "@nivo-lite/agent-sdk/query"
@@ -145,13 +144,13 @@ export class AgentGraphRecordsService {
     /** The graph of an agent, or null. */
     async graphOf(tx: ScopedTx, agentId: string): Promise<GraphRecord | null> {
         const rows = await this.rows(tx, GRAPH, GRAPH_SELECT, eq("agentId", agentId), [["id", "asc"]], 1)
-        return rows.map(graphRecordOf).at(0) ?? null
+        return rows.map((item) => graphRecordOf(item)).at(0) ?? null
     }
 
     /** The graph of an installation, or null. */
     async graphOfInstallation(tx: ScopedTx, installationId: string): Promise<GraphRecord | null> {
         const rows = await this.rows(tx, GRAPH, GRAPH_SELECT, eq("installationId", installationId), [["id", "asc"]], 1)
-        return rows.map(graphRecordOf).at(0) ?? null
+        return rows.map((item) => graphRecordOf(item)).at(0) ?? null
     }
 
     /** The ids among these agents that hold a graph. */
@@ -167,7 +166,7 @@ export class AgentGraphRecordsService {
             ],
             agentIds.length,
         )
-        return rows.map(graphRecordOf).map((graph) => graph.agentId)
+        return rows.map((item) => graphRecordOf(item)).map((graph) => graph.agentId)
     }
 
     /** The graphs of the workspace, in the order of their agents, at most `limit`. */
@@ -183,7 +182,7 @@ export class AgentGraphRecordsService {
             ],
             limit,
         )
-        return rows.map(graphRecordOf)
+        return rows.map((item) => graphRecordOf(item))
     }
 
     /** A graph, found or made under the match key of its agent. */
@@ -228,7 +227,7 @@ export class AgentGraphRecordsService {
             ],
             limit,
         )
-        return rows.map(versionRecordOf)
+        return rows.map((item) => versionRecordOf(item))
     }
 
     /** Inserts a version; null when its number is already the agent's. */
@@ -261,7 +260,7 @@ export class AgentGraphRecordsService {
             ],
             limit,
         )
-        return rows.map(sourceRecordOf)
+        return rows.map((item) => sourceRecordOf(item))
     }
 
     /** One proposal, or null. */
@@ -283,7 +282,7 @@ export class AgentGraphRecordsService {
             ],
             limit,
         )
-        return rows.map(proposalRecordOf)
+        return rows.map((item) => proposalRecordOf(item))
     }
 
     /** The proposals of one kind that the agent raised and that are open, confirmed or declined, at most `limit`. */
@@ -308,7 +307,7 @@ export class AgentGraphRecordsService {
             ],
             limit,
         )
-        return rows.map(proposalRecordOf)
+        return rows.map((item) => proposalRecordOf(item))
     }
 
     /** Raises a proposal once per cause: true when this call wrote it. */
@@ -345,7 +344,7 @@ export class AgentGraphRecordsService {
     /** The decision of a work item, or null. */
     async decisionOfItem(tx: ScopedTx, workItemId: string): Promise<GraphDecisionRecord | null> {
         const rows = await this.rows(tx, DECISION, DECISION_SELECT, eq("workItemId", workItemId), [["id", "asc"]], 1)
-        return rows.map(decisionRecordOf).at(0) ?? null
+        return rows.map((item) => decisionRecordOf(item)).at(0) ?? null
     }
 
     /** The decision whose open request is this one, or null. */
@@ -358,7 +357,7 @@ export class AgentGraphRecordsService {
             [["id", "asc"]],
             1,
         )
-        return rows.map(decisionRecordOf).at(0) ?? null
+        return rows.map((item) => decisionRecordOf(item)).at(0) ?? null
     }
 
     /** The latest decisions of an agent, newest first, at most `limit`. */
@@ -374,7 +373,7 @@ export class AgentGraphRecordsService {
             ],
             limit,
         )
-        return rows.map(decisionRecordOf)
+        return rows.map((item) => decisionRecordOf(item))
     }
 
     /** At most `limit` decisions that ended after this moment, newest change first. */
@@ -390,7 +389,7 @@ export class AgentGraphRecordsService {
             ],
             limit,
         )
-        return rows.map(decisionRecordOf)
+        return rows.map((item) => decisionRecordOf(item))
     }
 
     /** Records a decision once under the match key it names (its work item or its dedupe key): the record that stands. */

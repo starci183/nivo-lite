@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto"
-import { ok, refused } from "@modules/platform/primitives"
-import type { Outcome } from "@modules/platform/primitives"
+import { ok, refused, type Outcome } from "@modules/platform/primitives"
 import type {
     AgentKeyAnswer,
     AgentKeyPrincipal,
@@ -50,7 +49,7 @@ export const bearerKey = (authorization: BearerHeader): string | undefined => {
 
 /** The name a manager typed, with its white space collapsed and its length bounded; refused when it is too short. */
 export const cleanName = (raw: string): Outcome<string, ApiKeysErrorCode> => {
-    const name = raw.trim().replace(/\s+/g, " ").slice(0, NAME_MAX)
+    const name = raw.trim().replaceAll(/\s+/g, " ").slice(0, NAME_MAX)
     return name.length < NAME_MIN ? refused(ApiKeysErrorCode.NameTooShort) : ok(name)
 }
 

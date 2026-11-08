@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { InvoicesCashReadService } from "@modules/domain/invoices"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { PROBE_WINDOW_MS } from "../agent-schedules.policy"
 import type { AgentProbe, ProbeAgent, ProbeAnswer } from "../agent-schedules.contracts"
 

@@ -1,10 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { IsNull } from "typeorm"
-import type { EntityManager } from "typeorm"
-import { MemberGrantsService } from "@modules/domain/member-grants"
-import type { ApproverRef, DirectoryMember } from "@modules/domain/member-grants"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { IsNull, type EntityManager } from "typeorm"
+import { MemberGrantsService, type ApproverRef, type DirectoryMember } from "@modules/domain/member-grants"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import type {
@@ -72,13 +69,17 @@ export class ApprovalSweepService {
                 .getMany()
             const directories = new Map<string, ReadonlyArray<DirectoryMember>>()
             const events: Array<ApprovalResolved> = []
-            await eachInOrder(due.map(toRequestRecord), async (row) => {
-                const directory = directories.get(row.workspace_id) ?? (await this.grants.directory(row.workspace_id))
-                directories.set(row.workspace_id, directory)
-                const event = await this.escalation.expire(tx, row, directory, now)
-                await this.announcer.resolved(event, tx)
-                events.push(event)
-            })
+            await eachInOrder(
+                due.map((item) => toRequestRecord(item)),
+                async (row) => {
+                    const directory =
+                        directories.get(row.workspace_id) ?? (await this.grants.directory(row.workspace_id))
+                    directories.set(row.workspace_id, directory)
+                    const event = await this.escalation.expire(tx, row, directory, now)
+                    await this.announcer.resolved(event, tx)
+                    events.push(event)
+                },
+            )
             return events
         })
         return resolved.length
@@ -101,11 +102,14 @@ export class ApprovalSweepService {
                 .setOnLocked("skip_locked")
                 .getMany()
             const out: Array<Reminder> = []
-            await eachInOrder(due.map(toRequestRecord), async (row) => {
-                const answered = new Set(row.verdicts.map((one) => one.member_id))
-                await tx.update(ApprovalRequestEntity, { id: row.id, remindedAt: IsNull() }, { remindedAt: now })
-                out.push({ row, remaining: row.approvers.filter((member) => !answered.has(member.memberId)) })
-            })
+            await eachInOrder(
+                due.map((item) => toRequestRecord(item)),
+                async (row) => {
+                    const answered = new Set(row.verdicts.map((one) => one.member_id))
+                    await tx.update(ApprovalRequestEntity, { id: row.id, remindedAt: IsNull() }, { remindedAt: now })
+                    out.push({ row, remaining: row.approvers.filter((member) => !answered.has(member.memberId)) })
+                },
+            )
             return out
         })
         await eachInOrder(reminders, (entry) => this.announcer.reminder(reminderOf(entry)))

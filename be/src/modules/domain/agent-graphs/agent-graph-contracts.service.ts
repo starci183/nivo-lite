@@ -1,25 +1,23 @@
 import type { OptionalTurnContracts } from "./agent-graph-brief.contracts"
 import { Injectable } from "@nestjs/common"
-import { IntentRegistryService, resolveContracts } from "@modules/domain/intent-contracts"
-import type {
-    ContractSource,
-    FrameAction,
-    InboundTrust,
-    IntentBusiness,
-    IntentTrigger,
+import {
+    IntentRegistryService,
+    resolveContracts,
+    type ContractSource,
+    type FrameAction,
+    type InboundTrust,
+    type IntentBusiness,
+    type IntentTrigger,
 } from "@modules/domain/intent-contracts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { ModulesService } from "@modules/domain/modules"
 import { wakeSources } from "@modules/domain/agent-work"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
 import type { GraphDocument } from "./agent-graphs.contracts"
-import { reachableIntents } from "./policies/intent-of-step.policy"
-import type { ReachedIntent } from "./policies/intent-of-step.policy"
+import { reachableIntents, type ReachedIntent } from "./policies/intent-of-step.policy"
 
 /** The language of the words of the prompt of a turn. */
 const LOCALE = "vi"

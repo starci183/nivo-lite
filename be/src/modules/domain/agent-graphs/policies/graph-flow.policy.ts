@@ -1,8 +1,7 @@
 import type { GraphSpecNode, GraphTagSource } from "@nivo-lite/agent-sdk/graph"
 import type { NodeSaga } from "@nivo-lite/agent-sdk/node"
 import type { StepEffect, StepJson, StepSpec } from "@modules/domain/agent-runs"
-import { tagPayloadOf } from "@modules/domain/agent-work"
-import type { AgentWakeContext } from "@modules/domain/agent-work"
+import { tagPayloadOf, type AgentWakeContext } from "@modules/domain/agent-work"
 import type { Locale } from "@modules/platform/i18n"
 
 /** The step kind a node of a graph runs as. */

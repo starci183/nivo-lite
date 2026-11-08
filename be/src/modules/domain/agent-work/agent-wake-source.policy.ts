@@ -1,7 +1,6 @@
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import type { AgentWakeSource } from "./agent-work.contracts"
-import { WAKE_SOURCE_KEY } from "@modules/domain/agent-wake-rules"
-import type { AgentWakeTraits, OptionalAgentWakeTraits } from "@modules/domain/agent-wake-rules"
+import { WAKE_SOURCE_KEY, type AgentWakeTraits, type OptionalAgentWakeTraits } from "@modules/domain/agent-wake-rules"
 
 /** The keys of the four sources that existed before adapters, and the traits the work core always gave them. */
 const BUILT_IN: Readonly<Record<string, AgentWakeTraits>> = {

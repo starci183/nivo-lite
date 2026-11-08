@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
 import { AgentRunStoreService } from "./agent-run-store.service"

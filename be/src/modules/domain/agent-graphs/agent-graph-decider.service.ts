@@ -1,26 +1,26 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { HANDOVER_TO_FACT, TOOL_CONNECTOR_FACT, TOOL_NAME_FACT } from "@modules/domain/authority-rules"
-import type {
-    BranchAnswerer,
-    BranchRequest,
-    BranchRoute,
-    GateVerdict,
-    GraphAnswer,
-    GraphCheck,
-    OptionalBranchJudgement,
-    WorkBranchDecider,
+import {
+    HANDOVER_TO_FACT,
+    TOOL_CONNECTOR_FACT,
+    TOOL_NAME_FACT,
+    type BranchAnswerer,
+    type BranchRequest,
+    type BranchRoute,
+    type GateVerdict,
+    type GraphAnswer,
+    type GraphCheck,
+    type OptionalBranchJudgement,
+    type WorkBranchDecider,
 } from "@modules/domain/authority-rules"
 import type { Proposal, WorkItem } from "@modules/domain/work-items"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
 import { AgentGraphChecksService, closedAsOf, factsRead, outcomeOf } from "./agent-graph-checks.service"
 import { InjectAgentGraphApprovals } from "./agent-graphs.decorators"
 import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
-import { MODEL_AMOUNT_FACT } from "./agent-graphs.contracts"
-import type { FactRegistry, FactValue, FactValues } from "./agent-graphs.contracts"
+import { MODEL_AMOUNT_FACT, type FactRegistry, type FactValue, type FactValues } from "./agent-graphs.contracts"
 import type { GraphWalk } from "./agent-graphs-walk.contracts"
 import type { FactSubject } from "./agent-graphs.port"
 import { isFlowOnly } from "./policies/flow.policy"

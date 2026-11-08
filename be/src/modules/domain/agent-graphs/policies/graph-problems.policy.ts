@@ -1,21 +1,22 @@
 import { graphVocabulary } from "@modules/domain/intent-contracts"
 import { dataKindOfTool } from "@modules/domain/mcp-gateway"
-import { MAX_DOES_LENGTH, MAX_GRAPH_NODES, MAX_TITLE_LENGTH } from "../agent-graphs.contracts"
-import type {
-    CeilingRule,
-    DecidePoint,
-    GraphBranch,
-    GraphContext,
-    GraphDocument,
-    GraphNode,
-    GraphProblem,
-    NodeAnswerKey,
+import {
+    MAX_DOES_LENGTH,
+    MAX_GRAPH_NODES,
+    MAX_TITLE_LENGTH,
+    type CeilingRule,
+    type DecidePoint,
+    type GraphBranch,
+    type GraphContext,
+    type GraphDocument,
+    type GraphNode,
+    type GraphProblem,
+    type NodeAnswerKey,
 } from "../agent-graphs.contracts"
 import { conditionProblems } from "./condition.policy"
 import { contractProblems } from "./contract-problems.policy"
 import { successorsOf } from "./graph-successors.policy"
-import { amountFactOf, boundaryFindings, intervalOf, numericFactsOf, topOf } from "./interval.policy"
-import type { Interval } from "./interval.policy"
+import { amountFactOf, boundaryFindings, intervalOf, numericFactsOf, topOf, type Interval } from "./interval.policy"
 
 export { successorsOf }
 
@@ -80,7 +81,7 @@ const branchProblems = (graph: GraphDocument): ReadonlyArray<GraphProblem> => {
 }
 
 const entryProblems = (graph: GraphDocument): ReadonlyArray<GraphProblem> => {
-    const reached = new Set(graph.nodes.flatMap(successorsOf))
+    const reached = new Set(graph.nodes.flatMap((item) => successorsOf(item)))
     const first = graph.nodes[0]
     const noTrigger = first !== undefined && !graph.nodes.some((node) => node.kind === "trigger")
     return [

@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-connections.module-definition"
 import { AgentBindingsService } from "./agent-bindings.service"
 import { BINDING_AGENTS } from "./agent-connections.decorators"

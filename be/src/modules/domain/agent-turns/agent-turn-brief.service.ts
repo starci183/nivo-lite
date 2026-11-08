@@ -1,9 +1,7 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { Locale, MessageCatalog } from "@modules/platform/i18n"
-import { InjectAgentGraphBrief } from "@modules/domain/agent-graphs"
+import { InjectMessageCatalog, type Locale, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectAgentGraphBrief, type AgentGraphBrief } from "@modules/domain/agent-graphs"
 import { blockOf, intentLineOf } from "./internal-turn-prompt.policy"
-import type { AgentGraphBrief } from "@modules/domain/agent-graphs"
 
 @Injectable()
 /**
@@ -21,6 +19,9 @@ export class AgentTurnBriefService {
     async intentsBlock(workspaceId: string, agentId: string, locale: Locale): Promise<string> {
         if (this.graph === null) return ""
         const intents = await this.graph.intentsOf(workspaceId, agentId)
-        return blockOf(this.catalog.get("agentTurns.intentsTitle", {}, locale), intents.map(intentLineOf))
+        return blockOf(
+            this.catalog.get("agentTurns.intentsTitle", {}, locale),
+            intents.map((item) => intentLineOf(item)),
+        )
     }
 }

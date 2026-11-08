@@ -1,10 +1,13 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
 import type { EffectCall, EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { agentTagEffect } from "@nivo-lite/blocks-core"
 import { AgentTagService } from "@modules/domain/agent-work"
-import { GraphNodeRegistryService, ledgerKeyOf } from "@modules/domain/graph-nodes"
-import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
+import {
+    GraphNodeRegistryService,
+    ledgerKeyOf,
+    type NodeEffectExecutor,
+    type NodeTurn,
+} from "@modules/domain/graph-nodes"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
 import { InjectInstallations } from "./agents.decorators"
 import type { InstallationDirectory } from "./agents.port"

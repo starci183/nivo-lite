@@ -1,7 +1,6 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { ErrorParams } from "@modules/platform/errors"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentRunAlertsService } from "./agent-run-alerts.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
 import { AgentRunStoreService } from "./agent-run-store.service"

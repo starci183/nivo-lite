@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AGENT_TURN_EXECUTOR } from "@modules/domain/agent-work"
 import { AgentTurnBriefService } from "./agent-turn-brief.service"
 import { AgentTurnAccessService } from "./agent-turn-access.service"

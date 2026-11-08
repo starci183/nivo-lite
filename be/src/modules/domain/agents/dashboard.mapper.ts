@@ -24,7 +24,7 @@ const SUMMARY_MAX = 140
 
 /** Collapses white space and cuts the text to `max` characters with an ellipsis. */
 export const clip = (text: string, max: number): string => {
-    const flat = text.replace(/\s+/gu, " ").trim()
+    const flat = text.replaceAll(/\s+/gu, " ").trim()
     return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat
 }
 

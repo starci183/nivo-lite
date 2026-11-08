@@ -1,9 +1,12 @@
 import { Injectable } from "@nestjs/common"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { InjectOpenclawAgentRegistry, InjectOpenclawGateway } from "@modules/integrations/openclaw"
-import type { AgentRegistryService, GatewayClient } from "@modules/integrations/openclaw"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import {
+    InjectOpenclawAgentRegistry,
+    InjectOpenclawGateway,
+    type AgentRegistryService,
+    type GatewayClient,
+} from "@modules/integrations/openclaw"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import type { EngineAvailability, EngineStatus, Processor } from "./agents.contracts"
 import type { SyncCheckReader } from "./agents-reads.contracts"
 import { InjectAgentsRunOptions, InjectInstallations } from "./agents.decorators"

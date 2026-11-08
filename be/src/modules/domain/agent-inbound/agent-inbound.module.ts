@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { GenericWebhookQueueModule } from "@modules/queues/generic-webhook"
 import { INBOX, InboxService } from "@modules/platform/inbox"
 import { GenericWebhookIntakeService } from "./generic-webhook-intake.service"

@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { WorkBranchDecider } from "./branch-decider.port"
 
 /** Token of the branch decider port: absent until the action graph binds one, and then the gate decides alone. */

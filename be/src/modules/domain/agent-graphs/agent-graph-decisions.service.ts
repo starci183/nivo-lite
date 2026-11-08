@@ -1,12 +1,17 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { EntityEngineService } from "@modules/domain/entity-engine"
-import type { ScopedWork } from "@modules/domain/entity-engine"
+import { EntityEngineService, type ScopedWork } from "@modules/domain/entity-engine"
 import { AgentGraphRecordsService } from "./agent-graph-records.service"
 import type { GraphDecisionRecord } from "./agent-graphs-records.contracts"
-import { MODEL_AMOUNT_FACT } from "./agent-graphs.contracts"
+import {
+    MODEL_AMOUNT_FACT,
+    type ClosedDecision,
+    type DecisionClosedAs,
+    type DecisionOutcome,
+    type FactValue,
+    type GraphMode,
+} from "./agent-graphs.contracts"
 import type { GraphRoad } from "@modules/domain/authority-rules"
-import type { ClosedDecision, DecisionClosedAs, DecisionOutcome, FactValue, GraphMode } from "./agent-graphs.contracts"
 
 /** The most closed decisions the learning reads for one agent at a time. */
 const LEARN_WINDOW = 200

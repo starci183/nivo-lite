@@ -14,8 +14,7 @@ import type { InstalledTemplate } from "./agent-templates.contracts"
 import { TemplateInstallEntity, TemplateLicenseEntity } from "./persistence/entities"
 import { insertedId } from "./policies/inserted-id.policy"
 import { valuesOf } from "./policies/parameter-values.policy"
-import { instantiate, resolveValues } from "@nivo-lite/agent-sdk/template"
-import type { ParameterValues } from "@nivo-lite/agent-sdk/template"
+import { instantiate, resolveValues, type ParameterValues } from "@nivo-lite/agent-sdk/template"
 
 /** How the buyer came to hold the right to run the template. */
 export type InstallAccess =

@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, IsNull } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { In, IsNull, type EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     AdoptedInstallation,

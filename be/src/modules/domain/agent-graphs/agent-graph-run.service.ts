@@ -4,8 +4,7 @@ import { AgentGraphDecisionsService } from "./agent-graph-decisions.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { runTraceOf, triggerStepOf } from "./policies/run-trace.policy"
-import { runEntryWireOf } from "./policies/graph-wire.policy"
-import type { AgentGraphRunEntryWire, AgentGraphRunWire } from "./policies/graph-wire.policy"
+import { runEntryWireOf, type AgentGraphRunEntryWire, type AgentGraphRunWire } from "./policies/graph-wire.policy"
 
 @Injectable()
 /**

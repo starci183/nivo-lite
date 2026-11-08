@@ -4,8 +4,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { AgentWorkAccessService } from "./agent-work-access.service"
 import { toTriggerRecord } from "./agent-work.mapper"
 import { MAX_TRIGGERS } from "./agent-work.policy"
-import { triggerFields } from "./agent-trigger.policy"
-import type { TriggerFields } from "./agent-trigger.policy"
+import { triggerFields, type TriggerFields } from "./agent-trigger.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import { AgentTriggerEntity } from "./persistence/entities"
 import type {
@@ -36,7 +35,7 @@ export class AgentTriggersService {
             order: { createdAt: "ASC" },
             take: MAX_TRIGGERS,
         })
-        return rows.map(toTriggerRecord)
+        return rows.map((item) => toTriggerRecord(item))
     }
 
     /**
@@ -50,7 +49,9 @@ export class AgentTriggersService {
         source: AgentWakeSource,
     ): Promise<ReadonlyArray<AgentTriggerRecord>> {
         const rows = await this.eventRows(workspaceId, eventName, limit)
-        return rows.filter((row) => row.sources.length === 0 || row.sources.includes(source)).map(toTriggerRecord)
+        return rows
+            .filter((row) => row.sources.length === 0 || row.sources.includes(source))
+            .map((item) => toTriggerRecord(item))
     }
 
     /** One trigger by id, or null. */

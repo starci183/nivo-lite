@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { ScopedTx } from "@modules/domain/entity-engine"
 import type { MutationValues } from "@nivo-lite/agent-sdk/mutation"
@@ -68,7 +67,10 @@ export class AgentStepLedgerService {
         if (run === null) return { kind: "gone" }
         if (CLOSED_RUN.includes(run.status)) return { kind: "closed" }
         const steps = await this.records.stepsOf(scoped, runId)
-        const step = stepKey === null ? steps.find(open) : steps.find((candidate) => candidate.stepKey === stepKey)
+        const step =
+            stepKey === null
+                ? steps.find((item) => open(item))
+                : steps.find((candidate) => candidate.stepKey === stepKey)
         if (step === undefined) return { kind: stepKey === null ? "idle" : "gone" }
         const now = this.clock.now()
         const view = (record: StepRecord): StepView =>
@@ -200,7 +202,7 @@ export class AgentStepLedgerService {
         const more = commit.kind === "done" && (commit.continues === true || appended > 0)
         if (more) return { status: "running" }
         if (steps.every((step) => step.status === "done")) return { status: "done", endedAt: iso(this.clock.now()) }
-        return { status: steps.some(open) ? "running" : "waiting" }
+        return { status: steps.some((item) => open(item)) ? "running" : "waiting" }
     }
 
     /** Gives the claim of a step back at once; false when the claim already moved on. */

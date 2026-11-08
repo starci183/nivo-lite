@@ -1,6 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { InjectWakeInterruptions } from "./agent-work.decorators"
 import { AgentWorkLogEvent } from "./agent-work.log-events"
 import type { AgentTurnView } from "./agent-work.contracts"

@@ -1,5 +1,4 @@
-import { grantCoverageOf } from "@modules/domain/member-grants"
-import type { DirectoryMember, ApproverRef } from "@modules/domain/member-grants"
+import { grantCoverageOf, type DirectoryMember, type ApproverRef } from "@modules/domain/member-grants"
 import type { ApprovalExclusion, ApproverInput, ApproverSet } from "./approval-requests.contracts"
 
 const refOf = (member: DirectoryMember): ApproverRef => ({

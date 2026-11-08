@@ -1,10 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
-import { MemberGrantsService } from "@modules/domain/member-grants"
-import type { DirectoryMember } from "@modules/domain/member-grants"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { MemberGrantsService, type DirectoryMember } from "@modules/domain/member-grants"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ApprovalProgress,

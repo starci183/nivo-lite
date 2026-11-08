@@ -2,10 +2,8 @@ import { Injectable } from "@nestjs/common"
 import { AgentGoalsService, AgentTasksService } from "@modules/domain/agent-work"
 import { authorityBrief } from "@modules/domain/ai-tasks"
 import { AuthorityService } from "@modules/domain/authority"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentTurnBriefService } from "./agent-turn-brief.service"
 import { AgentTurnsLogEvent } from "./agent-turns.log-events"
 import { IntentPipelineService } from "./intent-pipeline.service"
@@ -121,11 +119,21 @@ export class InternalTurnContextService {
                 .catch((cause: unknown) => this.skip(cause, agentId, "authority")),
             this.goals
                 .alive(agentId)
-                .then((rows) => blockOf(this.catalog.get("agentTurns.goalsTitle", {}, locale), rows.map(goalLineOf)))
+                .then((rows) =>
+                    blockOf(
+                        this.catalog.get("agentTurns.goalsTitle", {}, locale),
+                        rows.map((item) => goalLineOf(item)),
+                    ),
+                )
                 .catch((cause: unknown) => this.skip(cause, agentId, "goals")),
             this.tasks
                 .alive(agentId)
-                .then((rows) => blockOf(this.catalog.get("agentTurns.tasksTitle", {}, locale), rows.map(taskLineOf)))
+                .then((rows) =>
+                    blockOf(
+                        this.catalog.get("agentTurns.tasksTitle", {}, locale),
+                        rows.map((item) => taskLineOf(item)),
+                    ),
+                )
                 .catch((cause: unknown) => this.skip(cause, agentId, "tasks")),
         ])
         return { authority, goals, tasks }

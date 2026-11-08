@@ -1,10 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { InjectQueueTimeout } from "@modules/platform/queue"
-import type { QueueTimeout } from "@modules/platform/queue"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { InjectQueueTimeout, type QueueTimeout } from "@modules/platform/queue"
 import { InjectAgentGraphsOptions, InjectGraphFactReaders } from "./agent-graphs.decorators"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
+import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import type { FactRegistry, FactValues } from "./agent-graphs.contracts"
 import type { AgentGraphsOptions } from "./agent-graphs.options"
 import type { FactSubject, GraphFactReader } from "./agent-graphs.port"
@@ -48,7 +47,7 @@ export class GraphFactsService {
         const expiry = new AbortController()
         const deadline = new Promise<never>((_resolve, reject) => {
             expiry.signal.addEventListener("abort", () => {
-                reject(new Error("fact read timed out"))
+                reject(new AgentGraphsError({ code: AgentGraphsErrorCode.FactReadTimedOut }))
             })
         })
         const cancel = this.timeout.schedule(() => {

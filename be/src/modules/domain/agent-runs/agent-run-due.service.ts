@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import type { ScopedTx } from "@modules/domain/entity-engine"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentRunRecordsService } from "./agent-run-records.service"

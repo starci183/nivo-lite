@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { StepAnswer, StepView } from "@modules/domain/agent-runs"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { InternalProposalSettlerService } from "./internal-proposal-settler.service"
 import { IntentSplitService } from "./intent-split.service"
 import { requestDoorInputSchema } from "./intent-step.schema"

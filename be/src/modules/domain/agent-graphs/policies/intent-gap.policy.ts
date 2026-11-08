@@ -8,9 +8,9 @@ const GAP_KEY_MAX = 160
 export const gapKeyOf = (question: string): string =>
     `gap:${question
         .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
-        .replace(/\u0111/giu, "d")
+        .replaceAll(/\p{Diacritic}/gu, "")
+        .replaceAll(/\u0111/giu, "d")
         .toLowerCase()
-        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .replaceAll(/[^\p{L}\p{N}]+/gu, " ")
         .trim()
         .slice(0, GAP_KEY_MAX)}`

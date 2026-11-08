@@ -6,8 +6,9 @@ import {
     gatewayDescribeSchema,
     gatewaySearchSchema,
     McpGatewayService,
+    type GatewayCaller,
+    type GatewayJson,
 } from "@modules/domain/mcp-gateway"
-import type { GatewayCaller, GatewayJson } from "@modules/domain/mcp-gateway"
 import { parseJsonText } from "@modules/platform/primitives"
 import { toolResultOf } from "@modules/domain/intent-contracts"
 import { AgentWriteRightService } from "./agent-write-right.service"

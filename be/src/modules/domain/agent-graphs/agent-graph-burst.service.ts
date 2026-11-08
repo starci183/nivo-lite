@@ -1,9 +1,7 @@
 import { Injectable } from "@nestjs/common"
-import { burstOf } from "@nivo-lite/agent-sdk/graph"
-import type { GraphSpecTrigger } from "@nivo-lite/agent-sdk/graph"
+import { burstOf, type GraphSpecTrigger } from "@nivo-lite/agent-sdk/graph"
 import type { AgentBurstPolicy, AgentBurstSetting } from "@modules/domain/agent-work"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
 import { AgentGraphsService } from "./agent-graphs.service"
 

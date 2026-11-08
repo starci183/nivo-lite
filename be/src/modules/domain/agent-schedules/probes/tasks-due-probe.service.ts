@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { AgentGoalsService, AgentTasksService } from "@modules/domain/agent-work"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import type { AgentProbe, ProbeAgent, ProbeAnswer } from "../agent-schedules.contracts"
 import { dueBriefOf, dueWorkOf } from "./probe-brief.policy"
 

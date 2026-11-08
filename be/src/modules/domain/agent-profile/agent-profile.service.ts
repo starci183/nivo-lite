@@ -1,11 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { AgentDirectoryService, AgentOwnershipService } from "@modules/domain/agents"
-import type { Region } from "@modules/domain/agents"
+import { AgentDirectoryService, AgentOwnershipService, type Region } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkItemsActivityService } from "@modules/domain/work-items"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { AgentHead, AgentPage, AppliedRule, RecentWork } from "./agent-profile.contracts"
 import { AgentProfileLogEvent } from "./agent-profile.log-events"
 import { headOf, recentOf, ruleLineOf } from "./agent-profile.mapper"
@@ -49,12 +47,12 @@ export class AgentProfileService {
 
     private async rulesOf(workspaceId: string, agent: AgentHead): Promise<ReadonlyArray<AppliedRule>> {
         const rows = await this.rules.departmentRules(workspaceId, agent.module, RULE_LIMIT)
-        return rows.map(ruleLineOf)
+        return rows.map((item) => ruleLineOf(item))
     }
 
     private async recentOf(workspaceId: string, agent: AgentHead): Promise<ReadonlyArray<RecentWork>> {
         const rows = await this.work.recentOf(workspaceId, agent.module, RECENT_LIMIT)
-        return rows.map(recentOf)
+        return rows.map((item) => recentOf(item))
     }
 
     private async settle<T>(region: string, read: () => Promise<T>): Promise<Region<T>> {

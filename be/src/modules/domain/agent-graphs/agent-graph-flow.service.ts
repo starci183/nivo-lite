@@ -1,8 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import type { NodeIndex } from "@nivo-lite/agent-sdk/node"
-import { AgentGraphsService } from "./agent-graphs.service"
-import type { OptionalGraphState } from "./agent-graphs.service"
+import { AgentGraphsService, type OptionalGraphState } from "./agent-graphs.service"
 import type { GraphChangeKind, GraphDocument } from "./agent-graphs.contracts"
 import { requireSoundFlow, sameFlow } from "./policies/flow.policy"
 

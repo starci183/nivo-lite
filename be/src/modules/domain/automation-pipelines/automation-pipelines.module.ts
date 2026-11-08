@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { AutomationPipelinesService } from "./automation-pipelines.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./automation-pipelines.module-definition"
 

@@ -1,6 +1,5 @@
 import type { Condition, DecidePoint, GraphBranch, GraphDocument, GraphNode } from "../agent-graphs.contracts"
-import { intervalOf, topOf } from "./interval.policy"
-import type { Interval } from "./interval.policy"
+import { intervalOf, topOf, type Interval } from "./interval.policy"
 
 /** What a learned proposal moves: the signal, the branch it is about and the amounts of its evidence. */
 export interface LearnedPatch {
@@ -21,7 +20,7 @@ const amountFactOf = (branch: GraphBranch): string | null => {
     const found = (term: Condition): string | null => {
         if ("fact" in term) return term.fact
         const members = "all" in term ? term.all : term.any
-        return members.map(found).find((fact) => fact !== null) ?? null
+        return members.map((item) => found(item)).find((fact) => fact !== null) ?? null
     }
     return found(branch.when)
 }

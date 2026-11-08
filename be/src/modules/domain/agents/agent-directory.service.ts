@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, Not } from "typeorm"
-import type { EntityManager, SelectQueryBuilder } from "typeorm"
+import { In, Not, type EntityManager, type SelectQueryBuilder } from "typeorm"
 import { storedAvatarAddress } from "@modules/integrations/object-storage"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
@@ -79,7 +78,7 @@ export class AgentDirectoryService {
             order: { name: "ASC" },
             take: limit,
         })
-        return agents.map(toCard)
+        return agents.map((item) => toCard(item))
     }
 
     /** The active agents among the given ids, in the order the ids are given. */
@@ -244,7 +243,7 @@ export class AgentDirectoryService {
             where: { workspaceId, id: In([...agentIds]) },
             take: agentIds.length,
         })
-        return agents.map(toCard)
+        return agents.map((item) => toCard(item))
     }
 
     /** The id of the oldest active agent of a module in the workspace; null when the department has none. */
@@ -335,7 +334,7 @@ export class AgentDirectoryService {
             order: { createdAt: "ASC" },
             take: limit,
         })
-        return agents.map(toSheet)
+        return agents.map((item) => toSheet(item))
     }
 
     /** The oldest agent of a module in the workspace, active or paused, with its whole sheet; null when the department has none. */

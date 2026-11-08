@@ -15,8 +15,8 @@ import {
     recordMember,
     stringListMember,
     stringMember,
+    type JsonRecord,
 } from "./json.mapper"
-import type { JsonRecord } from "./json.mapper"
 
 const STAGES: ReadonlyArray<Classification["stage"]> = ["new", "qualified", "proposal", "won", "lost"]
 const MODES = ["auto", "ask", "never"] as const
@@ -87,7 +87,7 @@ export const authorityChangeOf = (record: JsonRecord): AuthorityChange => ({
     brand_voice: optionalStringMember(record, "brand_voice"),
     limits_note_add: optionalStringMember(record, "limits_note_add"),
     rules: recordListMember(record, "rules")
-        .map(ruleChangeOf)
+        .map((item) => ruleChangeOf(item))
         .filter((rule) => rule.action !== ""),
     understood: record["understood"] !== false,
 })

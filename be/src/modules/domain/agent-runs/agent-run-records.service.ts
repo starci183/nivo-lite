@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { EntityEngineService, EntityMutationService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
+import { EntityEngineService, EntityMutationService, type ScopedTx } from "@modules/domain/entity-engine"
 import type { EngineResult, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { MutationValues } from "@nivo-lite/agent-sdk/mutation"
 import type { FilterExpr, OrderBy, Query } from "@nivo-lite/agent-sdk/query"
@@ -84,7 +83,7 @@ export class AgentRunRecordsService {
             order: [["id", "asc"]],
             page: { size: 1 },
         })
-        return rows.map(runRecordOf).at(0) ?? null
+        return rows.map((item) => runRecordOf(item)).at(0) ?? null
     }
 
     /** The runs of one status that `where` narrows, in the order of an index, at most `limit`. */
@@ -102,7 +101,7 @@ export class AgentRunRecordsService {
             order,
             page: { size: limit },
         })
-        return rows.map(runRecordOf)
+        return rows.map((item) => runRecordOf(item))
     }
 
     /** The steps of a run in order. */
@@ -117,7 +116,7 @@ export class AgentRunRecordsService {
             ],
             page: { size: STEPS_MAX },
         })
-        return rows.map(stepRecordOf)
+        return rows.map((item) => stepRecordOf(item))
     }
 
     /** The steps of one status that `where` narrows, in the order of an index, at most `limit`. */
@@ -135,7 +134,7 @@ export class AgentRunRecordsService {
             order,
             page: { size: limit },
         })
-        return rows.map(stepRecordOf)
+        return rows.map((item) => stepRecordOf(item))
     }
 
     /** The steps that wait on a work item. */
@@ -147,7 +146,7 @@ export class AgentRunRecordsService {
             order: [["id", "asc"]],
             page: { size: 5 },
         })
-        return rows.map(stepRecordOf)
+        return rows.map((item) => stepRecordOf(item))
     }
 
     /** At most `limit` steps of a kind that are about a work item, whatever their status. */
@@ -170,7 +169,7 @@ export class AgentRunRecordsService {
             order: [["id", "asc"]],
             page: { size: limit },
         })
-        return rows.map(stepRecordOf)
+        return rows.map((item) => stepRecordOf(item))
     }
 
     /** Inserts a run; `taken` when its wake already has one. */

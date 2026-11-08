@@ -1,5 +1,4 @@
-import { z } from "zod"
-import type { ZodType } from "zod"
+import { z, type ZodType } from "zod"
 
 /** Any of the task schemas, for the call that hands one to the chain. */
 export type TaskSchema = ZodType

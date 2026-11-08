@@ -18,8 +18,8 @@ const isIdRow = (value: unknown): value is { id: string } =>
  */
 const keptInstructions = (given: string, stored: string): string => {
     const cleaned = given
-        .replace(new RegExp(SETUP_BLOCK.source, "g"), "")
-        .replace(/\n{3,}/g, "\n\n")
+        .replaceAll(new RegExp(SETUP_BLOCK.source, "g"), "")
+        .replaceAll(/\n{3,}/g, "\n\n")
         .trim()
     const kept = SETUP_BLOCK.exec(stored)?.[0] ?? ""
     return [cleaned, kept].filter((part) => part !== "").join("\n\n")

@@ -1,5 +1,4 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import { AgentRunHandlersService } from "@modules/domain/agent-runs"
 import { IntentRequestDoorService } from "@modules/domain/agent-turns"
 import { genericWebhookAdapter } from "./generic-webhook.adapter"
