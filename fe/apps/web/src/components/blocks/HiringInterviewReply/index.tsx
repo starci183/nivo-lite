@@ -3,22 +3,14 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useHiringFormat, useHiringSay } from "@/hooks/hiring"
-import { useHiringInterviewReply, usePublicHiringInterview, type PublicInterviewView } from "@/hooks/hiringPublic"
+import { useHiringInterviewReply, usePublicHiringInterview } from "@/hooks/hiringPublic"
 import { useLocaleSwitch } from "@/hooks/locale"
 import { slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { HiringInterviewReplyBase } from "./component"
-import type { HiringInterviewReplyShape } from "./component"
 
 /** The token of the candidate's own link. */
 interface HiringInterviewReplyProps {
     readonly token: string
-}
-
-/** How the invitation stands: waiting for a pick, confirmed, or closed; a proposed shape stands in while it is read. */
-const shapeOf = (view: PublicInterviewView | undefined): HiringInterviewReplyShape => {
-    if (view === undefined) return "proposed"
-    if (view.status === "confirmed" || view.status === "proposed") return view.status
-    return "closed"
 }
 
 /** The connected interview link: reads the invitation without a session and sends the chosen time through the back end GraphQL API. */
@@ -37,7 +29,6 @@ export const HiringInterviewReply = (props: HiringInterviewReplyProps) => {
     const where = view === undefined ? "" : t("ivMode_" + view.mode) + location
     return (
         <HiringInterviewReplyBase
-            shape={shapeOf(view)}
             props={{
                 say,
                 slot: read.isMissing
