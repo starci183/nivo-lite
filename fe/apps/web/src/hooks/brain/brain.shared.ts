@@ -8,17 +8,15 @@ import {
     FINDING_FILTERS,
     selectionOf,
     type PublicDocument,
-} from "@/modules/brain"
-import type {
-    CategoryView,
-    EvidencePlaceView,
-    FindingAction,
-    FindingCardActionView,
-    FindingView,
-    MemberOption,
-    DossierReviewRecord,
-    ReviewedStatus,
-    FindingFilter,
+    type CategoryView,
+    type EvidencePlaceView,
+    type FindingAction,
+    type FindingCardActionView,
+    type FindingView,
+    type MemberOption,
+    type DossierReviewRecord,
+    type ReviewedStatus,
+    type FindingFilter,
 } from "@/modules/brain"
 import { brainUploadHref, workspaceHref } from "@/modules/routes"
 import type { DossierIdentity } from "./useDossierIdentities"

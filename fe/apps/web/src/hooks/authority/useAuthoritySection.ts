@@ -1,8 +1,7 @@
 import { isManager, useMember } from "@/hooks/member"
 import { useAuthoritySheet } from "./useAuthoritySheet"
 import { useSaveAuthority, type AuthorityPatch } from "./useSaveAuthority"
-import { EMPTY_PROFILE, type AuthoritySheet, type AuthorityProfile } from "@/modules/authority"
-import type { StoredRule } from "@/modules/authority"
+import { EMPTY_PROFILE, type AuthoritySheet, type AuthorityProfile, type StoredRule } from "@/modules/authority"
 import type { DataSlot } from "@/modules/types"
 import type { SWRResponse } from "swr"
 

@@ -5,14 +5,13 @@ import { useOpenWorkspaceId } from "@/hooks/workspaceKey"
 import { useAgentWorkbenchShell, type AgentWorkbenchFrame } from "@/hooks/agentDashboard"
 import { useBookingBoard } from "@/hooks/bookingBoard"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { BOOKING_TABS, type DataSlot, type SlotLabels } from "@/modules/types"
+import { BOOKING_TABS, type DataSlot, type SlotLabels, type WorkbenchAsideActions } from "@/modules/types"
 import { useBookingSetupView, type BookingSetupView } from "./useBookingSetupView"
 import { useBookingDeskView, type BookingDeskView } from "./useBookingDeskView"
 import { useBookingFiguresView, type BookingFiguresViewShape } from "./useBookingFiguresView"
 import { useBookingWaitlistView, type BookingWaitlistView } from "./useBookingWaitlistView"
 import { useBookingStatsView, type BookingStatsViewShape } from "./useBookingStatsView"
 import type { PlacementFields } from "@/hooks/bookingDesk"
-import type { WorkbenchAsideActions } from "@/modules/types"
 
 type BookingTab = (typeof BOOKING_TABS)[number]
 
