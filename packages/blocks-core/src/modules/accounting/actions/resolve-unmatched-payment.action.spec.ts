@@ -1,4 +1,5 @@
 import type { ActionResult } from "@nivo-lite/agent-sdk/block"
+import { BlocksError } from "../../../blocks-error"
 import { ORDER, TRANSACTION, orderOf, transactionOf } from "../../../rules/accounting/accounting.fixtures"
 import type { TransactionRecord } from "../../../rules/accounting/accounting.types"
 import {
@@ -26,7 +27,7 @@ const worldOf = (transaction: TransactionRecord | null = TRANSACTION): MemoryWor
 
 const run = (world: MemoryWorld, raw: unknown): Promise<ActionResult> =>
     resolveUnmatchedPaymentAction.execute?.(memoryProvider(world), raw, SYSTEM_CONTEXT) ??
-    Promise.reject(new Error("not runnable"))
+    Promise.reject(new BlocksError("ACTION_NOT_RUNNABLE", "execute"))
 
 describe("accounting.resolve-unmatched-payment", () => {
     it("is a transactional action of the accounting permission, run from the approval row of a payment", () => {

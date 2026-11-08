@@ -28,5 +28,5 @@ const rowOf = (order: WaitingOrder): DecisionRowView => ({
 export const salesDecisionQueueOf = (orders: ReadonlyArray<WaitingOrder>, total: number): DecisionQueueView => ({
     count: total === 0 ? null : String(total),
     more: null,
-    rows: orders.map(rowOf),
+    rows: orders.map((order) => rowOf(order)),
 })

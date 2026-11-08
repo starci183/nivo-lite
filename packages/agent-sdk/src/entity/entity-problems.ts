@@ -22,7 +22,7 @@ export const filterFieldsOf = (expr: FilterExpr): ReadonlyArray<string> => {
     switch (expr.op) {
         case "and":
         case "or":
-            return expr.of.flatMap(filterFieldsOf)
+            return expr.of.flatMap((inner) => filterFieldsOf(inner))
         case "not":
             return filterFieldsOf(expr.of)
         case "has":

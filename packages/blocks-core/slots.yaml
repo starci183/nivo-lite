@@ -2,6 +2,7 @@ schema: starci/package-slots@1
 closed: true
 slots:
   - { id: barrel, path: src/index.ts }
+  - { id: blocks-error, path: src/blocks-error.ts }
   - { id: bounds, path: src/bounds.ts }
   - { id: json-schema, path: src/json.schema.ts }
   - { id: fixtures-barrel, path: src/fixtures.ts }

@@ -38,5 +38,5 @@ export const chatDecisionQueueOf = (
 ): DecisionQueueView => ({
     count: total === 0 ? null : String(total),
     more: null,
-    rows: conversations.map(rowOf),
+    rows: conversations.map((conversation) => rowOf(conversation)),
 })

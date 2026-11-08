@@ -1,5 +1,6 @@
 import type { ActionResult } from "@nivo-lite/agent-sdk/block"
 import type { EngineResult, EntityApi } from "@nivo-lite/agent-sdk/entity/port"
+import { BlocksError } from "../../../blocks-error"
 import {
     CLAIM,
     ORDER,
@@ -41,11 +42,12 @@ const worldOf = (setup: Setup = {}): MemoryWorld => {
 }
 
 const run = (world: MemoryWorld, raw: unknown): Promise<ActionResult> =>
-    settleAction.execute?.(memoryProvider(world), raw, SYSTEM_CONTEXT) ?? Promise.reject(new Error("not runnable"))
+    settleAction.execute?.(memoryProvider(world), raw, SYSTEM_CONTEXT) ??
+    Promise.reject(new BlocksError("ACTION_NOT_RUNNABLE", "execute"))
 
 const runWith = (world: MemoryWorld, entity: string, patch: Partial<EntityApi>, raw: unknown): Promise<ActionResult> =>
     settleAction.execute?.(withEntity(world, entity, patch), raw, SYSTEM_CONTEXT) ??
-    Promise.reject(new Error("not runnable"))
+    Promise.reject(new BlocksError("ACTION_NOT_RUNNABLE", "execute"))
 
 const dataOf = (world: MemoryWorld, entity: string, id: string): Readonly<Record<string, unknown>> | undefined =>
     rowsOf(world, entity).find((row) => row.id === id)?.data

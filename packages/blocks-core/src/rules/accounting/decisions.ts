@@ -33,5 +33,5 @@ const rowOf = (payment: UnmatchedPayment): DecisionRowView => ({
 export const unmatchedQueueOf = (payments: ReadonlyArray<UnmatchedPayment>, total: number): DecisionQueueView => ({
     count: total === 0 ? null : String(total),
     more: null,
-    rows: payments.map(rowOf),
+    rows: payments.map((payment) => rowOf(payment)),
 })

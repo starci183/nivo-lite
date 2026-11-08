@@ -1,4 +1,5 @@
 import { invokeJob } from "@nivo-lite/agent-sdk/invoke"
+import { BlocksError } from "../../../blocks-error"
 import { ACCOUNTING_SETTINGS_DEFAULTS } from "../../../rules/accounting/settings"
 import { orderOf, transactionOf } from "../../../rules/accounting/accounting.fixtures"
 import {
@@ -153,9 +154,9 @@ describe("payment.rematch", () => {
     it("lets a failed write fail the job so the queue retries it", async () => {
         const world = worldOf([CREDIT_BEFORE_CODE])
         const failing = withEntity(world, "payment.transaction", {
-            update: () => Promise.reject(new Error("database away")),
+            update: () => Promise.reject(new BlocksError("FAKE_PORT_FAILED", "payment.transaction.update")),
         })
-        await expect(invokeJob(rematchJob, failing, GIVEN, CONTEXT)).rejects.toThrow("database away")
+        await expect(invokeJob(rematchJob, failing, GIVEN, CONTEXT)).rejects.toThrow("FAKE_PORT_FAILED")
     })
 
     it("asks again later when the question could not be written, and does not settle for it", async () => {

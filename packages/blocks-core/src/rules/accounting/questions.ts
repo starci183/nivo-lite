@@ -37,5 +37,5 @@ const rowOf = (question: QuestionLine): DecisionRowView => ({
 export const questionQueueOf = (questions: ReadonlyArray<QuestionLine>, total: number): DecisionQueueView => ({
     count: total === 0 ? null : String(total),
     more: null,
-    rows: questions.map(rowOf),
+    rows: questions.map((question) => rowOf(question)),
 })

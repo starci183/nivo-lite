@@ -105,17 +105,17 @@ export const LOYALTY_FIXTURES: ModuleFixtures = {
             empty: { rows: [] },
         },
         "loyalty.member-ledger": {
-            ready: { rows: SAMPLE_ENTRIES.map(ledgerViewOf) },
+            ready: { rows: SAMPLE_ENTRIES.map((entry) => ledgerViewOf(entry)) },
             empty: { rows: [] },
         },
         "loyalty.rewards": {
-            ready: { rows: SAMPLE_REWARDS.map(rewardViewOf) },
+            ready: { rows: SAMPLE_REWARDS.map((reward) => rewardViewOf(reward)) },
             empty: { rows: [] },
         },
         "loyalty.reward": { ready: rewardViewOf(FIRST_REWARD), empty: null },
         "loyalty.program": { ready: programViewOf(SAMPLE_PROGRAM) },
         "loyalty.campaigns": {
-            ready: { rows: SAMPLE_CAMPAIGNS.map(campaignViewOf) },
+            ready: { rows: SAMPLE_CAMPAIGNS.map((campaign) => campaignViewOf(campaign)) },
             empty: { rows: [] },
         },
         "loyalty.pending": { ready: QUEUE, empty: EMPTY_QUEUE, waiting: WAITING_QUEUE },

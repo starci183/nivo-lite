@@ -1,6 +1,7 @@
 import { runNode } from "@nivo-lite/agent-sdk/node"
 import type { NodeModelRequest } from "@nivo-lite/agent-sdk/node"
 import { EXAMPLE_TURN, fakeNodePorts, nodeExampleMismatches } from "@nivo-lite/agent-sdk/testing"
+import { BlocksError } from "../../blocks-error"
 import { coreEffects } from "../../vocabulary/effects"
 import { CLASSIFY_INSTRUCTIONS } from "./classify.messages"
 import { intentClassifyNode } from "./classify.node"
@@ -255,7 +256,7 @@ describe("what intent.classify shows the model", () => {
             {
                 ...fake.ports,
                 model: {
-                    text: () => Promise.reject(new Error("no text")),
+                    text: () => Promise.reject(new BlocksError("FAKE_PORT_UNUSED", "model.text")),
                     json: (schema, ask) => {
                         asks.push(ask)
                         return Promise.resolve(schema.parse({ intents: ["other"] }))

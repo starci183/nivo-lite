@@ -2,6 +2,7 @@ import { runNode } from "@nivo-lite/agent-sdk/node"
 import { EXAMPLE_TURN, fakeNodePorts } from "@nivo-lite/agent-sdk/testing"
 import { coreEffects } from "../../vocabulary/effects"
 import { coreTools } from "../../vocabulary/tools"
+import { BlocksError } from "../../blocks-error"
 import { accountingPostPaymentNode } from "./post-payment.node"
 import { LEAD_DINH, ORDER_DINH, TRANSACTION_DINH } from "../payment/payment.fixtures"
 import { READ_LEADS, READ_ORDERS, READ_TRANSACTIONS } from "../payment/payment.rights"
@@ -9,7 +10,7 @@ import { READ_LEADS, READ_ORDERS, READ_TRANSACTIONS } from "../payment/payment.r
 // The worked examples run in the root conformance spec; these cover what an example cannot say: a tool that fails.
 
 /** Runs the node on Dinh's payment with a ledger tool that fails with `failure`; answers what came out and the effects raised. */
-const run = async (failure: Error) => {
+const run = async (failure: BlocksError<string>) => {
     const fake = fakeNodePorts({
         store: { "bank-transaction": [TRANSACTION_DINH], order: [ORDER_DINH], "sales-lead": [LEAD_DINH] },
     })
@@ -34,7 +35,7 @@ const run = async (failure: Error) => {
 
 describe("accounting.post-payment", () => {
     it("asks the owner once to reconnect when the provider refuses the connection, and lets the failure go on", async () => {
-        const refusal = Object.assign(new Error("refused"), { code: "GRAPH_NODES_TOOL_CONNECTION_REFUSED" })
+        const refusal = new BlocksError("GRAPH_NODES_TOOL_CONNECTION_REFUSED", "ledger.append")
 
         const { outcome, raised } = await run(refusal)
 
@@ -53,7 +54,7 @@ describe("accounting.post-payment", () => {
     })
 
     it("raises nothing for a failure the run can try again, and lets it go on", async () => {
-        const transient = Object.assign(new Error("busy"), { code: "GRAPH_NODES_TOOL_FAILED" })
+        const transient = new BlocksError("GRAPH_NODES_TOOL_FAILED", "ledger.append")
 
         const { outcome, raised } = await run(transient)
 

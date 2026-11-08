@@ -1,4 +1,5 @@
 import type { ActionResult } from "@nivo-lite/agent-sdk/block"
+import { BlocksError } from "../../../blocks-error"
 import { ACCOUNTING_SETTINGS_DEFAULTS } from "../../../rules/accounting/settings"
 import { ACCOUNTANT_CONTEXT, memoryProvider, memoryWorld, putSettings, rowsOf } from "../fixtures/accounting.memory"
 import type { MemoryWorld } from "../fixtures/accounting.memory"
@@ -6,7 +7,7 @@ import { saveSettingsAction } from "./save-settings.action"
 
 const run = (world: MemoryWorld, raw: unknown): Promise<ActionResult> =>
     saveSettingsAction.execute?.(memoryProvider(world), raw, ACCOUNTANT_CONTEXT) ??
-    Promise.reject(new Error("not runnable"))
+    Promise.reject(new BlocksError("ACTION_NOT_RUNNABLE", "execute"))
 
 const savedOf = (world: MemoryWorld): unknown => {
     const [row] = rowsOf(world, "accounting.settings")

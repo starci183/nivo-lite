@@ -7,6 +7,7 @@ import type {
     RecordRow,
 } from "@nivo-lite/agent-sdk/entity/port"
 import type { PortProvider, RunContext } from "@nivo-lite/agent-sdk/port"
+import { BlocksError } from "../../../blocks-error"
 import { agentGraphs, agentRuns } from "../ports"
 
 /** The viewer and the instant of the runs reads in the specs. */
@@ -34,7 +35,7 @@ export const recordRow = (id: string, data: Record<string, unknown>): RecordRow 
 
 const pageRow = (row: RecordRow): PageRow => ({ row, joined: {}, position: [], included: {} })
 
-const unused = (): Promise<never> => Promise.reject(new Error("unused"))
+const unused = (): Promise<never> => Promise.reject(new BlocksError("FAKE_PORT_UNUSED", "agent-runs"))
 
 /** What a recorded entity is told to answer besides its rows. */
 export interface RecordedOptions {
@@ -68,7 +69,7 @@ export const recordedEntity = (rows: ReadonlyArray<RecordRow>, options: Recorded
         },
         list: (query) => {
             queries.push(query)
-            return Promise.resolve({ rows: rows.map(pageRow), next: options.next ?? null })
+            return Promise.resolve({ rows: rows.map((row) => pageRow(row)), next: options.next ?? null })
         },
         aggregate: (aggregate) => {
             aggregates.push(aggregate)
