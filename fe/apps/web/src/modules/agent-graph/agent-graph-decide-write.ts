@@ -182,7 +182,8 @@ const writeBranches = (
         })()
         const isChanged =
             before === undefined ||
-            JSON.stringify([before.when, before.outcome, before.approver]) !== JSON.stringify([when, row.outcome, approver])
+            JSON.stringify([before.when, before.outcome, before.approver]) !==
+                JSON.stringify([when, row.outcome, approver])
         return {
             key,
             when,

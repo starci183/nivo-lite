@@ -43,8 +43,7 @@ interface TermProps extends RowProps {
 }
 
 /** What a closing "else" may do: ask or stop, never run alone. */
-const thenOptionsOf = (props: RowProps) =>
-    props.view.thenOptions.filter((option) => !props.row.isElse || option.value !== "auto")
+const thenOptionsOf = ({ view, row }: RowProps) => view.thenOptions.filter((o) => !row.isElse || o.value !== "auto")
 
 /** One comparison of a row: the fact, how it is compared, the value, and the command that takes it away. */
 const TermRow = (props: TermProps) => {
@@ -96,6 +95,7 @@ const TermRow = (props: TermProps) => {
 /** One branch as a card: when it applies, what happens, who is asked, and what is wrong with it. */
 const RowCard = (props: RowProps) => {
     const { row, view } = props
+    const setOutcome = (value: string) => props.onChange({ kind: "setRow", row: row.index, field: "outcome", value })
     return (
         <SurfaceCard label={row.title} headingLevel={3}>
             <Stack gap="section">
@@ -121,7 +121,7 @@ const RowCard = (props: RowProps) => {
                     options={thenOptionsOf(props)}
                     value={row.outcome}
                     isLoading={props.isLoading}
-                    onValueChange={(value) => props.onChange({ kind: "setRow", row: row.index, field: "outcome", value })}
+                    onValueChange={setOutcome}
                 />
                 {row.outcome === "ask" ? (
                     <AgentGraphAskFields

@@ -119,7 +119,9 @@ describe("AgentGraphViewService.viewOf", () => {
     })
 
     it("names the person who approves on the card, in the catalog words of the language asked", async () => {
-        const ask = graphOf([branchOf({ key: "else", when: "else", outcome: "ask", next: "ask", approver: approverOf() })])
+        const ask = graphOf([
+            branchOf({ key: "else", when: "else", outcome: "ask", next: "ask", approver: approverOf() }),
+        ])
         const { service } = await build(stateOf({ draft: ask }))
 
         const view = await service.viewOf("ws-1", "agent-1", "vi")

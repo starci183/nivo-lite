@@ -87,9 +87,9 @@ export const leakyGraph = (): GraphDocument => {
             },
         }
     })
-    const withEnv = { ...nodes[0], env: { API_KEY: SECRET_IN_ENV } }
+    const withEnv = nodes.map((node, index) => (index === 0 ? { ...node, env: { API_KEY: SECRET_IN_ENV } } : node))
     return {
-        nodes: [withEnv, ...nodes.slice(1)],
+        nodes: withEnv,
         rights: [{ kind: "customers", scope: "workspace", hide: ["cost"], mask: ["phone"] }],
         contracts: [
             {
