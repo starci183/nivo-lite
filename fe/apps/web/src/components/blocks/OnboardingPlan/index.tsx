@@ -6,10 +6,7 @@ import { usePlanChoices } from "@/hooks/billing"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { workspaceHandoverPath, workspaceReadyPath } from "@/modules/routes"
 import { OnboardingPlanBase } from "./component"
-import type { OnboardingPlanCommit, OnboardingPlanOption } from "./component"
-
-/** The choice that keeps the workspace on the free plan it was made with. */
-const FREE = "free"
+import type { OnboardingPlanCard } from "./component"
 
 /** What the plan step reads from the connected block. */
 type OnboardingPlanProps = {
@@ -17,56 +14,75 @@ type OnboardingPlanProps = {
     readonly contactHref: string
 }
 
-/** The connected plan step: the listed plans of the catalogue, the contract plan and the free plan; a paid plan opens its payment. */
+/** The connected plan step: the listed plans of the catalogue side by side (the middle paid plan recommended), the contract plan as a contact, and the free plan the workspace already runs on. */
 export const OnboardingPlan = (props: OnboardingPlanProps) => {
     const t = useTranslations("onboarding")
     const format = useFormatter()
     const locale = useLocale()
     const workspaceId = useWorkspaceId()
     const choices = usePlanChoices(workspaceId)
+    const [chosen, setChosen] = useState<string | null>(null)
     const listed = [...(choices.plans ?? [])].filter((plan) => plan.listed).sort((a, b) => a.sort - b.sort)
-    const firstPaid = listed.find((plan) => !plan.isCustom)?.code
-    const [picked, setPicked] = useState<string | null>(null)
-    const selected = picked ?? firstPaid ?? FREE
+    const paid = listed.filter((plan) => !plan.isCustom)
+    const popularCode = paid[Math.floor(paid.length / 2)]?.code
     const money = (amount: number) =>
         format.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 })
-    const options: ReadonlyArray<OnboardingPlanOption> = [
-        ...listed.map((plan) => ({
-            value: plan.code,
-            label: locale === "vi" ? plan.nameVi : plan.nameEn,
-            description: plan.isCustom
-                ? t("planContract")
-                : t("planPaidLine", { price: money(plan.promoPriceVnd ?? plan.priceVnd), seats: plan.seats }),
-        })),
-        { value: FREE, label: t("planFree"), description: t("planFreeLine") },
-    ]
-    const chosen = listed.find((plan) => plan.code === selected)
-    const commitOf = (): OnboardingPlanCommit => {
-        if (chosen === undefined)
-            return { kind: "href", label: t("planStartFree"), href: workspaceReadyPath(workspaceId) }
-        if (chosen.isCustom) return { kind: "href", label: t("planContact"), href: props.contactHref }
-        return { kind: "buy", label: t("planPay") }
+    const priceOf = (plan: (typeof listed)[number]): string => {
+        if (plan.isCustom) return t("planContactPrice")
+        if (choices.cycle === "annual" && plan.priceAnnualVnd !== null)
+            return t("planPerYear", { price: money(plan.priceAnnualVnd) })
+        return t("planPerMonth", { price: money(plan.promoPriceVnd ?? plan.priceVnd) })
     }
+    const plans: ReadonlyArray<OnboardingPlanCard> = listed.map((plan) => {
+        const name = locale === "vi" ? plan.nameVi : plan.nameEn
+        const extra = locale === "vi" ? plan.features.vi : plan.features.en
+        const facts = plan.isCustom
+            ? []
+            : [
+                  t("planSeats", { seats: plan.seats }),
+                  ...(plan.aiCreditsPerMonth === null
+                      ? []
+                      : [t("planCredits", { credits: format.number(plan.aiCreditsPerMonth) })]),
+              ]
+        return {
+            id: plan.code,
+            name,
+            price: priceOf(plan),
+            isPopular: plan.code === popularCode,
+            features: [...facts, ...extra],
+            action: plan.isCustom
+                ? { kind: "contact", label: t("planContact"), href: props.contactHref }
+                : { kind: "buy", label: t("planChoose", { plan: name }) },
+        }
+    })
     return (
         <OnboardingPlanBase
             props={{
-                title: t("planTitle"),
                 heading: t("planQuestion"),
                 description: t("planText"),
-                choiceLabel: t("trackStep4"),
-                options,
-                selected,
-                note: t("planNote"),
+                cycleLabel: t("planCycle"),
+                cycle: choices.cycle,
+                cycleMonthly: t("planMonthly"),
+                cycleAnnual: t("planAnnual"),
+                popularLabel: t("planPopular"),
+                plans,
                 isLoading: choices.isLoading,
-                isPending: choices.isRequesting,
+                pendingId: choices.isRequesting ? chosen : null,
+                free: {
+                    title: t("planFreeTitle"),
+                    text: t("planFreeText"),
+                    label: t("planStartFree"),
+                    href: workspaceReadyPath(workspaceId),
+                },
                 backLabel: t("back"),
                 backHref: workspaceHandoverPath(workspaceId),
-                commit: commitOf(),
+                note: t("planNote"),
             }}
             on={{
-                select: setPicked,
-                buy: () => {
-                    if (chosen !== undefined) choices.choose(chosen.code)
+                setCycle: (cycle) => choices.setCycle(cycle === "annual" ? "annual" : "monthly"),
+                buy: (planId) => {
+                    setChosen(planId)
+                    choices.choose(planId)
                 },
             }}
         />

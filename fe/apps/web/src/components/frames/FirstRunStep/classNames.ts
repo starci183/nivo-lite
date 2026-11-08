@@ -30,3 +30,15 @@ export const STEP_DONE_CLASS_NAME: string | undefined = cn(
 )
 /** The rail mascot is decoration: a phone, where the rail sits above the form, shows none. */
 export const STEP_ART_CLASS_NAME: string | undefined = cn("hidden", "shrink-0", "lg:flex")
+/** The wide step: the track over a full-width body at the product measure (GAP-7 between them). */
+export const STEP_WIDE_CLASS_NAME: string | undefined = cn(
+    "mx-auto",
+    "flex",
+    "w-full",
+    "max-w-6xl",
+    "flex-col",
+    "gap-8",
+    "lg:pt-2",
+)
+/** The horizontal step track of the wide step, from the large breakpoint; a narrow screen shows the step bar. */
+export const STEP_TRACK_CLASS_NAME: string | undefined = cn("hidden", "w-full", "max-w-2xl", "self-center", "lg:block")
