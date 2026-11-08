@@ -1,5 +1,4 @@
-import { Secret } from "@modules/platform/config"
-import type { EnvSource } from "@modules/platform/config"
+import { Secret, type EnvSource } from "@modules/platform/config"
 import { redisUrlOf } from "./realtime-address.policy"
 import { REDIS_DEFAULT_PREFIX } from "./realtime.contracts"
 import type { PostgresRealtimeConfig, RealtimeConfig, RedisRealtimeOptions } from "./realtime.options"

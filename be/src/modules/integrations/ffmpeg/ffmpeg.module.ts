@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { FFMPEG } from "./ffmpeg.decorators"
 import { FfmpegClient } from "./ffmpeg.client"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./ffmpeg.module-definition"

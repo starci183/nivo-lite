@@ -18,7 +18,6 @@ import {
     isQueueMemoryBounded,
     jobOf,
     reasonOf,
-    rejectionOf,
     retryAfterSecondsOf,
     routeOf,
     secondsOf,
@@ -62,7 +61,6 @@ class QueuePolicySubject {
     readonly isUnrecoverable = isUnrecoverable
     readonly jobOf = jobOf
     readonly reasonOf = reasonOf
-    readonly rejectionOf = rejectionOf
     readonly retryAfterSecondsOf = retryAfterSecondsOf
     readonly routeOf = routeOf
     readonly secondsOf = secondsOf
@@ -224,15 +222,6 @@ describe("queue hand-backs", () => {
             subject.reasonOf(new Error("provider down")),
             subject.reasonOf("plain text"),
         ]).toEqual(["blocked_credits", "QUEUE_HANDLER_MISSING", "provider down", "plain text"])
-    })
-})
-
-describe("queue policy rejectionOf", () => {
-    it("answers a promise that rejects with exactly the reason it is given", async () => {
-        const subject = await build()
-        const reason = new Error("signal")
-
-        await expect(subject.rejectionOf(reason)).rejects.toBe(reason)
     })
 })
 

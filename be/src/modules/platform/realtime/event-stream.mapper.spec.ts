@@ -1,5 +1,6 @@
 import type { MessageEvent } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
+import { RealtimeError, RealtimeErrorCode } from "./errors/realtime.error"
 import { HEARTBEAT_MS, RECONNECT_MS, eventStream } from "./event-stream.mapper"
 import type { EventFrame } from "./realtime.port"
 
@@ -21,7 +22,7 @@ const buildSubject = async () => {
 const controlled = (withReturn: boolean) => {
     const queue: Array<IteratorResult<Frame>> = []
     let wake: (() => void) | undefined
-    let failure: Error | undefined
+    let failure: RealtimeError | undefined
     const returned = jest.fn(() => Promise.resolve<IteratorResult<Frame>>({ done: true, value: undefined }))
     const iterator: AsyncIterator<Frame> = {
         next: async () => {
@@ -30,7 +31,7 @@ const controlled = (withReturn: boolean) => {
                     wake = resolve
                 })
             }
-            if (failure !== undefined) return Promise.reject(failure)
+            if (failure !== undefined) throw failure
             return queue.shift() ?? { done: true, value: undefined }
         },
         ...(withReturn ? { return: returned } : {}),
@@ -45,7 +46,7 @@ const controlled = (withReturn: boolean) => {
             queue.push({ done: true, value: undefined })
             wake?.()
         },
-        fail: (error: Error) => {
+        fail: (error: RealtimeError) => {
             failure = error
             wake?.()
         },
@@ -154,7 +155,7 @@ describe("eventStream disconnects and failures", () => {
         const subject = await buildSubject()
         const source = controlled(true)
         const { state } = listen(subject.eventStream(source.frames))
-        const failure = new Error("hub failed")
+        const failure = new RealtimeError({ code: RealtimeErrorCode.ListenDropped })
 
         source.fail(failure)
         await jest.advanceTimersByTimeAsync(0)

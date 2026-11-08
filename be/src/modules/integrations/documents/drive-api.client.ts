@@ -1,15 +1,18 @@
 import { Injectable } from "@nestjs/common"
 import type { HttpResponse } from "@modules/platform/http"
-import { DOCUMENT_TEXT_MAX_CHARS, DRIVE_MAX_BYTES, RENEWAL_GRANT_FIELD } from "./documents.contracts"
-import type { DriveFileText, GoogleAccessToken } from "./documents.contracts"
+import {
+    DOCUMENT_TEXT_MAX_CHARS,
+    DRIVE_MAX_BYTES,
+    RENEWAL_GRANT_FIELD,
+    type DriveFileText,
+    type GoogleAccessToken,
+} from "./documents.contracts"
 import { InjectDocumentsOptions } from "./documents.decorators"
 import type { DocumentsOptions } from "./documents.options"
 import { DocumentsHttpClient } from "./documents-http.client"
 import { statusError } from "./documents-failure.policy"
-import { DRIVE_MIME, driveReadMode, isDriveId } from "./drive-link.policy"
-import type { DriveReadMode } from "./drive-link.policy"
-import { metaFrom } from "./drive-meta.mapper"
-import type { DriveMeta } from "./drive-meta.mapper"
+import { DRIVE_MIME, driveReadMode, isDriveId, type DriveReadMode } from "./drive-link.policy"
+import { metaFrom, type DriveMeta } from "./drive-meta.mapper"
 import { DocumentsError, DocumentsErrorCode } from "./errors/documents.error"
 import { bytesOf, fieldOf, textOf } from "./response-body.mapper"
 import { textFromBytes } from "./text-extraction.mapper"

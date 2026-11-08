@@ -1,7 +1,12 @@
-import { OPENAPI_METHODS } from "./openapi.contracts"
-import type { OpenApiAuthHint, OpenApiOperation, OpenApiParam, OpenApiSpec, OpenApiSuggest } from "./openapi.contracts"
-import { isApiJsonObject, suggestFields } from "./openapi-items.policy"
-import type { ApiJsonObject } from "./openapi-items.policy"
+import {
+    OPENAPI_METHODS,
+    type OpenApiAuthHint,
+    type OpenApiOperation,
+    type OpenApiParam,
+    type OpenApiSpec,
+    type OpenApiSuggest,
+} from "./openapi.contracts"
+import { isApiJsonObject, suggestFields, type ApiJsonObject } from "./openapi-items.policy"
 import { OPENAPI_TEXT } from "./messages/openapi.messages"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
 import { trimUrlSlashes } from "./openapi-text.policy"
@@ -79,7 +84,7 @@ const v3ServerUrl = (doc: ApiJsonObject): string => {
     const server = Array.isArray(doc.servers) ? doc.servers.find(isApiJsonObject) : undefined
     const raw = server ? text(server.url) : "/"
     const variables = server && isApiJsonObject(server.variables) ? server.variables : {}
-    return raw.replace(/\{(\w+)\}/gu, (_match, name: string) => {
+    return raw.replaceAll(/\{(\w+)\}/gu, (_match, name: string) => {
         const variable = variables[name]
         return isApiJsonObject(variable) ? text(variable.default) : ""
     })
@@ -122,7 +127,7 @@ const authHintOf = (doc: ApiJsonObject): OpenApiAuthHint => {
 }
 
 const cleanId = (value: string): string => {
-    const normalized = value.replace(/\W+/gu, "_")
+    const normalized = value.replaceAll(/\W+/gu, "_")
     let start = 0
     let end = normalized.length
     while (start < end && normalized[start] === "_") start++
@@ -205,7 +210,7 @@ const operationOf = (
         id: uniqueId(candidate, used),
         method,
         path,
-        summary: summary.replace(/\s+/gu, " ").slice(0, 120),
+        summary: summary.replaceAll(/\s+/gu, " ").slice(0, 120),
         params,
         hasBody,
         ...(suggest ? { suggest } : {}),

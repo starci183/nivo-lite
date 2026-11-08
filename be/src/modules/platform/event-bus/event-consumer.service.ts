@@ -1,14 +1,15 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { BeforeApplicationShutdown, OnApplicationBootstrap } from "@nestjs/common"
+import { Injectable, Optional, type BeforeApplicationShutdown, type OnApplicationBootstrap } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectCqrsReadiness } from "@modules/platform/cqrs"
-import type { CqrsReadinessService } from "@modules/platform/cqrs"
+import { InjectCqrsReadiness, type CqrsReadinessService } from "@modules/platform/cqrs"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
-import { DEFAULT_MAX_DELIVERIES } from "./event-bus.contracts"
-import type { BaseEvent, EventMessage, EventSubscriptionOptions } from "./event-bus.contracts"
+import {
+    DEFAULT_MAX_DELIVERIES,
+    type BaseEvent,
+    type EventMessage,
+    type EventSubscriptionOptions,
+} from "./event-bus.contracts"
 import { isCorrelationId } from "./event-bus.correlation.policy"
 import { InjectEventBusOptions } from "./event-bus.decorators"
 import { EventBusLogEvent } from "./event-bus.log-events"

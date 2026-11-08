@@ -1,22 +1,20 @@
 import { Injectable } from "@nestjs/common"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { MetaError, MetaErrorCode } from "./errors/meta.error"
-import { HOUR_MS, PRIVATE_REPLIES_PER_HOUR } from "./meta.contracts"
-import type {
-    GraphCall,
-    GraphResult,
-    MessageTag,
-    MetaPageAccess,
-    MetaPlatform,
-    MetaFailure,
-    RateLimiter,
-    SendVia,
-    SendResult,
+import {
+    HOUR_MS,
+    PRIVATE_REPLIES_PER_HOUR,
+    type GraphCall,
+    type GraphResult,
+    type MessageTag,
+    type MetaPageAccess,
+    type MetaPlatform,
+    type MetaFailure,
+    type RateLimiter,
+    type SendVia,
+    type SendResult,
 } from "./meta.contracts"
 import { InjectMetaOptions } from "./meta.decorators"
 import type { MetaOptions } from "./meta.options"

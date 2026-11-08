@@ -1,5 +1,4 @@
-import { Transform } from "class-transformer"
-import type { TransformFnParams } from "class-transformer"
+import { Transform, type TransformFnParams } from "class-transformer"
 
 /** Reads whitespace-only strings as null and preserves every other input value. */
 export const TrimmedEmptyAsNull = (): PropertyDecorator =>

@@ -10,7 +10,7 @@ import { DOCUMENTS_OPTIONS } from "./documents.decorators"
 import type { DocumentsOptions } from "./documents.options"
 import { DocumentsHttpClient } from "./documents-http.client"
 import { DriveApiClient } from "./drive-api.client"
-import { DocumentsErrorCode } from "./errors/documents.error"
+import { DocumentsError, DocumentsErrorCode } from "./errors/documents.error"
 
 const optionsOf = builder<DocumentsOptions>({
     driveBase: "https://drive.test/v3",
@@ -65,10 +65,15 @@ const build = async (inputOptions: DocumentsOptions = optionsOf()) => {
         ],
     }).compile()
     const route = (table: ReadonlyArray<Route>): void => {
-        http.request.mockImplementation((request) => {
-            const hit = table.find(([match]) => request.url.includes(match))
-            return hit === undefined ? Promise.reject(new Error(`unrouted ${request.url}`)) : Promise.resolve(hit[1])
-        })
+        http.request.mockImplementation((request) =>
+            Promise.resolve().then(() => {
+                const hit = table.find(([match]) => request.url.includes(match))
+                if (hit === undefined) {
+                    throw new DocumentsError({ code: DocumentsErrorCode.Unavailable, params: { url: request.url } })
+                }
+                return hit[1]
+            }),
+        )
     }
     return { client: moduleRef.get(DriveApiClient), http, route }
 }

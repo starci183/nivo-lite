@@ -1,8 +1,7 @@
 import { lookup } from "node:dns/promises"
 import { isIP } from "node:net"
 import { Injectable } from "@nestjs/common"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient, HttpRequest, HttpResponse } from "@modules/platform/http"
+import { InjectHttpClient, type HttpClient, type HttpRequest, type HttpResponse } from "@modules/platform/http"
 import { InjectDataSourcesOptions } from "./data-sources.decorators"
 import type { DataSourcesOptions } from "./data-sources.options"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
@@ -67,7 +66,7 @@ export class PublicHostClient {
 
     /** Resolves a host the owner typed and refuses a private answer; throws a DataSourcesError. */
     async resolve(host: string): Promise<ResolvedHost> {
-        const bare = host.trim().replace(/^\[|\]$/gu, "")
+        const bare = host.trim().replaceAll(/^\[|\]$/gu, "")
         const family = isIP(bare)
         if (family === 0 && !isWellFormedHost(bare)) {
             throw new DataSourcesError({ code: DataSourcesErrorCode.HostInvalid })

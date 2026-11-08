@@ -1,5 +1,4 @@
-import { Secret } from "@modules/platform/config"
-import type { EnvSource } from "@modules/platform/config"
+import { Secret, type EnvSource } from "@modules/platform/config"
 
 /**
  * The address of the Redis hub: the secret `REALTIME_REDIS_URL` when it is declared (any Redis, with its ACL user and `rediss://`), else

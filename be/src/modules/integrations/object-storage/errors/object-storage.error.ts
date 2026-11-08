@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the object storage integration: why the integration refused a call, in the wire words the domains already match on. */
 export enum ObjectStorageErrorCode {

@@ -16,7 +16,7 @@ const numberOf = (value: unknown): number | null =>
 
 /** The first number of the candidates; null when none is one. */
 const firstNumber = (...candidates: ReadonlyArray<unknown>): number | null =>
-    candidates.map(numberOf).find((candidate) => candidate !== null) ?? null
+    candidates.map((candidate) => numberOf(candidate)).find((candidate) => candidate !== null) ?? null
 
 /**
  * What a call used, read from LangChain: tokens from the message `usage_metadata` (input, output, total) or the `tokenUsage` of the
@@ -64,7 +64,7 @@ export const vectorsOf = (answer: unknown): Array<ReadonlyArray<number>> =>
 export const notesBlock = (passages: ReadonlyArray<ContextPassage>): string => {
     if (passages.length === 0) return ""
     const lines = passages.map((passage) => {
-        const text = passage.content.replace(/\s+/gu, " ").trim().slice(0, PASSAGE_MAX_CHARS)
+        const text = passage.content.replaceAll(/\s+/gu, " ").trim().slice(0, PASSAGE_MAX_CHARS)
         return passage.title === null ? `- ${text}` : `- ${passage.title}: ${text}`
     })
     return `${NOTES_HEADING}\n${lines.join("\n")}`

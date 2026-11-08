@@ -1,8 +1,13 @@
 import { Injectable } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { deferSecondsOf, InjectQueueWorkerRegistry, QueueError, QueueErrorCode } from "@modules/platform/queue"
-import type { QueueDelivery, QueueWorkerRegistry } from "@modules/platform/queue"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import {
+    deferSecondsOf,
+    InjectQueueWorkerRegistry,
+    QueueError,
+    QueueErrorCode,
+    type QueueDelivery,
+    type QueueWorkerRegistry,
+} from "@modules/platform/queue"
 import { JobsError, JobsErrorCode } from "./errors/jobs.error"
 import type { ClaimedJob } from "./jobs.contracts"
 import { InjectJobClaims, InjectJobsOptions } from "./jobs.decorators"

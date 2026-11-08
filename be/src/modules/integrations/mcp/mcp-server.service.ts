@@ -6,8 +6,8 @@ import {
     isJSONRPCRequest,
     JSONRPCMessageSchema,
     ListToolsRequestSchema,
+    type JSONRPCRequest,
 } from "@modelcontextprotocol/sdk/types.js"
-import type { JSONRPCRequest } from "@modelcontextprotocol/sdk/types.js"
 import { Injectable } from "@nestjs/common"
 import type { McpJson, McpReply, McpRpcResponse, McpServeRequest, McpSurface } from "./mcp.contracts"
 import type { McpServing } from "./mcp.port"

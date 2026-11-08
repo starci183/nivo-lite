@@ -1,11 +1,9 @@
 import { lookup } from "node:dns/promises"
 import { isIP } from "node:net"
 import { Injectable } from "@nestjs/common"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
-import { HttpError, HttpErrorCode, InjectHttpClient } from "@modules/platform/http"
+import { InjectClock, type Clock } from "@modules/platform/clock"
+import { HttpError, HttpErrorCode, InjectHttpClient, type HttpClient } from "@modules/platform/http"
 import { isPrivateAddress } from "@modules/platform/primitives"
-import type { HttpClient } from "@modules/platform/http"
 import { WebhookDeliveryError, WebhookDeliveryErrorCode } from "./errors/webhook-delivery.error"
 import { InjectWebhookDeliveryOptions } from "./webhook-delivery.decorators"
 import type { WebhookPost, WebhookPostResult } from "./webhook-delivery.contracts"
@@ -29,7 +27,7 @@ export class WebhookDeliveryClient {
         const parsed = refusalOfText(raw)
         if ("reason" in parsed) throw this.refused(parsed.reason)
         if (!requirePublic) return parsed.url
-        const host = parsed.url.hostname.replace(/^\[|\]$/gu, "")
+        const host = parsed.url.hostname.replaceAll(/^\[|\]$/gu, "")
         const addresses = isIP(host)
             ? [host]
             : (
@@ -42,7 +40,7 @@ export class WebhookDeliveryClient {
                   })
               ).map((entry) => entry.address)
         if (addresses.length === 0) throw this.refused("host_not_found")
-        if (addresses.some(isPrivateAddress)) throw this.refused("private")
+        if (addresses.some((address) => isPrivateAddress(address))) throw this.refused("private")
         return parsed.url
     }
 

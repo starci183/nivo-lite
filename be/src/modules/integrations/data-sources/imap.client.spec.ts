@@ -4,8 +4,10 @@ import * as imapflow from "imapflow"
 import type { FetchMessageObject, ImapFlow, ImapFlowOptions, ListResponse, MailboxObject, SearchObject } from "imapflow"
 import mailparser from "mailparser"
 import type { ParsedMail } from "mailparser"
+import { DomainError } from "@modules/platform/errors"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { outcome } from "@tests/fixtures/builders/stand-in.builder"
 import { DATA_SOURCES_OPTIONS, PUBLIC_HOST } from "./data-sources.decorators"
 import type { DataSourcesOptions } from "./data-sources.options"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
@@ -14,6 +16,11 @@ import type { ImapFolderRequest, ImapLogin, ImapPullRequest } from "./imap-mailb
 import { ImapLogEvent } from "./imap.log-events"
 import { IMAP_TEXT } from "./messages/imap.messages"
 import type { PublicHostClient } from "./public-host.client"
+
+/** The failure the fake library raises: a domain error whose `code` is the library's own code or text. */
+class StandInError extends DomainError<string> {}
+
+const standInOf = (code: string): StandInError => new StandInError({ code })
 
 /** What the parser answers for every message, or the failure it raises. */
 const registerMailboxListing = () => {
@@ -25,7 +32,7 @@ const registerMailboxListing = () => {
             boxOf("Gone", [String.raw`\NonExistent`]),
             boxOf("INBOX"),
         ]
-        mockImap.logoutError = new Error("bye")
+        mockImap.logoutError = standInOf("bye")
 
         await expect(client.listFolders({ ...login, host: "  [203.0.113.5]  ", secure: false })).resolves.toEqual([
             "INBOX",
@@ -48,7 +55,7 @@ const registerMailboxListing = () => {
 
     it("names the host for TLS and reports a refused login", async () => {
         const { client } = await build(false)
-        const refused = Object.assign(new Error("no"), { code: "ECONNREFUSED" })
+        const refused = standInOf("ECONNREFUSED")
         mockImap.connectError = refused
 
         await expect(client.listFolders(login)).rejects.toMatchObject({
@@ -63,7 +70,7 @@ const registerMailboxListing = () => {
 
     it("reports a folder list that the server refused", async () => {
         const { client } = await build()
-        const own = new Error(IMAP_TEXT.hostNotFound)
+        const own = standInOf(IMAP_TEXT.hostNotFound)
         mockImap.listError = own
 
         await expect(client.listFolders(login)).rejects.toMatchObject({
@@ -93,7 +100,7 @@ const registerMailboxCleanup = () => {
     it("propagates a cleanup logger failure after the folder list succeeds", async () => {
         const { client, logger } = await build()
         const failure = new DataSourcesError({ code: DataSourcesErrorCode.Unavailable })
-        mockImap.logoutError = new Error("logout unavailable")
+        mockImap.logoutError = standInOf("logout unavailable")
         logger.warn.mockImplementation(() => {
             throw failure
         })
@@ -105,8 +112,8 @@ const registerMailboxCleanup = () => {
     it("propagates cleanup failure when listing folders also fails", async () => {
         const { client, logger } = await build()
         const failure = new DataSourcesError({ code: DataSourcesErrorCode.Unavailable })
-        mockImap.listError = new Error("list unavailable")
-        mockImap.logoutError = new Error("logout unavailable")
+        mockImap.listError = standInOf("list unavailable")
+        mockImap.logoutError = standInOf("logout unavailable")
         logger.warn.mockImplementation(() => {
             throw failure
         })
@@ -128,7 +135,7 @@ const registerMailboxBoundaries = () => {
 
     it("keeps a folder failure and still releases the lock", async () => {
         const { client } = await build()
-        mockImap.lockError = new Error("mailbox does not exist")
+        mockImap.lockError = standInOf("mailbox does not exist")
         const folders: Array<ImapFolderRequest> = [
             { path: "INBOX", cursor: null },
             { path: "Sent", cursor: null },
@@ -192,7 +199,7 @@ const registerMessageDelivery = () => {
         expect(result.folders[0]).toMatchObject({ cursor: "9:3", rows: 1, more: false, failure: null })
         expect(mockImap.fetches).toEqual(["1,3"])
 
-        mockMail.fail = new Error("bad")
+        mockMail.fail = standInOf("bad")
         mockImap.searchResult = Array.from({ length: 201 }, (_item, index) => index + 1)
         mockImap.messages = [messageOf(1, "2026-01-02T00:00:00.000Z", "raw")]
         const cut = await client.pull(login, pull({ folders: [{ path: "INBOX", cursor: "8:1" }] }))
@@ -344,7 +351,7 @@ const registerPullFailures = () => {
 }
 
 class MockMail {
-    fail: Error | undefined = undefined
+    fail: StandInError | undefined = undefined
     readonly value: ParsedMail = {
         attachments: [],
         headers: new Map(),
@@ -367,10 +374,10 @@ const mailboxOf = (uidValidity: bigint): MailboxObject => ({
 
 /** What the server holds and how it answers; the fake client of each connection reads it. */
 class MockImapState {
-    connectError: Error | undefined = undefined
-    logoutError: Error | undefined = undefined
-    listError: Error | undefined = undefined
-    lockError: Error | undefined = undefined
+    connectError: StandInError | undefined = undefined
+    logoutError: StandInError | undefined = undefined
+    listError: StandInError | undefined = undefined
+    lockError: StandInError | undefined = undefined
     releaseError: DataSourcesError | undefined = undefined
     searchResult: Array<number> | false | undefined = []
     mailbox: MailboxObject | false = mailboxOf(9n)
@@ -420,27 +427,18 @@ const connectionOf = (options?: ImapFlowOptions): ImapFlow => {
         state.errorListener = listener
         return connection
     })
-    connection.connect.mockImplementation(() =>
-        state.connectError === undefined ? Promise.resolve() : Promise.reject(state.connectError),
-    )
+    connection.connect.mockImplementation(() => outcome(state.connectError, undefined))
     connection.close.mockImplementation(() => {
         state.closed = true
     })
-    connection.logout.mockImplementation(() =>
-        state.logoutError === undefined ? Promise.resolve() : Promise.reject(state.logoutError),
-    )
-    connection.list.mockImplementation(() =>
-        state.listError === undefined ? Promise.resolve(state.boxes) : Promise.reject(state.listError),
-    )
+    connection.logout.mockImplementation(() => outcome(state.logoutError, undefined))
+    connection.list.mockImplementation(() => outcome(state.listError, state.boxes))
     connection.getMailboxLock.mockImplementation((path) => {
-        if (state.lockError !== undefined) return Promise.reject(state.lockError)
-        return Promise.resolve({
-            path: String(path),
-            release: () => {
-                state.released = true
-                if (state.releaseError !== undefined) throw state.releaseError
-            },
-        })
+        const release = () => {
+            state.released = true
+            if (state.releaseError !== undefined) throw state.releaseError
+        }
+        return outcome(state.lockError, { path: String(path), release })
     })
     connection.search.mockImplementation((query, searchOptions) => {
         state.searches.push({ query, options: searchOptions })
@@ -485,9 +483,7 @@ describe("ImapClient", () => {
         Object.assign(mockImap, new MockImapState())
         mockMail.fail = undefined
         imapSpy.mockImplementation(connectionOf)
-        parserSpy.mockImplementation(() =>
-            mockMail.fail === undefined ? Promise.resolve(mockMail.value) : Promise.reject(mockMail.fail),
-        )
+        parserSpy.mockImplementation(() => outcome(mockMail.fail, mockMail.value))
     })
 
     afterAll(() => {

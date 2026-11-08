@@ -11,7 +11,7 @@ import type {
     DatabaseTarget,
 } from "./database-session.contracts"
 import { DatabaseClient } from "./database.client"
-import { DataSourcesErrorCode } from "./errors/data-sources.error"
+import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
 import type { PublicHostClient } from "./public-host.client"
 
 const registerDatabaseClient = () => {
@@ -144,12 +144,14 @@ const registerDatabaseCleanup = () => {
     it("propagates a cleanup failure when the read callback also rejects", async () => {
         const { client } = await build()
         const session = sessionOf("postgres")
-        const readFailure = new Error("read failed")
-        const cleanupFailure = new Error("cleanup failed")
+        const readFailure = new DataSourcesError({ code: DataSourcesErrorCode.Unavailable })
+        const cleanupFailure = new DataSourcesError({ code: DataSourcesErrorCode.Rejected })
         session.close.mockRejectedValue(cleanupFailure)
         jest.spyOn(drivers, "openPostgres").mockResolvedValue(session)
 
-        await expect(client.read(target("postgres"), () => Promise.reject(readFailure))).rejects.toBe(cleanupFailure)
+        const failing = jest.fn<Promise<never>, []>().mockRejectedValue(readFailure)
+
+        await expect(client.read(target("postgres"), failing)).rejects.toBe(cleanupFailure)
         expect(session.close).toHaveBeenCalledTimes(1)
         expect(session.query).not.toHaveBeenCalled()
     })

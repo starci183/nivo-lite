@@ -22,9 +22,9 @@ const stripTags = (html: string): string => {
 export const htmlToText = (html: string): string =>
     stripTags(
         html
-            .replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/giu, " ")
-            .replace(/<\/(p|div|li|h[1-6]|tr|br)>/giu, "\n")
-            .replace(/<br\s*\/?>/giu, "\n"),
+            .replaceAll(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/giu, " ")
+            .replaceAll(/<\/(p|div|li|h[1-6]|tr|br)>/giu, "\n")
+            .replaceAll(/<br\s*\/?>/giu, "\n"),
     )
         .replaceAll("&nbsp;", " ")
         .replaceAll("&lt;", "<")
@@ -32,8 +32,8 @@ export const htmlToText = (html: string): string =>
         .replaceAll("&quot;", '"')
         .replaceAll("&#39;", "'")
         .replaceAll("&amp;", "&")
-        .replace(/[ \t]+/gu, " ")
-        .replace(/\n\s*\n+/gu, "\n\n")
+        .replaceAll(/[ \t]+/gu, " ")
+        .replaceAll(/\n\s*\n+/gu, "\n\n")
         .trim()
 
 /** The title of an HTML page, cut to 160 characters; null when it has none. */

@@ -1,5 +1,4 @@
-import { GraphQLError } from "graphql"
-import type { GraphQLFormattedError } from "graphql"
+import { GraphQLError, type GraphQLFormattedError } from "graphql"
 import type { ErrorDescription, FailureSite } from "./errors.contracts"
 import type { ErrorsService } from "./errors.service"
 

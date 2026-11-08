@@ -1,6 +1,5 @@
 import type { EntityManager } from "typeorm"
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { ListenFactory, NotificationListener } from "./postgres-listener.port"
 import type { PostgresRealtimeOptions, RedisRealtimeOptions } from "./realtime.options"
 import type { RealtimeHub } from "./realtime.port"

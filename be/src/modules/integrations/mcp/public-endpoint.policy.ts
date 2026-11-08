@@ -22,7 +22,7 @@ export const publicAddressOf = async (url: string): Promise<PublicAddress | null
     if (!URL.canParse(url)) return null
     const parsed = new URL(url)
     if (!SCHEMES.has(parsed.protocol)) return null
-    const host = parsed.hostname.replace(/^\[|\]$/gu, "")
+    const host = parsed.hostname.replaceAll(/^\[|\]$/gu, "")
     const family = isIP(host)
     if (family === 4 || family === 6) return isPrivateAddress(host) ? null : { address: host, family }
     const looked = await dns.lookup(host, { all: true }).then(

@@ -1,5 +1,4 @@
-import { injector } from "@modules/platform/composition"
-import type { TypedParameterDecorator } from "@modules/platform/composition"
+import { injector, type TypedParameterDecorator } from "@modules/platform/composition"
 import type { McpOptions } from "./mcp.options"
 import type { McpRemote, McpServing } from "./mcp.port"
 

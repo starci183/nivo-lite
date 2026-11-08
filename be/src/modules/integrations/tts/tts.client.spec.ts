@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { PassThrough } from "node:stream"
 import { MsEdgeTTS } from "msedge-tts"
+import { DomainError } from "@modules/platform/errors"
 import { TtsErrorCode } from "./errors/tts.error"
 import { TtsClient } from "./tts.client"
 
@@ -14,6 +15,9 @@ interface Session {
 const sessions = new Map<MsEdgeTTS, Session>()
 
 const mockStreams: Array<PassThrough> = []
+
+/** The failure the fake SDK raises. */
+class SdkStandInError extends DomainError<string> {}
 
 const mockState = { offline: false }
 
@@ -52,7 +56,9 @@ beforeEach(() => {
     mockState.offline = false
     setMetadata.mockImplementation(function (this: MsEdgeTTS, voice: string) {
         sessionOf(this).voice = voice
-        return mockState.offline ? Promise.reject(new Error("offline")) : Promise.resolve()
+        return Promise.resolve().then(() => {
+            if (mockState.offline) throw new SdkStandInError({ code: "offline" })
+        })
     })
     toStream.mockImplementation(function (this: MsEdgeTTS, _text: string, options) {
         sessionOf(this).rate = String(options?.rate ?? "")

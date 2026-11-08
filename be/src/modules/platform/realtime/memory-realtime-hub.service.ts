@@ -1,5 +1,4 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleDestroy } from "@nestjs/common"
+import { Injectable, type OnModuleDestroy } from "@nestjs/common"
 import type { Entry, Replay } from "./realtime-subscriptions.policy"
 import { REPLAY_FRAMES, REPLAY_TOPICS } from "./realtime.contracts"
 import type { RealtimeTopic } from "./realtime.port"

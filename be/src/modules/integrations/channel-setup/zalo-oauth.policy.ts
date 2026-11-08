@@ -25,7 +25,11 @@ export const zaloAuthorizeUrl = (
     verifier: string,
     state: string,
 ): string => {
-    const base = trimSlashes(options.zaloOauthBase || "https://oauth.zaloapp.com")
+    const base = trimSlashes(
+        options.zaloOauthBase === undefined || options.zaloOauthBase === ""
+            ? "https://oauth.zaloapp.com"
+            : options.zaloOauthBase,
+    )
     const query = new URLSearchParams({
         app_id: appId,
         redirect_uri: redirectUri,

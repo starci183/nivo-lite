@@ -6,7 +6,7 @@ import { FakeClock, builder, mock } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { TtsErrorCode } from "./errors/tts.error"
+import { TtsError, TtsErrorCode } from "./errors/tts.error"
 import { TtsClient } from "./tts.client"
 import { TTS_OPTIONS } from "./tts.decorators"
 import { TtsLogEvent } from "./tts.log-events"
@@ -112,10 +112,13 @@ describe("TtsService / clip", () => {
     })
     it("lets the next clip go on after one failed", async () => {
         const { tts, client } = await build(await sandbox())
-        const failure = new Error("throttled")
+        const failure = new TtsError({ code: TtsErrorCode.Retryable })
         // Keyed by text, not by call order: the two clips race through the cache lookup before either reaches the provider.
         client.synthesize.mockImplementation((request) =>
-            request.text === "One" ? Promise.reject(failure) : Promise.resolve(AUDIO),
+            Promise.resolve().then(() => {
+                if (request.text === "One") throw failure
+                return AUDIO
+            }),
         )
 
         const [first, second] = await Promise.allSettled([
@@ -139,11 +142,14 @@ describe("TtsService / clip", () => {
     it("writes the clip into the work directory when the cache directory cannot be written", async () => {
         const dirs = await sandbox()
         const { tts, logger } = await build(dirs)
-        const refusal = new Error("read-only volume")
+        const refusal = new TtsError({ code: TtsErrorCode.Disabled })
         // Keyed by path, not by call order: another fs/promises caller of the same process may reach mkdir first under load.
         const realMkdir = fsPromises.mkdir.bind(fsPromises)
         jest.spyOn(fsPromises, "mkdir").mockImplementation((path, options) =>
-            path === dirs.cacheDir ? Promise.reject(refusal) : realMkdir(path, options),
+            Promise.resolve().then(() => {
+                if (path === dirs.cacheDir) throw refusal
+                return realMkdir(path, options)
+            }),
         )
 
         const clip = await tts.clip("Hello", "v", 0, signal)

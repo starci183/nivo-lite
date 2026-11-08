@@ -1,5 +1,4 @@
-import { Secret } from "@modules/platform/config"
-import type { EnvSource } from "@modules/platform/config"
+import { Secret, type EnvSource } from "@modules/platform/config"
 import { libraryReadersOf } from "./library-readers.client"
 import type { DocumentsGoogleClient, DocumentsOptions } from "./documents.options"
 import type { DocumentFileReaders, DocumentLibrarySdks } from "./documents.contracts"

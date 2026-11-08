@@ -25,7 +25,11 @@ export const userinfoEndpoint = (options: Pick<GoogleOptions, "oauthBase">): str
 
 /** The Sheets API base. */
 export const sheetsBase = (options: Pick<GoogleOptions, "sheetsBase">): string =>
-    trimSlashes(options.sheetsBase || "https://sheets.googleapis.com")
+    trimSlashes(
+        options.sheetsBase === undefined || options.sheetsBase === ""
+            ? "https://sheets.googleapis.com"
+            : options.sheetsBase,
+    )
 
 /** The OAuth redirect uri registered with Google, or null when the site url is unknown. */
 export const redirectUri = (options: Pick<GoogleOptions, "siteUrl">): string | null =>

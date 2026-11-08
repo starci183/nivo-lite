@@ -1,10 +1,7 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, type OnModuleInit } from "@nestjs/common"
 import type { AttemptEvent, BreakerEvent, KeyDisabledEvent, RequestEvent } from "@starci/ai-router"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
-import { InjectAiGatewayRouter } from "./ai-gateway.decorators"
-import type { OptionalAiRouter } from "./ai-gateway.decorators"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { InjectAiGatewayRouter, type OptionalAiRouter } from "./ai-gateway.decorators"
 import { AiGatewayLogEvent } from "./ai-gateway.log-events"
 
 @Injectable()

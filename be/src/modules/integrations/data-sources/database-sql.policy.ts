@@ -1,11 +1,11 @@
 import { selectRows } from "@modules/platform/database"
-import { DATABASE_MAX_ROWS } from "./database-session.contracts"
-import type {
-    DatabaseEngine,
-    DatabaseSelection,
-    DatabaseSession,
-    DatabaseStatement,
-    DatabaseTable,
+import {
+    DATABASE_MAX_ROWS,
+    type DatabaseEngine,
+    type DatabaseSelection,
+    type DatabaseSession,
+    type DatabaseStatement,
+    type DatabaseTable,
 } from "./database-session.contracts"
 import { DATABASE_CURSOR } from "./database-values.policy"
 import { DataSourcesError, DataSourcesErrorCode } from "./errors/data-sources.error"
@@ -60,13 +60,13 @@ export const buildSelect = (
     options: SelectOptions,
 ): DatabaseStatement => {
     const names = [selection.schema, selection.table, ...wantedColumns(selection)]
-    if (!names.every(isUsableIdentifier))
+    if (!names.every((name) => isUsableIdentifier(name)))
         throw new DataSourcesError({
             code: DataSourcesErrorCode.Rejected,
             params: { detail: DATABASE_COPY.badName },
         })
     const q = (column: string): string => quoteId(engine, column)
-    const columns = wantedColumns(selection).map(q)
+    const columns = wantedColumns(selection).map((column) => q(column))
     const hasUpdated = selection.updatedColumn !== ""
     if (hasUpdated) columns.push(`${castText(engine, q(selection.updatedColumn))} AS ${q(DATABASE_CURSOR)}`)
     const cursor = options.cursor ?? null

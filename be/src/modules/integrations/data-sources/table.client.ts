@@ -18,8 +18,13 @@ import {
     tableFromRows,
     withoutBom,
 } from "./table-rows.policy"
-import { TABLE_MAX_BYTES } from "./table-shapes.contracts"
-import type { GoogleDocumentText, Table, UploadedDocumentText, TableDocumentReaders } from "./table-shapes.contracts"
+import {
+    TABLE_MAX_BYTES,
+    type GoogleDocumentText,
+    type Table,
+    type UploadedDocumentText,
+    type TableDocumentReaders,
+} from "./table-shapes.contracts"
 import type { WorkbookReader } from "./workbook-reader.contracts"
 
 const GOOGLE_TIMEOUT_MS = 20_000
@@ -90,7 +95,7 @@ export class TableClient {
         })
         const chosen = sheets.find((candidate) => candidate.sheet === sheet)
         if (chosen === undefined) throw rejected(TABLE_COPY.noSuchSheet(sheet))
-        return chosen.data.map((row) => row.map(cellText))
+        return chosen.data.map((row) => row.map((cell) => cellText(cell)))
     }
 
     /** The table of a public Google Sheets tab. */

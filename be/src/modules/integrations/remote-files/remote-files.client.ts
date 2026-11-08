@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
 import { RemoteFilesError, RemoteFilesErrorCode } from "./errors/remote-files.error"
 import type { RemoteFileAnswer, RemoteFileRequest } from "./remote-files.contracts"
 import { InjectRemoteFilesOptions } from "./remote-files.decorators"

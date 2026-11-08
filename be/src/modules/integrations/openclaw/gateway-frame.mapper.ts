@@ -147,7 +147,7 @@ const TEXT_KEYS: ReadonlyArray<string> = ["text", "content", "body"]
 export const textOf = (value: unknown): string | null => {
     if (typeof value === "string") return value.trim() || null
     if (Array.isArray(value)) {
-        const parts = value.map(textOf).filter((part): part is string => part !== null)
+        const parts = value.map((part) => textOf(part)).filter((part): part is string => part !== null)
         return parts.length > 0 ? parts.join("\n") : null
     }
     if (!isRecord(value)) return null

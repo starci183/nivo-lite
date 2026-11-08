@@ -281,7 +281,7 @@ export const parseLead = (data: unknown): MetaLead => {
         const field = obj(raw)
         const name = str(field?.name)
         const value = arr(field?.values)
-            .map(str)
+            .map((answer) => str(answer))
             .filter((answer): answer is string => answer !== null)
             .join(", ")
         if (name && value) fields[name] = value
@@ -294,7 +294,7 @@ export const parseLead = (data: unknown): MetaLead => {
     const last = pick("last_name")
     const name = pick("full_name", "name") ?? ([first, last].filter(Boolean).join(" ") || null)
     const phoneRaw = pick("phone_number", "phone")
-    const phone = phoneRaw ? phoneRaw.replace(/[^\d+]/gu, "") || null : null
+    const phone = phoneRaw ? phoneRaw.replaceAll(/[^\d+]/gu, "") || null : null
     return {
         name,
         phone,

@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { MetaClient } from "./meta.client"
 import { META_CLIENT } from "./meta.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./meta.module-definition"

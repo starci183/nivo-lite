@@ -1,5 +1,4 @@
-import { DomainError } from "@modules/platform/errors"
-import type { ErrorKind } from "@modules/platform/errors"
+import { DomainError, type ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the Zalo integration. A refusal Zalo explained carries its numeric error in the params as `zaloCode`. */
 export enum ZaloErrorCode {

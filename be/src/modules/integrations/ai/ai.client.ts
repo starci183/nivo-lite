@@ -1,14 +1,11 @@
 import { Document } from "@langchain/core/documents"
-import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages"
-import type { BaseMessage } from "@langchain/core/messages"
+import { AIMessage, HumanMessage, SystemMessage, type BaseMessage } from "@langchain/core/messages"
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts"
 import { BaseRetriever } from "@langchain/core/retrievers"
-import { RunnableLambda, RunnableSequence } from "@langchain/core/runnables"
-import type { Runnable } from "@langchain/core/runnables"
+import { RunnableLambda, RunnableSequence, type Runnable } from "@langchain/core/runnables"
 import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai"
 import { Injectable } from "@nestjs/common"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
 import type {
     ChainReply,
     AiBudget,
@@ -89,13 +86,13 @@ export class AiClient implements AiRunner {
         let retrieved = 0
         const retrieve = RunnableLambda.from(async (messages: ReadonlyArray<AiMessage>) => {
             const { context } = request
-            if (context === null) return { messages: messages.map(messageOf) }
+            if (context === null) return { messages: messages.map((message) => messageOf(message)) }
             const found = await new PassageRetriever(context.search, context.limit).invoke(context.question)
             retrieved = found.length
             const block = notesBlock(
                 found.map((document) => ({ title: titleOf(document.metadata), content: document.pageContent })),
             )
-            return { messages: withNotes(messages, block).map(messageOf) }
+            return { messages: withNotes(messages, block).map((message) => messageOf(message)) }
         })
         const prompt = ChatPromptTemplate.fromMessages([new MessagesPlaceholder("messages")])
         const chain = RunnableSequence.from([retrieve, prompt, this.modelFor(request)])

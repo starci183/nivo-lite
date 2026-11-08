@@ -2,8 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { advisoryXactLock, notify, returnedRows, rowShape } from "@modules/platform/database"
 import { writerOf } from "./realtime-connection.policy"
-import { RealtimeSubscriptionsPolicy } from "./realtime-subscriptions.policy"
-import type { Entry, Replay } from "./realtime-subscriptions.policy"
+import { RealtimeSubscriptionsPolicy, type Entry, type Replay } from "./realtime-subscriptions.policy"
 import { NOTIFY_CHANNEL, REALTIME_LOCK_NAMESPACE, REPLAY_FRAMES } from "./realtime.contracts"
 import { InjectRealtimeManagers } from "./realtime.decorators"
 import type { RealtimeTopic, RealtimeTransaction } from "./realtime.port"
@@ -106,6 +105,6 @@ export class PostgresReplayHubService extends SubscribedRealtimeHub {
             .orderBy("newest.seq", "ASC")
             .limit(REPLAY_FRAMES)
             .getRawMany<EventFacts>()
-        return { entries: rows.map(entryOf), position }
+        return { entries: rows.map((row) => entryOf(row)), position }
     }
 }

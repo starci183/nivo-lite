@@ -4,7 +4,7 @@ import type { MockEntityManager, MockOf } from "@starci/jest-preset"
 import { DelayedError, UnrecoverableError } from "bullmq"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { ERROR_REPORTER } from "@modules/platform/errors"
+import { DomainError, ERROR_REPORTER } from "@modules/platform/errors"
 import type { ErrorReporter } from "@modules/platform/errors"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -17,6 +17,9 @@ import type { QueueOptions } from "./queue.options"
 import { deferMsOf } from "./queue.policy"
 import type { BullmqJob, QueueRedisGuard } from "./queue-transport.port"
 import type { QueueStartRow } from "./persistence/queue.rows"
+
+/** The failure a fake handler, hook or database raises. */
+class StandInError extends DomainError<string> {}
 
 const RUN_TOKEN = "76f0baf0-1815-4b96-b487-68e0bb4e7042"
 
@@ -187,14 +190,15 @@ describe("admission refusals", () => {
                 return finish.promise
             },
         })
-        const cause = new Error("lease database unavailable")
+        const cause = new StandInError({ code: "lease database unavailable" })
         const leases = () => em.query.mock.calls.filter(([sql]) => String(sql).includes("job_lease"))
-        em.query.mockImplementation((sql: unknown) => {
-            if (String(sql).includes("job_start")) return Promise.resolve(started(3))
-            return String(sql).includes("job_lease") && leases().length === 2
-                ? Promise.reject(cause)
-                : Promise.resolve([])
-        })
+        em.query.mockImplementation((sql: unknown) =>
+            Promise.resolve().then(() => {
+                if (String(sql).includes("job_start")) return started(3)
+                if (String(sql).includes("job_lease") && leases().length === 2) throw cause
+                return []
+            }),
+        )
         const running = client.deliver(handler, brokerJob(), undefined, redis)
         await began.promise
         await jest.advanceTimersByTimeAsync(20_000)
@@ -215,8 +219,8 @@ describe("admission refusals", () => {
 describe("failures", () => {
     it("retries a failed delivery on the durable row and lets the broker keep the pause", async () => {
         const { client, em, redis } = await build()
-        const failure = new Error("provider down")
-        const handler = handlerOf({ handle: jest.fn(() => Promise.reject(failure)) })
+        const failure = new StandInError({ code: "provider down" })
+        const handler = handlerOf({ handle: jest.fn<Promise<never>, []>().mockRejectedValue(failure) })
 
         await expect(client.deliver(handler, brokerJob(), "token", redis)).rejects.toBe(failure)
 
@@ -262,14 +266,17 @@ describe("failures", () => {
 describe("failure settlement", () => {
     it("preserves a failed settlement as failure and re-runs the recovered attempt", async () => {
         const { client, em, logger, redis } = await build()
-        const databaseFailure = new Error("settle unavailable")
+        const databaseFailure = new StandInError({ code: "settle unavailable" })
         const handler = handlerOf({
             handle: jest.fn().mockRejectedValueOnce(new Error("provider unavailable")).mockResolvedValue(undefined),
         })
-        em.query.mockImplementation((sql: unknown) => {
-            if (String(sql).includes("job_start")) return Promise.resolve(started(2))
-            return String(sql).includes("job_retry") ? Promise.reject(databaseFailure) : Promise.resolve([])
-        })
+        em.query.mockImplementation((sql: unknown) =>
+            Promise.resolve().then(() => {
+                if (String(sql).includes("job_start")) return started(2)
+                if (String(sql).includes("job_retry")) throw databaseFailure
+                return []
+            }),
+        )
 
         await expect(client.deliver(handler, brokerJob(), undefined, redis)).rejects.toBe(databaseFailure)
         expect(ran(em, "job_done")).toBe(false)
@@ -285,9 +292,12 @@ describe("failure settlement", () => {
 
     it("propagates completion persistence failures without a successful delivery", async () => {
         const { client, em, logger, redis } = await build()
-        const cause = new Error("completion unavailable")
+        const cause = new StandInError({ code: "completion unavailable" })
         em.query.mockImplementation((sql: unknown) =>
-            String(sql).includes("job_start") ? Promise.resolve(started()) : Promise.reject(cause),
+            Promise.resolve().then(() => {
+                if (String(sql).includes("job_start")) return started()
+                throw cause
+            }),
         )
 
         await expect(client.deliver(handlerOf(), brokerJob(), undefined, redis)).rejects.toBe(cause)
@@ -318,7 +328,7 @@ describe("failure dead letters", () => {
         const handler: QueueHandler = {
             queue: "knowledge",
             job: "index",
-            handle: () => Promise.reject(new Error("provider unavailable")),
+            handle: jest.fn<Promise<never>, []>().mockRejectedValue(new StandInError({ code: "provider unavailable" })),
         }
 
         await expect(client.deliver(handler, brokerJob(), undefined, redis)).rejects.toBeInstanceOf(UnrecoverableError)
@@ -328,10 +338,12 @@ describe("failure dead letters", () => {
 
     it("logs a failed failure hook and still persists the durable dead letter", async () => {
         const { client, em, logger, redis } = await build()
-        const hookFailure = new Error("owner failure write unavailable")
+        const hookFailure = new StandInError({ code: "owner failure write unavailable" })
         const handler = handlerOf({
-            handle: () => Promise.reject(new QueueError({ code: QueueErrorCode.Unrecoverable })),
-            failed: () => Promise.reject(hookFailure),
+            handle: jest
+                .fn<Promise<never>, []>()
+                .mockRejectedValue(new QueueError({ code: QueueErrorCode.Unrecoverable })),
+            failed: jest.fn<Promise<never>, []>().mockRejectedValue(hookFailure),
         })
 
         await expect(client.deliver(handler, brokerJob(), undefined, redis)).rejects.toBeInstanceOf(UnrecoverableError)
@@ -352,7 +364,7 @@ describe("shutdown", () => {
             handle: (delivery) =>
                 new Promise<void>((_resolve, reject) => {
                     began.resolve()
-                    delivery.signal.addEventListener("abort", () => reject(new Error("aborted")))
+                    delivery.signal.addEventListener("abort", () => reject(new StandInError({ code: "aborted" })))
                 }),
         })
         const job = brokerJob()

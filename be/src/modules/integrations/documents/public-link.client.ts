@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { DOCUMENT_TEXT_MAX_CHARS, LINK_MAX_BYTES } from "./documents.contracts"
-import type { DocumentText } from "./documents.contracts"
+import { DOCUMENT_TEXT_MAX_CHARS, LINK_MAX_BYTES, type DocumentText } from "./documents.contracts"
 import { InjectDocumentsOptions } from "./documents.decorators"
 import type { DocumentsOptions } from "./documents.options"
 import { DocumentsHttpClient } from "./documents-http.client"
@@ -24,6 +23,12 @@ const LINK_TIMEOUT_MS = 10_000
 
 /** How much of a page is read as HTML. */
 const HTML_READ_BYTES = 1_000_000
+
+/** The media type of a content-type header without its parameters, or "unknown" when it names none. */
+const mimeOf = (type: string): string => {
+    const mime = type.split(";", 1).join("")
+    return mime === "" ? "unknown" : mime
+}
 
 @Injectable()
 /** Reads a public address: a web page, a text, PDF or Office file, or the public export of a Google file. */
@@ -58,7 +63,7 @@ export class PublicLinkClient {
         if (!/html/iu.test(type)) {
             throw new DocumentsError({
                 code: DocumentsErrorCode.TypeUnsupported,
-                params: { type: type.split(";")[0] || "unknown" },
+                params: { type: mimeOf(type) },
             })
         }
         // A Google export that answers with a page is the sign-in wall or the Drive virus-scan page: not readable as a public file.

@@ -79,10 +79,15 @@ const build = async () => {
         ],
     }).compile()
     const route = (table: ReadonlyArray<Route>): void => {
-        http.request.mockImplementation((request) => {
-            const hit = table.find(([match]) => request.url.includes(match))
-            return hit === undefined ? Promise.reject(new Error(`unrouted ${request.url}`)) : Promise.resolve(hit[1])
-        })
+        http.request.mockImplementation((request) =>
+            Promise.resolve().then(() => {
+                const hit = table.find(([match]) => request.url.includes(match))
+                if (hit === undefined) {
+                    throw new DocumentsError({ code: DocumentsErrorCode.Unavailable, params: { url: request.url } })
+                }
+                return hit[1]
+            }),
+        )
     }
     return { client: moduleRef.get(DriveFolderClient), http, route }
 }
@@ -213,8 +218,11 @@ describe("DriveFolderClient", () => {
             if (request.url.includes(`/files/${FOLDER_ID}?fields`)) {
                 return Promise.resolve(json({ name: "Shop", mimeType: FOLDER }))
             }
-            if (request.url.includes("/files/1TargetBoom0000008?fields"))
-                return Promise.reject(new Error("socket hang up"))
+            if (request.url.includes("/files/1TargetBoom0000008?fields")) {
+                return Promise.resolve().then(() => {
+                    throw new DocumentsError({ code: DocumentsErrorCode.Unavailable })
+                })
+            }
             if (request.url.includes("/files/1TargetFolderFold09?fields"))
                 return Promise.resolve(json({ mimeType: FOLDER }))
             if (request.url.includes(childrenOf(FOLDER_ID))) {

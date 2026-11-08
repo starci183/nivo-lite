@@ -1,31 +1,28 @@
 import { Injectable } from "@nestjs/common"
-import { LessThan } from "typeorm"
-import type { EntityManager } from "typeorm"
+import { LessThan, type EntityManager } from "typeorm"
 import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialEntity"
 import { returnedRows, rowShape } from "@modules/platform/database"
 import { isRecord } from "@modules/platform/primitives"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import { JobsError, JobsErrorCode } from "./errors/jobs.error"
-import { isRunKey } from "./jobs.contracts"
-import type {
-    AdvanceWrite,
-    ParkWrite,
-    ClaimedJob,
-    ClaimParams,
-    JobClaimResult,
-    ClaimRetryDelay,
-    FailWrite,
-    RenewWrite,
-    FailedJobEffect,
-    JobEffect,
-    GuardedWrite,
-    RunKey,
+import {
+    isRunKey,
+    type AdvanceWrite,
+    type ParkWrite,
+    type ClaimedJob,
+    type ClaimParams,
+    type JobClaimResult,
+    type ClaimRetryDelay,
+    type FailWrite,
+    type RenewWrite,
+    type FailedJobEffect,
+    type JobEffect,
+    type GuardedWrite,
+    type RunKey,
 } from "./jobs.contracts"
 import { InjectJobsManagers } from "./jobs.decorators"
 import type { JobClaims } from "./jobs.port"
-import { JobEntity } from "./persistence/entities"
-import type { JobState } from "./persistence/entities"
+import { JobEntity, type JobState } from "./persistence/entities"
 
 /** The columns a claim answers, as the database names them. */
 const CLAIM_COLUMNS = "id, kind, fencing_token, current_step, payload"

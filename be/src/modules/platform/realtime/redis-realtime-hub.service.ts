@@ -1,7 +1,5 @@
-import { Injectable } from "@nestjs/common"
-import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import type { Timer } from "@modules/platform/retry"
 import {
     InjectRealtimeTimer,

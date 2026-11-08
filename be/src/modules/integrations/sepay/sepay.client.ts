@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { InjectHttpClient } from "@modules/platform/http"
-import type { HttpClient } from "@modules/platform/http"
+import { InjectHttpClient, type HttpClient } from "@modules/platform/http"
 import { isRecord } from "@modules/platform/primitives"
 import { SepayError, SepayErrorCode } from "./errors/sepay.error"
 import type { SepayTransaction, SepayTransactionsQuery } from "./sepay.contracts"
@@ -103,6 +102,6 @@ export class SepayClient {
         if (!isRecord(answer.body) || !Array.isArray(answer.body.transactions)) {
             throw new SepayError({ code: SepayErrorCode.Unavailable })
         }
-        return answer.body.transactions.map(transactionOf)
+        return answer.body.transactions.map((row) => transactionOf(row))
     }
 }

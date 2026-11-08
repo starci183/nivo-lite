@@ -1,5 +1,4 @@
-import { Module } from "@nestjs/common"
-import type { DynamicModule } from "@nestjs/common"
+import { Module, type DynamicModule } from "@nestjs/common"
 import { SepayClient } from "./sepay.client"
 import { SEPAY } from "./sepay.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./sepay.module-definition"

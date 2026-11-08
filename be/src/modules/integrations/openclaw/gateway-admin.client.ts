@@ -1,13 +1,10 @@
 import { Injectable } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder, isRecord } from "@modules/platform/primitives"
 import { agentIdFor } from "./agent-id.policy"
 import { OpenclawError, OpenclawErrorCode } from "./errors/openclaw.error"
-import { ADMIN_SCOPES, connectParams, frameOf } from "./gateway-frame.mapper"
-import type { OptionalGatewayFrame } from "./gateway-frame.mapper"
-import { failureOf, requesterFor } from "./gateway.client"
-import type { GatewaySocketFactory, Responder } from "./gateway.client"
+import { ADMIN_SCOPES, connectParams, frameOf, type OptionalGatewayFrame } from "./gateway-frame.mapper"
+import { failureOf, requesterFor, type GatewaySocketFactory, type Responder } from "./gateway.client"
 import { InjectOpenclawOptions, InjectOpenclawSocketFactory } from "./openclaw.decorators"
 import { OpenclawLogEvent } from "./openclaw.log-events"
 import type { OpenclawOptions } from "./openclaw.options"
@@ -73,7 +70,7 @@ export class GatewayAdminClient {
             }
             const remove = async (): Promise<void> => {
                 await request("connect", connectParams(gateway.auth, process.platform, ADMIN_SCOPES))
-                const removed = agentIdsOf(await request("agents.list", {})).filter(isTarget)
+                const removed = agentIdsOf(await request("agents.list", {})).filter((id) => isTarget(id))
                 await eachInOrder(removed, (agentId) => request("agents.delete", { agentId, deleteFiles: true }))
                 await request("nivo.purgeAgents", { match })
                 finish(null, removed)

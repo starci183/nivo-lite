@@ -1,7 +1,6 @@
 import { deriveStateKey, sameSitePath, signStateToken, verifyStateToken } from "@modules/platform/primitives"
 import { MetaError, MetaErrorCode } from "./errors/meta.error"
-import { META_STATE_PURPOSE } from "./meta.contracts"
-import type { MetaStateInput, OptionalMetaState, ReceivedText } from "./meta.contracts"
+import { META_STATE_PURPOSE, type MetaStateInput, type OptionalMetaState, type ReceivedText } from "./meta.contracts"
 
 const STATE_TTL_MS = 10 * 60 * 1000
 const DEFAULT_RETURN = "/connections"

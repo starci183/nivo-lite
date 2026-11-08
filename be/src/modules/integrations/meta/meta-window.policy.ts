@@ -4,14 +4,12 @@ import {
     MESSENGER_MAX_CHARS,
     PRIVATE_REPLY_WINDOW_MS,
     STANDARD_WINDOW_MS,
-} from "./meta.contracts"
-import type {
-    MessageTag,
-    MetaPlatform,
-    OptionalInstant,
-    PrivateReplyVerdict,
-    RateLimiter,
-    WindowVerdict,
+    type MessageTag,
+    type MetaPlatform,
+    type OptionalInstant,
+    type PrivateReplyVerdict,
+    type RateLimiter,
+    type WindowVerdict,
 } from "./meta.contracts"
 
 /**

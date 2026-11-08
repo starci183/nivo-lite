@@ -27,7 +27,7 @@ const LEAD_COLUMNS = ["date", "name", "company", "need", "phone", "email", "chan
 
 /** One text of the sheet product copy, with `{{name}}` placeholders filled. */
 export const translate = (key: string, params: Readonly<Record<string, string | number>> = {}): string =>
-    (TEXT[key] ?? key).replace(/\{\{(\w+)\}\}/gu, (_, name: string) => String(params[name] ?? ""))
+    (TEXT[key] ?? key).replaceAll(/\{\{(\w+)\}\}/gu, (_, name: string) => String(params[name] ?? ""))
 
 /** The orders tab title. */
 export const ordersTab = (): string => translate("sheet.ordersTab")
@@ -110,7 +110,7 @@ export const buildCreateBody = (title: string, now: Date): SheetCreateBody => {
                         columnMetadata: columnSizes([130, 110, 190, 220, 120, 130, 230, 100, 150]),
                         rowData: [
                             { values: orderHeader().map((header) => textCell(header, true)) },
-                            { values: sample.map(valueCell) },
+                            { values: sample.map((cell) => valueCell(cell)) },
                         ],
                     },
                 ],
@@ -171,7 +171,12 @@ const nameOf = (item: unknown): string => {
 }
 
 const itemsText = (value: unknown): string =>
-    Array.isArray(value) ? value.map(nameOf).filter(Boolean).join(", ") : asText(value)
+    Array.isArray(value)
+        ? value
+              .map((item) => nameOf(item))
+              .filter(Boolean)
+              .join(", ")
+        : asText(value)
 
 const flagOn = (config: SheetConfig, key: string): boolean => config[key] === true || config[key] === "true"
 

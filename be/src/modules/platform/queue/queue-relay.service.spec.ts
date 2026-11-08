@@ -161,13 +161,15 @@ describe("outbox relay", () => {
     it("logs a reconcile claim failure and resumes on the next pass", async () => {
         const world = await build()
         let refused = false
-        world.em.query.mockImplementation((sql) => {
-            if (String(sql).includes("job_reconcile") && !refused) {
-                refused = true
-                return Promise.reject(new Error("reconcile unavailable"))
-            }
-            return world.answerFor(sql)
-        })
+        world.em.query.mockImplementation((sql) =>
+            Promise.resolve().then(() => {
+                if (String(sql).includes("job_reconcile") && !refused) {
+                    refused = true
+                    throw new QueueError({ code: QueueErrorCode.FlowFailure })
+                }
+                return world.answerFor(sql)
+            }),
+        )
         await run(world)
         expect(world.logger.error).toHaveBeenCalledWith(QueueLogEvent.ReconcileFailed, expect.any(Error))
         expect(world.transport.wait).toHaveBeenCalled()

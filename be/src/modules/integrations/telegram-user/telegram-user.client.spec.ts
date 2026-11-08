@@ -10,8 +10,10 @@ import * as sessions from "telegram/sessions"
 import type { StringSession } from "telegram/sessions"
 import type { Dialog } from "telegram/tl/custom/dialog"
 import { Secret } from "@modules/platform/config"
+import { DomainError } from "@modules/platform/errors"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { outcome } from "@tests/fixtures/builders/stand-in.builder"
 import { DataSourcesError, DataSourcesErrorCode } from "@modules/integrations/data-sources"
 import { TELEGRAM_USER_OPTIONS } from "./telegram-user.decorators"
 import type { TelegramUserOptions } from "./telegram-user.options"
@@ -24,8 +26,8 @@ import { TelegramUserLogEvent } from "./telegram-user.log-events"
 class MockTelegram {
     mode = "ok"
     authorized = true
-    destroyError: Error | undefined = undefined
-    connectError: unknown = undefined
+    destroyError: StandInError | undefined = undefined
+    connectError: StandInError | undefined = undefined
     dialogs: Array<Dialog> = []
     messages: Array<Api.Message> = []
     windows: Array<unknown> = []
@@ -114,22 +116,26 @@ async function* listed(dialogs: ReadonlyArray<Dialog>): AsyncGenerator<Dialog, v
     yield* await Promise.resolve(dialogs)
 }
 
-const telegramError = (errorMessage: string): Error => Object.assign(new Error(errorMessage), { errorMessage })
+/** The failure the fake library raises: a domain error whose `code` is the library's own code or text. */
+class StandInError extends DomainError<string> {}
+
+/** What the fake Telegram library raises: a stand-in failure that also carries the `errorMessage` of an RPC error. */
+const telegramError = (errorMessage: string): StandInError =>
+    Object.assign(new StandInError({ code: errorMessage }), { errorMessage })
 
 /** The answer of the fake to one request, by the mode of the test. */
-const answerOf = (request: Api.AnyRequest): Promise<Api.AnyRequest["__response"]> => {
-    mockTg.queries.push(request.className)
-    if (mockTg.mode === "signup") return Promise.resolve(new Api.auth.AuthorizationSignUpRequired({}))
-    if (mockTg.mode === "password") return Promise.reject(telegramError("SESSION_PASSWORD_NEEDED"))
-    if (mockTg.mode === "invalid") return Promise.reject(telegramError("PHONE_CODE_INVALID"))
-    if (mockTg.mode === "down") return Promise.reject(new Error("offline"))
-    if (request instanceof Api.auth.ResendCode && mockTg.mode !== "same") {
-        return Promise.resolve(
-            new Api.auth.SentCode({ type: new Api.auth.SentCodeTypeApp({ length: 5 }), phoneCodeHash: "hash-2" }),
-        )
-    }
-    return Promise.resolve(new Api.auth.Authorization({ user: ada() }))
-}
+const answerOf = (request: Api.AnyRequest): Promise<Api.AnyRequest["__response"]> =>
+    Promise.resolve().then(() => {
+        mockTg.queries.push(request.className)
+        if (mockTg.mode === "signup") return new Api.auth.AuthorizationSignUpRequired({})
+        if (mockTg.mode === "password") throw telegramError("SESSION_PASSWORD_NEEDED")
+        if (mockTg.mode === "invalid") throw telegramError("PHONE_CODE_INVALID")
+        if (mockTg.mode === "down") throw telegramError("offline")
+        if (request instanceof Api.auth.ResendCode && mockTg.mode !== "same") {
+            return new Api.auth.SentCode({ type: new Api.auth.SentCodeTypeApp({ length: 5 }), phoneCodeHash: "hash-2" })
+        }
+        return new Api.auth.Authorization({ user: ada() })
+    })
 
 /** The client of one connection: it answers from the state of the running test. */
 const clientOf = (session: StringSession): TelegramClient => {
@@ -138,12 +144,10 @@ const clientOf = (session: StringSession): TelegramClient => {
     client.setLogLevel.mockImplementation((level) => {
         state.level = level
     })
-    client.connect.mockImplementation(() =>
-        state.connectError === undefined ? Promise.resolve(true) : Promise.reject(state.connectError),
-    )
+    client.connect.mockImplementation(() => outcome(state.connectError, true))
     client.destroy.mockImplementation(() => {
         state.destroyed = true
-        return state.destroyError === undefined ? Promise.resolve() : Promise.reject(state.destroyError)
+        return outcome(state.destroyError, undefined)
     })
     client.sendCode.mockResolvedValue({ phoneCodeHash: "hash-1", isCodeViaApp: true })
     client.getMe.mockImplementation(() => Promise.resolve(state.me))
@@ -280,18 +284,18 @@ describe("TelegramUserClient", () => {
 
         mockTg.mode = "invalid"
         await expect(client.sendCode("+841234")).resolves.toBeDefined()
-        mockTg.connectError = { errorMessage: "PHONE_CODE_INVALID" }
+        mockTg.connectError = telegramError("PHONE_CODE_INVALID")
         await expect(client.sendCode("+841234")).rejects.toMatchObject({
             code: DataSourcesErrorCode.Rejected,
             params: { detail: TELEGRAM_USER_TEXT.codeInvalid },
         })
-        mockTg.connectError = new Error("offline")
+        mockTg.connectError = telegramError("offline")
         await expect(client.sendCode("+841234")).rejects.toMatchObject({
             code: DataSourcesErrorCode.Unavailable,
             params: { detail: TELEGRAM_USER_TEXT.unavailable },
         })
         mockTg.connectError = undefined
-        mockTg.destroyError = new Error("close")
+        mockTg.destroyError = telegramError("close")
         await client.sendCode("+841234")
         expect(logger.error).toHaveBeenCalledWith(TelegramUserLogEvent.CloseFailed, mockTg.destroyError, {})
     })
@@ -466,8 +470,8 @@ describe("TelegramUserClient", () => {
     it.each([false, true])("propagates cleanup logger failures with connection failure %s", async (connectionFails) => {
         const { client, logger } = await build()
         const failure = new DataSourcesError({ code: DataSourcesErrorCode.Unavailable })
-        mockTg.connectError = connectionFails ? { errorMessage: "PHONE_CODE_INVALID" } : undefined
-        mockTg.destroyError = new Error("destroy unavailable")
+        mockTg.connectError = connectionFails ? telegramError("PHONE_CODE_INVALID") : undefined
+        mockTg.destroyError = telegramError("destroy unavailable")
         logger.error.mockImplementation(() => {
             throw failure
         })
