@@ -6,7 +6,7 @@ import { useWorkspaceId } from "@/hooks/workspaces"
 import { slotOfReads } from "@/hooks/slot"
 import { MODULE_KEYS, MODULE_REGISTRY, pickCopy, pickCopyList } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
-import type { AgentLifecycle, SetupProgress } from "@/modules/installations"
+import type { AgentLifecycle, Installation, SetupProgress } from "@/modules/installations"
 import {
     installationPersonName,
     agentHref,
@@ -77,6 +77,37 @@ const categoriesOf = (
               label: pickCopy(category.label, locale),
           }))
 
+/** What the installed agents are drawn from: the installations read (undefined while it loads), the catalogue copy and the reader context. */
+interface AgentsInput {
+    readonly list: ReadonlyArray<Installation> | undefined
+    readonly catalog: ModuleCatalog
+    readonly locale: "vi" | "en"
+    readonly workspaceId: string
+    readonly channelsOf: ReturnType<typeof useInstanceChannels>
+}
+
+/** The installed agents in the reader language; none while the installations are not read (the hook's slot says whether that is loading). */
+const agentsOf = ({ list, catalog, locale, workspaceId, channelsOf }: AgentsInput): ReadonlyArray<InstalledAgent> =>
+    (list ?? []).map((installation): InstalledAgent => {
+        const copy = catalog.modules[installation.moduleKey]
+        const lifecycle = agentLifecycleOf(installation)
+        return {
+            id: installation.id,
+            name: installationPersonName(installation),
+            seed: installation.agentId ?? installation.id,
+            avatarUrl: installation.agentAvatarUrl,
+            roleName: copy === undefined ? "" : pickCopy(copy.name, locale),
+            lifecycle,
+            tone: agentLifecycleTone(lifecycle),
+            href: workspaceHref(
+                workspaceId,
+                agentHref(installation.moduleKey, installation.id, isSetupPending(lifecycle) ? "setup" : "workbench"),
+            ),
+            channels: channelsOf(installation.agentId),
+            setupProgress: installation.setupProgress,
+        }
+    })
+
 /** The installed agents, the roles still to add (a single-instance role that is installed does not repeat), and the categories. */
 export const useCatalogEntries = (): {
     readonly agents: ReadonlyArray<InstalledAgent>
@@ -131,25 +162,7 @@ export const useCatalogEntries = (): {
             },
         ]
     })
-    const agents = (installations ?? []).map((installation): InstalledAgent => {
-        const copy = catalog.modules[installation.moduleKey]
-        const lifecycle = agentLifecycleOf(installation)
-        return {
-            id: installation.id,
-            name: installationPersonName(installation),
-            seed: installation.agentId ?? installation.id,
-            avatarUrl: installation.agentAvatarUrl,
-            roleName: copy === undefined ? "" : pickCopy(copy.name, locale),
-            lifecycle,
-            tone: agentLifecycleTone(lifecycle),
-            href: workspaceHref(
-                workspaceId,
-                agentHref(installation.moduleKey, installation.id, isSetupPending(lifecycle) ? "setup" : "workbench"),
-            ),
-            channels: channelsOf(installation.agentId),
-            setupProgress: installation.setupProgress,
-        }
-    })
+    const agents = agentsOf({ list: installations, catalog, locale, workspaceId, channelsOf })
     const categories = categoriesOf(catalog, locale)
     const slot = slotOfReads([installationsRead, catalog.read], () => true)
     return {
