@@ -22,47 +22,44 @@ type OpenApiTestStepProps = {
 }
 
 /** Step "test" of the OpenAPI wizard: calls one GET with the typed settings and shows what came back. */
-export const OpenApiTestStep = (props: OpenApiTestStepProps) => (
-    <Stack gap="section">
-        <Text size="sm" tone="muted">
-            {props.text.hint}
-        </Text>
-        <TestOperation
-            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-            options={props.options}
-            value={props.value}
-            text={props.text}
-            onOperation={props.onOperation}
-        />
-        {props.showQuery ? (
-            <Input
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                id="oa-test-q"
-                name="testQuery"
-                label={props.text.query}
-                value={props.query}
-                onValueChange={props.onQuery}
-            />
-        ) : null}
-        {props.isTesting ? (
-            <Text size="sm" live="polite">
-                {props.text.testing}
+export const OpenApiTestStep = (props: OpenApiTestStepProps) => {
+    const loading = props.isLoading === undefined ? {} : { isLoading: props.isLoading }
+    return (
+        <Stack gap="section">
+            <Text size="sm" tone="muted">
+                {props.text.hint}
             </Text>
-        ) : null}
-        {props.note === null ? null : (
-            <Alert
-                {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-                tone={props.note.tone}
-                title={props.note.text}
+            <TestOperation
+                {...loading}
+                options={props.options}
+                value={props.value}
+                text={props.text}
+                onOperation={props.onOperation}
             />
-        )}
-        {props.fields === null ? null : (
-            <Text {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })} size="sm" tone="muted">
-                {props.fields}
-            </Text>
-        )}
-    </Stack>
-)
+            {props.showQuery ? (
+                <Input
+                    {...loading}
+                    id="oa-test-q"
+                    name="testQuery"
+                    label={props.text.query}
+                    value={props.query}
+                    onValueChange={props.onQuery}
+                />
+            ) : null}
+            {props.isTesting ? (
+                <Text size="sm" live="polite">
+                    {props.text.testing}
+                </Text>
+            ) : null}
+            {props.note === null ? null : <Alert {...loading} tone={props.note.tone} title={props.note.text} />}
+            {props.fields === null ? null : (
+                <Text {...loading} size="sm" tone="muted">
+                    {props.fields}
+                </Text>
+            )}
+        </Stack>
+    )
+}
 
 /** Known capability copy stays real while unresolved options use their native control anatomy. */
 const TestOperation = (

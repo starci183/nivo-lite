@@ -31,45 +31,43 @@ export const HiringPipelineBoard = (props: HiringPipelineBoardProps) => {
     const { copy, jobId, jobOptions, hasNoCandidates, withdrawnNote, error } = props
     const { on } = props
     return (
-        <>
-            <Section
-                isLoading={props.isLoading}
-                title={copy.title}
-                action={
-                    <Select
-                        isLoading={props.isLoading}
-                        label={copy.jobLabel}
-                        isLabelHidden
-                        value={jobId}
-                        options={jobOptions}
-                        onValueChange={(id) => on.job(id ?? jobId)}
-                    />
-                }
-            >
-                {error === null ? null : (
-                    <Alert
-                        tone="negative"
-                        title={copy.moveFailed}
-                        description={error}
-                        dismissLabel={copy.dismissLabel}
-                        onDismiss={on.clearError}
-                    />
-                )}
-                {hasNoCandidates ? (
-                    <EmptyNotice message={copy.emptyTitle} description={copy.emptyBody} />
-                ) : (
-                    <>
-                        <PipelineBoard {...props} />
-                        <PipelinePhoneLanes {...props} />
-                        {withdrawnNote === null ? null : (
-                            <Text isLoading={props.isLoading} size="sm" tone="muted">
-                                {withdrawnNote}
-                            </Text>
-                        )}
-                    </>
-                )}
-            </Section>
-        </>
+        <Section
+            isLoading={props.isLoading}
+            title={copy.title}
+            action={
+                <Select
+                    isLoading={props.isLoading}
+                    label={copy.jobLabel}
+                    isLabelHidden
+                    value={jobId}
+                    options={jobOptions}
+                    onValueChange={(id) => on.job(id ?? jobId)}
+                />
+            }
+        >
+            {error === null ? null : (
+                <Alert
+                    tone="negative"
+                    title={copy.moveFailed}
+                    description={error}
+                    dismissLabel={copy.dismissLabel}
+                    onDismiss={on.clearError}
+                />
+            )}
+            {hasNoCandidates ? (
+                <EmptyNotice message={copy.emptyTitle} description={copy.emptyBody} />
+            ) : (
+                <>
+                    <PipelineBoard {...props} />
+                    <PipelinePhoneLanes {...props} />
+                    {withdrawnNote === null ? null : (
+                        <Text isLoading={props.isLoading} size="sm" tone="muted">
+                            {withdrawnNote}
+                        </Text>
+                    )}
+                </>
+            )}
+        </Section>
     )
 }
 

@@ -106,6 +106,8 @@ const Quotes = (props: QuotesProps) => {
  */
 export const QueueDetail = (props: QueueDetailProps) => {
     const detail = props.detail
+    const noticeDescription =
+        detail.notice === null || detail.notice.description === "" ? {} : { description: detail.notice.description }
     return (
         <Stack gap="section">
             {detail.heading === null ? null : (
@@ -124,11 +126,7 @@ export const QueueDetail = (props: QueueDetailProps) => {
                 <Tile key={tile.id} tile={tile} onAction={props.onAction} isLoading={props.isLoading} />
             ))}
             {detail.notice === null ? null : (
-                <Alert
-                    title={detail.notice.title}
-                    {...(detail.notice.description === "" ? {} : { description: detail.notice.description })}
-                    tone="informative"
-                />
+                <Alert title={detail.notice.title} {...noticeDescription} tone="informative" />
             )}
             {detail.actions.length === 0 ? null : (
                 <Cluster gap="inline" justify="end">

@@ -44,61 +44,59 @@ export const HiringInterviewSchedule = (props: HiringInterviewScheduleProps) => 
     const { copy, weekLabel, isThisWeek, days, invitations, invitationsFact, error } = props
     const { on } = props
     return (
-        <>
-            <Section
-                isLoading={props.isLoading}
-                title={copy.ivTabTitle}
-                action={
-                    <Cluster gap="inline">
-                        <Button isLoading={props.isLoading} intent="dismiss" size="sm" onPress={on.previousWeek}>
-                            {copy.ivPrevWeek}
+        <Section
+            isLoading={props.isLoading}
+            title={copy.ivTabTitle}
+            action={
+                <Cluster gap="inline">
+                    <Button isLoading={props.isLoading} intent="dismiss" size="sm" onPress={on.previousWeek}>
+                        {copy.ivPrevWeek}
+                    </Button>
+                    <Text isLoading={props.isLoading} as="span" size="sm" isStrong>
+                        {weekLabel}
+                    </Text>
+                    <Button isLoading={props.isLoading} intent="dismiss" size="sm" onPress={on.nextWeek}>
+                        {copy.ivNextWeek}
+                    </Button>
+                    {isThisWeek ? null : (
+                        <Button isLoading={props.isLoading} intent="neutral" size="sm" onPress={on.thisWeek}>
+                            {copy.ivBackToThisWeek}
                         </Button>
-                        <Text isLoading={props.isLoading} as="span" size="sm" isStrong>
-                            {weekLabel}
-                        </Text>
-                        <Button isLoading={props.isLoading} intent="dismiss" size="sm" onPress={on.nextWeek}>
-                            {copy.ivNextWeek}
-                        </Button>
-                        {isThisWeek ? null : (
-                            <Button isLoading={props.isLoading} intent="neutral" size="sm" onPress={on.thisWeek}>
-                                {copy.ivBackToThisWeek}
-                            </Button>
-                        )}
-                    </Cluster>
-                }
-            >
-                {error === null ? null : (
-                    <Alert
-                        tone="negative"
-                        title={copy.errorTitle}
-                        description={error}
-                        dismissLabel={copy.dismiss}
-                        onDismiss={on.clearError}
-                    />
-                )}
-                <Grid kind="week" label={weekLabel}>
-                    {days.map((day) => (
-                        <SurfaceCard
-                            isLoading={props.isLoading}
-                            key={day.key}
-                            kind="list"
-                            label={day.label}
-                            labelEnd={day.isToday ? <Badge tone="accent">{copy.ivToday}</Badge> : undefined}
-                            items={day.items.map((row) => interviewItem(props, row))}
-                            empty={<EmptyNotice message={copy.ivDayEmpty} />}
-                        />
-                    ))}
-                </Grid>
-                <SurfaceCard
-                    isLoading={props.isLoading}
-                    kind="list"
-                    label={copy.ivWaitingTitle}
-                    fact={invitationsFact}
-                    items={invitations.map((row) => invitationItem(props, row))}
-                    empty={<EmptyNotice message={copy.ivWaitingEmpty} description={copy.ivWaitingEmptyBody} />}
+                    )}
+                </Cluster>
+            }
+        >
+            {error === null ? null : (
+                <Alert
+                    tone="negative"
+                    title={copy.errorTitle}
+                    description={error}
+                    dismissLabel={copy.dismiss}
+                    onDismiss={on.clearError}
                 />
-            </Section>
-        </>
+            )}
+            <Grid kind="week" label={weekLabel}>
+                {days.map((day) => (
+                    <SurfaceCard
+                        isLoading={props.isLoading}
+                        key={day.key}
+                        kind="list"
+                        label={day.label}
+                        labelEnd={day.isToday ? <Badge tone="accent">{copy.ivToday}</Badge> : undefined}
+                        items={day.items.map((row) => interviewItem(props, row))}
+                        empty={<EmptyNotice message={copy.ivDayEmpty} />}
+                    />
+                ))}
+            </Grid>
+            <SurfaceCard
+                isLoading={props.isLoading}
+                kind="list"
+                label={copy.ivWaitingTitle}
+                fact={invitationsFact}
+                items={invitations.map((row) => invitationItem(props, row))}
+                empty={<EmptyNotice message={copy.ivWaitingEmpty} description={copy.ivWaitingEmptyBody} />}
+            />
+        </Section>
     )
 }
 

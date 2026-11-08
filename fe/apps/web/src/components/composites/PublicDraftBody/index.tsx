@@ -19,15 +19,13 @@ interface PublicDraftBodyProps {
 export const PublicDraftBody = (props: PublicDraftBodyProps) => {
     const { draft, form, copy } = props
     const isDisabled = form.isBusy || props.isLoading || !draft.canEdit
+    const noteDescription =
+        draft.note === null || draft.note.description === null ? {} : { description: draft.note.description }
     return (
         <Form label={copy.titleLabel} onSubmit={props.onSubmit} isPending={form.isBusy}>
             <Stack gap="section">
                 {draft.note === null ? null : (
-                    <Alert
-                        tone={draft.note.tone}
-                        title={draft.note.title}
-                        {...(draft.note.description === null ? {} : { description: draft.note.description })}
-                    />
+                    <Alert tone={draft.note.tone} title={draft.note.title} {...noteDescription} />
                 )}
                 <Input
                     id="public-doc-title"

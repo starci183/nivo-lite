@@ -25,47 +25,45 @@ export const BookingPolicyForm = (props: BookingPolicyFormProps) => {
         save: props.onSave,
     }
     return (
-        <>
-            <Form label={props.title} isPending={props.isPending} onSubmit={on.save}>
-                <Stack gap="row">
-                    <Grid kind="form" columns={2}>
-                        {props.rules.map((rule) => (
-                            <NumberField
-                                isLoading={props.isLoading}
-                                key={rule.id}
-                                label={rule.label}
-                                minValue={0}
-                                step={1}
-                                value={rule.value}
-                                onValueChange={(value) => on.changeRule(rule.id, value)}
-                            />
-                        ))}
-                        <div className={WIDE_CLASS}>
-                            <Input
-                                isLoading={props.isLoading}
-                                id="booking-policy-address"
-                                name="address"
-                                label={props.addressLabel}
-                                value={props.address}
-                                onValueChange={on.changeAddress}
-                            />
-                        </div>
-                    </Grid>
-                    <Checkbox
-                        isLoading={props.isLoading}
-                        label={props.autoConfirmLabel}
-                        isSelected={props.autoConfirm}
-                        onSelectedChange={on.toggleAutoConfirm}
-                    />
-                    <Checkbox
-                        isLoading={props.isLoading}
-                        label={props.handoffLabel}
-                        isSelected={props.handoff}
-                        onSelectedChange={on.toggleHandoff}
-                    />
-                    <BookingSaveLine isLoading={props.isLoading} label={props.saveLabel} isPending={props.isPending} />
-                </Stack>
-            </Form>
-        </>
+        <Form label={props.title} isPending={props.isPending} onSubmit={on.save}>
+            <Stack gap="row">
+                <Grid kind="form" columns={2}>
+                    {props.rules.map((rule) => (
+                        <NumberField
+                            isLoading={props.isLoading}
+                            key={rule.id}
+                            label={rule.label}
+                            minValue={0}
+                            step={1}
+                            value={rule.value}
+                            onValueChange={(value) => on.changeRule(rule.id, value)}
+                        />
+                    ))}
+                    <div className={WIDE_CLASS}>
+                        <Input
+                            isLoading={props.isLoading}
+                            id="booking-policy-address"
+                            name="address"
+                            label={props.addressLabel}
+                            value={props.address}
+                            onValueChange={on.changeAddress}
+                        />
+                    </div>
+                </Grid>
+                <Checkbox
+                    isLoading={props.isLoading}
+                    label={props.autoConfirmLabel}
+                    isSelected={props.autoConfirm}
+                    onSelectedChange={on.toggleAutoConfirm}
+                />
+                <Checkbox
+                    isLoading={props.isLoading}
+                    label={props.handoffLabel}
+                    isSelected={props.handoff}
+                    onSelectedChange={on.toggleHandoff}
+                />
+                <BookingSaveLine isLoading={props.isLoading} label={props.saveLabel} isPending={props.isPending} />
+            </Stack>
+        </Form>
     )
 }

@@ -136,6 +136,7 @@ const bodyOf = (props: ConnectorDetailOverlayBaseProps, entry: DetailEntry) => {
  */
 export const ConnectorDetailOverlayBase = (props: ConnectorDetailOverlayBaseProps) => {
     const entry = props.props.entry
+    const logo = entry?.logo === undefined ? {} : { src: entry.logo }
     return (
         <Drawer
             isOpen={entry !== null}
@@ -149,7 +150,7 @@ export const ConnectorDetailOverlayBase = (props: ConnectorDetailOverlayBaseProp
             {entry === null ? null : (
                 <Stack gap="section">
                     <Cluster gap="inline" align="start">
-                        <ProviderLogo glyph={entry.glyph} {...(entry.logo === undefined ? {} : { src: entry.logo })} />
+                        <ProviderLogo glyph={entry.glyph} {...logo} />
                         <div className={classNames.lead}>
                             <Stack gap="identity">
                                 <Cluster gap="inline" align="center" justify="between">
