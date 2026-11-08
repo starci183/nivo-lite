@@ -60,6 +60,9 @@ export const useKnowledgeDocIdeas = (onFailed: () => void): DocIdeas => {
         menu: [{ id: "restore", label: t("suggestRestore") }],
     })
     const shown = isExpanded ? ideas.open : ideas.open.slice(0, VISIBLE_IDEAS)
+    const moreKey = isExpanded ? "suggestFewer" : "suggestMore"
+    const moreLabel =
+        ideas.open.length > VISIBLE_IDEAS ? t(moreKey, { count: ideas.open.length - VISIBLE_IDEAS }) : null
     return {
         isLoading: ideas.isLoading,
         view: ideas.canWrite
@@ -71,10 +74,7 @@ export const useKnowledgeDocIdeas = (onFailed: () => void): DocIdeas => {
                   open: shown.map((one) => openOf(one.key)),
                   skipped: ideas.skipped.map((one) => skippedOf(one.key, one.state)),
                   skippedTitle: t("suggestSkipped"),
-                  moreLabel:
-                      ideas.open.length > VISIBLE_IDEAS
-                          ? t(isExpanded ? "suggestFewer" : "suggestMore", { count: ideas.open.length - VISIBLE_IDEAS })
-                          : null,
+                  moreLabel,
                   emptyLabel: t("suggestAllDone"),
               }
             : null,

@@ -95,7 +95,9 @@ export const useVideoScriptFields = (context: ScriptProjection): VideoScriptFiel
         scenes = form.watch("scenes"),
         dirty = form.formState.isDirty,
         total = estimateScriptSeconds(scenes),
-        estimate = estimateStateOf(scenes.length, total)
+        estimate = estimateStateOf(scenes.length, total),
+        estimateKey = estimate === "long" ? "tooLong" : "estimated",
+        estimateLabel = estimate === "none" ? null : t(estimateKey, { n: total })
     return {
         ui: {
             heading: copy.scriptHeading,
@@ -115,7 +117,7 @@ export const useVideoScriptFields = (context: ScriptProjection): VideoScriptFiel
             canAdd: scenes.length < SCRIPT_MAX_SCENES,
             backLabel: copy.back,
             nextLabel: copy.next,
-            estimateLabel: estimate === "none" ? null : t(estimate === "long" ? "tooLong" : "estimated", { n: total }),
+            estimateLabel,
             saving: form.formState.isSubmitting || pending,
             canContinue: estimate === "ok",
             dismissLabel: copy.back,

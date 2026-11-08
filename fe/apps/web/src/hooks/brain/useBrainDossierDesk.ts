@@ -83,7 +83,8 @@ export const useBrainDossierDesk = (input: DossierDeskInput): DossierDesk => {
     const waiting = member.isLoading || "isLoading" in slot || (!summary.isReady && !summary.isFailed)
     const listSlot = waiting ? loadingSlot<typeof sections>() : mapSlot(slot, () => sections)
     const isMap = input.mode === "map"
-    const selectedId = waiting ? null : (input.dossier ?? (isMap ? null : (sections[0]?.rows[0]?.id ?? null)))
+    const firstId = isMap ? null : (sections[0]?.rows[0]?.id ?? null)
+    const selectedId = waiting ? null : (input.dossier ?? firstId)
     const opened = findOpened(all, selectedId, standingOf)
     const owner = useDossierOwner({ dossier: opened === null ? null : opened.dossier, onSaved: reload })
     const details = opened === null ? [] : aw.detailsOf(owner, opened.dossier)

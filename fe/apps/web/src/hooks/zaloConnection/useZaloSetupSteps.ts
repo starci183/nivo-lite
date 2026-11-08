@@ -63,6 +63,7 @@ export const useZaloSetupSteps = (connectionId: string): UseZaloSetupStepsResult
         }
         return t(`${TITLE_KEYS[id]}Hint`)
     }
+    const authorizeLabel = isAuthorized ? t("reconnect") : t("authorize")
     return {
         stepsLabel: t("stepsLabel"),
         steps: steps.map((step, index) => ({
@@ -81,7 +82,7 @@ export const useZaloSetupSteps = (connectionId: string): UseZaloSetupStepsResult
         authorize:
             isOwner && ("items" in slot ? slot.items : undefined) !== undefined
                 ? {
-                      label: isAuthorized ? t("reconnect") : t("authorize"),
+                      label: authorizeLabel,
                       isPending: isAuthorizing,
                       isNext: !isAuthorized,
                   }

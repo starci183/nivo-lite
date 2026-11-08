@@ -92,7 +92,7 @@ export const useInviteView = (token: string): InviteView => {
             role: t(preview.role === "manager" ? "roleManager" : "roleStaff"),
         }),
         forEmail: preview.email,
-        asStaff: preview.staffName === null ? undefined : preview.staffName,
+        asStaff: preview.staffName ?? undefined,
         signedOutHint: t("signedOutHint", { email: preview.email }),
         mismatchBody: t("mismatchBody", { current: email ?? "", email: preview.email }),
     }

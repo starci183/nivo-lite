@@ -25,7 +25,7 @@ export interface OnboardingHandoverState {
 /** The approval a stored rule means: no rule is the same as never (nothing without a rule runs), unknown until the rules load. */
 const approvalOf = (isRead: boolean, mode: StoredRule["mode"] | undefined): OnboardingApproval => {
     if (!isRead) return "unknown"
-    return mode === undefined ? "never" : mode
+    return mode ?? "never"
 }
 
 /** The authority rule that gates the AI replying to a customer. */

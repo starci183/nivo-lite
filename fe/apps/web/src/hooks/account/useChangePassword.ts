@@ -31,8 +31,8 @@ export const useChangePassword = (): ChangePasswordView => {
             setError(undefined)
             try {
                 await trigger({ currentPassword: input.current, newPassword: input.next })
-            } catch (failure) {
-                setError(t(accountErrorKey(graphQLErrorCode(failure) ?? "")))
+            } catch (error_) {
+                setError(t(accountErrorKey(graphQLErrorCode(error_) ?? "")))
                 return false
             }
             toast.success(tToast("successTitle"), { description: t("passwordSaved") })

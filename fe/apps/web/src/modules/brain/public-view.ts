@@ -109,6 +109,7 @@ export const publicDraftOf = (
     format: PublicFormat,
 ): PublicDraftView => {
     const badge = publicBadgeOf(doc)
+    const approveKey = doc.needsReview ? "approveAgain" : "approveAndPublish"
     return {
         id: doc.id,
         title: doc.title,
@@ -131,10 +132,7 @@ export const publicDraftOf = (
         approval: doc.approvedByName === null || doc.approvedAt === null ? null : approvalOf(doc, t, format),
         publishedBody: doc.publishedBody,
         redraftLabel: doc.needsReview || badge === "failed" ? t("redraft") : null,
-        approveLabel:
-            badge === "drafting" || badge === "failed"
-                ? null
-                : t(doc.needsReview ? "approveAgain" : "approveAndPublish"),
+        approveLabel: badge === "drafting" || badge === "failed" ? null : t(approveKey),
     }
 }
 

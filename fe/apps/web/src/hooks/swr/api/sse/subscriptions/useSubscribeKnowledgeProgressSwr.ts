@@ -78,7 +78,7 @@ export const useSubscribeKnowledgeProgressSwr = (): SWRSubscriptionResponse<Know
                 clearTimeout(pending)
                 pending = setTimeout(() => void mutate(staleList), SETTLE_DEBOUNCE_MS)
             }
-            void streamKnowledgeProgress({
+            streamKnowledgeProgress({
                 signal: controller.signal,
                 onOpen: () => {
                     next(null, (state) => ({ ...(state ?? NOT_LIVE), isLive: true }))
