@@ -50,8 +50,8 @@ export const useZaloTestSend = (connectionId: string): UseZaloTestSendResult => 
             blocked: page.sendBlock === null ? "" : (blocks[page.sendBlock] ?? t("blockTokenExpired")),
         }
     })
-    const recipientId =
-        picked === "" ? (("items" in slot ? slot.items.recipients[0]?.userId : undefined) ?? "") : picked
+    const firstRecipientId = "items" in slot ? slot.items.recipients[0]?.userId : undefined
+    const recipientId = picked === "" ? (firstRecipientId ?? "") : picked
 
     const send = useCallback(async (): Promise<void> => {
         setNote({ text: "", isOk: false })

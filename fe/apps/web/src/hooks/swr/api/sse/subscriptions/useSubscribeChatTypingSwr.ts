@@ -41,7 +41,7 @@ export const useSubscribeChatTypingSwr = (roomId: string | null): SWRSubscriptio
     return useSWRSubscription<ChatTypingHints, Error, ChatTypingStreamKey>(key, ([, , , room], { next }) => {
         const controller = new AbortController()
         if (room !== null && room !== undefined)
-            void streamChatTyping({
+            streamChatTyping({
                 roomId: room,
                 signal: controller.signal,
                 onOpen: () => void mutate(matchesSwrKey(QUERY_CHAT_UNREAD_SWR_KEY)),

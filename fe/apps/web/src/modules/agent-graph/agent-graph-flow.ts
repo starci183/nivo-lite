@@ -95,7 +95,7 @@ const layersOf = (nodes: ReadonlyArray<AgentGraphNodeData>): ReadonlyMap<string,
             target,
         })),
     )
-    for (let pass = 0; pass < nodes.length; pass += 1) {
+    for (const _pass of nodes) {
         for (const edge of edges) {
             const from = layers.get(edge.source)
             const to = layers.get(edge.target)

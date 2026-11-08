@@ -130,7 +130,8 @@ export const usePublicBookingForm = (page: PublicBookingPageData | null | undefi
         setMissing(lacking)
         if (lacking === "") booking.submit()
     }
-    const needText = missing === "" ? "" : pub(missing === "service" ? "bookingNeedService" : "bookingNeedTime")
+    const needKey = missing === "service" ? "bookingNeedService" : "bookingNeedTime"
+    const needText = missing === "" ? "" : pub(needKey)
     return {
         props: {
             formLabel: t("publicFormLabel"),

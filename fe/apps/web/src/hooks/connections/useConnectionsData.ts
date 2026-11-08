@@ -74,7 +74,7 @@ export const useConnectionsData = (): ConnectionsDataView => {
         [agentRows],
     )
     const agentNames = useMemo(
-        () => Object.fromEntries((agentRows === undefined ? [] : agentRows).map((agent) => [agent.id, agent.name])),
+        () => Object.fromEntries((agentRows ?? []).map((agent) => [agent.id, agent.name])),
         [agentRows],
     )
     return {

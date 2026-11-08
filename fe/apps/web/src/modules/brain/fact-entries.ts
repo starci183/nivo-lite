@@ -103,10 +103,11 @@ const historyLineOf = (fact: BrainFact, stateWord: string, words: FactWords): st
     const isPast = fact.status === "superseded" || fact.status === "expired"
     const from = fact.validFrom ?? (isPast ? fact.proposedAt : null)
     const to = isPast ? (fact.validTo ?? fact.decidedAt) : null
+    const rangeEnd = isPast ? null : to
     const range =
         isPast && from !== null && to !== null
             ? words.betweenOf(words.dayShort(from), words.dayShort(to))
-            : rangeOf(words, from, isPast ? null : to, words.dayShort)
+            : rangeOf(words, from, rangeEnd, words.dayShort)
     return [stateWord, range].filter((part) => part !== "").join(" · ")
 }
 

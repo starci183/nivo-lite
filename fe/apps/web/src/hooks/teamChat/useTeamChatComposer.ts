@@ -42,15 +42,15 @@ export const useTeamChatComposer = (target: TeamChatTarget): TeamChatComposerVie
     const send = useMutateSendChatMessageSwr(workspaceId)
     const file = useTeamChatFile(workspaceId)
     const typingHint = useTeamChatTypingHint(workspaceId, target.roomId)
-    const [draft, setDraftState] = useState("")
+    const [draft, setDraft] = useState("")
     const [error, setError] = useState<string | null>(null)
     const mentions = useMemo(
         () => mentionsOfDraft(draft, target.parties).map((party) => ({ memberKind: party.kind, memberId: party.id })),
         [draft, target.parties],
     )
-    const setDraft = useCallback(
+    const changeDraft = useCallback(
         (value: string): void => {
-            setDraftState(value)
+            setDraft(value)
             setError(null)
             typingHint(value.trim() !== "")
         },
@@ -74,7 +74,7 @@ export const useTeamChatComposer = (target: TeamChatTarget): TeamChatComposerVie
                 setError(sent.refusal ?? "failed")
                 return
             }
-            setDraftState("")
+            setDraft("")
             file.clear()
             typingHint(false)
             target.onSent(sent.message.roomId)
@@ -87,7 +87,7 @@ export const useTeamChatComposer = (target: TeamChatTarget): TeamChatComposerVie
         file,
         error: error ?? file.problem,
         isSending: send.isMutating || file.isUploading,
-        setDraft,
+        setDraft: changeDraft,
         send: sendDraft,
     }
 }
