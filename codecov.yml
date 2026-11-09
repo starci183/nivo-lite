@@ -337,6 +337,7 @@ ignore:
   - "be/src/modules/integrations/*/errors/**"
   - "be/src/modules/integrations/*/index.ts"
   - "be/src/modules/integrations/*/messages/**"
+  - "be/src/modules/integrations/keycloak/keycloak.attestation.ts"
   - "be/src/modules/integrations/keycloak/keycloak.registration.ts"
   - "be/src/modules/platform/*/index.ts"
   - "be/src/modules/platform/*/messages/**"

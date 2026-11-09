@@ -97,7 +97,7 @@
   },
   "peerDependencies": {
     "@heroui/react": "3.2.6",
-    "@starci/grammar": "0.25.2",
+    "@starci/grammar": "0.32.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zod": "4.6.7"
@@ -107,13 +107,12 @@
     "typescript": "5.9.3"
   },
   "starci": {
-    "errorBase": {
-      "name": "SdkError",
-      "file": "src/sdk-error.ts"
-    },
     "outcome": {
       "name": "WorkbenchOutcome",
       "file": "src/workbench/host/host.types.ts"
     }
+  },
+  "dependencies": {
+    "@starci/common": "1.0.1"
   }
 }

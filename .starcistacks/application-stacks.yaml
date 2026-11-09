@@ -172,13 +172,13 @@ environments:
       nivo-openclaw:
         port: 58790
       nivo-api:
-        port: 18787
+        port: 3101
       nivo-mcp:
-        port: 18790
+        port: 3103
       nivo-web-app:
-        port: 3000
+        port: 3100
       nivo-landing:
-        port: 3002
+        port: 3104
     runbook: README.md
     # Dev values are generated once, dev-only, by `starci app secret init --env dev --execute`, which declares each key here; the sealed
     # members `ai` (the upstream OPENROUTER_API_KEY and STARCI_AI_KEY) and `auth` (the JWT pair) are the owner's and are never regenerated.
@@ -479,11 +479,11 @@ environments:
         redis: 56379
         minio: 59000
         openclaw: 58790
-        api: 18787
-        gateway: 18788
-        mcp: 18790
-        web: 3000
-        landing: 3002
+        api: 3101
+        gateway: 3102
+        mcp: 3103
+        web: 3100
+        landing: 3104
       services:
         - {name: db, wait: healthy}
         - {name: nivo-redis, wait: healthy}

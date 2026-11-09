@@ -860,7 +860,7 @@ Repo rules (hard, no exception):
 - Never open, read, print or grep *.enc*, secrets.env, any *.env or .env* file, or the secrets folder; never print the
   environment.
 - No migration in this WP.
-- The local api (port 18787) and web (port 3100) are running: never start, stop, restart or kill them or any node
+- The local api (port 3101) and web (port 3100) are running: never start, stop, restart or kill them or any node
   process; start no dev server.
 ```
 

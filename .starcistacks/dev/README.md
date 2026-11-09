@@ -13,10 +13,10 @@ runbook carries no docker command and nobody runs docker by hand.
 | redis (BullMQ broker, realtime) | container, volume `redis-data` | 56379 |
 | minio (S3) | container, volume `minio-data` | 59000 |
 | openclaw (agent gateway, relay) | container, agent workspace under the state base | 58790 |
-| api (+ the AI gateway on port + 1) | native | 18787 (gateway 18788) |
-| mcp | native | 18790 |
-| web (console) | native | 3000 |
-| landing | native | 3002 |
+| api (+ the AI gateway on port + 1) | native | 3101 (gateway 3102) |
+| mcp | native | 3103 |
+| web (console) | native | 3100 |
+| landing | native | 3104 |
 
 The ports differ from production and from the earlier local containers (`nivo-lite-dev-db` on 54322, port 8787) on purpose: `doctor` reports a port
 that something else holds and names the holder. Change a port in `local.ports` of the manifest, not in the commands.
