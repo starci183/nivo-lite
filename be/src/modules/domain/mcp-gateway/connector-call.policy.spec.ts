@@ -190,7 +190,7 @@ describe("failureCodeOf", () => {
 
 describe("domainNameIn", () => {
     const sender = (extra: Partial<GatewayToolSpec> = {}): GatewayToolSpec =>
-        specOf({ name: "send", domain: "chat.send", ...extra })
+        specOf({ name: "send", domain: "nivo.chat.send", ...extra })
 
     it("answers the full name of the first usable tool of an enabled connector declaring the domain", async () => {
         const policy = await build()
@@ -198,7 +198,7 @@ describe("domainNameIn", () => {
             manifest: { ...connectorOf().manifest, key: "zalo", name: "Zalo", tools: [sender()] },
         })
 
-        expect(policy.domainNameIn([connectorOf(), chat], "chat.send")).toBe("zalo.send")
+        expect(policy.domainNameIn([connectorOf(), chat], "nivo.chat.send")).toBe("zalo.send")
     })
 
     it("skips a disabled connector and an unapproved tool, and answers null for the rest", async () => {
@@ -208,28 +208,26 @@ describe("domainNameIn", () => {
         expect(
             policy.domainNameIn(
                 [connectorOf({ manifest, status: "disabled" }), connectorOf({ manifest, approvedTools: new Set() })],
-                "chat.send",
+                "nivo.chat.send",
             ),
         ).toBeNull()
-        expect(policy.domainNameIn([connectorOf()], "chat.send")).toBeNull()
+        expect(policy.domainNameIn([connectorOf()], "nivo.chat.send")).toBeNull()
     })
-    it("resolves a renamed NIVO door tool by its full id on a connector under the `nivo` prefix, and keeps the old id as it is", async () => {
+    it("resolves a NIVO door tool by its full id through the connector's public prefix, and an old id to nothing", async () => {
         const policy = await build()
         const ledger = connectorOf({
             manifest: {
                 ...connectorOf().manifest,
-                key: "nivo-ledger",
-                namespace: "nivo",
-                name: "NIVO Ledger",
-                tools: [specOf({ name: "ledger.entry.append", domain: "nivo.ledger.entry.append", scope: "write" })],
+                key: "ledger",
+                namespace: "nivo.ledger",
+                name: "Ledger",
+                tools: [specOf({ name: "entry.append", domain: "nivo.ledger.entry.append", scope: "write" })],
             },
         })
-        const old = connectorOf({
-            manifest: { ...connectorOf().manifest, key: "ledger", tools: [specOf({ name: "append", domain: "ledger.append" })] },
-        })
 
-        expect(policy.domainNameIn([old, ledger], "nivo.ledger.entry.append")).toBe("nivo.ledger.entry.append")
-        expect(policy.domainNameIn([old, ledger], "ledger.append")).toBe("ledger.append")
+        expect(policy.domainNameIn([ledger], "nivo.ledger.entry.append")).toBe("nivo.ledger.entry.append")
+        // no alias: the name before the flip resolves to nothing
+        expect(policy.domainNameIn([ledger], ["ledger", "append"].join("."))).toBeNull()
     })
 })
 

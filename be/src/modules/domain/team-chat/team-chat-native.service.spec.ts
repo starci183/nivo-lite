@@ -43,8 +43,8 @@ const REQUEST = {
 describe("TeamChatNativeService", () => {
     it("announces the two tools as internal and write", () => {
         expect(TEAM_CHAT_MANIFEST.tools.map((tool) => [tool.name, tool.internalOnly, tool.scope])).toEqual([
-            ["post-report", true, "write"],
-            ["post-approval", true, "write"],
+            ["report.post", true, "write"],
+            ["approval.post", true, "write"],
         ])
     })
 
@@ -52,7 +52,7 @@ describe("TeamChatNativeService", () => {
         const { service, chat } = await build()
         chat.postReport.mockResolvedValue({ roomId: ROOM, messageId: "m1", created: true })
         await expect(
-            service.invoke(WS, "post-report", { runId: RUN, agentId: AGENT, trigger: "tag" }, CALLER),
+            service.invoke(WS, "report.post", { runId: RUN, agentId: AGENT, trigger: "tag" }, CALLER),
         ).resolves.toEqual({ roomId: ROOM, messageId: "m1", created: true })
         expect(chat.postReport).toHaveBeenCalledWith(WS, {
             runId: RUN,
@@ -66,12 +66,12 @@ describe("TeamChatNativeService", () => {
         const { service, chat } = await build()
         chat.postReport.mockResolvedValue(null)
         await expect(
-            service.invoke(WS, "post-report", { runId: RUN, agentId: AGENT, trigger: "tag" }, CALLER),
+            service.invoke(WS, "report.post", { runId: RUN, agentId: AGENT, trigger: "tag" }, CALLER),
         ).rejects.toMatchObject({ code: "MCP_GATEWAY_NATIVE_REFUSED" })
-        await expect(service.invoke(WS, "post-report", { runId: "x" }, CALLER)).rejects.toMatchObject({
+        await expect(service.invoke(WS, "report.post", { runId: "x" }, CALLER)).rejects.toMatchObject({
             code: "MCP_GATEWAY_INVALID_ARGUMENTS",
         })
-        await expect(service.invoke(WS, "post-approval", {}, CALLER)).rejects.toMatchObject({
+        await expect(service.invoke(WS, "approval.post", {}, CALLER)).rejects.toMatchObject({
             code: "MCP_GATEWAY_INVALID_ARGUMENTS",
         })
         await expect(service.invoke(WS, "other", {}, CALLER)).rejects.toMatchObject({
@@ -88,7 +88,7 @@ describe("TeamChatNativeService approval cards", () => {
             storedGroup: { roles: ["owner"], rooms: [ROOM], members: [SEAT] },
         })
         chat.postApproval.mockResolvedValue(2)
-        await expect(service.invoke(WS, "post-approval", { decisionId: DECISION }, CALLER)).resolves.toEqual({
+        await expect(service.invoke(WS, "approval.post", { decisionId: DECISION }, CALLER)).resolves.toEqual({
             cards: 2,
         })
         expect(chat.postApproval).toHaveBeenCalledWith(WS, {
@@ -107,7 +107,7 @@ describe("TeamChatNativeService approval cards", () => {
             mock<ApprovalSetup>({ group: { roles: ["owner"], rooms: [ROOM], members: [] } }),
         )
         chat.postApproval.mockResolvedValue(1)
-        await service.invoke(WS, "post-approval", { decisionId: DECISION }, CALLER)
+        await service.invoke(WS, "approval.post", { decisionId: DECISION }, CALLER)
         expect(chat.postApproval).toHaveBeenCalledWith(
             WS,
             expect.objectContaining({
@@ -116,7 +116,7 @@ describe("TeamChatNativeService approval cards", () => {
             }),
         )
         rules.approvalSetup.mockResolvedValue(null)
-        await service.invoke(WS, "post-approval", { decisionId: DECISION }, CALLER)
+        await service.invoke(WS, "approval.post", { decisionId: DECISION }, CALLER)
         expect(chat.postApproval).toHaveBeenLastCalledWith(
             WS,
             expect.objectContaining({ roomIds: [], approverSeatIds: [] }),
@@ -126,7 +126,7 @@ describe("TeamChatNativeService approval cards", () => {
     it("refuses the card of a request the workspace does not have", async () => {
         const { service, chat } = await build()
         chat.approvalRequest.mockResolvedValue(null)
-        await expect(service.invoke(WS, "post-approval", { decisionId: DECISION }, CALLER)).rejects.toMatchObject({
+        await expect(service.invoke(WS, "approval.post", { decisionId: DECISION }, CALLER)).rejects.toMatchObject({
             code: "MCP_GATEWAY_NATIVE_REFUSED",
         })
     })

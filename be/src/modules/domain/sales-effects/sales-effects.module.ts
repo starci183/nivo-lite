@@ -10,8 +10,8 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./sales-effects.module-de
 
 @Module({})
 /**
- * What Sales does for the graph nodes on the entity engine: the executors of `lead.ensure`, `order.record`, `order.confirm` and
- * `order.void`, `payment.order.settle`, `payment.claim.record`, `payment.claim.cancel`, `payment.qr.create` and `report.daily.close` (the evening close of the books, posted to the team), and the resolver that tells a turn which customer its conversation belongs to. Each runs in one workspace-scoped
+ * What Sales does for the graph nodes on the entity engine: the executors of `nivo.lead.ensure`, `order.record`, `nivo.order.confirm` and
+ * `order.void`, `nivo.payment.order.settle`, `nivo.payment.claim.record`, `nivo.payment.claim.cancel`, `nivo.payment.qr.create` and `nivo.report.daily.close` (the evening close of the books, posted to the team), and the resolver that tells a turn which customer its conversation belongs to. Each runs in one workspace-scoped
  * transaction over the `sales.lead`, `sales.order` and `chat.conversation` records; the data ports of the two kinds are the engine's.
  */
 export class SalesEffectsModule extends ConfigurableModuleClass {

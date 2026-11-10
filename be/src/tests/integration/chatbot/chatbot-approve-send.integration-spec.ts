@@ -130,7 +130,7 @@ describe("a proposed reply is approved, sent once and recorded, as the back-end 
         expect(await lineOf(scene, first.id)).toMatchObject({ status: "proposed", role: "agent", authorKind: "ai" })
     })
 
-    it("approves the proposal: the line is posted, one delivery is enqueued, and the door gets chat.send once under the line key", async () => {
+    it("approves the proposal: the line is posted, one delivery is enqueued, and the door gets nivo.chat.send once under the line key", async () => {
         const scene = await openScene()
         const line = await propose(scene, ANSWER)
 
@@ -147,7 +147,7 @@ describe("a proposed reply is approved, sent once and recorded, as the back-end 
         await runDeliveries(scene)
         expect(door.calls).toEqual([
             {
-                tool: "chat.send",
+                tool: "nivo.chat.send",
                 input: { conversationId: scene.conversationId, text: ANSWER, key: line.id },
                 effectKey: `${queued[0]?.id}:send`,
             },

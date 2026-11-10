@@ -15,7 +15,7 @@ export interface PostPaymentInput {
 
 /** The line the ledger wrote. */
 export interface PostPaymentOutput {
-    /** The provider's reference to the line, as `ledger.append` answered it. */
+    /** The provider's reference to the line, as `nivo.ledger.entry.append` answered it. */
     readonly ref: string
 }
 
@@ -26,7 +26,7 @@ const id = z.string().min(1).max(MAX_ID)
 const input: NodeSchema<PostPaymentInput> = z.object({ transactionId: id, orderId: id })
 
 const output: NodeSchema<PostPaymentOutput> = z.object({
-    ref: z.string().min(1).max(MAX_LINE).describe("The reference ledger.append answered for the line it wrote."),
+    ref: z.string().min(1).max(MAX_LINE).describe("The reference nivo.ledger.entry.append answered for the line it wrote."),
 })
 
 const MAX_TURNS = 3
@@ -35,7 +35,7 @@ const MAX_TURNS = 3
 const GRANT: RightsGrant = { rights: [], tools: [LEDGER_APPEND] }
 
 /**
- * `accounting.post-payment` (Ghi sổ): the agent writes the settled payment into the shop's ledger by calling `ledger.append` with the
+ * `accounting.post-payment` (Ghi sổ): the agent writes the settled payment into the shop's ledger by calling `nivo.ledger.entry.append` with the
  * transaction id; the tool builds the line from the records (date, order, customer, amount) and writes a transaction once,
  * however often it is asked. A refused connection comes back to the agent as a fact and it says it cannot finish: the engine tells the
  * team and the workflow waits.

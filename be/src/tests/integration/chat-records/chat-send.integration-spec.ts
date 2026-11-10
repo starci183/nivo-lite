@@ -50,7 +50,7 @@ const customerChat = async (): Promise<{ readonly conversationId: string; readon
     return { conversationId: met.conversation.id, messageId: heard.id }
 }
 
-/** Runs the tool `chat.send` of the chat connector for a workspace, as the gateway does once the door resolved the domain tool. */
+/** Runs the tool `nivo.chat.send` of the chat connector for a workspace, as the gateway does once the door resolved the domain tool. */
 const send = (workspaceId: string, args: Readonly<Record<string, string>>) =>
     world
         .resolve(ChatSendNativeService)
@@ -70,7 +70,7 @@ describe("the chat path on records, as the back-end role", () => {
         expect(again).toEqual({ id: first.id, stored: false })
     })
 
-    it("sends the reply with chat.send, stores it once under its key and delivers it on the channel of the conversation", async () => {
+    it("sends the reply with nivo.chat.send, stores it once under its key and delivers it on the channel of the conversation", async () => {
         const { conversationId, messageId } = await customerChat()
         const input = { conversationId, text: ANSWER, key: `reply:${messageId}` }
 

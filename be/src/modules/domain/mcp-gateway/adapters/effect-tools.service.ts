@@ -13,6 +13,7 @@ import type {
     NativeCaller,
     NativeConnectorManifest,
 } from "../mcp-gateway.contracts"
+import { toolNameOf } from "../tool-name.policy"
 import { pinRefusalOf } from "./effect-pin.policy"
 import { answerOf, effectManifestsOf, refusalOf, refusalOfThrow } from "./effect-tools.policy"
 
@@ -63,7 +64,7 @@ export class EffectToolsService {
         return {
             manifest,
             invoke: async (workspaceId, tool, args, caller) => {
-                const effect = effects.get(`${manifest.key}.${tool}`)
+                const effect = effects.get(toolNameOf(manifest, tool))
                 if (effect === undefined) throw new McpGatewayError({ code: McpGatewayErrorCode.UnknownTool, params: { tool } })
                 return answerOf(await this.run(workspaceId, effect, args, caller))
             },

@@ -10,8 +10,8 @@ describe("doorPort", () => {
 describe("door tool names", () => {
     it("accepts <group>.<action> and <group>.<provider>.<action>", () => {
         for (const tool of [
-            "chat.send",
-            "ledger.append",
+            "nivo.chat.send",
+            "nivo.ledger.entry.append",
             "chat.zalo.send",
             "ai.agent.turn",
             "accounting.ledger.append",
@@ -37,8 +37,8 @@ describe("door tool names", () => {
     })
 
     it("tells a domain tool, whose provider the door picks, from a provider-qualified one", () => {
-        expect(isDomainTool("chat.send")).toBe(true)
-        expect(isDomainTool("ledger.append")).toBe(true)
+        expect(isDomainTool("nivo.chat.send")).toBe(true)
+        expect(isDomainTool("nivo.ledger.entry.append")).toBe(true)
         expect(isDomainTool("chat.zalo.send")).toBe(false)
         expect(isDomainTool("send")).toBe(false)
     })

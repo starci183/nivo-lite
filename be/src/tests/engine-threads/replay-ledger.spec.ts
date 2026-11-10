@@ -323,7 +323,7 @@ describe("the prebuilt agent loop under the engine's rules", () => {
         const ran = await founderDecides(process, runId, button(db, "retry"))
 
         expect(ran.map((one) => one.error)).toEqual([null])
-        // `requires: [customer.message.send]` is met by the guard's refusal: the output was taken on the third turn of the visit.
+        // `requires: [nivo.lead.message.send]` is met by the guard's refusal: the output was taken on the third turn of the visit.
         expect((await process.threads.stateOf({ workspaceId: WS, runId }))?.status).toBe("ended")
         expect(sendsOf(db)).toEqual([CHECKING])
         expect(db.lines).toHaveLength(1)

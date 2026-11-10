@@ -21,7 +21,7 @@ const WAKE = "wake"
 
 @Injectable()
 /**
- * The executor of `agent.tag`: a node of one agent's graph tags another agent through the one tag door, so the tag rights, the origin
+ * The executor of `nivo.agent.tag`: a node of one agent's graph tags another agent through the one tag door, so the tag rights, the origin
  * and the target's tag trigger are the door's. The target is an agent, or the agent the workspace runs for a module. The effect's ledger
  * key is the tag's event key, so a step tried again wakes the target once. A tag the rights refuse, or one with no target, is no
  * failure a retry changes.

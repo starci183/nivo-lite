@@ -23,7 +23,7 @@ describe("provider-tools.policy", () => {
         const tools = subject.providerTools("Telegram")
 
         expect(tools.map((tool) => [tool.name, tool.scope, tool.defaultMode, tool.internalOnly])).toEqual([
-            ["status", "read", "auto", true],
+            ["status.get", "read", "auto", true],
         ])
         expect(tools[0]?.description).toContain("Telegram")
     })

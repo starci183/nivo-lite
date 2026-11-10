@@ -46,18 +46,18 @@ describe("ZaloNativeService", () => {
         expect(ZALO_MANIFEST.key).toBe("zalo")
         expect(
             ZALO_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.internalOnly, tool.secretFields]),
-        ).toEqual([["status", "read", true, undefined]])
+        ).toEqual([["status.get", "read", true, undefined]])
     })
 
     it("runs the tools of the zalo_oa provider", async () => {
         const { zalo, tools } = await build()
 
-        await expect(zalo.invoke(WS, "status", {}, CALLER)).resolves.toEqual({ connections: [] })
+        await expect(zalo.invoke(WS, "status.get", {}, CALLER)).resolves.toEqual({ connections: [] })
 
         expect(tools.answer).toHaveBeenCalledWith(
             WS,
             expect.objectContaining({ provider: "zalo_oa" }),
-            "status",
+            "status.get",
             {},
             CALLER,
         )
@@ -65,7 +65,7 @@ describe("ZaloNativeService", () => {
 
     it("words an official account by its id and says whether it needs the owner, never giving the failure text", async () => {
         const { zalo, tools } = await build()
-        await zalo.invoke(WS, "status", {}, CALLER)
+        await zalo.invoke(WS, "status.get", {}, CALLER)
         const { line } = routeOf(tools)
 
         expect(line(account())).toEqual({
@@ -88,7 +88,7 @@ describe("ZaloNativeService", () => {
         const { zalo, tools } = await build()
         tools.answer.mockRejectedValue(nativeRefusal("not_connected"))
 
-        await expect(zalo.invoke(WS, "status", {}, CALLER)).rejects.toMatchObject({
+        await expect(zalo.invoke(WS, "status.get", {}, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
             params: { reason: "not_connected" },
         })

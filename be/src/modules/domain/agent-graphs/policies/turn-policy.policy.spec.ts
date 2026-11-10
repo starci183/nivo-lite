@@ -79,13 +79,13 @@ describe("stepPlaceOf", () => {
 describe("ledgerLinesOf", () => {
     it("keeps the words of the customer sends whose arguments were kept, oldest first, at the time they were kept", () => {
         const rows = [
-            { data: { effectId: "customer.message.send", args: { conversationId: "c-2", text: "B" } }, createdAt: "2026-11-10T03:05:00.000Z" },
-            { data: { effectId: "customer.message.send", args: { leadId: "l-1", text: "A" } }, createdAt: "2026-11-10T03:00:00.000Z" },
-            { data: { effectId: "team.message.post", args: { text: "team" } }, createdAt: "2026-11-10T03:01:00.000Z" },
-            { data: { effectId: "customer.message.send", args: null }, createdAt: "2026-11-10T03:02:00.000Z" },
-            { data: { effectId: "customer.message.send" }, createdAt: "2026-11-10T03:03:00.000Z" },
+            { data: { effectId: "nivo.lead.message.send", args: { conversationId: "c-2", text: "B" } }, createdAt: "2026-11-10T03:05:00.000Z" },
+            { data: { effectId: "nivo.lead.message.send", args: { leadId: "l-1", text: "A" } }, createdAt: "2026-11-10T03:00:00.000Z" },
+            { data: { effectId: "nivo.team.message.post", args: { text: "team" } }, createdAt: "2026-11-10T03:01:00.000Z" },
+            { data: { effectId: "nivo.lead.message.send", args: null }, createdAt: "2026-11-10T03:02:00.000Z" },
+            { data: { effectId: "nivo.lead.message.send" }, createdAt: "2026-11-10T03:03:00.000Z" },
         ]
-        expect(ledgerLinesOf(rows, ["customer.message.send"])).toEqual([
+        expect(ledgerLinesOf(rows, ["nivo.lead.message.send"])).toEqual([
             { text: "A", at: "2026-11-10T03:00:00.000Z" },
             { text: "B", at: "2026-11-10T03:05:00.000Z" },
         ])

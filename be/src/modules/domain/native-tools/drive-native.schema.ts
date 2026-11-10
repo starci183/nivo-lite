@@ -1,9 +1,9 @@
 import { z } from "zod"
 
-/** `drive.status`: takes no argument. */
+/** `google.drive.status.get`: takes no argument. */
 export const DRIVE_STATUS_SCHEMA: z.ZodObject<{}, z.core.$strict> = z.object({}).strict()
 
-/** `drive.sources.list`: the sources the Drive feeds into the Brain, optionally in one stage. */
+/** `google.drive.source.list`: the sources the Drive feeds into the Brain, optionally in one stage. */
 export const DRIVE_SOURCES_LIST_SCHEMA: z.ZodObject<
     {
         status: z.ZodOptional<
@@ -39,7 +39,7 @@ export const DRIVE_SOURCES_LIST_SCHEMA: z.ZodObject<
     })
     .strict()
 
-/** The arguments of `drive.sources.list` as its validator reads them. */
+/** The arguments of `google.drive.source.list` as its validator reads them. */
 export type DriveSourcesListInput = z.output<typeof DRIVE_SOURCES_LIST_SCHEMA>
 
 /** The schemas the manifest advertises, generated from the validators. */

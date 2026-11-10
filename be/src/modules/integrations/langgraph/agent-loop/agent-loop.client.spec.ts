@@ -96,7 +96,7 @@ const build = async (): Promise<AgentLoopClient> => {
 }
 
 const markPaid = defineEffect({
-    id: "payment.order.settle",
+    id: "nivo.payment.order.settle",
     title: { key: "t" },
     payload: z.object({ orderId: z.string().max(40), transactionId: z.string().max(40) }),
     rights: [],
@@ -110,7 +110,7 @@ const tellTeam = defineEffect({
 const OUTPUT = z.object({ result: z.enum(["paid", "not-paid"]), orderId: z.string().max(40) })
 const TOLD = z.object({ told: z.boolean() })
 
-const PAY = { call: { tool: "payment.order.settle", args: { orderId: "o-1", transactionId: "tx-1" } } }
+const PAY = { call: { tool: "nivo.payment.order.settle", args: { orderId: "o-1", transactionId: "tx-1" } } }
 const TELL = { call: { tool: "agent-message.post", args: { text: "Money received" } } }
 const DONE = { done: { result: "paid", orderId: "o-1" } }
 const STUCK = { confused: { reason: "The order is closed", question: "What to do with the surplus?" } }
@@ -124,8 +124,8 @@ const settleNode = defineNode({
     input: z.object({ orderId: z.string().max(40), transactionId: z.string().max(40) }),
     output: OUTPUT,
     rights: [],
-    effects: ["payment.order.settle", "agent-message.post"],
-    requires: ["payment.order.settle"],
+    effects: ["nivo.payment.order.settle", "agent-message.post"],
+    requires: ["nivo.payment.order.settle"],
     run: async (input, context) => {
         const decision = await context.agent.run({
             goal: "Mark the order paid with the bank transaction, then tell the team.",
@@ -142,7 +142,7 @@ const settleNode = defineNode({
             params: {},
             input: { orderId: "o-1", transactionId: "tx-1" },
             output: { result: "paid", orderId: "o-1" },
-            effects: ["payment.order.settle"],
+            effects: ["nivo.payment.order.settle"],
             model: [PAY, DONE],
         },
     ],
@@ -176,7 +176,7 @@ const tellNode = defineNode({
 })
 
 /** A turn of an agent that holds both tools, whichever step runs. */
-const AGENT_TURN: TurnRef = { ...EXAMPLE_TURN, agentTools: ["payment.order.settle", "agent-message.post"] }
+const AGENT_TURN: TurnRef = { ...EXAMPLE_TURN, agentTools: ["nivo.payment.order.settle", "agent-message.post"] }
 
 /** What a script is run with: the model's turns and what each effect answers. */
 type Script = Pick<FakeNodePortsOptions, "answers"> & { readonly model: ReadonlyArray<SdkTurn> }
@@ -236,15 +236,15 @@ describe("AgentLoopClient: the same end as the runner's own loop, on the SDK's e
         ["calls, then the output", { model: [PAY, TELL, DONE] }],
         ["an early output refused until the required call succeeded", { model: [DONE, PAY, DONE] }],
         ["an output that does not fit, then one that does", { model: [PAY, { done: { result: "maybe" } }, DONE] }],
-        ["a tool the step does not declare, then the call", { model: [{ call: { tool: "order.create", args: {} } }, PAY, DONE] }],
+        ["a tool the step does not declare, then the call", { model: [{ call: { tool: "nivo.order.create", args: {} } }, PAY, DONE] }],
         ["a confusion", { model: [PAY, STUCK] }],
         [
             "a refusal that satisfies nothing, then a confusion",
-            { model: [PAY, DONE, STUCK], answers: { "payment.order.settle": [{ kind: "refused", id: "waits_owner" }] } },
+            { model: [PAY, DONE, STUCK], answers: { "nivo.payment.order.settle": [{ kind: "refused", id: "waits_owner" }] } },
         ],
         [
             "a send already told for the stop counts as done",
-            { model: [PAY, DONE], answers: { "payment.order.settle": [{ kind: "refused", id: "already_told_for_this_stop" }] } },
+            { model: [PAY, DONE], answers: { "nivo.payment.order.settle": [{ kind: "refused", id: "already_told_for_this_stop" }] } },
         ],
         ["turns run out", { model: [TELL, TELL, TELL, TELL] }],
     ]
@@ -268,7 +268,7 @@ describe("AgentLoopClient: the same end as the runner's own loop, on the SDK's e
         const second = scripted.chat.calls[1]?.messages ?? []
         expect(sentOf(second).at(-1)).toEqual([
             "tool",
-            JSON.stringify({ ok: false, refused: { code: "REQUIRED_CALL_MISSING", message: "payment.order.settle" } }),
+            JSON.stringify({ ok: false, refused: { code: "REQUIRED_CALL_MISSING", message: "nivo.payment.order.settle" } }),
         ])
         // The list only grows: what the first call was sent is the opening of what the second was sent.
         expect(sentOf(second).slice(0, 2)).toEqual(sentOf(scripted.chat.calls[0]?.messages ?? []))
@@ -276,7 +276,7 @@ describe("AgentLoopClient: the same end as the runner's own loop, on the SDK's e
 
     it("returns a tool's own refusal as tool content, with its true values, and the model's next turn sees it", async () => {
         const refused = { kind: "refused", id: "waits_owner", facts: { amountVnd: 5_000_000 } }
-        const { ran, scripted } = run({ model: [PAY, STUCK], answers: { "payment.order.settle": [refused] } }, await build())
+        const { ran, scripted } = run({ model: [PAY, STUCK], answers: { "nivo.payment.order.settle": [refused] } }, await build())
         await ran.then(
             () => null,
             (thrown: unknown) => thrown,
@@ -412,7 +412,7 @@ describe("AgentLoopClient: the frame, as the model is sent it", () => {
         expect(settleSystem?.content).toBe(settle.loops[0]?.instructions)
         expect(tellSystem?.content).toBe(settleSystem?.content)
         expect(JSON.stringify(tell.scripted.bound[0]?.tools)).toBe(JSON.stringify(settle.scripted.bound[0]?.tools))
-        expect(namesOf(settle.scripted.bound[0]?.tools ?? [])).toEqual(["agent-message.post", "payment.order.settle", DONE_TOOL, CONFUSED_TOOL])
+        expect(namesOf(settle.scripted.bound[0]?.tools ?? [])).toEqual(["agent-message.post", "nivo.payment.order.settle", DONE_TOOL, CONFUSED_TOOL])
         // The step is the first thing after everything shared; the system message holds none of it.
         expect(settleUser?.type).toBe("human")
         expect(settleUser?.text.startsWith(settleStep)).toBe(true)

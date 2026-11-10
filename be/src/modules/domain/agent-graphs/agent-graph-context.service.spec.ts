@@ -65,8 +65,8 @@ const build = async (options: { audience?: "customer" | "internal"; rule?: "none
     })
     const gateway = mock<McpGatewayService>({
         grantsOf: jest.fn().mockResolvedValue([
-            { tool: "sepay.status", mode: "auto", limitVnd: null, constraints: [] },
-            { tool: "brain.*", mode: "ask", limitVnd: null, constraints: [] },
+            { tool: "sepay.status.get", mode: "auto", limitVnd: null, constraints: [] },
+            { tool: "nivo.brain.*", mode: "ask", limitVnd: null, constraints: [] },
             { tool: "drive.search", mode: "never", limitVnd: null, constraints: [] },
         ]),
     })
@@ -159,8 +159,8 @@ describe("AgentGraphContextService.contextOf grants and approvers", () => {
 
         const context = await service.contextOf(SCOPE, DOCUMENT)
 
-        expect(context.isGranted("sepay.status")).toBe(true)
-        expect(context.isGranted("brain.facts.list")).toBe(true)
+        expect(context.isGranted("sepay.status.get")).toBe(true)
+        expect(context.isGranted("nivo.brain.fact.list")).toBe(true)
         expect(context.isGranted("drive.search")).toBe(false)
         expect(context.isGranted("zalo.send")).toBe(false)
     })

@@ -16,7 +16,7 @@ export const PUBLIC_DOCUMENTS_MESSAGES: MessageBundle = {
         "errors.PUBLIC_DOCUMENTS_SOURCES_CHANGED":
             "Tài liệu nội bộ nguồn đã đổi sau lần duyệt trước. Hãy xem thay đổi rồi duyệt lại.",
         "errors.PUBLIC_DOCUMENTS_NO_INTERNAL_RIGHT":
-            "Chưa agent nào được quyền đọc tài liệu nội bộ để soạn. Hãy bật công cụ brain.documents.read cho một agent nội bộ ở mục Quyền.",
+            "Chưa agent nào được quyền đọc tài liệu nội bộ để soạn. Hãy bật công cụ nivo.brain.document.read cho một agent nội bộ ở mục Quyền.",
         "errors.PUBLIC_DOCUMENTS_DRAFT_UNAVAILABLE": "NIVO chưa soạn được lúc này. Hãy thử lại sau.",
         "errors.PUBLIC_DOCUMENTS_NOTHING_LEFT":
             "Toàn bộ nội dung nguồn thuộc loại không bao giờ công khai (lương, giấy tờ tùy thân, hợp đồng, vốn, chiết khấu nội bộ).",
@@ -36,7 +36,7 @@ export const PUBLIC_DOCUMENTS_MESSAGES: MessageBundle = {
         "errors.PUBLIC_DOCUMENTS_SOURCES_CHANGED":
             "An internal source changed since the last approval. Review the change, then approve again.",
         "errors.PUBLIC_DOCUMENTS_NO_INTERNAL_RIGHT":
-            "No agent holds the right to read internal documents for drafting. Turn on the brain.documents.read tool for an internal agent under Rights.",
+            "No agent holds the right to read internal documents for drafting. Turn on the nivo.brain.document.read tool for an internal agent under Rights.",
         "errors.PUBLIC_DOCUMENTS_DRAFT_UNAVAILABLE": "NIVO could not draft right now. Try again later.",
         "errors.PUBLIC_DOCUMENTS_NOTHING_LEFT":
             "All of the source text is of a kind that is never made public (salary, identity numbers, contracts, capital, internal discounts).",

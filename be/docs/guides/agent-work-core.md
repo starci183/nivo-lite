@@ -648,7 +648,7 @@ interface DataUse {
 | -------------- | ---------- | ------------------------------------------------------------------------- |
 | What it knows  | `knows`    | Spending policy section 4 (Brain), supplier contract on Drive             |
 | What it does   | `does`     | Confirms the expense, then records it in the ledger                       |
-| What it uses   | `uses`     | SePay, with the tool name `sepay.transactions.debits` on a secondary line |
+| What it uses   | `uses`     | SePay, with the tool name `sepay.debit.list` on a secondary line |
 | What it reads  | `reads`    | Amount and supplier name, from the SePay statement                        |
 | What it writes | `writes`   | An expense line, into the payables ledger                                 |
 | Who approves   | `approver` | Dinh, and Mr Nam after 4 hours without an answer                          |

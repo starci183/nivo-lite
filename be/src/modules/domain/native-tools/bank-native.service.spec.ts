@@ -77,7 +77,7 @@ const build = async () => {
 describe("BankNativeService", () => {
     it("announces one internal read tool named by the capability", () => {
         expect(BANK_MANIFEST.key).toBe("bank")
-        expect(BANK_MANIFEST.tools[0]).toMatchObject({ name: "transactions", scope: "read", internalOnly: true })
+        expect(BANK_MANIFEST.tools[0]).toMatchObject({ name: "transaction.list", scope: "read", internalOnly: true })
     })
 
     it("lists the transactions of the live feed through the provider that registered, with the window the caller named", async () => {
@@ -87,7 +87,7 @@ describe("BankNativeService", () => {
 
         const answer = await service.invoke(
             "ws-1",
-            "transactions",
+            "transaction.list",
             { since: "2026-11-01T00:00:00.000Z", until: "2026-11-04T00:00:00.000Z", limit: 5 },
             CALLER,
         )
@@ -109,7 +109,7 @@ describe("BankNativeService", () => {
         bindings.ofProvider.mockResolvedValue([feed("connected")])
         bindings.recordOf.mockResolvedValue(record("live"))
 
-        await service.invoke("ws-1", "transactions", {}, CALLER)
+        await service.invoke("ws-1", "transaction.list", {}, CALLER)
 
         expect(transactions).toHaveBeenCalledWith(record("live"), { since: undefined, until: undefined, limit: 20 })
     })
@@ -121,7 +121,7 @@ describe("BankNativeService", () => {
         const { service, bindings } = await build()
         bindings.ofProvider.mockResolvedValue(feeds)
 
-        await expect(service.invoke("ws-1", "transactions", {}, CALLER)).rejects.toMatchObject({
+        await expect(service.invoke("ws-1", "transaction.list", {}, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
             params: { reason: "not_connected" },
         })
@@ -134,13 +134,13 @@ describe("BankNativeService", () => {
 
         for (const found of cases) {
             bindings.recordOf.mockResolvedValueOnce(found)
-            await expect(service.invoke("ws-1", "transactions", {}, CALLER)).rejects.toMatchObject({
+            await expect(service.invoke("ws-1", "transaction.list", {}, CALLER)).rejects.toMatchObject({
                 params: { reason: "not_connected" },
             })
         }
         bindings.recordOf.mockResolvedValueOnce(record("live"))
         transactions.mockResolvedValueOnce(undefined)
-        await expect(service.invoke("ws-1", "transactions", {}, CALLER)).rejects.toMatchObject({
+        await expect(service.invoke("ws-1", "transaction.list", {}, CALLER)).rejects.toMatchObject({
             params: { reason: "not_connected" },
         })
     })
@@ -148,7 +148,7 @@ describe("BankNativeService", () => {
     it("refuses arguments outside the schema and tools it does not have", async () => {
         const { service } = await build()
 
-        await expect(service.invoke("ws-1", "transactions", { limit: 0 }, CALLER)).rejects.toMatchObject({
+        await expect(service.invoke("ws-1", "transaction.list", { limit: 0 }, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.InvalidArguments,
         })
         await expect(service.invoke("ws-1", "other", {}, CALLER)).rejects.toMatchObject({
@@ -179,9 +179,9 @@ describe("BankNativeService", () => {
         bindings.recordOf.mockImplementation((_workspaceId, id) => Promise.resolve({ ...record("live"), id, name: `Account ${id}` }))
         const service = moduleRef.get(BankNativeService)
 
-        const answer = await service.invoke("ws-1", "transactions", {}, CALLER)
+        const answer = await service.invoke("ws-1", "transaction.list", {}, CALLER)
 
-        expect(abilities.accountsOfAgent).toHaveBeenCalledWith("ws-1", CALLER.agentId, "bank.transactions")
+        expect(abilities.accountsOfAgent).toHaveBeenCalledWith("ws-1", CALLER.agentId, "nivo.bank.transaction.list")
         expect(answer).toMatchObject({
             provider: "sepay",
             transactions: [
@@ -192,7 +192,7 @@ describe("BankNativeService", () => {
         expect(transactions).toHaveBeenCalledTimes(2)
 
         abilities.accountsOfAgent.mockClear()
-        await service.invoke("ws-1", "transactions", {}, { ...CALLER, engine: true })
+        await service.invoke("ws-1", "transaction.list", {}, { ...CALLER, engine: true })
         expect(abilities.accountsOfAgent).not.toHaveBeenCalled()
     })
 })

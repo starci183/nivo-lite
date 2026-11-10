@@ -54,9 +54,9 @@ describe("SepayStatusNativeService manifest", () => {
     it("is the sepay connector with its two bank tools unchanged and a status tool beside them", () => {
         expect(SEPAY_STATUS_MANIFEST.key).toBe("sepay")
         expect(SEPAY_STATUS_MANIFEST.tools.map((tool) => tool.name)).toEqual([
-            "transactions.list",
-            "transactions.debits",
-            "status",
+            "transaction.list",
+            "debit.list",
+            "status.get",
         ])
         expect(SEPAY_STATUS_MANIFEST.tools.slice(0, 2)).toEqual(SEPAY_MANIFEST.tools)
         expect(SEPAY_STATUS_MANIFEST.tools[2]).toMatchObject({ scope: "read", defaultMode: "auto", internalOnly: true })
@@ -67,11 +67,11 @@ describe("SepayStatusNativeService", () => {
     it("runs the bank tools through the ledger as before, and never through the status route", async () => {
         const { status, tools, sepay } = await build()
 
-        await expect(status.invoke(WS, "transactions.list", { limit: 5 }, CALLER)).resolves.toEqual({
+        await expect(status.invoke(WS, "transaction.list", { limit: 5 }, CALLER)).resolves.toEqual({
             transactions: [],
         })
 
-        expect(sepay.invoke).toHaveBeenCalledWith(WS, "transactions.list", { limit: 5 })
+        expect(sepay.invoke).toHaveBeenCalledWith(WS, "transaction.list", { limit: 5 })
         expect(tools.answer).not.toHaveBeenCalled()
     })
 
@@ -89,12 +89,12 @@ describe("SepayStatusNativeService status", () => {
     it("runs the status tool of the sepay provider, through the shared tools", async () => {
         const { status, tools, sepay } = await build()
 
-        await status.invoke(WS, "status", {}, CALLER)
+        await status.invoke(WS, "status.get", {}, CALLER)
 
         expect(tools.answer).toHaveBeenCalledWith(
             WS,
             expect.objectContaining({ provider: "sepay" }),
-            "status",
+            "status.get",
             {},
             CALLER,
         )
@@ -103,7 +103,7 @@ describe("SepayStatusNativeService status", () => {
 
     it("words a bank connection with its masked account and says whether it needs the owner", async () => {
         const { status, tools } = await build()
-        await status.invoke(WS, "status", {}, CALLER)
+        await status.invoke(WS, "status.get", {}, CALLER)
         const { line } = routeOf(tools)
 
         expect(line(bank())).toEqual({
@@ -126,13 +126,13 @@ describe("SepayStatusNativeService status", () => {
         const { status, tools } = await build()
         tools.answer.mockRejectedValue(nativeRefusal("not_connected"))
 
-        await expect(status.invoke(WS, "status", {}, CALLER)).rejects.toMatchObject({
+        await expect(status.invoke(WS, "status.get", {}, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
             params: { reason: "not_connected" },
         })
     })
 
-    it.each(["status", "transactions.list", "transactions.debits"])(
+    it.each(["status.get", "transaction.list", "debit.list"])(
         "refuses %s to a caller the view policy keeps out, before any bank or connection read",
         async (tool) => {
             const { status, tools, sepay, views } = await build()

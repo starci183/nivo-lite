@@ -84,12 +84,12 @@ describe("ZaloProfileService: one connection", () => {
         expect(limiter.pass).toHaveBeenCalledTimes(2)
         expect(limiter.pass).toHaveBeenCalledWith("zalo_oa", "zalo-1", LIMITS)
         expect(call.mock.calls).toEqual([
-            ["chat.profile", { conversationId: "conv-1" }],
-            ["chat.profile", { conversationId: "conv-2" }],
+            ["nivo.chat.profile.get", { conversationId: "conv-1" }],
+            ["nivo.chat.profile.get", { conversationId: "conv-2" }],
         ])
-        expect(bindings.map((binding) => binding.effectKey("chat.profile"))).toEqual([
-            "zalo-profile:conv-1:chat.profile",
-            "zalo-profile:conv-2:chat.profile",
+        expect(bindings.map((binding) => binding.effectKey("nivo.chat.profile.get"))).toEqual([
+            "zalo-profile:conv-1:nivo.chat.profile.get",
+            "zalo-profile:conv-2:nivo.chat.profile.get",
         ])
         expect(bindings[0]?.scopeOpen()).toBe(false)
         expect(profiles.record).toHaveBeenNthCalledWith(

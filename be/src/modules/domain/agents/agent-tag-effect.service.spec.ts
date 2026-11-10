@@ -41,11 +41,11 @@ const build = async () => {
 }
 
 describe("AgentTagEffectService", () => {
-    it("registers as the executor of agent.tag", async () => {
+    it("registers as the executor of nivo.agent.tag", async () => {
         const { executor, registry } = await build()
         executor.onModuleInit()
         expect(registry.addExecutor).toHaveBeenCalledWith(executor)
-        expect(executor.effect).toBe("agent.tag")
+        expect(executor.effect).toBe("nivo.agent.tag")
     })
 
     it("tags the agent a module runs through the tag door, with everything the tag carries and the ledger key as event key", async () => {
@@ -102,7 +102,7 @@ describe("AgentTagEffectService", () => {
         const refusal = (code: AgentsErrorCode, reported: string) => ({
             name: AgentsError.name,
             code,
-            params: { refusal: reported, effect: "agent.tag" },
+            params: { refusal: reported, effect: "nivo.agent.tag" },
         })
 
         tags.tagAgent.mockResolvedValueOnce({ tagged: false, reason: "not_allowed" })

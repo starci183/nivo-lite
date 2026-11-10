@@ -41,7 +41,7 @@ export const toolNameOf = (manifest: Pick<GatewayConnectorManifest, "key" | "nam
 /** The prefix no wildcard grant may name alone: `nivo.*` would cover every native tool NIVO has. */
 const BARE_WILDCARDS: ReadonlySet<string> = new Set(["nivo"])
 
-/** The prefix a wildcard grant covers (`ledger.*` → `ledger`), or null for an exact grant or a refused bare `nivo.*`. */
+/** The prefix a wildcard grant covers (`nivo.ledger.*` → `nivo.ledger`), or null for an exact grant or a refused bare `nivo.*`. */
 const wildcardPrefixOf = (tool: string): string | null => {
     if (!tool.endsWith(".*")) return null
     const prefix = tool.slice(0, -2)
@@ -50,7 +50,7 @@ const wildcardPrefixOf = (tool: string): string | null => {
 
 /**
  * The grant that applies to a full name: the exact one, else the wildcard whose prefix is the LONGEST that covers the name
- * (`nivo.ledger.*` before `nivo.*`-like broader ones), else none. A bare `nivo.*` grant covers nothing.
+ * (`nivo.ledger.entry.*` before `nivo.ledger.*`), else none. A bare `nivo.*` grant covers nothing.
  */
 export const grantFor = (grants: ReadonlyArray<ToolGrant>, name: string): ToolGrant | null => {
     const exact = grants.find((grant) => grant.tool === name)

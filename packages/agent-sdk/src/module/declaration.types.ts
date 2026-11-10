@@ -61,7 +61,7 @@ export interface ModuleDeclarationConfig {
     /** The actions of the module. */
     readonly actions: ReadonlyArray<ActionDefinition>
     /**
-     * The door tools the module's jobs and nodes call, by DOMAIN name `<group>.<action>` (`chat.send`, `ledger.append`); the door
+     * The door tools the module's jobs and nodes call, by DOMAIN name `<group>.<action>` (`nivo.chat.send`, `nivo.ledger.entry.append`); the door
      * resolves the workspace's provider, so a module never names one.
      */
     readonly tools?: ReadonlyArray<`${string}.${string}`>

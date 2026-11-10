@@ -18,19 +18,19 @@ describe("door grants", () => {
     it("holds exactly the tools the flow F module jobs call", async () => {
         const subject = await build()
         expect([...subject.DOOR_GRANTS].sort()).toEqual([
-            "chat.profile",
-            "chat.send",
-            "ledger.append",
-            "ledger.status",
-            "team-chat.post-approval",
-            "team-chat.post-report",
+            "nivo.chat.profile.get",
+            "nivo.chat.send",
+            "nivo.ledger.entry.append",
+            "nivo.ledger.status.get",
+            "nivo.team-chat.approval.post",
+            "nivo.team-chat.report.post",
         ])
     })
 
     it("grants those tools and denies every other, by default", async () => {
         const subject = await build()
         for (const tool of subject.DOOR_GRANTS) expect(subject.isDoorGranted(tool)).toBe(true)
-        for (const tool of ["chat.zalo.send", "ledger.void", "ai.agent", "", "ai.agent.turn.x"])
+        for (const tool of ["chat.zalo.send", "nivo.ledger.entry.void", "ai.agent", "", "ai.agent.turn.x"])
             expect(subject.isDoorGranted(tool)).toBe(false)
     })
 

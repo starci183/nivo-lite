@@ -213,7 +213,7 @@ describe("AiService chat", () => {
         const request = { timeoutMs: 90_000, budget: { effort: "low" as const, maxTokens: 4000 } }
         const turn = {
             content: "",
-            tool_calls: [{ name: "payment.order.settle", args: { orderId: "o-1" }, id: "call_1" }],
+            tool_calls: [{ name: "nivo.payment.order.settle", args: { orderId: "o-1" }, id: "call_1" }],
             usage_metadata: {
                 input_tokens: 8000,
                 output_tokens: 60,

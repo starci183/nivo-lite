@@ -42,6 +42,18 @@ export interface ContextScope {
     readonly moduleKey: string
 }
 
+/**
+ * The wildcard grants that would cover a full tool name, one per prefix of it (`nivo.brain.search` → `nivo.brain.*`; `sepay.status.get`
+ * → `sepay.*`, `sepay.status.*`); a bare `nivo.*` covers nothing.
+ */
+const wildcardsOf = (tool: string): ReadonlyArray<string> => {
+    const parts = tool.split(".")
+    return parts
+        .slice(0, -1)
+        .map((_, index) => `${parts.slice(0, index + 1).join(".")}.*`)
+        .filter((wildcard) => wildcard !== "nivo.*")
+}
+
 @Injectable()
 /**
  * What the pure checks of a graph need to know about the workspace, read once per check: the facts the modules declare, the ceiling
@@ -95,7 +107,7 @@ export class AgentGraphContextService {
         return {
             facts: this.facts.registry(),
             ceilings,
-            isGranted: (tool) => granted.has(tool) || granted.has(`${tool.split(".", 1).join("")}.*`),
+            isGranted: (tool) => granted.has(tool) || wildcardsOf(tool).some((wildcard) => granted.has(wildcard)),
             approverCovers: (action, group, top) =>
                 this.approversOf(action, group, top, directory, grantsByAction).approvers.length > 0,
             groupHasPeople: (group) => {

@@ -71,7 +71,7 @@ interface CatalogueRow {
 
 const GUIDANCE =
     "The customer wrote through the website form, so nobody can answer them in a chat: the team calls them back. First keep what the " +
-    "request tells on the customer (`lead.update` with `consultStage` and `facts`, the lead facts it names: `recipientName`, `occasion`, " +
+    "request tells on the customer (`nivo.lead.update` with `consultStage` and `facts`, the lead facts it names: `recipientName`, `occasion`, " +
     "`deliveryAt`, `address`; the products go to the team in the message). Then tell the team on the team chat, in one `message.text` with " +
     "intent `ask`, in the team's language (`locale`), to call the customer to confirm the order: who, what they asked for, the products " +
     "matched, the phone or email. Never type a price or a total."
@@ -91,7 +91,7 @@ const NOTICE = {
 
 /**
  * `sales.web-order` (Đọc yêu cầu, báo đội gọi khách): a customer wrote through the website form. The agent reads their request against
- * the catalogue, keeps what it tells on the customer (`lead.update`), and tells the team on /chat to call the customer back to confirm
+ * the catalogue, keeps what it tells on the customer (`nivo.lead.update`), and tells the team on /chat to call the customer back to confirm
  * (`agent-message.post`). No work item, nothing to the customer (there is no chat to answer in).
  */
 export const salesWebOrderNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({

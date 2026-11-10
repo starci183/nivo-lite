@@ -34,8 +34,8 @@ const RUN: RunView = {
             outputSummary: "out",
             durationMs: 1500,
             calls: [
-                { tool: "chat.send", ok: true, summary: "sent" },
-                { tool: "ledger.append", ok: false },
+                { tool: "nivo.chat.send", ok: true, summary: "sent" },
+                { tool: "nivo.ledger.entry.append", ok: false },
             ],
             effectKey: "k1",
             approvalPath: "/approvals/ignored",
@@ -99,8 +99,8 @@ describe("runStepsOf", () => {
 
     it("lists the calls of a step with their verdict and a summary that may be empty", () => {
         expect(rows[0]?.calls).toEqual([
-            { id: "a:0", tool: "chat.send", ok: true, summary: "sent" },
-            { id: "a:1", tool: "ledger.append", ok: false, summary: "" },
+            { id: "a:0", tool: "nivo.chat.send", ok: true, summary: "sent" },
+            { id: "a:1", tool: "nivo.ledger.entry.append", ok: false, summary: "" },
         ])
     })
 

@@ -14,7 +14,7 @@ import { refusal, writeRefusal } from "./refusal"
 /**
  * A person reply in a conversation they hold. One transaction: the conversation moves first (a changed version refuses the
  * whole action), then the line is stored and the delivery job is enqueued through the outbox. No channel is called here; the job
- * pushes the line through `door.call("chat.send")` after the commit.
+ * pushes the line through `door.call("nivo.chat.send")` after the commit.
  */
 export const REPLY: ActionDefinition = defineAction({
     id: "chatbot.reply",

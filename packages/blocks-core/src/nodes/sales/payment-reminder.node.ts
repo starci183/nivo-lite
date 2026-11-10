@@ -70,8 +70,8 @@ const STORE = {
 const REMINDER = "Shop nhắc nhẹ chị An: đơn DH-1 vẫn đang chờ thanh toán ạ, thông tin chuyển khoản ở tin nhắn phía trên."
 
 /**
- * `sales.payment-reminder` (Nhắc khách chuyển khoản): two hours after the QR went out (the timer `payment.qr.create` armed), the agent
- * sends the customer ONE friendly reminder (`customer.message.send`). An order already paid, cancelled or gone, and a customer who asked to be left
+ * `sales.payment-reminder` (Nhắc khách chuyển khoản): two hours after the QR went out (the timer `nivo.payment.qr.create` armed), the agent
+ * sends the customer ONE friendly reminder (`nivo.lead.message.send`). An order already paid, cancelled or gone, and a customer who asked to be left
  * alone, get nothing: a guard in code before the agent.
  */
 export const salesPaymentReminderNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({

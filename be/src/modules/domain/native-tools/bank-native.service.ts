@@ -11,7 +11,7 @@ import { nativeRefusal } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
 
 /** The full name of the tool this adapter serves, as the rights catalogue names it. */
-const BANK_TRANSACTIONS_TOOL = "bank.transactions"
+const BANK_TRANSACTIONS_TOOL = "nivo.bank.transaction.list"
 
 /** The most bank feeds of one provider a list looks across. */
 const FEEDS_MAX = 20
@@ -19,12 +19,13 @@ const FEEDS_MAX = 20
 /** The bank capability: named by what it does, never by the provider that answers it. */
 export const BANK_MANIFEST: NativeConnectorManifest = {
     key: "bank",
+    namespace: "nivo.bank",
     name: "Bank",
     kind: "native",
     contractVersion: "bank-native@1",
     tools: [
         {
-            name: "transactions",
+            name: "transaction.list",
             description:
                 "The bank transactions of the workspace bank feed in a time window, money in and money out, newest first, read from the provider.",
             scope: "read",
@@ -39,7 +40,7 @@ export const BANK_MANIFEST: NativeConnectorManifest = {
 
 @Injectable()
 /**
- * `bank.transactions` for a workspace, for internal callers only: the live, non-test bank feeds of the first provider that registered
+ * `nivo.bank.transaction.list` for a workspace, for internal callers only: the live, non-test bank feeds of the first provider that registered
  * a transaction list answer. An agent reads every account it holds the ability to read transactions on (each movement names its
  * account); the engine's own caller reads the first feed, as before. A workspace with none, or whose feed cannot be read yet, is not connected.
  */
@@ -53,10 +54,10 @@ export class BankNativeService implements NativeAdapter {
         @Optional() private readonly abilities?: ProviderAbilitiesService,
     ) {}
 
-    /** Runs `transactions`; any other tool is unknown. */
+    /** Runs `transaction.list`; any other tool is unknown. */
     async invoke(workspaceId: string, tool: string, args: GatewayJson, caller: NativeCaller): Promise<GatewayJson> {
         await this.views.internalOf(workspaceId, caller)
-        if (tool !== "transactions") throw unknownTool(tool)
+        if (tool !== "transaction.list") throw unknownTool(tool)
         const input = argumentsOf(tool, BANK_TRANSACTIONS_SCHEMA, args)
         const allowed = await this.allowedOf(workspaceId, caller)
         const answer = await this.firstAnswer(workspaceId, this.providers.all(), input, allowed)

@@ -95,7 +95,7 @@ const build = async (world: World = {}) => {
         runGrantOf: jest.fn().mockResolvedValue({ rights: [], tools: [], effects: null }),
     })
     const host = mock<GraphNodeHostService>()
-    const post = mock<NodeEffectExecutor>({ effect: "team.message.post" })
+    const post = mock<NodeEffectExecutor>({ effect: "nivo.team.message.post" })
     post.execute.mockResolvedValue({ kind: "chat-message", id: "m-1" })
     const definition = {
         effects: [],
@@ -104,7 +104,7 @@ const build = async (world: World = {}) => {
     }
     const nodes = mock<GraphNodeRegistryService>({
         installed: jest.fn(() => ({ nodes: new Map([["accounting.match-payment", definition]]) }) as never),
-        optionalExecutorOf: jest.fn((effect: string) => (effect === "team.message.post" ? post : undefined)),
+        optionalExecutorOf: jest.fn((effect: string) => (effect === "nivo.team.message.post" ? post : undefined)),
     })
     const workflowRuns = mock<AgentWorkflowRunsService>({
         pinsOf: jest.fn().mockResolvedValue(
@@ -463,7 +463,7 @@ describe("ThreadStepService.gate and the founder's decisions", () => {
 describe("ThreadStepService.run: a call that asks the owner first (an `ask` ability)", () => {
     const ASK = new GraphNodesError({
         code: GraphNodesErrorCode.ToolApprovalRequired,
-        params: { tool: "payment.qr.create", fingerprint: "fp-1", reason: "ask_mode" },
+        params: { tool: "nivo.payment.qr.create", fingerprint: "fp-1", reason: "ask_mode" },
     })
     const QUESTION = { reason: "Cho phep tao QR?", question: null, suggestions: [], decisions: ["retry", "take_over", "skip"] }
 

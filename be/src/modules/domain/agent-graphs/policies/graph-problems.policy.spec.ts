@@ -423,8 +423,8 @@ describe("graph-problems.policy rightsProblems", () => {
         const subject = await build()
         const denied = contextOf({ isGranted: () => false })
 
-        expect(codes(subject.rightsProblems(using("sepay.status"), denied))).toEqual(["no_right", "no_data_right"])
-        expect(codes(subject.rightsProblems(using("sepay.status"), contextOf()))).toEqual(["no_data_right"])
+        expect(codes(subject.rightsProblems(using("sepay.status.get"), denied))).toEqual(["no_right", "no_data_right"])
+        expect(codes(subject.rightsProblems(using("sepay.status.get"), contextOf()))).toEqual(["no_data_right"])
         expect(codes(subject.rightsProblems(using("zalo.send", true), contextOf()))).toEqual([
             "placeholder_live",
             "no_data_right",
@@ -439,7 +439,7 @@ describe("graph-problems.policy rightsProblems", () => {
     it("accepts data the graph holds a right on", async () => {
         const subject = await build()
         const graph: GraphDocument = {
-            ...using("sepay.status"),
+            ...using("sepay.status.get"),
             rights: [{ kind: "payments", scope: "workspace", hide: [], mask: [] }],
         }
 

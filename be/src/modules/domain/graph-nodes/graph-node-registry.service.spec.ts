@@ -131,10 +131,10 @@ const sourcesUnder = (folder: string): ReadonlyArray<string> =>
         return name.endsWith(".ts") && !name.endsWith(".spec.ts") ? [path] : []
     })
 
-/** The core effects by the name the vocabulary exports them under (`paymentMarkPaidEffect` serves `payment.mark-paid`). */
+/** The core effects by the name the vocabulary exports them under (`agentTagEffect` serves `nivo.agent.tag`: the prefix is not in it). */
 const effectBySymbol = new Map(
     coreEffects.map((effect) => [
-        `${effect.id.replace(/[.-](\w)/g, (_all, letter: string) => letter.toUpperCase())}Effect`,
+        `${effect.id.replace(/^nivo\./u, "").replace(/[.-](\w)/g, (_all, letter: string) => letter.toUpperCase())}Effect`,
         effect.id,
     ]),
 )

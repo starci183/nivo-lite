@@ -64,8 +64,8 @@ describe("tool-names.policy: the names of one run", () => {
         const names = (await build()).toolNamesOf(INSTALLED, false)
 
         expect(INSTALLED.map((id) => names.shown(id))).toEqual(INSTALLED)
-        expect(names.idOf("customer.message.send")).toBe("customer.message.send")
-        expect(names.idOf("customer__message__send")).toBe("customer__message__send")
+        expect(names.idOf("nivo.lead.message.send")).toBe("nivo.lead.message.send")
+        expect(names.idOf("nivo__lead__message__send")).toBe("nivo__lead__message__send")
     })
 
     it("shows each id under its wire name with the map on and reads it back, one to one", async () => {

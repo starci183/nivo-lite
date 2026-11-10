@@ -9,7 +9,7 @@ import { copyOf } from "../messages/copy"
 import { CONVERSATIONS, ORDERS } from "../ports"
 
 /** The door tool that sends a message to a customer on the channel they wrote from. */
-export const CHAT_SEND_TOOL = "chat.send"
+export const CHAT_SEND_TOOL = "nivo.chat.send"
 
 /** The name of the job: the outbox enqueues it by this name. */
 const JOB_NAME = "payment.confirm-notice"

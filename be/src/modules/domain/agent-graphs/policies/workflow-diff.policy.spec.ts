@@ -95,7 +95,7 @@ describe("workflowDiffOf: edges, first versions, trigger and grant", () => {
         const before = graph([node("a")], {
             grant: {
                 rights: [{ kind: "order", access: "read", scope: "workspace", fields: ["id", "status"] }],
-                tools: ["ledger.append"],
+                tools: ["nivo.ledger.entry.append"],
                 effects: [],
             },
         })
@@ -114,7 +114,7 @@ describe("workflowDiffOf: edges, first versions, trigger and grant", () => {
                 rightsAdded: ["order:read.amountVnd"],
                 rightsRemoved: ["order:read.status"],
                 toolsAdded: [],
-                toolsRemoved: ["ledger.append"],
+                toolsRemoved: ["nivo.ledger.entry.append"],
                 effectsAdded: ["channel.send"],
                 effectsRemoved: [],
             },

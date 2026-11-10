@@ -21,28 +21,29 @@ const noRoom = (): McpGatewayError =>
     new McpGatewayError({ code: McpGatewayErrorCode.NativeRefused, params: { reason: "no_room" } })
 
 /**
- * The chat capability of the NIVO MCP door for the declared jobs of the engine: `post-report` writes the report of a finished run and
- * `post-approval` the approval card of a decision. Internal callers only; the chat keeps one card per run or decision per room.
+ * The chat capability of the NIVO MCP door for the declared jobs of the engine: `report.post` writes the report of a finished run and
+ * `approval.post` the approval card of a decision. Internal callers only; the chat keeps one card per run or decision per room.
  */
 export const TEAM_CHAT_MANIFEST: NativeConnectorManifest = {
     key: "team-chat",
+    namespace: "nivo.team-chat",
     name: "Team chat",
     kind: "native",
     contractVersion: "team-chat-native@1",
     tools: [
         {
-            name: "post-report",
+            name: "report.post",
             description: "Writes the report of a finished run in the room its agent reports to. One report per run.",
             scope: "write",
             defaultMode: "auto",
             inputSchema: POST_REPORT_INPUT_SCHEMA,
             argumentSchema: POST_REPORT_SCHEMA,
             idempotencyArg: "runId",
-            domain: "team-chat.post-report",
+            domain: "nivo.team-chat.report.post",
             internalOnly: true,
         },
         {
-            name: "post-approval",
+            name: "approval.post",
             description:
                 "Writes the approval card of a decision in the rooms its rule names. One card per decision per room.",
             scope: "write",
@@ -50,7 +51,7 @@ export const TEAM_CHAT_MANIFEST: NativeConnectorManifest = {
             inputSchema: POST_APPROVAL_INPUT_SCHEMA,
             argumentSchema: POST_APPROVAL_SCHEMA,
             idempotencyArg: "decisionId",
-            domain: "team-chat.post-approval",
+            domain: "nivo.team-chat.approval.post",
             internalOnly: true,
         },
     ],
@@ -70,12 +71,12 @@ export class TeamChatNativeService extends RoutedNativeAdapter {
     }
 
     protected readonly handlers: ReadonlyMap<string, NativeToolHandler> = new Map([
-        ["post-report", (workspaceId, args) => this.report(workspaceId, args)],
-        ["post-approval", (workspaceId, args) => this.approval(workspaceId, args)],
+        ["report.post", (workspaceId, args) => this.report(workspaceId, args)],
+        ["approval.post", (workspaceId, args) => this.approval(workspaceId, args)],
     ])
 
     private async report(workspaceId: string, args: GatewayJson): Promise<GatewayJson> {
-        const parsed = argumentsOf("post-report", POST_REPORT_SCHEMA, args)
+        const parsed = argumentsOf("report.post", POST_REPORT_SCHEMA, args)
         const body = this.catalog.get("teamChat.report", { trigger: parsed.trigger }, LOCALE)
         const posted = await this.chat.postReport(workspaceId, {
             runId: parsed.runId,
@@ -88,7 +89,7 @@ export class TeamChatNativeService extends RoutedNativeAdapter {
     }
 
     private async approval(workspaceId: string, args: GatewayJson): Promise<GatewayJson> {
-        const parsed = argumentsOf("post-approval", POST_APPROVAL_SCHEMA, args)
+        const parsed = argumentsOf("approval.post", POST_APPROVAL_SCHEMA, args)
         const request = await this.chat.approvalRequest(workspaceId, parsed.decisionId)
         if (request === null) throw noRoom()
         const group =

@@ -15,7 +15,7 @@ export const SEPAY_MANIFEST: NativeConnectorManifest = {
     contractVersion: "sepay-native@1",
     tools: [
         {
-            name: "transactions.list",
+            name: "transaction.list",
             description:
                 "Latest bank credits (money in) of the workspace: amount, reference, payer, status; filter by status and since.",
             scope: "read",
@@ -27,7 +27,7 @@ export const SEPAY_MANIFEST: NativeConnectorManifest = {
             internalOnly: true,
         },
         {
-            name: "transactions.debits",
+            name: "debit.list",
             description:
                 "Latest bank debits (money out, for example supplier payments) of the workspace, with the same fields and filters.",
             scope: "read",
@@ -54,7 +54,7 @@ export class SepayNativeService implements NativeAdapter {
 
     /** Runs one SePay tool. */
     async invoke(workspaceId: string, tool: string, args: GatewayJson): Promise<GatewayJson> {
-        if (this.transactions === undefined || (tool !== "transactions.list" && tool !== "transactions.debits")) {
+        if (this.transactions === undefined || (tool !== "transaction.list" && tool !== "debit.list")) {
             throw new McpGatewayError({ code: McpGatewayErrorCode.UnknownTool, params: { tool } })
         }
         const parsed = SEPAY_BANK_MOVE_SCHEMA.safeParse(args)
@@ -62,7 +62,7 @@ export class SepayNativeService implements NativeAdapter {
             throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool } })
         }
         const rows = await this.transactions.list(workspaceId, {
-            direction: tool === "transactions.list" ? "credit" : "debit",
+            direction: tool === "transaction.list" ? "credit" : "debit",
             status: parsed.data.status ?? null,
             since: parsed.data.since === undefined ? null : new Date(parsed.data.since).toISOString(),
             limit: parsed.data.limit,

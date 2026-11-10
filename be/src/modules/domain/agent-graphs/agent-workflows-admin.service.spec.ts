@@ -32,7 +32,7 @@ const GRAPH: GraphSpec = {
     nodes: [{ key: "end", kind: "output", step: "stop" }],
 }
 
-const WIDER: GraphSpec = { ...GRAPH, grant: { ...GRAPH.grant, tools: ["ledger.append"] } }
+const WIDER: GraphSpec = { ...GRAPH, grant: { ...GRAPH.grant, tools: ["nivo.ledger.entry.append"] } }
 
 const VIEW: WorkflowView = {
     id: "wf-1",

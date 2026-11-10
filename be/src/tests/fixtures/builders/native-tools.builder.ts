@@ -57,7 +57,7 @@ interface Tenant {
 
 /**
  * Seeds the Brain scenario of the native-tools proof: the first tenant has a public and an internal fact, the second a public fact of
- * its own, and each agent holds a grant on `brain.search` only.
+ * its own, and each agent holds a grant on `nivo.brain.search` only.
  */
 export const persistBrainScenario = async (manager: EntityManager, own: Tenant, other: Tenant): Promise<void> => {
     const shop = { subject: "Shop", attribute: "Opening hours" } as const
@@ -81,8 +81,8 @@ export const persistBrainScenario = async (manager: EntityManager, own: Tenant, 
             value: "9 to 17 weekdays",
             scope: "public",
         }),
-        grantTool(manager, own.workspaceId, own.agentId, "brain.search"),
-        grantTool(manager, other.workspaceId, other.agentId, "brain.search"),
+        grantTool(manager, own.workspaceId, own.agentId, "nivo.brain.search"),
+        grantTool(manager, other.workspaceId, other.agentId, "nivo.brain.search"),
     ])
 }
 

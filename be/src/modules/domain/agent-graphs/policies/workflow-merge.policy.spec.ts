@@ -108,7 +108,7 @@ describe("mergeTemplate: trigger and grant", () => {
             trigger: { kind: "tag", sources: ["channel", "schedule"] },
             grant: {
                 rights: [{ kind: "order", access: "read", scope: "workspace", fields: ["amountVnd"] }],
-                tools: ["ledger.append"],
+                tools: ["nivo.ledger.entry.append"],
                 effects: [],
             },
         })
@@ -125,7 +125,7 @@ describe("mergeTemplate: trigger and grant", () => {
         expect(merged.trigger.sources).toEqual(["channel", "schedule"])
         expect(merged.grant).toEqual({
             rights: [{ kind: "order", access: "read", scope: "workspace", fields: ["id", "amountVnd"] }],
-            tools: ["ledger.append"],
+            tools: ["nivo.ledger.entry.append"],
             effects: ["channel.send"],
         })
     })

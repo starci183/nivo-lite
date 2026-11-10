@@ -5,7 +5,7 @@ import { JobRetry } from "./job-retry"
 /** What `endAfterDoor` throws for a call, or null when it throws nothing. */
 const thrownFor = (call: DoorCallResult): unknown => {
     try {
-        endAfterDoor("a.job", "chat.send", call)
+        endAfterDoor("a.job", "nivo.chat.send", call)
         return null
     } catch (cause) {
         return cause
@@ -15,7 +15,7 @@ const thrownFor = (call: DoorCallResult): unknown => {
 describe("endAfterDoor", () => {
     it("does nothing when the door returned output, and answers that output", () => {
         expect(thrownFor({ ok: true, output: null })).toBeNull()
-        expect(endAfterDoor("a.job", "chat.send", { ok: true, output: { ref: "r1" } })).toEqual({ ref: "r1" })
+        expect(endAfterDoor("a.job", "nivo.chat.send", { ok: true, output: { ref: "r1" } })).toEqual({ ref: "r1" })
     })
 
     it("has the queue deliver the job again when the provider was away", () => {
@@ -28,9 +28,9 @@ describe("endAfterDoor", () => {
         expect(thrown).not.toBeInstanceOf(JobRetry)
         expect(thrown).toMatchObject({
             code: "JOB_REFUSED",
-            at: "chat.send forbidden",
+            at: "nivo.chat.send forbidden",
             cause: "403",
-            message: "JOB_REFUSED: chat.send forbidden",
+            message: "JOB_REFUSED: nivo.chat.send forbidden",
             name: "JobRefused",
         })
     })

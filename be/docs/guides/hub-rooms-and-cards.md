@@ -67,7 +67,7 @@ A card is an ordinary `public.messages` row (`author_kind = 'agent'` normally) w
   "actions": ["approve", "edit", "decline"], // optional; only allowed when "ref" is present
   "sources": [
     // optional, <=10: ONLY the sources this turn actually used (see 2b)
-    { "layer": 1, "kind": "mcp_tool", "ref": "sepay.transactions.list", "label": "sepay.transactions.list" },
+    { "layer": 1, "kind": "mcp_tool", "ref": "sepay.transaction.list", "label": "sepay.transaction.list" },
     {
       "layer": 2,
       "kind": "brain_document",
@@ -88,7 +88,7 @@ Unknown top-level keys are rejected. Validation lives in `be/src/modules/domain/
 
 | layer | meaning                            | typical `kind`                     | `ref`                                                               |
 | ----- | ---------------------------------- | ---------------------------------- | ------------------------------------------------------------------- |
-| 1     | MCP connector live data            | `mcp_tool`                         | full tool name `<connector>.<tool>`, e.g. `sepay.transactions.list` |
+| 1     | MCP connector live data            | `mcp_tool`                         | full tool name `<connector>.<tool>`, e.g. `sepay.transaction.list` |
 | 2     | Second Brain (workspace knowledge) | `brain_document`, `brain_fact`     | knowledge source id / fact id                                       |
 | 3     | Agent self-learning                | `brain_lesson`, `brain_extraction` | lesson id                                                           |
 | 4     | NIVO base knowledge                | `base_document`                    | base document key, e.g. `tax-calendar-vn`                           |

@@ -38,7 +38,7 @@ const GUIDANCE =
     "last day of the month the reconciliation too). Never type a figure yourself."
 
 /**
- * `accounting.report` (Báo cáo cuối ngày): every evening the agent closes the day with the `report.daily.close` tool, which computes the
+ * `accounting.report` (Báo cáo cuối ngày): every evening the agent closes the day with the `nivo.report.daily.close` tool, which computes the
  * day's figures (and the month-end reconciliation on the last evening) from the records and posts the report card to the team. The figures
  * are money, so the agent never types them (`closeReportOf` in `close-report.ts` is the body the tool's executor runs). A side step.
  * The report reads NIVO's own books and the bank's list, not the Google Sheet the ledger step writes to.

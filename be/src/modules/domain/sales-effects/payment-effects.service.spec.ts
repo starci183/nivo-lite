@@ -112,9 +112,9 @@ describe("PaymentEffectsService registration", () => {
     it("registers the three payment effects the graphs run and that were unserved", async () => {
         const { registry } = await build()
         expect(registry.addExecutor.mock.calls.map(([executor]) => executor.effect)).toEqual([
-            "payment.order.settle",
-            "payment.claim.record",
-            "payment.claim.cancel",
+            "nivo.payment.order.settle",
+            "nivo.payment.claim.record",
+            "nivo.payment.claim.cancel",
         ])
     })
 })
@@ -130,7 +130,7 @@ describe("PaymentEffectsService payment.mark-paid", () => {
         entities.orders.get.mockResolvedValue(order("paid"))
         entities.orders.list.mockResolvedValue(pageOf([order("confirmed")], { lead: LEAD }))
 
-        await expect(executorOf("payment.order.settle").execute(TURN, payload, PAID_CALL)).resolves.toEqual({
+        await expect(executorOf("nivo.payment.order.settle").execute(TURN, payload, PAID_CALL)).resolves.toEqual({
             kind: "order",
             id: ORDER,
             facts: {
@@ -157,13 +157,13 @@ describe("PaymentEffectsService payment.mark-paid", () => {
         paid.entities.transactions.get.mockResolvedValue(credit(null))
         paid.entities.orders.get.mockResolvedValue(order("paid"))
         paid.entities.orders.list.mockResolvedValue(pageOf([order("confirmed")], { lead: LEAD }))
-        await paid.executorOf("payment.order.settle").execute(TURN, payload, PAID_CALL)
+        await paid.executorOf("nivo.payment.order.settle").execute(TURN, payload, PAID_CALL)
         expect(paid.timers.closeOf).toHaveBeenCalledWith(TURN.workspaceId, ORDER)
 
         const refused = await build()
         refused.entities.transactions.get.mockResolvedValue(credit(null))
         refused.entities.orders.list.mockResolvedValue(pageOf([order("cancelled")], { lead: LEAD }))
-        await refused.executorOf("payment.order.settle").execute(TURN, payload, PAID_CALL)
+        await refused.executorOf("nivo.payment.order.settle").execute(TURN, payload, PAID_CALL)
         expect(refused.timers.closeOf).not.toHaveBeenCalled()
     })
 
@@ -173,7 +173,7 @@ describe("PaymentEffectsService payment.mark-paid", () => {
         entities.orders.get.mockResolvedValue(order("paid"))
         entities.orders.list.mockResolvedValue(pageOf([order("paid")], { lead: LEAD }))
 
-        await expect(executorOf("payment.order.settle").execute(TURN, payload, PAID_CALL)).resolves.toMatchObject({
+        await expect(executorOf("nivo.payment.order.settle").execute(TURN, payload, PAID_CALL)).resolves.toMatchObject({
             kind: "order",
             id: ORDER,
             facts: { result: "already_paid" },
@@ -187,7 +187,7 @@ describe("PaymentEffectsService payment.mark-paid", () => {
         entities.transactions.get.mockResolvedValue(credit(null))
         entities.orders.list.mockResolvedValue(pageOf([order("cancelled")], { lead: LEAD }))
 
-        await expect(executorOf("payment.order.settle").execute(TURN, payload, PAID_CALL)).resolves.toEqual({
+        await expect(executorOf("nivo.payment.order.settle").execute(TURN, payload, PAID_CALL)).resolves.toEqual({
             kind: "refused",
             id: "order_not_open",
             facts: { receivedVnd: 2000, orderAmountVnd: 2000, status: "cancelled" },
@@ -206,7 +206,7 @@ describe("PaymentEffectsService payment.mark-paid", () => {
             entities.orders.list.mockResolvedValue(pageOf([priced(dueVnd)], { lead: LEAD }))
             entities.orders.get.mockResolvedValue(priced(dueVnd, "paid"))
 
-            await expect(executorOf("payment.order.settle").execute(TURN, payload, PAID_CALL)).resolves.toMatchObject({
+            await expect(executorOf("nivo.payment.order.settle").execute(TURN, payload, PAID_CALL)).resolves.toMatchObject({
                 kind: "order",
                 facts: { result: "paid", expectedVnd: dueVnd, receivedVnd: 2000, differenceVnd },
             })
@@ -241,7 +241,7 @@ describe("PaymentEffectsService payment.mark-paid", () => {
         entities.claims.get.mockResolvedValue(recordOf(CLAIM, { status: "open" }))
         entities.claims.get.mockImplementation((id) => Promise.resolve(recordOf(id, { status: "escalated" })))
 
-        await expect(executorOf("payment.order.settle").execute(TURN, payload, PAID_CALL)).resolves.toMatchObject({
+        await expect(executorOf("nivo.payment.order.settle").execute(TURN, payload, PAID_CALL)).resolves.toMatchObject({
             kind: "order",
         })
         const closed = entities.claims.update.mock.calls.map(([id]) => id)
@@ -253,7 +253,7 @@ describe("PaymentEffectsService payment.mark-paid", () => {
         const { api, entities, executorOf } = await setUpSettle()
         api.list.mockResolvedValue(pageOf([recordOf(CLAIM, { status: "open" })]))
 
-        await executorOf("payment.order.settle").execute(TURN, payload, PAID_CALL)
+        await executorOf("nivo.payment.order.settle").execute(TURN, payload, PAID_CALL)
         expect(entities.claims.update).not.toHaveBeenCalled()
     })
 
@@ -261,7 +261,7 @@ describe("PaymentEffectsService payment.mark-paid", () => {
         const { api, entities, executorOf } = await setUpSettle()
         entities.claims.get.mockResolvedValue(recordOf(CLAIM, { status: "open", leadId: LEAD }))
 
-        await executorOf("payment.order.settle").execute(TURN, { ...payload, claimId: CLAIM }, PAID_CALL)
+        await executorOf("nivo.payment.order.settle").execute(TURN, { ...payload, claimId: CLAIM }, PAID_CALL)
         expect(api.list).not.toHaveBeenCalled()
         expect(entities.claims.update).toHaveBeenCalledWith(CLAIM, "1", {
             status: "settled",
@@ -272,10 +272,10 @@ describe("PaymentEffectsService payment.mark-paid", () => {
     it("answers an id that names no record as a refusal fact", async () => {
         const { executorOf } = await build()
         await expect(
-            executorOf("payment.order.settle").execute(TURN, { ...payload, orderId: "x" }, PAID_CALL),
+            executorOf("nivo.payment.order.settle").execute(TURN, { ...payload, orderId: "x" }, PAID_CALL),
         ).resolves.toEqual({ kind: "refused", id: "order_missing", facts: {} })
         await expect(
-            executorOf("payment.order.settle").execute(TURN, { ...payload, transactionId: "x" }, PAID_CALL),
+            executorOf("nivo.payment.order.settle").execute(TURN, { ...payload, transactionId: "x" }, PAID_CALL),
         ).resolves.toEqual({ kind: "refused", id: "transaction_missing", facts: {} })
     })
 
@@ -285,7 +285,7 @@ describe("PaymentEffectsService payment.mark-paid", () => {
         entities.orders.list.mockResolvedValue(pageOf([order("confirmed")], { lead: LEAD }))
         entities.orders.update.mockResolvedValue({ ok: false, reason: "stale" })
 
-        await expect(executorOf("payment.order.settle").execute(TURN, payload, PAID_CALL)).rejects.toMatchObject({
+        await expect(executorOf("nivo.payment.order.settle").execute(TURN, payload, PAID_CALL)).rejects.toMatchObject({
             code: "SALES_EFFECTS_WRITE_REFUSED",
         })
     })
@@ -307,7 +307,7 @@ describe("PaymentEffectsService payment-claim.record", () => {
         api.insert.mockResolvedValue(written(CLAIM))
 
         await expect(
-            executorOf("payment.claim.record").execute(TURN, { ...said, orderId: ORDER }, CLAIM_CALL),
+            executorOf("nivo.payment.claim.record").execute(TURN, { ...said, orderId: ORDER }, CLAIM_CALL),
         ).resolves.toEqual({ kind: "payment-claim", id: CLAIM, facts: { orderId: ORDER } })
         expect(api.insert).toHaveBeenCalledWith(
             "payment.claim",
@@ -331,7 +331,7 @@ describe("PaymentEffectsService payment-claim.record", () => {
         api.get.mockResolvedValue(recordOf(ORDER, { leadId: "99999999-9999-4999-8999-999999999999" }))
 
         await expect(
-            executorOf("payment.claim.record").execute(TURN, { ...said, orderId: ORDER }, CLAIM_CALL),
+            executorOf("nivo.payment.claim.record").execute(TURN, { ...said, orderId: ORDER }, CLAIM_CALL),
         ).resolves.toEqual({ kind: "refused", id: "order_not_of_customer", facts: { orderId: ORDER } })
         expect(api.insert).not.toHaveBeenCalled()
     })
@@ -342,7 +342,7 @@ describe("PaymentEffectsService payment-claim.record", () => {
         api.list.mockResolvedValueOnce(pageOf([])).mockResolvedValueOnce(pageOf([order("confirmed"), second]))
         api.insert.mockResolvedValue(written(CLAIM))
 
-        await expect(executorOf("payment.claim.record").execute(TURN, said, CLAIM_CALL)).resolves.toEqual({
+        await expect(executorOf("nivo.payment.claim.record").execute(TURN, said, CLAIM_CALL)).resolves.toEqual({
             kind: "payment-claim",
             id: CLAIM,
             facts: {
@@ -360,7 +360,7 @@ describe("PaymentEffectsService payment-claim.record", () => {
         const { api, executorOf } = await build()
         api.list.mockResolvedValue(pageOf([recordOf(CLAIM, { status: "open" })]))
 
-        await expect(executorOf("payment.claim.record").execute(TURN, said, CLAIM_CALL)).resolves.toEqual({
+        await expect(executorOf("nivo.payment.claim.record").execute(TURN, said, CLAIM_CALL)).resolves.toEqual({
             kind: "payment-claim",
             id: CLAIM,
         })
@@ -375,7 +375,7 @@ describe("PaymentEffectsService payment-claim.record", () => {
             .mockResolvedValueOnce(pageOf([recordOf(CLAIM, { status: "open" })]))
         api.insert.mockResolvedValue(taken)
 
-        await expect(executorOf("payment.claim.record").execute(TURN, said, CLAIM_CALL)).resolves.toEqual({
+        await expect(executorOf("nivo.payment.claim.record").execute(TURN, said, CLAIM_CALL)).resolves.toEqual({
             kind: "payment-claim",
             id: CLAIM,
         })
@@ -384,7 +384,7 @@ describe("PaymentEffectsService payment-claim.record", () => {
     it("refuses a conversation that is no record", async () => {
         const { executorOf } = await build()
         await expect(
-            executorOf("payment.claim.record").execute(TURN, { ...said, conversationId: "c1" }, CLAIM_CALL),
+            executorOf("nivo.payment.claim.record").execute(TURN, { ...said, conversationId: "c1" }, CLAIM_CALL),
         ).rejects.toMatchObject({ code: "SALES_EFFECTS_CONVERSATION_NOT_FOUND" })
     })
 })
@@ -395,7 +395,7 @@ describe("PaymentEffectsService payment-claim.withdraw", () => {
         api.get.mockResolvedValue(recordOf(CLAIM, { status: "open" }))
         api.update.mockResolvedValue(written(CLAIM))
 
-        await expect(executorOf("payment.claim.cancel").execute(TURN, { id: CLAIM }, CLAIM_CALL)).resolves.toEqual({
+        await expect(executorOf("nivo.payment.claim.cancel").execute(TURN, { id: CLAIM }, CLAIM_CALL)).resolves.toEqual({
             kind: "payment-claim",
             id: CLAIM,
         })
@@ -410,7 +410,7 @@ describe("PaymentEffectsService payment-claim.withdraw", () => {
         const { api, executorOf } = await build()
         api.get.mockResolvedValue(found)
 
-        await executorOf("payment.claim.cancel").execute(TURN, { id: CLAIM }, CLAIM_CALL)
+        await executorOf("nivo.payment.claim.cancel").execute(TURN, { id: CLAIM }, CLAIM_CALL)
         expect(api.update).not.toHaveBeenCalled()
     })
 })

@@ -15,16 +15,16 @@
     "outcome": {
         "acts": [
             {
-                "effect": "customer.message.send",
+                "effect": "nivo.lead.message.send",
                 "payload": {
                     "conversationId": "conv-1",
                     "text": "Chi Lan oi, shop tom tat: 2 gio hoa nho, giao 25 Nguyen Hue, chi Lan 0901 234 567, thu Bay 9-11h. Chi dong y nhe?"
                 },
-                "key": "00000000-0000-4000-8000-000000000001:consult:f45440ffd52bacf4",
+                "key": "00000000-0000-4000-8000-000000000001:consult:910ee4aa42962dff",
                 "dedupeKey": null
             },
             {
-                "effect": "order.create",
+                "effect": "nivo.order.create",
                 "payload": {
                     "leadId": "lead-1",
                     "items": [
@@ -38,61 +38,61 @@
                     "recipientPhone": "0901 234 567",
                     "deliveryAt": "Saturday 9-11"
                 },
-                "key": "00000000-0000-4000-8000-000000000002:create-order:9261214dc2d60e01",
+                "key": "00000000-0000-4000-8000-000000000002:create-order:fdd08abf4dcc6b9b",
                 "dedupeKey": null
             },
             {
-                "effect": "order.confirm",
+                "effect": "nivo.order.confirm",
                 "payload": {
                     "orderId": "order-1"
                 },
-                "key": "00000000-0000-4000-8000-000000000002:create-order:2d161910ba148c6b",
+                "key": "00000000-0000-4000-8000-000000000002:create-order:cb2be6e3a29a6111",
                 "dedupeKey": null
             },
             {
-                "effect": "lead.stage.update",
+                "effect": "nivo.lead.stage.update",
                 "payload": {
                     "leadId": "lead-1",
                     "stage": "won"
                 },
-                "key": "00000000-0000-4000-8000-000000000002:create-order:b5ca64820bbe2616",
+                "key": "00000000-0000-4000-8000-000000000002:create-order:e268f61a1ff00d54",
                 "dedupeKey": null
             },
             {
-                "effect": "payment.qr.create",
+                "effect": "nivo.payment.qr.create",
                 "payload": {
                     "orderId": "order-1"
                 },
-                "key": "00000000-0000-4000-8000-000000000002:send-qr:d76f828217d7bc95",
+                "key": "00000000-0000-4000-8000-000000000002:send-qr:33b8a8085d961aa2",
                 "dedupeKey": null
             },
             {
-                "effect": "customer.care.schedule",
+                "effect": "nivo.lead.care.schedule",
                 "payload": {
                     "kind": "payment-reminder",
                     "ref": "order-1",
                     "afterHours": 2
                 },
-                "key": "00000000-0000-4000-8000-000000000002:send-qr:8911124496b3d244",
+                "key": "00000000-0000-4000-8000-000000000002:send-qr:08aea0ef2acf344e",
                 "dedupeKey": null
             },
             {
-                "effect": "customer.care.schedule",
+                "effect": "nivo.lead.care.schedule",
                 "payload": {
                     "kind": "payment-stale",
                     "ref": "order-1",
                     "afterHours": 24
                 },
-                "key": "00000000-0000-4000-8000-000000000002:send-qr:e72500c4e34a1b3a",
+                "key": "00000000-0000-4000-8000-000000000002:send-qr:121edbc6b7a6ab0e",
                 "dedupeKey": null
             },
             {
-                "effect": "team.message.post",
+                "effect": "nivo.team.message.post",
                 "payload": {
                     "kind": "order.summary",
                     "orderId": "order-1"
                 },
-                "key": "00000000-0000-4000-8000-000000000002:notify-order:8f712886d57781e0",
+                "key": "00000000-0000-4000-8000-000000000002:notify-order:ac7478e5e453718c",
                 "dedupeKey": null
             }
         ],
@@ -100,12 +100,12 @@
             {
                 "conversationId": "conv-1",
                 "text": "Chi Lan oi, shop tom tat: 2 gio hoa nho, giao 25 Nguyen Hue, chi Lan 0901 234 567, thu Bay 9-11h. Chi dong y nhe?",
-                "channelRef": "line:00000000-0000-4000-8000-000000000001:consult:f45440ffd52bacf4"
+                "channelRef": "line:00000000-0000-4000-8000-000000000001:consult:910ee4aa42962dff"
             }
         ],
         "team": [
             {
-                "key": "00000000-0000-4000-8000-000000000002:notify-order:8f712886d57781e0",
+                "key": "00000000-0000-4000-8000-000000000002:notify-order:ac7478e5e453718c",
                 "versions": [
                     {
                         "kind": "order.summary",
@@ -137,8 +137,8 @@
         ],
         "ledger": [
             {
-                "effectKey": "call:00000000-0000-4000-8000-000000000001:consult:f45440ffd52bacf4",
-                "effectId": "customer.message.send",
+                "effectKey": "call:00000000-0000-4000-8000-000000000001:consult:910ee4aa42962dff",
+                "effectId": "nivo.lead.message.send",
                 "runId": "00000000-0000-4000-8000-000000000001",
                 "stepKey": "consult",
                 "args": {
@@ -149,8 +149,8 @@
                 "subjectId": "m-1"
             },
             {
-                "effectKey": "call:00000000-0000-4000-8000-000000000002:create-order:9261214dc2d60e01",
-                "effectId": "order.create",
+                "effectKey": "call:00000000-0000-4000-8000-000000000002:create-order:fdd08abf4dcc6b9b",
+                "effectId": "nivo.order.create",
                 "runId": "00000000-0000-4000-8000-000000000002",
                 "stepKey": "create-order",
                 "args": {
@@ -177,42 +177,42 @@
                 }
             },
             {
-                "effectKey": "call:00000000-0000-4000-8000-000000000002:create-order:2d161910ba148c6b",
-                "effectId": "order.confirm",
+                "effectKey": "call:00000000-0000-4000-8000-000000000002:create-order:cb2be6e3a29a6111",
+                "effectId": "nivo.order.confirm",
                 "runId": "00000000-0000-4000-8000-000000000002",
                 "stepKey": "create-order",
                 "args": {
                     "orderId": "order-1"
                 },
-                "subjectEntity": "order.confirm",
-                "subjectId": "order.confirm-3"
+                "subjectEntity": "nivo.order.confirm",
+                "subjectId": "nivo.order.confirm-3"
             },
             {
-                "effectKey": "call:00000000-0000-4000-8000-000000000002:create-order:b5ca64820bbe2616",
-                "effectId": "lead.stage.update",
+                "effectKey": "call:00000000-0000-4000-8000-000000000002:create-order:e268f61a1ff00d54",
+                "effectId": "nivo.lead.stage.update",
                 "runId": "00000000-0000-4000-8000-000000000002",
                 "stepKey": "create-order",
                 "args": {
                     "leadId": "lead-1",
                     "stage": "won"
                 },
-                "subjectEntity": "lead.stage.update",
-                "subjectId": "lead.stage.update-4"
+                "subjectEntity": "nivo.lead.stage.update",
+                "subjectId": "nivo.lead.stage.update-4"
             },
             {
-                "effectKey": "call:00000000-0000-4000-8000-000000000002:send-qr:d76f828217d7bc95",
-                "effectId": "payment.qr.create",
+                "effectKey": "call:00000000-0000-4000-8000-000000000002:send-qr:33b8a8085d961aa2",
+                "effectId": "nivo.payment.qr.create",
                 "runId": "00000000-0000-4000-8000-000000000002",
                 "stepKey": "send-qr",
                 "args": {
                     "orderId": "order-1"
                 },
-                "subjectEntity": "payment.qr.create",
-                "subjectId": "payment.qr.create-5"
+                "subjectEntity": "nivo.payment.qr.create",
+                "subjectId": "nivo.payment.qr.create-5"
             },
             {
-                "effectKey": "call:00000000-0000-4000-8000-000000000002:send-qr:8911124496b3d244",
-                "effectId": "customer.care.schedule",
+                "effectKey": "call:00000000-0000-4000-8000-000000000002:send-qr:08aea0ef2acf344e",
+                "effectId": "nivo.lead.care.schedule",
                 "runId": "00000000-0000-4000-8000-000000000002",
                 "stepKey": "send-qr",
                 "args": {
@@ -220,12 +220,12 @@
                     "ref": "order-1",
                     "afterHours": 2
                 },
-                "subjectEntity": "customer.care.schedule",
-                "subjectId": "customer.care.schedule-6"
+                "subjectEntity": "nivo.lead.care.schedule",
+                "subjectId": "nivo.lead.care.schedule-6"
             },
             {
-                "effectKey": "call:00000000-0000-4000-8000-000000000002:send-qr:e72500c4e34a1b3a",
-                "effectId": "customer.care.schedule",
+                "effectKey": "call:00000000-0000-4000-8000-000000000002:send-qr:121edbc6b7a6ab0e",
+                "effectId": "nivo.lead.care.schedule",
                 "runId": "00000000-0000-4000-8000-000000000002",
                 "stepKey": "send-qr",
                 "args": {
@@ -233,12 +233,12 @@
                     "ref": "order-1",
                     "afterHours": 24
                 },
-                "subjectEntity": "customer.care.schedule",
-                "subjectId": "customer.care.schedule-7"
+                "subjectEntity": "nivo.lead.care.schedule",
+                "subjectId": "nivo.lead.care.schedule-7"
             },
             {
-                "effectKey": "call:00000000-0000-4000-8000-000000000002:notify-order:8f712886d57781e0",
-                "effectId": "team.message.post",
+                "effectKey": "call:00000000-0000-4000-8000-000000000002:notify-order:ac7478e5e453718c",
+                "effectId": "nivo.team.message.post",
                 "runId": "00000000-0000-4000-8000-000000000002",
                 "stepKey": "notify-order",
                 "args": {

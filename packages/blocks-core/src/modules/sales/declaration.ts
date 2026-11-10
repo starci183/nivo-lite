@@ -32,7 +32,7 @@ const PAYMENT_STALE_HOURS = 24
 
 /**
  * Whether a confirmed order wins the customer's deal: the default of the policy value `autoWon`, which the shop's own Sales setting of
- * the same name overrides. The order tool moves no deal; the create-order step does, through `lead.stage.update`.
+ * the same name overrides. The order tool moves no deal; the create-order step does, through `nivo.lead.stage.update`.
  */
 const AUTO_WON = true
 

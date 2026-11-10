@@ -14,7 +14,7 @@ export interface ProviderAbility {
     /** The full names of the tools the ability holds. */
     readonly tools: ReadonlyArray<string>
     /**
-     * The customer channels the provider serves, for an ability whose tool is one tool for every provider (`customer.message.send`):
+     * The customer channels the provider serves, for an ability whose tool is one tool for every provider (`nivo.lead.message.send`):
      * the provider is then known only from the conversation, and the tool's executor asks with it.
      */
     readonly channels?: ReadonlyArray<string>
@@ -67,7 +67,7 @@ export const PROVIDER_CATALOGUE: ReadonlyArray<ProviderSpec> = [
             {
                 id: "transactions.read",
                 scope: "read",
-                tools: [TOOL.bankTransactions, "sepay.transactions.list", "sepay.transactions.debits", "sepay.status"],
+                tools: [TOOL.bankTransactions, "sepay.transaction.list", "sepay.debit.list", "sepay.status.get"],
             },
             { id: "credit.rematch", scope: "write", tools: [TOOL.paymentRematch] },
             { id: "qr.create", scope: "write", tools: [TOOL.paymentQrCreate], account: "default" },
@@ -80,7 +80,7 @@ export const PROVIDER_CATALOGUE: ReadonlyArray<ProviderSpec> = [
         abilities: [
             { id: "ledger.read", scope: "read", tools: [TOOL.ledgerStatus] },
             { id: "ledger.write", scope: "write", tools: [TOOL.ledgerAppend, TOOL.ledgerVoid] },
-            { id: "drive.read", scope: "read", tools: ["drive.status", "drive.sources.list"] },
+            { id: "drive.read", scope: "read", tools: ["google.drive.status.get", "google.drive.source.list"] },
         ],
     },
 ]

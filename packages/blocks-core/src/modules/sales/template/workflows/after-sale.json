@@ -135,9 +135,9 @@
                     ],
                     "tools": [],
                     "effects": [
-                        "customer.message.send",
-                        "lead.update",
-                        "customer.care.schedule"
+                        "nivo.lead.message.send",
+                        "nivo.lead.update",
+                        "nivo.lead.care.schedule"
                     ]
                 },
                 "nodes": [

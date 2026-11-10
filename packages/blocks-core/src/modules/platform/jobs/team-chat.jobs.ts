@@ -11,10 +11,10 @@ export const POST_REPORT_JOB = "platform.post-report"
 export const POST_APPROVAL_JOB = "platform.post-approval"
 
 /** The door tool of the chat the two jobs call. */
-export const CHAT_POST_REPORT_TOOL = "team-chat.post-report"
+export const CHAT_POST_REPORT_TOOL = "nivo.team-chat.report.post"
 
 /** The door tool of the chat that writes the approval cards. */
-export const CHAT_POST_APPROVAL_TOOL = "team-chat.post-approval"
+export const CHAT_POST_APPROVAL_TOOL = "nivo.team-chat.approval.post"
 
 /** How many times the queue delivers either job before it is parked. */
 const POST_ATTEMPTS = 6

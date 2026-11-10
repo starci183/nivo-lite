@@ -8,10 +8,10 @@ import type { InternalText } from "./public-documents.contracts"
 import { PublicDocumentsLogEvent } from "./public-documents.log-events"
 
 /** The tool that reads one internal document whole. */
-export const READ_TOOL = "brain.documents.read"
+export const READ_TOOL = "nivo.brain.document.read"
 
 /** The tool that searches the Brain for a question. */
-export const SEARCH_TOOL = "brain.search"
+export const SEARCH_TOOL = "nivo.brain.search"
 
 /** How many passages a search for a customer question asks for. */
 const SEARCH_LIMIT = 6
@@ -35,7 +35,7 @@ type AskOutcome =
 
 const stringOf = (value: unknown): string | null => (typeof value === "string" ? value : null)
 
-/** The text of a `brain.documents.read` answer, or null when it does not have the shape the tool promises. */
+/** The text of a `nivo.brain.document.read` answer, or null when it does not have the shape the tool promises. */
 const textOf = (value: GatewayJson, sourceId: string): InternalText | null => {
     const document = value.document
     if (!isRecord(document)) return null
@@ -45,7 +45,7 @@ const textOf = (value: GatewayJson, sourceId: string): InternalText | null => {
     return title === null || text === null || contentHash === null ? null : { sourceId, title, contentHash, text }
 }
 
-/** The distinct document ids of a `brain.search` answer, in the order of its passages, at most `HIT_DOCUMENTS`. */
+/** The distinct document ids of a `nivo.brain.search` answer, in the order of its passages, at most `HIT_DOCUMENTS`. */
 const hitsOf = (value: GatewayJson): ReadonlyArray<string> => {
     const passages = Array.isArray(value.passages) ? value.passages : []
     const ids = passages.flatMap((passage): ReadonlyArray<string> => {

@@ -22,7 +22,7 @@ describe("defineInstallation", () => {
     it("joins the lists of every part in part order and keeps the hash it is given", () => {
         const sales = moduleOf("sales")
         const crm = moduleOf("crm")
-        const node = nodeOf("lead.ensure")
+        const node = nodeOf("nivo.lead.ensure")
         const installation = defineInstallation(
             [
                 { modules: [sales], blocks: [STACK], jobs: [jobOf("sales.notice")] },
@@ -74,8 +74,8 @@ describe("defineInstallation", () => {
             at: "block:test.stack",
         })
         expect(
-            captured(() => defineInstallation([{ nodes: [nodeOf("lead.ensure"), nodeOf("lead.ensure")] }], HASH)),
-        ).toMatchObject({ at: "node:lead.ensure" })
+            captured(() => defineInstallation([{ nodes: [nodeOf("nivo.lead.ensure"), nodeOf("nivo.lead.ensure")] }], HASH)),
+        ).toMatchObject({ at: "node:nivo.lead.ensure" })
         expect(
             captured(() =>
                 defineInstallation([{ jobs: [jobOf("sales.notice")] }, { jobs: [jobOf("sales.notice")] }], HASH),
@@ -97,7 +97,7 @@ describe("the fixture node", () => {
     it("does nothing and answers an empty output", async () => {
         const { ports } = scriptedNodePorts()
         const request = {
-            node: nodeOf("lead.ensure"),
+            node: nodeOf("nivo.lead.ensure"),
             params: {},
             input: {},
             turn: EXAMPLE_TURN,

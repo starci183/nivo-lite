@@ -210,7 +210,7 @@ type AgentTurn =
 
 /**
  * The schema of one turn. A fake scripts an agent with these very shapes, in call order:
- * `{ call: { tool: "payment.order.settle", args: { orderId, transactionId } } }`, then `{ done: <the step's output> }`,
+ * `{ call: { tool: "nivo.payment.order.settle", args: { orderId, transactionId } } }`, then `{ done: <the step's output> }`,
  * or `{ confused: { reason, question } }`.
  */
 const agentTurnSchema: z.ZodType<AgentTurn> = z.union([

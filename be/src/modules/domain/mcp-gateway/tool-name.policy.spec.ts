@@ -74,7 +74,7 @@ describe("tool-name.policy", () => {
     it("splits a namespaced name and refuses anything else", async () => {
         const subject = await build()
         expect(subject.addressOf("hakuen.booking.hold")).toEqual({ connector: "hakuen", tool: "booking.hold" })
-        expect(subject.addressOf("sepay.transactions.list")).toEqual({ connector: "sepay", tool: "transactions.list" })
+        expect(subject.addressOf("sepay.transaction.list")).toEqual({ connector: "sepay", tool: "transaction.list" })
         expect(subject.addressOf("booking")).toBeNull()
         expect(subject.addressOf("Hakuen.booking.hold")).toBeNull()
         expect(subject.fullNameOf("hakuen", "stay.current")).toBe("hakuen.stay.current")
@@ -85,7 +85,7 @@ describe("tool-name.policy", () => {
         const grants = [grant("hakuen.*", "auto"), grant("hakuen.keycode.reveal", "never")]
         expect(subject.grantFor(grants, "hakuen.keycode.reveal")?.mode).toBe("never")
         expect(subject.grantFor(grants, "hakuen.rates.quote")?.mode).toBe("auto")
-        expect(subject.grantFor(grants, "sepay.transactions.list")).toBeNull()
+        expect(subject.grantFor(grants, "sepay.transaction.list")).toBeNull()
         expect(subject.grantFor(grants, "bad")).toBeNull()
     })
 
@@ -119,33 +119,48 @@ describe("tool-name.policy: full names through an index, not by the first dot", 
         contractVersion: "nivo-native@1",
         tools: [toolSpec("lead.order.list", "Orders."), toolSpec("conversation.message.list", "Thread.")],
     }
-    const nivoBrain: GatewayConnectorManifest = { ...nivoContext, key: "nivo-brain", tools: [toolSpec("brain.change.propose", "Propose.", "write")] }
+    const nivoBrain: GatewayConnectorManifest = {
+        ...nivoContext,
+        key: "brain",
+        namespace: "nivo.brain",
+        tools: [toolSpec("change.propose", "Propose.", "write")],
+    }
     const ledger: GatewayConnectorManifest = {
         key: "ledger",
+        namespace: "nivo.ledger",
         name: "Ledger",
         kind: "native",
         contractVersion: "ledger@1",
-        tools: [toolSpec("append", "Append.", "write")],
+        tools: [toolSpec("entry.append", "Append.", "write")],
+    }
+    const sepay: GatewayConnectorManifest = {
+        key: "sepay",
+        name: "SePay",
+        kind: "native",
+        contractVersion: "sepay@1",
+        tools: [toolSpec("status.get", "Status.")],
     }
     const entries = [nivoContext, nivoBrain, ledger].map((manifest) => ({ manifest }))
 
     it("names a tool by its connector's public prefix, the key when it has none", () => {
         expect(toolNameOf(nivoContext, "lead.order.list")).toBe("nivo.lead.order.list")
-        expect(toolNameOf(ledger, "append")).toBe("ledger.append")
+        expect(toolNameOf(ledger, "entry.append")).toBe("nivo.ledger.entry.append")
+        expect(toolNameOf(sepay, "status.get")).toBe("sepay.status.get")
     })
 
-    it("resolves two connectors that share the `nivo` prefix, each to its own tool, and an old id beside them", () => {
+    it("resolves connectors that share the `nivo` prefix, each to its own tool, and an old id to nothing", () => {
         expect(namedToolIn(entries, "nivo.lead.order.list")?.connector.manifest.key).toBe("nivo-context")
-        expect(namedToolIn(entries, "nivo.brain.change.propose")?.connector.manifest.key).toBe("nivo-brain")
-        expect(namedToolIn(entries, "ledger.append")?.spec.name).toBe("append")
+        expect(namedToolIn(entries, "nivo.brain.change.propose")?.connector.manifest.key).toBe("brain")
+        expect(namedToolIn(entries, "nivo.ledger.entry.append")?.spec.name).toBe("entry.append")
         expect(namedToolIn(entries, "nivo.ledger.append")).toBeNull()
+        expect(namedToolIn(entries, ["ledger", "append"].join("."))).toBeNull()
         expect(namedToolIn(entries, "nivo-context.lead.order.list")).toBeNull()
     })
 
     it("refuses the start when two adapters hold one full name", () => {
         const adapterOf = (manifest: GatewayConnectorManifest): NativeAdapter =>
             ({ manifest, invoke: () => Promise.resolve({}) }) as unknown as NativeAdapter
-        const twin: GatewayConnectorManifest = { ...nivoBrain, key: "nivo-twin", tools: [toolSpec("lead.order.list", "Again.")] }
+        const twin: GatewayConnectorManifest = { ...nivoContext, key: "nivo-twin", tools: [toolSpec("lead.order.list", "Again.")] }
 
         expect(duplicateNamesOf([nivoContext, nivoBrain, ledger])).toEqual([])
         expect(duplicateNamesOf([nivoContext, twin])).toEqual(["nivo.lead.order.list"])
@@ -161,6 +176,6 @@ describe("tool-name.policy: full names through an index, not by the first dot", 
         expect(grantFor(grants, "nivo.lead.profile.get")?.mode).toBe("never")
         expect(grantFor(grants, "nivo.ledger.entry.append")).toBeNull()
         expect(grantFor([...grants, g("nivo.lead.order.list", "auto")], "nivo.lead.order.list")?.mode).toBe("auto")
-        expect(grantFor([g("ledger.*", "auto")], "ledger.append")?.mode).toBe("auto")
+        expect(grantFor([g("nivo.ledger.*", "auto")], "nivo.ledger.entry.append")?.mode).toBe("auto")
     })
 })

@@ -118,13 +118,13 @@ describe("McpToolGrantsService reads", () => {
         })
         const grants = await build(em)
 
-        await expect(grants.agentsGranted("ws-1", ["sepay.*", "einvoice.list"])).resolves.toEqual([
+        await expect(grants.agentsGranted("ws-1", ["sepay.*", "nivo.einvoice.list"])).resolves.toEqual([
             "agent-2",
             "agent-1",
         ])
         expect(em.find).toHaveBeenCalledWith(McpToolGrantEntity, {
             select: { agentId: true },
-            where: { workspaceId: "ws-1", tool: In(["sepay.*", "einvoice.list"]), mode: Not("never") },
+            where: { workspaceId: "ws-1", tool: In(["sepay.*", "nivo.einvoice.list"]), mode: Not("never") },
             order: { updatedAt: "ASC" },
             take: 500,
         })
@@ -218,7 +218,7 @@ describe("McpToolGrantsService.upsert", () => {
             grants.upsert([
                 recordOf(),
                 recordOf({ agentId: "agent-3", tool: "sepay.*" }),
-                recordOf({ workspaceId: "ws-2", agentId: "agent-3", tool: "einvoice.*" }),
+                recordOf({ workspaceId: "ws-2", agentId: "agent-3", tool: "nivo.einvoice.*" }),
             ]),
         ).resolves.toBe(2)
         expect(grants.doubles.agents.cardsOf).toHaveBeenCalledWith("ws-1", ["agent-1", "agent-3"])
@@ -245,17 +245,17 @@ describe("McpToolGrantsService.upsert", () => {
 describe("McpToolGrantsService.insertMissing", () => {
     it("creates only the grants that do not exist and never touches an existing one", async () => {
         const em = mockEntityManager({
-            find: [McpToolGrantEntity, [entityOf({ tool: "ledger.append" })]],
+            find: [McpToolGrantEntity, [entityOf({ tool: "nivo.ledger.entry.append" })]],
             insert: [McpToolGrantEntity, {}],
         })
         const grants = await build(em)
 
         await expect(
-            grants.insertMissing([recordOf({ tool: "ledger.append" }), recordOf({ tool: "ledger.void" })]),
+            grants.insertMissing([recordOf({ tool: "nivo.ledger.entry.append" }), recordOf({ tool: "nivo.ledger.entry.void" })]),
         ).resolves.toBe(1)
         expect(em.insert).toHaveBeenCalledTimes(1)
         expect(em.insert).toHaveBeenCalledWith(McpToolGrantEntity, [
-            expect.objectContaining({ tool: "ledger.void", mode: "auto", updatedBy: null }),
+            expect.objectContaining({ tool: "nivo.ledger.entry.void", mode: "auto", updatedBy: null }),
         ])
         expect(em.upsert).not.toHaveBeenCalled()
         expect(em.find).toHaveBeenCalledTimes(1)

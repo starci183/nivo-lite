@@ -70,7 +70,7 @@ const claimSubject = (id: string): EffectFact => ({ kind: "payment-claim", id })
 @Injectable()
 /**
  * The executors of the payment effects on the entity engine, each in one workspace-scoped transaction.
- * - `payment.order.settle` settles the order with the bank transaction through the same path as `payment.settle` (`settleOnOrder`): the
+ * - `nivo.payment.order.settle` settles the order with the bank transaction through the same path as `payment.settle` (`settleOnOrder`): the
  *   transaction matched and linked to the order, the order paid and the book entry enqueued. No notice job and no ledger job: the
  *   workflow thanks the customer and writes the ledger line in its own steps. A transaction that already paid the order changes nothing.
  *   The claim it answers is the one the agent names (`claimId`), else every open claim linked to that order; a claim linked to no order
@@ -80,10 +80,10 @@ const claimSubject = (id: string): EffectFact => ({ kind: "payment-claim", id })
  *   the answer carries what was due, what arrived and the difference (negative short, positive over) for the agent to report. A missing
  *   or used transaction, a missing, closed or unpriced order is a refusal fact (`refused`, the reason, the true values) with nothing
  *   written.
- * - `payment.claim.record` stores what the customer said they paid as an open claim, tied to the conversation and, only when the agent
+ * - `nivo.payment.claim.record` stores what the customer said they paid as an open claim, tied to the conversation and, only when the agent
  *   names the order (`orderId`, which must be the customer's own), to that order; once per dedupe key. When no order is named the
  *   answer lists the customer's orders awaiting payment (id, number, amount) as facts, for the agent to choose from.
- * - `payment.claim.cancel` closes a claim a failed run recorded; a claim that is gone, withdrawn or settled changes nothing.
+ * - `nivo.payment.claim.cancel` closes a claim a failed run recorded; a claim that is gone, withdrawn or settled changes nothing.
  */
 export class PaymentEffectsService implements OnModuleInit {
     constructor(

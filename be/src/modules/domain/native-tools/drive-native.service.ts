@@ -30,12 +30,13 @@ const FAILED: ReadonlySet<string> = new Set(["failed", "blocked_credits"])
 /** The Google Drive native connector: whether the grant holds and what the Drive fed into the Brain. Internal use only. */
 export const DRIVE_MANIFEST: NativeConnectorManifest = {
     key: "drive",
+    namespace: "google.drive",
     name: "Google Drive",
     kind: "native",
     contractVersion: "drive-native@1",
     tools: [
         {
-            name: "status",
+            name: "status.get",
             description:
                 "Whether Google Drive is connected for the business, the account masked, and how many of its files are ready, being read or failed.",
             scope: "read",
@@ -45,7 +46,7 @@ export const DRIVE_MANIFEST: NativeConnectorManifest = {
             internalOnly: true,
         },
         {
-            name: "sources.list",
+            name: "source.list",
             description: "The files the Drive fed into the Brain, newest change first: stage, visibility and when.",
             scope: "read",
             defaultMode: "auto",
@@ -73,7 +74,7 @@ const countsOf = (sources: ReadonlyArray<OriginSource>): SourceCounts => ({
 @Injectable()
 /**
  * Runs the Drive tools. Drive content is never read live through a tool: it enters the Brain as sources and is read with
- * `brain.search`. These tools say whether the grant holds and where the files fed in stand; the account leaves masked.
+ * `nivo.brain.search`. These tools say whether the grant holds and where the files fed in stand; the account leaves masked.
  */
 export class DriveNativeService implements NativeAdapter {
     readonly manifest: NativeConnectorManifest = DRIVE_MANIFEST
@@ -87,11 +88,11 @@ export class DriveNativeService implements NativeAdapter {
     /** Runs one Drive tool. */
     async invoke(workspaceId: string, tool: string, args: GatewayJson, caller: NativeCaller): Promise<GatewayJson> {
         await this.views.internalOf(workspaceId, caller)
-        if (tool === "status") {
+        if (tool === "status.get") {
             argumentsOf(tool, DRIVE_STATUS_SCHEMA, args)
             return this.status(workspaceId)
         }
-        if (tool === "sources.list") {
+        if (tool === "source.list") {
             return this.list(workspaceId, argumentsOf(tool, DRIVE_SOURCES_LIST_SCHEMA, args))
         }
         throw unknownTool(tool)

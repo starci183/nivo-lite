@@ -8,10 +8,10 @@ import { leadNameById, orderById, transactionById } from "../accounting-data"
 import { LEADS, ORDERS, TRANSACTIONS } from "../ports"
 
 /** The door tool that tells whether the workspace has a ledger connected and told where to write. */
-export const LEDGER_STATUS_TOOL = "ledger.status"
+export const LEDGER_STATUS_TOOL = "nivo.ledger.status.get"
 
 /** The door tool that writes one line of the business ledger. */
-export const LEDGER_APPEND_TOOL = "ledger.append"
+export const LEDGER_APPEND_TOOL = "nivo.ledger.entry.append"
 
 /** The name of the job: the outbox enqueues it by this name. */
 const JOB_NAME = "accounting.ledger-append"

@@ -18,18 +18,32 @@ const CONTRACT_VERSION = "nivo-effects@1"
 /** The schema advertised when an effect's payload cannot be written as JSON Schema. */
 const OPEN_OBJECT: GatewayJson = { type: "object" }
 
-/** An effect id split at its first dot: the connector key (its domain) and the tool name inside it (`order.create` → `order`, `create`). */
+/** The public prefix of NIVO's own business actions: every effect id reads `nivo.<domain>.<object>.<verb>`. */
+export const EFFECT_NAMESPACE = "nivo"
+
+/**
+ * An effect id split for the gateway: the connector row key (its domain, the segment after `nivo.`), the public prefix of that
+ * connector (`nivo.<domain>`) and the tool name inside it (`nivo.order.create` → `order`, `nivo.order`, `create`), so the full name
+ * of the tool is the effect id itself and every domain is a connector of its own.
+ */
 export interface EffectAddress {
-    /** The connector key. */
+    /** The connector row key: the domain. */
     readonly connector: string
+    /** The public prefix of the connector's tools: `nivo.<domain>`. */
+    readonly namespace: string
     /** The tool name inside the connector. */
     readonly tool: string
 }
 
-/** The address of an effect id, or null when it has no dot. */
+/** The address of an effect id, or null when it is not `nivo.<domain>.<rest>`. */
 export const effectAddressOf = (id: string): EffectAddress | null => {
-    const dot = id.indexOf(".")
-    return dot <= 0 || dot === id.length - 1 ? null : { connector: id.slice(0, dot), tool: id.slice(dot + 1) }
+    const prefix = `${EFFECT_NAMESPACE}.`
+    if (!id.startsWith(prefix)) return null
+    const rest = id.slice(prefix.length)
+    const dot = rest.indexOf(".")
+    if (dot <= 0 || dot === rest.length - 1) return null
+    const connector = rest.slice(0, dot)
+    return { connector, namespace: `${prefix}${connector}`, tool: rest.slice(dot + 1) }
 }
 
 /** A value as JSON the gateway can carry: undefined members dropped, a date as ISO text, anything else not JSON as null. */
@@ -97,18 +111,21 @@ const toolOf = (effect: EffectDefinition, tool: string): NativeToolSpec => ({
 })
 
 /**
- * One native manifest per domain of the installed effects, in the order the domains first appear: the connector key is the effect id up
- * to its first dot and the tool its rest, so the gateway's full name of a tool is the effect id itself (`customer.message.send`).
+ * One native manifest per domain of the installed effects, in the order the domains first appear: the connector key is the domain after
+ * `nivo.`, its public prefix `nivo.<domain>` and the tool the rest, so the gateway's full name of a tool is the effect id itself
+ * (`nivo.lead.message.send`).
  */
 export const effectManifestsOf = (effects: Iterable<EffectDefinition>): ReadonlyArray<NativeConnectorManifest> => {
-    const byKey = new Map<string, Array<NativeToolSpec>>()
+    const byKey = new Map<string, { readonly namespace: string; readonly tools: Array<NativeToolSpec> }>()
     for (const effect of effects) {
         const address = effectAddressOf(effect.id)
         if (address === null) continue
-        byKey.set(address.connector, [...(byKey.get(address.connector) ?? []), toolOf(effect, address.tool)])
+        const entry = byKey.get(address.connector) ?? { namespace: address.namespace, tools: [] }
+        byKey.set(address.connector, { namespace: entry.namespace, tools: [...entry.tools, toolOf(effect, address.tool)] })
     }
-    return [...byKey.entries()].map(([key, tools]) => ({
+    return [...byKey.entries()].map(([key, { namespace, tools }]) => ({
         key,
+        namespace,
         name: `NIVO ${key}`,
         kind: "native",
         contractVersion: CONTRACT_VERSION,

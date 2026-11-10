@@ -1,10 +1,10 @@
 import { z } from "zod"
 import { FINDING_SEVERITIES, FINDING_STATUSES } from "@modules/domain/dossier-review"
 
-/** `dossier.status`: takes no argument. */
+/** `nivo.dossier.status.get`: takes no argument. */
 export const DOSSIER_STATUS_SCHEMA: z.ZodObject<{}, z.core.$strict> = z.object({}).strict()
 
-/** `dossier.findings.list`: a page of the findings of the dossier review, the most severe first. */
+/** `nivo.dossier.finding.list`: a page of the findings of the dossier review, the most severe first. */
 export const DOSSIER_FINDINGS_LIST_SCHEMA: z.ZodObject<
     {
         dossierId: z.ZodOptional<z.ZodUUID>
@@ -42,7 +42,7 @@ export const DOSSIER_FINDINGS_LIST_SCHEMA: z.ZodObject<
     })
     .strict()
 
-/** The arguments of `dossier.findings.list` as its validator reads them. */
+/** The arguments of `nivo.dossier.finding.list` as its validator reads them. */
 export type DossierFindingsListInput = z.output<typeof DOSSIER_FINDINGS_LIST_SCHEMA>
 
 /** The schemas the manifest advertises, generated from the validators. */

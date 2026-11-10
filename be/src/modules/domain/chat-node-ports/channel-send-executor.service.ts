@@ -49,7 +49,7 @@ const MEMORY_KIND = "agent-lead-memory"
 
 @Injectable()
 /**
- * The one way a step's agent says something to a customer: the executor of `customer.message.send` (a message addressed by
+ * The one way a step's agent says something to a customer: the executor of `nivo.lead.message.send` (a message addressed by
  * `leadId` is the shop writing unprompted, care steps included). The system, not the agent, picks the channel: the
  * conversation carries its channel and connection, and the channel layer routes by them (Zalo with its window and ZNS fallback,
  * Telegram, Meta, the website). The caller gives the words and record ids: an order becomes its card on the stored line and catalogue

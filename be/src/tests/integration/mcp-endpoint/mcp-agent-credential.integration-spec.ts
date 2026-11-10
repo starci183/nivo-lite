@@ -55,7 +55,7 @@ const callBankTool = (workspaceId: string, principal: CredentialPrincipal) =>
             jsonrpc: "2.0",
             id: 1,
             method: "tools/call",
-            params: { name: "tool.call", arguments: { name: "sepay.transactions.list", arguments: { limit: 5 } } },
+            params: { name: "tool.call", arguments: { name: "sepay.transaction.list", arguments: { limit: 5 } } },
         },
     })
 
@@ -104,7 +104,7 @@ describe("MCP endpoint per-agent credential", () => {
         })
         expect(reply.body).toMatchObject({ jsonrpc: "2.0", id: 1, result: { isError: false } })
         await expect(mcpCallsOfAgent(world.db.primary, identity.agentId)).resolves.toEqual([
-            { tool: "sepay.transactions.list", outcome: "ok" },
+            { tool: "sepay.transaction.list", outcome: "ok" },
         ])
     })
 

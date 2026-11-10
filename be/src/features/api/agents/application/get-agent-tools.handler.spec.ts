@@ -27,8 +27,8 @@ const BOARD: ProviderBoard = {
 }
 
 const GRANTS: ReadonlyArray<GrantView> = [
-    { agentId: "agent-1", agentName: "Lễ tân", tool: "brain.search", mode: "never", limitVnd: null, constraints: [], constraintsJson: "[]" },
-    { agentId: "agent-2", agentName: "Sales", tool: "agent.tag", mode: "never", limitVnd: null, constraints: [], constraintsJson: "[]" },
+    { agentId: "agent-1", agentName: "Lễ tân", tool: "nivo.brain.search", mode: "never", limitVnd: null, constraints: [], constraintsJson: "[]" },
+    { agentId: "agent-2", agentName: "Sales", tool: "nivo.agent.tag", mode: "never", limitVnd: null, constraints: [], constraintsJson: "[]" },
 ]
 
 const build = (options: { readonly module?: string | null; readonly agent?: boolean } = {}) => {
@@ -56,24 +56,27 @@ describe("GetAgentToolsHandler", () => {
 
         expect(admin.providerBoard).toHaveBeenCalledWith({ principalId: "user-1", workspaceId: "ws-1" })
         expect(tools.filter((tool) => tool.origin === "declared").map((tool) => tool.id)).toEqual([
-            "agent.tag",
-            "customer.message.send",
-            "team.message.post",
-            "brain.search",
+            "nivo.agent.tag",
+            "nivo.lead.message.send",
+            "nivo.team.message.post",
+            "nivo.brain.search",
+            "nivo.brain.fact.get",
+            "nivo.brain.fact.related",
+            "nivo.brain.change.propose",
         ])
-        expect(tools.find((tool) => tool.id === "customer.message.send")?.accounts).toEqual([
+        expect(tools.find((tool) => tool.id === "nivo.lead.message.send")?.accounts).toEqual([
             { connectionId: "oa-1", provider: "zalo_oa", accountLabel: "Tiệm hoa NIVO", ability: "customer.send", mode: "ask" },
         ])
-        expect(tools.find((tool) => tool.id === "brain.search")).toMatchObject({ grant: "never", ready: false })
-        expect(tools.find((tool) => tool.id === "agent.tag")).toMatchObject({ grant: null, ready: true })
+        expect(tools.find((tool) => tool.id === "nivo.brain.search")).toMatchObject({ grant: "never", ready: false })
+        expect(tools.find((tool) => tool.id === "nivo.agent.tag")).toMatchObject({ grant: null, ready: true })
     })
 
     it("reads the module of the agent's installation (a copied agent), else the agent's own", async () => {
         const sales = await build({ module: "sales" }).handler.execute(query())
         const own = await build({ module: null }).handler.execute(query())
 
-        expect(sales.some((tool) => tool.id === "order.create")).toBe(true)
-        expect(own.some((tool) => tool.id === "order.create")).toBe(false)
+        expect(sales.some((tool) => tool.id === "nivo.order.create")).toBe(true)
+        expect(own.some((tool) => tool.id === "nivo.order.create")).toBe(false)
     })
 
     it("answers nothing for an agent the workspace does not have", async () => {

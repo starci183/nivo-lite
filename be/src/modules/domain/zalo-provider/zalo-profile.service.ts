@@ -45,7 +45,7 @@ const plus = (left: ZaloProfileTally, right: ZaloProfileTally): ZaloProfileTally
 @Injectable()
 /**
  * Gives the customers of the Zalo conversations their name and picture: a customer whose profile was never read, or was read long ago, is asked
- * about through the NIVO MCP door (`chat.profile`, so the grant of the internal agent decides it and the call log records it), and the answer is
+ * about through the NIVO MCP door (`nivo.chat.profile.get`, so the grant of the internal agent decides it and the call log records it), and the answer is
  * kept on the conversation. Each connection reads at most a few customers a round, one call per customer id and through the connection's own
  * rate bucket. A failed read is data: the conversation keeps the name it has ("Zalo guest" until one is read) and is tried again after a pause.
  */
@@ -135,7 +135,7 @@ export class ZaloProfileService {
                 effectKey: (step) => `zalo-profile:${candidate.id}:${step}`,
                 scopeOpen: () => false,
             })
-            const answered = await door.call("chat.profile", { conversationId: candidate.id })
+            const answered = await door.call("nivo.chat.profile.get", { conversationId: candidate.id })
             const profile = answered.ok ? profileOfAnswer(answered.output) : null
             if (profile === null) {
                 await this.profiles.tried(workspaceId, candidate.id, this.clock.now())

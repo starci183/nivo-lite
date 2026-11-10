@@ -43,7 +43,7 @@ describe("NIVO MCP native Brain tools", () => {
     })
 
     it("reads a public fact of its own workspace and nothing internal or foreign", async () => {
-        const reply = await call(own, "brain.search", { query: "opening hours" })
+        const reply = await call(own, "nivo.brain.search", { query: "opening hours" })
 
         const text = JSON.stringify(reply.body)
         expect(reply.body).toMatchObject({ result: { isError: false } })
@@ -53,7 +53,7 @@ describe("NIVO MCP native Brain tools", () => {
     })
 
     it("answers another workspace from its own facts alone", async () => {
-        const reply = await call(other, "brain.search", { query: "opening hours" })
+        const reply = await call(other, "nivo.brain.search", { query: "opening hours" })
 
         const text = JSON.stringify(reply.body)
         expect(text).toContain("9 to 17 weekdays")
@@ -61,9 +61,9 @@ describe("NIVO MCP native Brain tools", () => {
     })
 
     it("keeps the question out of the audit line it writes, and the values out of its summary", async () => {
-        await call(own, "brain.search", { query: "secret margin question" })
+        await call(own, "nivo.brain.search", { query: "secret margin question" })
 
-        const lines = await storedCallsOf(world.db.primary, own.agentId, "brain.search")
+        const lines = await storedCallsOf(world.db.primary, own.agentId, "nivo.brain.search")
 
         expect(lines.length).toBeGreaterThan(0)
         for (const line of lines) {
@@ -77,19 +77,19 @@ describe("NIVO MCP native Brain tools", () => {
     it("answers not granted for a tool the agent holds no grant on, and audits the refusal", async () => {
         // A call that names its operation reaches the gateway, which audits the refusal; one that does not is answered by the surface
         // as "not granted or unknown" before the gateway, so a probe for tool names leaves no line.
-        const reply = await call(own, "brain.facts.list", {}, "probe-1")
+        const reply = await call(own, "nivo.brain.fact.list", {}, "probe-1")
 
         expect(reply.body).toMatchObject({ result: { isError: true } })
         expect(JSON.stringify(reply.body)).toContain("not_granted")
-        await expect(storedCallsOf(world.db.primary, own.agentId, "brain.facts.list")).resolves.toEqual([
+        await expect(storedCallsOf(world.db.primary, own.agentId, "nivo.brain.fact.list")).resolves.toEqual([
             expect.objectContaining({ outcome: "refused" }),
         ])
     })
 
     it("answers not found, an answer and not a failure, for a fact the view does not hold", async () => {
-        await grantTool(world.db.primary, own.workspaceId, own.agentId, "brain.facts.get")
+        await grantTool(world.db.primary, own.workspaceId, own.agentId, "nivo.brain.fact.get")
 
-        const reply = await call(own, "brain.facts.get", { id: "00000000-0000-4000-8000-000000000000" })
+        const reply = await call(own, "nivo.brain.fact.get", { id: "00000000-0000-4000-8000-000000000000" })
 
         expect(JSON.stringify(reply.body)).toContain("not_found")
     })

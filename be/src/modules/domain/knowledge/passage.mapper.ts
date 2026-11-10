@@ -4,7 +4,7 @@ import type { NivoHit } from "@modules/domain/nivo-knowledge"
 import type { Passage } from "./knowledge.contracts"
 
 /**
- * The mark an internal reader (an internal agent, "try asking", `brain.search` passages) reads before a passage the shop-document critic
+ * The mark an internal reader (an internal agent, "try asking", `nivo.brain.search` passages) reads before a passage the shop-document critic
  * has not released to customers yet (trust gate, BG3). A customer search never returns such a passage.
  */
 export const UNREVIEWED_MARK = "[chua soat]"

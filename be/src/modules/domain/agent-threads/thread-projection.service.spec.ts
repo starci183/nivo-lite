@@ -134,7 +134,7 @@ const step = (key: string, ordinal: number, attempt: number, seconds: number): T
 })
 
 const CALLS: ReadonlyArray<ThreadStepCallParams> = [
-    { tool: "customer.message.send", ok: true, failure: null, effectKey: "call:run-1:reply:abc" },
+    { tool: "nivo.lead.message.send", ok: true, failure: null, effectKey: "call:run-1:reply:abc" },
 ]
 
 const ended = (key: string, ordinal: number, attempt: number, seconds: number): ThreadStepEndParams => ({
@@ -201,7 +201,7 @@ describe("ThreadProjectionService", () => {
             errorCode: null,
             claimedUntil: null,
             notBefore: null,
-            doorCalls: { calls: [{ tool: "customer.message.send", ok: true, effectKey: "call:run-1:reply:abc" }] },
+            doorCalls: { calls: [{ tool: "nivo.lead.message.send", ok: true, effectKey: "call:run-1:reply:abc" }] },
             input: { versionId: "v-1", nodeKey: "greet", trigger: { text: "hi" } },
         })
         expect(store.get(RUN, "run-1")?.data).toMatchObject({ status: "running", stepSeq: 1 })

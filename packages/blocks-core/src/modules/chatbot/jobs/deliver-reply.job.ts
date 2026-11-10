@@ -55,10 +55,10 @@ export type DeliverOutcome = "sent" | "failed" | "skipped" | "retry"
 /** What one push to the channel came to. */
 type Push = { readonly kind: "sent" } | { readonly kind: "retry" } | { readonly kind: "failed"; readonly code: string }
 
-/** Pushes the text through the door tool `chat.send`; a customer no channel can reach is a failure without a call. */
+/** Pushes the text through the door tool `nivo.chat.send`; a customer no channel can reach is a failure without a call. */
 const pushOf = async (door: DoorApi, conversation: ThreadRow, line: MessageRecord): Promise<Push> => {
     if (placeholderRecipient(conversation)) return { kind: "failed", code: RECIPIENT_NOT_LINKED }
-    const result = await door.call("chat.send", { conversationId: conversation.id, text: line.text, key: line.id })
+    const result = await door.call("nivo.chat.send", { conversationId: conversation.id, text: line.text, key: line.id })
     if (result.ok) return { kind: "sent" }
     return result.reason === "transient"
         ? { kind: "retry" }
@@ -66,7 +66,7 @@ const pushOf = async (door: DoorApi, conversation: ThreadRow, line: MessageRecor
 }
 
 /**
- * Pushes one stored line of a person to the customer channel through `door.call("chat.send")`, outside any transaction, and records
+ * Pushes one stored line of a person to the customer channel through `door.call("nivo.chat.send")`, outside any transaction, and records
  * the outcome on the line. The line id is the key of the call, so a retry of the same delivery sends nothing twice.
  */
 export const deliverReply = async (

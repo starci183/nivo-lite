@@ -131,7 +131,7 @@ describe("graph-diff.policy tools and rights", () => {
 
     it("counts a tool that was not there before, once", async () => {
         const subject = await build()
-        const tool = { provider: "sepay", tool: "sepay.status", scope: "read", label: "SePay" } as const
+        const tool = { provider: "sepay", tool: "sepay.status.get", scope: "read", label: "SePay" } as const
         const added: GraphDocument = {
             ...BASE,
             nodes: [...BASE.nodes, nodeOf({ key: "extra", uses: [tool], next: ["end"] })],

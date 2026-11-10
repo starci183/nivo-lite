@@ -62,14 +62,14 @@ import type { MoneyDb } from "./thread-world-money"
 
 // The PROCESS of the money world (package P7): one app process over a `MoneyDb`, composed as the 0-9 world's `processOf` composes one
 // (the REAL LanggraphModule and AgentThreadsModule over the real flow, node host, effect ledger, rights judge and door checks), with
-// the two outside parts a money walk needs: the gateway's `ledger.append` and the books the order tool and the bank's settle write.
+// the two outside parts a money walk needs: the gateway's `nivo.ledger.entry.append` and the books the order tool and the bank's settle write.
 
 /** The text of a value, or empty. */
 const textOf = (value: unknown): string => (typeof value === "string" ? value : "")
 
 /**
- * The gateway tools of the world: `ledger.append` writes one line per bank transaction (the real tool's own rule: "a transaction is
- * recorded once, however often it is asked") and answers its ref; `brain.search` answers no knowledge.
+ * The gateway tools of the world: `nivo.ledger.entry.append` writes one line per bank transaction (the real tool's own rule: "a transaction is
+ * recorded once, however often it is asked") and answers its ref; `nivo.brain.search` answers no knowledge.
  */
 const toolDoorOf = (db: MoneyDb, door: NodeToolDoorService): NodeToolDoor => ({
     call: (call: NodeToolCall) => {

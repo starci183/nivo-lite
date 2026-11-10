@@ -61,10 +61,10 @@ describe("the internal nivo agent of a workspace", () => {
         const agents = await nivoAgentsOf(who.workspaceId)
         expect(agents).toHaveLength(1)
         expect(await grantsOf(who.workspaceId, String(agents[0]?.id))).toEqual([
-            { tool: "chat.profile", mode: "auto" },
-            { tool: "chat.send", mode: "auto" },
-            { tool: "ledger.append", mode: "auto" },
-            { tool: "ledger.status", mode: "auto" },
+            { tool: "nivo.chat.profile.get", mode: "auto" },
+            { tool: "nivo.chat.send", mode: "auto" },
+            { tool: "nivo.ledger.entry.append", mode: "auto" },
+            { tool: "nivo.ledger.status.get", mode: "auto" },
         ])
     })
 
@@ -108,7 +108,7 @@ describe("the internal nivo agent of a workspace", () => {
             take: ROWS_MAX,
         })
         expect(logged.map(({ connector, tool, outcome }) => ({ connector, tool, outcome }))).toEqual([
-            { connector: "chat", tool: "chat.send", outcome: "ok" },
+            { connector: "chat", tool: "nivo.chat.send", outcome: "ok" },
         ])
         const stored = await world.resolve(ChatMessagesService).storeAgentLine({
             workspaceId: who.workspaceId,

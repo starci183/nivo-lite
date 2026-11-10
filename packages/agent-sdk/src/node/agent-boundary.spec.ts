@@ -19,13 +19,13 @@ import type { NodeDefinition, NodeModelRequest } from "./node.types"
 const WRITE_ORDER: DataRight = { kind: "order", access: "write", scope: "turn", fields: ["status"] }
 
 const send = defineEffect({
-    id: "customer.message.send",
+    id: "nivo.lead.message.send",
     title: { key: "t" },
     payload: z.object({ conversationId: z.string(), text: z.string() }),
     rights: [],
 })
 const settle = defineEffect({
-    id: "payment.order.settle",
+    id: "nivo.payment.order.settle",
     title: { key: "t" },
     payload: z.object({ orderId: z.string() }),
     rights: [WRITE_ORDER],
@@ -64,7 +64,7 @@ const replyStep: NodeDefinition = defineNode({
     input: z.object({ thread: z.array(z.string()) }),
     output: OUTPUT,
     rights: [],
-    effects: ["customer.message.send", "payment.order.settle"],
+    effects: ["nivo.lead.message.send", "nivo.payment.order.settle"],
     tools: ["catalog.item.find", "ledger.entry.read"],
     run: async (input, context) => {
         const decision = await context.agent.run({ goal: "Answer the customer.", input, output: OUTPUT, maxTurns: 4 })
@@ -76,7 +76,7 @@ const replyStep: NodeDefinition = defineNode({
 /** Everything installed in the app, and everything the agent's module declares for it: both wider than the step. */
 const EFFECTS = new Map([send, settle, refund].map((effect) => [effect.id, effect]))
 const TOOLS = new Map([find, ledger].map((tool) => [tool.id, tool]))
-const AGENT_TOOLS = ["customer.message.send", "payment.order.settle", "payment.order.refund", "catalog.item.find", "ledger.entry.read"]
+const AGENT_TOOLS = ["nivo.lead.message.send", "nivo.payment.order.settle", "payment.order.refund", "catalog.item.find", "ledger.entry.read"]
 
 /** The workflow's grant: the catalogue tool by name, no ledger tool, and no right to write an order. */
 const GRANT: NodeRunRequest["grant"] = { rights: [], tools: ["catalog.item.find"] }
@@ -105,8 +105,8 @@ const attempt = async (call: { readonly tool: string; readonly args: Readonly<Re
 
 describe("agent boundary: an engine agent calls only what its step declares and its workflow grants", () => {
     it("runs a call of a declared, granted effect and a declared, granted tool", async () => {
-        const sent = await attempt({ tool: "customer.message.send", args: { conversationId: "c-1", text: "Dạ có ạ." } })
-        expect(sent.fake.executed.map((one) => one.id)).toEqual(["customer.message.send"])
+        const sent = await attempt({ tool: "nivo.lead.message.send", args: { conversationId: "c-1", text: "Dạ có ạ." } })
+        expect(sent.fake.executed.map((one) => one.id)).toEqual(["nivo.lead.message.send"])
         expect(sent.told[0]).toMatchObject({ ok: true })
 
         const looked = await attempt({ tool: "catalog.item.find", args: { words: "hoa" } })
@@ -145,7 +145,7 @@ describe("agent boundary: an engine agent calls only what its step declares and 
     })
 
     it("refuses a declared effect whose right the workflow did not grant", async () => {
-        const { fake, told } = await attempt({ tool: "payment.order.settle", args: { orderId: "o-1" } })
+        const { fake, told } = await attempt({ tool: "nivo.payment.order.settle", args: { orderId: "o-1" } })
 
         expect(fake.executed).toEqual([])
         expect(told[0]).toMatchObject({ ok: false, refused: { code: "RIGHTS_DENIED" } })
@@ -156,7 +156,7 @@ describe("agent boundary: an engine agent calls only what its step declares and 
         expect(extra.fake.toolCalls).toEqual([])
         expect(extra.told[0]).toMatchObject({ ok: false, refused: { code: "TOOL_ARGS_INVALID" } })
 
-        const wrong = await attempt({ tool: "customer.message.send", args: { conversationId: "c-1" } })
+        const wrong = await attempt({ tool: "nivo.lead.message.send", args: { conversationId: "c-1" } })
         expect(wrong.fake.executed).toEqual([])
         expect(wrong.told[0]).toMatchObject({ ok: false, refused: { code: "EFFECT_PAYLOAD_INVALID" } })
     })

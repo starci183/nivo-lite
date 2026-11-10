@@ -330,7 +330,7 @@ describe("AiClient the client of one try of an agent turn", () => {
             {
                 type: "function" as const,
                 function: {
-                    name: "payment.order.settle",
+                    name: "nivo.payment.order.settle",
                     description: "Mark the order paid.",
                     parameters: { type: "object", properties: { orderId: { type: "string" } }, required: ["orderId"] },
                 },
@@ -345,7 +345,7 @@ describe("AiClient the client of one try of an agent turn", () => {
         expect(postsOf(http)).toHaveLength(1)
         expect(postsOf(http)[0]).toMatchObject({ timeoutMs: 45_000 })
         const sent = sentOf(http, 0).text
-        expect(sent).toContain('"name":"payment.order.settle"')
+        expect(sent).toContain('"name":"nivo.payment.order.settle"')
         expect(sent).toContain('"tool_choice":"auto"')
         expect(sent).toContain('"reasoning":{"effort":"low","exclude":true}')
         expect(sent).toContain('"max_tokens":4000')

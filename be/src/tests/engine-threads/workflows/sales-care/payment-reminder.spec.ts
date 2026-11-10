@@ -133,7 +133,7 @@ describe("payment-reminder on a thread: the stop", () => {
         expect(db.team).toHaveLength(1)
         // No automatic compensation, and no cancel of the order by anyone but a person.
         expect(db.store.order?.[0]).toMatchObject({ status: "confirmed" })
-        expect(db.acts.filter((act) => act.effect === TOOL.orderVoid || act.effect === "order.cancel")).toEqual([])
+        expect(db.acts.filter((act) => act.effect === TOOL.orderVoid || act.effect === "nivo.order.cancel")).toEqual([])
     })
 
     it("confused before reminding: a stop with no line; the founder's free-text answer resumes it; one reminder, run done", async () => {

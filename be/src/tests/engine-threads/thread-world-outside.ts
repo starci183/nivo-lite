@@ -398,7 +398,7 @@ const SEARCH = {
 /**
  * The providers of the rights of a process: the REAL judge (`ProviderAbilitiesService`) over the shop's accounts and attachments, the
  * REAL door (`NodeToolDoorService`) whose right and repeat checks the node host asks, and run tokens that carry the turn's workspace
- * and agent. The door's tool calls answer the shop's knowledge for `brain.search`.
+ * and agent. The door's tool calls answer the shop's knowledge for `nivo.brain.search`.
  */
 export const rightsProvidersOf = (rights: Rights): Array<Provider> => [
     ProviderAbilitiesService,

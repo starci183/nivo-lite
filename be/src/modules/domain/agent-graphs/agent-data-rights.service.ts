@@ -6,7 +6,7 @@ import { AgentGraphsService } from "./agent-graphs.service"
 
 /**
  * The rights of a graph with the ones its flow implies: a flow whose grant declares a NIVO MCP tool that reads a kind of data
- * (`brain.search` reads the Brain) holds the right on that kind, the narrowest one (the conversation the call serves, nothing hidden or
+ * (`nivo.brain.search` reads the Brain) holds the right on that kind, the narrowest one (the conversation the call serves, nothing hidden or
  * masked: what a seed gives), unless the graph already states a right on the kind, which then decides. Without it a flow that declares
  * a read could never run it: a published spec carries no right of its own. A kind no declared tool reads stays a deny.
  */

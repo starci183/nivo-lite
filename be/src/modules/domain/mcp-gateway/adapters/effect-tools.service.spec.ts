@@ -16,13 +16,13 @@ import { CONVERSATION_LEADS_GATE } from "../mcp-gateway.decorators"
 import { EffectToolsService } from "./effect-tools.service"
 
 const MESSAGE_SEND = defineEffect({
-    id: "customer.message.send",
+    id: "nivo.lead.message.send",
     title: { key: "customerMessageSend" },
     payload: z.object({ conversationId: z.string().min(1), text: z.string().min(1) }).strict(),
     rights: [],
 })
 const ORDER_CREATE = defineEffect({
-    id: "order.create",
+    id: "nivo.order.create",
     title: { key: "orderCreate" },
     payload: z.object({ leadId: z.string().min(1) }).strict(),
     rights: [],
@@ -45,7 +45,7 @@ const RUN: GatewayRun = {
     memberId: null,
     handedOffBy: "agent-0",
     leadId: null,
-    stepTools: ["customer.message.send"],
+    stepTools: ["nivo.lead.message.send"],
 }
 
 const CALLER: NativeCaller = { agentId: "agent-1", conversationId: "conv-1", opKey: "step-1:tool:0", run: RUN }
@@ -55,7 +55,7 @@ const SENT: SubjectRef = { kind: "message", id: "m-1", facts: { channel: "zalo_o
 interface Options {
     /** Whether the app runs the graph host (its registry and ledger). */
     readonly host?: boolean
-    /** The executor of `customer.message.send`, or none. */
+    /** The executor of `nivo.lead.message.send`, or none. */
     readonly executor?: NodeEffectExecutor["execute"] | null
 }
 
@@ -100,8 +100,8 @@ describe("EffectToolsService", () => {
 
         const adapters = service.adapters()
 
-        expect(adapters.map((adapter) => adapter.manifest.key)).toEqual(["customer", "order"])
-        expect(adapterOf(adapters, "customer").manifest.tools.map((spec) => spec.name)).toEqual(["message.send"])
+        expect(adapters.map((adapter) => adapter.manifest.key)).toEqual(["lead", "order"])
+        expect(adapterOf(adapters, "lead").manifest.tools.map((spec) => spec.name)).toEqual(["message.send"])
     })
 
     it("serves none in an app without the graph host", async () => {
@@ -112,14 +112,14 @@ describe("EffectToolsService", () => {
 
     it("runs the executor once per step key in the turn the token signed, and answers its fact", async () => {
         const { service, ledger, execute } = await build()
-        const customer = adapterOf(service.adapters(), "customer")
+        const customer = adapterOf(service.adapters(), "lead")
 
         await expect(
             customer.invoke("ws-1", "message.send", { conversationId: "conv-1", text: "Dạ" }, CALLER),
         ).resolves.toEqual({ kind: "message", id: "m-1", facts: { channel: "zalo_oa" } })
 
         const call: EffectCall = { key: "step-1:tool:0", dedupeKey: null }
-        expect(ledger.once).toHaveBeenCalledWith("ws-1", "customer.message.send", call, expect.any(Function), {
+        expect(ledger.once).toHaveBeenCalledWith("ws-1", "nivo.lead.message.send", call, expect.any(Function), {
             args: { conversationId: "conv-1", text: "Dạ" },
         })
         expect(execute).toHaveBeenCalledWith(
@@ -141,7 +141,7 @@ describe("EffectToolsService", () => {
 
     it("refuses a call made in no graph step, before anything runs", async () => {
         const { service, execute } = await build()
-        const customer = adapterOf(service.adapters(), "customer")
+        const customer = adapterOf(service.adapters(), "lead")
         const outside: NativeCaller = { agentId: "agent-1", conversationId: "conv-1" }
 
         await expect(
@@ -152,7 +152,7 @@ describe("EffectToolsService", () => {
 
     it("refuses a conversation other than the run's", async () => {
         const { service, execute } = await build()
-        const customer = adapterOf(service.adapters(), "customer")
+        const customer = adapterOf(service.adapters(), "lead")
 
         await expect(
             customer.invoke("ws-1", "message.send", { conversationId: "conv-9", text: "Dạ" }, CALLER),
@@ -177,16 +177,16 @@ describe("EffectToolsService", () => {
         const args = { conversationId: "conv-1", text: "Dạ" }
 
         await expect(
-            adapterOf(guarded.service.adapters(), "customer").invoke("ws-1", "message.send", args, CALLER),
+            adapterOf(guarded.service.adapters(), "lead").invoke("ws-1", "message.send", args, CALLER),
         ).resolves.toEqual({ kind: "refused", id: McpGatewayErrorCode.NativeRefused, facts: { reason: "held" } })
         await expect(
-            adapterOf(broken.service.adapters(), "customer").invoke("ws-1", "message.send", args, CALLER),
+            adapterOf(broken.service.adapters(), "lead").invoke("ws-1", "message.send", args, CALLER),
         ).rejects.toThrow(TypeError)
     })
 
     it("refuses arguments its payload schema does not take, and a tool its domain does not have", async () => {
         const { service } = await build()
-        const customer = adapterOf(service.adapters(), "customer")
+        const customer = adapterOf(service.adapters(), "lead")
 
         await expect(customer.invoke("ws-1", "message.send", { conversationId: "conv-1" }, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.InvalidArguments,
@@ -246,6 +246,6 @@ describe("EffectToolsService in the composed app (GraphNodesModule registered gl
 
         const adapters = moduleRef.get(EffectToolsService).adapters()
 
-        expect(adapters.map((adapter) => adapter.manifest.key)).toEqual(["customer", "order"])
+        expect(adapters.map((adapter) => adapter.manifest.key)).toEqual(["lead", "order"])
     })
 })

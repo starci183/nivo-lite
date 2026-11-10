@@ -22,12 +22,13 @@ const LOCALE = "vi"
 /** The dossier native connector: where the dossiers of the Second Brain stand and what the review found. Internal use only. */
 export const DOSSIER_MANIFEST: NativeConnectorManifest = {
     key: "dossier",
+    namespace: "nivo.dossier",
     name: "Dossiers",
     kind: "native",
     contractVersion: "dossier-native@1",
     tools: [
         {
-            name: "status",
+            name: "status.get",
             description:
                 "Where the dossiers of the business stand: each one's status and open findings, the totals and the last review.",
             scope: "read",
@@ -37,7 +38,7 @@ export const DOSSIER_MANIFEST: NativeConnectorManifest = {
             internalOnly: true,
         },
         {
-            name: "findings.list",
+            name: "finding.list",
             description:
                 "A page of what the dossier review found, the most severe first; filter by dossier, status and severity.",
             scope: "read",
@@ -66,12 +67,12 @@ export class DossierNativeService implements NativeAdapter {
 
     /** Runs one dossier tool. */
     async invoke(workspaceId: string, tool: string, args: GatewayJson, caller: NativeCaller): Promise<GatewayJson> {
-        if (tool === "status") {
+        if (tool === "status.get") {
             argumentsOf(tool, DOSSIER_STATUS_SCHEMA, args)
             await this.admit(workspaceId, caller)
             return this.status(workspaceId)
         }
-        if (tool === "findings.list") {
+        if (tool === "finding.list") {
             const input = argumentsOf(tool, DOSSIER_FINDINGS_LIST_SCHEMA, args)
             await this.admit(workspaceId, caller)
             return this.list(workspaceId, input)

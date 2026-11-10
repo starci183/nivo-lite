@@ -51,11 +51,11 @@ const STEP: ApprovalStep = {
     },
 }
 
-/** The host's typed refusal of a call of `payment.qr.create` an `ask` tick holds. */
+/** The host's typed refusal of a call of `nivo.payment.qr.create` an `ask` tick holds. */
 const askError = (params: Record<string, unknown> = {}): GraphNodesError =>
     new GraphNodesError({
         code: GraphNodesErrorCode.ToolApprovalRequired,
-        params: { tool: "payment.qr.create", fingerprint: FINGERPRINT, reason: "ask_mode", ...params },
+        params: { tool: "nivo.payment.qr.create", fingerprint: FINGERPRINT, reason: "ask_mode", ...params },
     })
 
 const itemOf = builder<WorkItem>({
@@ -102,7 +102,7 @@ const stopOf = (over: Partial<RunStop> = {}): RunStop => ({
     question: null,
     detail: {
         suggestions: [],
-        facts: factsOf(["tool", "payment.qr.create"], ["workItemId", "item-1"], ["fingerprint", FINGERPRINT]),
+        facts: factsOf(["tool", "nivo.payment.qr.create"], ["workItemId", "item-1"], ["fingerprint", FINGERPRINT]),
     },
     cardMessageId: "msg-1",
     customerLines: [],
@@ -127,7 +127,7 @@ const BOARD: ProviderBoard = {
                     id: "qr.create",
                     label: { vi: "Create a payment QR (vi)", en: "Create a payment QR" },
                     scope: "write",
-                    tools: ["payment.qr.create"],
+                    tools: ["nivo.payment.qr.create"],
                 },
             ],
             accounts: [
@@ -245,7 +245,7 @@ describe("ThreadApprovalsService.asked", () => {
                     engine: "langgraph",
                     runId: "run-1",
                     stepKey: "qr",
-                    tool: "payment.qr.create",
+                    tool: "nivo.payment.qr.create",
                     fingerprint: FINGERPRINT,
                     account: "SePay · MB Bank 5252",
                     connectionId: "conn-1",
@@ -262,7 +262,7 @@ describe("ThreadApprovalsService.asked", () => {
             leadId: "lead-1",
         })
         expect(opened?.facts).toEqual([
-            { name: "tool", value: "payment.qr.create" },
+            { name: "tool", value: "nivo.payment.qr.create" },
             { name: "account", value: "SePay · MB Bank 5252" },
             { name: "ability", value: "Create a payment QR (vi)" },
             { name: "orderId", value: "DH-1" },

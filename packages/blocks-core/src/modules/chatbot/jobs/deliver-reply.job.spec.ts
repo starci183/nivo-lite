@@ -37,12 +37,12 @@ const reply = async (world: MemoryWorld, conversationId = "c2"): Promise<string>
 }
 
 describe("deliverReply", () => {
-    it("pushes the line through the door tool chat.send with the line id as the key and records it sent", async () => {
+    it("pushes the line through the door tool nivo.chat.send with the line id as the key and records it sent", async () => {
         const world = memoryWorld()
         const id = await reply(world)
         expect(await run(world, id)).toBe("sent")
         expect(world.sends).toEqual([
-            { tool: "chat.send", input: { conversationId: "c2", text: "Invoice is on its way.", key: id } },
+            { tool: "nivo.chat.send", input: { conversationId: "c2", text: "Invoice is on its way.", key: id } },
         ])
         expect(world.lines[0]).toMatchObject({ version: "2", data: { deliveryStatus: "sent", deliveryError: null } })
     })

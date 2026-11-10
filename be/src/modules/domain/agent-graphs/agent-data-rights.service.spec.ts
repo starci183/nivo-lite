@@ -17,7 +17,7 @@ const FLOW = {
     schema: "nivo/agent-graph@1" as const,
     moduleKey: "chatbot",
     trigger: { kind: "tag" as const, sources: ["channel" as const] },
-    grant: { rights: [], tools: ["brain.search", "ledger.append", "brain.facts.list"], effects: [] },
+    grant: { rights: [], tools: ["nivo.brain.search", "nivo.ledger.entry.append", "nivo.brain.fact.list"], effects: [] },
     nodes: [{ key: "end", kind: "output" as const, step: "stop" }],
 }
 

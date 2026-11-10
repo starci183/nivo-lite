@@ -116,7 +116,7 @@ const givenOf = (post: BrainChangePost, fact: FactRecord, current: BrainChangeCu
 @Injectable()
 /**
  * The truth-graph change message (BG4; owner 2026-11-11: "agent in ra message sửa truth graph và lí do"). When a change request is filed
- * from a chat (through `brain.change.propose`), learnt from repeated human answers (BG5) or found in a document, ONE `brain.change`
+ * from a chat (through `nivo.brain.change.propose`), learnt from repeated human answers (BG5) or found in a document, ONE `brain.change`
  * card goes to the room it came from (the founder's direct room with the agent when it came from no room): the truth, the value in force
  * → the proposed one, the agent's reason and the evidence. It never applies anything. The same request again rewrites its card (more
  * evidence, the newest reason); a newer request for the same truth marks the older open card `superseded`. Only the workspace owner

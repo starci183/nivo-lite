@@ -14,7 +14,7 @@ import { refusal, writeRefusal } from "./refusal"
 /**
  * A person approves the reply the AI proposed, with or without changes to its words. One transaction: the conversation moves first
  * (a changed version refuses the whole action), then the line becomes a posted line and the delivery job is enqueued through the
- * outbox. No channel is called here; the job pushes the line through `door.call("chat.send")` after the commit.
+ * outbox. No channel is called here; the job pushes the line through `door.call("nivo.chat.send")` after the commit.
  */
 export const APPROVE_AND_SEND: ActionDefinition = defineAction({
     id: "chatbot.approve-and-send",

@@ -1,5 +1,6 @@
 import { evaluateGate } from "@modules/domain/authority-rules"
 import { isDefaultRead } from "@modules/domain/context-sources"
+import { connectorOfTool } from "./data-rights.policy"
 import type { GatewayCaller, GatewayJson, GatewayToolSpec, GrantVerdict, ToolGrant } from "./mcp-gateway.contracts"
 
 const numberOf = (value: unknown): number | null => (typeof value === "number" && Number.isFinite(value) ? value : null)
@@ -60,14 +61,14 @@ export { isLockedContextRead } from "@modules/domain/context-sources"
 
 /**
  * True for a tool every agent holds by default (owner rules 2026-11-10: "the second brain MCP is granted to agents by default", "MCP
- * hết"): a READ tool of the second brain (`brain.search`, `brain.facts.list`, `brain.facts.get`, `brain.documents.read`) or a read
+ * hết"): a READ tool of the second brain (`nivo.brain.search`, `nivo.brain.fact.list`, `nivo.brain.fact.get`, `nivo.brain.document.read`) or a read
  * of a registered context source (`nivo.conversation.message.list`, `nivo.lead.*`). A tool that writes is never one, whatever its
  * connector. Inside a graph step the default holds only for a tool on the step's allow-list (its node declares it and its workflow grants
  * it). What the read may see is not decided here: the caller's audience lens, the door's lock and the data rights still narrow it.
  */
 export const grantedByDefault = (spec: GatewayToolSpec, caller: GatewayCaller, name: string): boolean =>
     spec.scope === "read" &&
-    (DEFAULT_READ_CONNECTORS.has(name.split(".", 1).join("")) || isDefaultRead(name)) &&
+    (DEFAULT_READ_CONNECTORS.has(connectorOfTool(name)) || isDefaultRead(name)) &&
     (caller.run === undefined || caller.run.stepTools.includes(name))
 
 /**

@@ -15,6 +15,7 @@ import type { EinvoiceDraft } from "./einvoice-xml.policy"
 /** The e-invoice native connector: the TT78 XML invoices that arrived in the workspace's invoice mailbox (data-hub IMAP sync). */
 export const EINVOICE_MANIFEST: NativeConnectorManifest = {
     key: "einvoice",
+    namespace: "nivo.einvoice",
     name: "E-invoices (TT78)",
     kind: "native",
     contractVersion: "einvoice-native@1",
@@ -31,7 +32,7 @@ export const EINVOICE_MANIFEST: NativeConnectorManifest = {
         },
         {
             name: "get",
-            description: "One e-invoice with its lines, by the id einvoice.list answered.",
+            description: "One e-invoice with its lines, by the id nivo.einvoice.list answered.",
             scope: "read",
             defaultMode: "auto",
             inputSchema: EINVOICE_GET_INPUT_SCHEMA,
@@ -41,7 +42,7 @@ export const EINVOICE_MANIFEST: NativeConnectorManifest = {
     ],
 }
 
-/** The most mails one `einvoice.list` reads. */
+/** The most mails one `nivo.einvoice.list` reads. */
 const MAIL_LIMIT = 200
 
 /** One parsed invoice of a mail, with its id `<record>:<attachment index>`. */
@@ -87,7 +88,7 @@ const summaryOf = (entry: MailInvoice): GatewayJson => ({
 /** A TT78 VAT rate as text: `10%`, or `KCT` when the line is not subject to VAT. */
 const vatRateText = (rate: number | null): string => (rate === null ? "KCT" : `${String(rate)}%`)
 
-/** One invoice in full, as einvoice.get answers it. */
+/** One invoice in full, as nivo.einvoice.get answers it. */
 const detailOf = (entry: MailInvoice): GatewayJson => {
     const { invoice } = entry
     return {

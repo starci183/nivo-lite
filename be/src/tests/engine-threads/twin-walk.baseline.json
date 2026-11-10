@@ -15,15 +15,15 @@
                 "workflow": "consult",
                 "version": "latest",
                 "tag": {
-                    "kind": "agent.tag",
-                    "id": "agent.tag-1"
+                    "kind": "nivo.agent.tag",
+                    "id": "nivo.agent.tag-1"
                 }
             }
         },
         "outcome": {
             "acts": [
                 {
-                    "effect": "agent.tag",
+                    "effect": "nivo.agent.tag",
                     "payload": {
                         "toModuleKey": "sales",
                         "text": "Shop oi cho minh dat 1 bo hoa hong",
@@ -47,7 +47,7 @@
                         },
                         "visibility": "chat"
                     },
-                    "key": "run-1:to-consult:c234cad7e48e8bea",
+                    "key": "run-1:to-consult:4256642e6af6d12f",
                     "dedupeKey": "call-workflow:run-1:sales.consult"
                 }
             ],
@@ -56,7 +56,7 @@
             "ledger": [
                 {
                     "effectKey": "dedupe:call-workflow:run-1:sales.consult",
-                    "effectId": "agent.tag",
+                    "effectId": "nivo.agent.tag",
                     "args": {
                         "toModuleKey": "sales",
                         "text": "Shop oi cho minh dat 1 bo hoa hong",
@@ -80,8 +80,8 @@
                         },
                         "visibility": "chat"
                     },
-                    "subjectEntity": "agent.tag",
-                    "subjectId": "agent.tag-1"
+                    "subjectEntity": "nivo.agent.tag",
+                    "subjectId": "nivo.agent.tag-1"
                 }
             ],
             "modelAsked": [
@@ -105,15 +105,15 @@
                 "workflow": "reconcile",
                 "version": "latest",
                 "tag": {
-                    "kind": "agent.tag",
-                    "id": "agent.tag-1"
+                    "kind": "nivo.agent.tag",
+                    "id": "nivo.agent.tag-1"
                 }
             }
         },
         "outcome": {
             "acts": [
                 {
-                    "effect": "agent.tag",
+                    "effect": "nivo.agent.tag",
                     "payload": {
                         "toModuleKey": "accounting",
                         "text": "Minh chuyen khoan roi nhe",
@@ -137,7 +137,7 @@
                         },
                         "visibility": "chat"
                     },
-                    "key": "run-1:to-reconcile:48cec3bd5fd89fda",
+                    "key": "run-1:to-reconcile:0b008363e2305819",
                     "dedupeKey": "call-workflow:run-1:accounting.reconcile"
                 }
             ],
@@ -146,7 +146,7 @@
             "ledger": [
                 {
                     "effectKey": "dedupe:call-workflow:run-1:accounting.reconcile",
-                    "effectId": "agent.tag",
+                    "effectId": "nivo.agent.tag",
                     "args": {
                         "toModuleKey": "accounting",
                         "text": "Minh chuyen khoan roi nhe",
@@ -170,8 +170,8 @@
                         },
                         "visibility": "chat"
                     },
-                    "subjectEntity": "agent.tag",
-                    "subjectId": "agent.tag-1"
+                    "subjectEntity": "nivo.agent.tag",
+                    "subjectId": "nivo.agent.tag-1"
                 }
             ],
             "modelAsked": [
@@ -206,16 +206,16 @@
         "outcome": {
             "acts": [
                 {
-                    "effect": "customer.message.send",
+                    "effect": "nivo.lead.message.send",
                     "payload": {
                         "conversationId": "conv-1",
                         "text": "Shop xin loi, shop kiem tra ngay."
                     },
-                    "key": "run-1:complaint:ad07ffcb4fbffd5c",
+                    "key": "run-1:complaint:6bf03839c93a7075",
                     "dedupeKey": null
                 },
                 {
-                    "effect": "team.message.post",
+                    "effect": "nivo.team.message.post",
                     "payload": {
                         "kind": "message.text",
                         "intent": "notify",
@@ -223,7 +223,7 @@
                         "text": "Lan: hoa heo",
                         "audience": "own"
                     },
-                    "key": "run-1:complaint:e09ba44b11f934f0",
+                    "key": "run-1:complaint:42cc3c108aac462a",
                     "dedupeKey": null
                 }
             ],
@@ -231,12 +231,12 @@
                 {
                     "conversationId": "conv-1",
                     "text": "Shop xin loi, shop kiem tra ngay.",
-                    "channelRef": "line:run-1:complaint:ad07ffcb4fbffd5c"
+                    "channelRef": "line:run-1:complaint:6bf03839c93a7075"
                 }
             ],
             "team": [
                 {
-                    "key": "run-1:complaint:e09ba44b11f934f0",
+                    "key": "run-1:complaint:42cc3c108aac462a",
                     "versions": [
                         {
                             "kind": "message.text",
@@ -250,8 +250,8 @@
             ],
             "ledger": [
                 {
-                    "effectKey": "call:run-1:complaint:ad07ffcb4fbffd5c",
-                    "effectId": "customer.message.send",
+                    "effectKey": "call:run-1:complaint:6bf03839c93a7075",
+                    "effectId": "nivo.lead.message.send",
                     "args": {
                         "conversationId": "conv-1",
                         "text": "Shop xin loi, shop kiem tra ngay."
@@ -260,8 +260,8 @@
                     "subjectId": "m-1"
                 },
                 {
-                    "effectKey": "call:run-1:complaint:e09ba44b11f934f0",
-                    "effectId": "team.message.post",
+                    "effectKey": "call:run-1:complaint:42cc3c108aac462a",
+                    "effectId": "nivo.team.message.post",
                     "args": {
                         "kind": "message.text",
                         "intent": "notify",
@@ -299,12 +299,12 @@
         "outcome": {
             "acts": [
                 {
-                    "effect": "customer.message.send",
+                    "effect": "nivo.lead.message.send",
                     "payload": {
                         "conversationId": "conv-1",
                         "text": "Shop mo cua tu 8h den 21h a."
                     },
-                    "key": "run-1:answer:b9d227b2b42a15f4",
+                    "key": "run-1:answer:ab85200d1bfd81bb",
                     "dedupeKey": null
                 }
             ],
@@ -312,14 +312,14 @@
                 {
                     "conversationId": "conv-1",
                     "text": "Shop mo cua tu 8h den 21h a.",
-                    "channelRef": "line:run-1:answer:b9d227b2b42a15f4"
+                    "channelRef": "line:run-1:answer:ab85200d1bfd81bb"
                 }
             ],
             "team": [],
             "ledger": [
                 {
-                    "effectKey": "call:run-1:answer:b9d227b2b42a15f4",
-                    "effectId": "customer.message.send",
+                    "effectKey": "call:run-1:answer:ab85200d1bfd81bb",
+                    "effectId": "nivo.lead.message.send",
                     "args": {
                         "conversationId": "conv-1",
                         "text": "Shop mo cua tu 8h den 21h a."

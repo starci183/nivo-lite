@@ -68,7 +68,7 @@ const subjectOf = (id: string): SubjectRef => ({ kind: "order", id })
 
 @Injectable()
 /**
- * The executors of `order.record`, `order.confirm` and `order.void` on the entity engine, each in one workspace-scoped transaction.
+ * The executors of `order.record`, `nivo.order.confirm` and `order.void` on the entity engine, each in one workspace-scoped transaction.
  * - Recording makes a draft for a customer (the engine mints its number). The caller names what and how many; every price and the total
  *   are the catalogue's, read here, so nothing a caller says can set an amount. An item the catalogue does not list or has not priced is
  *   answered as a refusal fact and nothing is written.
@@ -250,7 +250,7 @@ export class OrderEffectsService implements OnModuleInit {
 
     /**
      * The pipeline stage of the customer's deal, as a fact: confirming an order moves no deal. Whether the deal is now won is the agent's
-     * call from the policy (`autoWon`), through `lead.stage.update`. Null when the order has no customer the workspace holds.
+     * call from the policy (`autoWon`), through `nivo.lead.stage.update`. Null when the order has no customer the workspace holds.
      */
     private async dealStageOf(api: EntitiesApi, leadId: string | null): Promise<string | null> {
         const record = leadId === null ? null : await api.get(LEAD, leadId)

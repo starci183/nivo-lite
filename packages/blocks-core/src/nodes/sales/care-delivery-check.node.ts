@@ -103,7 +103,7 @@ const QUESTION = "Did the tea boxes reach you well, and are you happy with them?
 
 /**
  * `sales.care-delivery-check` (Hỏi thăm khách): the morning after delivery the agent asks the customer, in one message, how the order
- * went (`customer.message.send`). Timing is code before it: a timer that woke early moves to its real moment, and a check-in whose delivery day was not
+ * went (`nivo.lead.message.send`). Timing is code before it: a timer that woke early moves to its real moment, and a check-in whose delivery day was not
  * known waits a day at a time, at most three, for the order to ship. Nothing is asked about an order that is not paid or of a customer who
  * asked to be left alone. A complaint in the reply reaches the front desk, which reads every customer message.
  */

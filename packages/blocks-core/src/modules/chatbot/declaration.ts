@@ -73,6 +73,6 @@ export const chatbotModule: ModuleDeclaration = defineModule({
         SETTINGS_READ,
     ],
     actions: [REPLY, HANDOFF, RELEASE, DECIDE, APPROVE_AND_SEND, REJECT_PROPOSAL, SAVE_SETTINGS],
-    tools: ["chat.send"],
+    tools: ["nivo.chat.send"],
     specs: [CHATBOT_WORKBENCH_SPEC],
 })

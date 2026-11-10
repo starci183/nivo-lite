@@ -82,7 +82,7 @@ const STEP_CALLER: GatewayCaller = {
         memberId: null,
         handedOffBy: null,
         leadId: null,
-        stepTools: ["customer.message.send"],
+        stepTools: ["nivo.lead.message.send"],
     },
 }
 
@@ -90,16 +90,16 @@ describe("grant.policy grantOfCall", () => {
     it("grants a step-granted tool the step declared, to run alone, when the owner set no row", async () => {
         const subject = await build()
 
-        expect(subject.grantOfCall(null, EFFECT_SPEC, STEP_CALLER, "customer.message.send")).toEqual(
-            grant("customer.message.send", "auto"),
+        expect(subject.grantOfCall(null, EFFECT_SPEC, STEP_CALLER, "nivo.lead.message.send")).toEqual(
+            grant("nivo.lead.message.send", "auto"),
         )
     })
 
     it("keeps the owner's row when one applies", async () => {
         const subject = await build()
-        const row = grant("customer.*", "ask")
+        const row = grant("nivo.lead.*", "ask")
 
-        expect(subject.grantOfCall(row, EFFECT_SPEC, STEP_CALLER, "customer.message.send")).toBe(row)
+        expect(subject.grantOfCall(row, EFFECT_SPEC, STEP_CALLER, "nivo.lead.message.send")).toBe(row)
     })
 
     it("grants nothing outside the step, for a tool not step-granted, or a caller in no step", async () => {
@@ -107,8 +107,8 @@ describe("grant.policy grantOfCall", () => {
         const outside: GatewayCaller = { ...STEP_CALLER, run: undefined }
 
         expect(subject.grantOfCall(null, EFFECT_SPEC, STEP_CALLER, "customer.message.ghost")).toBeNull()
-        expect(subject.grantOfCall(null, { ...EFFECT_SPEC, stepGranted: false }, STEP_CALLER, "customer.message.send")).toBeNull()
-        expect(subject.grantOfCall(null, EFFECT_SPEC, outside, "customer.message.send")).toBeNull()
+        expect(subject.grantOfCall(null, { ...EFFECT_SPEC, stepGranted: false }, STEP_CALLER, "nivo.lead.message.send")).toBeNull()
+        expect(subject.grantOfCall(null, EFFECT_SPEC, outside, "nivo.lead.message.send")).toBeNull()
     })
 })
 
@@ -122,21 +122,21 @@ describe("grant.policy grantOfCall > the second brain by default", () => {
         const subject = await build()
         const run = STEP_CALLER.run
         const step: GatewayCaller =
-            run === undefined ? STEP_CALLER : { ...STEP_CALLER, run: { ...run, stepTools: ["brain.search"] } }
+            run === undefined ? STEP_CALLER : { ...STEP_CALLER, run: { ...run, stepTools: ["nivo.brain.search"] } }
 
-        expect(step.run?.stepTools).toEqual(["brain.search"])
-        expect(subject.grantOfCall(null, BRAIN_READ, step, "brain.search")).toEqual(grant("brain.search", "auto"))
-        expect(subject.grantOfCall(null, BRAIN_READ, NO_STEP, "brain.search")).toEqual(grant("brain.search", "auto"))
-        expect(subject.judgeGrant(subject.grantOfCall(null, BRAIN_READ, step, "brain.search"), {}, false)).toEqual({
+        expect(step.run?.stepTools).toEqual(["nivo.brain.search"])
+        expect(subject.grantOfCall(null, BRAIN_READ, step, "nivo.brain.search")).toEqual(grant("nivo.brain.search", "auto"))
+        expect(subject.grantOfCall(null, BRAIN_READ, NO_STEP, "nivo.brain.search")).toEqual(grant("nivo.brain.search", "auto"))
+        expect(subject.judgeGrant(subject.grantOfCall(null, BRAIN_READ, step, "nivo.brain.search"), {}, false)).toEqual({
             kind: "allow",
         })
     })
 
     it("lets the owner's row win, so `never` still refuses the second brain", async () => {
         const subject = await build()
-        const never = grant("brain.*", "never")
+        const never = grant("nivo.brain.*", "never")
 
-        expect(subject.grantOfCall(never, BRAIN_READ, NO_STEP, "brain.search")).toBe(never)
+        expect(subject.grantOfCall(never, BRAIN_READ, NO_STEP, "nivo.brain.search")).toBe(never)
         expect(subject.judgeGrant(never, {}, false)).toEqual({ kind: "refuse" })
     })
 
@@ -144,9 +144,9 @@ describe("grant.policy grantOfCall > the second brain by default", () => {
         const subject = await build()
 
         expect(subject.grantOfCall(null, BRAIN_WRITE, NO_STEP, "brain.facts.propose")).toBeNull()
-        expect(subject.grantOfCall(null, BRAIN_READ, NO_STEP, "ledger.status")).toBeNull()
+        expect(subject.grantOfCall(null, BRAIN_READ, NO_STEP, "nivo.ledger.status.get")).toBeNull()
         expect(subject.grantOfCall(null, BRAIN_READ, NO_STEP, "brainy.search")).toBeNull()
-        expect(subject.grantOfCall(null, BRAIN_READ, STEP_CALLER, "brain.search")).toBeNull()
+        expect(subject.grantOfCall(null, BRAIN_READ, STEP_CALLER, "nivo.brain.search")).toBeNull()
     })
 })
 

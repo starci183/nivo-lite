@@ -22,7 +22,7 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { SalesEffectsError, SalesEffectsErrorCode } from "./errors/sales-effects.error"
 import { isAnswerOf, isRowsOf } from "./daily-close.policy"
 
-/** The bank's own list, as the `bank.transactions` tool answers it: its result schema judges every answer the close report reads. */
+/** The bank's own list, as the `nivo.bank.transaction.list` tool answers it: its result schema judges every answer the close report reads. */
 const BANK_RESULT = coreTools.find((tool) => tool.id === TOOL.bankTransactions)?.result
 
 /** The tool of the bank adapter that lists movements. */
@@ -53,7 +53,7 @@ const factsOf = (day: string, report: CloseReport): EffectFacts => ({
 
 @Injectable()
 /**
- * The executor of `report.daily.close`: the evening report step's agent names the day (today when it names none) and everything with
+ * The executor of `nivo.report.daily.close`: the evening report step's agent names the day (today when it names none) and everything with
  * money in it happens here, from the records. It runs the close report (`closeReportOf`): the day's figures from the books (the credits
  * of the workspace) and the bank's own list, and on the last evening of the month the reconciliation of the bank against the ledger. It
  * posts each card to the team itself, server to server (no agent-facing payload carries a card), each once for its period

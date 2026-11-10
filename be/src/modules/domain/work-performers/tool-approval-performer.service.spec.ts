@@ -17,7 +17,7 @@ const THREAD_FIELDS: Proposal["fields"] = {
     engine: "langgraph",
     runId: "run-1",
     stepKey: "qr",
-    tool: "payment.qr.create",
+    tool: "nivo.payment.qr.create",
     fingerprint: "f".repeat(64),
 }
 
@@ -25,7 +25,7 @@ const THREAD_FIELDS: Proposal["fields"] = {
 const OLD_FIELDS: Proposal["fields"] = {
     runId: "run-0",
     nodeKey: "qr",
-    tool: "payment.qr.create",
+    tool: "nivo.payment.qr.create",
     fingerprint: "f".repeat(64),
 }
 
@@ -46,7 +46,7 @@ const itemOf = builder<WorkItem>({
     reason: "branch_ask",
     reasons: [],
     missing_fields: [],
-    proposal: { summary: "The AI needs your approval before it runs payment.qr.create", fields: THREAD_FIELDS },
+    proposal: { summary: "The AI needs your approval before it runs nivo.payment.qr.create", fields: THREAD_FIELDS },
     result: null,
     error: null,
     evidence_state: "pending",

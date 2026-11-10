@@ -67,7 +67,7 @@ describe("ProviderToolsService answer", () => {
     it("answers the status of the connections as the route words them", async () => {
         const { tools } = await build()
 
-        await expect(tools.answer(WS, route, "status", {}, CALLER)).resolves.toEqual({
+        await expect(tools.answer(WS, route, "status.get", {}, CALLER)).resolves.toEqual({
             connections: [{ id: CONNECTION, handle: "shop_bot" }],
         })
     })
@@ -75,9 +75,9 @@ describe("ProviderToolsService answer", () => {
     it("refuses invalid arguments before reading anything", async () => {
         const { tools, bindings } = await build()
 
-        await expect(tools.answer(WS, route, "status", { x: 1 }, CALLER)).rejects.toMatchObject({
+        await expect(tools.answer(WS, route, "status.get", { x: 1 }, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.InvalidArguments,
-            params: { tool: "status" },
+            params: { tool: "status.get" },
         })
         expect(bindings.ofProvider).not.toHaveBeenCalled()
     })
@@ -95,7 +95,7 @@ describe("ProviderToolsService answer", () => {
         views.internalOf.mockRejectedValue(nativeRefusal("internal_only"))
 
         await expect(
-            tools.answer(WS, route, "status", {}, { agentId: "a1", conversationId: "c1" }),
+            tools.answer(WS, route, "status.get", {}, { agentId: "a1", conversationId: "c1" }),
         ).rejects.toMatchObject({
             params: { reason: "internal_only" },
         })

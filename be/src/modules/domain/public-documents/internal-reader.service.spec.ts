@@ -39,10 +39,10 @@ describe("InternalReaderService read", () => {
             kind: "ok",
             text: { sourceId: SOURCE, title: "Delivery policy", contentHash: "h1", text: "Same day delivery." },
         })
-        expect(gateway.agentsGranted).toHaveBeenCalledWith(WS, ["brain.documents.read"])
+        expect(gateway.agentsGranted).toHaveBeenCalledWith(WS, ["nivo.brain.document.read"])
         expect(gateway.call).toHaveBeenCalledWith(
             { workspaceId: WS, agentId: "a1", conversationId: null, workItemId: null },
-            "brain.documents.read",
+            "nivo.brain.document.read",
             { sourceId: SOURCE },
         )
     })
@@ -79,7 +79,7 @@ describe("InternalReaderService read", () => {
 
         await expect(reader.read(WS, SOURCE)).resolves.toEqual({ kind: "refused" })
         expect(logger.warn).toHaveBeenCalledWith("public_documents.read.refused", {
-            tool: "brain.documents.read",
+            tool: "nivo.brain.document.read",
             code: "tool_error",
         })
     })
@@ -111,8 +111,8 @@ describe("InternalReaderService hits", () => {
             kind: "ok",
             sourceIds: ["s1", "s2", "s3"],
         })
-        expect(gateway.agentsGranted).toHaveBeenCalledWith(WS, ["brain.search"])
-        expect(gateway.call).toHaveBeenCalledWith(expect.anything(), "brain.search", {
+        expect(gateway.agentsGranted).toHaveBeenCalledWith(WS, ["nivo.brain.search"])
+        expect(gateway.call).toHaveBeenCalledWith(expect.anything(), "nivo.brain.search", {
             query: "Do you deliver tonight?",
             limit: 6,
         })

@@ -16,7 +16,7 @@ import type { ChatSendInput } from "./chat-send-native.schema"
 /** The shape of the id of a record: only a replay key of this shape can name a line already stored in the conversation. */
 const MESSAGE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-/** The expected reasons `chat.send` and `chat.profile` refuse with. */
+/** The expected reasons `nivo.chat.send` and `nivo.chat.profile.get` refuse with. */
 type ChatSendRefusal = "not_found" | "held_by_person" | "connection_refused" | "delivery_unknown" | "profile_unavailable"
 
 /** The refusal of an expected case: an answer to the caller, never a failure of the connector. */
@@ -25,14 +25,15 @@ const refusal = (reason: ChatSendRefusal): McpGatewayError =>
 
 /**
  * The chat capability of the NIVO MCP door, for the declared jobs of the modules only (never a step's agent, which says something to a
- * customer through `customer.message.send` alone): `chat.send` delivers a line of a customer conversation on its own channel, and
- * `chat.profile` reads what that channel says of the customer (name and picture). `chat.send` is the outbox delivery of a line a person
+ * customer through `nivo.lead.message.send` alone): `nivo.chat.send` delivers a line of a customer conversation on its own channel, and
+ * `nivo.chat.profile.get` reads what that channel says of the customer (name and picture). `nivo.chat.send` is the outbox delivery of a line a person
  * stored (a reply, an approved draft: the action that stored it checked the person may speak), named by its id as the key; a declared
  * job's own notice (a payment confirmation) is stored once under its key and holds the agent's rule that nothing is said over a person
  * who holds the conversation. The Zalo window, its ZNS fallback and the recipient are the channel layer's, as for every send.
  */
 export const CHAT_MANIFEST: NativeConnectorManifest = {
     key: "chat",
+    namespace: "nivo.chat",
     name: "Chat",
     kind: "native",
     contractVersion: "chat-native@1",
@@ -46,18 +47,18 @@ export const CHAT_MANIFEST: NativeConnectorManifest = {
             inputSchema: CHAT_SEND_INPUT_SCHEMA,
             argumentSchema: CHAT_SEND_SCHEMA,
             idempotencyArg: "key",
-            domain: "chat.send",
+            domain: "nivo.chat.send",
             internalOnly: true,
         },
         {
-            name: "profile",
+            name: "profile.get",
             description:
                 "Reads what the channel says of the customer of a conversation: their display name and picture link, each empty when the channel gives none. Refused when the channel cannot say.",
             scope: "read",
             defaultMode: "auto",
             inputSchema: CHAT_PROFILE_INPUT_SCHEMA,
             argumentSchema: CHAT_PROFILE_SCHEMA,
-            domain: "chat.profile",
+            domain: "nivo.chat.profile.get",
             internalOnly: true,
         },
     ],
@@ -77,7 +78,7 @@ export class ChatSendNativeService implements NativeAdapter {
 
     /** Runs one chat tool. */
     async invoke(workspaceId: string, tool: string, args: GatewayJson, _caller: NativeCaller): Promise<GatewayJson> {
-        if (tool === "profile") return this.profile(workspaceId, args)
+        if (tool === "profile.get") return this.profile(workspaceId, args)
         if (tool !== "send") throw new McpGatewayError({ code: McpGatewayErrorCode.UnknownTool, params: { tool } })
         const parsed = CHAT_SEND_SCHEMA.safeParse(args)
         if (!parsed.success) throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool } })
@@ -89,7 +90,7 @@ export class ChatSendNativeService implements NativeAdapter {
     private async profile(workspaceId: string, args: GatewayJson): Promise<GatewayJson> {
         const parsed = CHAT_PROFILE_SCHEMA.safeParse(args)
         if (!parsed.success)
-            throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool: "profile" } })
+            throw new McpGatewayError({ code: McpGatewayErrorCode.InvalidArguments, params: { tool: "profile.get" } })
         const target = await this.conversations.targetOf(workspaceId, parsed.data.conversationId)
         if (target.kind !== "ok") throw refusal("not_found")
         const profile = await this.customers.profileOf(target.value)

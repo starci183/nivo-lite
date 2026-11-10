@@ -47,7 +47,7 @@ describe("the team chat turn of every module with an agent", () => {
     })
 
     it("carries the truth-change guidance, the rights lens and the no-action rule in its stable goal", () => {
-        expect(TEAM_CHAT_GOAL).toContain("brain.change.propose")
+        expect(TEAM_CHAT_GOAL).toContain("nivo.brain.change.propose")
         expect(TEAM_CHAT_GOAL).toContain("reason")
         expect(TEAM_CHAT_GOAL).toContain("Không gọi cho: chỉ dẫn một lần")
         expect(TEAM_CHAT_GOAL).toContain("When `standing` is staff")

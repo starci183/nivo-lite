@@ -81,7 +81,7 @@ const build = async () => {
     const resolver = registry.addSubjectResolver.mock.calls[0]?.[0]
     assert(executor !== undefined && resolver !== undefined, "The service must register an executor and a resolver")
     const updater = registry.addExecutor.mock.calls[1]?.[0]
-    assert(updater !== undefined, "The service must register the executor of lead.update")
+    assert(updater !== undefined, "The service must register the executor of nivo.lead.update")
     return { engine, registry, api, executor, resolver, updater, memory }
 }
 
@@ -89,9 +89,9 @@ const ensure = (executor: NodeEffectExecutor, payload: Readonly<Record<string, u
     executor.execute(TURN, payload, CALL)
 
 describe("LeadEffectsService registration", () => {
-    it("registers the executor of lead.ensure and the resolver of the customer of a turn", async () => {
+    it("registers the executor of nivo.lead.ensure and the resolver of the customer of a turn", async () => {
         const { registry, executor } = await build()
-        expect(executor.effect).toBe("lead.ensure")
+        expect(executor.effect).toBe("nivo.lead.ensure")
         expect(registry.addSubjectResolver).toHaveBeenCalledTimes(1)
     })
 
@@ -107,7 +107,7 @@ describe("LeadEffectsService registration", () => {
     })
 })
 
-describe("LeadEffectsService lead.ensure makes the customer", () => {
+describe("LeadEffectsService nivo.lead.ensure makes the customer", () => {
     it("answers the customer the conversation is already linked to and writes nothing", async () => {
         const { executor, api, engine } = await build()
         api.list.mockResolvedValue(conversationPage(LEAD))
@@ -166,7 +166,7 @@ describe("LeadEffectsService lead.ensure makes the customer", () => {
     })
 })
 
-describe("LeadEffectsService lead.ensure writes the leadId field the nodes read", () => {
+describe("LeadEffectsService nivo.lead.ensure writes the leadId field the nodes read", () => {
     // The live Zalo order of 2026-11-09: the conversation was tied to its customer by the link only, its leadId field empty, so the nodes
     // that find a customer's conversation by that field (the after-sale thanks) found none and the customer heard nothing after paying.
     it("writes the leadId field of a conversation the link alone tied to its customer", async () => {
@@ -192,7 +192,7 @@ describe("LeadEffectsService lead.ensure writes the leadId field the nodes read"
     })
 })
 
-describe("LeadEffectsService lead.ensure refuses", () => {
+describe("LeadEffectsService nivo.lead.ensure refuses", () => {
     it.each([
         ["a payload with no conversation", { channel: "zalo" }],
         ["a name that is empty", { conversationId: CONVERSATION, name: "", channel: "zalo" }],
@@ -254,14 +254,14 @@ describe("LeadEffectsService the subject of a turn", () => {
     })
 })
 
-describe("LeadEffectsService lead.update writes the consult", () => {
+describe("LeadEffectsService nivo.lead.update writes the consult", () => {
     it("writes the consult stage on the record under the version it read, the facts into lead memory, and answers the customer", async () => {
         const { updater, api, memory } = await build()
         api.get.mockResolvedValue(recordOf(LEAD, { contactName: "Lan" }))
         api.update.mockResolvedValue(written(LEAD, false))
         const facts = { recipientName: "mother", careOptOut: false }
 
-        expect(updater.effect).toBe("lead.update")
+        expect(updater.effect).toBe("nivo.lead.update")
         await expect(updater.execute(TURN, { leadId: LEAD, consultStage: "recommend", facts }, CALL)).resolves.toEqual({
             kind: "sales-lead",
             id: LEAD,
@@ -302,11 +302,11 @@ describe("LeadEffectsService lead.update writes the consult", () => {
     })
 })
 
-describe("LeadEffectsService lead.stage.update moves a deal and decides nothing", () => {
+describe("LeadEffectsService nivo.lead.stage.update moves a deal and decides nothing", () => {
     const stageExecutor = async () => {
         const built = await build()
-        const mover = built.registry.addExecutor.mock.calls.map(([one]) => one).find((one) => one.effect === "lead.stage.update")
-        assert(mover !== undefined, "The service must register lead.stage.update")
+        const mover = built.registry.addExecutor.mock.calls.map(([one]) => one).find((one) => one.effect === "nivo.lead.stage.update")
+        assert(mover !== undefined, "The service must register nivo.lead.stage.update")
         return { ...built, mover }
     }
     const lead = (stage: string) => recordOf(LEAD, { contactName: "Lan", channel: "zalo", stage, closedReason: "giá cao" })

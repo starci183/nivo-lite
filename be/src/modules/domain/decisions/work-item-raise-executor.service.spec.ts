@@ -66,7 +66,7 @@ describe("WorkItemRaiseExecutorService", () => {
         const { executor } = await build()
         const bare = await buildWithoutRegistry()
 
-        expect(executor.effect).toBe("work.item.create")
+        expect(executor.effect).toBe("nivo.work.item.create")
         expect(() => bare.onModuleInit()).not.toThrow()
     })
 

@@ -157,14 +157,14 @@
             }
         ],
         "tools": [
-            "ledger.append"
+            "nivo.ledger.entry.append"
         ],
         "effects": [
-            "payment.claim.record",
-            "customer.message.send",
-            "payment.order.settle",
-            "team.message.post",
-            "agent.tag"
+            "nivo.payment.claim.record",
+            "nivo.lead.message.send",
+            "nivo.payment.order.settle",
+            "nivo.team.message.post",
+            "nivo.agent.tag"
         ]
     },
     "nodes": [

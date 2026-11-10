@@ -51,7 +51,7 @@ export interface AgentSearch {
     /** How long the embedding of the question may take before the search falls back to words, milliseconds; absent = 8000. */
     readonly embedTimeoutMs?: number
     /**
-     * The question already embedded by the caller with the embedding model in use (brain.search embeds it for its fact half): when it
+     * The question already embedded by the caller with the embedding model in use (nivo.brain.search embeds it for its fact half): when it
      * has EMBEDDING_DIMENSIONS numbers the search uses it and makes no embedding call of its own; absent = the search embeds it.
      */
     readonly questionVector?: ReadonlyArray<number>

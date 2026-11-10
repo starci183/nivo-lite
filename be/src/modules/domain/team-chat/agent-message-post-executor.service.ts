@@ -316,7 +316,7 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
 
     /**
      * The engine's own report with facts (`report.facts`): one readable sentence and its facts, posted once per key to the founder (or
-     * the audience the engine names). A model's `team.message.post` can never name this kind (its payload is checked against the tool's
+     * the audience the engine names). A model's `nivo.team.message.post` can never name this kind (its payload is checked against the tool's
      * schema before it reaches here).
      */
     private async reported(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<EffectFact> {

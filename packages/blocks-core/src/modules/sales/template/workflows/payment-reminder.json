@@ -153,8 +153,8 @@
                     ],
                     "tools": [],
                     "effects": [
-                        "customer.message.send",
-                        "team.message.post"
+                        "nivo.lead.message.send",
+                        "nivo.team.message.post"
                     ]
                 },
                 "nodes": [

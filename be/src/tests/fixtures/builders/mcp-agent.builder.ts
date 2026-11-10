@@ -35,7 +35,7 @@ export const persistMcpAgentRows = async (manager: EntityManager, identity: McpA
         await tx.insert(McpToolGrantEntity, {
             workspaceId: identity.workspaceId,
             agentId: identity.agentId,
-            tool: "sepay.transactions.list",
+            tool: "sepay.transaction.list",
             mode: "auto",
         })
     })

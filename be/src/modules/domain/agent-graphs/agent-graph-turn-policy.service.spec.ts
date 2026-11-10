@@ -203,7 +203,7 @@ const rowOf = (id: string, data: Readonly<Record<string, unknown>>, createdAt = 
 })
 
 const sendOf = (id: string, text: string, conversationId: string, at: string): PageRow =>
-    rowOf(id, { effectId: "customer.message.send", args: { conversationId, text } }, at)
+    rowOf(id, { effectId: "nivo.lead.message.send", args: { conversationId, text } }, at)
 
 interface World {
     /** Ledger rows by `<run>:<step>`. */
@@ -377,23 +377,23 @@ describe("AgentGraphTurnPolicyService: what THIS run step already did before its
                 [`${RUN}:check`]: [
                     sendOf("e-1", CHECKING, "c-1", AT_SEND),
                     sendOf("e-2", OUTCOME, "c-1", AT_SEND),
-                    rowOf("e-3", { effectId: "customer.care.schedule", subjectEntity: "agent-task" }),
+                    rowOf("e-3", { effectId: "nivo.lead.care.schedule", subjectEntity: "agent-task" }),
                 ],
             },
         })
 
         const turn = await policy.toldOf(ANSWERED, "sales", `${RUN}:check`)
 
-        expect(turn.alreadyDone).toEqual(["customer.care.schedule", "customer.message.send"])
+        expect(turn.alreadyDone).toEqual(["nivo.lead.care.schedule", "nivo.lead.message.send"])
     })
 
     it("leaves out a refused call, an act of unknown outcome and an undone act", async () => {
         const { policy } = await told({
             ledger: {
                 [`${RUN}:check`]: [
-                    rowOf("e-1", { effectId: "customer.message.send", subjectEntity: "refused" }),
-                    rowOf("e-2", { effectId: "order.create", subjectEntity: "outcome-unknown" }),
-                    rowOf("e-3", { effectId: "order.cancel", subjectEntity: "sales.order", undoneAt: AT_SEND }),
+                    rowOf("e-1", { effectId: "nivo.lead.message.send", subjectEntity: "refused" }),
+                    rowOf("e-2", { effectId: "nivo.order.create", subjectEntity: "outcome-unknown" }),
+                    rowOf("e-3", { effectId: "nivo.order.cancel", subjectEntity: "sales.order", undoneAt: AT_SEND }),
                 ],
             },
         })

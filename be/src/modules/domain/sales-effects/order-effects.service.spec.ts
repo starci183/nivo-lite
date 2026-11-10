@@ -106,13 +106,13 @@ const run = (executor: NodeEffectExecutor, payload: Readonly<Record<string, unkn
     executor.execute(TURN, payload, CALL)
 
 describe("OrderEffectsService registration", () => {
-    it("registers the executors of order.record, order.confirm, order.void and payment.rematch", async () => {
+    it("registers the executors of order.record, nivo.order.confirm, order.void and payment.rematch", async () => {
         const { executorOf } = await build()
         expect(
-            ["order.create", "order.confirm", "order.cancel", "payment.credit.rematch"].map(
+            ["nivo.order.create", "nivo.order.confirm", "nivo.order.cancel", "nivo.payment.credit.rematch"].map(
                 (effect) => executorOf(effect).effect,
             ),
-        ).toEqual(["order.create", "order.confirm", "order.cancel", "payment.credit.rematch"])
+        ).toEqual(["nivo.order.create", "nivo.order.confirm", "nivo.order.cancel", "nivo.payment.credit.rematch"])
     })
 
     it("does nothing when the app hosts no graph nodes", async () => {
@@ -165,7 +165,7 @@ describe("OrderEffectsService order.record", () => {
         api.get.mockResolvedValue(leadRecord("new"))
         api.insert.mockResolvedValue(ok(priced({ note: "Leave at the door", deliveryAddress: "25 Nguyen Hue" })))
 
-        await expect(run(executorOf("order.create"), RECORD_PAYLOAD)).resolves.toEqual({
+        await expect(run(executorOf("nivo.order.create"), RECORD_PAYLOAD)).resolves.toEqual({
             kind: "order",
             id: ORDER,
             facts: {
@@ -214,7 +214,7 @@ describe("OrderEffectsService order.record", () => {
             amountVnd: 2,
         }
 
-        await run(executorOf("order.create"), typed)
+        await run(executorOf("nivo.order.create"), typed)
 
         expect(api.insert).toHaveBeenCalledWith(
             "sales.order",
@@ -252,7 +252,7 @@ describe("OrderEffectsService order.record", () => {
         api.get.mockResolvedValue(leadRecord("new"))
         api.insert.mockResolvedValue(ok(priced()))
 
-        await expect(run(executorOf("order.create"), RECORD_PAYLOAD)).resolves.toMatchObject({
+        await expect(run(executorOf("nivo.order.create"), RECORD_PAYLOAD)).resolves.toMatchObject({
             facts: { waitsOwner: true, thresholdVnd: 100_000 },
         })
     })
@@ -265,7 +265,7 @@ describe("OrderEffectsService order.record", () => {
         const { executorOf, api } = await build()
         api.get.mockResolvedValue(leadRecord("new"))
 
-        await expect(run(executorOf("order.create"), { leadId: LEAD, items: [item] })).resolves.toEqual({
+        await expect(run(executorOf("nivo.order.create"), { leadId: LEAD, items: [item] })).resolves.toEqual({
             kind: "refused",
             id: reason,
             facts: { name },
@@ -276,12 +276,12 @@ describe("OrderEffectsService order.record", () => {
     it("refuses a customer the workspace has not as a fact, and a payload that is not an order as an invalid payload", async () => {
         const { executorOf, api } = await build()
         api.get.mockResolvedValue(null)
-        await expect(run(executorOf("order.create"), RECORD_PAYLOAD)).resolves.toEqual({
+        await expect(run(executorOf("nivo.order.create"), RECORD_PAYLOAD)).resolves.toEqual({
             kind: "refused",
             id: "lead_missing",
             facts: {},
         })
-        await expect(run(executorOf("order.create"), { leadId: LEAD, items: [] })).rejects.toMatchObject({
+        await expect(run(executorOf("nivo.order.create"), { leadId: LEAD, items: [] })).rejects.toMatchObject({
             code: SalesEffectsErrorCode.InvalidPayload,
         })
     })
@@ -290,7 +290,7 @@ describe("OrderEffectsService order.record", () => {
         const { executorOf, api } = await build()
         api.get.mockResolvedValue(leadRecord("new"))
         api.insert.mockResolvedValue({ ok: false, reason: "stale" })
-        await expect(run(executorOf("order.create"), RECORD_PAYLOAD)).rejects.toMatchObject({
+        await expect(run(executorOf("nivo.order.create"), RECORD_PAYLOAD)).rejects.toMatchObject({
             code: SalesEffectsErrorCode.WriteRefused,
         })
     })
@@ -300,7 +300,7 @@ describe("OrderEffectsService order.record", () => {
         api.get.mockResolvedValueOnce(leadRecord("new")).mockResolvedValueOnce(orderRecord())
         api.update.mockResolvedValue(ok(priced()))
 
-        await expect(run(executorOf("order.create"), { ...RECORD_PAYLOAD, orderId: ORDER })).resolves.toMatchObject({
+        await expect(run(executorOf("nivo.order.create"), { ...RECORD_PAYLOAD, orderId: ORDER })).resolves.toMatchObject({
             kind: "order",
             id: ORDER,
         })
@@ -322,7 +322,7 @@ describe("OrderEffectsService order.record", () => {
         api.get.mockResolvedValueOnce(leadRecord("new")).mockResolvedValueOnce(orderRecord({ status: "confirmed" }))
         api.insert.mockResolvedValue(ok(priced()))
 
-        await run(executorOf("order.create"), { ...RECORD_PAYLOAD, orderId: ORDER })
+        await run(executorOf("nivo.order.create"), { ...RECORD_PAYLOAD, orderId: ORDER })
         expect(api.update).not.toHaveBeenCalled()
         expect(api.insert).toHaveBeenCalledTimes(1)
     })
@@ -342,7 +342,7 @@ describe("OrderEffectsService order.record", () => {
             next: null,
         })
 
-        await expect(run(executorOf("order.create"), RECORD_PAYLOAD)).resolves.toMatchObject({
+        await expect(run(executorOf("nivo.order.create"), RECORD_PAYLOAD)).resolves.toMatchObject({
             kind: "order",
             id: ORDER,
         })
@@ -351,13 +351,13 @@ describe("OrderEffectsService order.record", () => {
     })
 })
 
-describe("OrderEffectsService order.confirm", () => {
+describe("OrderEffectsService nivo.order.confirm", () => {
     it("confirms a draft in the name of the agent, answers the deal's stage as a fact and moves no deal", async () => {
         const { executorOf, api } = await build()
         api.get.mockResolvedValueOnce(orderRecord()).mockResolvedValueOnce(leadRecord("proposal"))
         api.update.mockResolvedValue(ok(orderRecord()))
 
-        await expect(run(executorOf("order.confirm"), { orderId: ORDER })).resolves.toMatchObject({
+        await expect(run(executorOf("nivo.order.confirm"), { orderId: ORDER })).resolves.toMatchObject({
             kind: "order",
             id: ORDER,
             facts: { orderNo: "DH-20261105-0001", status: "confirmed", amountVnd: 120_000, dealStage: "proposal" },
@@ -378,7 +378,7 @@ describe("OrderEffectsService order.confirm", () => {
             .mockResolvedValueOnce(leadRecord("proposal"))
         api.update.mockResolvedValue(ok(orderRecord()))
 
-        await expect(run(executorOf("order.confirm"), { orderId: ORDER })).resolves.toMatchObject({
+        await expect(run(executorOf("nivo.order.confirm"), { orderId: ORDER })).resolves.toMatchObject({
             kind: "order",
             id: ORDER,
             facts: { orderNo: "DH-20261105-0001", status: "confirmed", amountVnd: 5_000_000 },
@@ -393,7 +393,7 @@ describe("OrderEffectsService order.confirm", () => {
     it("answers ok without writing once the owner confirmed the order", async () => {
         const { executorOf, api } = await build()
         api.get.mockResolvedValue(orderRecord({ status: "confirmed", amountVnd: 9_000_000 }))
-        await expect(run(executorOf("order.confirm"), { orderId: ORDER })).resolves.toMatchObject({
+        await expect(run(executorOf("nivo.order.confirm"), { orderId: ORDER })).resolves.toMatchObject({
             kind: "order",
             facts: { status: "confirmed", amountVnd: 9_000_000 },
         })
@@ -405,12 +405,12 @@ describe("OrderEffectsService order.confirm", () => {
         api.update.mockResolvedValue(ok(orderRecord()))
         for (const stage of ["won", "lost"]) {
             api.get.mockResolvedValueOnce(orderRecord()).mockResolvedValueOnce(leadRecord(stage))
-            await run(executorOf("order.confirm"), { orderId: ORDER })
+            await run(executorOf("nivo.order.confirm"), { orderId: ORDER })
         }
         api.get.mockResolvedValueOnce(orderRecord({ leadId: null }))
-        await run(executorOf("order.confirm"), { orderId: ORDER })
+        await run(executorOf("nivo.order.confirm"), { orderId: ORDER })
         api.get.mockResolvedValueOnce(orderRecord()).mockResolvedValueOnce(null)
-        await expect(run(executorOf("order.confirm"), { orderId: ORDER })).resolves.toMatchObject({
+        await expect(run(executorOf("nivo.order.confirm"), { orderId: ORDER })).resolves.toMatchObject({
             facts: { dealStage: null },
         })
         expect(api.update).toHaveBeenCalledTimes(4)
@@ -420,19 +420,19 @@ describe("OrderEffectsService order.confirm", () => {
     it("refuses a cancelled order and an order the workspace has not as facts, and a payload without an order as invalid", async () => {
         const { executorOf, api } = await build()
         api.get.mockResolvedValueOnce(orderRecord({ status: "cancelled" }))
-        await expect(run(executorOf("order.confirm"), { orderId: ORDER })).resolves.toEqual({
+        await expect(run(executorOf("nivo.order.confirm"), { orderId: ORDER })).resolves.toEqual({
             kind: "refused",
             id: "not_confirmable",
             facts: { status: "cancelled" },
         })
         api.get.mockResolvedValueOnce(null)
-        await expect(run(executorOf("order.confirm"), { orderId: ORDER })).resolves.toMatchObject({
+        await expect(run(executorOf("nivo.order.confirm"), { orderId: ORDER })).resolves.toMatchObject({
             id: "order_missing",
         })
-        await expect(run(executorOf("order.confirm"), { orderId: "o-1" })).resolves.toMatchObject({
+        await expect(run(executorOf("nivo.order.confirm"), { orderId: "o-1" })).resolves.toMatchObject({
             id: "order_missing",
         })
-        await expect(run(executorOf("order.confirm"), {})).rejects.toMatchObject({
+        await expect(run(executorOf("nivo.order.confirm"), {})).rejects.toMatchObject({
             code: SalesEffectsErrorCode.InvalidPayload,
         })
     })
@@ -441,7 +441,7 @@ describe("OrderEffectsService order.confirm", () => {
         const { executorOf, api } = await build()
         api.get.mockResolvedValueOnce(orderRecord()).mockResolvedValueOnce(leadRecord("proposal"))
         api.update.mockResolvedValueOnce({ ok: false, reason: "stale" })
-        await expect(run(executorOf("order.confirm"), { orderId: ORDER })).rejects.toMatchObject({
+        await expect(run(executorOf("nivo.order.confirm"), { orderId: ORDER })).rejects.toMatchObject({
             code: SalesEffectsErrorCode.WriteRefused,
         })
     })
@@ -452,7 +452,7 @@ describe("OrderEffectsService order.void", () => {
         const { executorOf, api, timers } = await build()
         api.get.mockResolvedValue(orderRecord({ status: "confirmed" }))
         api.update.mockResolvedValue(ok(orderRecord({ status: "failed_system" })))
-        await run(executorOf("order.cancel"), { id: ORDER })
+        await run(executorOf("nivo.order.cancel"), { id: ORDER })
         expect(timers.closeOf).toHaveBeenCalledWith(expect.any(String), ORDER)
     })
 
@@ -461,7 +461,7 @@ describe("OrderEffectsService order.void", () => {
         api.get.mockResolvedValue(orderRecord())
         api.update.mockResolvedValue(ok(orderRecord()))
 
-        await expect(run(executorOf("order.cancel"), { id: ORDER })).resolves.toEqual({ kind: "order", id: ORDER })
+        await expect(run(executorOf("nivo.order.cancel"), { id: ORDER })).resolves.toEqual({ kind: "order", id: ORDER })
 
         expect(api.update).toHaveBeenCalledWith("sales.order", ORDER, "4", { status: "failed_system" })
     })
@@ -469,21 +469,21 @@ describe("OrderEffectsService order.void", () => {
     it("changes nothing for an order that already is failed_system, is gone, or is no order id", async () => {
         const { executorOf, api } = await build()
         api.get.mockResolvedValueOnce(orderRecord({ status: "failed_system" }))
-        await run(executorOf("order.cancel"), { id: ORDER })
+        await run(executorOf("nivo.order.cancel"), { id: ORDER })
         api.get.mockResolvedValueOnce(null)
-        await expect(run(executorOf("order.cancel"), { id: ORDER })).resolves.toEqual({ kind: "order", id: ORDER })
-        await expect(run(executorOf("order.cancel"), { id: "o-1" })).resolves.toEqual({ kind: "order", id: "o-1" })
+        await expect(run(executorOf("nivo.order.cancel"), { id: ORDER })).resolves.toEqual({ kind: "order", id: ORDER })
+        await expect(run(executorOf("nivo.order.cancel"), { id: "o-1" })).resolves.toEqual({ kind: "order", id: "o-1" })
         expect(api.update).not.toHaveBeenCalled()
     })
 
     it("refuses a payload without an id, and a write the engine does not make", async () => {
         const { executorOf, api } = await build()
-        await expect(run(executorOf("order.cancel"), {})).rejects.toMatchObject({
+        await expect(run(executorOf("nivo.order.cancel"), {})).rejects.toMatchObject({
             code: "SALES_EFFECTS_INVALID_PAYLOAD",
         })
         api.get.mockResolvedValue(orderRecord())
         api.update.mockResolvedValue({ ok: false, reason: "stale" })
-        await expect(run(executorOf("order.cancel"), { id: ORDER })).rejects.toMatchObject({
+        await expect(run(executorOf("nivo.order.cancel"), { id: ORDER })).rejects.toMatchObject({
             code: "SALES_EFFECTS_WRITE_REFUSED",
         })
     })
@@ -495,7 +495,7 @@ describe("OrderEffectsService payment.rematch", () => {
         api.get.mockResolvedValue(orderRecord())
 
         await expect(
-            executorOf("payment.credit.rematch").execute(
+            executorOf("nivo.payment.credit.rematch").execute(
                 TURN,
                 { orderId: ORDER },
                 { key: "k", dedupeKey: `payment-rematch:${ORDER}` },
@@ -513,13 +513,13 @@ describe("OrderEffectsService payment.rematch", () => {
         const { executorOf, api, outbox } = await build()
         api.get.mockResolvedValueOnce(orderRecord()).mockResolvedValueOnce(null)
 
-        await run(executorOf("payment.credit.rematch"), { orderId: ORDER })
+        await run(executorOf("nivo.payment.credit.rematch"), { orderId: ORDER })
         expect(outbox.enqueue).toHaveBeenCalledWith(expect.anything(), expect.anything(), { dedupeKey: "k" })
 
-        await expect(run(executorOf("payment.credit.rematch"), { orderId: ORDER })).rejects.toMatchObject({
+        await expect(run(executorOf("nivo.payment.credit.rematch"), { orderId: ORDER })).rejects.toMatchObject({
             code: SalesEffectsErrorCode.OrderNotFound,
         })
-        await expect(run(executorOf("payment.credit.rematch"), { orderId: "not-an-id" })).rejects.toMatchObject({
+        await expect(run(executorOf("nivo.payment.credit.rematch"), { orderId: "not-an-id" })).rejects.toMatchObject({
             code: SalesEffectsErrorCode.OrderNotFound,
         })
     })

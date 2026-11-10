@@ -95,7 +95,7 @@ const build = async (
 }
 
 const TARGET = { workspaceId: WS, agentId: SALES, moduleKey: "sales" }
-const SEND = "customer.message.send"
+const SEND = "nivo.lead.message.send"
 
 describe("ProviderAbilitiesService: a call is judged on the account it acts on", () => {
     it("two Zalo OAs: a send goes out on the OA the agent is attached to, and is refused on the other one", async () => {
@@ -122,9 +122,9 @@ describe("ProviderAbilitiesService: a call is judged on the account it acts on",
             rowOf(SALES, "vcb", "sepay", { "transactions.read": "auto", "qr.create": "auto" }),
         ])
 
-        await expect(service.judge(WS, SALES, "bank.transactions", false)).resolves.toMatchObject({ kind: "allow" })
-        await expect(service.accountsOfAgent(WS, SALES, "bank.transactions")).resolves.toEqual(["mb", "vcb"])
-        await expect(service.accountsOfAgent(WS, SALES, "payment.qr.create")).resolves.toEqual(["vcb"])
+        await expect(service.judge(WS, SALES, "nivo.bank.transaction.list", false)).resolves.toMatchObject({ kind: "allow" })
+        await expect(service.accountsOfAgent(WS, SALES, "nivo.bank.transaction.list")).resolves.toEqual(["mb", "vcb"])
+        await expect(service.accountsOfAgent(WS, SALES, "nivo.payment.qr.create")).resolves.toEqual(["vcb"])
     })
 
     it("two SePay accounts: a QR is drawn only on the default receiving account, and needs the ability on that very account", async () => {
@@ -134,13 +134,13 @@ describe("ProviderAbilitiesService: a call is judged on the account it acts on",
         ]
 
         const onMb = await build(TWO_EACH, rows, "mb")
-        await expect(onMb.service.judge(WS, SALES, "payment.qr.create", false)).resolves.toMatchObject({
+        await expect(onMb.service.judge(WS, SALES, "nivo.payment.qr.create", false)).resolves.toMatchObject({
             kind: "allow",
             connectionId: "mb",
         })
 
         const onVcb = await build(TWO_EACH, rows, "vcb")
-        await expect(onVcb.service.judge(WS, SALES, "payment.qr.create", false)).resolves.toMatchObject({
+        await expect(onVcb.service.judge(WS, SALES, "nivo.payment.qr.create", false)).resolves.toMatchObject({
             kind: "refuse",
             reason: "ability_off",
             connectionId: "vcb",
@@ -153,7 +153,7 @@ describe("ProviderAbilitiesService: a call is judged on the account it acts on",
             rowOf(SALES, "vcb", "sepay", { "qr.create": "auto" }),
         ])
 
-        await expect(service.judge(WS, SALES, "payment.qr.create", false)).resolves.toEqual({
+        await expect(service.judge(WS, SALES, "nivo.payment.qr.create", false)).resolves.toEqual({
             kind: "refuse",
             reason: "no_default_account",
             ability: "qr.create",
@@ -165,7 +165,7 @@ describe("ProviderAbilitiesService: a call is judged on the account it acts on",
     it("takes the only working payment account as the default with nothing named, and ignores a named one that no longer works", async () => {
         const one = await build(ONE_EACH, [rowOf(SALES, "mb", "sepay", { "qr.create": "auto" })])
         await expect(one.service.defaultAccountOf(WS, "payment")).resolves.toBe("mb")
-        await expect(one.service.judge(WS, SALES, "payment.qr.create", false)).resolves.toMatchObject({ kind: "allow" })
+        await expect(one.service.judge(WS, SALES, "nivo.payment.qr.create", false)).resolves.toMatchObject({ kind: "allow" })
 
         const gone = await build(ONE_EACH, [], "old-account")
         await expect(gone.service.defaultAccountOf(WS, "payment")).resolves.toBe("mb")
@@ -218,7 +218,7 @@ describe("ProviderAbilitiesService defaults", () => {
         expect(entityManager.upsert).not.toHaveBeenCalled()
         expect(entityManager.save).not.toHaveBeenCalled()
         expect(entityManager.delete).not.toHaveBeenCalled()
-        await expect(service.judge(WS, SALES, "payment.qr.create", false)).resolves.toMatchObject({
+        await expect(service.judge(WS, SALES, "nivo.payment.qr.create", false)).resolves.toMatchObject({
             kind: "refuse",
             reason: "ability_off",
         })

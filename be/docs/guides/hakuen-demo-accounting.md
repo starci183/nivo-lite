@@ -9,7 +9,7 @@ declared in `.starcistacks/application-stacks.yaml` and `be/src/modules/domain/j
 ## Data layers
 
 - **MCP gateway (live data).** The desk never reads a source itself. `be/src/modules/domain/accounting/accounting-gateway.port.ts`
-  names what it needs: `einvoice.list` (invoices received since a moment, and the unpaid ones), `sepay.transactions.list`,
+  names what it needs: `nivo.einvoice.list` (invoices received since a moment, and the unpaid ones), `sepay.transaction.list`,
   `hakuen.folio.get` (by transfer memo) and `hakuen.folio.recordPayment`. The app root binds an adapter through
   `AccountingModule.register({ gateway })`; until then `be/src/modules/domain/accounting/unwired-accounting-gateway.service.ts` answers that nothing is there.
 - **Second Brain.** The tax profile is the active facts of subject `tax_profile` (`tax_code`, `vat_period`, `withholds_pit`,

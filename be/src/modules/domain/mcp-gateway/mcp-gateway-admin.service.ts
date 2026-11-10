@@ -50,7 +50,18 @@ import { McpGatewayService } from "./mcp-gateway.service"
 import { addressOf, toolNameOf } from "./tool-name.policy"
 
 const KEY = /^[a-z][a-z0-9-]{1,30}$/u
-const WILDCARD = /^[a-z][a-z0-9-]{1,30}\.\*$/u
+
+/**
+ * True when a remote key would shadow a native connector: the native's row key, or the first segment of its public prefix (`nivo`,
+ * `google`), since a remote tool's full name `<key>.<tool>` would then read as a native one.
+ */
+const holdsName = (manifest: { readonly key: string; readonly namespace?: string }, key: string): boolean =>
+    manifest.key === key || (manifest.namespace ?? manifest.key).split(".", 1).join("") === key
+/** A wildcard grant: a connector or a namespaced prefix and `.*` (`sepay.*`, `nivo.ledger.*`); a bare `nivo.*` is refused below. */
+const WILDCARD = /^[a-z][a-z0-9-]{1,30}(\.[a-z][a-z0-9-]*)*\.\*$/u
+
+/** The wildcard no grant may name: it would cover every native tool NIVO has. */
+const BARE_WILDCARD = "nivo.*"
 const ARG = /^[a-zA-Z]\w{0,60}$/u
 const LOG_MAX = 200
 const LOG_DEFAULT = 50
@@ -218,13 +229,14 @@ export class McpGatewayAdminService {
         return (await this.callLines.latest({ workspaceId: query.actor.workspaceId, limit })).map(callLogViewOf)
     }
 
-    /** Sets one grant: a full tool name or `connector.*`, a non-negative limit, well-named constraints, an agent of the workspace. */
+    /** Sets one grant: a full tool name or `<prefix>.*` (never a bare `nivo.*`), a non-negative limit, well-named constraints, an agent of the workspace. */
     async setGrant(actor: ConnectionActor, input: GrantInput): Promise<void> {
         await this.connections.authorize(actor, MANAGER)
         const constraints = constraintsOfJson(input.constraintsJson)
         const limitVnd = input.limitVnd ?? null
         if (constraints === null || constraints.some((entry) => !ARG.test(entry.arg))) throw invalid("constraints")
-        if (!WILDCARD.test(input.tool) && addressOf(input.tool) === null) throw invalid("tool")
+        if (input.tool === BARE_WILDCARD || (!WILDCARD.test(input.tool) && addressOf(input.tool) === null))
+            throw invalid("tool")
         if (limitVnd !== null && limitVnd < 0) throw invalid("limitVnd")
         const written = await this.grantRows.set({
             workspaceId: actor.workspaceId,
@@ -246,7 +258,7 @@ export class McpGatewayAdminService {
     async registerRemote(actor: ConnectionActor, input: RemoteConnectorInput): Promise<void> {
         await this.connections.authorize(actor, MANAGER)
         const credential = input.credential ?? null
-        if (!KEY.test(input.key) || this.natives.some((adapter) => adapter.manifest.key === input.key))
+        if (!KEY.test(input.key) || this.natives.some((adapter) => holdsName(adapter.manifest, input.key)))
             throw invalid("key")
         if (input.name.trim() === "") throw invalid("name")
         if (!isUrl(input.url) || !(await this.remote.isReachable(input.url))) throw invalid("url")

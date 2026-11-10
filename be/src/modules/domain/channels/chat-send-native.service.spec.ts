@@ -47,11 +47,11 @@ const build = async () => {
 }
 
 describe("ChatSendNativeService", () => {
-    it("announces two internal tools: a write that plays chat.send and takes its replay key, and a read that plays chat.profile", () => {
+    it("announces two internal tools: a write that plays nivo.chat.send and takes its replay key, and a read that plays nivo.chat.profile.get", () => {
         expect(CHAT_MANIFEST.key).toBe("chat")
         expect(CHAT_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.domain, tool.internalOnly])).toEqual([
-            ["send", "write", "chat.send", true],
-            ["profile", "read", "chat.profile", true],
+            ["send", "write", "nivo.chat.send", true],
+            ["profile.get", "read", "nivo.chat.profile.get", true],
         ])
         expect(CHAT_MANIFEST.tools[0]?.idempotencyArg).toBe("key")
     })
@@ -139,7 +139,7 @@ describe("ChatSendNativeService: profile", () => {
         const { service, conversations, customers } = await build()
         customers.profileOf.mockResolvedValue({ name: "Minh", avatarUrl: "https://zalo.test/a.png" })
 
-        await expect(service.invoke("ws-1", "profile", { conversationId: CONVERSATION }, CALLER)).resolves.toEqual({
+        await expect(service.invoke("ws-1", "profile.get", { conversationId: CONVERSATION }, CALLER)).resolves.toEqual({
             name: "Minh",
             avatarUrl: "https://zalo.test/a.png",
         })
@@ -152,14 +152,14 @@ describe("ChatSendNativeService: profile", () => {
         const { service, conversations, customers } = await build()
         customers.profileOf.mockResolvedValue(null)
 
-        await expect(service.invoke("ws-1", "profile", { conversationId: CONVERSATION }, CALLER)).rejects.toMatchObject(
+        await expect(service.invoke("ws-1", "profile.get", { conversationId: CONVERSATION }, CALLER)).rejects.toMatchObject(
             { code: McpGatewayErrorCode.NativeRefused, params: { reason: "profile_unavailable" } },
         )
-        await expect(service.invoke("ws-1", "profile", { conversationId: "x" }, CALLER)).rejects.toMatchObject({
+        await expect(service.invoke("ws-1", "profile.get", { conversationId: "x" }, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.InvalidArguments,
         })
         conversations.targetOf.mockResolvedValue({ kind: "refused", code: ChatRecordsErrorCode.NotFound })
-        await expect(service.invoke("ws-1", "profile", { conversationId: CONVERSATION }, CALLER)).rejects.toMatchObject(
+        await expect(service.invoke("ws-1", "profile.get", { conversationId: CONVERSATION }, CALLER)).rejects.toMatchObject(
             { code: McpGatewayErrorCode.NativeRefused, params: { reason: "not_found" } },
         )
     })

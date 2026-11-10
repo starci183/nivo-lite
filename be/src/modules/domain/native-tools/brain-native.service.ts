@@ -79,6 +79,7 @@ export const BRAIN_NOTICE =
 /** The NIVO Brain native connector: what the business knows, read through the view of the calling agent. */
 export const BRAIN_MANIFEST: NativeConnectorManifest = {
     key: "brain",
+    namespace: "nivo.brain",
     name: "NIVO Brain",
     kind: "native",
     contractVersion: "brain-native@1",
@@ -95,7 +96,7 @@ export const BRAIN_MANIFEST: NativeConnectorManifest = {
             taints: true,
         },
         {
-            name: "facts.list",
+            name: "fact.list",
             description: "The facts in force of the business that this agent may read, optionally of one subject.",
             scope: "read",
             defaultMode: "auto",
@@ -105,7 +106,7 @@ export const BRAIN_MANIFEST: NativeConnectorManifest = {
             taints: true,
         },
         {
-            name: "facts.get",
+            name: "fact.get",
             description: "One fact in force of the business with the kind and label of its evidence and when it holds.",
             scope: "read",
             defaultMode: "auto",
@@ -115,7 +116,7 @@ export const BRAIN_MANIFEST: NativeConnectorManifest = {
             taints: true,
         },
         {
-            name: "documents.read",
+            name: "document.read",
             description:
                 "One internal document of the business, read whole, to draft a separate public text from it. Never in a customer turn.",
             scope: "read",
@@ -140,7 +141,7 @@ export const BRAIN_MANIFEST: NativeConnectorManifest = {
         {
             name: "change.propose",
             description:
-                "When a person of the team (the founder, a manager or staff) states in your private chat or the common chat a NEW lasting truth of the business, or corrects one in force (a price, a fee, opening hours, a rule), file it: subject, attribute, the new value (or retire: true), room, the chat message id, the words verbatim, validFrom / validTo when the person said when or for how long, and reason: why the truth changes in your own plain words: who said what, which value in force it replaces (read it with brain.search or brain.facts.get first), for how long if said. Not for a one-off instruction ('this order is 10k off'), a question, what a customer says, or a value already in force. It waits for the founder's yes on a card in the chat; nothing changes before.",
+                "When a person of the team (the founder, a manager or staff) states in your private chat or the common chat a NEW lasting truth of the business, or corrects one in force (a price, a fee, opening hours, a rule), file it: subject, attribute, the new value (or retire: true), room, the chat message id, the words verbatim, validFrom / validTo when the person said when or for how long, and reason: why the truth changes in your own plain words: who said what, which value in force it replaces (read it with nivo.brain.search or nivo.brain.fact.get first), for how long if said. Not for a one-off instruction ('this order is 10k off'), a question, what a customer says, or a value already in force. It waits for the founder's yes on a card in the chat; nothing changes before.",
             scope: "write",
             defaultMode: "auto",
             inputSchema: BRAIN_CHANGE_PROPOSE_INPUT_SCHEMA,
@@ -176,11 +177,11 @@ export class BrainNativeService implements NativeAdapter {
     /** Runs one Brain tool. */
     async invoke(workspaceId: string, tool: string, args: GatewayJson, caller: NativeCaller): Promise<GatewayJson> {
         if (tool === "search") return this.search(workspaceId, argumentsOf(tool, BRAIN_SEARCH_SCHEMA, args), caller)
-        if (tool === "facts.list") {
+        if (tool === "fact.list") {
             return this.list(workspaceId, argumentsOf(tool, BRAIN_FACTS_LIST_SCHEMA, args), caller)
         }
-        if (tool === "facts.get") return this.get(workspaceId, argumentsOf(tool, BRAIN_FACTS_GET_SCHEMA, args), caller)
-        if (tool === "documents.read") {
+        if (tool === "fact.get") return this.get(workspaceId, argumentsOf(tool, BRAIN_FACTS_GET_SCHEMA, args), caller)
+        if (tool === "document.read") {
             return this.readDocument(workspaceId, argumentsOf(tool, BRAIN_DOCUMENTS_READ_SCHEMA, args), caller)
         }
         if (tool === "fact.related") {
@@ -227,7 +228,7 @@ export class BrainNativeService implements NativeAdapter {
 
     /**
      * The facts that match the question, and the passages of the business documents, concurrently. The question is embedded ONCE and
-     * the vector serves both halves (BG2 → BG1: one embedding per `brain.search`, not two).
+     * the vector serves both halves (BG2 → BG1: one embedding per `nivo.brain.search`, not two).
      */
     private async search(workspaceId: string, input: BrainSearchInput, caller: NativeCaller): Promise<GatewayJson> {
         const view = await this.views.of(workspaceId, caller)

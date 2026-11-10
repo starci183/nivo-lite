@@ -30,7 +30,7 @@ interface TiedConversation {
 
 @Injectable()
 /**
- * The executors of `lead.ensure` and `lead.update` on the entity engine, and the resolver of the customer of a turn's conversation. The customer of a
+ * The executors of `nivo.lead.ensure` and `nivo.lead.update` on the entity engine, and the resolver of the customer of a turn's conversation. The customer of a
  * conversation is the one it is already linked to; else the one the chat's phone matches (the `phone` match key of `sales.lead`, so
  * two conversations of one phone share a customer); else a new one. The conversation is linked to it. It is a pivot: a customer other
  * records point at is not taken back.
@@ -47,8 +47,8 @@ export class LeadEffectsService implements OnModuleInit {
     onModuleInit(): void {
         const registry = this.registry
         if (registry === undefined) return
-        registry.addExecutor({ effect: "lead.ensure", execute: (turn, payload) => this.ensure(turn, payload) })
-        registry.addExecutor({ effect: "lead.update", execute: (turn, payload) => this.update(turn, payload) })
+        registry.addExecutor({ effect: "nivo.lead.ensure", execute: (turn, payload) => this.ensure(turn, payload) })
+        registry.addExecutor({ effect: "nivo.lead.update", execute: (turn, payload) => this.update(turn, payload) })
         registry.addExecutor({ effect: TOOL.leadStageUpdate, execute: (turn, payload) => this.moveStage(turn, payload) })
         registry.addSubjectResolver({ subjectOf: (turn) => this.subjectOf(turn) })
     }
@@ -79,7 +79,7 @@ export class LeadEffectsService implements OnModuleInit {
     }
 
     /**
-     * `lead.update`: writes the consult stage the payload names on the customer, under the version just read, and lays the facts it
+     * `nivo.lead.update`: writes the consult stage the payload names on the customer, under the version just read, and lays the facts it
      * names over the customer's lead memory (their one home: the record keeps no copy); a customer the workspace does not hold, or a
      * write another writer beat, is refused so the step is tried again. An app with no lead memory keeps the stage only.
      */
@@ -100,7 +100,7 @@ export class LeadEffectsService implements OnModuleInit {
     }
 
     /**
-     * `lead.stage.update`: moves the customer's deal to the stage named, under the version just read, and answers the stage before and
+     * `nivo.lead.stage.update`: moves the customer's deal to the stage named, under the version just read, and answers the stage before and
      * after as facts. A deal that leaves `lost` drops its closed reason (it no longer says why the deal was lost). The tool decides
      * nothing: when a deal is won (on a confirmed order, on payment) and whether a lost one may move are the agent's, from the policy. A
      * customer the workspace does not hold is the refusal `lead_missing`; a write another writer beat is thrown, so the step runs again.

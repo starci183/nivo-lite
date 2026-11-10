@@ -23,9 +23,9 @@ export enum AgentsErrorCode {
     AvatarInvalid = "AGENTS_AVATAR_INVALID",
     /** The preset picture is not one an agent may wear. */
     AvatarPresetInvalid = "AGENTS_AVATAR_PRESET_INVALID",
-    /** An agent.tag effect names no agent, or a module the workspace runs no agent for; `params.refusal` is the node refusal it reports. */
+    /** An nivo.agent.tag effect names no agent, or a module the workspace runs no agent for; `params.refusal` is the node refusal it reports. */
     TagTargetMissing = "AGENTS_TAG_TARGET_MISSING",
-    /** The tag rights refuse an agent.tag effect, or the tag door refused it for another reason; `params.refusal` is the node refusal it reports. */
+    /** The tag rights refuse an nivo.agent.tag effect, or the tag door refused it for another reason; `params.refusal` is the node refusal it reports. */
     TagRefused = "AGENTS_TAG_REFUSED",
     /** A care.schedule effect names a step no schedule can hold (an unknown step, a moment that is not an instant or is too far away); `params.refusal` is the node refusal it reports. */
     CareScheduleInvalid = "AGENTS_CARE_SCHEDULE_INVALID",

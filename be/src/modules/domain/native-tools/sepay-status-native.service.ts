@@ -27,7 +27,7 @@ const ROUTE: ProviderRoute = { provider: "sepay", line: lineOf }
 
 @Injectable()
 /**
- * The SePay connector of the apps that serve a workspace, for internal callers only: `transactions.list` and `transactions.debits` run as before, through the
+ * The SePay connector of the apps that serve a workspace, for internal callers only: `transaction.list` and `debit.list` run as before, through the
  * ledger, and `status` reads the bank connections. It takes the place of the gateway's own SePay adapter, which has no status.
  */
 export class SepayStatusNativeService implements NativeAdapter {
@@ -42,7 +42,7 @@ export class SepayStatusNativeService implements NativeAdapter {
     /** Runs one SePay tool: the bank tools through the ledger, `status` through the connections. */
     async invoke(workspaceId: string, tool: string, args: GatewayJson, caller: NativeCaller): Promise<GatewayJson> {
         await this.views.internalOf(workspaceId, caller)
-        if (tool === "status") return this.tools.answer(workspaceId, ROUTE, tool, args, caller)
+        if (tool === "status.get") return this.tools.answer(workspaceId, ROUTE, tool, args, caller)
         return this.sepay.invoke(workspaceId, tool, args)
     }
 }

@@ -17,12 +17,12 @@ import type { TurnRef } from "./node.types"
  *   { confused: { reason: "...", question: "..." | null } }              the agent gives up; the node returns context.confused(...)
  * An effect the fake runs answers the subject `{ kind: "<effect id>", id: "<effect id>-<n>" }`; `fake.executed` lists the calls.
  * To script what an effect answers (a refusal, a subject with facts), per effect id and in call order:
- *   fakeNodePorts({ answers: { "order.confirm": [{ kind: "refused", id: "waits_owner", facts: { amountVnd: 5_000_000 } }] } })
+ *   fakeNodePorts({ answers: { "nivo.order.confirm": [{ kind: "refused", id: "waits_owner", facts: { amountVnd: 5_000_000 } }] } })
  * and the same `answers` field on a node example. A call past the list answers the made-up subject.
  */
 
 const markPaid = defineEffect({
-    id: "payment.order.settle",
+    id: "nivo.payment.order.settle",
     title: { key: "t" },
     payload: z.object({ orderId: z.string(), transactionId: z.string() }),
     rights: [],
@@ -45,8 +45,8 @@ const settleNode = defineNode({
     input: z.object({ orderId: z.string(), transactionId: z.string() }),
     output: OUTPUT,
     rights: [],
-    effects: ["payment.order.settle", "agent-message.post"],
-    requires: ["payment.order.settle"],
+    effects: ["nivo.payment.order.settle", "agent-message.post"],
+    requires: ["nivo.payment.order.settle"],
     run: async (input, context) => {
         const decision = await context.agent.run({
             goal: "Mark the order paid with the bank transaction, then tell the team.",
@@ -63,9 +63,9 @@ const settleNode = defineNode({
             params: {},
             input: { orderId: "o-1", transactionId: "tx-1" },
             output: { result: "paid", orderId: "o-1" },
-            effects: ["payment.order.settle"],
+            effects: ["nivo.payment.order.settle"],
             model: [
-                { call: { tool: "payment.order.settle", args: { orderId: "o-1", transactionId: "tx-1" } } },
+                { call: { tool: "nivo.payment.order.settle", args: { orderId: "o-1", transactionId: "tx-1" } } },
                 { done: { result: "paid", orderId: "o-1" } },
             ],
         },
@@ -92,9 +92,9 @@ const run = (options: FakeNodePortsOptions, override: Partial<NodeHostPorts> = {
     return { ran, fake, json }
 }
 
-const PAY = { call: { tool: "payment.order.settle", args: { orderId: "o-1", transactionId: "tx-1" } } }
+const PAY = { call: { tool: "nivo.payment.order.settle", args: { orderId: "o-1", transactionId: "tx-1" } } }
 const DONE = { done: { result: "paid", orderId: "o-1" } }
-const PAY_KEY = `run-1:settle:${callDigestOf("payment.order.settle", PAY.call.args)}`
+const PAY_KEY = `run-1:settle:${callDigestOf("nivo.payment.order.settle", PAY.call.args)}`
 
 describe("context.agent.run", () => {
     it("lets the agent call the step's tools itself and answers its output, with the effects the calls ran", async () => {
@@ -103,12 +103,12 @@ describe("context.agent.run", () => {
         await expect(ran).resolves.toEqual({
             output: { result: "paid", orderId: "o-1" },
             effects: [
-                { id: "payment.order.settle", subject: { kind: "payment.order.settle", id: "payment.order.settle-1" } },
+                { id: "nivo.payment.order.settle", subject: { kind: "nivo.payment.order.settle", id: "nivo.payment.order.settle-1" } },
                 { id: "agent-message.post", subject: { kind: "agent-message.post", id: "agent-message.post-2" } },
             ],
         })
         expect(fake.executed.map((one) => [one.id, one.payload])).toEqual([
-            ["payment.order.settle", { orderId: "o-1", transactionId: "tx-1" }],
+            ["nivo.payment.order.settle", { orderId: "o-1", transactionId: "tx-1" }],
             ["agent-message.post", { text: "Đã nhận tiền" }],
         ])
     })
@@ -117,7 +117,7 @@ describe("context.agent.run", () => {
         const { ran, fake } = run({ model: [PAY, { call: { tool: "agent-message.post", args: { text: "x" } } }, DONE] })
         await ran
         expect(fake.executed.map((one) => one.key)).toEqual([
-            `run-1:settle:${callDigestOf("payment.order.settle", { orderId: "o-1", transactionId: "tx-1" })}`,
+            `run-1:settle:${callDigestOf("nivo.payment.order.settle", { orderId: "o-1", transactionId: "tx-1" })}`,
             `run-1:settle:${callDigestOf("agent-message.post", { text: "x" })}`,
         ])
     })
@@ -132,16 +132,16 @@ describe("context.agent.run", () => {
         // The tool set in name order with each schema, then how turns are taken, then the step: its goal and its frame.
         expect(instructions.indexOf('"name":"agent-message.post"')).toBeGreaterThan(-1)
         expect(instructions.indexOf('"name":"agent-message.post"')).toBeLessThan(
-            instructions.indexOf('"name":"payment.order.settle"'),
+            instructions.indexOf('"name":"nivo.payment.order.settle"'),
         )
-        expect(instructions.indexOf('"name":"payment.order.settle"')).toBeLessThan(
+        expect(instructions.indexOf('"name":"nivo.payment.order.settle"')).toBeLessThan(
             instructions.indexOf("Mark the order paid with the bank transaction, then tell the team."),
         )
-        expect(instructions).toContain('"required":["payment.order.settle"],"tools":["payment.order.settle","agent-message.post"]}')
+        expect(instructions).toContain('"required":["nivo.payment.order.settle"],"tools":["nivo.payment.order.settle","agent-message.post"]}')
         expect(instructions).toContain('"outputSchema":{')
         expect(second?.input).toEqual({
             input: { orderId: "o-1", transactionId: "tx-1" },
-            calls: [expect.objectContaining({ tool: "payment.order.settle", ok: true })],
+            calls: [expect.objectContaining({ tool: "nivo.payment.order.settle", ok: true })],
             turnsLeft: 2,
         })
         expect(second?.volatile).toBeUndefined()
@@ -152,7 +152,7 @@ describe("context.agent.run", () => {
 
         await expect(ran).resolves.toMatchObject({ output: { result: "paid" } })
         expect(json.mock.calls[1]?.[1].input).toMatchObject({
-            calls: [{ done: "refused", refused: { code: "REQUIRED_CALL_MISSING", message: "payment.order.settle" } }],
+            calls: [{ done: "refused", refused: { code: "REQUIRED_CALL_MISSING", message: "nivo.payment.order.settle" } }],
         })
         expect(fake.executed).toHaveLength(1)
     })
@@ -177,7 +177,7 @@ describe("context.agent.run", () => {
         expect(json.mock.calls[1]?.[1].input).toMatchObject({
             calls: [
                 {
-                    tool: "payment.order.settle",
+                    tool: "nivo.payment.order.settle",
                     ok: false,
                     refused: { code: "SALES_EFFECTS_ORDER_NOT_OPEN", data: { reason: "order_not_open" } },
                 },
@@ -204,7 +204,7 @@ describe("context.agent.run", () => {
         expect(json.mock.calls[2]?.[1].input).toMatchObject({
             calls: [
                 {
-                    tool: "payment.order.settle",
+                    tool: "nivo.payment.order.settle",
                     ok: false,
                     refused: { code: "waits_owner", data: { amountVnd: 5_000_000, thresholdVnd: 2_000_000 } },
                 },
@@ -222,7 +222,7 @@ describe("context.agent.run", () => {
         expect(json.mock.calls[1]?.[1].input).toMatchObject({
             calls: [
                 {
-                    tool: "payment.order.settle",
+                    tool: "nivo.payment.order.settle",
                     ok: false,
                     refused: { code: "already_told_for_this_stop", data: { conversationId: "c-1" } },
                 },
@@ -256,7 +256,7 @@ describe("context.agent.run", () => {
         const answered: TurnRef = {
             ...EXAMPLE_TURN,
             founderAnswers: [{ text: "Da bao khach roi, ket thuc", at: "2026-11-10T05:00:00.000Z" }],
-            alreadyDone: ["payment.order.settle"],
+            alreadyDone: ["nivo.payment.order.settle"],
         }
         for (const agentLoop of [false, true]) {
             const { ran, fake } = run({ model: [DONE], agentLoop }, {}, answered)
@@ -277,7 +277,7 @@ describe("context.agent.run", () => {
 
             expect(isNodeConfused(cause)).toBe(true)
             expect(json.mock.calls[1]?.[1].input).toMatchObject({
-                calls: [{ done: "refused", refused: { code: "REQUIRED_CALL_MISSING", message: "payment.order.settle" } }],
+                calls: [{ done: "refused", refused: { code: "REQUIRED_CALL_MISSING", message: "nivo.payment.order.settle" } }],
             })
         }
     })
@@ -292,7 +292,7 @@ describe("context.agent.run", () => {
 
         await expect(ran).resolves.toEqual({
             output: { result: "paid", orderId: "o-1" },
-            effects: [{ id: "payment.order.settle", subject: { kind: "order", id: "o-1", facts: { amountVnd: 1000 } } }],
+            effects: [{ id: "nivo.payment.order.settle", subject: { kind: "order", id: "o-1", facts: { amountVnd: 1000 } } }],
         })
         expect(execute.mock.calls.map((call) => Reflect.get(call, 2))).toEqual([
             { key: PAY_KEY, dedupeKey: null },
@@ -307,7 +307,7 @@ describe("context.agent.run", () => {
         const { ran, json, fake } = run({
             model: [
                 { call: { tool: "order.void", args: { id: "o-1" } } },
-                { call: { tool: "payment.order.settle", args: { orderId: 1 } } },
+                { call: { tool: "nivo.payment.order.settle", args: { orderId: 1 } } },
                 PAY,
                 DONE,
             ],
@@ -317,7 +317,7 @@ describe("context.agent.run", () => {
         expect(json.mock.calls[2]?.[1].input).toMatchObject({
             calls: [
                 { tool: "order.void", ok: false, refused: { code: "TOOL_NOT_OFFERED" } },
-                { tool: "payment.order.settle", ok: false, refused: { code: "EFFECT_PAYLOAD_INVALID" } },
+                { tool: "nivo.payment.order.settle", ok: false, refused: { code: "EFFECT_PAYLOAD_INVALID" } },
             ],
         })
         expect(fake.executed).toHaveLength(1)
@@ -371,11 +371,11 @@ describe("the fake's scripted answers", () => {
     it("answers a scripted refusal for the first call of an effect, then the made-up subject", async () => {
         const { ran, fake } = run({
             model: [PAY, PAY, DONE],
-            answers: { "payment.order.settle": [{ kind: "refused", id: "order_not_open", facts: { expectedVnd: 1000 } }] },
+            answers: { "nivo.payment.order.settle": [{ kind: "refused", id: "order_not_open", facts: { expectedVnd: 1000 } }] },
         })
 
         await expect(ran).resolves.toMatchObject({
-            effects: [{ id: "payment.order.settle", subject: { kind: "payment.order.settle", id: "payment.order.settle-2" } }],
+            effects: [{ id: "nivo.payment.order.settle", subject: { kind: "nivo.payment.order.settle", id: "nivo.payment.order.settle-2" } }],
         })
         expect(fake.executed).toHaveLength(2)
     })
@@ -406,10 +406,10 @@ describe("context.agent.run on a host that takes the turns itself (`ports.agent`
         ["calls, then the output", { model: [PAY, TELL, DONE] }],
         ["an early output refused until the required call succeeded", { model: [DONE, PAY, DONE] }],
         ["an output that does not fit, then one that does", { model: [PAY, { done: { result: "maybe" } }, DONE] }],
-        ["a tool the step does not declare, then the call", { model: [{ call: { tool: "order.create", args: {} } }, PAY, DONE] }],
+        ["a tool the step does not declare, then the call", { model: [{ call: { tool: "nivo.order.create", args: {} } }, PAY, DONE] }],
         ["a confusion", { model: [PAY, STUCK] }],
-        ["a refusal that satisfies nothing, then a confusion", { model: [PAY, DONE, STUCK], answers: { "payment.order.settle": [{ kind: "refused", id: "waits_owner" }] } }],
-        ["a send already told for the stop counts as done", { model: [PAY, DONE], answers: { "payment.order.settle": [{ kind: "refused", id: "already_told_for_this_stop" }] } }],
+        ["a refusal that satisfies nothing, then a confusion", { model: [PAY, DONE, STUCK], answers: { "nivo.payment.order.settle": [{ kind: "refused", id: "waits_owner" }] } }],
+        ["a send already told for the stop counts as done", { model: [PAY, DONE], answers: { "nivo.payment.order.settle": [{ kind: "refused", id: "already_told_for_this_stop" }] } }],
         ["turns run out", { model: [TELL, TELL, TELL, TELL] }],
     ] as const)("ends as the runner's own loop does: %s", async (_what, script) => {
         const own = await outcomeOf(run({ ...script }))
@@ -428,10 +428,10 @@ describe("context.agent.run on a host that takes the turns itself (`ports.agent`
         expect(loop?.maxTurns).toBe(4)
         expect(loop?.instructions).toContain("You act by calling tools")
         expect(loop?.instructions).not.toContain('{"call"')
-        expect(loop?.instructions).not.toContain('"name":"payment.order.settle"')
+        expect(loop?.instructions).not.toContain('"name":"nivo.payment.order.settle"')
         expect(loop?.step).toContain("Mark the order paid with the bank transaction, then tell the team.")
-        expect(loop?.step).toContain('"required":["payment.order.settle"],"tools":["payment.order.settle","agent-message.post"]}')
-        expect(loop?.tools.map((tool) => tool.name)).toEqual(["agent-message.post", "payment.order.settle"])
+        expect(loop?.step).toContain('"required":["nivo.payment.order.settle"],"tools":["nivo.payment.order.settle","agent-message.post"]}')
+        expect(loop?.tools.map((tool) => tool.name)).toEqual(["agent-message.post", "nivo.payment.order.settle"])
         expect(loop?.tools[1]?.argsSchema).toMatchObject({ type: "object", required: ["orderId", "transactionId"] })
         expect(loop?.input).toEqual({ input: { orderId: "o-1", transactionId: "tx-1" } })
         expect(loop?.volatile).toBeUndefined()
@@ -449,12 +449,12 @@ describe("context.agent.run on a host that takes the turns itself (`ports.agent`
     })
 
     it("answers each call with the fact the model reads, under the runner's own call key, and refuses arguments that are no object", async () => {
-        const { ran, fake } = run({ model: [{ call: { tool: "payment.order.settle", args: "o-1" } }, PAY, DONE], agentLoop: true })
+        const { ran, fake } = run({ model: [{ call: { tool: "nivo.payment.order.settle", args: "o-1" } }, PAY, DONE], agentLoop: true })
         await ran
 
         expect(fake.agentFacts.map((fact) => fact.answer)).toEqual([
             { ok: false, refused: expect.objectContaining({ code: "TOOL_ARGS_INVALID" }) },
-            { ok: true, subject: { kind: "payment.order.settle", id: "payment.order.settle-1" } },
+            { ok: true, subject: { kind: "nivo.payment.order.settle", id: "nivo.payment.order.settle-1" } },
             { ok: true },
         ])
         expect(fake.executed.map((one) => one.key)).toEqual([PAY_KEY])
@@ -465,7 +465,7 @@ describe("context.agent.run on a host that takes the turns itself (`ports.agent`
         const seen: Array<unknown> = []
         const agent: NonNullable<NodeHostPorts["agent"]> = async (loop) => {
             seen.push(loop.confused({ reason: "", question: null }))
-            seen.push(await loop.call("payment.order.settle", PAY.call.args))
+            seen.push(await loop.call("nivo.payment.order.settle", PAY.call.args))
             seen.push(loop.done(DONE.done))
             seen.push(await loop.call("agent-message.post", { text: "late" }))
             seen.push(loop.done(DONE.done))
@@ -489,13 +489,13 @@ describe("context.agent.run on a host that takes the turns itself (`ports.agent`
         expect(ran.output).toEqual({ result: "paid", orderId: "o-1" })
         expect(seen).toEqual([
             { ok: false, refused: expect.objectContaining({ code: "CONFUSION_INVALID" }) },
-            { ok: true, subject: expect.objectContaining({ kind: "payment.order.settle" }) },
+            { ok: true, subject: expect.objectContaining({ kind: "nivo.payment.order.settle" }) },
             { ok: true },
             { ok: false, refused: expect.objectContaining({ code: "STEP_ENDED" }) },
             { ok: false, refused: expect.objectContaining({ code: "STEP_ENDED" }) },
             { ok: false, refused: expect.objectContaining({ code: "STEP_ENDED" }) },
         ])
-        expect(fake.executed.map((one) => one.id)).toEqual(["payment.order.settle"])
+        expect(fake.executed.map((one) => one.id)).toEqual(["nivo.payment.order.settle"])
     })
 
     it("answers confused when the host returns without an output or a confusion taken", async () => {

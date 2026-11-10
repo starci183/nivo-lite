@@ -481,7 +481,7 @@ describe("StopLearningService", () => {
         expect(Object.keys(world.store.rows[0] ?? {})).not.toContain("leadId")
     })
 
-    it("after learning, the next stop of the same gap finds the truth by its own words (what brain.search ranks on)", () => {
+    it("after learning, the next stop of the same gap finds the truth by its own words (what nivo.brain.search ranks on)", () => {
         const learned = {
             id: "fact-1",
             subjectKey: factSlugOf(DRAFT.subject),

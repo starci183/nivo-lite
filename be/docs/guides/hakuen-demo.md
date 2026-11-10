@@ -50,7 +50,7 @@ every table is written by its owning capability:
    `hakuen.rates.quote`, `hakuen.booking.hold`, `hakuen.folio.get` auto and `hakuen.booking.confirm` auto with the argument bound
    `discountPct <= 0` (HAKUEN's own policy, written as profile data on the gateway's generic argument bounds: any discount goes to
    approval). AI CSKH `hakuen.stay.*`, `hakuen.guest.*`, `hakuen.folio.get` auto, `hakuen.keycode.reveal` ask; the accounting
-   agent `sepay.*`, `einvoice.*`, `hakuen.folio.*` auto.
+   agent `sepay.*`, `nivo.einvoice.*`, `hakuen.folio.*` auto.
 6. Documents (layer 2) through `ProfileSourcesService.keep`, queued into the ingestion in the same transaction; a changed text is
    re-queued, an unchanged one is left alone.
 7. Hub rooms when `public.ensure_office_rooms` exists; each agent with a home room is moved there with

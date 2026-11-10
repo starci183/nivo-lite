@@ -109,8 +109,8 @@
                     ],
                     "tools": [],
                     "effects": [
-                        "lead.update",
-                        "team.message.post"
+                        "nivo.lead.update",
+                        "nivo.team.message.post"
                     ]
                 },
                 "nodes": [

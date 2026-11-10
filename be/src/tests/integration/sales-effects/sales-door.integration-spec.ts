@@ -237,12 +237,12 @@ const conversation = async (): Promise<string> => {
     return id
 }
 
-describe("the lead.ensure effect on the engine", () => {
+describe("the nivo.lead.ensure effect on the engine", () => {
     it("makes the customer of a conversation through the phone match key, and a second conversation of that phone gets the same one", async () => {
         const first = await conversation()
         const second = await conversation()
-        const made = await run("lead.ensure", { conversationId: first, name: "Lan", phone: "0933 111 222" })
-        const again = await run("lead.ensure", { conversationId: second, phone: "84933111222" })
+        const made = await run("nivo.lead.ensure", { conversationId: first, name: "Lan", phone: "0933 111 222" })
+        const again = await run("nivo.lead.ensure", { conversationId: second, phone: "84933111222" })
         expect(made).toMatchObject({ kind: "sales-lead" })
         expect(again).toEqual(made)
         expect(await leadsLinkedTo(seed.manager, first)).toEqual([made.id])
@@ -257,8 +257,8 @@ describe("the lead.ensure effect on the engine", () => {
 
     it("answers the customer a conversation is linked to without making a second, and tells the turn who it is", async () => {
         const id = await conversation()
-        const made = await run("lead.ensure", { conversationId: id })
-        expect(await run("lead.ensure", { conversationId: id, name: "Other" })).toEqual(made)
+        const made = await run("nivo.lead.ensure", { conversationId: id })
+        expect(await run("nivo.lead.ensure", { conversationId: id, name: "Other" })).toEqual(made)
         expect(await door.read(OWNER, "sales.lead", { id: made.id })).toMatchObject({
             contactName: "Guest 7",
             phone: null,
@@ -269,7 +269,7 @@ describe("the lead.ensure effect on the engine", () => {
     })
 
     it("refuses a conversation the workspace does not have", async () => {
-        await expect(run("lead.ensure", { conversationId: world.id() })).rejects.toMatchObject({
+        await expect(run("nivo.lead.ensure", { conversationId: world.id() })).rejects.toMatchObject({
             code: "SALES_EFFECTS_CONVERSATION_NOT_FOUND",
         })
     })
@@ -297,13 +297,13 @@ describe("the order effects on the engine", () => {
             status: "draft",
             leadId: BINH,
         })
-        expect(await run("order.confirm", { orderId: recorded.id })).toEqual(recorded)
+        expect(await run("nivo.order.confirm", { orderId: recorded.id })).toEqual(recorded)
         expect(await door.read(OWNER, "sales.order", { id: recorded.id })).toMatchObject({
             status: "confirmed",
             confirmedBy: "NIVO",
         })
         expect(await stageOf(BINH)).toBe("won")
-        expect(await run("order.confirm", { orderId: recorded.id })).toEqual(recorded)
+        expect(await run("nivo.order.confirm", { orderId: recorded.id })).toEqual(recorded)
     })
 
     it("cuts a draft short, once, and keeps its fields", async () => {

@@ -24,7 +24,7 @@ export const LEAD_ENTITY = "sales.lead"
 /**
  * The context sources registered in nivo core, on one shape (scope, lens, brief, read tools). Adding a source here gives it the default
  * grant, the door's lock when its scope is the customer, and its place in every agent's tool set; the engine itself is not touched.
- * The brain keeps its existing tool name until the one rename flip (`brain.search` → `nivo.brain.search`).
+ * The brain keeps its existing tool name until the one rename flip (`nivo.brain.search` → `nivo.brain.search`).
  */
 export const CONTEXT_SOURCES: ReadonlyArray<ContextSource> = [
     {

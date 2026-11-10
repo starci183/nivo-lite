@@ -31,7 +31,7 @@ const callWith = async (
 describe("core.call-workflow", () => {
     it("is the end hand-off step of the contract", () => {
         expect(coreCallWorkflowNode.id).toBe(CALL_WORKFLOW_STEP)
-        expect(coreCallWorkflowNode.effects).toEqual(["agent.tag"])
+        expect(coreCallWorkflowNode.effects).toEqual(["nivo.agent.tag"])
     })
 
     it.each(coreCallWorkflowNode.examples.map((each) => [each.name, each] as const))("example: %s", async (_name, each) => {
@@ -41,8 +41,8 @@ describe("core.call-workflow", () => {
     it("tags once, and answers the target it called with the tag it wrote", async () => {
         const { run, executed } = await callWith({ text: "Em mu\u1ed1n mua hoa", leadId: "l1" })
 
-        expect(executed.map((one) => one.id)).toEqual(["agent.tag"])
-        expect(run.output).toMatchObject({ agent: "sales", workflow: "consult", version: "latest", tag: { kind: "agent.tag" } })
+        expect(executed.map((one) => one.id)).toEqual(["nivo.agent.tag"])
+        expect(run.output).toMatchObject({ agent: "sales", workflow: "consult", version: "latest", tag: { kind: "nivo.agent.tag" } })
     })
 
     it("carries ONLY the mapped inputs as the data of the target, with the pin of the workflow and the calling run", async () => {

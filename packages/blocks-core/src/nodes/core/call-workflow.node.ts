@@ -42,7 +42,7 @@ const textOf = (inputs: Readonly<Record<string, unknown>>, name: string): string
 }
 
 /**
- * The `agent.tag` payload of a hand-off: the agent of the target's module, the pin of the workflow and version routing honours, and
+ * The `nivo.agent.tag` payload of a hand-off: the agent of the target's module, the pin of the workflow and version routing honours, and
  * ONLY the mapped inputs as the data the target's trigger reads (`trigger.<name>`). The lead and the conversation ride along when the
  * target declares them, so the target speaks in the same chat and reads the same lead memory; the calling run is named so the target
  * sees `trigger.caller`. The line shown is the customer's words when
@@ -84,10 +84,10 @@ export const coreCallWorkflowNode: NodeDefinition<typeof input, typeof output, t
     input,
     output,
     rights: [],
-    effects: ["agent.tag"],
+    effects: ["nivo.agent.tag"],
     run: async (given, context) => {
         const target = context.params
-        const tag = await context.effect("agent.tag", callPayloadOf(target, given.inputs, context.turn.turnId), {
+        const tag = await context.effect("nivo.agent.tag", callPayloadOf(target, given.inputs, context.turn.turnId), {
             dedupeKey: `call-workflow:${context.turn.turnId}:${target.agent}.${target.workflow}`,
         })
         return { agent: target.agent, workflow: target.workflow, version: target.version, tag }
@@ -97,10 +97,10 @@ export const coreCallWorkflowNode: NodeDefinition<typeof input, typeof output, t
             name: "calls the sales consult with only the mapped inputs, pinned to the workflow",
             params: { agent: "sales", workflow: "consult", version: "latest" },
             input: { inputs: { leadId: "l1", conversationId: "c1", text: "Em muốn đặt 1 chậu hoa" } },
-            output: { agent: "sales", workflow: "consult", version: "latest", tag: { kind: "agent.tag", id: "agent.tag-1" } },
+            output: { agent: "sales", workflow: "consult", version: "latest", tag: { kind: "nivo.agent.tag", id: "nivo.agent.tag-1" } },
             effects: [
                 {
-                    kind: "agent.tag",
+                    kind: "nivo.agent.tag",
                     payload: {
                         toModuleKey: "sales",
                         visibility: "chat",
@@ -120,10 +120,10 @@ export const coreCallWorkflowNode: NodeDefinition<typeof input, typeof output, t
             name: "a hand-off with no words shows the neutral note and keeps a pinned version",
             params: { agent: "sales", workflow: "after-sale", version: 3 },
             input: { inputs: { orderId: "o1" } },
-            output: { agent: "sales", workflow: "after-sale", version: 3, tag: { kind: "agent.tag", id: "agent.tag-1" } },
+            output: { agent: "sales", workflow: "after-sale", version: 3, tag: { kind: "nivo.agent.tag", id: "nivo.agent.tag-1" } },
             effects: [
                 {
-                    kind: "agent.tag",
+                    kind: "nivo.agent.tag",
                     payload: {
                         toModuleKey: "sales",
                         visibility: "chat",

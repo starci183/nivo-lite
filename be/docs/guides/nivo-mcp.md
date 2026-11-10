@@ -29,10 +29,10 @@ Corrections to what the plan assumed:
 
 | Assumed                                    | Found                                                                                                                                                                                                                                    | Consequence                                                                                                         |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `brain.search` runs over `match_knowledge` | `db/migrations/20261109100225_dead-objects_contract_drop.sql:206` drops it and no TS calls it                                                                                                                                            | Search goes through `KnowledgeSearchService.forAgent`, which reaches `KnowledgeChunksService.search`                |
+| `nivo.brain.search` runs over `match_knowledge` | `db/migrations/20261109100225_dead-objects_contract_drop.sql:206` drops it and no TS calls it                                                                                                                                            | Search goes through `KnowledgeSearchService.forAgent`, which reaches `KnowledgeChunksService.search`                |
 | apps/mcp and apps/cli have no boot proof   | `be/src/tests/fixtures/builders/{api,cli,mcp}.builder.ts` are committed and `starci app check --wiring` compiles the three roots (R272, BE-TEST-12); `app-check-4.log` of 2026-10-31 says `boot wiring: checked, 3 app(s), 0 failure(s)` | The DI graph is proved. What nothing proves is that a built process starts and answers (section 4)                  |
 | An adapter can apply the agent's view      | `NativeAdapter.invoke(workspaceId, tool, args)` gets no caller                                                                                                                                                                           | Module, instance and audience cannot be known. `invoke` must receive the caller (W1)                                |
-| Reads fit the gateway limit                | the search query timeout is 8000 ms in `be/src/modules/domain/knowledge/knowledge-search.service.ts`; the native limit defaults to 4000 (`MCP_GATEWAY_TIMEOUT_MS`)                                                                       | A slow embedding fails the call and counts on the breaker. `brain.search` passes its own embed budget (section 5.2) |
+| Reads fit the gateway limit                | the search query timeout is 8000 ms in `be/src/modules/domain/knowledge/knowledge-search.service.ts`; the native limit defaults to 4000 (`MCP_GATEWAY_TIMEOUT_MS`)                                                                       | A slow embedding fails the call and counts on the breaker. `nivo.brain.search` passes its own embed budget (section 5.2) |
 | The audit masks PII                        | `summaryOf` stores 400 characters of the result in `mcp_call_log`, masking only `secretFields` and fixed secret names. SePay declares none, so payer names reach the console today                                                       | Every native tool declares `secretFields`; SePay is fixed (W2)                                                      |
 | A Drive source has no mark                 | `knowledge_sources.origin` exists and `EnqueueKnowledgeSourceInput.origin` takes it                                                                                                                                                      | No migration. Drive writes `origin: "google_drive"`                                                                 |
 | Telegram events come from `telegram_inbox` | The table has no `workspace_id` and holds raw bodies                                                                                                                                                                                     | Events are read as Zalo reads them, from conversations and the message feed (section 6.3)                           |
@@ -54,7 +54,7 @@ engine step ── node door (NodeToolDoorService) ┘      schema, grant, appro
 
 The door stays three meta-tools. Native tools are found with `tool.search` and called with `tool.call`, so `tools/list` does
 not grow with the catalog. Google Drive content is never read live through a tool: it enters through the Brain and is read
-with `brain.search`, as the ruling says. A provider MCP server, if one appears, is a remote connector and needs no NIVO code.
+with `nivo.brain.search`, as the ruling says. A provider MCP server, if one appears, is a remote connector and needs no NIVO code.
 
 ## 4. Boot check
 
@@ -118,36 +118,36 @@ Each Brain read answers for one view, the same one `knowledge.search` uses and n
   does not serve them. A later ruling can widen this per grant.
 - Evidence is returned as `{ kind, label }`. `quote`, `ref` and `connectionId` are dropped.
 
-`brain.search` gives its embedding 2500 ms (new optional `embedTimeoutMs` on `AgentSearch`, default unchanged), so the database
+`nivo.brain.search` gives its embedding 2500 ms (new optional `embedTimeoutMs` on `AgentSearch`, default unchanged), so the database
 half has room inside 4000 ms. When embedding is slow, unconfigured or out of credits it falls back to word search, as
 `passages` already does. An embedding is metered to the workspace through `UsageMeterService`.
 
 ### 5.3 Tools
 
 All are `read`, so `opKey` is optional and none writes. A new grant starts at `auto`. Default deny holds: no grant, no call.
-Scoping is section 5.2 for `brain.*` and `dossier.*`, and `workspaceId` for the rest. `Masked` is the tool's `secretFields`, which
+Scoping is section 5.2 for `nivo.brain.*` and `nivo.dossier.*`, and `workspaceId` for the rest. `Masked` is the tool's `secretFields`, which
 applies to audit arguments and the result summary at any depth.
 
 | Tool                    | Input                                                                  | Output                                                                                               | Masked                               | Calls                                                                                    |
 | ----------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------- |
-| `brain.search`          | `query` (1 to 500), `limit?` (1 to 8, default 6)                       | `facts: [FactLine]`, `passages: [{ sourceId, title, topic, order, content (400 chars) }]`            | `query`, `value`, `content`, `title` | `BrainFactsReadService.search`, `KnowledgeSearchService.forAgent`, layer `business` only |
-| `brain.facts.list`      | `subject?` (160), `limit?` (1 to 50, default 20)                       | `facts: [FactLine]`                                                                                  | `subject`, `value`                   | `BrainFactsReadService.forView`                                                          |
-| `brain.facts.get`       | `id` (uuid)                                                            | `FactLine` with `evidence`, `validFrom`, `validTo`, or `not_found`                                   | `value`, `label`                     | `BrainFactsReadService.get`, then `visibleTo` and `inForce`                              |
-| `dossier.status`        | none                                                                   | `dossiers: [{ id, ref, category, name, status, findingsOpen }]`, `totals`, `latestRunAt`             | none                                 | `BrainDossiersReadService.all`, new `DossierFindingsService.summaryForAgent`             |
-| `dossier.findings.list` | `dossierId?`, `statuses?`, `severities?`, `first?` (1 to 20), `after?` | `findings: [{ id, dossierId, kind, severity, status, title, remedyAction, lastSeenAt }]`, `pageInfo` | `title`                              | new `DossierFindingsService.listForAgent`                                                |
-| `drive.status`          | none                                                                   | `{ state, accountMasked, rawBytesUsed, sources: { ready, working, failed } }`                        | none                                 | `ConnectionBindingsReadService`, `KnowledgeSourcesReadService`                           |
-| `drive.sources.list`    | `status?`, `limit?` (1 to 50)                                          | `sources: [{ id, title, status, visibility, updatedAt }]`                                            | `title`                              | new `KnowledgeSourcesReadService.ofOrigin`                                               |
-| `telegram.status`       | none                                                                   | `connections: [{ id, name, handle, status, needsAttention }]`                                        | none                                 | `ConnectionBindingsReadService`                                                          |
+| `nivo.brain.search`          | `query` (1 to 500), `limit?` (1 to 8, default 6)                       | `facts: [FactLine]`, `passages: [{ sourceId, title, topic, order, content (400 chars) }]`            | `query`, `value`, `content`, `title` | `BrainFactsReadService.search`, `KnowledgeSearchService.forAgent`, layer `business` only |
+| `nivo.brain.fact.list`      | `subject?` (160), `limit?` (1 to 50, default 20)                       | `facts: [FactLine]`                                                                                  | `subject`, `value`                   | `BrainFactsReadService.forView`                                                          |
+| `nivo.brain.fact.get`       | `id` (uuid)                                                            | `FactLine` with `evidence`, `validFrom`, `validTo`, or `not_found`                                   | `value`, `label`                     | `BrainFactsReadService.get`, then `visibleTo` and `inForce`                              |
+| `nivo.dossier.status.get`        | none                                                                   | `dossiers: [{ id, ref, category, name, status, findingsOpen }]`, `totals`, `latestRunAt`             | none                                 | `BrainDossiersReadService.all`, new `DossierFindingsService.summaryForAgent`             |
+| `nivo.dossier.finding.list` | `dossierId?`, `statuses?`, `severities?`, `first?` (1 to 20), `after?` | `findings: [{ id, dossierId, kind, severity, status, title, remedyAction, lastSeenAt }]`, `pageInfo` | `title`                              | new `DossierFindingsService.listForAgent`                                                |
+| `google.drive.status.get`          | none                                                                   | `{ state, accountMasked, rawBytesUsed, sources: { ready, working, failed } }`                        | none                                 | `ConnectionBindingsReadService`, `KnowledgeSourcesReadService`                           |
+| `google.drive.source.list`    | `status?`, `limit?` (1 to 50)                                          | `sources: [{ id, title, status, visibility, updatedAt }]`                                            | `title`                              | new `KnowledgeSourcesReadService.ofOrigin`                                               |
+| `telegram.status.get`       | none                                                                   | `connections: [{ id, name, handle, status, needsAttention }]`                                        | none                                 | `ConnectionBindingsReadService`                                                          |
 | `telegram.events`       | `connectionId`, `limit?` (1 to 50)                                     | `events: [{ at, direction, delivery, customerMasked }]`                                              | `customerMasked`                     | `AgentConversationsReadService.onConnection`, `AgentMessagesFeedReadService.recentIn`    |
-| `zalo.status`           | none                                                                   | `connections: [{ id, name, oaId, status, needsAttention }]`                                          | none                                 | `ConnectionBindingsReadService`                                                          |
+| `zalo.status.get`           | none                                                                   | `connections: [{ id, name, oaId, status, needsAttention }]`                                          | none                                 | `ConnectionBindingsReadService`                                                          |
 | `zalo.events`           | `connectionId`, `limit?` (1 to 50)                                     | as `telegram.events`                                                                                 | `customerMasked`                     | as `telegram.events`                                                                     |
-| `sepay.status`          | none                                                                   | `connections: [{ id, name, accountMasked, status, needsAttention }]`                                 | none                                 | `ConnectionBindingsReadService`                                                          |
+| `sepay.status.get`          | none                                                                   | `connections: [{ id, name, accountMasked, status, needsAttention }]`                                 | none                                 | `ConnectionBindingsReadService`                                                          |
 
-`FactLine` is `{ id, subject, attribute, value, unit, trust }`. Only the three `brain.*` tools run in a customer turn, under the
-public view of section 5.2. Every other tool here is `internalOnly`, and `dossier.*` also answers `NativeRefused: internal_only` to an
+`FactLine` is `{ id, subject, attribute, value, unit, trust }`. Only the three `nivo.brain.*` tools run in a customer turn, under the
+public view of section 5.2. Every other tool here is `internalOnly`, and `nivo.dossier.*` also answers `NativeRefused: internal_only` to an
 agent whose view is customer, for a key held outside a conversation.
 
-The existing `sepay.transactions.list` and `sepay.transactions.debits` keep their shape and gain `secretFields: ["payer", "reference"]`.
+The existing `sepay.transaction.list` and `sepay.debit.list` keep their shape and gain `secretFields: ["payer", "reference"]`.
 
 PII in answers: no tool answers a message body, a visitor name, a phone number, an email in clear or a raw provider error.
 `customerMasked` is the first four and last three characters of the channel id, as the mockup draws it. `accountMasked` masks
@@ -359,8 +359,8 @@ compose function within its budget; split a compose file if the check asks.
 
 Specs, per adapter: unknown tool; a customer-audience view gets public facts only; a `conversationId` narrows an internal module;
 `customer` and `person` subjects never returned; `quote` never returned; a foreign `connectionId` gives `not_found`; `not_connected` for a
-workspace with no connection is `NativeRefused`; masked fields absent from `summaryOf`; `brain.search` with embeddings unavailable still
-answers by words and passes 2500 ms. `sepay-native`: payer absent from the summary, value unchanged. Integration: a key with a grant on `brain.search` reads a public
+workspace with no connection is `NativeRefused`; masked fields absent from `summaryOf`; `nivo.brain.search` with embeddings unavailable still
+answers by words and passes 2500 ms. `sepay-native`: payer absent from the summary, value unchanged. Integration: a key with a grant on `nivo.brain.search` reads a public
 fact of its workspace, gets nothing from another, and a line lands in `mcp_call_log` with `query` masked; no grant answers `not_granted`.
 
 Done: section 9.0 and the process boot of section 4.

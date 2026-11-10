@@ -97,12 +97,12 @@
             }
         ],
         "tools": [
-            "brain.search"
+            "nivo.brain.search"
         ],
         "effects": [
-            "agent.tag",
-            "customer.message.send",
-            "team.message.post"
+            "nivo.agent.tag",
+            "nivo.lead.message.send",
+            "nivo.team.message.post"
         ]
     },
     "nodes": [

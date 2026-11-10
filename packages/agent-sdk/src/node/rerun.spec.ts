@@ -20,10 +20,10 @@ const effectOf = (id: `${string}.${string}`, payload: z.ZodType): EffectDefiniti
     defineEffect({ id, title: { key: "t" }, payload, rights: [] })
 
 const EFFECTS = [
-    effectOf("order.create", z.object({ leadId: z.string() })),
-    effectOf("order.confirm", z.object({ orderId: z.string() })),
-    effectOf("payment.qr.create", z.object({ orderId: z.string() })),
-    effectOf("customer.message.send", z.object({ conversationId: z.string(), text: z.string() })),
+    effectOf("nivo.order.create", z.object({ leadId: z.string() })),
+    effectOf("nivo.order.confirm", z.object({ orderId: z.string() })),
+    effectOf("nivo.payment.qr.create", z.object({ orderId: z.string() })),
+    effectOf("nivo.lead.message.send", z.object({ conversationId: z.string(), text: z.string() })),
 ]
 
 const OUTPUT = z.object({ orderId: z.string() })
@@ -36,7 +36,7 @@ const stepNode = defineNode({
     input: z.object({ leadId: z.string() }),
     output: OUTPUT,
     rights: [],
-    effects: ["order.create", "order.confirm", "payment.qr.create", "customer.message.send"],
+    effects: ["nivo.order.create", "nivo.order.confirm", "nivo.payment.qr.create", "nivo.lead.message.send"],
     run: async (input, context) => {
         const decision = await context.agent.run({ goal: "Create the order.", input, output: OUTPUT, maxTurns: 6 })
         if (decision.kind === "confused") return context.confused(decision.confusion)
@@ -48,8 +48,8 @@ const stepNode = defineNode({
             params: {},
             input: { leadId: "l-1" },
             output: { orderId: "o-1" },
-            effects: ["order.create"],
-            model: [{ call: { tool: "order.create", args: { leadId: "l-1" } } }, { done: { orderId: "o-1" } }],
+            effects: ["nivo.order.create"],
+            model: [{ call: { tool: "nivo.order.create", args: { leadId: "l-1" } } }, { done: { orderId: "o-1" } }],
         },
     ],
 })
@@ -99,8 +99,8 @@ const attempt = (world: ReturnType<typeof worldOf>, model: ReadonlyArray<unknown
 }
 
 const call = (tool: string, args: Readonly<Record<string, unknown>>) => ({ call: { tool, args } })
-const CREATE = call("order.create", { leadId: "l-1" })
-const HOLD = call("customer.message.send", { conversationId: "c-1", text: "Dạ shop đang kiểm tra ạ." })
+const CREATE = call("nivo.order.create", { leadId: "l-1" })
+const HOLD = call("nivo.lead.message.send", { conversationId: "c-1", text: "Dạ shop đang kiểm tra ạ." })
 const ASK = { confused: { reason: "over the threshold", question: "Duyệt đơn này không?" } }
 
 describe("a step that runs again after the founder's answer", () => {
@@ -111,43 +111,43 @@ describe("a step that runs again after the founder's answer", () => {
 
         const ran = await attempt(world, [
             CREATE,
-            call("order.confirm", { orderId: "order.create#1" }),
-            { done: { orderId: "order.create#1" } },
+            call("nivo.order.confirm", { orderId: "nivo.order.create#1" }),
+            { done: { orderId: "nivo.order.create#1" } },
         ])
 
-        expect(world.acted.map((one) => one.id)).toEqual(["order.create", "customer.message.send", "order.confirm"])
+        expect(world.acted.map((one) => one.id)).toEqual(["nivo.order.create", "nivo.lead.message.send", "nivo.order.confirm"])
         expect(ran.effects).toEqual([
-            { id: "order.create", subject: { kind: "order.create", id: "order.create#1" } },
-            { id: "order.confirm", subject: { kind: "order.confirm", id: "order.confirm#3" } },
+            { id: "nivo.order.create", subject: { kind: "nivo.order.create", id: "nivo.order.create#1" } },
+            { id: "nivo.order.confirm", subject: { kind: "nivo.order.confirm", id: "nivo.order.confirm#3" } },
         ])
     })
 
     it("a QR after a refusal: the refused call kept nothing, and the call made again is not answered with the holding message", async () => {
-        const world = worldOf({ "payment.qr.create": [{ kind: "refused", id: "order_not_payable" }] })
-        const qr = call("payment.qr.create", { orderId: "o-1" })
+        const world = worldOf({ "nivo.payment.qr.create": [{ kind: "refused", id: "order_not_payable" }] })
+        const qr = call("nivo.payment.qr.create", { orderId: "o-1" })
         await attempt(world, [qr, HOLD, ASK]).catch(() => undefined)
 
         const ran = await attempt(world, [qr, { done: { orderId: "o-1" } }])
 
-        expect(world.acted.map((one) => one.id)).toEqual(["customer.message.send", "payment.qr.create"])
-        expect(ran.effects).toEqual([{ id: "payment.qr.create", subject: { kind: "payment.qr.create", id: "payment.qr.create#2" } }])
+        expect(world.acted.map((one) => one.id)).toEqual(["nivo.lead.message.send", "nivo.payment.qr.create"])
+        expect(ran.effects).toEqual([{ id: "nivo.payment.qr.create", subject: { kind: "nivo.payment.qr.create", id: "nivo.payment.qr.create#2" } }])
     })
 
     it("no double customer message: the same send asked again is answered from the first, whatever its place in the attempt", async () => {
         const world = worldOf()
         await attempt(world, [CREATE, HOLD, ASK]).catch(() => undefined)
 
-        await attempt(world, [HOLD, CREATE, HOLD, { done: { orderId: "order.create#1" } }])
+        await attempt(world, [HOLD, CREATE, HOLD, { done: { orderId: "nivo.order.create#1" } }])
 
-        expect(world.acted.map((one) => one.id)).toEqual(["order.create", "customer.message.send"])
+        expect(world.acted.map((one) => one.id)).toEqual(["nivo.order.create", "nivo.lead.message.send"])
     })
 
     it("the same tool with other arguments is another call, and equal arguments in another member order are the same call", async () => {
         const world = worldOf()
         await attempt(world, [
             HOLD,
-            call("customer.message.send", { text: "Dạ shop đang kiểm tra ạ.", conversationId: "c-1" }),
-            call("customer.message.send", { conversationId: "c-1", text: "Đơn của mình đã được duyệt ạ." }),
+            call("nivo.lead.message.send", { text: "Dạ shop đang kiểm tra ạ.", conversationId: "c-1" }),
+            call("nivo.lead.message.send", { conversationId: "c-1", text: "Đơn của mình đã được duyệt ạ." }),
             { done: { orderId: "o-1" } },
         ])
 

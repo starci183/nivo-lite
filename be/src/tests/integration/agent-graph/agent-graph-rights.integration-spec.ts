@@ -45,10 +45,10 @@ const arrange = async (who: Tenant, module: string) => {
         value: "8 to 21 every day",
         scope: "public",
     })
-    await grantTool(world.db.primary, who.workspaceId, who.agentId, "brain.search")
+    await grantTool(world.db.primary, who.workspaceId, who.agentId, "nivo.brain.search")
 }
 
-const search = (who: Tenant) => call(who, "brain.search", { query: "opening hours" })
+const search = (who: Tenant) => call(who, "nivo.brain.search", { query: "opening hours" })
 
 describe("agent-graph/rights: the data rights of an agent at the gateway", () => {
     const chatbot = tenant()
@@ -78,7 +78,7 @@ describe("agent-graph/rights: the data rights of an agent at the gateway", () =>
 
         expect(reply.body).toMatchObject({ result: { isError: true } })
         expect(JSON.stringify(reply.body)).toContain("no_data_right")
-        await expect(storedCallsOf(world.db.primary, closed.agentId, "brain.search")).resolves.toEqual([
+        await expect(storedCallsOf(world.db.primary, closed.agentId, "nivo.brain.search")).resolves.toEqual([
             expect.objectContaining({ outcome: "refused" }),
         ])
     })

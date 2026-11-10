@@ -283,7 +283,7 @@ describe("RunStopsService.stopped: the stop holds what the step told customers, 
 
         await stops.stopped(OPEN)
 
-        expect(ledger.recordsOf).toHaveBeenCalledWith("ws-1", { runId: "run-1", stepKey: "match" }, ["customer.message.send"])
+        expect(ledger.recordsOf).toHaveBeenCalledWith("ws-1", { runId: "run-1", stepKey: "match" }, ["nivo.lead.message.send"])
         expect(current().customerLines).toEqual([
             { conversationId: "conv-9", text: "Shop da nhan, dang kiem tra a.", at: "2026-11-10T09:59:00.000Z" },
         ])

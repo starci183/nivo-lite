@@ -143,7 +143,7 @@ describe("the lines of a step", () => {
         expect(
             callsOf({
                 calls: [
-                    { tool: "chat.send", ok: false, failure: "refused", effectKey: "k" },
+                    { tool: "nivo.chat.send", ok: false, failure: "refused", effectKey: "k" },
                     { tool: "catalogue.search", ok: true, effectKey: "k2" },
                     { tool: "no-ok" },
                     { ok: true },
@@ -152,7 +152,7 @@ describe("the lines of a step", () => {
                 ],
             }),
         ).toEqual([
-            { tool: "chat.send", ok: false, summary: "refused" },
+            { tool: "nivo.chat.send", ok: false, summary: "refused" },
             { tool: "catalogue.search", ok: true, summary: null },
         ])
         expect(callsOf({ calls: "none" })).toEqual([])

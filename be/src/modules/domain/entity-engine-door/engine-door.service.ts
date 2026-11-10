@@ -23,7 +23,7 @@ const NO_PROVIDER: DoorCallResult = { ok: false, reason: "unknown_tool", message
  * it, exactly as for an agent; the internal agent (the seeded `nivo` row of the workspace) holds only the tools of `DOOR_GRANTS` (default deny, answered `forbidden` before the
  * gateway is reached). The call is never made while an engine scope is open (no transaction spans an external call,
  * BE-PERSISTENCE-6), and its replay key is the job's effect key joined to the hash of the arguments, so a retried job never repeats
- * an effect. A domain tool (`<group>.<action>`, `chat.send`) names no provider: the door resolves it to the tool of the workspace's own
+ * an effect. A domain tool (`<group>.<action>`, `nivo.chat.send`) names no provider: the door resolves it to the tool of the workspace's own
  * connection that plays it (`domainNameIn` over the connectors of the workspace), and answers `unknown_tool` when the workspace has none.
  */
 export class EngineDoorService implements EngineDoorProvider {

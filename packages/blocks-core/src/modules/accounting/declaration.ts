@@ -101,7 +101,7 @@ export const accountingModule: ModuleDeclaration = defineModule({
         decideOwnerItemAction,
         repostLedgerAction,
     ],
-    tools: ["ledger.status", "ledger.append"],
+    tools: ["nivo.ledger.status.get", "nivo.ledger.entry.append"],
     specs: [accountingSpecDocument],
 })
 
@@ -117,6 +117,6 @@ export const paymentModule: ModuleDeclaration = defineModule({
     permissions: ["payment.manage"],
     reads: [],
     actions: [settleAction],
-    tools: ["chat.send"],
+    tools: ["nivo.chat.send"],
     specs: [],
 })

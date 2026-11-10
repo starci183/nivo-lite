@@ -79,7 +79,7 @@ describe("OutboundAccessService: the department agent's attachment to the conver
 
         expect(conversations.targetOf).toHaveBeenCalledWith("ws-1", "conv-named")
         expect(agents.agentOfDepartment).toHaveBeenCalledWith("ws-1", "sales", "inst-1")
-        expect(abilities.judge).toHaveBeenCalledWith("ws-1", "agent-1", "customer.message.send", false, {
+        expect(abilities.judge).toHaveBeenCalledWith("ws-1", "agent-1", "nivo.lead.message.send", false, {
             provider: "zalo_oa",
             connectionId: "conn-1",
         })

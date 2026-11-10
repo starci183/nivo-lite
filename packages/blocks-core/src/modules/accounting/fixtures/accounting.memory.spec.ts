@@ -365,7 +365,7 @@ describe("the memory ports", () => {
 
     it("answers the seats, the outbox and the door, and leaves a port outside the module unprovided", async () => {
         const world = memoryWorld()
-        world.answers.set("chat.send", { ok: true, output: null })
+        world.answers.set("nivo.chat.send", { ok: true, output: null })
         const provider = memoryProvider(world)
         const { members, outbox, door, transactions, entries } = portsOf(provider, {
             members: membersPort,
@@ -386,13 +386,13 @@ describe("the memory ports", () => {
             { job: "a.b", input: { id: "x" }, dedupeKey: "k" },
             { job: "a.c", input: { id: "y" }, dedupeKey: undefined },
         ])
-        await expect(doorApi(world).call("chat.send", { a: 1 })).resolves.toEqual({ ok: true, output: null })
-        await expect(door.call("ledger.status", {})).resolves.toEqual({
+        await expect(doorApi(world).call("nivo.chat.send", { a: 1 })).resolves.toEqual({ ok: true, output: null })
+        await expect(door.call("nivo.ledger.status.get", {})).resolves.toEqual({
             ok: false,
             reason: "unknown_tool",
-            message: "ledger.status",
+            message: "nivo.ledger.status.get",
         })
-        expect(world.calls.map((call) => call.tool)).toEqual(["chat.send", "ledger.status"])
+        expect(world.calls.map((call) => call.tool)).toEqual(["nivo.chat.send", "nivo.ledger.status.get"])
         await expect(transactions.get("nope")).resolves.toBeNull()
         await expect(entries.page(SHAPE, QUERY)).resolves.toEqual({ rows: [], cursor: null })
         expect(() => provider.implementationOf({ entry: "port", id: "elsewhere.thing" })).toThrow("PORT_UNPROVIDED")

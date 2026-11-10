@@ -107,8 +107,8 @@ describe("DossierNativeService manifest", () => {
         expect(
             DOSSIER_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.internalOnly, tool.secretFields]),
         ).toEqual([
-            ["status", "read", true, undefined],
-            ["findings.list", "read", true, ["title"]],
+            ["status.get", "read", true, undefined],
+            ["finding.list", "read", true, ["title"]],
         ])
     })
 })
@@ -124,8 +124,8 @@ describe("DossierNativeService unknown tool and arguments", () => {
     })
 
     it.each([
-        ["status", { dossierId: "d1" }],
-        ["findings.list", { first: 99 }],
+        ["status.get", { dossierId: "d1" }],
+        ["finding.list", { first: 99 }],
     ])("refuses invalid arguments for %s before reading anything", async (tool, args) => {
         const { dossier, dossiers, findings } = await build()
 
@@ -139,7 +139,7 @@ describe("DossierNativeService unknown tool and arguments", () => {
 })
 
 describe("DossierNativeService internal use", () => {
-    it.each(["status", "findings.list"])(
+    it.each(["status.get", "finding.list"])(
         "refuses %s to a caller the view policy keeps out, before reading anything",
         async (tool) => {
             const { dossier, dossiers, findings, views } = await build()
@@ -189,7 +189,7 @@ describe("DossierNativeService status", () => {
             }),
         )
 
-        await expect(dossier.invoke(WS, "status", {}, AGENT)).resolves.toEqual({
+        await expect(dossier.invoke(WS, "status.get", {}, AGENT)).resolves.toEqual({
             dossiers: [
                 {
                     id: "d1",
@@ -209,7 +209,7 @@ describe("DossierNativeService status", () => {
 
     it("answers no last review before the first run, and the request time of a run that has not ended", async () => {
         const { dossier, findings } = await build()
-        const first = await dossier.invoke(WS, "status", {}, AGENT)
+        const first = await dossier.invoke(WS, "status.get", {}, AGENT)
         findings.summaryForAgent.mockResolvedValue(
             summary({
                 latestRun: {
@@ -228,7 +228,7 @@ describe("DossierNativeService status", () => {
                 },
             }),
         )
-        const running = await dossier.invoke(WS, "status", {}, AGENT)
+        const running = await dossier.invoke(WS, "status.get", {}, AGENT)
 
         expect(first["latestRunAt"]).toBeNull()
         expect(running["latestRunAt"]).toBe("2026-10-31T00:00:00.000Z")
@@ -241,7 +241,7 @@ describe("DossierNativeService findings.list", () => {
 
         const answer = await dossier.invoke(
             WS,
-            "findings.list",
+            "finding.list",
             {
                 dossierId: "11111111-1111-4111-8111-222222222222",
                 statuses: ["open"],
@@ -288,7 +288,7 @@ describe("DossierNativeService findings.list", () => {
             pageInfo: { endCursor: null, hasNextPage: false },
         })
 
-        const answer = await dossier.invoke(WS, "findings.list", {}, AGENT)
+        const answer = await dossier.invoke(WS, "finding.list", {}, AGENT)
 
         expect(JSON.stringify(answer)).toContain(`"${"t".repeat(199)}…"`)
     })

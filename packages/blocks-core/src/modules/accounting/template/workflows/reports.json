@@ -1,0 +1,108 @@
+{
+    "id": "accounting.reports",
+    "moduleKey": "accounting",
+    "primary": false,
+    "seedActive": true,
+    "name": {
+        "vi": "Báo cáo cuối ngày",
+        "en": "Evening report"
+    },
+    "summary": {
+        "vi": "Gửi báo cáo sổ sách cuối ngày",
+        "en": "Sends the evening books report"
+    },
+    "requires": [
+        {
+            "kind": "google",
+            "label": {
+                "vi": "Google Sheets",
+                "en": "Google Sheets"
+            },
+            "why": {
+                "vi": "Đọc sổ thu chi để tổng hợp",
+                "en": "Reads the cash book to sum it up"
+            }
+        }
+    ],
+    "shops": 917,
+    "versions": [
+        {
+            "version": 3,
+            "publishedAt": "2026-11-10T14:00:00.000Z",
+            "changes": [
+                {
+                    "vi": "Thuần nghiệp vụ: Báo cáo cuối ngày qua công cụ chốt ngày (số liệu tính ở máy chủ), Đã báo cáo",
+                    "en": "Pure business steps: Evening report through the daily close tool (figures computed server-side), Reported"
+                }
+            ],
+            "graph": {
+                "schema": "nivo/agent-graph@1",
+                "moduleKey": "accounting",
+                "contract": {
+                    "inputs": [
+                        {
+                            "name": "slotMs",
+                            "type": "integer",
+                            "required": true
+                        }
+                    ]
+                },
+                "triggers": [
+                    {
+                        "key": "evening",
+                        "source": {
+                            "kind": "schedule",
+                            "connectionId": null
+                        }
+                    }
+                ],
+                "outcomes": [
+                    {
+                        "key": "reported",
+                        "label": "Đã báo cáo",
+                        "outputs": []
+                    }
+                ],
+                "entry": {
+                    "openTo": "agent"
+                },
+                "trigger": {
+                    "kind": "tag",
+                    "sources": [
+                        "schedule"
+                    ]
+                },
+                "grant": {
+                    "rights": [],
+                    "tools": [],
+                    "effects": [
+                        "nivo.report.daily.close"
+                    ]
+                },
+                "nodes": [
+                    {
+                        "key": "report",
+                        "kind": "output",
+                        "step": "accounting.report",
+                        "params": {
+                            "slotMs": {
+                                "$ref": "trigger.slotMs"
+                            },
+                            "locale": "vi"
+                        },
+                        "next": "reported"
+                    },
+                    {
+                        "key": "reported",
+                        "kind": "output",
+                        "step": "core.outcome",
+                        "params": {
+                            "outcome": "reported",
+                            "outputs": {}
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

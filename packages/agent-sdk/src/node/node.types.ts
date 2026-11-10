@@ -265,7 +265,7 @@ export interface NodeExample<I extends z.ZodType, O extends z.ZodType, P extends
     /** The tools' results, in call order. */
     readonly tools?: ReadonlyArray<unknown>
     /**
-     * What each effect answers, by effect id, in call order: `{ "order.confirm": [{ kind: "refused", id: "waits_owner", facts }] }`
+     * What each effect answers, by effect id, in call order: `{ "nivo.order.confirm": [{ kind: "refused", id: "waits_owner", facts }] }`
      * scripts a refusal (or any subject with its facts) for that call. A call past the list, or an effect not named, answers the
      * made-up subject `{ kind: <effect id>, id: "<effect id>-<n>" }`.
      */

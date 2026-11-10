@@ -47,7 +47,7 @@ const deepArgs = (): Record<string, JsonValue> => {
 describe("EngineDoorService", () => {
     it("calls the gateway as the workspace agent, internal, under the job's replay key", async () => {
         const { door, gateway } = await build(undefined, [CHANNEL])
-        const result = await door.doorApi(binding()).call("chat.send", { to: "a" })
+        const result = await door.doorApi(binding()).call("nivo.chat.send", { to: "a" })
         expect(result).toEqual({ ok: true, output: { sent: true } })
         expect(gateway.call).toHaveBeenCalledWith(
             {
@@ -57,7 +57,7 @@ describe("EngineDoorService", () => {
                 workItemId: null,
                 audience: "internal",
                 engine: true,
-                opKey: `job-1:chat.send:${argsHashOf({ to: "a" })}`,
+                opKey: `job-1:nivo.chat.send:${argsHashOf({ to: "a" })}`,
             },
             "zalo.send",
             { to: "a" },
@@ -66,7 +66,7 @@ describe("EngineDoorService", () => {
 
     it("calls the gateway as the seeded nivo agent of the workspace, and refuses when the workspace has none", async () => {
         const { door, gateway } = await build(undefined, [CHANNEL], [])
-        await expect(door.doorApi(binding()).call("chat.send", {})).rejects.toMatchObject({
+        await expect(door.doorApi(binding()).call("nivo.chat.send", {})).rejects.toMatchObject({
             code: EntityEngineDoorErrorCode.NoAgent,
         })
         expect(gateway.call).not.toHaveBeenCalled()
@@ -74,7 +74,7 @@ describe("EngineDoorService", () => {
 
     it("maps a gateway refusal to a door failure", async () => {
         const { door } = await build({ ok: false, code: "not_granted", detail: "zalo.send" }, [CHANNEL])
-        expect(await door.doorApi(binding()).call("chat.send", {})).toEqual({
+        expect(await door.doorApi(binding()).call("nivo.chat.send", {})).toEqual({
             ok: false,
             reason: "forbidden",
             message: "zalo.send",
@@ -83,7 +83,7 @@ describe("EngineDoorService", () => {
 
     it("refuses a call while an engine scope is open, and never reaches the gateway", async () => {
         const { door, gateway } = await build()
-        await expect(door.doorApi(binding(true)).call("chat.send", {})).rejects.toMatchObject({
+        await expect(door.doorApi(binding(true)).call("nivo.chat.send", {})).rejects.toMatchObject({
             code: EntityEngineDoorErrorCode.InScope,
         })
         expect(gateway.call).not.toHaveBeenCalled()
@@ -104,13 +104,13 @@ describe("EngineDoorService", () => {
 
     it("answers invalid for arguments the gateway cannot take", async () => {
         const { door, gateway } = await build()
-        const result = await door.doorApi(binding()).call("chat.send", { nested: deepArgs() })
+        const result = await door.doorApi(binding()).call("nivo.chat.send", { nested: deepArgs() })
         expect(result).toEqual({ ok: false, reason: "invalid", message: "invalid_arguments" })
         expect(gateway.call).not.toHaveBeenCalled()
     })
 })
 
-/** A connector of the workspace whose tool `send` plays the domain tool `chat.send`. */
+/** A connector of the workspace whose tool `send` plays the domain tool `nivo.chat.send`. */
 const CHANNEL = builder<WorkspaceConnector>({
     manifest: {
         key: "zalo",
@@ -124,7 +124,7 @@ const CHANNEL = builder<WorkspaceConnector>({
                 scope: "write",
                 defaultMode: "auto",
                 inputSchema: {},
-                domain: "chat.send",
+                domain: "nivo.chat.send",
             },
         ],
     },
@@ -141,11 +141,11 @@ const CHANNEL = builder<WorkspaceConnector>({
 describe("EngineDoorService domain tools", () => {
     it("resolves a domain tool to the tool of the workspace's own connection that plays it", async () => {
         const { door, gateway } = await build({ ok: true, value: { sent: true } }, [CHANNEL])
-        const result = await door.doorApi(binding()).call("chat.send", { key: "m1" })
+        const result = await door.doorApi(binding()).call("nivo.chat.send", { key: "m1" })
         expect(result).toEqual({ ok: true, output: { sent: true } })
         expect(gateway.connectorsOf).toHaveBeenCalledWith("ws-1")
         expect(gateway.call).toHaveBeenCalledWith(
-            expect.objectContaining({ workspaceId: "ws-1", opKey: `job-1:chat.send:${argsHashOf({ key: "m1" })}` }),
+            expect.objectContaining({ workspaceId: "ws-1", opKey: `job-1:nivo.chat.send:${argsHashOf({ key: "m1" })}` }),
             "zalo.send",
             { key: "m1" },
         )
@@ -153,7 +153,7 @@ describe("EngineDoorService domain tools", () => {
 
     it("answers unknown_tool for a domain tool no connection of the workspace plays, and calls nothing", async () => {
         const { door, gateway } = await build()
-        expect(await door.doorApi(binding()).call("chat.send", {})).toEqual({
+        expect(await door.doorApi(binding()).call("nivo.chat.send", {})).toEqual({
             ok: false,
             reason: "unknown_tool",
             message: "no_provider",

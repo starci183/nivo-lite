@@ -3,23 +3,23 @@
     "outcome": {
         "acts": [
             {
-                "effect": "customer.message.send",
+                "effect": "nivo.lead.message.send",
                 "payload": {
                     "text": "Chi Lan oi, sap toi sinh nhat me chi roi, chi co muon dat gio hoa nho nhu lan truoc khong a?",
                     "conversationId": "conv-1"
                 },
-                "key": "00000000-0000-4000-8000-000000000001:suggest:8db54b38573e4291",
+                "key": "00000000-0000-4000-8000-000000000001:suggest:568cd2f75d2ca138",
                 "dedupeKey": null
             },
             {
-                "effect": "customer.care.schedule",
+                "effect": "nivo.lead.care.schedule",
                 "payload": {
                     "kind": "occasion",
                     "ref": "lead-1",
                     "dueAt": "2027-11-06T17:00:00.000Z",
                     "suffix": "sinhnhatme-11-14"
                 },
-                "key": "00000000-0000-4000-8000-000000000001:suggest:9e66221a99da8f8a",
+                "key": "00000000-0000-4000-8000-000000000001:suggest:05f8099c2b7db4e1",
                 "dedupeKey": "care-arm:occasion:lead-1:sinhnhatme-11-14:2027-11-06T17:00:00.000Z"
             }
         ],
@@ -27,14 +27,14 @@
             {
                 "conversationId": "conv-1",
                 "text": "Chi Lan oi, sap toi sinh nhat me chi roi, chi co muon dat gio hoa nho nhu lan truoc khong a?",
-                "channelRef": "line:00000000-0000-4000-8000-000000000001:suggest:8db54b38573e4291"
+                "channelRef": "line:00000000-0000-4000-8000-000000000001:suggest:568cd2f75d2ca138"
             }
         ],
         "team": [],
         "ledger": [
             {
-                "effectKey": "call:00000000-0000-4000-8000-000000000001:suggest:8db54b38573e4291",
-                "effectId": "customer.message.send",
+                "effectKey": "call:00000000-0000-4000-8000-000000000001:suggest:568cd2f75d2ca138",
+                "effectId": "nivo.lead.message.send",
                 "runId": "00000000-0000-4000-8000-000000000001",
                 "stepKey": "suggest",
                 "args": {
@@ -49,7 +49,7 @@
             },
             {
                 "effectKey": "dedupe:care-arm:occasion:lead-1:sinhnhatme-11-14:2027-11-06T17:00:00.000Z",
-                "effectId": "customer.care.schedule",
+                "effectId": "nivo.lead.care.schedule",
                 "runId": "00000000-0000-4000-8000-000000000001",
                 "stepKey": "suggest",
                 "args": {
@@ -58,8 +58,8 @@
                     "dueAt": "2027-11-06T17:00:00.000Z",
                     "suffix": "sinhnhatme-11-14"
                 },
-                "subjectEntity": "customer.care.schedule",
-                "subjectId": "customer.care.schedule-2"
+                "subjectEntity": "nivo.lead.care.schedule",
+                "subjectId": "nivo.lead.care.schedule-2"
             }
         ],
         "modelAsked": [

@@ -26,7 +26,7 @@ export const profileCuts = (now: Date): ProfileCuts => ({
     triedBefore: new Date(now.getTime() - PROFILE_RETRY_MS),
 })
 
-/** The profile a `chat.profile` answer holds; null when the answer is not the name and picture it announces. */
+/** The profile a `nivo.chat.profile.get` answer holds; null when the answer is not the name and picture it announces. */
 export const profileOfAnswer = (output: unknown): OptionalChatCustomerProfile => {
     if (!isRecord(output)) return null
     const { name, avatarUrl } = output

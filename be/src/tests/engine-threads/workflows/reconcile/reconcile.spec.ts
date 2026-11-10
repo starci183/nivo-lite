@@ -376,7 +376,7 @@ describe("reconcile on a thread: the stop rules", () => {
 
         expect(await statusOf(process, runId)).toBe("stopped")
         expect((await stopsOf(process, runId)).map((stop) => stop.stepKey)).toEqual(["ledger"])
-        const undo = [TOOL.orderVoid, "order.cancel", "payment.claim.cancel", TOOL.ledgerVoid]
+        const undo = [TOOL.orderVoid, "nivo.order.cancel", "nivo.payment.claim.cancel", TOOL.ledgerVoid]
         expect(db.acts.filter((act) => undo.includes(act.effect))).toEqual([])
         expect(db.store.order?.[0]).toMatchObject({ status: "paid" })
 

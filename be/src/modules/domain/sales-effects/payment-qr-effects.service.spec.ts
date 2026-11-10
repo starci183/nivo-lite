@@ -67,7 +67,7 @@ const build = async (
         }),
     )
     const sender: Sender = {
-        effect: "customer.message.send",
+        effect: "nivo.lead.message.send",
         execute: jest.fn().mockResolvedValue({ kind: "message", id: "m-plain" }),
         composed: jest.fn().mockResolvedValue({ kind: "message", id: "m1" }),
     }
@@ -75,7 +75,7 @@ const build = async (
     const rematch = mock<NodeEffectExecutor>({ execute: jest.fn().mockResolvedValue({ kind: "order", id: "o1" }) })
     const schedule = mock<NodeEffectExecutor>({ execute: jest.fn().mockResolvedValue({ kind: "agent-task", id: "t" }) })
     registry.executorOf.mockImplementation((effect) =>
-        effect === "payment.credit.rematch" ? rematch : options.composing === false ? plain : sender,
+        effect === "nivo.payment.credit.rematch" ? rematch : options.composing === false ? plain : sender,
     )
     registry.optionalExecutorOf.mockReturnValue(schedule)
     accounts.accountOfConnection.mockImplementation((_workspaceId, connectionId) =>
@@ -132,7 +132,7 @@ describe("PaymentQrEffectsService on a shop with two payment accounts", () => {
 describe("PaymentQrEffectsService", () => {
     it("registers the payment.qr-create executor", async () => {
         const { executor } = await build()
-        expect(executor.effect).toBe("payment.qr.create")
+        expect(executor.effect).toBe("nivo.payment.qr.create")
     })
 
     it("sends the payment details of the order with the QR and its card, from the records, and answers them as facts", async () => {

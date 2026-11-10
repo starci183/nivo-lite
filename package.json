@@ -125,6 +125,7 @@
     "codegen": "node scripts/codegen.mjs",
     "codegen:graphql": "node scripts/codegen.mjs --graphql",
     "seeds:graphs": "node scripts/seeds-graphs.mjs",
+    "tool-names:check": "node scripts/tool-names-check.mjs",
     "typecheck": "npm run build:modules --silent && npm run codegen --silent && tsc -p be/tsconfig.json && turbo run typecheck",
     "lint": "npm run build:modules --silent && npm run codegen --silent && turbo run build --filter=./fe/packages/* && starci app check --gate lint",
     "lint:fix": "npm run build:modules --silent && npm run codegen --silent && turbo run build --filter=./fe/packages/* && starci app check --gate lint --fix",

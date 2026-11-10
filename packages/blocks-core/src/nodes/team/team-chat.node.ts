@@ -155,7 +155,7 @@ const MONEY_REFUSAL = "Dạ số liệu doanh thu chỉ chủ tiệm hoặc qu�
  * `team.chat` (the agent answers the team): an agent step of the `team-chat` workflow every module with an agent ships. A person of the
  * shop spoke to the agent in its private room, or called it by name (or by a reply) in a room of several people; the agent answers like
  * a colleague from the shop's truths, with the asker's standing as its lens, and files a truth change for the owner when an owner or a
- * manager states a lasting rule. Its tools are the truth-graph reads and `brain.change.propose` only: nothing that acts on a customer or on
+ * manager states a lasting rule. Its tools are the truth-graph reads and `nivo.brain.change.propose` only: nothing that acts on a customer or on
  * money. The node's code, not the model, posts the answer in the room as a reply to the asked message, once per message and agent.
  */
 export const teamChatNode: NodeDefinition<NodeSchema<TeamChatInput>, NodeSchema<TeamChatOutput>, NodeSchema<NoParams>> =

@@ -1,6 +1,6 @@
 import { SEPAY_BANK_MOVE_SCHEMA } from "./sepay-native.schema"
 
-describe.each(["transactions.list", "transactions.debits"])("SePay %s argument schema", () => {
+describe.each(["transaction.list", "debit.list"])("SePay %s argument schema", () => {
     it("accepts valid filters and supplies the default limit", () => {
         expect(SEPAY_BANK_MOVE_SCHEMA.parse({})).toEqual({ limit: 20 })
         expect(

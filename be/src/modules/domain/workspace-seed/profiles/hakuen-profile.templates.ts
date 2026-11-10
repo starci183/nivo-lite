@@ -90,7 +90,7 @@ export const HAKUEN_PROFILE: WorkspaceProfile = {
             room: "accounting",
             tools: [
                 { tool: "sepay.*", mode: "auto", limitVnd: null, constraints: [] },
-                { tool: "einvoice.*", mode: "auto", limitVnd: null, constraints: [] },
+                { tool: "nivo.einvoice.*", mode: "auto", limitVnd: null, constraints: [] },
                 { tool: "hakuen.folio.*", mode: "auto", limitVnd: null, constraints: [] },
             ],
             setup: HAKUEN_ACCOUNTING_SETUP,

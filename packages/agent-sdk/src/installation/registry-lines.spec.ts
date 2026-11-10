@@ -6,7 +6,7 @@ describe("registryLinesOf", () => {
     it("writes one `<kind>:<id>@<version>` line per installed thing, sorted by code unit", () => {
         const lines = registryLinesOf([
             { modules: [moduleOf("sales")], blocks: [STACK] },
-            { nodes: [nodeOf("lead.ensure")], jobs: [jobOf("sales.notice")], entities: [entityOf("sales.lead")] },
+            { nodes: [nodeOf("nivo.lead.ensure")], jobs: [jobOf("sales.notice")], entities: [entityOf("sales.lead")] },
         ])
         expect(lines).toEqual([
             "action:sales.open@0",
@@ -14,7 +14,7 @@ describe("registryLinesOf", () => {
             "entity:sales.lead@0",
             "job:sales.notice@0",
             "module:sales@0",
-            "node:lead.ensure@0",
+            "node:nivo.lead.ensure@0",
             "read:sales.people@0",
         ])
     })

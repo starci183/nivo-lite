@@ -117,7 +117,7 @@ type GrantWrite = Pick<InstanceType<typeof McpToolGrantEntity>, "workspaceId" | 
 const grantOf = builder<GrantWrite>({
     workspaceId: "22222222-2222-4222-8222-222222222222",
     agentId: "77777777-7777-4777-8777-777777777777",
-    tool: "brain.search",
+    tool: "nivo.brain.search",
     mode: "auto",
 })
 type GapWrite = Pick<
@@ -186,7 +186,7 @@ export const persistPublicDraftingAgent = (manager: EntityManager, id: PublicLif
         await tx.insert(AgentEntity, agentOf({ id: id.agentId, workspaceId: id.workspaceId }))
         await tx.insert(
             McpToolGrantEntity,
-            ["brain.search", "brain.documents.read"].map((tool) =>
+            ["nivo.brain.search", "nivo.brain.document.read"].map((tool) =>
                 grantOf({
                     workspaceId: id.workspaceId,
                     agentId: id.agentId,

@@ -22,7 +22,7 @@ describe("gatewayNameOf", () => {
     it("drops the group of a door tool and keeps the connector and its tool", async () => {
         const p = await build()
         expect(p.gatewayNameOf("chat.zalo.send")).toBe("zalo.send")
-        expect(p.gatewayNameOf("accounting.ledger.append")).toBe("ledger.append")
+        expect(p.gatewayNameOf("accounting.books.write")).toBe("books.write")
     })
 })
 

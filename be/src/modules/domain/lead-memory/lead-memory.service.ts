@@ -139,7 +139,7 @@ export class LeadMemoryService implements LeadMemoryStore {
     }
 
     /**
-     * Lays facts over the customer's facts entry, outside any step (what `lead.update` says the consult learned): only lead facts are
+     * Lays facts over the customer's facts entry, outside any step (what `nivo.lead.update` says the consult learned): only lead facts are
      * kept (`LEAD_FACTS`), the newest value wins, another writer is waited out a few times.
      */
     async remember(

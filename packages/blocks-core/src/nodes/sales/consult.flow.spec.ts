@@ -183,7 +183,7 @@ describe("sales.create-order", () => {
 })
 
 describe("payment.request", () => {
-    // Waits for F2's `payment.qr.create` effect ({ orderId }): until it is installed the runner refuses the undeclared effect.
+    // Waits for F2's `nivo.payment.qr.create` effect ({ orderId }): until it is installed the runner refuses the undeclared effect.
     it("no payment account connected: a holding line, then the step is not done and goes to the wrapper", async () => {
         const ran = await runOver(
             paymentRequestNode,

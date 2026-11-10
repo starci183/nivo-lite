@@ -12,9 +12,9 @@ export interface ToolWords {
     readonly summary: AgentToolText
 }
 
-/** One grant row of the agent: a tool (or `connector.*`) and its mode. */
+/** One grant row of the agent: a tool (or a wildcard `<prefix>.*`) and its mode. */
 export interface ToolGrantRow {
-    /** The full tool name or `connector.*`. */
+    /** The full tool name or a wildcard `<prefix>.*`. */
     readonly tool: string
     /** `auto`, `ask` or `never`. */
     readonly mode: string
@@ -65,10 +65,20 @@ const accountsOf = (input: AgentToolsInput, tool: string): ReadonlyArray<AgentTo
         })
     })
 
-/** The grant row that restricts the tool (its own row first, else its connector's `connector.*`), or null. */
+/** The prefix a wildcard row covers (`nivo.brain.*` → `nivo.brain`), or null for an exact row or a bare `nivo.*` (it covers nothing). */
+const wildcardPrefixOf = (tool: string): string | null =>
+    tool.endsWith(".*") && tool !== "nivo.*" && tool.length > 2 ? tool.slice(0, -2) : null
+
+/**
+ * The grant row that restricts the tool, as the gateway reads it: its own row first, else the wildcard row with the LONGEST prefix
+ * that covers it (`nivo.brain.*`), or null.
+ */
 const restrictionOf = (grants: ReadonlyArray<ToolGrantRow>, tool: string): "ask" | "never" | null => {
-    const connector = `${tool.split(".", 1).join("")}.*`
-    const row = grants.find((grant) => grant.tool === tool) ?? grants.find((grant) => grant.tool === connector)
+    const covering = grants
+        .map((grant) => ({ grant, prefix: wildcardPrefixOf(grant.tool) }))
+        .filter((entry) => entry.prefix !== null && tool.startsWith(`${entry.prefix}.`))
+        .toSorted((a, b) => (b.prefix?.length ?? 0) - (a.prefix?.length ?? 0))
+    const row = grants.find((grant) => grant.tool === tool) ?? covering[0]?.grant
     return row?.mode === "ask" || row?.mode === "never" ? row.mode : null
 }
 

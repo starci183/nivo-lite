@@ -22,7 +22,7 @@ const ORDER_CREATE = defineEffect({
     rights: [],
 })
 const MESSAGE_SEND = defineEffect({
-    id: "customer.message.send",
+    id: "nivo.lead.message.send",
     title: { key: "messageSend" },
     payload: z.object({ text: z.string() }).strict(),
     rights: [],
@@ -175,7 +175,7 @@ describe("replayPortsOf", () => {
             status: "ended",
             state: { steps: { consult: { order: "subject-1", sent: "subject-2", approved: true } } },
         })
-        expect(host.seen.execute).toEqual([`sales.order.create:${STEP_KEY}:aaaa`, `customer.message.send:${STEP_KEY}:cccc`])
+        expect(host.seen.execute).toEqual([`sales.order.create:${STEP_KEY}:aaaa`, `nivo.lead.message.send:${STEP_KEY}:cccc`])
     })
 
     it("passes read, write and now through unrecorded: a restart reads the world again", async () => {
@@ -276,9 +276,9 @@ describe("replayPortsOf", () => {
         expect(host.seen.model).toEqual(["json:consult:agent"])
         expect(host.seen.execute).toEqual([
             `sales.order.create:${STEP_KEY}:aaaa`,
-            `customer.message.send:${STEP_KEY}:cccc`,
+            `nivo.lead.message.send:${STEP_KEY}:cccc`,
             `sales.order.create:${STEP_KEY}:zzzz`,
-            `customer.message.send:${STEP_KEY}:cccc`,
+            `nivo.lead.message.send:${STEP_KEY}:cccc`,
         ])
         expect(logger.warn).toHaveBeenCalledWith(LanggraphLogEvent.ReplayLeft, {
             thread: "run-1",

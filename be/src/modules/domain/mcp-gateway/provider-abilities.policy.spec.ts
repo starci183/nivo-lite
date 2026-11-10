@@ -55,7 +55,7 @@ describe("the provider catalogue", () => {
         expect(isAbilityTool(TOOL.paymentQrCreate)).toBe(true)
         expect(isAbilityTool(TOOL.brainSearch)).toBe(false)
         expect(isAbilityTool(TOOL.paymentMarkPaid)).toBe(false)
-        expect(isAbilityTool("zalo.status")).toBe(false)
+        expect(isAbilityTool("zalo.status.get")).toBe(false)
         expect(isChannelBound(TOOL.customerMessageSend)).toBe(true)
         expect(isChannelBound(TOOL.ledgerAppend)).toBe(false)
         expect(providerOfChannel("zalo")).toBe("zalo_oa")
@@ -116,7 +116,7 @@ describe("judgeAbility: the decision table", () => {
     })
 })
 
-describe("judgeAbility: customer.message.send on the conversation's channel", () => {
+describe("judgeAbility: nivo.lead.message.send on the conversation's channel", () => {
     const rows = [row("zalo_oa", { "customer.send": "auto" }), row("telegram", {}), row("sepay", { "qr.create": "auto" })]
 
     it("is not judged without the provider of the conversation's channel", () => {

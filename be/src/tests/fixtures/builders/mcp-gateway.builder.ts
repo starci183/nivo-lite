@@ -159,7 +159,7 @@ export const answerOf = (value: GatewayJson): AnswerOfResultShape => ({ ok: true
 export const refusedReadLineOf: (overrides?: Partial<CallLogLine>) => CallLogLine = builder<CallLogLine>({
     workspaceId: "ws-1",
     connector: "sepay",
-    tool: "sepay.transactions.list",
+    tool: "sepay.transaction.list",
     agentId: "sales",
     conversationId: "conv-1",
     workItemId: null,

@@ -31,7 +31,7 @@ const CLAIMS: NodeRunClaims = {
 
 const callOf = (overrides: Partial<NodeToolCall> = {}): NodeToolCall => ({
     token: "token-1",
-    tool: "bank.transactions",
+    tool: "nivo.bank.transaction.list",
     args: ARGS,
     key: "step-1",
     approval: null,
@@ -101,7 +101,7 @@ describe("NodeToolDoorService who calls", () => {
                 audience: "internal",
                 graphStep: true,
             },
-            "bank.transactions",
+            "nivo.bank.transaction.list",
             ARGS,
         )
     })
@@ -111,7 +111,7 @@ describe("NodeToolDoorService who calls", () => {
 
         await expect(door.call(callOf())).rejects.toMatchObject({
             code: GraphNodesErrorCode.ToolTokenInvalid,
-            params: { tool: "bank.transactions" },
+            params: { tool: "nivo.bank.transaction.list" },
         })
         expect(gateway.call).not.toHaveBeenCalled()
     })
@@ -122,7 +122,7 @@ describe("NodeToolDoorService who calls", () => {
             locale: "vi" as const,
             handedOffBy: "agent-0",
             leadId: null,
-            stepTools: ["order.create"],
+            stepTools: ["nivo.order.create"],
         }
         const { door, gateway } = await build(claims)
 
@@ -135,7 +135,7 @@ describe("NodeToolDoorService who calls", () => {
             memberId: CLAIMS.memberId,
             handedOffBy: "agent-0",
             leadId: null,
-            stepTools: ["order.create"],
+            stepTools: ["nivo.order.create"],
         })
     })
 
@@ -190,7 +190,7 @@ describe("NodeToolDoorService who calls", () => {
     it("lets an owner or manager's turn call, and refuses any other member's turn unless a person approved it", async () => {
         const owner = await build({ ...CLAIMS, origin: "owner", memberId: "member-owner" })
         const staff = await build({ ...CLAIMS, origin: "staff", memberId: "member-staff" })
-        const approval = { by: "member-owner", fingerprint: toolFingerprintOf("bank.transactions", ARGS) }
+        const approval = { by: "member-owner", fingerprint: toolFingerprintOf("nivo.bank.transaction.list", ARGS) }
 
         await expect(owner.door.call(callOf())).resolves.toEqual({})
         await expect(staff.door.call(callOf())).rejects.toMatchObject({
@@ -220,11 +220,11 @@ describe("NodeToolDoorService approvals", () => {
     it("asks for a person with the fingerprint of the exact tool and arguments", async () => {
         const { door } = await build(CLAIMS, { ok: false, code: "approval_required", reason: "ask_mode" })
 
-        await expect(door.call(callOf({ tool: "ledger.append" }))).rejects.toMatchObject({
+        await expect(door.call(callOf({ tool: "nivo.ledger.entry.append" }))).rejects.toMatchObject({
             code: GraphNodesErrorCode.ToolApprovalRequired,
             params: {
-                tool: "ledger.append",
-                fingerprint: toolFingerprintOf("ledger.append", ARGS),
+                tool: "nivo.ledger.entry.append",
+                fingerprint: toolFingerprintOf("nivo.ledger.entry.append", ARGS),
                 reason: "ask_mode",
                 args: JSON.stringify({ orderNo: "DH-7", amountVnd: "5000", transferContent: "DH7 thanh toan" }),
             },
@@ -233,7 +233,7 @@ describe("NodeToolDoorService approvals", () => {
 
     it("runs a call that replays an approval of its fingerprint as approved by that person", async () => {
         const { door, gateway } = await build()
-        const approval = { by: "member-owner", fingerprint: toolFingerprintOf("bank.transactions", ARGS) }
+        const approval = { by: "member-owner", fingerprint: toolFingerprintOf("nivo.bank.transaction.list", ARGS) }
 
         await door.call(callOf({ approval }))
 
@@ -242,7 +242,7 @@ describe("NodeToolDoorService approvals", () => {
 
     it("asks again when the arguments changed after the approval", async () => {
         const { door, gateway } = await build()
-        const approval = { by: "member-owner", fingerprint: toolFingerprintOf("bank.transactions", ARGS) }
+        const approval = { by: "member-owner", fingerprint: toolFingerprintOf("nivo.bank.transaction.list", ARGS) }
 
         await door.call(callOf({ approval, args: { ...ARGS, amountVnd: 9000 } }))
 
@@ -269,7 +269,7 @@ describe("NodeToolDoorService failures", () => {
         ],
         [
             "a grant it lacks",
-            { ok: false, code: "not_granted", detail: "bank.transactions" },
+            { ok: false, code: "not_granted", detail: "nivo.bank.transaction.list" },
             GraphNodesErrorCode.ToolNotGranted,
         ],
         [
@@ -283,7 +283,7 @@ describe("NodeToolDoorService failures", () => {
         async (_name, result, code) => {
             const { door } = await build(CLAIMS, result)
 
-            await expect(door.call(callOf())).rejects.toMatchObject({ code, params: { tool: "bank.transactions" } })
+            await expect(door.call(callOf())).rejects.toMatchObject({ code, params: { tool: "nivo.bank.transaction.list" } })
         },
     )
 
@@ -300,17 +300,17 @@ describe("NodeToolDoorService failures", () => {
 
 describe("NodeToolDoorService failure log", () => {
     it("names a missing tool grant apart from a missing data right, and logs the refusal with its cause", async () => {
-        const { door, logger } = await build(CLAIMS, { ok: false, code: "not_granted", detail: "bank.transactions" })
+        const { door, logger } = await build(CLAIMS, { ok: false, code: "not_granted", detail: "nivo.bank.transaction.list" })
 
         await expect(door.call(callOf())).rejects.toMatchObject({
             code: GraphNodesErrorCode.ToolNotGranted,
-            params: { tool: "bank.transactions", reason: "no_tool_grant" },
+            params: { tool: "nivo.bank.transaction.list", reason: "no_tool_grant" },
         })
         expect(logger.warn).toHaveBeenCalledWith("mcp-gateway.node-tool.failed", {
             workspaceId: "ws-1",
             agentId: "agent-1",
             runId: "run-1",
-            tool: "bank.transactions",
+            tool: "nivo.bank.transaction.list",
             code: GraphNodesErrorCode.ToolNotGranted,
             gatewayCode: "not_granted",
             reason: "no_tool_grant",
@@ -357,7 +357,7 @@ const buildWithAbilities = async (verdict: Awaited<ReturnType<ProviderAbilitiesS
 const QR = { token: "token-1", effect: TOOL.paymentQrCreate, payload: { orderId: "o-1" }, approval: null }
 
 describe("NodeToolDoorService effect rights: the context.effect road", () => {
-    it("judges payment.qr.create and payment.credit.rematch by the run agent's abilities, as the gateway road does", async () => {
+    it("judges nivo.payment.qr.create and nivo.payment.credit.rematch by the run agent's abilities, as the gateway road does", async () => {
         const { door, abilities } = await buildWithAbilities({
             kind: "allow",
             provider: "sepay",
@@ -614,6 +614,6 @@ describe("NodeToolDoorService hard lock of the context reads", () => {
         await door.call(callOf())
 
         expect(gateway.call).toHaveBeenNthCalledWith(1, expect.anything(), TOOL.conversationMessageList, {})
-        expect(gateway.call).toHaveBeenNthCalledWith(2, expect.anything(), "bank.transactions", ARGS)
+        expect(gateway.call).toHaveBeenNthCalledWith(2, expect.anything(), "nivo.bank.transaction.list", ARGS)
     })
 })

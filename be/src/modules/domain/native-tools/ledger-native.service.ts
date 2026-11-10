@@ -33,12 +33,13 @@ const RECORD_ID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu
 /** The ledger capability: named by what it keeps, never by the provider that keeps it. */
 export const LEDGER_MANIFEST: NativeConnectorManifest = {
     key: "ledger",
+    namespace: "nivo.ledger",
     name: "Ledger",
     kind: "native",
     contractVersion: "ledger-native@1",
     tools: [
         {
-            name: "append",
+            name: "entry.append",
             description:
                 "Writes one bank transaction into the business ledger the workspace connected. Give the transaction id alone: the date, amount, order number and customer of the line are read from the records. A transaction is recorded once; nothing already written is changed or removed.",
             scope: "write",
@@ -46,28 +47,28 @@ export const LEDGER_MANIFEST: NativeConnectorManifest = {
             inputSchema: LEDGER_APPEND_INPUT_SCHEMA,
             argumentSchema: LEDGER_APPEND_SCHEMA,
             secretFields: ["customer"],
-            domain: "ledger.append",
+            domain: "nivo.ledger.entry.append",
             internalOnly: true,
         },
         {
-            name: "void",
+            name: "entry.void",
             description:
                 "Takes the entry of one transaction back by adding a void entry. Nothing already written is changed or removed.",
             scope: "write",
             defaultMode: "auto",
             inputSchema: LEDGER_VOID_INPUT_SCHEMA,
             argumentSchema: LEDGER_VOID_SCHEMA,
-            domain: "ledger.void",
+            domain: "nivo.ledger.entry.void",
             internalOnly: true,
         },
         {
-            name: "status",
+            name: "status.get",
             description: "Whether the workspace has a business ledger connected and told where to write.",
             scope: "read",
             defaultMode: "auto",
             inputSchema: LEDGER_STATUS_INPUT_SCHEMA,
             argumentSchema: LEDGER_STATUS_SCHEMA,
-            domain: "ledger.status",
+            domain: "nivo.ledger.status.get",
             internalOnly: true,
         },
     ],
@@ -75,13 +76,13 @@ export const LEDGER_MANIFEST: NativeConnectorManifest = {
 
 @Injectable()
 /**
- * `ledger.append`, `ledger.void` and `ledger.status` for a workspace, for internal callers only: the first registered provider that is
+ * `nivo.ledger.entry.append`, `nivo.ledger.entry.void` and `nivo.ledger.status.get` for a workspace, for internal callers only: the first registered provider that is
  * ready in the workspace keeps the ledger. The ledger is a copy that only grows. A transaction is written once (the key
  * `ledger:<transactionId>` in the ledger of graph-node effects, so a replay, another run or a retry never adds a second entry); a
  * provider refusing the connection is the refusal `connection_refused`, which only the owner can cure; any other failure of the provider
  * is thrown as it is and the run tries again. The once-per-key ledger is what makes a write happen once, so a write is never made
  * without it: an app that binds none (no graph host) answers the refusal `ledger_key_unavailable` and writes nothing, it never appends
- * unkeyed; `ledger.status` needs no key and answers everywhere.
+ * unkeyed; `nivo.ledger.status.get` needs no key and answers everywhere.
  */
 export class LedgerNativeService implements NativeAdapter {
     readonly manifest: NativeConnectorManifest = LEDGER_MANIFEST
@@ -97,17 +98,17 @@ export class LedgerNativeService implements NativeAdapter {
     /** Runs one ledger tool. */
     async invoke(workspaceId: string, tool: string, args: GatewayJson, caller: NativeCaller): Promise<GatewayJson> {
         await this.views.internalOf(workspaceId, caller)
-        if (tool === "status") {
+        if (tool === "status.get") {
             argumentsOf(tool, LEDGER_STATUS_SCHEMA, args)
             return { connected: (await this.readyPort(workspaceId)) !== undefined }
         }
-        if (tool === "append") {
+        if (tool === "entry.append") {
             const asked = argumentsOf(tool, LEDGER_APPEND_SCHEMA, args)
             const entry = "entry" in asked ? asked.entry : await this.entryOf(workspaceId, asked.transactionId)
             const key = `ledger:${entry.transactionId}${entry.status === "void" ? ":void" : ""}`
             return this.written(workspaceId, key, (port) => port.append(workspaceId, entry))
         }
-        if (tool === "void") {
+        if (tool === "entry.void") {
             const { transactionId } = argumentsOf(tool, LEDGER_VOID_SCHEMA, args)
             return this.written(workspaceId, `ledger:${transactionId}:void`, (port) =>
                 port.void(workspaceId, transactionId),

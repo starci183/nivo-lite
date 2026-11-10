@@ -151,23 +151,23 @@ export const TOOL_LABELS: Readonly<Record<string, ToolLabel>> = {
         { vi: "Xem ghi chú về khách", en: "Read notes on the customer" },
         { vi: "Xem điều tiệm đã ghi về khách đang xử lý.", en: "Reads what the shop noted about the customer it serves." },
     ),
-    "sepay.transactions.list": reads(
+    "sepay.transaction.list": reads(
         { vi: "Đọc giao dịch SePay", en: "Read SePay transactions" },
         { vi: "Đọc các khoản tiền vào qua SePay.", en: "Reads the credits SePay reports." },
     ),
-    "sepay.transactions.debits": reads(
+    "sepay.debit.list": reads(
         { vi: "Đọc tiền ra SePay", en: "Read SePay debits" },
         { vi: "Đọc các khoản tiền ra qua SePay.", en: "Reads the debits SePay reports." },
     ),
-    "sepay.status": reads(
+    "sepay.status.get": reads(
         { vi: "Xem trạng thái SePay", en: "Check SePay" },
         { vi: "Xem kết nối SePay có đang chạy không.", en: "Checks whether the SePay connection works." },
     ),
-    "drive.status": reads(
+    "google.drive.status.get": reads(
         { vi: "Xem trạng thái Google Drive", en: "Check Google Drive" },
         { vi: "Xem Google Drive đã nối chưa.", en: "Checks whether Google Drive is connected." },
     ),
-    "drive.sources.list": reads(
+    "google.drive.source.list": reads(
         { vi: "Xem tài liệu trên Drive", en: "List Drive documents" },
         { vi: "Liệt kê tài liệu Drive tiệm đã chọn.", en: "Lists the Drive documents the shop chose." },
     ),

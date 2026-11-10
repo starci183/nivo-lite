@@ -209,11 +209,11 @@ describe("the fake engine", () => {
         const { outbox, door } = portsOf(memoryProvider(world), { outbox: outboxPort, door: doorPort })
         await outbox.enqueue(DELIVER_REPLY, { messageId: "m1" })
         expect(world.jobs).toEqual([{ job: "chatbot.deliver-reply", input: { messageId: "m1" } }])
-        expect(await door.call("chat.send", { conversationId: "c1", text: "Hi", key: "k" })).toEqual({
+        expect(await door.call("nivo.chat.send", { conversationId: "c1", text: "Hi", key: "k" })).toEqual({
             ok: true,
             output: null,
         })
-        expect(world.sends).toEqual([{ tool: "chat.send", input: { conversationId: "c1", text: "Hi", key: "k" } }])
+        expect(world.sends).toEqual([{ tool: "nivo.chat.send", input: { conversationId: "c1", text: "Hi", key: "k" } }])
     })
 
     it("answer for the members and nobody else, and provide the entity ports", async () => {

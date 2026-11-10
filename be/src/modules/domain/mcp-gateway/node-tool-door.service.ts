@@ -126,7 +126,7 @@ export class NodeToolDoorService implements NodeToolDoor {
     ) {}
 
     /**
-     * One customer line per stop, ever: refuses a `customer.message.send` that would tell a customer again for the same stop. The
+     * One customer line per stop, ever: refuses a `nivo.lead.message.send` that would tell a customer again for the same stop. The
      * step (the same run and step key, on any engine) already sent a line to the conversation the call addresses in an EARLIER attempt
      * (so it ran, told the customer and did not complete: it stopped, was parked, re-driven or resumed), and no person has answered
      * its report since that line. The refusal is an ordinary fact the step reads (`already_told_for_this_stop`, with the line and its

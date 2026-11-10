@@ -45,9 +45,9 @@ describe("widens", () => {
     it("is true for a new tool or a new right field, false for the same or less", async () => {
         const subject = await build()
 
-        expect(subject.widens(graph([]), graph(["ledger.append"]))).toBe(true)
+        expect(subject.widens(graph([]), graph(["nivo.ledger.entry.append"]))).toBe(true)
         expect(subject.widens(graph([]), graph([], "amountVnd"))).toBe(true)
-        expect(subject.widens(graph(["ledger.append"]), graph([]))).toBe(false)
+        expect(subject.widens(graph(["nivo.ledger.entry.append"]), graph([]))).toBe(false)
         expect(subject.widens(graph([]), graph([]))).toBe(false)
     })
 
@@ -73,10 +73,10 @@ describe("requireNoWidening", () => {
     it("lets the owner widen and refuses a manager", async () => {
         const subject = await build()
 
-        expect(codeOf(() => subject.requireNoWidening(graph([]), graph(["ledger.append"]), "owner"))).toBeNull()
-        expect(codeOf(() => subject.requireNoWidening(graph([]), graph(["ledger.append"]), "manager"))).toBe(
+        expect(codeOf(() => subject.requireNoWidening(graph([]), graph(["nivo.ledger.entry.append"]), "owner"))).toBeNull()
+        expect(codeOf(() => subject.requireNoWidening(graph([]), graph(["nivo.ledger.entry.append"]), "manager"))).toBe(
             AgentGraphsErrorCode.WidensNeedsOwner,
         )
-        expect(codeOf(() => subject.requireNoWidening(graph(["ledger.append"]), graph([]), "manager"))).toBeNull()
+        expect(codeOf(() => subject.requireNoWidening(graph(["nivo.ledger.entry.append"]), graph([]), "manager"))).toBeNull()
     })
 })

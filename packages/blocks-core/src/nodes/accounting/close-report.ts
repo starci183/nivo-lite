@@ -25,13 +25,13 @@ import { amountTextOf } from "../sales/order-notice.policy"
 import { READ_CREDITS } from "./accounting.rights"
 
 /**
- * What the close report reads with: the books (`bank-transaction`, under `READ_CREDITS`) and the bank itself (the `bank.transactions`
+ * What the close report reads with: the books (`bank-transaction`, under `READ_CREDITS`) and the bank itself (the `nivo.bank.transaction.list`
  * tool). The executor of the `accounting.close-report` tool hands its own reader and bank port; a node context fits as is.
  */
 export interface CloseReportPorts {
     /** Reads the books. */
     readonly data: Pick<RightsBoundData, "read">
-    /** Calls the `bank.transactions` tool. */
+    /** Calls the `nivo.bank.transaction.list` tool. */
     readonly tools: NodeTools
 }
 
@@ -57,7 +57,7 @@ export interface CloseReport {
     readonly posts: ReadonlyArray<CloseReportPost>
 }
 
-const BANK_TOOL = "bank.transactions" as const
+const BANK_TOOL = "nivo.bank.transaction.list" as const
 
 /** The most rows the bank answers for one window, and the most one read of the books answers. */
 const BANK_PAGE = 50

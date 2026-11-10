@@ -11,7 +11,7 @@ import {
 import type { GatewayInputSchema } from "./gateway-tools.schema"
 import type { GatewayArgument, GatewayJson } from "./mcp-gateway.contracts"
 
-const TOOL_NAME = "sepay.transactions.list"
+const TOOL_NAME = "sepay.transaction.list"
 
 /** Resolve the local references of the advertised schema before inspecting a field's declared bounds. */
 const resolvedSchema = (schema: GatewayInputSchema | boolean | undefined): GatewayInputSchema => {

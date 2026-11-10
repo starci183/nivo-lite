@@ -49,7 +49,7 @@ describe("agent graph specs of flow F", () => {
         const broken: GraphSpec = {
             ...chatbot,
             // No right granted, an effect no node uses, and no tool for the ledger step the graph now reaches.
-            grant: { rights: [], tools: [], effects: [...chatbot.grant.effects, "lead.ensure"] },
+            grant: { rights: [], tools: [], effects: [...chatbot.grant.effects, "nivo.lead.ensure"] },
             nodes: [
                 ...chatbot.nodes.map((node) =>
                     node.kind === "condition" ? { ...node, routes: {} } : node.key === "answer" ? { ...node, next: ledger.key } : node,

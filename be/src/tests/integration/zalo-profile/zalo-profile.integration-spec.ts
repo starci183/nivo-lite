@@ -117,7 +117,7 @@ describe("the profile round of a Zalo connection", () => {
             take: ROWS_MAX,
         })
         expect(logged.map(({ connector, tool, outcome }) => ({ connector, tool, outcome }))).toEqual([
-            { connector: "chat", tool: "chat.profile", outcome: "ok" },
+            { connector: "chat", tool: "nivo.chat.profile.get", outcome: "ok" },
         ])
     })
 

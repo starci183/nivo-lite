@@ -170,18 +170,18 @@
                         }
                     ],
                     "tools": [
-                        "brain.search",
+                        "nivo.brain.search",
                         "nivo.lead.order.list"
                     ],
                     "effects": [
-                        "customer.message.send",
-                        "lead.ensure",
-                        "lead.stage.update",
-                        "order.create",
-                        "order.confirm",
-                        "payment.qr.create",
-                        "customer.care.schedule",
-                        "team.message.post"
+                        "nivo.lead.message.send",
+                        "nivo.lead.ensure",
+                        "nivo.lead.stage.update",
+                        "nivo.order.create",
+                        "nivo.order.confirm",
+                        "nivo.payment.qr.create",
+                        "nivo.lead.care.schedule",
+                        "nivo.team.message.post"
                     ]
                 },
                 "nodes": [

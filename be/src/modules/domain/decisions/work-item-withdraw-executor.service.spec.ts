@@ -54,7 +54,7 @@ describe("WorkItemWithdrawExecutorService", () => {
         const { executor } = await build()
         const bare = await buildWithoutRegistry()
 
-        expect(executor.effect).toBe("work.item.cancel")
+        expect(executor.effect).toBe("nivo.work.item.cancel")
         expect(() => bare.onModuleInit()).not.toThrow()
     })
 

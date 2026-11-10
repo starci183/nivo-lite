@@ -4,12 +4,12 @@
         "outcome": {
             "acts": [
                 {
-                    "effect": "customer.message.send",
+                    "effect": "nivo.lead.message.send",
                     "payload": {
                         "text": "Chi Lan oi, 2 gio hoa nho da toi noi chu? Chi co hai long khong a?",
                         "conversationId": "conv-1"
                     },
-                    "key": "00000000-0000-4000-8000-000000000001:check:de120463c4b39d0b",
+                    "key": "00000000-0000-4000-8000-000000000001:check:c4a9298363df0016",
                     "dedupeKey": null
                 }
             ],
@@ -17,14 +17,14 @@
                 {
                     "conversationId": "conv-1",
                     "text": "Chi Lan oi, 2 gio hoa nho da toi noi chu? Chi co hai long khong a?",
-                    "channelRef": "line:00000000-0000-4000-8000-000000000001:check:de120463c4b39d0b"
+                    "channelRef": "line:00000000-0000-4000-8000-000000000001:check:c4a9298363df0016"
                 }
             ],
             "team": [],
             "ledger": [
                 {
-                    "effectKey": "call:00000000-0000-4000-8000-000000000001:check:de120463c4b39d0b",
-                    "effectId": "customer.message.send",
+                    "effectKey": "call:00000000-0000-4000-8000-000000000001:check:c4a9298363df0016",
+                    "effectId": "nivo.lead.message.send",
                     "runId": "00000000-0000-4000-8000-000000000001",
                     "stepKey": "check",
                     "args": {
@@ -49,13 +49,13 @@
         "outcome": {
             "acts": [
                 {
-                    "effect": "customer.care.schedule",
+                    "effect": "nivo.lead.care.schedule",
                     "payload": {
                         "kind": "delivery-check",
                         "ref": "order-1",
                         "dueAt": "2026-11-20T02:00:00.000Z"
                     },
-                    "key": "00000000-0000-4000-8000-000000000001:check:cefc22c467e16006",
+                    "key": "00000000-0000-4000-8000-000000000001:check:b1e128bb6ed185c4",
                     "dedupeKey": "care-arm:delivery-check:order-1::2026-11-20T02:00:00.000Z"
                 }
             ],
@@ -64,7 +64,7 @@
             "ledger": [
                 {
                     "effectKey": "dedupe:care-arm:delivery-check:order-1::2026-11-20T02:00:00.000Z",
-                    "effectId": "customer.care.schedule",
+                    "effectId": "nivo.lead.care.schedule",
                     "runId": "00000000-0000-4000-8000-000000000001",
                     "stepKey": "check",
                     "args": {
@@ -72,8 +72,8 @@
                         "ref": "order-1",
                         "dueAt": "2026-11-20T02:00:00.000Z"
                     },
-                    "subjectEntity": "customer.care.schedule",
-                    "subjectId": "customer.care.schedule-1"
+                    "subjectEntity": "nivo.lead.care.schedule",
+                    "subjectId": "nivo.lead.care.schedule-1"
                 }
             ],
             "modelAsked": []

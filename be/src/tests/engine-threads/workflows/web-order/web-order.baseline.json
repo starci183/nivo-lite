@@ -3,7 +3,7 @@
     "outcome": {
         "acts": [
             {
-                "effect": "lead.update",
+                "effect": "nivo.lead.update",
                 "payload": {
                     "leadId": "lead-1",
                     "consultStage": "close",
@@ -12,25 +12,25 @@
                         "deliveryAt": "thu Bay"
                     }
                 },
-                "key": "00000000-0000-4000-8000-000000000001:read:aaa958e870f5e0e9",
+                "key": "00000000-0000-4000-8000-000000000001:read:40057d34f8b0e889",
                 "dedupeKey": null
             },
             {
-                "effect": "team.message.post",
+                "effect": "nivo.team.message.post",
                 "payload": {
                     "kind": "message.text",
                     "intent": "ask",
                     "title": "Don web moi: goi xac nhan",
                     "text": "Khach Lan dat 2 Gio hoa nho giao 25 Nguyen Hue thu Bay qua website. Goi 0901234567 de xac nhan."
                 },
-                "key": "00000000-0000-4000-8000-000000000001:read:f3be48e9971a2054",
+                "key": "00000000-0000-4000-8000-000000000001:read:13c103fb95663aa0",
                 "dedupeKey": null
             }
         ],
         "lines": [],
         "team": [
             {
-                "key": "00000000-0000-4000-8000-000000000001:read:f3be48e9971a2054",
+                "key": "00000000-0000-4000-8000-000000000001:read:13c103fb95663aa0",
                 "versions": [
                     {
                         "kind": "message.text",
@@ -43,8 +43,8 @@
         ],
         "ledger": [
             {
-                "effectKey": "call:00000000-0000-4000-8000-000000000001:read:aaa958e870f5e0e9",
-                "effectId": "lead.update",
+                "effectKey": "call:00000000-0000-4000-8000-000000000001:read:40057d34f8b0e889",
+                "effectId": "nivo.lead.update",
                 "runId": "00000000-0000-4000-8000-000000000001",
                 "stepKey": "read",
                 "args": {
@@ -55,12 +55,12 @@
                         "deliveryAt": "thu Bay"
                     }
                 },
-                "subjectEntity": "lead.update",
-                "subjectId": "lead.update-1"
+                "subjectEntity": "nivo.lead.update",
+                "subjectId": "nivo.lead.update-1"
             },
             {
-                "effectKey": "call:00000000-0000-4000-8000-000000000001:read:f3be48e9971a2054",
-                "effectId": "team.message.post",
+                "effectKey": "call:00000000-0000-4000-8000-000000000001:read:13c103fb95663aa0",
+                "effectId": "nivo.team.message.post",
                 "runId": "00000000-0000-4000-8000-000000000001",
                 "stepKey": "read",
                 "args": {

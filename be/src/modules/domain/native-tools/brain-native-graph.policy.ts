@@ -29,7 +29,7 @@ export const relatedLinesOf = (
         })
         .slice(0, limit)
 
-/** What `brain.change.propose` answers: what happened and the change request, which waits for the founder while it is proposed. */
+/** What `nivo.brain.change.propose` answers: what happened and the change request, which waits for the founder while it is proposed. */
 export const changeAnswerOf = (filed: ChangeFiled): GatewayJson => ({
     outcome: filed.outcome,
     changeRequest: {

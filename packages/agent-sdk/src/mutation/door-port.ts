@@ -7,7 +7,7 @@ import type { PortDefinition } from "../port/port.types"
 export const DOOR_PORT_ID = "engine.door"
 
 /**
- * A door tool: a domain tool `<group>.<action>` (`chat.send`, `ledger.append`), whose provider the door resolves from the workspace's
+ * A door tool: a domain tool `<group>.<action>` (`nivo.chat.send`, `nivo.ledger.entry.append`), whose provider the door resolves from the workspace's
  * connection, or a provider-qualified `<group>.<provider>.<action>` (`ai.agent.turn`, `chat.zalo.send`). NIVO's own tools after the
  * rename are domain tools too, three or four parts under `nivo.` (`nivo.chat.send`, `nivo.ledger.entry.append`): the door resolves
  * them by the full id a connector declares as its `domain`, never by dropping a part.

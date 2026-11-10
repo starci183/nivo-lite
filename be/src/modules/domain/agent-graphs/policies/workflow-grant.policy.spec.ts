@@ -31,25 +31,25 @@ const right = (
 /** The agent: reads every order of the workspace (id, amount), the customer only for the turn (name), posts to the ledger. */
 const AGENT: GraphSpecGrant = {
     rights: [right("order", "workspace", ["id", "amountVnd"]), right("customer", "turn", ["name"])],
-    tools: ["ledger.append"],
+    tools: ["nivo.ledger.entry.append"],
     effects: ["ledger.post", "work-item.raise"],
 }
 
 /** The tool set the agent's module declares. */
-const AGENT_TOOLS: ReadonlyArray<string> = ["ledger.append", "ledger.post", "work-item.raise"]
+const AGENT_TOOLS: ReadonlyArray<string> = ["nivo.ledger.entry.append", "ledger.post", "work-item.raise"]
 
 describe("workflowRunGrantOf", () => {
     it("keeps the workflow's own rights, and of its tools and effects only those the agent's declared tool set holds", async () => {
         const subject = await build()
         const own: GraphSpecGrant = {
             rights: [right("order", "workspace", ["id", "note"]), right("payment", "workspace", ["id"])],
-            tools: ["ledger.append", "bank.pull"],
+            tools: ["nivo.ledger.entry.append", "bank.pull"],
             effects: ["ledger.post", "payment.refund"],
         }
 
         expect(subject.workflowRunGrantOf(own, AGENT_TOOLS)).toEqual({
             rights: own.rights,
-            tools: withDefaultReads(["ledger.append"]),
+            tools: withDefaultReads(["nivo.ledger.entry.append"]),
             effects: ["ledger.post"],
         })
     })
@@ -58,7 +58,7 @@ describe("workflowRunGrantOf", () => {
         const subject = await build()
 
         expect(subject.workflowRunGrantOf({ ...AGENT, tools: [] }, AGENT_TOOLS).tools).toEqual(withDefaultReads([]))
-        expect(subject.ownRunGrantOf(AGENT).tools).toEqual(withDefaultReads(["ledger.append"]))
+        expect(subject.ownRunGrantOf(AGENT).tools).toEqual(withDefaultReads(["nivo.ledger.entry.append"]))
         expect(subject.ownRunGrantOf(AGENT).tools).toContain(TOOL.leadOrderList)
     })
 

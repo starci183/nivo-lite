@@ -10,7 +10,7 @@ import { CONV, FRONT, LEAD, ZALO, type Act, type ThreadDb, type ThreadProcess, t
 
 // THE MONEY WORLD of package P7 (1-8: consult + reconcile on threads). The database and the process of the 0-9 world (`thread-world*.ts`),
 // with three agents (front desk, sales, accounting) and their seeded workflows, the shop's books (orders, bank transactions, claims,
-// catalogue) as the data ports read them, and two outside parts the 0-9 world does not need: the gateway's `ledger.append` (one line per
+// catalogue) as the data ports read them, and two outside parts the 0-9 world does not need: the gateway's `nivo.ledger.entry.append` (one line per
 // bank transaction, however often it is asked: its own business key) and the bank's settle (the order is paid, the credit tied to it).
 // The process over it is `thread-world-money-process.ts`. Faked: the model (scripted per purpose), the outside acts, the wake and run
 // tables, as in the 0-9 world.
@@ -252,7 +252,7 @@ export const linesOf = (db: MoneyDb): ReadonlyArray<string> => db.lines.map((lin
 const AGENT_OF_MODULE: Readonly<Record<string, string>> = { chatbot: FRONT, sales: SALES, accounting: ACCOUNTING }
 
 /**
- * The wake a hand-off (`core.call-workflow`'s `agent.tag` act) makes for its target, as `AgentTagService` writes it: the target agent of
+ * The wake a hand-off (`core.call-workflow`'s `nivo.agent.tag` act) makes for its target, as `AgentTagService` writes it: the target agent of
  * the module, the workflow pin and the mapped inputs as the tag's data, the customer and conversation it names.
  */
 export const handOffWake = (act: Act, fromAgentId: string): WakeIn => {

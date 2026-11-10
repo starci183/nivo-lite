@@ -95,7 +95,7 @@ const buildBare = async (port: LedgerPort) => {
 describe("LedgerNativeService > the manifest", () => {
     it("names the capability by what it keeps, never by a provider, and is for internal callers only", () => {
         expect(LEDGER_MANIFEST.key).toBe("ledger")
-        expect(LEDGER_MANIFEST.tools.map((tool) => tool.name)).toEqual(["append", "void", "status"])
+        expect(LEDGER_MANIFEST.tools.map((tool) => tool.name)).toEqual(["entry.append", "entry.void", "status.get"])
         for (const tool of LEDGER_MANIFEST.tools) expect(tool.internalOnly).toBe(true)
         expect(LEDGER_MANIFEST.tools.map((tool) => tool.scope)).toEqual(["write", "write", "read"])
         expect(JSON.stringify(LEDGER_MANIFEST)).not.toMatch(/sheet|google|cell/iu)
@@ -115,18 +115,17 @@ describe("LedgerNativeService > the door", () => {
         checkedAt: null,
     }
 
-    it("plays every ledger door tool the internal agent holds, so a job that calls `ledger.status` or `ledger.append` finds its tool", () => {
-        const ledgerGrants = DOOR_GRANTS.filter((tool) => tool.startsWith("ledger."))
-        expect(ledgerGrants).toEqual(["ledger.append", "ledger.status"])
-        for (const tool of ledgerGrants)
-            expect(domainNameIn([connector], tool)).toBe(`ledger.${tool.slice("ledger.".length)}`)
+    it("plays every ledger door tool the internal agent holds, so a job that calls `nivo.ledger.status.get` or `nivo.ledger.entry.append` finds its tool", () => {
+        const ledgerGrants = DOOR_GRANTS.filter((tool) => tool.startsWith("nivo.ledger."))
+        expect(ledgerGrants).toEqual(["nivo.ledger.entry.append", "nivo.ledger.status.get"])
+        for (const tool of ledgerGrants) expect(domainNameIn([connector], tool)).toBe(tool)
     })
 
     it("declares the domain of each of its tools", () => {
         expect(LEDGER_MANIFEST.tools.map((tool) => tool.domain)).toEqual([
-            "ledger.append",
-            "ledger.void",
-            "ledger.status",
+            "nivo.ledger.entry.append",
+            "nivo.ledger.entry.void",
+            "nivo.ledger.status.get",
         ])
     })
 })
@@ -137,9 +136,9 @@ describe("LedgerNativeService > status", () => {
         const idle = await build(portOf(false))
         const none = await build(null)
 
-        await expect(ready.service.invoke("ws-1", "status", {}, CALLER)).resolves.toEqual({ connected: true })
-        await expect(idle.service.invoke("ws-1", "status", {}, CALLER)).resolves.toEqual({ connected: false })
-        await expect(none.service.invoke("ws-1", "status", {}, CALLER)).resolves.toEqual({ connected: false })
+        await expect(ready.service.invoke("ws-1", "status.get", {}, CALLER)).resolves.toEqual({ connected: true })
+        await expect(idle.service.invoke("ws-1", "status.get", {}, CALLER)).resolves.toEqual({ connected: false })
+        await expect(none.service.invoke("ws-1", "status.get", {}, CALLER)).resolves.toEqual({ connected: false })
         expect(ready.views.internalOf).toHaveBeenCalledWith("ws-1", CALLER)
     })
 })
@@ -148,7 +147,7 @@ describe("LedgerNativeService > append and void", () => {
     it("appends the entry through the ready provider and answers its reference", async () => {
         const { service, port } = await build()
 
-        await expect(service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)).resolves.toEqual({
+        await expect(service.invoke("ws-1", "entry.append", { entry: ENTRY }, CALLER)).resolves.toEqual({
             ref: "Sheet1!A2:G2",
         })
         expect(port?.append).toHaveBeenCalledWith("ws-1", ENTRY)
@@ -157,8 +156,8 @@ describe("LedgerNativeService > append and void", () => {
     it("writes a transaction once: a replay, another run or a retry adds no second entry", async () => {
         const { service, port } = await build()
 
-        const first = await service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)
-        const again = await service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)
+        const first = await service.invoke("ws-1", "entry.append", { entry: ENTRY }, CALLER)
+        const again = await service.invoke("ws-1", "entry.append", { entry: ENTRY }, CALLER)
 
         expect(again).toEqual(first)
         expect(port?.append).toHaveBeenCalledTimes(1)
@@ -167,10 +166,10 @@ describe("LedgerNativeService > append and void", () => {
     it("takes a transaction back with one void, once", async () => {
         const { service, port, effects } = await build()
 
-        await expect(service.invoke("ws-1", "void", { transactionId: ENTRY.transactionId }, CALLER)).resolves.toEqual({
+        await expect(service.invoke("ws-1", "entry.void", { transactionId: ENTRY.transactionId }, CALLER)).resolves.toEqual({
             ref: "Sheet1!A3:G3",
         })
-        await service.invoke("ws-1", "void", { transactionId: ENTRY.transactionId }, CALLER)
+        await service.invoke("ws-1", "entry.void", { transactionId: ENTRY.transactionId }, CALLER)
 
         expect(port?.void).toHaveBeenCalledTimes(1)
         expect(port?.void).toHaveBeenCalledWith("ws-1", ENTRY.transactionId)
@@ -185,15 +184,15 @@ describe("LedgerNativeService > append and void", () => {
     it("keeps the entry and its void apart, so a void is written after the entry", async () => {
         const { service, port } = await build()
 
-        await service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)
-        await service.invoke("ws-1", "append", { entry: { ...ENTRY, status: "void" } }, CALLER)
+        await service.invoke("ws-1", "entry.append", { entry: ENTRY }, CALLER)
+        await service.invoke("ws-1", "entry.append", { entry: { ...ENTRY, status: "void" } }, CALLER)
 
         expect(port?.append).toHaveBeenCalledTimes(2)
     })
 
-    it.each(["append", "void"] as const)("is not connected for %s when no provider is ready", async (tool) => {
+    it.each(["entry.append", "entry.void"] as const)("is not connected for %s when no provider is ready", async (tool) => {
         const { service, port } = await build(portOf(false))
-        const args = tool === "append" ? { entry: ENTRY } : { transactionId: ENTRY.transactionId }
+        const args = tool === "entry.append" ? { entry: ENTRY } : { transactionId: ENTRY.transactionId }
 
         await expect(service.invoke("ws-1", tool, args, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
@@ -209,7 +208,7 @@ describe("LedgerNativeService > a provider that cannot write", () => {
         port.append.mockResolvedValue(undefined)
         const { service } = await build(port)
 
-        await expect(service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)).rejects.toMatchObject({
+        await expect(service.invoke("ws-1", "entry.append", { entry: ENTRY }, CALLER)).rejects.toMatchObject({
             params: { reason: "not_connected" },
         })
     })
@@ -224,7 +223,7 @@ describe("LedgerNativeService > a provider that cannot write", () => {
         )
         const { service } = await build(port)
 
-        await expect(service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)).rejects.toMatchObject({
+        await expect(service.invoke("ws-1", "entry.append", { entry: ENTRY }, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
             params: { reason: "connection_refused" },
         })
@@ -236,7 +235,7 @@ describe("LedgerNativeService > a provider that cannot write", () => {
         port.append.mockRejectedValue(timeout)
         const { service } = await build(port)
 
-        await expect(service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)).rejects.toBe(timeout)
+        await expect(service.invoke("ws-1", "entry.append", { entry: ENTRY }, CALLER)).rejects.toBe(timeout)
     })
 })
 
@@ -245,10 +244,10 @@ describe("LedgerNativeService > refusals", () => {
         const { service, port } = await build()
 
         await expect(
-            service.invoke("ws-1", "append", { entry: { ...ENTRY, date: "04/11/2026" } }, CALLER),
+            service.invoke("ws-1", "entry.append", { entry: { ...ENTRY, date: "04/11/2026" } }, CALLER),
         ).rejects.toMatchObject({ code: McpGatewayErrorCode.InvalidArguments })
         await expect(
-            service.invoke("ws-1", "append", { entry: { ...ENTRY, sheetId: "x" } }, CALLER),
+            service.invoke("ws-1", "entry.append", { entry: { ...ENTRY, sheetId: "x" } }, CALLER),
         ).rejects.toMatchObject({ code: McpGatewayErrorCode.InvalidArguments })
         await expect(service.invoke("ws-1", "other", {}, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.UnknownTool,
@@ -260,23 +259,23 @@ describe("LedgerNativeService > refusals", () => {
         const port = portOf(true)
         const { service } = await buildBare(port)
 
-        await expect(service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)).rejects.toMatchObject({
+        await expect(service.invoke("ws-1", "entry.append", { entry: ENTRY }, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
             params: { reason: "ledger_key_unavailable" },
         })
-        await expect(service.invoke("ws-1", "void", { transactionId: ENTRY.transactionId }, CALLER)).rejects.toMatchObject({
+        await expect(service.invoke("ws-1", "entry.void", { transactionId: ENTRY.transactionId }, CALLER)).rejects.toMatchObject({
             params: { reason: "ledger_key_unavailable" },
         })
         expect(port.append).not.toHaveBeenCalled()
         expect(port.void).not.toHaveBeenCalled()
-        await expect(service.invoke("ws-1", "status", {}, CALLER)).resolves.toEqual({ connected: true })
+        await expect(service.invoke("ws-1", "status.get", {}, CALLER)).resolves.toEqual({ connected: true })
     })
 
     it("keys the line by its transaction, whoever writes it: the step's and the job's append of one transaction are one key", async () => {
         const { service, effects, port } = await build()
 
-        await service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)
-        await service.invoke("ws-1", "append", { entry: ENTRY }, { ...CALLER, engine: true })
+        await service.invoke("ws-1", "entry.append", { entry: ENTRY }, CALLER)
+        await service.invoke("ws-1", "entry.append", { entry: ENTRY }, { ...CALLER, engine: true })
 
         const key = `ledger:${ENTRY.transactionId}`
         expect(effects.once.mock.calls.map((call) => [call[1], call[2]])).toEqual([
@@ -360,7 +359,7 @@ describe("LedgerNativeService > append by transaction id", () => {
     it("builds the line from the transaction and the order it paid: the caller gives the id alone", async () => {
         const { service, port, engine } = await buildWithRecords(ORDER)
 
-        await expect(service.invoke("ws-1", "append", { transactionId: TRANSACTION }, CALLER)).resolves.toEqual({
+        await expect(service.invoke("ws-1", "entry.append", { transactionId: TRANSACTION }, CALLER)).resolves.toEqual({
             ref: "Sheet1!A2:G2",
         })
         expect(engine.scoped).toHaveBeenCalledWith("ws-1", expect.any(Function))
@@ -379,11 +378,11 @@ describe("LedgerNativeService > append by transaction id", () => {
 
     it("refuses a transaction that paid nothing yet, one that is not there, and an id that is no record id; nothing is written", async () => {
         const unsettled = await buildWithRecords(null)
-        await expect(unsettled.service.invoke("ws-1", "append", { transactionId: TRANSACTION }, CALLER)).rejects.toMatchObject({
+        await expect(unsettled.service.invoke("ws-1", "entry.append", { transactionId: TRANSACTION }, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
             params: { reason: "not_found" },
         })
-        await expect(unsettled.service.invoke("ws-1", "append", { transactionId: "tx-1" }, CALLER)).rejects.toMatchObject({
+        await expect(unsettled.service.invoke("ws-1", "entry.append", { transactionId: "tx-1" }, CALLER)).rejects.toMatchObject({
             params: { reason: "not_found" },
         })
         expect(unsettled.port.append).not.toHaveBeenCalled()
@@ -392,7 +391,7 @@ describe("LedgerNativeService > append by transaction id", () => {
     it("refuses arguments that name both a transaction and an entry", async () => {
         const { service } = await buildWithRecords(ORDER)
         await expect(
-            service.invoke("ws-1", "append", { transactionId: TRANSACTION, entry: ENTRY }, CALLER),
+            service.invoke("ws-1", "entry.append", { transactionId: TRANSACTION, entry: ENTRY }, CALLER),
         ).rejects.toMatchObject({ code: McpGatewayErrorCode.InvalidArguments })
     })
 })

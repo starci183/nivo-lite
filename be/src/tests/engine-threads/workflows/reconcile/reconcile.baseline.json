@@ -4,25 +4,25 @@
         "outcome": {
             "acts": [
                 {
-                    "effect": "payment.order.settle",
+                    "effect": "nivo.payment.order.settle",
                     "payload": {
                         "orderId": "order-1",
                         "transactionId": "tx-exact"
                     },
-                    "key": "00000000-0000-4000-8000-000000000001:mark-paid:54936929ac0a92cc",
+                    "key": "00000000-0000-4000-8000-000000000001:mark-paid:18d799548a30a0dc",
                     "dedupeKey": null
                 },
                 {
-                    "effect": "team.message.post",
+                    "effect": "nivo.team.message.post",
                     "payload": {
                         "kind": "payment.received",
                         "orderId": "order-1"
                     },
-                    "key": "00000000-0000-4000-8000-000000000001:notify-paid:fff9b8cb9840239a",
+                    "key": "00000000-0000-4000-8000-000000000001:notify-paid:c610334f0a4b4f6a",
                     "dedupeKey": null
                 },
                 {
-                    "effect": "agent.tag",
+                    "effect": "nivo.agent.tag",
                     "payload": {
                         "toModuleKey": "sales",
                         "text": "Chuyển tiếp sang quy trình tiếp theo",
@@ -42,14 +42,14 @@
                         },
                         "visibility": "chat"
                     },
-                    "key": "00000000-0000-4000-8000-000000000001:to-after-sale:86753d2dab06d322",
+                    "key": "00000000-0000-4000-8000-000000000001:to-after-sale:f25e8c40ecb15e61",
                     "dedupeKey": "call-workflow:00000000-0000-4000-8000-000000000001:sales.after-sale"
                 }
             ],
             "lines": [],
             "team": [
                 {
-                    "key": "00000000-0000-4000-8000-000000000001:notify-paid:fff9b8cb9840239a",
+                    "key": "00000000-0000-4000-8000-000000000001:notify-paid:c610334f0a4b4f6a",
                     "versions": [
                         {
                             "kind": "payment.received",
@@ -60,11 +60,11 @@
             ],
             "tools": [
                 {
-                    "tool": "ledger.append",
+                    "tool": "nivo.ledger.entry.append",
                     "args": {
                         "transactionId": "tx-exact"
                     },
-                    "key": "00000000-0000-4000-8000-000000000001:ledger:tool:5a7ff43b0e285494"
+                    "key": "00000000-0000-4000-8000-000000000001:ledger:tool:937147bc25dfac02"
                 }
             ],
             "book": [
@@ -75,20 +75,20 @@
             ],
             "ledger": [
                 {
-                    "effectKey": "call:00000000-0000-4000-8000-000000000001:mark-paid:54936929ac0a92cc",
-                    "effectId": "payment.order.settle",
+                    "effectKey": "call:00000000-0000-4000-8000-000000000001:mark-paid:18d799548a30a0dc",
+                    "effectId": "nivo.payment.order.settle",
                     "runId": "00000000-0000-4000-8000-000000000001",
                     "stepKey": "mark-paid",
                     "args": {
                         "orderId": "order-1",
                         "transactionId": "tx-exact"
                     },
-                    "subjectEntity": "payment.order.settle",
-                    "subjectId": "payment.order.settle-1"
+                    "subjectEntity": "nivo.payment.order.settle",
+                    "subjectId": "nivo.payment.order.settle-1"
                 },
                 {
-                    "effectKey": "call:00000000-0000-4000-8000-000000000001:notify-paid:fff9b8cb9840239a",
-                    "effectId": "team.message.post",
+                    "effectKey": "call:00000000-0000-4000-8000-000000000001:notify-paid:c610334f0a4b4f6a",
+                    "effectId": "nivo.team.message.post",
                     "runId": "00000000-0000-4000-8000-000000000001",
                     "stepKey": "notify-paid",
                     "args": {
@@ -100,7 +100,7 @@
                 },
                 {
                     "effectKey": "dedupe:call-workflow:00000000-0000-4000-8000-000000000001:sales.after-sale",
-                    "effectId": "agent.tag",
+                    "effectId": "nivo.agent.tag",
                     "runId": "00000000-0000-4000-8000-000000000001",
                     "stepKey": "to-after-sale",
                     "args": {
@@ -122,8 +122,8 @@
                         },
                         "visibility": "chat"
                     },
-                    "subjectEntity": "agent.tag",
-                    "subjectId": "agent.tag-3"
+                    "subjectEntity": "nivo.agent.tag",
+                    "subjectId": "nivo.agent.tag-3"
                 }
             ],
             "modelAsked": [
@@ -142,25 +142,25 @@
         "outcome": {
             "acts": [
                 {
-                    "effect": "payment.order.settle",
+                    "effect": "nivo.payment.order.settle",
                     "payload": {
                         "orderId": "order-1",
                         "transactionId": "tx-exact"
                     },
-                    "key": "00000000-0000-4000-8000-000000000001:mark-paid:54936929ac0a92cc",
+                    "key": "00000000-0000-4000-8000-000000000001:mark-paid:18d799548a30a0dc",
                     "dedupeKey": null
                 },
                 {
-                    "effect": "team.message.post",
+                    "effect": "nivo.team.message.post",
                     "payload": {
                         "kind": "payment.received",
                         "orderId": "order-1"
                     },
-                    "key": "00000000-0000-4000-8000-000000000001:notify-paid:fff9b8cb9840239a",
+                    "key": "00000000-0000-4000-8000-000000000001:notify-paid:c610334f0a4b4f6a",
                     "dedupeKey": null
                 },
                 {
-                    "effect": "agent.tag",
+                    "effect": "nivo.agent.tag",
                     "payload": {
                         "toModuleKey": "sales",
                         "text": "Chuyển tiếp sang quy trình tiếp theo",
@@ -180,14 +180,14 @@
                         },
                         "visibility": "chat"
                     },
-                    "key": "00000000-0000-4000-8000-000000000001:to-after-sale:86753d2dab06d322",
+                    "key": "00000000-0000-4000-8000-000000000001:to-after-sale:f25e8c40ecb15e61",
                     "dedupeKey": "call-workflow:00000000-0000-4000-8000-000000000001:sales.after-sale"
                 }
             ],
             "lines": [],
             "team": [
                 {
-                    "key": "00000000-0000-4000-8000-000000000001:notify-paid:fff9b8cb9840239a",
+                    "key": "00000000-0000-4000-8000-000000000001:notify-paid:c610334f0a4b4f6a",
                     "versions": [
                         {
                             "kind": "payment.received",
@@ -198,11 +198,11 @@
             ],
             "tools": [
                 {
-                    "tool": "ledger.append",
+                    "tool": "nivo.ledger.entry.append",
                     "args": {
                         "transactionId": "tx-exact"
                     },
-                    "key": "00000000-0000-4000-8000-000000000001:ledger:tool:5a7ff43b0e285494"
+                    "key": "00000000-0000-4000-8000-000000000001:ledger:tool:937147bc25dfac02"
                 }
             ],
             "book": [
@@ -213,20 +213,20 @@
             ],
             "ledger": [
                 {
-                    "effectKey": "call:00000000-0000-4000-8000-000000000001:mark-paid:54936929ac0a92cc",
-                    "effectId": "payment.order.settle",
+                    "effectKey": "call:00000000-0000-4000-8000-000000000001:mark-paid:18d799548a30a0dc",
+                    "effectId": "nivo.payment.order.settle",
                     "runId": "00000000-0000-4000-8000-000000000001",
                     "stepKey": "mark-paid",
                     "args": {
                         "orderId": "order-1",
                         "transactionId": "tx-exact"
                     },
-                    "subjectEntity": "payment.order.settle",
-                    "subjectId": "payment.order.settle-1"
+                    "subjectEntity": "nivo.payment.order.settle",
+                    "subjectId": "nivo.payment.order.settle-1"
                 },
                 {
-                    "effectKey": "call:00000000-0000-4000-8000-000000000001:notify-paid:fff9b8cb9840239a",
-                    "effectId": "team.message.post",
+                    "effectKey": "call:00000000-0000-4000-8000-000000000001:notify-paid:c610334f0a4b4f6a",
+                    "effectId": "nivo.team.message.post",
                     "runId": "00000000-0000-4000-8000-000000000001",
                     "stepKey": "notify-paid",
                     "args": {
@@ -238,7 +238,7 @@
                 },
                 {
                     "effectKey": "dedupe:call-workflow:00000000-0000-4000-8000-000000000001:sales.after-sale",
-                    "effectId": "agent.tag",
+                    "effectId": "nivo.agent.tag",
                     "runId": "00000000-0000-4000-8000-000000000001",
                     "stepKey": "to-after-sale",
                     "args": {
@@ -260,8 +260,8 @@
                         },
                         "visibility": "chat"
                     },
-                    "subjectEntity": "agent.tag",
-                    "subjectId": "agent.tag-3"
+                    "subjectEntity": "nivo.agent.tag",
+                    "subjectId": "nivo.agent.tag-3"
                 }
             ],
             "modelAsked": [

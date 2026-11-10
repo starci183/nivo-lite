@@ -72,19 +72,19 @@ describe("run token policy", () => {
 
     it("fingerprints a call by its tool and arguments, whatever order the members came in", async () => {
         const subject = await build()
-        const one = subject.toolFingerprintOf("ledger.append", { entry: { a: 1, b: [1, "x"] }, note: null })
-        const same = subject.toolFingerprintOf("ledger.append", { note: null, entry: { b: [1, "x"], a: 1 } })
+        const one = subject.toolFingerprintOf("nivo.ledger.entry.append", { entry: { a: 1, b: [1, "x"] }, note: null })
+        const same = subject.toolFingerprintOf("nivo.ledger.entry.append", { note: null, entry: { b: [1, "x"], a: 1 } })
 
         expect(one).toBe(same)
         expect(one).toMatch(/^[0-9a-f]{64}$/u)
-        expect(subject.toolFingerprintOf("ledger.append", { entry: { a: 2, b: [1, "x"] }, note: null })).not.toBe(one)
-        expect(subject.toolFingerprintOf("ledger.void", { entry: { a: 1, b: [1, "x"] }, note: null })).not.toBe(one)
+        expect(subject.toolFingerprintOf("nivo.ledger.entry.append", { entry: { a: 2, b: [1, "x"] }, note: null })).not.toBe(one)
+        expect(subject.toolFingerprintOf("nivo.ledger.entry.void", { entry: { a: 1, b: [1, "x"] }, note: null })).not.toBe(one)
     })
 
     it("fingerprints an argument with no value as a null one", async () => {
         const subject = await build()
-        expect(subject.toolFingerprintOf("ledger.append", { note: undefined })).toBe(
-            subject.toolFingerprintOf("ledger.append", { note: null }),
+        expect(subject.toolFingerprintOf("nivo.ledger.entry.append", { note: undefined })).toBe(
+            subject.toolFingerprintOf("nivo.ledger.entry.append", { note: null }),
         )
     })
 })

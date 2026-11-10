@@ -333,7 +333,7 @@ export const GATEWAY_SCENARIO_EXPECTED: GatewayScenarioExpectedShape = {
         ok: true,
         tool: {
             role: "payment.credits.list",
-            name: "sepay.transactions.list",
+            name: "sepay.transaction.list",
             connector: "sepay",
             connectorName: "SePay",
         },
@@ -402,7 +402,7 @@ export const pendingRemoteReplyOf = (remote: MockOf<McpRemote>) => {
 /** Tool descriptions that differ by current catalog approval and caller grant. */
 export const GATEWAY_DESCRIPTIONS: Array<GatewayDescriptionsShape | GatewayDescriptionsShape2> = [
     { name: "hakuen.booking.confirm", answer: GATEWAY_SCENARIO_EXPECTED.confirmation },
-    ...["hakuen.stay.current", "hakuen.keycode.reveal", "sepay.transactions.list", "nope"].map((name) => ({
+    ...["hakuen.stay.current", "hakuen.keycode.reveal", "sepay.transaction.list", "nope"].map((name) => ({
         name,
         answer: null,
     })),
@@ -438,7 +438,7 @@ export const INVALID_GATEWAY_TOOLS: Array<InvalidGatewayToolsShape> = [
     { name: "nope", answer: { ok: false, code: "invalid_name", detail: "nope" } },
     { name: "zalo.send", answer: { ok: false, code: "unknown_tool", detail: "zalo.send" } },
     { name: "hakuen.nope", answer: { ok: false, code: "unknown_tool", detail: "hakuen.nope" } },
-    { name: "sepay.transactions.list", answer: { ok: false, code: "connector_disabled", detail: "sepay" } },
+    { name: "sepay.transaction.list", answer: { ok: false, code: "connector_disabled", detail: "sepay" } },
 ]
 
 /** Global budget failures stop before resolution; native shape failures stop before ask-mode grants. */
@@ -453,7 +453,7 @@ export const INVALID_GATEWAY_ARGUMENTS: ReadonlyArray<InvalidGatewayArgumentsSha
     {
         label: "unbounded payloads",
         setup: {},
-        tool: "sepay.transactions.list",
+        tool: "sepay.transaction.list",
         args: { text: "x".repeat(8193) },
         connectorReads: 1,
         audit: [["refused", "invalid_arguments", "{}"]],
@@ -461,7 +461,7 @@ export const INVALID_GATEWAY_ARGUMENTS: ReadonlyArray<InvalidGatewayArgumentsSha
     {
         label: "a prototype key",
         setup: {},
-        tool: "sepay.transactions.list",
+        tool: "sepay.transaction.list",
         args: { filter: prototypeKeyed() },
         connectorReads: 1,
         audit: [["refused", "invalid_arguments", "{}"]],
@@ -477,7 +477,7 @@ export const INVALID_GATEWAY_ARGUMENTS: ReadonlyArray<InvalidGatewayArgumentsSha
     {
         label: "invalid native limits",
         setup: { grants: [toolGrantRowOf({ tool: "sepay.*", mode: "ask" })] },
-        tool: "sepay.transactions.list",
+        tool: "sepay.transaction.list",
         args: { limit: 51 },
         connectorReads: 1,
         audit: [["refused", "invalid_arguments", '{"limit":51}']],

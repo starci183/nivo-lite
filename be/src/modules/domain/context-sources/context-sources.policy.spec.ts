@@ -25,8 +25,8 @@ describe("context-sources.policy: the registry", () => {
 
     it("grants every read by default and locks only the customer's to the run", () => {
         expect(DEFAULT_READ_TOOLS).toEqual([
-            TOOL.brainFactRelated,
             TOOL.brainFactGet,
+            TOOL.brainFactRelated,
             TOOL.brainSearch,
             TOOL.conversationMessageList,
             TOOL.leadNoteList,
@@ -38,7 +38,7 @@ describe("context-sources.policy: the registry", () => {
         expect(isLockedContextRead(TOOL.leadOrderList)).toBe(true)
         expect(isDefaultRead(TOOL.customerMessageSend) || isLockedContextRead(TOOL.customerMessageSend)).toBe(false)
         expect(sourceOfTool(TOOL.leadNoteList)?.key).toBe("nivo.lead")
-        expect(sourceOfTool("ledger.append")).toBeNull()
+        expect(sourceOfTool("nivo.ledger.entry.append")).toBeNull()
     })
 
     it("bounds a wanted count between one and the list's most, its default when none is asked", () => {

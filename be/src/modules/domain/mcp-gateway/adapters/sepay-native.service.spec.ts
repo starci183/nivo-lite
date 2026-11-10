@@ -32,8 +32,8 @@ describe("SepayNativeService manifest", () => {
 
         expect(sepay.manifest).toBe(SEPAY_MANIFEST)
         expect(SEPAY_MANIFEST.tools.map((tool) => [tool.name, tool.role])).toEqual([
-            ["transactions.list", "payment.credits.list"],
-            ["transactions.debits", "payment.debits.list"],
+            ["transaction.list", "payment.credits.list"],
+            ["debit.list", "payment.debits.list"],
         ])
         for (const tool of SEPAY_MANIFEST.tools) {
             expect(tool.inputSchema).toMatchObject({
@@ -56,7 +56,7 @@ describe("SepayNativeService audit", () => {
     it("keeps the payer and the memo out of the summary the audit stores while the answer is unchanged", async () => {
         const { sepay } = await build()
 
-        const answer = await sepay.invoke("ws-1", "transactions.list", {})
+        const answer = await sepay.invoke("ws-1", "transaction.list", {})
         const summary = summaryOf(answer, SEPAY_MANIFEST.tools[0]?.secretFields)
 
         expect(answer).toMatchObject({ transactions: [{ payer: "NGUYEN VAN A", reference: "HAKUEN F7K2Q9" }] })
@@ -72,7 +72,7 @@ describe("SepayNativeService credits", () => {
         const { sepay, transactions } = await build()
 
         await expect(
-            sepay.invoke("ws-1", "transactions.list", {
+            sepay.invoke("ws-1", "transaction.list", {
                 status: "unmatched",
                 since: "2026-10-01T07:00:00+07:00",
                 limit: 5,
@@ -100,7 +100,7 @@ describe("SepayNativeService credits", () => {
     it("uses the default limit when filters are absent", async () => {
         const { sepay, transactions } = await build()
 
-        await sepay.invoke("ws-1", "transactions.list", {})
+        await sepay.invoke("ws-1", "transaction.list", {})
 
         expect(transactions.list.mock.calls).toEqual([
             ["ws-1", { direction: "credit", status: null, since: null, limit: 20 }],
@@ -109,7 +109,7 @@ describe("SepayNativeService credits", () => {
 })
 
 describe("SepayNativeService invalid arguments", () => {
-    it.each(["transactions.list", "transactions.debits"])(
+    it.each(["transaction.list", "debit.list"])(
         "refuses invalid filters for %s before reading transactions",
         async (tool) => {
             const { sepay, transactions } = await build()
@@ -130,7 +130,7 @@ describe("SepayNativeService debits", () => {
     it("reads the debit records with the same filters", async () => {
         const { sepay, transactions } = await build()
 
-        await expect(sepay.invoke("ws-1", "transactions.debits", { limit: 3 })).resolves.toMatchObject({
+        await expect(sepay.invoke("ws-1", "debit.list", { limit: 3 })).resolves.toMatchObject({
             transactions: [{ id: "tx-2", payer: "SUPPLIER CO", amountVnd: 3600000 }],
         })
         expect(transactions.list.mock.calls).toEqual([
@@ -153,7 +153,7 @@ describe("SepayNativeService unknown tools", () => {
     it("answers every tool as unknown in an app that has no entity engine to read the records from", async () => {
         const moduleRef = await Test.createTestingModule({ providers: [SepayNativeService] }).compile()
 
-        await expect(moduleRef.get(SepayNativeService).invoke("ws-1", "transactions.list", {})).rejects.toMatchObject({
+        await expect(moduleRef.get(SepayNativeService).invoke("ws-1", "transaction.list", {})).rejects.toMatchObject({
             code: McpGatewayErrorCode.UnknownTool,
         })
     })

@@ -46,18 +46,18 @@ describe("TelegramNativeService", () => {
         expect(TELEGRAM_MANIFEST.key).toBe("telegram")
         expect(
             TELEGRAM_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.internalOnly, tool.secretFields]),
-        ).toEqual([["status", "read", true, undefined]])
+        ).toEqual([["status.get", "read", true, undefined]])
     })
 
     it("runs the tools of the telegram provider", async () => {
         const { telegram, tools } = await build()
 
-        await expect(telegram.invoke(WS, "status", {}, CALLER)).resolves.toEqual({ connections: [] })
+        await expect(telegram.invoke(WS, "status.get", {}, CALLER)).resolves.toEqual({ connections: [] })
 
         expect(tools.answer).toHaveBeenCalledWith(
             WS,
             expect.objectContaining({ provider: "telegram" }),
-            "status",
+            "status.get",
             {},
             CALLER,
         )
@@ -65,7 +65,7 @@ describe("TelegramNativeService", () => {
 
     it("words a bot by its handle and says whether it needs the owner, never giving the failure text", async () => {
         const { telegram, tools } = await build()
-        await telegram.invoke(WS, "status", {}, CALLER)
+        await telegram.invoke(WS, "status.get", {}, CALLER)
         const { line } = routeOf(tools)
 
         expect(line(bot())).toEqual({
@@ -88,7 +88,7 @@ describe("TelegramNativeService", () => {
         const { telegram, tools } = await build()
         tools.answer.mockRejectedValue(nativeRefusal("not_connected"))
 
-        await expect(telegram.invoke(WS, "status", {}, CALLER)).rejects.toMatchObject({
+        await expect(telegram.invoke(WS, "status.get", {}, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
             params: { reason: "not_connected" },
         })

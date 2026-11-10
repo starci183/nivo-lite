@@ -69,6 +69,6 @@ describe("payment.confirm-notice", () => {
         await expect(run(away)).rejects.toBeInstanceOf(JobRetry)
         const refused = worldOf(ORDER, true)
         refused.answers.set(CHAT_SEND_TOOL, { ok: false, reason: "forbidden", message: "403" })
-        await expect(run(refused)).rejects.toThrow("JOB_REFUSED: chat.send forbidden")
+        await expect(run(refused)).rejects.toThrow("JOB_REFUSED: nivo.chat.send forbidden")
     })
 })

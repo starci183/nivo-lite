@@ -42,7 +42,7 @@ export interface NodeHostPorts {
 
 /** A tool as the agent is shown it: one of the agent's whole set, the same for every step. */
 export interface NodeAgentLoopTool {
-    /** The id of the effect or tool (`customer.message.send`). */
+    /** The id of the effect or tool (`nivo.lead.message.send`). */
     readonly name: string
     /** What it does, in words the model can read. */
     readonly does: unknown

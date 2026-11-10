@@ -16,7 +16,7 @@ const ITEMS_MAX = 100
 /** The most a total may be, VND. */
 const AMOUNT_MAX = 1_000_000_000_000
 
-/** What `lead.ensure` asks for: the conversation whose customer is wanted, and what the chat knows of them. */
+/** What `nivo.lead.ensure` asks for: the conversation whose customer is wanted, and what the chat knows of them. */
 export const ensureSchema: z.ZodObject<{
     conversationId: z.ZodString
     name: z.ZodOptional<z.ZodString>
@@ -28,7 +28,7 @@ export const ensureSchema: z.ZodObject<{
 })
 
 /**
- * What `order.create` carries: the customer, what they order (a catalogue item by id or by name, and how many), where it goes, the name
+ * What `nivo.order.create` carries: the customer, what they order (a catalogue item by id or by name, and how many), where it goes, the name
  * and phone of the person who receives it, when it is delivered (in the customer's words) and a note.
  */
 export const recordSchema: z.ZodObject<{
@@ -62,7 +62,7 @@ export const recordSchema: z.ZodObject<{
     orderId: z.string().min(1).max(ID_MAX).optional(),
 })
 
-/** What `order.confirm` carries: the draft to confirm. */
+/** What `nivo.order.confirm` carries: the draft to confirm. */
 export const confirmSchema: z.ZodObject<{ orderId: z.ZodString }> = z.object({
     orderId: z.string().min(1).max(ID_MAX),
 })
@@ -76,7 +76,7 @@ export const rematchSchema: z.ZodObject<{ orderId: z.ZodString }> = z.object({ o
 /** The most evidence lines and payer names a payment payload carries. */
 const PAYMENT_ENTRIES_MAX = 100
 
-/** What `payment.order.settle` carries: the order and the bank transaction that paid it, and the claim it answers when the agent names one. */
+/** What `nivo.payment.order.settle` carries: the order and the bank transaction that paid it, and the claim it answers when the agent names one. */
 export const markPaidSchema: z.ZodObject<{
     orderId: z.ZodString
     transactionId: z.ZodString
@@ -87,7 +87,7 @@ export const markPaidSchema: z.ZodObject<{
     claimId: z.string().min(1).max(ID_MAX).optional(),
 })
 
-/** What `payment.claim.record` carries: who said they paid, in which conversation, how much and under which names, in their words, and the order when the agent decided which. */
+/** What `nivo.payment.claim.record` carries: who said they paid, in which conversation, how much and under which names, in their words, and the order when the agent decided which. */
 export const claimRecordSchema: z.ZodObject<{
     orderId: z.ZodOptional<z.ZodString>
     leadId: z.ZodNullable<z.ZodString>
@@ -137,7 +137,7 @@ const factValue: z.ZodType<JsonValue> = z.lazy(() =>
     ]),
 )
 
-/** What `lead.update` carries: the customer, the consult stage for the record, and the facts for the customer's lead memory. */
+/** What `nivo.lead.update` carries: the customer, the consult stage for the record, and the facts for the customer's lead memory. */
 export interface LeadUpdate {
     /** The customer. */
     readonly leadId: string
@@ -147,7 +147,7 @@ export interface LeadUpdate {
     readonly facts?: { readonly [fact: string]: JsonValue } | undefined
 }
 
-/** What `lead.update` carries: the customer and the consult stage and facts to write; a member left out is kept. */
+/** What `nivo.lead.update` carries: the customer and the consult stage and facts to write; a member left out is kept. */
 export const updateSchema: z.ZodType<LeadUpdate> = z.object({
     leadId: z.string().min(1).max(ID_MAX),
     consultStage: consultStageSchema.optional(),

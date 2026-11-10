@@ -28,7 +28,7 @@ export class ProviderToolsService {
         private readonly bindings: ConnectionBindingsReadService,
     ) {}
 
-    /** Runs the `status` tool of a provider connector for an internal caller only; any other tool is unknown. */
+    /** Runs the `status.get` tool of a provider connector for an internal caller only; any other tool is unknown. */
     async answer(
         workspaceId: string,
         route: ProviderRoute,
@@ -37,7 +37,7 @@ export class ProviderToolsService {
         caller: NativeCaller,
     ): Promise<GatewayJson> {
         await this.views.internalOf(workspaceId, caller)
-        if (tool === "status") {
+        if (tool === "status.get") {
             argumentsOf(tool, PROVIDER_STATUS_SCHEMA, args)
             return { connections: (await this.connectionsOf(workspaceId, route.provider)).map(route.line) }
         }

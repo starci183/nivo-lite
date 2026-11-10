@@ -196,8 +196,8 @@ describe("McpGatewayService.call refusals", () => {
 
     it("refuses a read the agent is not granted and audits it", async () => {
         const { gateway, callLog, native } = await build()
-        await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 5 })).resolves.toEqual(
-            gw.refusalOf("not_granted", "sepay.transactions.list"),
+        await expect(gateway.call(CALLER, "sepay.transaction.list", { limit: 5 })).resolves.toEqual(
+            gw.refusalOf("not_granted", "sepay.transaction.list"),
         )
         expect(native.invoke).not.toHaveBeenCalled()
         expect(linesOf(callLog)).toEqual([gw.refusedReadLineOf()])
@@ -224,7 +224,7 @@ describe("McpGatewayService write identities", () => {
         )
         const role = await gateway.toolForRole(caller.workspaceId, "receivable.find")
         assert(role.ok)
-        const tool = isNative ? "sepay.transactions.list" : role.tool.name
+        const tool = isNative ? "sepay.transaction.list" : role.tool.name
         const first = await gateway.call(caller, tool, {})
         const retried = await gateway.call(caller, tool, {})
         const refused = gw.refusalOf("idempotency_key_required", tool)
@@ -386,7 +386,7 @@ describe("McpGatewayService breaker", () => {
         const { gateway, remote, native, callLog } = await build({ grants: [grantOf(), grantOf({ tool: "sepay.*" })] })
         await gws.openRemoteGatewayBreaker(gateway, remote)
         await expect(gateway.call(CALLER, "hakuen.stay.current", {})).resolves.toEqual(EXPECTED.circuitOpen)
-        await expect(gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toMatchObject({ ok: true })
+        await expect(gateway.call(CALLER, "sepay.transaction.list", {})).resolves.toMatchObject({ ok: true })
         await expect(
             gateway.call({ ...CALLER, workspaceId: "ws-2" }, "hakuen.stay.current", {}),
         ).resolves.toMatchObject({ detail: "internal" })
@@ -426,11 +426,11 @@ describe("McpGatewayService.call native connectors", () => {
     it("returns and audits invalid arguments without opening the connector's breaker or logging a server failure", async () => {
         const { gateway, native, callLog, logger } = await build({ grants: [grantOf({ tool: "sepay.*" })] })
         for (let attempt = 0; attempt < 6; attempt += 1) {
-            await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 51 })).resolves.toEqual(
+            await expect(gateway.call(CALLER, "sepay.transaction.list", { limit: 51 })).resolves.toEqual(
                 gw.refusalOf("invalid_arguments", "Invalid tool arguments"),
             )
         }
-        await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 1 })).resolves.toMatchObject({ ok: true })
+        await expect(gateway.call(CALLER, "sepay.transaction.list", { limit: 1 })).resolves.toMatchObject({ ok: true })
         expect(native.invoke).toHaveBeenCalledTimes(1)
         expect(linesOf(callLog)[0]).toMatchObject({ outcome: "refused", errorCode: "invalid_arguments" })
         expect(logger.error).not.toHaveBeenCalled()
@@ -439,18 +439,18 @@ describe("McpGatewayService.call native connectors", () => {
     it("lets a valid probe run after an invalid native call during breaker recovery", async () => {
         const { gateway, native, clock } = await build({ grants: [grantOf({ tool: "sepay.*" })] })
         await gwt.openNativeGatewayBreaker(gateway, native, clock, CALLER)
-        await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 51 })).resolves.toMatchObject({
+        await expect(gateway.call(CALLER, "sepay.transaction.list", { limit: 51 })).resolves.toMatchObject({
             code: "invalid_arguments",
         })
         native.invoke.mockResolvedValue({ transactions: [] })
-        await expect(gateway.call(CALLER, "sepay.transactions.list", { limit: 1 })).resolves.toMatchObject({ ok: true })
+        await expect(gateway.call(CALLER, "sepay.transaction.list", { limit: 1 })).resolves.toMatchObject({ ok: true })
         expect(native.invoke).toHaveBeenCalledTimes(6)
     })
 })
 
 describe("McpGatewayService internal-only tools", () => {
     it("keeps a customer conversation from the tool, audited before the adapter, and shows it outside one", async () => {
-        const name = "sepay.transactions.list"
+        const name = "sepay.transaction.list"
         const { gateway, native, callLog } = await build(
             { grants: [grantOf({ tool: "sepay.*" })] },
             gwt.INTERNAL_SEPAY_MANIFEST,
@@ -482,12 +482,12 @@ describe("McpGatewayService data rights", () => {
         const refused = await build({ grants: [grantOf({ tool: "sepay.*" })], rights: [] })
         const narrowed = await build({ grants: [grantOf({ tool: "sepay.*" })], rights: [gwt.PAYMENT_RIGHT] })
         narrowed.native.invoke.mockResolvedValue({ transactions: [{ id: "t1", account: "0123" }] })
-        await expect(refused.gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual(
+        await expect(refused.gateway.call(CALLER, "sepay.transaction.list", {})).resolves.toEqual(
             gw.refusalOf("not_granted", "no_data_right"),
         )
         expect(refused.native.invoke).not.toHaveBeenCalled()
         expect(linesOf(refused.callLog)[0]).toMatchObject({ outcome: "refused", errorCode: "no_data_right" })
-        await expect(narrowed.gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual(gwt.HIDDEN_REPLY)
+        await expect(narrowed.gateway.call(CALLER, "sepay.transaction.list", {})).resolves.toEqual(gwt.HIDDEN_REPLY)
     })
 })
 
@@ -523,6 +523,7 @@ describe("McpGatewayService the graph of the agent on writes", () => {
 /** A NIVO effect tool as the effect adapter declares it: a write granted by a step's allow-list, kept by the effect ledger. */
 const EFFECT_MANIFEST: NativeConnectorManifest = {
     key: "order",
+    namespace: "nivo.order",
     name: "NIVO order",
     kind: "native",
     contractVersion: "nivo-effects@1",
@@ -530,7 +531,7 @@ const EFFECT_MANIFEST: NativeConnectorManifest = {
     tools: [
         {
             name: "create",
-            description: "NIVO business action order.create",
+            description: "NIVO business action nivo.order.create",
             scope: "write",
             defaultMode: "ask",
             inputSchema: { type: "object" },
@@ -550,7 +551,7 @@ const STEP_RUN: GatewayRun = {
     memberId: null,
     handedOffBy: null,
     leadId: null,
-    stepTools: ["order.create"],
+    stepTools: ["nivo.order.create"],
 }
 
 /** A caller in that graph step. */
@@ -561,7 +562,7 @@ describe("McpGatewayService NIVO effect tools", () => {
         const { gateway, native, receipts } = await build({ grants: [] }, EFFECT_MANIFEST)
         native.invoke.mockResolvedValue({ kind: "order", id: "o-1", facts: { amountVnd: 120_000 } })
 
-        const result = await gateway.call(STEP_CALLER, "order.create", { leadId: "lead-1" })
+        const result = await gateway.call(STEP_CALLER, "nivo.order.create", { leadId: "lead-1" })
 
         expect(result).toEqual({ ok: true, value: { kind: "order", id: "o-1", facts: { amountVnd: 120_000 } }, summary: expect.any(String) })
         expect(receipts.run).not.toHaveBeenCalled()
@@ -579,7 +580,7 @@ describe("McpGatewayService NIVO effect tools", () => {
         const { gateway, native } = await build({ grants: [] }, EFFECT_MANIFEST)
         const caller: GatewayCaller = { ...STEP_CALLER, run: { ...STEP_RUN, stepTools: [] } }
 
-        await expect(gateway.call(caller, "order.create", { leadId: "lead-1" })).resolves.toEqual({
+        await expect(gateway.call(caller, "nivo.order.create", { leadId: "lead-1" })).resolves.toEqual({
             ok: false,
             code: "approval_required",
             reason: "no_rule",
@@ -588,12 +589,12 @@ describe("McpGatewayService NIVO effect tools", () => {
     })
 
     it("lets the owner's grant row decide over the step's allow-list", async () => {
-        const { gateway, native } = await build({ grants: [grantOf({ tool: "order.*", mode: "never", constraints: [] })] }, EFFECT_MANIFEST)
+        const { gateway, native } = await build({ grants: [grantOf({ tool: "nivo.order.*", mode: "never", constraints: [] })] }, EFFECT_MANIFEST)
 
-        await expect(gateway.call(STEP_CALLER, "order.create", { leadId: "lead-1" })).resolves.toEqual({
+        await expect(gateway.call(STEP_CALLER, "nivo.order.create", { leadId: "lead-1" })).resolves.toEqual({
             ok: false,
             code: "not_granted",
-            detail: "order.create",
+            detail: "nivo.order.create",
         })
         expect(native.invoke).not.toHaveBeenCalled()
     })
@@ -602,21 +603,21 @@ describe("McpGatewayService NIVO effect tools", () => {
         const { gateway, native, callLog } = await build({ grants: [] }, EFFECT_MANIFEST)
         native.invoke.mockResolvedValue({ kind: "refused", id: "item_unknown", facts: { name: "Trà đào" } })
 
-        const result = await gateway.call(STEP_CALLER, "order.create", { leadId: "lead-1" })
+        const result = await gateway.call(STEP_CALLER, "nivo.order.create", { leadId: "lead-1" })
 
         assert(result.ok)
         expect(result.value).toEqual({ kind: "refused", id: "item_unknown", facts: { name: "Trà đào" } })
-        expect(linesOf(callLog).at(-1)).toMatchObject({ tool: "order.create", outcome: "refused", errorCode: "item_unknown" })
+        expect(linesOf(callLog).at(-1)).toMatchObject({ tool: "nivo.order.create", outcome: "refused", errorCode: "item_unknown" })
     })
 
     it("still refuses an effect tool called with no step key", async () => {
         const { gateway, native } = await build({ grants: [] }, EFFECT_MANIFEST)
         const caller: GatewayCaller = { ...STEP_CALLER, opKey: undefined }
 
-        await expect(gateway.call(caller, "order.create", { leadId: "lead-1" })).resolves.toEqual({
+        await expect(gateway.call(caller, "nivo.order.create", { leadId: "lead-1" })).resolves.toEqual({
             ok: false,
             code: "idempotency_key_required",
-            detail: "order.create",
+            detail: "nivo.order.create",
         })
         expect(native.invoke).not.toHaveBeenCalled()
     })
@@ -634,9 +635,10 @@ const sepay = (abilities: ProviderAttachmentView["abilities"]): ProviderAttachme
 const QR_MANIFEST: NativeConnectorManifest = {
     ...EFFECT_MANIFEST,
     key: "payment",
+    namespace: "nivo.payment",
     tools: EFFECT_MANIFEST.tools.slice(0, 1).map((tool) => ({ ...tool, name: "qr.create" })),
 }
-const QR_CALLER: GatewayCaller = { ...STEP_CALLER, run: { ...STEP_RUN, stepTools: ["payment.qr.create"] } }
+const QR_CALLER: GatewayCaller = { ...STEP_CALLER, run: { ...STEP_RUN, stepTools: ["nivo.payment.qr.create"] } }
 
 describe("McpGatewayService provider abilities: the decision table", () => {
     it("not attached: refuses a provider tool, whatever the tool grants say", async () => {
@@ -644,7 +646,7 @@ describe("McpGatewayService provider abilities: the decision table", () => {
             { agentId: "sales", connectionId: "conn-oa", provider: "zalo_oa", abilities: { "customer.send": "auto" } },
         ])
 
-        await expect(gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual({
+        await expect(gateway.call(CALLER, "sepay.transaction.list", {})).resolves.toEqual({
             ok: false,
             code: "not_granted",
             detail: "not_attached",
@@ -656,7 +658,7 @@ describe("McpGatewayService provider abilities: the decision table", () => {
     it("attached, the ability unticked: refuses with ability_off", async () => {
         const { gateway, native } = await build({}, gwt.OPEN_SEPAY_MANIFEST, [], [sepay({ "qr.create": "auto" })])
 
-        await expect(gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual({
+        await expect(gateway.call(CALLER, "sepay.transaction.list", {})).resolves.toEqual({
             ok: false,
             code: "not_granted",
             detail: "ability_off",
@@ -669,7 +671,7 @@ describe("McpGatewayService provider abilities: the decision table", () => {
             sepay({ "transactions.read": "auto" }),
         ])
 
-        const result = await gateway.call(CALLER, "sepay.transactions.list", {})
+        const result = await gateway.call(CALLER, "sepay.transaction.list", {})
 
         expect(result.ok).toBe(true)
         expect(native.invoke).toHaveBeenCalled()
@@ -679,7 +681,7 @@ describe("McpGatewayService provider abilities: the decision table", () => {
         const { gateway, native } = await build({ grants: [] }, QR_MANIFEST, [], [sepay({ "qr.create": "auto" })])
         native.invoke.mockResolvedValue({ kind: "message", id: "m-1" })
 
-        const result = await gateway.call(QR_CALLER, "payment.qr.create", { orderId: "o-1" })
+        const result = await gateway.call(QR_CALLER, "nivo.payment.qr.create", { orderId: "o-1" })
 
         expect(result.ok).toBe(true)
     })
@@ -688,23 +690,28 @@ describe("McpGatewayService provider abilities: the decision table", () => {
         const { gateway, native } = await build({ grants: [] }, QR_MANIFEST, [], [sepay({ "qr.create": "ask" })])
         native.invoke.mockResolvedValue({ kind: "message", id: "m-1" })
 
-        await expect(gateway.call(QR_CALLER, "payment.qr.create", { orderId: "o-1" })).resolves.toEqual({
+        await expect(gateway.call(QR_CALLER, "nivo.payment.qr.create", { orderId: "o-1" })).resolves.toEqual({
             ok: false,
             code: "approval_required",
             reason: "ask_mode",
         })
         expect(native.invoke).not.toHaveBeenCalled()
 
-        const approved = await gateway.call({ ...QR_CALLER, approvedBy: "owner-1" }, "payment.qr.create", { orderId: "o-1" })
+        const approved = await gateway.call({ ...QR_CALLER, approvedBy: "owner-1" }, "nivo.payment.qr.create", { orderId: "o-1" })
         expect(approved.ok).toBe(true)
     })
 
     it("a tool that is no provider right is judged as before: the step's own business tool runs, an ungranted one is refused", async () => {
-        const { gateway, native, access } = await build({ grants: [] }, { ...EFFECT_MANIFEST, key: "payment" }, [], [])
+        const { gateway, native, access } = await build(
+            { grants: [] },
+            { ...EFFECT_MANIFEST, key: "payment", namespace: "nivo.payment" },
+            [],
+            [],
+        )
         native.invoke.mockResolvedValue({ kind: "message", id: "m-1" })
-        const caller: GatewayCaller = { ...STEP_CALLER, run: { ...STEP_RUN, stepTools: ["payment.create"] } }
+        const caller: GatewayCaller = { ...STEP_CALLER, run: { ...STEP_RUN, stepTools: ["nivo.payment.create"] } }
 
-        const result = await gateway.call(caller, "payment.create", { orderId: "o-1" })
+        const result = await gateway.call(caller, "nivo.payment.create", { orderId: "o-1" })
 
         expect(result.ok).toBe(true)
         expect(access.listOfAgent).not.toHaveBeenCalled()
@@ -713,10 +720,10 @@ describe("McpGatewayService provider abilities: the decision table", () => {
     it("the engine's own caller (a module's declared job) is not judged by abilities: its grant row decides", async () => {
         const { gateway, access } = await build({ grants: [] }, gwt.OPEN_SEPAY_MANIFEST, [], [])
 
-        await expect(gateway.call({ ...CALLER, engine: true }, "sepay.transactions.list", {})).resolves.toEqual({
+        await expect(gateway.call({ ...CALLER, engine: true }, "sepay.transaction.list", {})).resolves.toEqual({
             ok: false,
             code: "not_granted",
-            detail: "sepay.transactions.list",
+            detail: "sepay.transaction.list",
         })
         expect(access.listOfAgent).not.toHaveBeenCalled()
     })
@@ -725,6 +732,6 @@ describe("McpGatewayService provider abilities: the decision table", () => {
         const { gateway, grants } = await build({}, gwt.OPEN_SEPAY_MANIFEST, [], [sepay({ "transactions.read": "auto" })])
         grants.agentsGranted.mockResolvedValue(["a1"])
 
-        await expect(gateway.agentsGranted("ws-1", ["sepay.transactions.list"])).resolves.toEqual(["sales", "a1"])
+        await expect(gateway.agentsGranted("ws-1", ["sepay.transaction.list"])).resolves.toEqual(["sales", "a1"])
     })
 })

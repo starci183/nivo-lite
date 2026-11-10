@@ -29,7 +29,7 @@ describe("sales-effects.schema", () => {
         expect(recordSchema.safeParse({ ...record, items: [{ name: "tea", qty: 0 }] }).success).toBe(false)
     })
 
-    it("reads what a lead.ensure asks for: a conversation, and a name and a phone when the chat knows them", () => {
+    it("reads what a nivo.lead.ensure asks for: a conversation, and a name and a phone when the chat knows them", () => {
         expect(ensureSchema.safeParse({ conversationId: "c-1", phone: "0912", name: "Lan" }).success).toBe(true)
         expect(ensureSchema.safeParse({ name: "Lan" }).success).toBe(false)
     })

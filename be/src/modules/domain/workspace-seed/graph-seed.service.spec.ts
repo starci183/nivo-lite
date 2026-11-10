@@ -145,7 +145,7 @@ const LEDGER_SPEC = {
     moduleKey: "accounting",
     grant: {
         rights: [],
-        tools: ["ledger.append", "ledger.void", "ledger.status", "chat.send"],
+        tools: ["nivo.ledger.entry.append", "nivo.ledger.entry.void", "nivo.ledger.status.get", "nivo.chat.send"],
         effects: [],
     },
 }

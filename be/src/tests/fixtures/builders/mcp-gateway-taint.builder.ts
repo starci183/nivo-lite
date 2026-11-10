@@ -134,7 +134,7 @@ export const openNativeGatewayBreaker = async (
     caller: GatewayCaller,
 ): Promise<void> => {
     native.invoke.mockRejectedValue(new Error("down"))
-    await eachInOrder(Array.from({ length: 5 }), () => gateway.call(caller, "sepay.transactions.list", {}))
+    await eachInOrder(Array.from({ length: 5 }), () => gateway.call(caller, "sepay.transaction.list", {}))
     clock.advance(120_000)
 }
 

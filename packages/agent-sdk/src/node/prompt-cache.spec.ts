@@ -15,13 +15,13 @@ import type { NodeDefinition, NodeModelRequest, TurnRef } from "./node.types"
  */
 
 const settle = defineEffect({
-    id: "payment.order.settle",
+    id: "nivo.payment.order.settle",
     title: { key: "t.settle" },
     payload: z.object({ orderId: z.string(), transactionId: z.string() }),
     rights: [],
 })
 const send = defineEffect({
-    id: "customer.message.send",
+    id: "nivo.lead.message.send",
     title: { key: "t.send" },
     payload: z.object({ conversationId: z.string(), text: z.string() }),
     rights: [],
@@ -39,7 +39,7 @@ const EFFECTS = new Map([settle, send].map((effect) => [effect.id, effect]))
 const TOOLS = new Map([[lookUp.id, lookUp]])
 
 /** The agent's whole set, as its module declares it: given out of name order on purpose. */
-const AGENT_TOOLS = ["payment.order.settle", "catalog.item.find", "customer.message.send"]
+const AGENT_TOOLS = ["nivo.payment.order.settle", "catalog.item.find", "nivo.lead.message.send"]
 
 const stepOf = (
     id: Namespaced,
@@ -64,10 +64,10 @@ const stepOf = (
         examples: [{ name: "answers", params: {}, input: {}, output: done, effects: [], model: [{ done }] }],
     })
 
-const SETTLE_STEP = stepOf("payment.settle", "Mark the order paid.", ["payment.order.settle"], z.object({ paid: z.boolean() }), {
+const SETTLE_STEP = stepOf("payment.settle", "Mark the order paid.", ["nivo.payment.order.settle"], z.object({ paid: z.boolean() }), {
     paid: true,
 })
-const REPLY_STEP = stepOf("chat.reply", "Answer the customer.", ["customer.message.send"], z.object({ said: z.string() }), {
+const REPLY_STEP = stepOf("chat.reply", "Answer the customer.", ["nivo.lead.message.send"], z.object({ said: z.string() }), {
     said: "ok",
 })
 
@@ -103,12 +103,12 @@ const asksOf = async (
 }
 
 const PAID = { done: { paid: true } }
-const SETTLE_CALL = { call: { tool: "payment.order.settle", args: { orderId: "o-1", transactionId: "tx-1" } } }
+const SETTLE_CALL = { call: { tool: "nivo.payment.order.settle", args: { orderId: "o-1", transactionId: "tx-1" } } }
 
 describe("prompt cache: what the tool set costs", () => {
     const audience = "Who also reads the line: the owner alone, or a group too."
     const post = defineEffect({
-        id: "team.message.post",
+        id: "nivo.team.message.post",
         title: { key: "effectTeamPost" },
         payload: z.union([
             z.object({ kind: z.literal("text"), text: z.string(), audience: z.string().describe(audience) }),
@@ -117,7 +117,7 @@ describe("prompt cache: what the tool set costs", () => {
         rights: [],
     })
     const frameOf = (words?: (key: string) => string | undefined) => ({
-        turn: { ...EXAMPLE_TURN, agentTools: ["team.message.post", "customer.message.send"] },
+        turn: { ...EXAMPLE_TURN, agentTools: ["nivo.team.message.post", "nivo.lead.message.send"] },
         effects: new Map([post, send].map((effect) => [effect.id, effect])),
         tools: new Map(),
         ...(words === undefined ? {} : { words }),
@@ -202,14 +202,14 @@ describe("prompt cache: the stable prefix of a model call", () => {
         expect(replied.slice(shared.length).startsWith("Answer the customer.")).toBe(true)
         // The shared part is L1 then L2: guidance, the full set in name order (not the step's own tools), how turns go, the values.
         expect(shared.startsWith("Speak kindly. Never promise a refund.\n\n")).toBe(true)
-        const names = ['"name":"catalog.item.find"', '"name":"customer.message.send"', '"name":"payment.order.settle"']
+        const names = ['"name":"catalog.item.find"', '"name":"nivo.lead.message.send"', '"name":"nivo.payment.order.settle"']
         const places = names.map((name) => shared.indexOf(name))
         expect(places.every((place) => place > 0)).toBe(true)
         expect([...places].sort((left, right) => left - right)).toEqual(places)
         expect(shared.indexOf("You act by calling tools")).toBeGreaterThan(places[2] ?? 0)
         expect(shared.endsWith('{"approvalThresholdVnd":5000000,"refundDays":7}\n\n')).toBe(true)
         // The step names what it may call; the right itself stays in code.
-        expect(settled.slice(shared.length)).toContain('"tools":["payment.order.settle"]')
+        expect(settled.slice(shared.length)).toContain('"tools":["nivo.payment.order.settle"]')
     })
 
     it("writes equal data as equal text: the order the values or the tool ids were given in does not show", async () => {

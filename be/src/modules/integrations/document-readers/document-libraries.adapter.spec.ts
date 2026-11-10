@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs"
+import { createRequire } from "node:module"
 import { join } from "node:path"
 import sharp from "sharp"
 import { LibraryMissingError } from "./document-readers.contracts"
@@ -27,7 +28,21 @@ describe("document libraries adapter", () => {
         await expect(pictureToolsOf(sharp).toJpeg(new Uint8Array([1, 2, 3]), 10)).rejects.toThrow()
     })
 
-    it("names the missing library when no HEIC decoder is installed", async () => {
-        await expect(documentLibraries.heicToJpeg(new Uint8Array([0]))).rejects.toBeInstanceOf(LibraryMissingError)
+    it("names the missing library when no HEIC decoder is installed, and lets the decoder refuse bytes that are no HEIC when it is", async () => {
+        // The decoder is optional: the same spec holds on a machine with it and one without it.
+        const installed = ((): boolean => {
+            try {
+                createRequire(__filename).resolve("heic-convert")
+                return true
+            } catch {
+                return false
+            }
+        })()
+        const outcome = await documentLibraries.heicToJpeg(new Uint8Array([0])).then(
+            () => "decoded",
+            (cause: unknown) => (cause instanceof LibraryMissingError ? "missing" : "refused"),
+        )
+
+        expect(outcome).toBe(installed ? "refused" : "missing")
     })
 })

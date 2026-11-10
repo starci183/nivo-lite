@@ -32,14 +32,14 @@ describe("gateway-run.policy", () => {
     it("reads the graph step a token signs, with no hand-off and no lead when it names none", async () => {
         const subject = await build()
 
-        expect(subject.runOfClaims({ ...CLAIMS, locale: "en", stepTools: ["team.message.post"] })).toEqual({
+        expect(subject.runOfClaims({ ...CLAIMS, locale: "en", stepTools: ["nivo.team.message.post"] })).toEqual({
             turnId: "run-1",
             locale: "en",
             origin: "system",
             memberId: null,
             handedOffBy: null,
             leadId: null,
-            stepTools: ["team.message.post"],
+            stepTools: ["nivo.team.message.post"],
         })
     })
 

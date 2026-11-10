@@ -197,8 +197,8 @@ describe("flow F entity declarations", () => {
         })
         expect(step?.fields["effect"]?.shape?.safeParse({ kind: "other" }).success).toBe(false)
         expect(
-            step?.fields["doorCalls"]?.shape?.parse({ calls: [{ tool: "chat.send", ok: true, effectKey: "k" }] }),
-        ).toEqual({ calls: [{ tool: "chat.send", ok: true, effectKey: "k" }] })
+            step?.fields["doorCalls"]?.shape?.parse({ calls: [{ tool: "nivo.chat.send", ok: true, effectKey: "k" }] }),
+        ).toEqual({ calls: [{ tool: "nivo.chat.send", ok: true, effectKey: "k" }] })
     })
 
     it("indexes the messages of a conversation and keeps one transaction and one invoice per order", () => {

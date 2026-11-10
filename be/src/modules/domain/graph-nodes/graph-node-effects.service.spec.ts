@@ -117,12 +117,12 @@ describe("GraphNodeEffectsService.once", () => {
 
     it("never answers one effect with what another kept: a key another effect holds is refused before anything acts", async () => {
         const { service, engine, mutations } = await build()
-        engine.list.mockResolvedValue({ rows: [recordedAs("message", "m-0", "customer.message.send")], next: null })
+        engine.list.mockResolvedValue({ rows: [recordedAs("message", "m-0", "nivo.lead.message.send")], next: null })
         const act = jest.fn()
 
-        await expect(service.once(WS, "order.confirm", CALL, act)).rejects.toMatchObject({
+        await expect(service.once(WS, "nivo.order.confirm", CALL, act)).rejects.toMatchObject({
             code: GraphNodesErrorCode.EffectKeyTaken,
-            params: { effect: "order.confirm", heldBy: "customer.message.send" },
+            params: { effect: "nivo.order.confirm", heldBy: "nivo.lead.message.send" },
         })
 
         expect(act).not.toHaveBeenCalled()
@@ -154,7 +154,7 @@ describe("GraphNodeEffectsService.once, when the act answers a refusal", () => {
         engine.list.mockResolvedValue({ rows: [], next: null })
         const act = jest.fn().mockResolvedValue(REFUSED)
 
-        await expect(service.once(WS, "order.confirm", CALL, act)).resolves.toEqual(REFUSED)
+        await expect(service.once(WS, "nivo.order.confirm", CALL, act)).resolves.toEqual(REFUSED)
 
         expect(act).toHaveBeenCalledTimes(1)
         expect(mutations.mutate).not.toHaveBeenCalled()
@@ -166,15 +166,15 @@ describe("GraphNodeEffectsService.once, when the act answers a refusal", () => {
         mutations.mutate.mockResolvedValue({ ok: true, row: recordedAs("order", "o-1").row, version: "1" })
         const act = jest.fn().mockResolvedValueOnce(REFUSED).mockResolvedValueOnce({ kind: "order", id: "o-1" })
 
-        await expect(service.once(WS, "order.confirm", CALL, act)).resolves.toEqual(REFUSED)
-        await expect(service.once(WS, "order.confirm", CALL, act)).resolves.toEqual({ kind: "order", id: "o-1" })
+        await expect(service.once(WS, "nivo.order.confirm", CALL, act)).resolves.toEqual(REFUSED)
+        await expect(service.once(WS, "nivo.order.confirm", CALL, act)).resolves.toEqual({ kind: "order", id: "o-1" })
 
         expect(act).toHaveBeenCalledTimes(2)
         expect(mutations.mutate).toHaveBeenCalledTimes(1)
         expect(mutations.mutate).toHaveBeenCalledWith(
             expect.anything(),
             expect.objectContaining({
-                values: { effectKey: "call:run:0", effectId: "order.confirm", subjectEntity: "order", subjectId: "o-1" },
+                values: { effectKey: "call:run:0", effectId: "nivo.order.confirm", subjectEntity: "order", subjectId: "o-1" },
             }),
             "job",
         )
@@ -237,14 +237,14 @@ describe("GraphNodeEffectsService.once, D.1: the run, the step, the arguments an
         mutations.mutate.mockResolvedValue({ ok: true, row: recordedAs("message", "m-1").row, version: "1" })
         const act = jest.fn().mockResolvedValue({ kind: "message", id: "m-1", facts: { conversationId: "c-1" } })
 
-        await service.once(WS, "customer.message.send", STEP_CALL, act, { args: { conversationId: "c-1", text: "Da nhan" } })
+        await service.once(WS, "nivo.lead.message.send", STEP_CALL, act, { args: { conversationId: "c-1", text: "Da nhan" } })
 
         expect(mutations.mutate).toHaveBeenCalledWith(
             expect.anything(),
             expect.objectContaining({
                 values: {
                     effectKey: `call:${STEP_CALL.key}`,
-                    effectId: "customer.message.send",
+                    effectId: "nivo.lead.message.send",
                     runId: RUN,
                     stepKey: "answer",
                     args: { conversationId: "c-1", text: "Da nhan" },
@@ -284,13 +284,13 @@ describe("GraphNodeEffectsService.once, D.1: the run, the step, the arguments an
 
     it("answers a replay with the facts the first call answered, not the subject alone", async () => {
         const { service, engine } = await build()
-        const kept = recordedAs("order", "o-1", "order.confirm")
+        const kept = recordedAs("order", "o-1", "nivo.order.confirm")
         engine.list.mockResolvedValue({
             rows: [{ ...kept, row: { ...kept.row, data: { ...kept.row.data, facts: { totalVnd: 100_000 } } } }],
             next: null,
         })
 
-        await expect(service.once(WS, "order.confirm", CALL, jest.fn())).resolves.toEqual({
+        await expect(service.once(WS, "nivo.order.confirm", CALL, jest.fn())).resolves.toEqual({
             kind: "order",
             id: "o-1",
             facts: { totalVnd: 100_000 },
@@ -307,7 +307,7 @@ describe("GraphNodeEffectsService.once, an outcome nobody knows", () => {
         mutations.mutate.mockResolvedValue({ ok: true, row: recordedAs(OUTCOME_UNKNOWN_KIND, code).row, version: "1" })
         const thrown = unknown(code)
 
-        await expect(service.once(WS, "agent.tag", STEP_CALL, jest.fn().mockRejectedValue(thrown))).rejects.toBe(thrown)
+        await expect(service.once(WS, "nivo.agent.tag", STEP_CALL, jest.fn().mockRejectedValue(thrown))).rejects.toBe(thrown)
 
         expect(mutations.mutate).toHaveBeenCalledWith(
             expect.anything(),
@@ -316,7 +316,7 @@ describe("GraphNodeEffectsService.once, an outcome nobody knows", () => {
                 entity: "agent.node-effect",
                 values: {
                     effectKey: `call:${STEP_CALL.key}`,
-                    effectId: "agent.tag",
+                    effectId: "nivo.agent.tag",
                     runId: RUN,
                     stepKey: "answer",
                     subjectEntity: OUTCOME_UNKNOWN_KIND,
@@ -331,12 +331,12 @@ describe("GraphNodeEffectsService.once, an outcome nobody knows", () => {
     it("never makes such a call again: the key answers the same code, nothing acts", async () => {
         const { service, engine, mutations } = await build()
         engine.list.mockResolvedValue({
-            rows: [recordedAs(OUTCOME_UNKNOWN_KIND, "tool_outcome_unknown", "agent.tag")],
+            rows: [recordedAs(OUTCOME_UNKNOWN_KIND, "tool_outcome_unknown", "nivo.agent.tag")],
             next: null,
         })
         const act = jest.fn()
 
-        await expect(service.once(WS, "agent.tag", STEP_CALL, act)).rejects.toMatchObject({ code: "tool_outcome_unknown" })
+        await expect(service.once(WS, "nivo.agent.tag", STEP_CALL, act)).rejects.toMatchObject({ code: "tool_outcome_unknown" })
 
         expect(act).not.toHaveBeenCalled()
         expect(mutations.mutate).not.toHaveBeenCalled()
@@ -347,28 +347,28 @@ describe("GraphNodeEffectsService.once, an outcome nobody knows", () => {
         engine.list.mockResolvedValue({ rows: [], next: null })
         const other = Object.assign(new Error("refused"), { code: "provider_down" })
 
-        await expect(service.once(WS, "agent.tag", STEP_CALL, jest.fn().mockRejectedValue(other))).rejects.toBe(other)
+        await expect(service.once(WS, "nivo.agent.tag", STEP_CALL, jest.fn().mockRejectedValue(other))).rejects.toBe(other)
         expect(mutations.mutate).not.toHaveBeenCalled()
 
         mutations.mutate.mockRejectedValue(new Error("db down"))
         const thrown = unknown("tool_outcome_unknown")
-        await expect(service.once(WS, "agent.tag", STEP_CALL, jest.fn().mockRejectedValue(thrown))).rejects.toBe(thrown)
+        await expect(service.once(WS, "nivo.agent.tag", STEP_CALL, jest.fn().mockRejectedValue(thrown))).rejects.toBe(thrown)
     })
 })
 
 describe("GraphNodeEffectsService.recordsOf", () => {
     it("reads a run step's records by run and step, oldest first, cut to the effects named, with their arguments and time", async () => {
         const { service, engine } = await build()
-        const send = recordedAs("message", "m-1", "customer.message.send")
-        const post = recordedAs("team-message", "t-1", "team.message.post")
+        const send = recordedAs("message", "m-1", "nivo.lead.message.send")
+        const post = recordedAs("team-message", "t-1", "nivo.team.message.post")
         const args = { conversationId: "c-1", text: "Da nhan" }
         engine.list.mockResolvedValue({
             rows: [{ ...send, row: { ...send.row, data: { ...send.row.data, args } } }, post],
             next: null,
         })
 
-        await expect(service.recordsOf(WS, { runId: RUN, stepKey: "match" }, ["customer.message.send"])).resolves.toEqual([
-            { effect: "customer.message.send", args, subject: { kind: "message", id: "m-1" }, at: AT },
+        await expect(service.recordsOf(WS, { runId: RUN, stepKey: "match" }, ["nivo.lead.message.send"])).resolves.toEqual([
+            { effect: "nivo.lead.message.send", args, subject: { kind: "message", id: "m-1" }, at: AT },
         ])
         expect(engine.list).toHaveBeenCalledWith(
             expect.anything(),

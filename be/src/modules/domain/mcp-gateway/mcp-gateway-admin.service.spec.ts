@@ -121,13 +121,13 @@ describe("McpGatewayAdminService reads", () => {
             tools: [
                 {
                     approved: true,
-                    name: "sepay.transactions.list",
+                    name: "sepay.transaction.list",
                     scope: "read",
                     description: SEPAY_MANIFEST.tools[0]?.description,
                 },
                 {
                     approved: true,
-                    name: "sepay.transactions.debits",
+                    name: "sepay.debit.list",
                     scope: "read",
                     description: SEPAY_MANIFEST.tools[1]?.description,
                 },
@@ -139,8 +139,8 @@ describe("McpGatewayAdminService reads", () => {
             approvedAt: "t1",
             checkedAt: "t2",
             tools: [
-                { approved: false, name: "shop.transactions.list" },
-                { approved: false, name: "shop.transactions.debits" },
+                { approved: false, name: "shop.transaction.list" },
+                { approved: false, name: "shop.debit.list" },
             ],
         })
         expect(connections.authorize).toHaveBeenCalledWith(ACTOR, MANAGER)

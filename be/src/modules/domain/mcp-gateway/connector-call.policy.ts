@@ -114,7 +114,7 @@ export const roleIn = (connectors: ReadonlyArray<WorkspaceConnector>, role: Capa
 }
 
 /**
- * The full tool name (its connector's public prefix and its own name) that plays a domain tool among connectors, `chat.send` or a
+ * The full tool name (its connector's public prefix and its own name) that plays a domain tool among connectors, `nivo.chat.send` or a
  * renamed `nivo.chat.send` alike: the first tool declaring the domain among those not disabled
  * (natives first, then remotes by key) that may run; null when the workspace has none.
  */

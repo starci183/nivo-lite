@@ -101,7 +101,7 @@ const SUGGESTION = "Her birthday is coming up. Would you like to see ideas like 
 
 /**
  * `sales.care-occasion` (Gợi ý đặt lại cho dịp): `occasionLeadDays` before a date the customer mentioned (a birthday, an anniversary), the
- * agent writes ONE gentle suggestion to order again, from the occasion and the customer's last paid order (`customer.message.send`). Timing is code
+ * agent writes ONE gentle suggestion to order again, from the occasion and the customer's last paid order (`nivo.lead.message.send`). Timing is code
  * around it: a date still far away moves the timer, a yearly date arms next year once handled, a one-off date that has passed ends.
  * Nothing is written to a customer who asked to be left alone or who never paid an order.
  */

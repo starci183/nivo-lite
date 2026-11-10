@@ -72,8 +72,8 @@ describe("DriveNativeService manifest", () => {
         expect(
             DRIVE_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.internalOnly, tool.secretFields]),
         ).toEqual([
-            ["status", "read", true, undefined],
-            ["sources.list", "read", true, ["title"]],
+            ["status.get", "read", true, undefined],
+            ["source.list", "read", true, ["title"]],
         ])
     })
 })
@@ -89,8 +89,8 @@ describe("DriveNativeService unknown tool and arguments", () => {
     })
 
     it.each([
-        ["status", { status: "ready" }],
-        ["sources.list", { limit: 51 }],
+        ["status.get", { status: "ready" }],
+        ["source.list", { limit: 51 }],
     ])("refuses invalid arguments for %s before reading anything", async (tool, args) => {
         const { drive, tools, sources } = await build()
 
@@ -107,7 +107,7 @@ describe("DriveNativeService status", () => {
     it("answers the grant state, the account masked, the bytes and the sources by stage", async () => {
         const { drive, tools, sources } = await build()
 
-        const answer = await drive.invoke(WS, "status", {}, CALLER)
+        const answer = await drive.invoke(WS, "status.get", {}, CALLER)
 
         expect(answer).toEqual({
             state: "connected",
@@ -124,7 +124,7 @@ describe("DriveNativeService status", () => {
         const { drive, tools } = await build()
         tools.connectionsOf.mockResolvedValue([grant({ status: "error", email: null })])
 
-        await expect(drive.invoke(WS, "status", {}, CALLER)).resolves.toMatchObject({
+        await expect(drive.invoke(WS, "status.get", {}, CALLER)).resolves.toMatchObject({
             state: "error",
             accountMasked: "",
         })
@@ -134,7 +134,7 @@ describe("DriveNativeService status", () => {
         const { drive, tools, sources } = await build()
         tools.connectionsOf.mockResolvedValue([])
 
-        await expect(drive.invoke(WS, "status", {}, CALLER)).rejects.toMatchObject({
+        await expect(drive.invoke(WS, "status.get", {}, CALLER)).rejects.toMatchObject({
             params: { reason: "not_connected" },
         })
         expect(sources.ofOrigin).not.toHaveBeenCalled()
@@ -144,7 +144,7 @@ describe("DriveNativeService status", () => {
         const { drive, tools, sources } = await build()
         tools.connectionsOf.mockRejectedValue(nativeRefusal("not_connected"))
 
-        await expect(drive.invoke(WS, "status", {}, CALLER)).rejects.toMatchObject({
+        await expect(drive.invoke(WS, "status.get", {}, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.NativeRefused,
             params: { reason: "not_connected" },
         })
@@ -156,7 +156,7 @@ describe("DriveNativeService sources.list", () => {
     it("lists the sources of the Drive origin, bounded, without text", async () => {
         const { drive, sources } = await build()
 
-        const answer = await drive.invoke(WS, "sources.list", { status: "ready", limit: 1 }, CALLER)
+        const answer = await drive.invoke(WS, "source.list", { status: "ready", limit: 1 }, CALLER)
 
         expect(answer).toEqual({
             sources: [
@@ -178,7 +178,7 @@ describe("DriveNativeService sources.list", () => {
             Array.from({ length: 30 }, (_, index) => source({ id: `s${String(index)}`, status: "queued" })),
         )
 
-        const answer = await drive.invoke(WS, "sources.list", {}, CALLER)
+        const answer = await drive.invoke(WS, "source.list", {}, CALLER)
 
         expect(tools.connectionsOf).toHaveBeenCalledWith(WS, "google_drive")
         expect(answer["sources"]).toHaveLength(20)
@@ -187,7 +187,7 @@ describe("DriveNativeService sources.list", () => {
     it("keeps to the stage asked for", async () => {
         const { drive } = await build()
 
-        const answer = await drive.invoke(WS, "sources.list", { status: "failed" }, CALLER)
+        const answer = await drive.invoke(WS, "source.list", { status: "failed" }, CALLER)
 
         expect(answer).toMatchObject({ sources: [{ id: "s3", status: "failed" }] })
     })
@@ -196,7 +196,7 @@ describe("DriveNativeService sources.list", () => {
         const { drive, tools, sources } = await build()
         tools.connectionsOf.mockRejectedValue(nativeRefusal("not_connected"))
 
-        await expect(drive.invoke(WS, "sources.list", {}, CALLER)).rejects.toMatchObject({
+        await expect(drive.invoke(WS, "source.list", {}, CALLER)).rejects.toMatchObject({
             params: { reason: "not_connected" },
         })
         expect(sources.ofOrigin).not.toHaveBeenCalled()
@@ -204,7 +204,7 @@ describe("DriveNativeService sources.list", () => {
 })
 
 describe("DriveNativeService internal use", () => {
-    it.each(["status", "sources.list"])(
+    it.each(["status.get", "source.list"])(
         "refuses %s to a caller the view policy keeps out, before reading anything",
         async (tool) => {
             const { drive, tools, sources, views } = await build()

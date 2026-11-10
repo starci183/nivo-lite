@@ -37,7 +37,7 @@ const build = async () => {
     return { requests: moduleRef.get(BrainChangeRequestsService), facts: service }
 }
 
-describe("BrainChangeRequestsService: brain.change.propose files a proposal and never activates", () => {
+describe("BrainChangeRequestsService: nivo.brain.change.propose files a proposal and never activates", () => {
     it("files a new value as a proposal on the review path, with the chat message as its evidence", async () => {
         const { requests, facts: store } = await build()
         const proposal = facts.factOf({ id: "p1", value: "9h", status: "proposed", conflictWith: "f1" })

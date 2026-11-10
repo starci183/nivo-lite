@@ -38,35 +38,39 @@ const build = async (): Promise<Subject> => {
 }
 
 const ORDER_CREATE = defineEffect({
-    id: "order.create",
+    id: "nivo.order.create",
     title: { key: "orderCreate" },
     payload: z.object({ leadId: z.string().min(1), qty: z.number().int().positive() }).strict(),
     rights: [],
 })
 const ORDER_CONFIRM = defineEffect({
-    id: "order.confirm",
+    id: "nivo.order.confirm",
     title: { key: "orderConfirm" },
     payload: z.object({ orderId: z.string().min(1) }).strict(),
     rights: [],
 })
 const MESSAGE_SEND = defineEffect({
-    id: "customer.message.send",
+    id: "nivo.lead.message.send",
     title: { key: "customerMessageSend" },
     payload: z.object({ conversationId: z.string(), text: z.string() }).strict(),
     rights: [],
 })
 
 describe("effect-tools.policy", () => {
-    it("splits an effect id at its first dot into connector and tool", async () => {
+    it("splits a nivo effect id into its domain (the connector key), its public prefix and the tool", async () => {
         const subject = await build()
 
-        expect(subject.effectAddressOf("customer.message.send")).toEqual({
-            connector: "customer",
+        expect(subject.effectAddressOf("nivo.lead.message.send")).toEqual({
+            connector: "lead",
+            namespace: "nivo.lead",
             tool: "message.send",
         })
-        expect(subject.effectAddressOf("order.create")).toEqual({ connector: "order", tool: "create" })
+        expect(subject.effectAddressOf("nivo.order.create")).toEqual({ connector: "order", namespace: "nivo.order", tool: "create" })
         expect(subject.effectAddressOf("plain")).toBeNull()
-        expect(subject.effectAddressOf("order.")).toBeNull()
+        expect(subject.effectAddressOf("nivo.order.")).toBeNull()
+        expect(subject.effectAddressOf("nivo.order")).toBeNull()
+        // no alias: an id without the prefix is no effect tool
+        expect(subject.effectAddressOf(["order", "create"].join("."))).toBeNull()
     })
 
     it("declares one write connector per effect domain, granted by the step, ledgered and out of the taint rule", async () => {
@@ -76,8 +80,9 @@ describe("effect-tools.policy", () => {
 
         expect(manifests.map((manifest) => [manifest.key, manifest.tools.map((spec) => spec.name)])).toEqual([
             ["order", ["create", "confirm"]],
-            ["customer", ["message.send"]],
+            ["lead", ["message.send"]],
         ])
+        expect(manifests.map((manifest) => manifest.namespace)).toEqual(["nivo.order", "nivo.lead"])
         const [order] = manifests
         expect(order).toMatchObject({ kind: "native", timeoutMs: EFFECT_TOOL_TIMEOUT_MS })
         expect(order?.tools[0]).toMatchObject({

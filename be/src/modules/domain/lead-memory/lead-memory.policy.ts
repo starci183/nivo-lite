@@ -185,7 +185,7 @@ export const stepMemoryOfRow = (row: RecordRow): StepMemory | null => {
 
 /**
  * The facts of a customer the lead record itself holds: the name, the phone, the email and the channel. The delivery details (address,
- * recipient, time) and what care needs (`careOptOut`, `occasions`) live in this memory only (`lead.update` writes them here): an order is
+ * recipient, time) and what care needs (`careOptOut`, `occasions`) live in this memory only (`nivo.lead.update` writes them here): an order is
  * the one home of how a delivery goes; the record keeps no copy (its old copy went stale and was dropped).
  */
 export const factsOfLead = (lead: RecordRow | null): Readonly<Partial<Record<LeadFact, JsonValue>>> => {

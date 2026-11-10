@@ -27,14 +27,14 @@ const CUSTOMER: GatewayCaller = { ...GATEWAY_CALLER, audience: "customer" }
 
 describe("data-rights.policy dataKindOfTool", () => {
     it.each([
-        ["brain.facts.list", "brain"],
-        ["dossier.findings.list", "customers"],
+        ["nivo.brain.fact.list", "brain"],
+        ["nivo.dossier.finding.list", "customers"],
         ["drive.files.search", "documents"],
-        ["sepay.transactions.debits", "payments"],
-        ["bank.transactions", "payments"],
+        ["sepay.debit.list", "payments"],
+        ["nivo.bank.transaction.list", "payments"],
         ["zalo.send", "channels"],
         ["telegram.send", "channels"],
-        ["einvoice.list", "invoices"],
+        ["nivo.einvoice.list", "invoices"],
         ["office.note", null],
         ["", null],
     ] as const)("reads %s as %s", async (tool, kind) => {
@@ -48,18 +48,18 @@ describe("data-rights.policy judgeDataRight", () => {
     it("lets a read pass untouched when no enforced graph governs the agent", async () => {
         const subject = await build()
 
-        expect(subject.judgeDataRight(null, "dossier.findings.list", CUSTOMER)).toEqual({ kind: "open" })
+        expect(subject.judgeDataRight(null, "nivo.dossier.finding.list", CUSTOMER)).toEqual({ kind: "open" })
     })
 
     it("denies a tool that reads no known kind of data, and a kind with no right, even with no rights at all", async () => {
         const subject = await build()
 
         expect(subject.judgeDataRight([RIGHT], "office.note", INTERNAL)).toEqual({ kind: "deny", reason: "no_kind" })
-        expect(subject.judgeDataRight([RIGHT], "sepay.transactions.debits", INTERNAL)).toEqual({
+        expect(subject.judgeDataRight([RIGHT], "sepay.debit.list", INTERNAL)).toEqual({
             kind: "deny",
             reason: "no_right",
         })
-        expect(subject.judgeDataRight([], "dossier.findings.list", INTERNAL)).toEqual({
+        expect(subject.judgeDataRight([], "nivo.dossier.finding.list", INTERNAL)).toEqual({
             kind: "deny",
             reason: "no_right",
         })
@@ -69,8 +69,8 @@ describe("data-rights.policy judgeDataRight", () => {
         const subject = await build()
         const payments: DataRight = { kind: "payments", scope: "conversation", hide: [], mask: [] }
 
-        expect(subject.judgeDataRight([payments], "bank.transactions", CUSTOMER)).toEqual({ kind: "narrow", right: payments })
-        expect(subject.judgeDataRight([RIGHT], "bank.transactions", CUSTOMER)).toEqual({
+        expect(subject.judgeDataRight([payments], "nivo.bank.transaction.list", CUSTOMER)).toEqual({ kind: "narrow", right: payments })
+        expect(subject.judgeDataRight([RIGHT], "nivo.bank.transaction.list", CUSTOMER)).toEqual({
             kind: "deny",
             reason: "no_right",
         })
@@ -79,7 +79,7 @@ describe("data-rights.policy judgeDataRight", () => {
     it("gives an internal agent with no conversation the right it holds, as wide as it is", async () => {
         const subject = await build()
 
-        expect(subject.judgeDataRight([RIGHT], "dossier.findings.list", INTERNAL)).toEqual({
+        expect(subject.judgeDataRight([RIGHT], "nivo.dossier.finding.list", INTERNAL)).toEqual({
             kind: "narrow",
             right: RIGHT,
         })
@@ -88,11 +88,11 @@ describe("data-rights.policy judgeDataRight", () => {
     it("keeps an agent that faces outsiders to the rows of its conversation, whatever the right says", async () => {
         const subject = await build()
 
-        expect(subject.judgeDataRight([RIGHT], "dossier.findings.list", CUSTOMER)).toEqual({
+        expect(subject.judgeDataRight([RIGHT], "nivo.dossier.finding.list", CUSTOMER)).toEqual({
             kind: "narrow",
             right: { ...RIGHT, scope: "conversation" },
         })
-        expect(subject.judgeDataRight([RIGHT], "dossier.findings.list", { ...GATEWAY_CALLER })).toMatchObject({
+        expect(subject.judgeDataRight([RIGHT], "nivo.dossier.finding.list", { ...GATEWAY_CALLER })).toMatchObject({
             right: { scope: "conversation" },
         })
     })
@@ -100,7 +100,7 @@ describe("data-rights.policy judgeDataRight", () => {
     it("reads nothing for an agent that faces outsiders when the call serves no conversation", async () => {
         const subject = await build()
 
-        expect(subject.judgeDataRight([RIGHT], "dossier.findings.list", { ...CUSTOMER, conversationId: null })).toEqual(
+        expect(subject.judgeDataRight([RIGHT], "nivo.dossier.finding.list", { ...CUSTOMER, conversationId: null })).toEqual(
             {
                 kind: "deny",
                 reason: "no_conversation",

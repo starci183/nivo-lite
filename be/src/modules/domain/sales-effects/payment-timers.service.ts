@@ -16,8 +16,8 @@ const CLOSE_SQL =
 
 @Injectable()
 /**
- * The payment timers of an order are closed when the order no longer waits for money: settled (`payment.order.settle`) or cancelled
- * (`order.cancel`). Mechanics, not a business choice: a timer of an order that cannot be paid any more would wake the Sales agent for
+ * The payment timers of an order are closed when the order no longer waits for money: settled (`nivo.payment.order.settle`) or cancelled
+ * (`nivo.order.cancel`). Mechanics, not a business choice: a timer of an order that cannot be paid any more would wake the Sales agent for
  * nothing (its own guard then ends the run quietly; that guard stays as the second line). A failure is logged and never fails the
  * settle or the cancel: the guard covers it.
  */

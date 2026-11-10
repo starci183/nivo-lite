@@ -127,7 +127,7 @@ const GRANT = exampleGrantOf([], EFFECTS)
  * order tools. The agent passes ids and quantities only; prices, the total and the order number are the tools' facts. The big-order
  * approval is policy the agent reasons on: at or above the threshold it confirms only with the founder's approval, else it says one
  * holding line to the customer and asks the founder (`confused`), so the step is not done (`requires`) and runs again with the answer.
- * Winning the customer's deal on the confirmed order is the policy's (`autoWon`), done here through `lead.stage.update`, never by the
+ * Winning the customer's deal on the confirmed order is the policy's (`autoWon`), done here through `nivo.lead.stage.update`, never by the
  * order tool. The order is kept in lead memory.
  */
 export const salesCreateOrderNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({

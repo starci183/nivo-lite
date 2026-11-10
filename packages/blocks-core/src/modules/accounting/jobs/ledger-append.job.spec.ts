@@ -116,9 +116,9 @@ describe("accounting.ledger-append", () => {
         const unknown = harness({ [LEDGER_STATUS_TOOL]: { ok: false, reason: "unknown_tool", message: "no_provider" } })
         const refused = harness({ [LEDGER_STATUS_TOOL]: { ok: false, reason: "forbidden", message: "403" } })
         const unreadable = harness({ [LEDGER_STATUS_TOOL]: { ok: true, output: { unexpected: true } } })
-        await expect(unknown.run()).rejects.toThrow("JOB_REFUSED: ledger.status unknown_tool")
-        await expect(refused.run()).rejects.toThrow("JOB_REFUSED: ledger.status forbidden")
-        await expect(unreadable.run()).rejects.toThrow("JOB_REFUSED: ledger.status failed")
+        await expect(unknown.run()).rejects.toThrow("JOB_REFUSED: nivo.ledger.status.get unknown_tool")
+        await expect(refused.run()).rejects.toThrow("JOB_REFUSED: nivo.ledger.status.get forbidden")
+        await expect(unreadable.run()).rejects.toThrow("JOB_REFUSED: nivo.ledger.status.get failed")
         for (const { calls } of [unknown, refused, unreadable])
             expect(calls.map((call) => call.tool)).toEqual([LEDGER_STATUS_TOOL])
     })
@@ -133,7 +133,7 @@ describe("accounting.ledger-append", () => {
             [LEDGER_STATUS_TOOL]: connected,
             [LEDGER_APPEND_TOOL]: { ok: false, reason: "forbidden", message: "403" },
         })
-        await expect(refused.run()).rejects.toThrow("JOB_REFUSED: ledger.append forbidden")
+        await expect(refused.run()).rejects.toThrow("JOB_REFUSED: nivo.ledger.entry.append forbidden")
         const transient = harness({
             [LEDGER_STATUS_TOOL]: connected,
             [LEDGER_APPEND_TOOL]: { ok: false, reason: "transient", message: "503" },

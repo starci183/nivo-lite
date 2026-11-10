@@ -25,8 +25,17 @@ const KIND_OF_CONNECTOR: Readonly<Record<string, DataKind>> = {
     einvoice: "invoices",
 }
 
-/** The kind of data a tool reads, from the connector in front of its name, or null when it reads none the store holds. */
-export const dataKindOfTool = (tool: string): OptionalDataKind => KIND_OF_CONNECTOR[tool.split(".", 1).join("")] ?? null
+/** The public prefixes whose next segment names the connector: `nivo.brain.search` is the brain's, `google.drive.status.get` the drive's. */
+const NAMESPACES: ReadonlyArray<string> = ["nivo.", "google."]
+
+/** The connector a full tool name belongs to: the segment after `nivo.` / `google.`, else the first segment (`sepay.status.get`). */
+export const connectorOfTool = (tool: string): string => {
+    const prefix = NAMESPACES.find((namespace) => tool.startsWith(namespace)) ?? ""
+    return tool.slice(prefix.length).split(".", 1).join("")
+}
+
+/** The kind of data a tool reads, from the connector its full name names, or null when it reads none the store holds. */
+export const dataKindOfTool = (tool: string): OptionalDataKind => KIND_OF_CONNECTOR[connectorOfTool(tool)] ?? null
 
 /**
  * The data rights of one native read, default deny. No governed agent: the read passes as before. A tool with no data kind is

@@ -146,7 +146,7 @@ const build = async (options: BuildOptions = {}) => {
 }
 
 describe("DailyCloseEffectsService", () => {
-    it("registers itself for the report.daily.close effect", async () => {
+    it("registers itself for the nivo.report.daily.close effect", async () => {
         expect((await build()).executor.effect).toBe(TOOL.reportDailyClose)
     })
 

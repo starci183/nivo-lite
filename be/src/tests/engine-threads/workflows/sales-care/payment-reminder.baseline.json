@@ -4,12 +4,12 @@
         "outcome": {
             "acts": [
                 {
-                    "effect": "customer.message.send",
+                    "effect": "nivo.lead.message.send",
                     "payload": {
                         "text": "Shop nhac nhe chi Lan: don DH-1 van dang cho thanh toan a, thong tin chuyen khoan o tin nhan phia tren.",
                         "conversationId": "conv-1"
                     },
-                    "key": "00000000-0000-4000-8000-000000000001:remind:12e808b9c6c817bf",
+                    "key": "00000000-0000-4000-8000-000000000001:remind:1b2a1b1e3221fe6c",
                     "dedupeKey": null
                 }
             ],
@@ -17,14 +17,14 @@
                 {
                     "conversationId": "conv-1",
                     "text": "Shop nhac nhe chi Lan: don DH-1 van dang cho thanh toan a, thong tin chuyen khoan o tin nhan phia tren.",
-                    "channelRef": "line:00000000-0000-4000-8000-000000000001:remind:12e808b9c6c817bf"
+                    "channelRef": "line:00000000-0000-4000-8000-000000000001:remind:1b2a1b1e3221fe6c"
                 }
             ],
             "team": [],
             "ledger": [
                 {
-                    "effectKey": "call:00000000-0000-4000-8000-000000000001:remind:12e808b9c6c817bf",
-                    "effectId": "customer.message.send",
+                    "effectKey": "call:00000000-0000-4000-8000-000000000001:remind:1b2a1b1e3221fe6c",
+                    "effectId": "nivo.lead.message.send",
                     "runId": "00000000-0000-4000-8000-000000000001",
                     "stepKey": "remind",
                     "args": {
@@ -49,21 +49,21 @@
         "outcome": {
             "acts": [
                 {
-                    "effect": "team.message.post",
+                    "effect": "nivo.team.message.post",
                     "payload": {
                         "kind": "message.text",
                         "intent": "ask",
                         "title": "Don DH-1 chua thanh toan",
                         "text": "Chi Lan chua chuyen khoan don DH-1 sau mot ngay va mot lan nhac. Giu don hay huy a?"
                     },
-                    "key": "00000000-0000-4000-8000-000000000001:tell-team:1c6fba6a9567269a",
+                    "key": "00000000-0000-4000-8000-000000000001:tell-team:d69af8b7913ea88f",
                     "dedupeKey": null
                 }
             ],
             "lines": [],
             "team": [
                 {
-                    "key": "00000000-0000-4000-8000-000000000001:tell-team:1c6fba6a9567269a",
+                    "key": "00000000-0000-4000-8000-000000000001:tell-team:d69af8b7913ea88f",
                     "versions": [
                         {
                             "kind": "message.text",
@@ -76,8 +76,8 @@
             ],
             "ledger": [
                 {
-                    "effectKey": "call:00000000-0000-4000-8000-000000000001:tell-team:1c6fba6a9567269a",
-                    "effectId": "team.message.post",
+                    "effectKey": "call:00000000-0000-4000-8000-000000000001:tell-team:d69af8b7913ea88f",
+                    "effectId": "nivo.team.message.post",
                     "runId": "00000000-0000-4000-8000-000000000001",
                     "stepKey": "tell-team",
                     "args": {
