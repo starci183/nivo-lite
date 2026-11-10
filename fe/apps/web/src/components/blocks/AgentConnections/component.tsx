@@ -3,6 +3,7 @@ import {
     Button,
     Cluster,
     Drawer,
+    EmptyNotice,
     Link,
     Pane,
     PaneGrid,
@@ -11,98 +12,53 @@ import {
     Stack,
     Sublabel,
     SurfaceCard,
-    Text,
 } from "@starci/grammar/common"
 import { ProviderRightsCard } from "@/components/composites/ProviderRightsCard"
-import type { ProviderRightsCardProps } from "@/components/composites/ProviderRightsCard"
+import type { AgentConnectionsBaseProps, AttachDrawerView, NivoToolsView } from "./types"
 
-/** One group of provider cards under its small label (Nhắn tin, Thanh toán, Sổ sách). */
-export interface ProviderGroupView {
-    readonly id: string
-    readonly label: string
-    readonly cards: ReadonlyArray<{ readonly id: string; readonly card: ProviderRightsCardProps }>
-}
-
-/** One provider the agent could still be given. */
-export interface AttachOptionView {
-    readonly id: string
-    readonly title: string
-    readonly subtitle: string
-}
-
-/** The "Công cụ NIVO" choice card. */
-export interface NivoToolsView {
-    readonly title: string
-    readonly linkLabel: string
-    readonly linkHref: string
-    readonly rows: ReadonlyArray<{ readonly id: string; readonly title: string; readonly subtitle: string; readonly isOn: boolean }>
-    readonly isDisabled: boolean
-}
-
-/** The tab "Quyền" of one agent: the providers it holds with what it may do through each, then the NIVO tools. */
-export interface AgentConnectionsBaseProps {
-    readonly props: {
-        readonly paneLabel: string
-        readonly title: string
-        readonly attachLabel: string
-        readonly groups: ReadonlyArray<ProviderGroupView>
-        readonly emptyLabel: string
-        readonly tools: NivoToolsView
-        readonly drawer: {
-            readonly isOpen: boolean
-            readonly title: string
-            readonly closeLabel: string
-            readonly options: ReadonlyArray<AttachOptionView>
-            readonly optionsLabel: string
-            readonly pickedId: string | null
-            readonly emptyLabel: string
-            readonly cancelLabel: string
-            readonly submitLabel: string
-        }
-        readonly detach: {
-            readonly isOpen: boolean
-            readonly title: string
-            readonly description: string
-            readonly confirm: string
-            readonly cancel: string
-        }
-    }
-    readonly on: {
-        readonly openDrawer: () => void
-        readonly closeDrawer: () => void
-        readonly pickAttach: (id: string) => void
-        readonly submitAttach: () => void
-        readonly cancelDetach: () => void
-        readonly confirmDetach: () => void
-        readonly toggleTool: (tool: string, isOn: boolean) => void
-    }
-}
+export type { AgentConnectionsBaseProps } from "./types"
 
 type Props = AgentConnectionsBaseProps["props"]
 type On = AgentConnectionsBaseProps["on"]
 
-/** The cards of the providers the agent holds, grouped under small labels. */
-const ProviderGroups = ({ view }: { readonly view: Props }) => (
-    <Stack gap="inline">
-        {view.groups.length === 0 ? (
-            <Text tone="muted">{view.emptyLabel}</Text>
-        ) : (
-            view.groups.map((group) => (
-                <Stack key={group.id} gap="inline">
-                    <Sublabel>{group.label}</Sublabel>
-                    <Stack gap="inline">
-                        {group.cards.map((entry) => (
-                            <ProviderRightsCard key={entry.id} {...entry.card} />
-                        ))}
-                    </Stack>
-                </Stack>
-            ))
-        )}
-    </Stack>
-)
+/** The input of a part that needs the view and the commands. */
+interface PartInput {
+    readonly view: Props
+    readonly on: On
+}
 
-/** The NIVO tools the agent may call: a choice card with a "n / m" chip and a head link to the rules in the Second Brain. */
-const NivoTools = ({ view, on }: { readonly view: NivoToolsView; readonly on: On }) => (
+/** The input of the providers list: the view only. */
+interface ViewInput {
+    readonly view: Props
+}
+
+/** The input of the tools card. */
+interface ToolsInput {
+    readonly view: NivoToolsView
+    readonly on: On
+}
+
+/** The input of the attach drawer parts. */
+interface DrawerInput {
+    readonly view: AttachDrawerView
+    readonly on: On
+}
+
+/** The cards of the providers the agent holds in one flat run: a small label above the cards of its group, 8px between all of them. */
+const ProviderGroups = ({ view }: ViewInput) => {
+    if (view.groups.length === 0) return <EmptyNotice message={view.emptyLabel} />
+    return (
+        <Stack gap="inline">
+            {view.groups.flatMap((group) => [
+                <Sublabel key={`label-${group.id}`}>{group.label}</Sublabel>,
+                ...group.cards.map((entry) => <ProviderRightsCard key={entry.id} {...entry.card} />),
+            ])}
+        </Stack>
+    )
+}
+
+/** The NIVO tools the agent may call: a choice card with an "n / m" chip and a head link to the rules in the Second Brain. */
+const NivoTools = ({ view, on }: ToolsInput) => (
     <SurfaceCard
         kind="select"
         selectionMode="multiple"
@@ -130,8 +86,23 @@ const NivoTools = ({ view, on }: { readonly view: NivoToolsView; readonly on: On
     />
 )
 
+/** The body of the attach drawer: the connected providers to pick from, or the notice that none is left. */
+const AttachOptions = ({ view, on }: DrawerInput) => {
+    if (view.options.length === 0) return <EmptyNotice message={view.emptyLabel} />
+    return (
+        <SurfaceCard
+            kind="select"
+            selectionMode="single"
+            ariaLabel={view.optionsLabel}
+            items={view.options.map((option) => ({ id: option.id, title: option.title, subtitle: option.subtitle }))}
+            value={view.pickedId}
+            onChange={on.pickAttach}
+        />
+    )
+}
+
 /** The drawer that lists the connected providers the agent does not hold yet. */
-const AttachDrawer = ({ view, on }: { readonly view: Props["drawer"]; readonly on: On }) => (
+const AttachDrawer = ({ view, on }: DrawerInput) => (
     <Drawer
         isOpen={view.isOpen}
         onOpenChange={(isOpen) => (isOpen ? undefined : on.closeDrawer())}
@@ -148,22 +119,30 @@ const AttachDrawer = ({ view, on }: { readonly view: Props["drawer"]; readonly o
             </Cluster>
         }
     >
-        {view.options.length === 0 ? (
-            <Text tone="muted">{view.emptyLabel}</Text>
-        ) : (
-            <SurfaceCard
-                kind="select"
-                selectionMode="single"
-                ariaLabel={view.optionsLabel}
-                items={view.options.map((option) => ({ id: option.id, title: option.title, subtitle: option.subtitle }))}
-                value={view.pickedId}
-                onChange={on.pickAttach}
-            />
-        )}
+        <AttachOptions view={view} on={on} />
     </Drawer>
 )
 
-/** Draws the Quyền tab of an agent as one well: the providers it holds (grouped), then the NIVO tools; the attach drawer and the detach confirm open over it. */
+/** The section of the held providers: its label with the count chip, the neutral small pill that opens the drawer, then the groups. */
+const ProvidersSection = ({ view, on }: PartInput) => (
+    <Section
+        kind="region"
+        title={view.title}
+        count={view.groups.reduce((sum, group) => sum + group.cards.length, 0)}
+        headingLevel={2}
+    >
+        <Stack gap="inline">
+            <Cluster gap="identity" justify="end">
+                <Button size="sm" intent="neutral" onPress={on.openDrawer}>
+                    {view.attachLabel}
+                </Button>
+            </Cluster>
+            <ProviderGroups view={view} />
+        </Stack>
+    </Section>
+)
+
+/** Draws the rights tab of an agent as one well: the providers it holds (grouped), then the NIVO tools; the attach drawer and the detach confirm open over it. */
 export const AgentConnectionsBase = (props: AgentConnectionsBaseProps) => {
     const { props: view, on } = props
     return (
@@ -171,21 +150,7 @@ export const AgentConnectionsBase = (props: AgentConnectionsBaseProps) => {
             <PaneGrid label={view.paneLabel} areas={{ base: ["well"] }} columns={{ base: ["fill"] }}>
                 <Pane area="well" scroll label={view.paneLabel}>
                     <PaneSection gap="section">
-                        <Section
-                            kind="region"
-                            title={view.title}
-                            count={view.groups.reduce((sum, group) => sum + group.cards.length, 0)}
-                            headingLevel={2}
-                        >
-                            <Stack gap="row">
-                                <Cluster gap="inline" justify="end">
-                                    <Button size="sm" intent="neutral" onPress={on.openDrawer}>
-                                        {view.attachLabel}
-                                    </Button>
-                                </Cluster>
-                                <ProviderGroups view={view} />
-                            </Stack>
-                        </Section>
+                        <ProvidersSection view={view} on={on} />
                         <NivoTools view={view.tools} on={on} />
                     </PaneSection>
                 </Pane>

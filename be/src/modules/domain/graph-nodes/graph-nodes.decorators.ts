@@ -1,6 +1,6 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
-import type { NodeModelDoor, NodeToolDoor } from "./graph-nodes.contracts"
+import type { EffectOnce, NodeModelDoor, NodeToolDoor } from "./graph-nodes.contracts"
 import type { GraphNodesOptions } from "./graph-nodes.options"
 
 /** Token of the graph-nodes options: the install the app assembled. */
@@ -23,3 +23,12 @@ export const GRAPH_NODE_MODEL: unique symbol = Symbol("domain.graph-nodes.model"
 /** Injects the model door. Parameter type: NodeModelDoor. */
 export const InjectGraphNodeModel = (): TypedParameterDecorator<NodeModelDoor> =>
     injector<NodeModelDoor>(GRAPH_NODE_MODEL)
+
+/**
+ * Token of the once-per-key ledger of effects, for a capability outside the graph host that must act once per key (the business
+ * ledger writes one line per transaction). The graph-nodes module binds and exports it; an app without the graph host has none.
+ */
+export const GRAPH_EFFECT_ONCE: unique symbol = Symbol("domain.graph-nodes.effect-once")
+
+/** Injects the once-per-key ledger of effects. Parameter type: EffectOnce. */
+export const InjectGraphEffectOnce = (): TypedParameterDecorator<EffectOnce> => injector<EffectOnce>(GRAPH_EFFECT_ONCE)

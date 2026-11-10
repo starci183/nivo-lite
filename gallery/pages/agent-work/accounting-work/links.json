@@ -75,7 +75,7 @@
    "w": 104,
    "h": 40
   },
-  "to": "agent-connections/accounting-connections",
+  "to": "agent-connections/accounting-quyen",
   "kind": "page"
  },
  {

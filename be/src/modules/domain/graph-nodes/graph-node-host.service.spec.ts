@@ -219,6 +219,43 @@ describe("GraphNodeHostService", () => {
     })
 })
 
+describe("GraphNodeHostService effect rights", () => {
+    it("asks the door for the right of each effect with the run token, and runs the effect when the door has no objection", async () => {
+        const { host, tools, executor } = await build(readingPort())
+        tools.effectRight = jest.fn().mockResolvedValue(null)
+
+        await host.run(INPUT)
+
+        expect(tools.effectRight).toHaveBeenCalledWith({
+            token: "token-1",
+            effect: "core.ping",
+            payload: { n: 1 },
+            approval: null,
+        })
+        expect(executor.execute).toHaveBeenCalled()
+    })
+
+    it("answers the door's refusal as the effect's ordinary refusal fact, and neither runs nor ledgers the effect", async () => {
+        const { host, tools, executor, effects } = await build(readingPort())
+        const refusal = { kind: "refused", id: "not_attached", facts: { tool: "core.ping" } }
+        tools.effectRight = jest.fn().mockResolvedValue(refusal)
+
+        await expect(host.run(INPUT)).resolves.toMatchObject({ output: { ref: "not_attached" }, effects: [] })
+        expect(executor.execute).not.toHaveBeenCalled()
+        expect(effects.once).not.toHaveBeenCalled()
+    })
+
+    it("stops the node at an effect whose right waits for a person, like a tool that waits", async () => {
+        const { host, tools, executor } = await build(readingPort())
+        const ask = askOf()
+        tools.effectRight = jest.fn().mockRejectedValue(ask)
+
+        await expect(host.run(INPUT)).rejects.toBe(ask)
+        expect(executor.execute).not.toHaveBeenCalled()
+        expect(tools.call).not.toHaveBeenCalled()
+    })
+})
+
 describe("GraphNodeHostService ports", () => {
     it("writes through a port that writes, and refuses a kind whose port does not", async () => {
         const write = jest.fn().mockResolvedValue({ kind: "record", id: "w-1" })

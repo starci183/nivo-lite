@@ -25,9 +25,10 @@ import type {
     AttachmentChangeResult,
     AttachmentRefusal,
     AttachmentWish,
-    ProposedAttachment,
     ProviderBoard,
+    RightsGiver,
     TemplateCandidate,
+    TemplateProposal,
 } from "./provider-abilities.service"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { InjectMcpGatewayOptions, InjectNativeAdapters } from "./mcp-gateway.decorators"
@@ -58,6 +59,9 @@ const MANAGER = ["owner", "manager"] as const
 /** The refusal of a console input, naming the field. */
 const invalid = (field: string): McpGatewayError =>
     new McpGatewayError({ code: McpGatewayErrorCode.Invalid, params: { field } })
+
+/** Who gives a right: the owner, or anyone else allowed here (a manager), who may not let an agent act by itself. */
+const giverOf = (member: { readonly role: string }): RightsGiver => (member.role === "owner" ? "owner" : "manager")
 
 /** The refusal of a change of an attachment, with its reason. */
 const attachmentRefused = (reason: AttachmentRefusal): McpGatewayError =>
@@ -120,16 +124,25 @@ export class McpGatewayAdminService {
         return this.abilities.board(actor.workspaceId)
     }
 
-    /** What a fresh agent of a module would be attached to in this workspace, pre-ticked from the module's defaults; nothing is written. */
-    async abilityProposal(actor: ConnectionActor, moduleKey: string): Promise<ReadonlyArray<ProposedAttachment>> {
+    /**
+     * Every provider a module's defaults name for a fresh agent, pre-ticked, each saying whether the workspace connected it (only the
+     * connected ones are attached at creation); nothing is written.
+     */
+    async abilityProposal(actor: ConnectionActor, moduleKey: string): Promise<ReadonlyArray<TemplateProposal>> {
         await this.connections.authorize(actor, MANAGER)
-        return this.abilities.proposalOf(actor.workspaceId, moduleKey)
+        return this.abilities.templateProposal(actor.workspaceId, moduleKey)
     }
 
-    /** Attaches an agent to a connected provider with the abilities ticked; refused with its reason when it cannot be. */
+    /**
+     * Attaches an agent to a connected provider with the abilities ticked; refused with its reason when it cannot be. Only the owner
+     * may tick a write ability `auto`: a manager's `auto` is refused `owner_only` (here and in `setAbility`), and a template a manager
+     * applies ticks its write abilities `ask`.
+     */
     async attachProvider(actor: ConnectionActor, agentId: string, wish: AttachmentWish): Promise<void> {
-        await this.connections.authorize(actor, MANAGER)
-        attachmentDone(await this.abilities.attach({ workspaceId: actor.workspaceId, agentId }, wish, actor.principalId))
+        const giver = giverOf(await this.connections.authorize(actor, MANAGER))
+        attachmentDone(
+            await this.abilities.attach({ workspaceId: actor.workspaceId, agentId }, wish, actor.principalId, giver),
+        )
     }
 
     /** Detaches an agent from a provider: every ability it held there goes. */
@@ -140,13 +153,14 @@ export class McpGatewayAdminService {
 
     /** Ticks one ability of an attachment (`auto` or `ask`) or unticks it (`off`). */
     async setAbility(actor: ConnectionActor, input: AbilityInput): Promise<void> {
-        await this.connections.authorize(actor, MANAGER)
+        const giver = giverOf(await this.connections.authorize(actor, MANAGER))
         attachmentDone(
             await this.abilities.setAbility(
                 { workspaceId: actor.workspaceId, agentId: input.agentId, provider: input.provider },
                 input.ability,
                 input.mode,
                 actor.principalId,
+                giver,
             ),
         )
     }
@@ -163,8 +177,14 @@ export class McpGatewayAdminService {
         provider: string,
         agentIds: ReadonlyArray<string>,
     ): Promise<ReadonlyArray<string>> {
-        await this.connections.authorize(actor, MANAGER)
-        const made = await this.abilities.attachByTemplate(actor.workspaceId, provider, agentIds, actor.principalId)
+        const giver = giverOf(await this.connections.authorize(actor, MANAGER))
+        const made = await this.abilities.attachByTemplate(
+            actor.workspaceId,
+            provider,
+            agentIds,
+            actor.principalId,
+            giver,
+        )
         if ("ok" in made) throw attachmentRefused(made.reason)
         return made
     }

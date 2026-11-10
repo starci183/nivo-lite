@@ -18,6 +18,7 @@ import type { RunNotice, StuckTold } from "./agent-graph-run-notices.service"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
 import { AgentGraphFreezeGateService } from "./agent-graph-freeze-gate.service"
 import { AgentWorkflowRunsService } from "./agent-workflow-runs.service"
+import { AgentRunsService, AgentRunsViewService } from "@modules/domain/agent-runs"
 
 const TURN: NodeTurn = {
     turnId: "run-1",
@@ -53,6 +54,7 @@ const build = async (
     executors: { readonly raise?: boolean; readonly send?: boolean; readonly post?: boolean } = {},
     freezes: Freezes = "none",
     workflowName?: string,
+    runs?: { readonly agentRuns: AgentRunsService; readonly views: AgentRunsViewService },
 ) => {
     const gate = mock<AgentGraphFreezeGateService>({
         stopped: jest.fn(() =>
@@ -74,6 +76,7 @@ const build = async (
     conversations.ofLeads.mockResolvedValue([
         mock<Awaited<ReturnType<ChatConversationsService["ofLeads"]>>[number]>({ id: "c-9", leadId: "lead-1" }),
     ])
+    conversations.leadIdOf.mockResolvedValue(null)
     conversations.turnOf.mockResolvedValue({
         kind: "ok",
         value: mock<TurnOf>({ agent: mock<TurnOf["agent"]>({ id: "speaker-1" }) }),
@@ -94,6 +97,12 @@ const build = async (
             { provide: CLOCK, useValue: mock<Clock>({ now: jest.fn(() => new Date("2026-11-10T08:00:00.000Z")) }) },
             ...(freezes === "none" ? [] : [{ provide: AgentGraphFreezeGateService, useValue: gate }]),
             { provide: ChatConversationsService, useValue: conversations },
+            ...(runs === undefined
+                ? []
+                : [
+                      { provide: AgentRunsService, useValue: runs.agentRuns },
+                      { provide: AgentRunsViewService, useValue: runs.views },
+                  ]),
             ...(workflowName === undefined
                 ? []
                 : [
@@ -189,6 +198,42 @@ describe("AgentGraphRunNoticesService a stuck step", () => {
         const card = workflowStoppedPayload.parse(Reflect.get(post.execute.mock.calls[0]?.[1] ?? {}, "card"))
         expect(card.workflow).toEqual({ ...WORKFLOW, title: "Đối soát của tiệm" })
         expect(card.step).toEqual({ key: "notify", nodeId: "mystery.node", title: "notify" })
+    })
+
+    it("names the customer of the run's conversation on the card when the run itself names none yet", async () => {
+        const { notices, post, conversations } = await build()
+        conversations.leadIdOf.mockResolvedValue("lead-7")
+
+        await notices.stuck(noticeOf({ workflow: WORKFLOW, nodeId: "payment.settle" }), toldOf())
+
+        const card = workflowStoppedPayload.parse(Reflect.get(post.execute.mock.calls[0]?.[1] ?? {}, "card"))
+        expect(card.leadId).toBe("lead-7")
+        expect(conversations.leadIdOf).toHaveBeenCalledWith("ws-1", "c-1")
+    })
+
+    it("marks the card of every step of a run that then ended well as resolved, in place, under each step's key", async () => {
+        const agentRuns = mock<AgentRunsService>({
+            runOf: jest.fn().mockResolvedValue({ id: "run-1", agentId: "agent-1", context: { locale: "vi" } }),
+        })
+        const views = mock<AgentRunsViewService>({
+            detail: jest.fn().mockResolvedValue({ run: {}, steps: [{ stepKey: "match" }, { stepKey: "settle" }] }),
+        })
+        const { notices, post } = await build({}, "none", undefined, { agentRuns, views })
+
+        await notices.runResolved("ws-1", "run-1")
+
+        expect(post.execute.mock.calls.map(([, , call]) => call)).toEqual([
+            { key: "run-stuck:run-1:match:resolved", dedupeKey: "run-stuck:run-1:match" },
+            { key: "run-stuck:run-1:settle:resolved", dedupeKey: "run-stuck:run-1:settle" },
+        ])
+        expect(post.execute.mock.calls[0]?.[1]).toEqual({
+            kind: "workflow.stopped",
+            resolved: {
+                title: "[agentGraphs.stuck.resolvedTitle]",
+                summary: "[agentGraphs.stuck.resolvedSummary]",
+                at: NOW,
+            },
+        })
     })
 
     it("speaks for itself only when the AI failed: static words, the same facts, no suggestions, the three freeze decisions, never a line to the customer", async () => {

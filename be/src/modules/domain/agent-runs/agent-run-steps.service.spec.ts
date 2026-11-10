@@ -449,3 +449,76 @@ describe("AgentRunStepsService side steps", () => {
         )
     })
 })
+
+describe("AgentRunStepsService.execute, the claim of a long step", () => {
+    beforeEach(() => jest.useFakeTimers())
+    afterEach(() => jest.useRealTimers())
+
+    /** A handler that answers only when released, like a step whose model call and its retry are still in flight. */
+    const slow = async (commits: ReadonlyArray<CommitResult> = ["ok"]) => {
+        const fixture = await build({ kind: "done", result: { ok: true }, next: [] }, { commits })
+        let release: () => void = () => undefined
+        const gate = new Promise<void>((resolve) => {
+            release = resolve
+        })
+        const seen: { signal?: AbortSignal } = {}
+        fixture.handler.run.mockImplementation(async (_step, signal) => {
+            seen.signal = signal
+            await gate
+            return { kind: "done", result: { ok: true }, next: [] }
+        })
+        return { ...fixture, release, seen }
+    }
+
+    it("is never re-claimed while it holds a 180 s model budget: the claim is renewed three times per deadline and the commit goes under the renewed fence", async () => {
+        const { service, ledger, release, logger } = await slow()
+        const claimed = stepViewOf({ deadlineMs: 120_000, fence: 7 })
+        let fence = 7
+        ledger.renew.mockImplementation(() => Promise.resolve((fence += 1)))
+
+        const done = service.execute(claimed, new AbortController().signal)
+        // A model call that times out at 90 s and its one retry: 180 s of work under a 120 s deadline.
+        await jest.advanceTimersByTimeAsync(180_000)
+
+        // Renewed every 40 s, so the claim never came within a beat of lapsing: no sweep or job could take the step.
+        expect(ledger.renew).toHaveBeenCalledTimes(4)
+        expect(ledger.renew.mock.calls.map(([view]) => view.fence)).toEqual([7, 8, 9, 10])
+        release()
+        await expect(done).resolves.toEqual({ kind: "done", result: { ok: true } })
+        expect(ledger.commit.mock.calls[0]?.[0]).toMatchObject({ fence: 11, attempt: claimed.attempt })
+        expect(logger.warn).not.toHaveBeenCalledWith(AgentRunsLogEvent.StepFenced, expect.anything())
+
+        await jest.advanceTimersByTimeAsync(300_000)
+        expect(ledger.renew).toHaveBeenCalledTimes(4)
+    })
+
+    it("stops a try whose claim another try took: its handler's signal is aborted and it commits and reports nothing", async () => {
+        const { service, ledger, release, seen, deadLetter, logger } = await slow()
+        ledger.renew.mockResolvedValue(null)
+
+        const done = service.execute(stepViewOf({ deadlineMs: 120_000 }), new AbortController().signal)
+        await jest.advanceTimersByTimeAsync(40_000)
+
+        expect(seen.signal?.aborted).toBe(true)
+        expect(logger.warn).toHaveBeenCalledWith(AgentRunsLogEvent.StepClaimLost, expect.anything())
+        release()
+        await expect(done).resolves.toEqual({ kind: "fenced" })
+        expect(ledger.commit).not.toHaveBeenCalled()
+        expect(ledger.commitIn).not.toHaveBeenCalled()
+        expect(deadLetter.tell).not.toHaveBeenCalled()
+    })
+
+    it("keeps the claim when a renewal fails once: the next beat renews it", async () => {
+        const { service, ledger, release, logger } = await slow()
+        ledger.renew.mockRejectedValueOnce(new Error("db down")).mockResolvedValue(9)
+
+        const done = service.execute(stepViewOf({ deadlineMs: 120_000, fence: 7 }), new AbortController().signal)
+        await jest.advanceTimersByTimeAsync(80_000)
+        release()
+
+        await expect(done).resolves.toMatchObject({ kind: "done" })
+        expect(logger.error).toHaveBeenCalledWith(AgentRunsLogEvent.StepRenewFailed, expect.any(Error), expect.anything())
+        expect(ledger.commit.mock.calls[0]?.[0]).toMatchObject({ fence: 9 })
+    })
+})
+

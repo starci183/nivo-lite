@@ -22,6 +22,13 @@ export const toCreateAgentInstallationRequest = (
     connectionIds: input.connectionIds,
     startFrom: input.startFrom,
     copyFrom: input.copyFrom,
+    providerRights:
+        input.providerRights === null
+            ? null
+            : input.providerRights.map((right) => ({
+                  provider: right.provider,
+                  abilities: Object.fromEntries(right.abilities.map((ability) => [ability.id, ability.mode])),
+              })),
 })
 
 /** Maps the created agent to its GraphQL type. */

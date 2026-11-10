@@ -28,6 +28,19 @@ export interface CreateAgentInstanceRequest {
     readonly startFrom: "copy" | "default"
     /** The installation of the same role to copy the setup of, when the setup starts from a copy. */
     readonly copyFrom: string | null
+    /**
+     * The rights of the new agent on the providers the workspace connected, as the owner left the proposal: each provider to attach
+     * with its abilities (`off`, `auto` or `ask`). Null or absent takes the module's proposal as it is; an empty list attaches nothing.
+     */
+    readonly providerRights?: ReadonlyArray<AgentProviderRight> | null | undefined
+}
+
+/** One provider a new agent is attached to, with the abilities wanted. */
+export interface AgentProviderRight {
+    /** The provider. */
+    readonly provider: string
+    /** The abilities wanted, by id: `off`, `auto` or `ask`; an ability left out is off. */
+    readonly abilities: Readonly<Record<string, string>>
 }
 
 /** What a request asks for once it is checked: the cleaned name and handle, and the picture. */

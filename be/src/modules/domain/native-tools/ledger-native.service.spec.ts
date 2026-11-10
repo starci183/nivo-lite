@@ -1,6 +1,7 @@
 import { mock } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { GraphNodeEffectsService } from "@modules/domain/graph-nodes"
+import { GRAPH_EFFECT_ONCE } from "@modules/domain/graph-nodes"
+import type { EffectOnce } from "@modules/domain/graph-nodes"
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
 import {
     LedgerRegistryService,
@@ -37,7 +38,7 @@ const portOf = (ready: boolean): jest.Mocked<LedgerPort> => ({
 })
 
 /** Makes the effects double a ledger that runs the act the first time a key is seen and answers the first subject afterwards. */
-const actOnce = (effects: jest.Mocked<GraphNodeEffectsService>): void => {
+const actOnce = (effects: jest.Mocked<EffectOnce>): void => {
     const seen = new Map<string, { kind: string; id: string }>()
     effects.once.mockImplementation(async (_workspaceId, _effect, call, act) => {
         const before = seen.get(call.key)
@@ -62,7 +63,7 @@ const arrange = (
 const build = async (port: LedgerPort | null = portOf(true)) => {
     const views = mock<NativeViewService>()
     const providers = mock<LedgerRegistryService>()
-    const effects = mock<GraphNodeEffectsService>()
+    const effects = mock<EffectOnce>()
     arrange(views, providers, port)
     actOnce(effects)
     const moduleRef = await Test.createTestingModule({
@@ -70,13 +71,13 @@ const build = async (port: LedgerPort | null = portOf(true)) => {
             LedgerNativeService,
             { provide: NativeViewService, useValue: views },
             { provide: LedgerRegistryService, useValue: providers },
-            { provide: GraphNodeEffectsService, useValue: effects },
+            { provide: GRAPH_EFFECT_ONCE, useValue: effects },
         ],
     }).compile()
     return { service: moduleRef.get(LedgerNativeService), views, effects, port }
 }
 
-/** The ledger tools over the port in an app without the ledger of effects: every call writes. */
+/** The ledger tools over the port in an app that binds no ledger of effects (no graph host). */
 const buildBare = async (port: LedgerPort) => {
     const views = mock<NativeViewService>()
     const providers = mock<LedgerRegistryService>()
@@ -255,13 +256,34 @@ describe("LedgerNativeService > refusals", () => {
         expect(port?.append).not.toHaveBeenCalled()
     })
 
-    it("runs without the ledger of effects, writing every call", async () => {
+    it("never writes without the once-per-key ledger: an app that binds none refuses every write and still answers status", async () => {
         const port = portOf(true)
         const { service } = await buildBare(port)
 
-        await service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)
+        await expect(service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)).rejects.toMatchObject({
+            code: McpGatewayErrorCode.NativeRefused,
+            params: { reason: "ledger_key_unavailable" },
+        })
+        await expect(service.invoke("ws-1", "void", { transactionId: ENTRY.transactionId }, CALLER)).rejects.toMatchObject({
+            params: { reason: "ledger_key_unavailable" },
+        })
+        expect(port.append).not.toHaveBeenCalled()
+        expect(port.void).not.toHaveBeenCalled()
+        await expect(service.invoke("ws-1", "status", {}, CALLER)).resolves.toEqual({ connected: true })
+    })
 
-        expect(port.append).toHaveBeenCalledTimes(1)
+    it("keys the line by its transaction, whoever writes it: the step's and the job's append of one transaction are one key", async () => {
+        const { service, effects, port } = await build()
+
+        await service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)
+        await service.invoke("ws-1", "append", { entry: ENTRY }, { ...CALLER, engine: true })
+
+        const key = `ledger:${ENTRY.transactionId}`
+        expect(effects.once.mock.calls.map((call) => [call[1], call[2]])).toEqual([
+            ["ledger.write", { key, dedupeKey: key }],
+            ["ledger.write", { key, dedupeKey: key }],
+        ])
+        expect(port?.append).toHaveBeenCalledTimes(1)
     })
 })
 
@@ -320,11 +342,14 @@ describe("LedgerNativeService > append by transaction id", () => {
         )
         leads.get.mockResolvedValue(recordOf(LEAD, { contactName: "Dinh" }))
         leads.list.mockResolvedValue(pageOf([recordOf(LEAD, { contactName: "Dinh" })]))
+        const once = mock<EffectOnce>()
+        actOnce(once)
         const moduleRef = await Test.createTestingModule({
             providers: [
                 LedgerNativeService,
                 { provide: NativeViewService, useValue: views },
                 { provide: LedgerRegistryService, useValue: providers },
+                { provide: GRAPH_EFFECT_ONCE, useValue: once },
                 { provide: EntityEngineService, useValue: engine },
                 { provide: EntityPortsService, useValue: ports },
             ],

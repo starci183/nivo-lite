@@ -2,7 +2,8 @@ import { Injectable, Optional } from "@nestjs/common"
 import { ledgerEntryOf } from "@nivo-lite/blocks-core/modules/accounting"
 import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
 import type { RunIn } from "@modules/domain/entity-engine"
-import { GraphNodeEffectsService } from "@modules/domain/graph-nodes"
+import { InjectGraphEffectOnce } from "@modules/domain/graph-nodes"
+import type { EffectOnce } from "@modules/domain/graph-nodes"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
 import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
 import {
@@ -78,7 +79,9 @@ export const LEDGER_MANIFEST: NativeConnectorManifest = {
  * ready in the workspace keeps the ledger. The ledger is a copy that only grows. A transaction is written once (the key
  * `ledger:<transactionId>` in the ledger of graph-node effects, so a replay, another run or a retry never adds a second entry); a
  * provider refusing the connection is the refusal `connection_refused`, which only the owner can cure; any other failure of the provider
- * is thrown as it is and the run tries again.
+ * is thrown as it is and the run tries again. The once-per-key ledger is what makes a write happen once, so a write is never made
+ * without it: an app that binds none (no graph host) answers the refusal `ledger_key_unavailable` and writes nothing, it never appends
+ * unkeyed; `ledger.status` needs no key and answers everywhere.
  */
 export class LedgerNativeService implements NativeAdapter {
     readonly manifest: NativeConnectorManifest = LEDGER_MANIFEST
@@ -86,7 +89,7 @@ export class LedgerNativeService implements NativeAdapter {
     constructor(
         private readonly views: NativeViewService,
         private readonly providers: LedgerRegistryService,
-        @Optional() private readonly once?: GraphNodeEffectsService,
+        @Optional() @InjectGraphEffectOnce() private readonly once?: EffectOnce,
         @Optional() private readonly engine?: EntityEngineService,
         @Optional() private readonly ports?: EntityPortsService,
     ) {}
@@ -142,6 +145,8 @@ export class LedgerNativeService implements NativeAdapter {
         key: string,
         write: (port: LedgerPort) => Promise<string | undefined>,
     ): Promise<GatewayJson> {
+        const { once } = this
+        if (once === undefined) throw nativeRefusal("ledger_key_unavailable")
         const port = await this.readyPort(workspaceId)
         if (port === undefined) throw nativeRefusal("not_connected")
         const act = async (): Promise<{ readonly kind: string; readonly id: string }> => {
@@ -150,8 +155,7 @@ export class LedgerNativeService implements NativeAdapter {
             return { kind: "ledger-entry", id: ref }
         }
         const call = { key, dedupeKey: key }
-        const subject =
-            this.once === undefined ? await act() : await this.once.once(workspaceId, "ledger.write", call, act)
+        const subject = await once.once(workspaceId, "ledger.write", call, act)
         return { ref: subject.id }
     }
 

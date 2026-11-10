@@ -14,6 +14,7 @@ import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
+import { PaymentTimersService } from "./payment-timers.service"
 import { SalesEffectsError, SalesEffectsErrorCode } from "./errors/sales-effects.error"
 import { isRecordId, payloadOf } from "./sales-effects.policy"
 import { claimRecordSchema, markPaidSchema, voidSchema } from "./sales-effects.schema"
@@ -90,6 +91,7 @@ export class PaymentEffectsService implements OnModuleInit {
         private readonly engine: EntityEngineService,
         private readonly ports: EntityPortsService,
         @Optional() private readonly registry?: GraphNodeRegistryService,
+        @Optional() private readonly timers?: PaymentTimersService,
     ) {}
 
     /** Registers the executors when the app hosts graph nodes. */
@@ -118,7 +120,7 @@ export class PaymentEffectsService implements OnModuleInit {
         if (!isRecordId(given.orderId)) return refusalOf("order_missing")
         if (!isRecordId(given.transactionId)) return refusalOf("transaction_missing")
         try {
-            return await this.engine.scoped(turn.workspaceId, async (tx) => {
+            const fact = await this.engine.scoped(turn.workspaceId, async (tx) => {
                 const runIn: RunIn = (use) => use(tx)
                 const ports: SettlePorts = {
                     transactions: this.ports.entityApi(runIn, "action", TRANSACTION),
@@ -144,6 +146,9 @@ export class PaymentEffectsService implements OnModuleInit {
                 }
                 throw new SettleRefused(settleRefusalOf(settled.data))
             })
+            // The order is paid (now or before): its payment timers have nothing left to wake for.
+            await this.timers?.closeOf(turn.workspaceId, given.orderId)
+            return fact
         } catch (cause) {
             if (cause instanceof SettleRefused) return cause.fact
             throw cause

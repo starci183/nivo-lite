@@ -474,6 +474,7 @@ const agentRun = async <S extends z.ZodType>(
             // The calls so far come last and only grow, so the text of one turn is the opening of the next turn's.
             input: { input: asked.input, ...facts, calls: [...calls], turnsLeft: left - 1 },
             ...(asked.images === undefined ? {} : { images: asked.images }),
+            ...(asked.reasoning === undefined ? {} : { reasoning: asked.reasoning }),
         })
         if ("confused" in turn) return { kind: "confused", confusion: turn.confused }
         if ("call" in turn) {

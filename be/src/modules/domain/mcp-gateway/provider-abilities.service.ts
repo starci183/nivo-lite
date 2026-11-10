@@ -8,6 +8,8 @@ import { ABILITY_LABELS, KIND_LABELS, PROVIDER_LABELS, labelOf } from "./message
 import type { AbilityLabel } from "./messages/provider-abilities.labels"
 import {
     PROVIDER_CATALOGUE,
+    cappedTicks,
+    exceedsCeiling,
     holdsTool,
     isAbilityTool,
     judgeAbility,
@@ -50,6 +52,8 @@ export interface ProviderView {
     readonly kindLabel: AbilityLabel
     /** True when the workspace holds a working connection of it. */
     readonly connected: boolean
+    /** The name of the workspace's working connection of it (the account it reaches), or null when it is not connected. */
+    readonly accountLabel: string | null
     /** Its abilities; none means no agent can be attached to it yet. */
     readonly abilities: ReadonlyArray<AbilityView>
 }
@@ -68,6 +72,12 @@ export interface ProposedAttachment {
     readonly provider: string
     /** The abilities ticked. */
     readonly abilities: AbilityTicks
+}
+
+/** One provider a module's template names, with its ticks and whether the workspace connected it. */
+export interface TemplateProposal extends ProposedAttachment {
+    /** True when the workspace holds a working connection of it: only then is a fresh agent attached. */
+    readonly connected: boolean
 }
 
 /** One attachment a person asks for: each ability `off`, `auto` or `ask`; an ability left out is off. */
@@ -99,18 +109,26 @@ export type AttachmentRefusal =
     | "unknown_ability"
     | "already_attached"
     | "not_attached"
+    | "owner_only"
+
+/**
+ * Who makes a change: the owner may tick anything; a manager may tick a write ability `ask` or `off`, never `auto` (letting an agent
+ * act on a provider by itself is the owner's to give). A template applied for a manager ticks its write abilities `ask`.
+ */
+export type RightsGiver = "owner" | "manager"
 
 /** What a change of an attachment came to. */
 export type AttachmentChangeResult = { readonly ok: true } | { readonly ok: false; readonly reason: AttachmentRefusal }
 
 const refused = (reason: AttachmentRefusal): AttachmentChangeResult => ({ ok: false, reason })
 
-const viewOf = (spec: ProviderSpec, connected: boolean): ProviderView => ({
+const viewOf = (spec: ProviderSpec, account: string | undefined): ProviderView => ({
     provider: spec.provider,
     label: labelOf(PROVIDER_LABELS, spec.provider),
     kind: spec.kind,
     kindLabel: labelOf(KIND_LABELS, spec.kind),
-    connected,
+    connected: account !== undefined,
+    accountLabel: account ?? null,
     abilities: spec.abilities.map((ability) => ({
         id: ability.id,
         label: labelOf(ABILITY_LABELS[spec.provider], ability.id),
@@ -118,6 +136,15 @@ const viewOf = (spec: ProviderSpec, connected: boolean): ProviderView => ({
         tools: ability.tools,
     })),
 })
+
+/** A template's attachments as the giver may give them: a manager's write abilities ask first, the owner's stay as the template has them. */
+const capped = <T extends ProposedAttachment>(entries: ReadonlyArray<T>, giver: RightsGiver): ReadonlyArray<T> =>
+    giver === "owner"
+        ? entries
+        : entries.map((entry) => {
+              const spec = providerSpecOf(entry.provider)
+              return spec === null ? entry : { ...entry, abilities: cappedTicks(spec, entry.abilities) }
+          })
 
 /** The default abilities a module declares for its agent, or undefined when it declares none. */
 const templateOf = (moduleKey: string) =>
@@ -183,25 +210,31 @@ export class ProviderAbilitiesService {
 
     /** The providers of the catalogue the workspace holds a working connection of; none in an app that reads no connections. */
     async connectedProviders(workspaceId: string): Promise<ReadonlyArray<string>> {
+        return [...(await this.accountsOf(workspaceId)).keys()]
+    }
+
+    /** The name of the oldest working connection of each connected provider of the catalogue, by provider. */
+    private async accountsOf(workspaceId: string): Promise<ReadonlyMap<string, string>> {
         const { connections } = this
-        if (connections === undefined) return []
+        if (connections === undefined) return new Map()
         const held = await Promise.all(
-            PROVIDER_CATALOGUE.map(async (spec) => {
+            PROVIDER_CATALOGUE.map(async (spec): Promise<Array<[string, string]>> => {
                 const found = await connections.ofProvider(workspaceId, spec.provider, CONNECTIONS_MAX)
-                return found.some((connection) => connection.status === CONNECTED) ? [spec.provider] : []
+                const working = found.find((connection) => connection.status === CONNECTED)
+                return working === undefined ? [] : [[spec.provider, working.name]]
             }),
         )
-        return held.flat()
+        return new Map(held.flat())
     }
 
     /** Every provider with its abilities and whether it is connected, and every attachment of the workspace. */
     async board(workspaceId: string): Promise<ProviderBoard> {
-        const [connected, attachments] = await Promise.all([
-            this.connectedProviders(workspaceId),
+        const [accounts, attachments] = await Promise.all([
+            this.accountsOf(workspaceId),
             this.rows.listOfWorkspace(workspaceId),
         ])
         return {
-            providers: PROVIDER_CATALOGUE.map((spec) => viewOf(spec, connected.includes(spec.provider))),
+            providers: PROVIDER_CATALOGUE.map((spec) => viewOf(spec, accounts.get(spec.provider))),
             attachments,
         }
     }
@@ -211,11 +244,22 @@ export class ProviderAbilitiesService {
      * (by kind or by key), with the abilities it ticks. The owner edits it before creating; nothing is written here.
      */
     async proposalOf(workspaceId: string, moduleKey: string): Promise<ReadonlyArray<ProposedAttachment>> {
+        const named = await this.templateProposal(workspaceId, moduleKey)
+        return named.filter((entry) => entry.connected).map(({ provider, abilities }) => ({ provider, abilities }))
+    }
+
+    /**
+     * Every provider a module's declaration names for its agent, with the abilities it ticks and whether the workspace connected it:
+     * the connected ones are what a fresh agent is attached to, the others are what it would be asked about once connected.
+     */
+    async templateProposal(workspaceId: string, moduleKey: string): Promise<ReadonlyArray<TemplateProposal>> {
         const template = templateOf(moduleKey)
         const connected = await this.connectedProviders(workspaceId)
         return PROVIDER_CATALOGUE.flatMap((spec) => {
-            const abilities = connected.includes(spec.provider) ? ticksOfTemplate(template, spec) : null
-            return abilities === null ? [] : [{ provider: spec.provider, abilities }]
+            const abilities = ticksOfTemplate(template, spec)
+            return abilities === null
+                ? []
+                : [{ provider: spec.provider, abilities, connected: connected.includes(spec.provider) }]
         })
     }
 
@@ -229,15 +273,35 @@ export class ProviderAbilitiesService {
         target: { readonly workspaceId: string; readonly agentId: string; readonly moduleKey: string },
         wishes: ReadonlyArray<AttachmentWish> | null,
         updatedBy: string | null,
-    ): Promise<{ readonly ok: true; readonly attached: ReadonlyArray<ProposedAttachment> } | Extract<AttachmentChangeResult, { ok: false }>> {
+        giver: RightsGiver = "owner",
+    ): Promise<
+        | { readonly ok: true; readonly attached: ReadonlyArray<ProposedAttachment> }
+        | Extract<AttachmentChangeResult, { ok: false }>
+    > {
         const { workspaceId, agentId } = target
-        const wanted = wishes === null ? await this.proposalOf(workspaceId, target.moduleKey) : await this.wished(workspaceId, wishes)
+        const wanted =
+            wishes === null
+                ? capped(await this.proposalOf(workspaceId, target.moduleKey), giver)
+                : await this.wished(workspaceId, wishes, giver)
         if ("ok" in wanted) return wanted
         const made = await this.rows.insertMissing(
             wanted.map((entry) => ({ workspaceId, agentId, provider: entry.provider, abilities: entry.abilities })),
             updatedBy,
         )
-        return { ok: true, attached: made.map((record) => ({ provider: record.provider, abilities: record.abilities })) }
+        return {
+            ok: true,
+            attached: made.map((record) => ({ provider: record.provider, abilities: record.abilities })),
+        }
+    }
+
+    /** Why the wishes cannot be stored in this workspace (the first that cannot), or null when every one can; nothing is written. */
+    async wishProblem(
+        workspaceId: string,
+        wishes: ReadonlyArray<AttachmentWish>,
+        giver: RightsGiver = "owner",
+    ): Promise<AttachmentRefusal | null> {
+        const wanted = await this.wished(workspaceId, wishes, giver)
+        return "ok" in wanted ? wanted.reason : null
     }
 
     /** Attaches an agent to a connected provider with the abilities wanted; an agent already attached is refused (tick it instead). */
@@ -245,12 +309,16 @@ export class ProviderAbilitiesService {
         target: { readonly workspaceId: string; readonly agentId: string },
         wish: AttachmentWish,
         updatedBy: string,
+        giver: RightsGiver = "owner",
     ): Promise<AttachmentChangeResult> {
-        const wanted = await this.wished(target.workspaceId, [wish])
+        const wanted = await this.wished(target.workspaceId, [wish], giver)
         if ("ok" in wanted) return wanted
         const [entry] = wanted
         if (entry === undefined) return refused("unknown_provider")
-        const outcome = await this.rows.attach({ ...target, provider: entry.provider, abilities: entry.abilities }, updatedBy)
+        const outcome = await this.rows.attach(
+            { ...target, provider: entry.provider, abilities: entry.abilities },
+            updatedBy,
+        )
         if (outcome === "attached") return { ok: true }
         return refused(outcome === "held" ? "already_attached" : "unknown_agent")
     }
@@ -266,11 +334,13 @@ export class ProviderAbilitiesService {
         ability: string,
         mode: string,
         updatedBy: string,
+        giver: RightsGiver = "owner",
     ): Promise<AttachmentChangeResult> {
         const spec = providerSpecOf(target.provider)
         if (spec === null) return refused("unknown_provider")
         const wished = ticksOfWish(spec, { [ability]: mode })
         if (!wished.ok) return refused("unknown_ability")
+        if (giver !== "owner" && exceedsCeiling(spec, wished.ticks)) return refused("owner_only")
         const stored: AbilityMode | null = wished.ticks[ability] ?? null
         const outcome = await this.rows.setAbility({ ...target, ability, mode: stored, updatedBy })
         return outcome === "set" ? { ok: true } : refused("not_attached")
@@ -314,6 +384,7 @@ export class ProviderAbilitiesService {
         provider: string,
         agentIds: ReadonlyArray<string>,
         updatedBy: string,
+        giver: RightsGiver = "owner",
     ): Promise<ReadonlyArray<string> | Extract<AttachmentChangeResult, { ok: false }>> {
         const problem = await this.providerProblem(workspaceId, provider)
         if (problem !== null) return { ok: false, reason: problem }
@@ -321,7 +392,10 @@ export class ProviderAbilitiesService {
             agentIds.includes(entry.agentId),
         )
         const made = await this.rows.insertMissing(
-            candidates.map((entry) => ({ workspaceId, agentId: entry.agentId, provider, abilities: entry.abilities })),
+            capped(
+                candidates.map((entry) => ({ provider, agentId: entry.agentId, abilities: entry.abilities })),
+                giver,
+            ).map((entry) => ({ workspaceId, agentId: entry.agentId, provider, abilities: entry.abilities })),
             updatedBy,
         )
         return made.map((record) => record.agentId)
@@ -339,6 +413,7 @@ export class ProviderAbilitiesService {
     private async wished(
         workspaceId: string,
         wishes: ReadonlyArray<AttachmentWish>,
+        giver: RightsGiver,
     ): Promise<ReadonlyArray<ProposedAttachment> | Extract<AttachmentChangeResult, { ok: false }>> {
         const connected = await this.connectedProviders(workspaceId)
         const judged = wishes.map((wish): ProposedAttachment | AttachmentRefusal => {
@@ -347,7 +422,9 @@ export class ProviderAbilitiesService {
             if (spec.abilities.length === 0) return "no_ability"
             if (!connected.includes(wish.provider)) return "not_connected"
             const ticks = ticksOfWish(spec, wish.abilities)
-            return ticks.ok ? { provider: wish.provider, abilities: ticks.ticks } : "unknown_ability"
+            if (!ticks.ok) return "unknown_ability"
+            if (giver !== "owner" && exceedsCeiling(spec, ticks.ticks)) return "owner_only"
+            return { provider: wish.provider, abilities: ticks.ticks }
         })
         const problem = judged.find((entry): entry is AttachmentRefusal => typeof entry === "string")
         if (problem !== undefined) return { ok: false, reason: problem }

@@ -1,40 +1,48 @@
 "use client"
 
 import { useState } from "react"
-import { FRESH_PROVIDERS, fakeAttachProviderByTemplate, useFakeProviderTemplateCandidates } from "./fakeProviderTemplateCandidates"
-import type { TemplateCandidateWire } from "./providerRights.types"
+import {
+    useMutateAttachProviderByTemplateSwr,
+    useQueryProviderRightsSwr,
+    useQueryProviderTemplateCandidatesSwr,
+} from "@/hooks/swr"
+import type { TemplateCandidateWire } from "@/modules/providerRights"
 
 /** A provider connected after the agents were made, with the agents that could get it by template. */
-export interface PendingProvider {
+interface PendingProvider {
     readonly provider: string
     readonly candidates: ReadonlyArray<TemplateCandidateWire>
 }
 
 /** The providers waiting for "attach by template?", and the two answers. */
-export interface ProviderTemplateCandidates {
+interface ProviderTemplateCandidates {
+    readonly isLoading: boolean
     readonly rows: ReadonlyArray<PendingProvider>
     readonly attach: (provider: string) => Promise<void>
-    /** "Để sau": remembered here, not by the backend (the candidates keep answering until the provider is attached). */
+    /** "Later": remembered here, not by the backend (the candidates keep answering until the provider is attached). */
     readonly dismiss: (provider: string) => void
 }
 
 /**
- * `providerTemplateCandidates({ provider })` for each provider connected later, with `attachProviderByTemplate({ provider, agentIds })`.
- * FAKE SOURCE today (`fakeProviderTemplateCandidates.ts`).
+ * `providerTemplateCandidates({ provider })` for each provider of the shop that has abilities, with `attachProviderByTemplate`. A provider
+ * with no candidate left is not listed.
  */
 export const useProviderTemplateCandidates = (): ProviderTemplateCandidates => {
-    const all = useFakeProviderTemplateCandidates()
+    const rights = useQueryProviderRightsSwr()
+    const keys = rights.data === undefined ? null : rights.data.providers.filter((one) => one.abilities.length > 0).map((one) => one.provider)
+    const read = useQueryProviderTemplateCandidatesSwr(keys)
+    const attachMutation = useMutateAttachProviderByTemplateSwr()
     const [dismissed, setDismissed] = useState<ReadonlyArray<string>>([])
+    const all = read.data ?? []
+    const rows = all.filter((row) => row.candidates.length > 0 && !dismissed.includes(row.provider))
     return {
-        rows: FRESH_PROVIDERS.filter((provider) => !dismissed.includes(provider)).flatMap((provider) => {
-            const candidates = all[provider] ?? []
-            return candidates.length === 0 ? [] : [{ provider, candidates }]
-        }),
-        attach: (provider) =>
-            fakeAttachProviderByTemplate(
-                provider,
-                (all[provider] ?? []).map((row) => row.agentId),
-            ),
+        isLoading: read.isLoading,
+        rows,
+        attach: async (provider) => {
+            const agentIds = rows.filter((row) => row.provider === provider).flatMap((row) => row.candidates.map((one) => one.agentId))
+            await attachMutation.trigger({ provider, agentIds })
+            await read.mutate()
+        },
         dismiss: (provider) => setDismissed((current) => [...current, provider]),
     }
 }

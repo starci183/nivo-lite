@@ -5,6 +5,7 @@ import { LeadEffectsService } from "./lead-effects.service"
 import { OrderEffectsService } from "./order-effects.service"
 import { PaymentEffectsService } from "./payment-effects.service"
 import { PaymentQrEffectsService } from "./payment-qr-effects.service"
+import { PaymentTimersService } from "./payment-timers.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./sales-effects.module-definition"
 
 @Module({})
@@ -25,6 +26,7 @@ export class SalesEffectsModule extends ConfigurableModuleClass {
                 OrderEffectsService,
                 PaymentEffectsService,
                 PaymentQrEffectsService,
+                PaymentTimersService,
                 DailyCloseEffectsService,
             ],
         }

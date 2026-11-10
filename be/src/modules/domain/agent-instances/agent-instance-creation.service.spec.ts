@@ -15,6 +15,7 @@ import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-m
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { CreateAgentInstanceRequest } from "./agent-instances.contracts"
+import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
 import { AgentInstanceCreationService } from "./agent-instance-creation.service"
 import { AgentSetupCopyService } from "./agent-setup-copy.service"
 import { AgentInstancesErrorCode } from "./errors/agent-instances.error"
@@ -113,6 +114,9 @@ const build = async (role: WorkspaceRole = "owner") => {
         grants: [{ connectionId: "db1", access: "read" }],
     })
     const logger = mock<Logger>()
+    const abilities = mock<ProviderAbilitiesService>()
+    abilities.wishProblem.mockResolvedValue(null)
+    abilities.attachDefaults.mockResolvedValue({ ok: true, attached: [] })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentInstanceCreationService,
@@ -126,6 +130,7 @@ const build = async (role: WorkspaceRole = "owner") => {
             { provide: ConnectionGrantsService, useValue: grants },
             { provide: ChannelOwnersService, useValue: owners },
             { provide: AgentSetupCopyService, useValue: setupCopy },
+            { provide: ProviderAbilitiesService, useValue: abilities },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
@@ -139,6 +144,7 @@ const build = async (role: WorkspaceRole = "owner") => {
         grants,
         setupCopy,
         logger,
+        abilities,
     }
 }
 
@@ -229,6 +235,61 @@ describe("AgentInstanceCreationService > create", () => {
             connections: 1,
         })
         expect(created.channels).toBe(1)
+    })
+})
+
+describe("AgentInstanceCreationService > create, provider rights", () => {
+    it("attaches the new agent by its module's proposal when the owner sent no edit", async () => {
+        const { service, abilities } = await build()
+
+        await service.create("u1", REQUEST)
+
+        expect(abilities.wishProblem).not.toHaveBeenCalled()
+        expect(abilities.attachDefaults).toHaveBeenCalledWith(
+            { workspaceId: "w1", agentId: "agent-minh", moduleKey: "sales" },
+            null,
+            "u1",
+            "owner",
+        )
+    })
+
+    it("attaches exactly what the owner left of the proposal, checked before anything is written", async () => {
+        const { service, abilities, install } = await build()
+        const providerRights = [{ provider: "zalo_oa", abilities: { "customer.send": "ask" } }]
+
+        await service.create("u1", { ...REQUEST, providerRights })
+        expect(abilities.wishProblem).toHaveBeenCalledWith("w1", providerRights, "owner")
+        expect(abilities.attachDefaults).toHaveBeenCalledWith(
+            { workspaceId: "w1", agentId: "agent-minh", moduleKey: "sales" },
+            providerRights,
+            "u1",
+            "owner",
+        )
+
+        install.install.mockClear()
+        abilities.wishProblem.mockResolvedValue("not_connected")
+        await expect(service.create("u1", { ...REQUEST, providerRights })).rejects.toMatchObject({
+            code: "MCP_GATEWAY_ATTACHMENT_REFUSED",
+            params: { reason: "not_connected" },
+        })
+        expect(install.install).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentInstanceCreationService > create, a manager's provider rights", () => {
+    it("gives the proposal and checks an edit as a manager, who may not let an agent act by itself", async () => {
+        const { service, abilities } = await build("manager")
+        const providerRights = [{ provider: "zalo_oa", abilities: { "customer.send": "ask" } }]
+
+        await service.create("u1", { ...REQUEST, providerRights })
+
+        expect(abilities.wishProblem).toHaveBeenCalledWith("w1", providerRights, "manager")
+        expect(abilities.attachDefaults).toHaveBeenCalledWith(
+            { workspaceId: "w1", agentId: "agent-minh", moduleKey: "sales" },
+            providerRights,
+            "u1",
+            "manager",
+        )
     })
 })
 

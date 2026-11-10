@@ -344,3 +344,4 @@ export type {
     WorkflowTemplateQuery,
     WorkflowTemplatesQuery,
 } from "./graphql/__generated__/graphql"
+export type { AgentAbilityProposalQuery, ProviderRightsQuery, ProviderTemplateCandidatesQuery } from "./graphql/__generated__/graphql"

@@ -1,7 +1,8 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentGraphFreezeGateService } from "@modules/domain/agent-graphs"
+import { AgentRunHandlersService } from "@modules/domain/agent-runs"
 import type { AgentTurnView } from "@modules/domain/agent-work"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -88,11 +89,13 @@ export class LeadFreezesService implements OnModuleInit {
         private readonly items: LeadFreezeItemsService,
         private readonly runs: LeadFreezeRunsService,
         private readonly wakes: LeadFreezeWakesService,
+        @Optional() private readonly handlers?: AgentRunHandlersService,
     ) {}
 
     /** Registers with the gate of the graph flows once the app has started. */
     onModuleInit(): void {
         this.gate.set(this)
+        this.handlers?.onEnded((workspaceId, runId) => this.runEnded(workspaceId, runId))
     }
 
     /**
@@ -191,6 +194,22 @@ export class LeadFreezesService implements OnModuleInit {
         if (!holds(freeze) || freeze.frozenRunId === null) return
         const run = await this.runs.stoppedOf(workspaceId, freeze.frozenRunId)
         await this.raise(workspaceId, freeze, run?.locale ?? "vi")
+    }
+
+    /**
+     * A run the job drove ended `done`: when it is the run of a freeze whose retry outlived the owner's answer (the door answered
+     * `retrying` and the job carried the rest), the freeze is released now and its pending events replayed, once. Not waiting for the
+     * customer's next message keeps that message from being held first and replayed after. A failure is logged and left to the lazy
+     * settle on the next read; it never fails the run.
+     */
+    async runEnded(workspaceId: string, runId: string): Promise<void> {
+        try {
+            const freeze = await this.records.byRun(workspaceId, runId)
+            if (!holds(freeze) || freeze.status !== "retrying" || freeze.frozenRunId !== runId) return
+            await this.settle(workspaceId, freeze, "retry")
+        } catch (cause) {
+            this.logger.error(LeadFreezesLogEvent.SettleFailed, cause, { runId })
+        }
     }
 
     /** Whether a lead waits for the owner, for the lead page; a retry that already ended is settled first. */

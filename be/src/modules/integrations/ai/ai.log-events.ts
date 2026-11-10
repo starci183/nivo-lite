@@ -12,6 +12,8 @@ export enum AiLogEvent {
      * the same prefix, so a missing cache hit between them is the provider's, not the prompt's. Never the prompt itself.
      */
     ChatAnswered = "ai.chat.answered",
+    /** A chat answer was cut at the token limit (finish reason `length`): it is a failure, never an answer. */
+    ChatCut = "ai.chat.cut",
     /** A chat call answered no text. */
     ChatEmpty = "ai.chat.empty",
     /** An embeddings call failed; the passages are stored without vectors. */

@@ -52,18 +52,20 @@ export const accountingModule: ModuleDeclaration = defineModule({
             },
         },
         policy: {
-            limits: { overpayment: "settle", underpayment: "ask", refund: "never" },
+            limits: { refund: "never" },
             guidance: guidanceOf({
                 vi:
                     "Chỉ giao dịch ngân hàng thật mới là bằng chứng khách đã trả; lời khách báo đã chuyển chỉ là lời báo. " +
-                    "Khách chuyển dư: vẫn ghi nhận đã trả (sổ ghi đúng số thật nhận) và báo đội phần dư; không tự hoàn tiền, không hứa hoàn. " +
-                    "Khách chuyển thiếu: theo quy định của tiệm nếu có (đặt cọc, giảm cho khách quen…); chưa có quy định thì hỏi chủ tiệm ở /chat trước khi ghi nhận đã trả. " +
-                    "Tiền vào không thuộc đơn nào: không gán bừa, hỏi chủ tiệm.",
+                    "Một khoản tiền chỉ rõ khi tự nó chỉ đúng một đơn đang chờ (mã đơn trong nội dung) và số tiền bằng đúng số đơn phải trả; " +
+                    "mọi trường hợp khác là chưa rõ (số tiền trùng là trùng hợp, lời báo là manh mối): không ghi nhận, không ghi sổ, dừng lại hỏi chủ tiệm kèm dữ kiện, trừ khi quy định của tiệm đã quyết. " +
+                    "Mỗi khi dừng hỏi chủ tiệm về tiền của một đơn của khách đã biết, nhắn khách một câu: tiệm đã nhận bao nhiêu cho đơn nào, đang kiểm tra và sẽ báo lại; không nói kết luận chủ tiệm chưa đưa ra. " +
+                    "Không tự hoàn tiền, không hứa hoàn.",
                 en:
                     "Only a real bank transaction proves a customer paid; a customer's word that they paid is only a claim. " +
-                    "A customer paid more: still mark the order paid (the books keep what really arrived) and tell the team the extra; never refund or promise one. " +
-                    "A customer paid less: follow the shop's rule when it has one (a deposit, a discount for a regular customer…); with no rule ask the founder in /chat before marking the order paid. " +
-                    "Money that pays no order: never force a match, ask the founder.",
+                    "Money is clear only when it names one open order by itself (the order code in the transfer content) and its amount equals what that order owes; " +
+                    "anything else is not clear (an equal amount is a coincidence, a claim is a lead): settle nothing, book nothing, stop for the founder with the facts, unless the shop's own rule already decides it. " +
+                    "Whenever you stop for the founder about money for an order of a known customer, tell that customer one line: what the shop received for which order, that it is checking and will come back; never a verdict the founder has not given. " +
+                    "Never refund or promise one.",
             }),
         },
     },

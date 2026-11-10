@@ -1,7 +1,9 @@
 import { Injectable } from "@nestjs/common"
 import { InjectAi } from "@modules/integrations/ai"
-import type { AiService } from "@modules/integrations/ai"
+import type { AiChatAnswer, AiService } from "@modules/integrations/ai"
 import { InjectLogger } from "@modules/platform/logging"
+import { InjectTimer } from "@modules/platform/retry"
+import type { Timer } from "@modules/platform/retry"
 import type { Logger } from "@modules/platform/logging"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
@@ -37,6 +39,10 @@ import {
     RESPONSIBILITY_SCHEMA,
 } from "./ai-tasks.schema"
 import type { TaskSchema } from "./ai-tasks.schema"
+import { callLimitsOf } from "./call-limits.policy"
+import type { CallKind } from "./call-limits.policy"
+import { NOT_JSON, failedTries, newTries, pauseBeforeRetryMs, triesRemain } from "./model-tries.policy"
+import type { Tries } from "./model-tries.policy"
 import { AiTasksError, AiTasksErrorCode } from "./errors/ai-tasks.error"
 import { NodeImagesService } from "./node-images.service"
 import { NotesService } from "./notes.service"
@@ -67,10 +73,17 @@ interface CallOptions {
     readonly schema: TaskSchema | null
     /** The question to retrieve business notes for, or null when the task needs none. */
     readonly question: string | null
+    /** The kind of call, which sets its deadline and what a reasoning model may spend on it. */
+    readonly call: CallKind
+    /** The reasoning a node named for its own call, when it named one. */
+    readonly reasoning?: NodeAsk["reasoning"]
 }
 
-/** A call with neither a schema nor retrieval. */
-const PLAIN: CallOptions = { schema: null, question: null }
+/** A task with neither a schema nor retrieval. */
+const PLAIN: CallOptions = { schema: null, question: null, call: "task" }
+
+/** A graph node's free-text call. */
+const NODE_TEXT: CallOptions = { schema: null, question: null, call: "node" }
 
 /** The result of one run: the text, and the structured output when the model produced one. */
 interface Ran {
@@ -96,6 +109,7 @@ export class AiTasksService {
         @InjectAiTaskMeter() private readonly meter: AiTaskMeter,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectLogger() private readonly logger: Logger,
+        @InjectTimer() private readonly timer: Timer,
         private readonly notes: NotesService,
         private readonly images: NodeImagesService,
     ) {}
@@ -169,7 +183,7 @@ export class AiTasksService {
             ],
             false,
             SALES,
-            { schema: null, question: `${nextAction} ${lead.need}` },
+            { schema: null, question: `${nextAction} ${lead.need}`, call: "task" },
         )
     }
 
@@ -287,7 +301,7 @@ Use a confidence below 0.6 only when you cannot tell what the message is (spam, 
             ],
             false,
             SALES,
-            { schema: null, question: lead.need },
+            { schema: null, question: lead.need, call: "task" },
         )
     }
 
@@ -334,12 +348,23 @@ Current rules: ${currentRules}`,
 
     /** A graph node's free-text call: its instructions and input, metered as engine work of the node's namespace. */
     async nodeText(scope: AiTaskScope, ask: NodeAsk): Promise<string> {
-        return this.complete(scope, nodeMessagesOf(await this.inlined(ask)), false, nodeMetaOf(ask))
+        return this.complete(scope, nodeMessagesOf(await this.inlined(ask)), false, nodeMetaOf(ask), {
+            ...NODE_TEXT,
+            reasoning: ask.reasoning,
+        })
     }
 
     /** A graph node's structured call: the answer the schema asks for, asked again as often as the options allow. */
     async nodeJson(scope: AiTaskScope, ask: NodeAsk, schema: TaskSchema): Promise<JsonRecord> {
-        return this.completeJson(scope, nodeMessagesOf(await this.inlined(ask), schema), nodeMetaOf(ask), schema)
+        return this.completeJson(
+            scope,
+            nodeMessagesOf(await this.inlined(ask), schema),
+            nodeMetaOf(ask),
+            schema,
+            "node",
+            newTries(),
+            ask.reasoning,
+        )
     }
 
     /** The node's call with its pictures carried as bytes: a provider outside the deployment cannot fetch the store's own addresses. */
@@ -363,13 +388,18 @@ Current rules: ${currentRules}`,
         return (await this.run(scope, messages, json, meta, options)).text
     }
 
-    /** One generation for the workspace of the scope on the AI endpoint; without the endpoint the call fails as unavailable. */
+    /**
+     * One generation for the workspace of the scope on the AI endpoint; without the endpoint the call fails as unavailable. `tries`
+     * is the count of the whole model call: a caller that asks again (a JSON answer that was no JSON) hands the same count on, so
+     * every kind of AI failure draws on the one allowance.
+     */
     private async run(
         scope: AiTaskScope,
         messages: ReadonlyArray<ChatMessage>,
         json: boolean,
         meta: CallMeta,
         options: CallOptions,
+        tries: Tries = newTries(),
     ): Promise<Ran> {
         if (!this.ai.available()) throw new AiTasksError({ code: AiTasksErrorCode.Unavailable })
         const request: TextRequest = {
@@ -379,24 +409,17 @@ Current rules: ${currentRules}`,
             kind: scope.kind ?? meta.kind,
             module: scope.module ?? meta.module,
         }
-        return this.metered(scope, request, options)
+        return this.metered(scope, request, options, tries)
     }
 
     /**
-     * The same call once more, for a call the endpoint gave no answer to (it timed out, failed or answered nothing). The model had
-     * not answered, so nothing was done and nothing was metered: asking again repeats no effect. Once only: a second silence is
-     * the caller's failure to report ("the AI is down"), never a loop.
+     * One prompt on the AI endpoint: refused when the workspace is over its allowance, tried again while the AI itself failed (the
+     * deadline, a cut or empty answer, the provider) and tries remain, metered once it answered. The model had not answered, so a
+     * try that failed did nothing and is not metered: asking again repeats no effect. THIS is the one place that counts the tries
+     * of a model call (`MODEL_TRIES` in all): the gateway makes one attempt per try and no caller loops over it. When the last try
+     * fails too the call is unavailable, with the tries made and the failure of each, for whoever reports "the AI failed".
      */
-    private again(request: TextRequest, call: Parameters<AiService["chat"]>[0]): ReturnType<AiService["chat"]> {
-        this.logger.warn(AiTasksLogEvent.Retried, { workspaceId: request.workspaceId, module: request.module })
-        return this.ai.chat(call)
-    }
-
-    /**
-     * One prompt on the AI endpoint: refused when the workspace is over its allowance, asked once more when the endpoint gave no
-     * answer, metered once it answered.
-     */
-    private async metered(scope: AiTaskScope, request: TextRequest, options: CallOptions): Promise<Ran> {
+    private async metered(scope: AiTaskScope, request: TextRequest, options: CallOptions, tries: Tries): Promise<Ran> {
         const notice = await this.meter.blockedBy(request.workspaceId, request.kind, scope.locale)
         if (notice !== null) {
             throw new AiTasksError({ code: AiTasksErrorCode.QuotaBlocked, params: { message: notice.message } })
@@ -405,12 +428,10 @@ Current rules: ${currentRules}`,
             messages: request.messages,
             json: request.json,
             schema: request.json ? options.schema : null,
-            timeoutMs: this.options.timeoutMs,
             context: this.notes.contextOf(scope, options.question),
             affinity: request.workspaceId,
         }
-        const answer = (await this.ai.chat(call)) ?? (await this.again(request, call))
-        if (answer === null) throw new AiTasksError({ code: AiTasksErrorCode.Unavailable })
+        const answer = await this.answered(request, call, options, tries)
         await this.meter.record({
             workspaceId: request.workspaceId,
             kind: request.kind,
@@ -427,20 +448,59 @@ Current rules: ${currentRules}`,
         return { text: answer.text, parsed: answer.parsed }
     }
 
-    /** A JSON completion: the structured output when the model gave one, else a loose parse; it asks again as often as the options allow. */
+    /** Waits before the next try; no wait at all for a pause of nothing. */
+    private paused(ms: number): Promise<void> {
+        if (ms <= 0) return Promise.resolve()
+        return new Promise((resolve) => {
+            this.timer.schedule(() => resolve(), ms)
+        })
+    }
+
+    /** The answer of the call within the tries left, or the unavailable error that names every try's failure. */
+    private async answered(
+        request: TextRequest,
+        call: Omit<Parameters<AiService["attempt"]>[0], "timeoutMs" | "budget">,
+        options: CallOptions,
+        tries: Tries,
+    ): Promise<AiChatAnswer> {
+        if (!triesRemain(tries)) throw failedTries(AiTasksErrorCode.Unavailable, tries)
+        tries.made += 1
+        // The deadline of a try depends on which try it is: a node call's retries are given less time than its first try.
+        const limits = callLimitsOf(this.options, options.call, options.reasoning, tries.made)
+        const tried = await this.ai.attempt({ ...call, ...limits })
+        if (tried.ok) return tried.answer
+        tries.failures.push(tried.failure)
+        this.logger.warn(AiTasksLogEvent.Retried, {
+            workspaceId: request.workspaceId,
+            module: request.module,
+            tried: tries.made,
+            failure: tried.failure,
+            again: triesRemain(tries),
+        })
+        if (triesRemain(tries)) await this.paused(pauseBeforeRetryMs(tried.failure))
+        return this.answered(request, call, options, tries)
+    }
+
+    /**
+     * A JSON completion: the structured output when the model gave one, else a loose parse. An answer that is no JSON object is an
+     * AI failure like any other and draws on the same tries: the model is asked again while tries remain, never on a count of its own.
+     */
     private async completeJson(
         scope: AiTaskScope,
         messages: ReadonlyArray<ChatMessage>,
         meta: CallMeta,
         schema: TaskSchema,
-        retriesLeft = this.options.jsonRetries,
+        call: CallKind = "task",
+        tries: Tries = newTries(),
+        reasoning?: NodeAsk["reasoning"],
     ): Promise<JsonRecord> {
-        const ran = await this.run(scope, messages, true, meta, { schema, question: null })
+        const ran = await this.run(scope, messages, true, meta, { schema, question: null, call, reasoning }, tries)
         const parsed = ran.parsed ?? this.parseObject(ran.text)
         if (parsed !== null) return parsed
-        if (retriesLeft <= 0) throw new AiTasksError({ code: AiTasksErrorCode.JsonNotReturned })
+        tries.failures.push(NOT_JSON)
+        if (!triesRemain(tries)) throw failedTries(AiTasksErrorCode.JsonNotReturned, tries)
         const again: ChatMessage = { role: "system", content: JSON_AGAIN }
-        return this.completeJson(scope, [...messages, again], meta, schema, retriesLeft - 1)
+        return this.completeJson(scope, [...messages, again], meta, schema, call, tries, reasoning)
     }
 
     /** The JSON object of an answer: bare, fenced, or the first {...} block inside prose. */

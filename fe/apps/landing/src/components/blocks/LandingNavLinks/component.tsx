@@ -21,7 +21,7 @@ export const LandingNavLinksBase = (props: LandingNavLinksBaseProps) => (
     <div className={NAV_LINKS}>
         <NavLandmark label={props.props.navLabel} layout="bar">
             {props.props.links.map((link) => (
-                <Link key={link.id} href={link.href}>
+                <Link key={link.id} variant="plain" href={link.href}>
                     {link.label}
                 </Link>
             ))}

@@ -81,6 +81,80 @@ describe("accounting.match-payment", () => {
         expect(String(cause)).toContain("MATCH_PAYMENT_UNKNOWN_ORDER")
     })
 
+    it("a short transfer for a known customer's order: one line to the customer, the founder asked through confusion, the order kept open", async () => {
+        const short = { ...TRANSACTION_OVER, amountVnd: 500 }
+        const line = "Dạ tiệm đã nhận 500đ cho đơn SO-0003, tiệm đang kiểm tra và sẽ báo lại mình ngay ạ."
+        const fake = fakeNodePorts({
+            store: { ...STORE_OVER, "bank-transaction": [short] },
+            model: [
+                { call: { tool: TOOL.customerMessageSend, args: { leadId: "lead-dinh", text: line } } },
+                { confused: { reason: "Khách chuyển 500đ cho đơn SO-0003 1.000đ", question: "Ghi nhận đơn đã trả hay chờ khách chuyển thêm?" } },
+            ],
+        })
+        const cause = await causeOf(
+            runNode(
+                {
+                    node: accountingMatchPaymentNode,
+                    params: {},
+                    input: { transactionId: "tx-over" },
+                    turn: EXAMPLE_TURN,
+                    grant: {
+                        rights: [...accountingMatchPaymentNode.rights, ...coreEffects.flatMap((effect) => effect.rights)],
+                        tools: coreTools.map((tool) => tool.id),
+                    },
+                    effects: new Map(coreEffects.map((effect) => [effect.id, effect])),
+                    tools: new Map(coreTools.map((tool) => [tool.id, tool])),
+                    key: "match:short",
+                },
+                fake.ports,
+            ),
+        )
+
+        expect(isNodeConfused(cause)).toBe(true)
+        expect(fake.executed.map((one) => one.id)).toEqual([TOOL.customerMessageSend])
+        expect(fake.executed[0]?.payload).toEqual({ leadId: "lead-dinh", text: line })
+        expect(fake.executed.map((one) => one.id)).not.toContain(TOOL.paymentMarkPaid)
+    })
+
+    it("a wrong code with the exact amount of one open order is not clear: one line to the customer, the founder asked, nothing settled", async () => {
+        const wrongCode = { ...TRANSACTION_OVER, amountVnd: 1000, reference: "DH999999 chuyen tien" }
+        const line = "Dạ tiệm đã nhận 1.000đ, có thể cho đơn SO-0003, tiệm đang kiểm tra và sẽ báo lại mình ạ."
+        const fake = fakeNodePorts({
+            store: { ...STORE_OVER, "bank-transaction": [wrongCode] },
+            model: [
+                { call: { tool: TOOL.customerMessageSend, args: { leadId: "lead-dinh", text: line } } },
+                {
+                    confused: {
+                        reason: "Khoản 1.000đ, nội dung 'DH999999 chuyen tien' không chỉ đơn nào; số tiền trùng đơn SO-0003 (1.000đ)",
+                        question: "Khoản này có phải của đơn SO-0003 không?",
+                    },
+                },
+            ],
+        })
+        const cause = await causeOf(
+            runNode(
+                {
+                    node: accountingMatchPaymentNode,
+                    params: {},
+                    input: { transactionId: "tx-over" },
+                    turn: EXAMPLE_TURN,
+                    grant: {
+                        rights: [...accountingMatchPaymentNode.rights, ...coreEffects.flatMap((effect) => effect.rights)],
+                        tools: coreTools.map((tool) => tool.id),
+                    },
+                    effects: new Map(coreEffects.map((effect) => [effect.id, effect])),
+                    tools: new Map(coreTools.map((tool) => [tool.id, tool])),
+                    key: "match:wrong-code",
+                },
+                fake.ports,
+            ),
+        )
+
+        expect(isNodeConfused(cause)).toBe(true)
+        expect(fake.executed.map((one) => one.id)).toEqual([TOOL.customerMessageSend])
+        expect(fake.toolCalls.map((one) => one.id)).not.toContain(TOOL.ledgerAppend)
+    })
+
     it("hands the agent's confusion to the engine", async () => {
         const confused = { confused: { reason: "Hai đơn cùng số tiền", question: "Khoản này của đơn nào?" } }
         const cause = await causeOf(

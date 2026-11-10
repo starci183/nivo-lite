@@ -39,7 +39,7 @@ export const CheckEmail = (props: CheckEmailProps) => (
         </Button>
         <Stack gap="inline" align="center">
             <TextAction onPress={props.onChangeEmail}>{props.wrongEmailLabel}</TextAction>
-            <Link href={props.backHref}>{props.backLabel}</Link>
+            <Link variant="plain" href={props.backHref}>{props.backLabel}</Link>
         </Stack>
     </Stack>
 )

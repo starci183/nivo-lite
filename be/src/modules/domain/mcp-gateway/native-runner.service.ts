@@ -63,6 +63,7 @@ export class NativeRunnerService {
             ...(caller.opKey === undefined ? {} : { opKey: caller.opKey }),
             ...(caller.run === undefined ? {} : { run: caller.run }),
             ...(caller.graphStep === true ? { graphStep: true as const } : {}),
+            ...(caller.engine === true ? { engine: true as const } : {}),
         }
         try {
             return { kind: "ok", value: await adapter.invoke(caller.workspaceId, tool, args, who) }

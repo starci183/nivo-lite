@@ -1,3 +1,5 @@
+import { ProviderAbilitiesService } from "./provider-abilities.service"
+import { TOOL } from "@nivo-lite/blocks-core"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { GraphNodeRunTokensService, GraphNodesErrorCode, toolFingerprintOf } from "@modules/domain/graph-nodes"
@@ -316,5 +318,82 @@ describe("NodeToolDoorService failure log", () => {
             expect.objectContaining({ code: GraphNodesErrorCode.ToolFailed, reason: "member_not_allowed" }),
         )
         expect(asking.logger.warn).not.toHaveBeenCalled()
+    })
+})
+
+/** The door with the provider rights bound, answering `verdict` for the run's agent. */
+const buildWithAbilities = async (verdict: Awaited<ReturnType<ProviderAbilitiesService["judge"]>>) => {
+    const gateway = mock<McpGatewayService>()
+    const tokens = mock<GraphNodeRunTokensService>()
+    tokens.verify.mockReturnValue(CLAIMS)
+    const abilities = mock<ProviderAbilitiesService>()
+    abilities.judge.mockResolvedValue(verdict)
+    const logger = mock<Logger>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            NodeToolDoorService,
+            { provide: McpGatewayService, useValue: gateway },
+            { provide: GraphNodeRunTokensService, useValue: tokens },
+            { provide: LOGGER, useValue: logger },
+            { provide: ProviderAbilitiesService, useValue: abilities },
+        ],
+    }).compile()
+    return { door: moduleRef.get(NodeToolDoorService), abilities, tokens, logger }
+}
+
+const QR = { token: "token-1", effect: TOOL.paymentQrCreate, payload: { orderId: "o-1" }, approval: null }
+
+describe("NodeToolDoorService effect rights: the context.effect road", () => {
+    it("judges payment.qr.create and payment.credit.rematch by the run agent's abilities, as the gateway road does", async () => {
+        const { door, abilities } = await buildWithAbilities({ kind: "allow", provider: "sepay", ability: "qr.create" })
+
+        await expect(door.effectRight(QR)).resolves.toBeNull()
+        await expect(door.effectRight({ ...QR, effect: TOOL.paymentRematch })).resolves.toBeNull()
+        expect(abilities.judge).toHaveBeenNthCalledWith(1, CLAIMS.workspaceId, CLAIMS.agentId, TOOL.paymentQrCreate, false)
+        expect(abilities.judge).toHaveBeenNthCalledWith(2, CLAIMS.workspaceId, CLAIMS.agentId, TOOL.paymentRematch, false)
+    })
+
+    it("not attached and unticked: answers the ordinary refusal fact and logs why", async () => {
+        const off = { kind: "refuse", ability: "qr.create", providers: ["sepay"] } as const
+        const { door, abilities, logger } = await buildWithAbilities({ ...off, reason: "not_attached" })
+
+        await expect(door.effectRight(QR)).resolves.toEqual({
+            kind: "refused",
+            id: "not_attached",
+            facts: { tool: TOOL.paymentQrCreate, ability: "qr.create", providers: ["sepay"] },
+        })
+        abilities.judge.mockResolvedValue({ ...off, reason: "ability_off" })
+        await expect(door.effectRight(QR)).resolves.toMatchObject({ kind: "refused", id: "ability_off" })
+        expect(logger.warn).toHaveBeenCalled()
+    })
+
+    it("ticked ask: waits for a person with the fingerprint of the effect and its payload, and runs the call that replays it", async () => {
+        const { door, abilities } = await buildWithAbilities({ kind: "approval", provider: "sepay", ability: "qr.create" })
+        const fingerprint = toolFingerprintOf(TOOL.paymentQrCreate, QR.payload)
+
+        await expect(door.effectRight(QR)).rejects.toMatchObject({
+            code: GraphNodesErrorCode.ToolApprovalRequired,
+            params: { tool: TOOL.paymentQrCreate, fingerprint, reason: "ask_mode" },
+        })
+
+        abilities.judge.mockResolvedValue({ kind: "allow", provider: "sepay", ability: "qr.create" })
+        await expect(door.effectRight({ ...QR, approval: { by: "member-1", fingerprint } })).resolves.toBeNull()
+        expect(abilities.judge).toHaveBeenLastCalledWith(CLAIMS.workspaceId, CLAIMS.agentId, TOOL.paymentQrCreate, true)
+    })
+
+    it("does not judge an effect that is no provider right, nor the customer send (its executor asks with the channel)", async () => {
+        const { door, abilities, tokens } = await buildWithAbilities(null)
+
+        await expect(door.effectRight({ ...QR, effect: TOOL.orderRecord })).resolves.toBeNull()
+        await expect(door.effectRight({ ...QR, effect: TOOL.customerMessageSend })).resolves.toBeNull()
+        expect(abilities.judge).not.toHaveBeenCalled()
+        expect(tokens.verify).not.toHaveBeenCalled()
+    })
+
+    it("refuses an effect whose run token does not verify", async () => {
+        const { door, tokens } = await buildWithAbilities(null)
+        tokens.verify.mockReturnValue(null)
+
+        await expect(door.effectRight(QR)).rejects.toMatchObject({ code: GraphNodesErrorCode.ToolTokenInvalid })
     })
 })

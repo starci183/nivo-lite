@@ -3,41 +3,41 @@ title: Agent / Đóng gói quy trình
 route: /workspaces/<ws>/agents/templates/package/<installation>
 area: agents-catalog
 ---
-Route: `/workspaces/<ws>/agents/templates/package/<installation>`. Packaging one agent's process as a template (form column of measure "form"). The shot is the top of the form; the version, preview and save regions are below the fold and described from code.
+Route: `/workspaces/<ws>/agents/templates/package/<installation>`. Packaging one agent's process as a template: one centred column of measure `reading` (about 544px, the next measure above `form`). The shots are tall so the regions below the fold (version, preview, save) are visible.
 
-Grammar paths are under `node_modules/@starci/grammar/dist/core/`. Screens are the console shell (`ConsoleLayout`, a `WorkspaceShell`) around one route page. Shots are taken in the Next dev server (the round "N" button, "Compiling" and "1 Issue" pills are Next dev overlays, not app UI; retake with `devIndicators: false`).
+Grammar paths are under `node_modules/@starci/grammar/dist/core/`. Screens are the console shell (`ConsoleLayout`, a `WorkspaceShell`) around one route page. Shots are taken in the Next dev server (the round "N" button is the Next dev overlay, not app UI). The notice is drawn in the accent pair until Grammar 0.37.17 makes `informative` neutral; the app does not hand-colour it.
 
-## Header band (trail "Agent / Đóng gói quy trình", title, description)
-Vì sao: the band has the trail, the title "Đóng gói quy trình" (18) and a 14 muted description; no tabs and no actions (the save command is at the foot of the form). The trail "Agent / Đóng gói quy trình" skips "Mẫu của tôi", the tab this page belongs to.
+## Header band (trail "Tổng quan / Agent / Mẫu của tôi / Đóng gói quy trình", title, description)
+Vì sao: the trail ends in the tab this page belongs to ("Mẫu của tôi", a link back to the templates tab) before the page itself; title "Đóng gói quy trình" (18) and a short 14 muted description; no tabs and no actions (the one command is at the foot of the form).
 Luật: `page-header-left-sublabel-xs.md` (band flush left), `type-scale-14-12.md`.
-Grammar: `Page header={{ breadcrumbs, title, description }}` (`frame/Page/index.d.ts`). Code: `features/pages/AgentTemplatesPage/index.tsx`.
+Grammar: `Page header={{ breadcrumbs, title, description }}` (`frame/Page/index.d.ts`). Code: `features/pages/AgentTemplatesPage/index.tsx`, `modules/page-header` (`agentsSubpageCrumbsOf` with `parent`).
 
-## Notice ("Gói chỉ có quy trình: không có Brain nội bộ…")
-Vì sao: CHƯA RÕ — the notice is `Alert tone="informative"`, but it is drawn in the pink/red soft pair with dark red text, so it reads as an error ("Phiên bản đã chốt sẽ được đóng gói: 8" is neutral information). The accent soft pair is the brand colour, not an info colour; the owner has not said which tone "informative" should be (Core must take HeroUI tokens; Nivo may add an info tone) and the colour must not be swapped without asking.
-Luật: `grammar-core-heroui.md` (tones from HeroUI, apps may add tones), `owner-colors-exact.md` (never swap a colour without asking).
+## Notice ("Gói chỉ có quy trình")
+Vì sao: `Alert tone="informative"` with a short title and one line of what the package leaves out plus the frozen version that will be packaged. The tone is informative, so it turns neutral with Grammar 0.37.17; the app passes no colour.
+Luật: `red-budget-links-foreground.md` (informative alerts are neutral, never the accent pair), `owner-colors-exact.md`.
 Grammar: `Alert tone="informative" title description` (`composite/Alert/index.d.ts`). Code: `blocks/AgentTemplatePackage/component.tsx`.
 
-## "Thông tin mẫu" form card (Mã của mẫu, Tên VI/EN, Tóm tắt VI/EN, Nhóm, Giọng của agent)
-Vì sao: a form card in a 480px column centred in the well: label on the pink, nine text inputs with 14/500 labels on the surface-secondary fill, no descriptions. The code lays the text fields in `Grid kind="form" columns={2}` but the narrow column shows them in one, so the form is long (each field ~90px). "Nhóm" is prefilled with the raw key "operations" (English enum), which is the only unlocalised value. The ids are plain inputs: no help on the format ("a-z, 0-9, gạch nối" is in the label).
-Luật: `surfacecard-select-subtitle.md` (flat fields: label 14/500 + optional description), `table-heroui-native-section-head.md` (ONE CONTENT PER CARD: an input group is allowed with its footer), `page-header-left-sublabel-xs.md` (content capped and centred).
-Grammar: `SurfaceCard label` + `Grid kind="form"` + `Input`, `Textarea` (`frame/SurfaceCard`, `frame/Grid`, `branch/Input`, `branch/Textarea`); `Stack measure="form"` (`frame/Stack`). Code: `blocks/AgentTemplatePackage/component.tsx` (`TemplateCard`).
+## "Thông tin mẫu" form card (Mã của mẫu | Nhóm, Tên Việt | Tên Anh, Tóm tắt, Giọng của agent)
+Vì sao: one `Grid kind="form" columns={2}`: key and group on one row, the two names on one row, the two summaries and the voice at the full width (`span="full"`). "Nhóm" is a Grammar `Select` with localized labels (Bán hàng và khách, Tài chính, Vận hành, Tiếp thị, Nhân sự), never the raw key. The column uses `Stack measure="reading"` (the next width above `form`) so the grid can reach its two-column breakpoint (container 32rem), as in the approved drawing (about 520px); at 390 the grid stacks to one column. Grammar gap: the breakpoint is 32rem and the card interior at `reading` is about 1px under it, see the report.
+Luật: `surfacecard-select-subtitle.md` (flat fields: label 14/500 + optional description), `table-heroui-native-section-head.md` (ONE CONTENT PER CARD: one form), `page-header-left-sublabel-xs.md` (column capped and centred).
+Grammar: `SurfaceCard label` + `Grid kind="form"` + `Input`, `Select`, `Textarea` (`frame/SurfaceCard`, `frame/Grid`, `branch/Input`, `branch/Select`, `branch/Textarea`); `Stack measure` (`frame/Stack`). Code: `blocks/AgentTemplatePackage/component.tsx` (`TemplateCard`).
 
-## "Phiên bản này" card (changelog, breaking switch) — below the fold
-Vì sao: SAI — a changelog `Textarea` and a `Switch` with a separate hand-rolled 12 muted hint under it (`Text size="sm" tone="muted"`). A switch setting is ONE row with title+description on the left and the switch on the right edge; Grammar `Switch label description` does exactly that, so the hint must be the Switch `description`, and the title a noun ("Không tương thích"), not the verb-led sentence.
+## "Phiên bản này" card (Có gì mới, Không tương thích)
+Vì sao: a changelog `Textarea` labelled "Có gì mới" and ONE `Switch` row through `label` and `description` ("Không tương thích", "Bật khi người đã cài phải thiết lập lại."): title and line at the start, the switch at the end, no loose hint text.
 Luật: `surfacecard-select-subtitle.md` (switch rows; row titles are nouns; no loose explanatory lines).
 Grammar: `Switch label description` (`leaf/Switch/index.d.ts`). Code: `blocks/AgentTemplatePackage/component.tsx` (`VersionCard`).
 
-## "Gói sẽ có gì" preview card — below the fold
-Vì sao: SAI — the preview is a stack of loose `Text` lines (what is kept, left out, needed), then a negative `Alert` for problems and suggestions as 12 muted lines; a card of lone sentences breaks one-content-per-card. It should be a list or `DescriptionList` card (Giữ lại / Bỏ ra / Cần), with problems as `Alert` rows; the retry button on a failed preview is a neutral `sm` pill with no icon (correct).
+## "Gói sẽ có gì" card (Giữ lại / Bỏ ra / Cần)
+Vì sao: a details card of three term/value rows taken from the preview (steps and branches kept; Brain references, sources, people and rights left out; providers and rules needed). Before a preview exists the rows show a dash and the note under the card says what to fill in. Problems that refuse the package are `Alert tone="negative"` rows above the card, the numbers that could become settings one `informative` alert below it. The retry on a failed preview is a neutral `sm` pill with no icon in the card head.
 Luật: `table-heroui-native-section-head.md` (ONE CONTENT PER CARD; lone sentences become rows), `page-header-left-sublabel-xs.md` (sm buttons no icon).
-Grammar: `SurfaceCard kind="list"` / `DescriptionList`, `Alert tone="negative"`. Code: `blocks/AgentTemplatePackage/component.tsx` (`PreviewCard`).
+Grammar: `SurfaceCard kind="details" items labelEnd note` (`frame/SurfaceCard/index.d.ts`), `Alert` (`composite/Alert/index.d.ts`). Code: `blocks/AgentTemplatePackage/component.tsx` (`PreviewCard`).
 
-## Save button ("Đóng gói") — below the fold
-Vì sao: the one `commit` button at the foot of the column; disabled until the package can be saved and pending while it saves.
-Luật: `surfacecard-zones-api.md` (form footer carries the action).
+## Save button ("Đóng gói")
+Vì sao: the one primary red call to action of the page, at the foot of the column; disabled until the package can be saved and pending while it saves. No other red element and no standalone link on the page.
+Luật: `red-budget-links-foreground.md` (one red CTA per view), `surfacecard-zones-api.md` (form footer carries the action).
 Grammar: `Button intent="commit" isDisabled isPending` (`leaf/Button/index.d.ts`). Code: `blocks/AgentTemplatePackage/component.tsx`.
 
 ## Phone layout (390)
-Vì sao: the column fills the width with the 16px gutter; the notice wraps to five lines; fields stack; the floating button covers the "Tóm tắt" label.
+Vì sao: the column fills the width with the 16px gutter; the form grid stacks to one column; the notice wraps; the switch row keeps its switch at the end.
 Luật: `pink-page-surface-rule.md`.
-Grammar: `Stack measure="form"` (`frame/Stack`). Code: `blocks/AgentTemplatePackage/component.tsx`.
+Grammar: `Stack measure` (`frame/Stack`), `Grid kind="form"` (`frame/Grid`). Code: `blocks/AgentTemplatePackage/component.tsx`.

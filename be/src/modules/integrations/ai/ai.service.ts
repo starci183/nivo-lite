@@ -6,6 +6,7 @@ import type { Logger } from "@modules/platform/logging"
 import { isRecord } from "@modules/platform/primitives"
 import type {
     ContextPassage,
+    AiChatAttempt,
     AiChatRequest,
     AiChatResult,
     AiEmbedRequest,
@@ -83,18 +84,31 @@ export class AiService implements OnModuleInit {
 
     /**
      * One chat chain at temperature 0: the prompt (with the retrieved business notes when a context is given), the model and, for a
-     * JSON task, the structured parse. Null when no key is set, the call failed or the answer is empty. A retrieval that fails
-     * leaves the prompt without notes; it never fails the call.
+     * JSON task, the structured parse. Null when no key is set, the call failed or the answer is empty or cut. A retrieval that
+     * fails leaves the prompt without notes; it never fails the call. A caller that retries reads `attempt` instead, which says why.
      */
     async chat(request: AiChatRequest): Promise<AiChatResult> {
-        if (this.runner === null) return null
+        const tried = await this.attempt(request)
+        return tried.ok ? tried.answer : null
+    }
+
+    /**
+     * One try of a chat call, which never throws: the answer, or the kind of failure it was. An answer cut at the token limit is a
+     * failure of its own (`length`), never an answer: what was written is half a text or half a JSON object.
+     */
+    async attempt(request: AiChatRequest): Promise<AiChatAttempt> {
+        if (this.runner === null) return { ok: false, failure: "unconfigured" }
         try {
             const reply = await this.runner.chat({ ...request, context: this.guarded(request.context) })
             const text = textOf(reply.content)
             const model = modelOf(reply.responseMetadata, this.options.chatModel)
+            if (fieldOf(reply.responseMetadata, "finish_reason") === "length") {
+                this.logger.warn(AiLogEvent.ChatCut, { model, answerChars: text.length })
+                return { ok: false, failure: "length" }
+            }
             if (text === "") {
                 this.logger.warn(AiLogEvent.ChatEmpty, { model })
-                return null
+                return { ok: false, failure: "empty" }
             }
             const usage = usageOf(reply.usageMetadata, reply.responseMetadata)
             this.logger.info(AiLogEvent.ChatAnswered, {
@@ -103,19 +117,28 @@ export class AiService implements OnModuleInit {
                 // Named `prompt` and `cached`: the log scrubs any field whose name says "token".
                 prompt: usage.promptTokens,
                 cached: usage.cachedTokens ?? null,
+                // What the model wrote, reasoning included, beside what the caller got: a large gap is thinking nobody reads.
+                completion: usage.completionTokens,
+                answerChars: text.length,
+                effort: request.budget?.effort ?? null,
                 json: request.json,
                 ...headOf(request.messages),
             })
             return {
-                text,
-                parsed: isRecord(reply.parsed) ? reply.parsed : null,
-                model,
-                usage,
-                retrieved: reply.retrieved,
+                ok: true,
+                answer: {
+                    text,
+                    parsed: isRecord(reply.parsed) ? reply.parsed : null,
+                    model,
+                    usage,
+                    retrieved: reply.retrieved,
+                },
             }
         } catch (cause) {
-            this.logger.warn(AiLogEvent.ChatFailed, failureOf(cause))
-            return null
+            const failure = failureOf(cause)
+            this.logger.warn(AiLogEvent.ChatFailed, failure)
+            const timedOut = failure.errorClass === "TimeoutError" || failure.errorClass === "AbortError"
+            return { ok: false, failure: timedOut ? "timeout" : "provider" }
         }
     }
 

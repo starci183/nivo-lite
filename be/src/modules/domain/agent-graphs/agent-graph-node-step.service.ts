@@ -11,6 +11,7 @@ import {
 } from "@nivo-lite/agent-sdk/node"
 import {
     AgentRunHandlersService,
+    AgentRunsService,
     type AgentStepHandler,
     type OptionalStepPassOver,
     type StepAnswer,
@@ -55,6 +56,7 @@ import {
     AI_CORE_FAILED,
     FOUNDER_ANSWERS_MEMBER,
     stuckFactsOf,
+    isAiFailure,
     troubleOfConfusion,
     troubleOfFailure,
     troubleOfRefusal,
@@ -235,6 +237,7 @@ export class AgentGraphNodeStepService implements AgentStepHandler, OnModuleInit
         @Optional() private readonly holds?: AgentGraphConversationHoldsService,
         @Optional() private readonly core?: AgentGraphAiCoreService,
         @Optional() private readonly policy?: AgentGraphTurnPolicyService,
+        @Optional() private readonly runs?: AgentRunsService,
     ) {}
 
     /** Registers with the run engine once the app has started. */
@@ -308,6 +311,17 @@ export class AgentGraphNodeStepService implements AgentStepHandler, OnModuleInit
     }
 
     /**
+     * True only when the run engine says, in so many words, that another try owns the step now (`holds` answered `false`). A step
+     * with no engine to ask, and any other answer, is taken as its own: staying silent about a real stop is the worse mistake, so
+     * silence needs the engine's explicit `false`, never the absence of an answer.
+     */
+    private async superseded(step: StepView): Promise<boolean> {
+        if (this.runs === undefined) return false
+        const holds: unknown = await this.runs.holds(step)
+        return holds === false
+    }
+
+    /**
      * A step that could not complete goes to the AI core, once per try, before anything is parked. The AI core produces the step's
      * output (checked against the node's own schema; never for a node that runs effects): the step is done, marked as recovered by
      * the AI, and the run goes on. Or it reports: the team is told in its words with the engine's facts, the customer hears only what
@@ -323,12 +337,14 @@ export class AgentGraphNodeStepService implements AgentStepHandler, OnModuleInit
         trouble: StepTrouble,
     ): Promise<StepAnswer> {
         this.notices.troubled(step, trouble)
+        // A try another try took over says nothing: no AI core call, no report, no line to the customer. Its commit is fenced.
+        if (await this.superseded(step)) return { kind: "failed", code: trouble.code }
         const turn = await this.toldTurnOf(step, flow, input)
         const subject = this.memory?.subjectOf(step, input) ?? null
         const given = await this.givenOf(step, flow, node, input)
         const scope = await this.scopeOrNull(step, flow, input)
         const decision =
-            this.core === undefined
+            this.core === undefined || isAiFailure(trouble)
                 ? { kind: "ai_failed" as const, code: AI_CORE_FAILED }
                 : await this.core.decide({
                       turn,
@@ -356,6 +372,8 @@ export class AgentGraphNodeStepService implements AgentStepHandler, OnModuleInit
                 next,
             })
         }
+        // Asked again after the AI core's call, which takes long enough for another try to have taken the step.
+        if (await this.superseded(step)) return { kind: "failed", code: trouble.code }
         const facts = stuckFactsOf(
             {
                 workflow: input.namespace ?? flow.moduleKey,

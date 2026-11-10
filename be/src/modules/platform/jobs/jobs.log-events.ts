@@ -12,6 +12,8 @@ export enum JobsLogEvent {
     LeaseNotRenewed = "jobs.lease.not-renewed",
     /** A parked job was handed back to its queue. */
     Resumed = "jobs.resumed",
+    /** A parked job was closed for good by a person, with the reason. */
+    Closed = "jobs.closed",
     /** A recurring tick failed to put its job on the queue; the next firing tries again and the app keeps running. */
     TickFailed = "jobs.tick.failed",
 }

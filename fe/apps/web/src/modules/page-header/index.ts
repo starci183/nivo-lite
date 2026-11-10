@@ -11,12 +11,15 @@ interface AgentsSubpageLabels {
     readonly agents: string
     /** The page itself. */
     readonly current: string
+    /** A tab of the agents page this page belongs to: it stands between the agents and the page itself. */
+    readonly parent?: { readonly label: string; readonly href: string }
 }
 
 /** The trail of a page under the agents page: the dashboard, the agents and the page itself. */
 export const agentsSubpageCrumbsOf = (labels: AgentsSubpageLabels): ReadonlyArray<BreadcrumbItem> => [
     { id: "home", label: labels.home, href: workspaceHref(labels.workspaceId, APP_ROUTES.workspaceHome) },
     { id: "agents", label: labels.agents, href: workspaceHref(labels.workspaceId, AGENTS_ROUTE) },
+    ...(labels.parent === undefined ? [] : [{ id: "parent", label: labels.parent.label, href: labels.parent.href }]),
     { id: "current", label: labels.current },
 ]
 

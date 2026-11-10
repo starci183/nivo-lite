@@ -335,6 +335,44 @@ describe("AgentStepLedgerService release", () => {
     })
 })
 
+describe("AgentStepLedgerService the claim of a step that is still working", () => {
+    it("holds the claim for another deadline under its fence and answers the fence it has after", async () => {
+        const { ledger, records } = await build()
+        withSteps(records, [stepRecordOf({ stepKey: "step-1", status: "running", version: "2", deadlineMs: 120_000 })])
+        records.patchStep.mockResolvedValue(stepRecordOf({ stepKey: "step-1", status: "running", version: "3" }))
+
+        await expect(ledger.renew(claimed)).resolves.toBe(3)
+        expect(records.patchStep).toHaveBeenCalledWith(scoped, expect.anything(), { claimedUntil: at(120_000) })
+    })
+
+    it("renews nothing for a claim another try took, a step that waits, ended or is gone", async () => {
+        const { ledger, records } = await build()
+        withSteps(records, [stepRecordOf({ stepKey: "step-1", status: "running", version: "9" })])
+        await expect(ledger.renew(claimed)).resolves.toBeNull()
+        withSteps(records, [stepRecordOf({ stepKey: "step-1", status: "running", version: "2", waitItemId: "item-1" })])
+        await expect(ledger.renew(claimed)).resolves.toBeNull()
+        withSteps(records, [stepRecordOf({ stepKey: "step-1", status: "done", version: "2" })])
+        await expect(ledger.renew(claimed)).resolves.toBeNull()
+        withSteps(records, [])
+        await expect(ledger.renew(claimed)).resolves.toBeNull()
+        expect(records.patchStep).not.toHaveBeenCalled()
+    })
+
+    it("says a try holds its step while it runs under the same try number, whatever its fence became, and not once a later try took it", async () => {
+        const { ledger, records } = await build()
+        withSteps(records, [stepRecordOf({ stepKey: "step-1", status: "running", version: "9", attempt: claimed.attempt })])
+        await expect(ledger.holds(claimed)).resolves.toBe(true)
+        withSteps(records, [
+            stepRecordOf({ stepKey: "step-1", status: "running", version: "9", attempt: claimed.attempt + 1 }),
+        ])
+        await expect(ledger.holds(claimed)).resolves.toBe(false)
+        withSteps(records, [stepRecordOf({ stepKey: "step-1", status: "done", version: "9", attempt: claimed.attempt })])
+        await expect(ledger.holds(claimed)).resolves.toBe(false)
+        withSteps(records, [])
+        await expect(ledger.holds(claimed)).resolves.toBe(false)
+    })
+})
+
 describe("AgentStepLedgerService compensation", () => {
     it("is closed for a run that is not compensating", async () => {
         const { ledger, records } = await build()

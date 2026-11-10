@@ -64,6 +64,23 @@
     "grant": {
         "rights": [
             {
+                "kind": "order",
+                "access": "read",
+                "scope": "workspace",
+                "fields": [
+                    "id",
+                    "orderNo",
+                    "status",
+                    "createdAt",
+                    "recipientName",
+                    "recipientPhone",
+                    "deliveryAddress",
+                    "deliveryAt",
+                    "note",
+                    "leadId"
+                ]
+            },
+            {
                 "kind": "catalogue-item",
                 "access": "read",
                 "scope": "workspace",

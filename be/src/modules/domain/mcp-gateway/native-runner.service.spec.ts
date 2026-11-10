@@ -48,6 +48,9 @@ describe("NativeRunnerService.run", () => {
         await runner.run(adapter, { ...CALLER, graphStep: true }, "transactions.list", 4000, {})
 
         expect(adapter.invoke.mock.calls[0]?.[3]).toEqual({ agentId: "sales", conversationId: "conv-1", graphStep: true })
+
+        await runner.run(adapter, { ...CALLER, conversationId: null, engine: true }, "transactions.list", 4000, {})
+        expect(adapter.invoke.mock.calls[1]?.[3]).toEqual({ agentId: "sales", conversationId: null, engine: true })
     })
 
     it("answers an expected refusal of the adapter as a tool error with its reason", async () => {

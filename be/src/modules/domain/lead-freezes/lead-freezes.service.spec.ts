@@ -447,6 +447,28 @@ describe("LeadFreezesService.retry", () => {
         expect(running.runs.retry).toHaveBeenCalledTimes(1)
     })
 
+    it("releases a retry that outlived the owner's answer as soon as its run ends, once, so the customer's next wake runs and is not replayed", async () => {
+        const { service, records, runState, wakes } = await build(frozenFreezeOf({ pending: [pendingLineOf()] }), "waiting")
+        await expect(service.retry("ws-1", "freeze-1", "owner-1")).resolves.toBe("retrying")
+
+        runState.status = "done"
+        await service.runEnded("ws-1", "run-1")
+        await service.runEnded("ws-1", "run-1")
+
+        expect(records.get("freeze-1")).toMatchObject({ status: "released", releaseReason: "retried" })
+        expect(wakes.replay).toHaveBeenCalledTimes(1)
+        await expect(service.hold(CHAT_TURN, { leadId: "lead-1" })).resolves.toBe(false)
+        expect(wakes.replay).toHaveBeenCalledTimes(1)
+    })
+
+    it("leaves a freeze alone when another run ends, or its own run ends while it is frozen and not retrying", async () => {
+        const { service, records, wakes } = await build(frozenFreezeOf(), "done")
+        await service.runEnded("ws-1", "run-other")
+        await service.runEnded("ws-1", "run-1")
+        expect(records.get("freeze-1")?.status).toBe("frozen")
+        expect(wakes.replay).not.toHaveBeenCalled()
+    })
+
     it("answers a step whose outcome is unknown as one that cannot run again", async () => {
         const { service, runs } = await build(frozenFreezeOf(), "parked")
         runs.retry.mockResolvedValueOnce({ resume: { kind: "outcome_unknown" }, status: "parked" })

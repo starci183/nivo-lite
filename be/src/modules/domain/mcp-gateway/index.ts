@@ -19,6 +19,7 @@ export type { NativeToolHandler } from "./adapters/routed-native.adapter"
 export { argumentsOf, invalidArguments, unknownTool } from "./native-arguments.policy"
 export { outputStepOf } from "./output-step.policy"
 export type {
+    AbilityInput,
     CapabilityRole,
     CallLogView,
     ConnectorView,
@@ -64,7 +65,9 @@ export type {
     ProposedAttachment,
     ProviderBoard,
     ProviderView,
+    RightsGiver,
     TemplateCandidate,
+    TemplateProposal,
 } from "./provider-abilities.service"
 export { PROVIDER_CATALOGUE, isAbilityTool, providerOfChannel } from "./provider-abilities.policy"
 export type { AbilityVerdict, ProviderAbility, ProviderKind, ProviderSpec } from "./provider-abilities.policy"

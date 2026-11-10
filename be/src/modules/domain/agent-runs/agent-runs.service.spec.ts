@@ -34,6 +34,7 @@ const build = async (
     const store = mock<AgentRunStoreService>()
     coverage.arrangeRunStore(store)
     const compensation = mock<AgentRunCompensationService>({ run: jest.fn().mockResolvedValue(undefined) })
+    const handlers = mock<AgentRunHandlersService>({ of: jest.fn(() => handler), ended: jest.fn().mockResolvedValue(undefined) })
     const container = await Test.createTestingModule({
         providers: [
             AgentRunsService,
@@ -48,14 +49,14 @@ const build = async (
             },
             {
                 provide: AgentRunHandlersService,
-                useValue: mock<AgentRunHandlersService>({ of: jest.fn(() => handler) }),
+                useValue: handlers,
             },
             { provide: AgentStepLedgerService, useValue: ledger },
             { provide: AgentRunStepsService, useValue: steps },
             { provide: AgentRunCompensationService, useValue: compensation },
         ],
     }).compile()
-    return { service: container.get(AgentRunsService), em, ledger, steps, store, compensation }
+    return { service: container.get(AgentRunsService), em, ledger, steps, store, compensation, handlers }
 }
 
 const claimed = (stepKey: string): ClaimResult => ({ kind: "claimed", step: stepViewOf({ stepKey }) })
@@ -185,6 +186,18 @@ describe("AgentRunsService.advance", () => {
 
         expect(steps.execute).toHaveBeenCalledTimes(2)
         expect(ledger.claim).toHaveBeenCalledWith({ runId: "run-1", workspaceId: "ws-1" }, null)
+    })
+
+    it("tells the run's listeners once the run it drove has ended done, and nobody while it runs on", async () => {
+        const ended = await build([claimed("a"), { kind: "idle" }], [DONE])
+        ended.store.runById.mockResolvedValueOnce(runViewOf({ status: "done" }))
+        await ended.service.advance("ws-1", "run-1", SIGNAL)
+        expect(ended.handlers.ended).toHaveBeenCalledWith("ws-1", "run-1")
+
+        const waiting = await build([claimed("a"), { kind: "idle" }], [DONE])
+        waiting.store.runById.mockResolvedValueOnce(runViewOf({ status: "waiting" }))
+        await waiting.service.advance("ws-1", "run-1", SIGNAL)
+        expect(waiting.handlers.ended).not.toHaveBeenCalled()
     })
 
     it("parks a waiting branch and stops at a failed or fenced step", async () => {

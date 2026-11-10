@@ -143,11 +143,16 @@ const transactionsOf = (context: NodeContext, transactionId: string | null) =>
         transactionId === null ? { status: "unmatched" } : { id: transactionId },
     )
 
-/** The orders of the customer the run names that are paid already; none when the run names no customer. */
+/**
+ * The orders of the customer the run names that are paid already; none when the run names no customer. Read among the customer's
+ * latest orders (an order is indexed by its customer and time, so a read pinned on the status too is one no index serves), the paid kept.
+ */
 const paidOrdersOf = async (context: NodeContext, leadId: string | null): Promise<ReadonlyArray<OrderRow>> =>
     leadId === null
         ? []
-        : (await read<OrderRow>(context, "order", READ_ORDERS.fields, { leadId, status: PAID })).slice(0, PAID_SHOWN)
+        : (await read<OrderRow>(context, "order", READ_ORDERS.fields, { leadId }))
+              .filter((order) => order.status === PAID)
+              .slice(0, PAID_SHOWN)
 
 const factsOf = async (context: NodeContext, given: MatchPaymentInput): Promise<MatchFacts> => {
     const [transactions, orderLists, claims, paidOrders] = await Promise.all([

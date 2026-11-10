@@ -303,3 +303,10 @@ export {
     useQueryWorkflowTemplateSwr,
     useQueryWorkflowTemplatesSwr,
 } from "./api"
+export { useQueryProviderRightsSwr, useQueryAgentAbilityProposalSwr, useQueryProviderTemplateCandidatesSwr } from "./api"
+export {
+    useMutateAttachAgentProviderSwr,
+    useMutateDetachAgentProviderSwr,
+    useMutateSetAgentAbilitySwr,
+    useMutateAttachProviderByTemplateSwr,
+} from "./api"

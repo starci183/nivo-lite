@@ -9,6 +9,7 @@ import type { ScopedTx } from "@modules/domain/entity-engine"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
 import { CLOCK } from "@modules/platform/clock"
+import { PaymentTimersService } from "./payment-timers.service"
 import { PaymentEffectsService } from "./payment-effects.service"
 
 const WORKSPACE = "11111111-1111-4111-8111-111111111111"
@@ -86,9 +87,11 @@ const build = async () => {
         each.update.mockImplementation((key) => Promise.resolve(written(key)))
     entities.transactions.link.mockResolvedValue(written(TRANSACTION))
     outbox.enqueue.mockResolvedValue(undefined)
+    const timers = mock<PaymentTimersService>({ closeOf: jest.fn().mockResolvedValue(2) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             PaymentEffectsService,
+            { provide: PaymentTimersService, useValue: timers },
             { provide: CLOCK, useValue: new FakeClock(Date.parse(NOW)) },
             { provide: EntityEngineService, useValue: engine },
             { provide: EntityPortsService, useValue: ports },
@@ -102,7 +105,7 @@ const build = async () => {
         assert(found !== undefined, `no executor for ${effect}`)
         return found
     }
-    return { api, entities, outbox, registry, executorOf }
+    return { api, entities, outbox, registry, executorOf, timers }
 }
 
 describe("PaymentEffectsService registration", () => {
@@ -147,6 +150,21 @@ describe("PaymentEffectsService payment.mark-paid", () => {
         expect(entities.transactions.link).toHaveBeenCalledWith(TRANSACTION, "order", ORDER)
         expect(entities.orders.update).toHaveBeenCalledWith(ORDER, "1", { status: "paid" })
         expect(outbox.enqueue.mock.calls.map(([job]) => job.name)).toEqual(["accounting.book-project"])
+    })
+
+    it("closes the order's payment timers once it is paid, and keeps them when the settle is refused", async () => {
+        const paid = await build()
+        paid.entities.transactions.get.mockResolvedValue(credit(null))
+        paid.entities.orders.get.mockResolvedValue(order("paid"))
+        paid.entities.orders.list.mockResolvedValue(pageOf([order("confirmed")], { lead: LEAD }))
+        await paid.executorOf("payment.order.settle").execute(TURN, payload, PAID_CALL)
+        expect(paid.timers.closeOf).toHaveBeenCalledWith(TURN.workspaceId, ORDER)
+
+        const refused = await build()
+        refused.entities.transactions.get.mockResolvedValue(credit(null))
+        refused.entities.orders.list.mockResolvedValue(pageOf([order("cancelled")], { lead: LEAD }))
+        await refused.executorOf("payment.order.settle").execute(TURN, payload, PAID_CALL)
+        expect(refused.timers.closeOf).not.toHaveBeenCalled()
     })
 
     it("is idempotent: a credit that already paid the order writes nothing and says so", async () => {

@@ -116,7 +116,8 @@ describe("lead memory policy", () => {
     it("snapshots facts (record under proved) and the latest outcome per workflow, the lead's entries over the conversation's", async () => {
         const { factsOfLead, factsValuesOf, snapshotOf, stepValuesOf, triggerValuesOf } = await buildPolicy()
         const lead = rowOf({ contactName: "An", phone: "0901", consultFacts: { address: "old", deliveryAt: "Sat" } })
-        expect(factsOfLead(lead)).toEqual({ name: "An", phone: "0901", address: "old", deliveryAt: "Sat" })
+        // The record's stale consult copy of a delivery is not read: the order and this memory are the homes of a delivery's details.
+        expect(factsOfLead(lead)).toEqual({ name: "An", phone: "0901" })
         const conversation = { ...stepValuesOf(WRITE, NOW), subjectKey: "conversation:c1", output: { value: { orderId: "old" } } }
         const snapshot = snapshotOf(
             LEAD,
@@ -128,7 +129,7 @@ describe("lead memory policy", () => {
             ],
             lead,
         )
-        expect(snapshot.lead).toEqual({ name: "An", phone: "0901", address: "335 Ba Trieu", deliveryAt: "Sat" })
+        expect(snapshot.lead).toEqual({ name: "An", phone: "0901", address: "335 Ba Trieu" })
         expect(snapshot.workflows["sales.consult"]?.["order"]?.output).toEqual({ orderId: "o1" })
         expect(Object.keys(snapshot.workflows["sales.consult"] ?? {})).toEqual(["order"])
     })

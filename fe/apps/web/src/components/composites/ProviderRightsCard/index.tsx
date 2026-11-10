@@ -1,4 +1,3 @@
-import type { ReactNode } from "react"
 import {
     Cluster,
     DropdownMenu,
@@ -7,126 +6,105 @@ import {
     Link,
     SurfaceCard,
     Tabs,
-    type DropdownMenuEntry,
     type SelectItemData,
 } from "@starci/grammar/common"
+import type { CapabilityModeView, CapabilityRowView, ProviderHeadView, ProviderRightsCardProps } from "./types"
 
-/** The mode control at a row's end: "Tự động | Hỏi". */
-export interface CapabilityModeView {
-    readonly label: string
-    readonly value: string
-    readonly options: ReadonlyArray<{ readonly id: string; readonly label: string }>
-    readonly onChange: (value: string) => void
-}
+export { abilityRowsOf, toggleAbility } from "./rows"
+export type { RightsTranslate } from "./rows"
+export type { ProviderRightsCardProps } from "./types"
 
-/** One capability row of a provider card. */
-export interface CapabilityRowView {
-    readonly id: string
-    readonly title: string
-    readonly subtitle: string | undefined
-    readonly isOn: boolean
-    readonly isDisabled: boolean
-    /** Only a write capability has a mode. */
-    readonly mode: CapabilityModeView | undefined
-}
+/** A read ability row: the checkbox alone. */
+const readItemOf = (row: CapabilityRowView): SelectItemData => ({
+    id: row.id,
+    title: row.title,
+    ...(row.subtitle === undefined ? {} : { subtitle: row.subtitle }),
+    isDisabled: row.isDisabled,
+})
 
-/** The ⋯ menu of a provider card ("Gỡ khỏi agent"). */
-export interface ProviderMenuView {
-    readonly label: string
-    readonly entries: ReadonlyArray<DropdownMenuEntry>
-}
-
-/** One provider card: its head (logo, name, "type · account"), then its capabilities, or a link to connect it. */
-export interface ProviderRightsCardProps {
-    readonly props: {
-        readonly name: string
-        readonly logo: string | undefined
-        readonly line: string
-        readonly rows: ReadonlyArray<CapabilityRowView>
-        readonly menu: ProviderMenuView | undefined
-        /** Set when the provider is attached but not connected: the card shows only this link. */
-        readonly connectLink: { readonly label: string; readonly href: string } | undefined
-    }
-    readonly on: {
-        readonly toggle: (rowId: string, isOn: boolean) => void
-    }
-}
-
-/** The pill "Tự động | Hỏi": the primary Tabs of Grammar, off (dimmed) while the capability is off. */
-const modeTabs = (row: CapabilityRowView, mode: CapabilityModeView): ReactNode => {
-    const [first, second] = mode.options
-    if (first === undefined || second === undefined) return null
-    return (
+/** A write ability row: the checkbox and, at its end, the mode pill (Grammar primary Tabs, dimmed while the ability is off). */
+const writeItemOf = (row: CapabilityRowView, mode: CapabilityModeView): SelectItemData => ({
+    ...readItemOf(row),
+    control: (
         <Tabs
             appearance="primary"
             label={mode.label}
             selectedKey={mode.value}
             onSelect={mode.onChange}
             items={[
-                { id: first.id, label: first.label, isDisabled: !row.isOn || row.isDisabled },
-                { id: second.id, label: second.label, isDisabled: !row.isOn || row.isDisabled },
+                { id: mode.options[0].id, label: mode.options[0].label, isDisabled: !row.isOn },
+                { id: mode.options[1].id, label: mode.options[1].label, isDisabled: !row.isOn },
             ]}
+        />
+    ),
+})
+
+/** One row as a select item. */
+const itemOf = (row: CapabilityRowView): SelectItemData => (row.mode === undefined ? readItemOf(row) : writeItemOf(row, row.mode))
+
+/** The input of the head parts. */
+interface HeadInput {
+    readonly head: ProviderHeadView
+}
+
+/** What stands at the end of the head: the link to connect, the more-menu, or nothing. */
+const HeadEnd = ({ head }: HeadInput) => {
+    if (head.connectLink !== undefined) {
+        return (
+            <Link variant="head" href={head.connectLink.href}>
+                {head.connectLink.label}
+            </Link>
+        )
+    }
+    if (head.menu === undefined) return null
+    return (
+        <DropdownMenu
+            placement="bottom end"
+            entries={head.menu.entries}
+            trigger={<IconButton glyph="more" intent="neutral" label={head.menu.label} size="sm" />}
         />
     )
 }
 
-/** One row as a select item: a write ability carries the mode pill at its end (a read ability is the checkbox alone). */
-const itemOf = (row: CapabilityRowView): SelectItemData => ({
-    id: row.id,
-    title: row.title,
-    ...(row.subtitle === undefined ? {} : { subtitle: row.subtitle }),
-    isDisabled: row.isDisabled,
-    ...(row.mode === undefined ? {} : { control: modeTabs(row, row.mode) }),
-})
-
-/** The head of a provider card: the logo and name over "type · account", the ⋯ menu at the end. */
-const Head = (props: ProviderRightsCardProps["props"]) => (
+/** The head of a provider card: the logo and name over the kind line, the end of the head at the end. */
+const Head = ({ head }: HeadInput) => (
     <Cluster gap="inline" justify="between" align="center" wrap={false}>
         <IdentityLockup
-            title={props.name}
-            subtitle={props.line}
+            title={head.name}
+            subtitle={head.line}
             markShape="rounded"
-            {...(props.logo === undefined ? {} : { logoSrc: props.logo })}
+            {...(head.logo === undefined ? {} : { logoSrc: head.logo })}
         />
-        {props.connectLink !== undefined ? (
-            <Link variant="head" href={props.connectLink.href}>
-                {props.connectLink.label}
-            </Link>
-        ) : props.menu === undefined ? null : (
-            <DropdownMenu
-                placement="bottom end"
-                entries={props.menu.entries}
-                trigger={<IconButton glyph="more" label={props.menu.label} size="sm" />}
-            />
-        )}
+        <HeadEnd head={head} />
     </Cluster>
 )
 
 /**
- * One provider of an agent as a card: a head with the provider's logo, name and "type · account" line (and the ⋯ menu, or the link to
+ * One provider of an agent as a card: a head with the provider's logo, name and kind line (and the more-menu, or the link to
  * connect it), then a choice card of the capabilities the agent may use (checkbox rows; a write one also carries its mode).
  */
-export const ProviderRightsCard = (card: ProviderRightsCardProps) => {
-    const view = card.props
+export const ProviderRightsCard = (props: ProviderRightsCardProps) => {
+    const view = props.props
     if (view.connectLink !== undefined) {
         return (
             <SurfaceCard kind="body" ariaLabel={view.name}>
-                <Head {...view} />
+                <Head head={view} />
             </SurfaceCard>
         )
     }
+    const items = view.rows.map((row) => itemOf(row))
     return (
         <SurfaceCard
             kind="select"
             selectionMode="multiple"
             ariaLabel={view.name}
-            headers={[{ kind: "custom", children: <Head {...view} /> }]}
-            items={view.rows.map(itemOf)}
+            headers={[{ kind: "custom", children: <Head head={view} /> }]}
+            items={items}
             value={view.rows.filter((row) => row.isOn).map((row) => row.id)}
             onChange={(keys) => {
                 const next = new Set(keys)
                 view.rows.forEach((row) => {
-                    if (next.has(row.id) !== row.isOn) card.on.toggle(row.id, next.has(row.id))
+                    if (next.has(row.id) !== row.isOn) props.on.toggle(row.id, next.has(row.id))
                 })
             }}
         />

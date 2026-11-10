@@ -23,7 +23,10 @@ export interface ConsultTurnInput {
     readonly channel: string | null
     /** The customer, or null when the conversation has none yet. */
     readonly leadId: string | null
-    /** The delivery address lead memory knows (`lead.address`), or null. */
+    /**
+     * The delivery address the shop's memory of this customer holds (`lead.address`: what an earlier turn of a consult settled), or null.
+     * Older background: the customer's recent orders are the truth for a previous delivery.
+     */
     readonly address: string | null
     /** The language the shop writes in. */
     readonly locale: NodeLocale
@@ -52,6 +55,47 @@ const CATALOGUE_LIMIT = 500
 const THREAD_LIMIT = 30
 
 const CATALOGUE_FIELDS = ["id", "name", "priceVnd", "active", "imageUrl"] as const
+
+/** The most recent orders of the customer handed to the agent, newest first. */
+const RECENT_ORDERS = 3
+
+/** What the consult reads of a customer's recent orders: how each was delivered, as the order recorded it. */
+const ORDER_FIELDS = [
+    "id",
+    "orderNo",
+    "status",
+    "createdAt",
+    "recipientName",
+    "recipientPhone",
+    "deliveryAddress",
+    "deliveryAt",
+    "note",
+] as const
+
+/** One recent order of the customer as the agent is handed it: how that delivery went, the truth for "như đơn trước". */
+interface RecentOrder {
+    readonly orderNo: string
+    readonly status: string
+    readonly createdAt: string | null
+    readonly recipientName: string | null
+    readonly recipientPhone: string | null
+    readonly deliveryAddress: string | null
+    readonly deliveryAt: string | null
+}
+
+const textOrNull = (value: unknown): string | null => (typeof value === "string" && value.trim() !== "" ? value : null)
+
+/** The recent orders as the agent is handed them; an older order that kept its address in the note gives that note. */
+const recentOrdersOf = (rows: ReadonlyArray<Readonly<Record<string, unknown>>>): ReadonlyArray<RecentOrder> =>
+    rows.map((row) => ({
+        orderNo: textOrNull(row.orderNo) ?? "",
+        status: textOrNull(row.status) ?? "",
+        createdAt: textOrNull(row.createdAt),
+        recipientName: textOrNull(row.recipientName),
+        recipientPhone: textOrNull(row.recipientPhone),
+        deliveryAddress: textOrNull(row.deliveryAddress) ?? textOrNull(row.note),
+        deliveryAt: textOrNull(row.deliveryAt),
+    }))
 const MESSAGE_FIELDS = ["role", "text", "sentAt"] as const
 
 interface CatalogueRow {
@@ -129,6 +173,7 @@ const output: NodeSchema<ConsultTurnOutput> = z
     )
 
 const RIGHTS: RightsGrant["rights"] = [
+    { kind: "order", access: "read", scope: "workspace", fields: [...ORDER_FIELDS, "leadId"] },
     { kind: "catalogue-item", access: "read", scope: "workspace", fields: [...CATALOGUE_FIELDS] },
     { kind: "message", access: "read", scope: "turn", fields: [...MESSAGE_FIELDS] },
 ]
@@ -141,13 +186,20 @@ const GUIDANCE = [
         `${TOOL.brainSearch} with a \`query\` you write yourself for the question (the shop's public facts and passages come back) and answer only from what it returns.`,
     "The order is complete when you know which catalogue items (by id), how many of each, the delivery address, the phone number of " +
         "the person who receives the delivery (`recipientPhone`), the delivery day and time window (`deliveryAt`, as the customer said it) and the customer " +
-        "agreed to it. An address in `address` (what memory knows) counts once the customer confirms it. Ask for what is missing, one question per turn: the address first, then the phone, then the day and time. " +
+        "agreed to it. Ask for what is missing, one question per turn: the address first, then the phone, then the day and time. " +
+        "`recentOrders` are the customer's last orders as each was really delivered (recipient, phone, address, time), newest first; " +
+        "`remembered.address` is older background, never a fact of this order. When the customer refers to an earlier delivery " +
+        "(\"như đơn trước\"), use the newest order. When your sources disagree (two orders, an order and memory), say in the same summary " +
+        "question which one you took and that another said otherwise; never pick silently. " +
         "When the customer names who receives it (\"giao cho chị Lan\"), keep that name as `recipientName`; otherwise it is null.",
     "While it is not complete, send the customer the ONE next question and answer with branch `asked`. When it is complete, answer " +
         "`ready`; when `leadId` is null, call " +
         `${TOOL.leadEnsure} with the conversation first and answer the id it gives.`,
     "Before the customer agrees, sum up in one message what you understood: each item with its catalogue price as `catalogue` gives it, " +
-        "how many, the address, the recipient's phone and the delivery time; never compute or type a total, a fee or a discount (the order card after you carries the total).",
+        "how many, the address, the recipient and their phone and the delivery time; never compute or type a total, a fee or a discount (the order card after you carries the total).",
+    "Answer `ready` only when the customer agreed to the LAST summary in `thread` and that summary carries the final address, recipient, " +
+        "phone and time of your answer. When anything changed after it, or no summary of yours is in `thread` (a turn tried again), send the " +
+        "summary now and answer `asked`.",
     "Payment is a bank transfer by the QR the shop sends right after the order: never offer cash on delivery or another account.",
     "A question neither the knowledge search nor `catalogue` answers (a custom order, a discount, stock): tell the customer you " +
         "will check with the shop owner, then answer confused with the question for the owner; never guess.",
@@ -234,7 +286,7 @@ export const salesConsultTurnNode: NodeDefinition<typeof input, typeof output, t
     effects: EFFECTS,
     tools: TOOLS,
     run: async (given, context) => {
-        const [catalogue, thread] = await Promise.all([
+        const [catalogue, thread, orders] = await Promise.all([
             context.data.read<CatalogueRow>("catalogue-item", {
                 where: { active: true },
                 fields: [...CATALOGUE_FIELDS],
@@ -245,12 +297,22 @@ export const salesConsultTurnNode: NodeDefinition<typeof input, typeof output, t
                 fields: [...MESSAGE_FIELDS],
                 limit: THREAD_LIMIT,
             }),
+            given.leadId === null
+                ? Promise.resolve([])
+                : context.data.read<Readonly<Record<string, unknown>>>("order", {
+                      where: { leadId: given.leadId },
+                      fields: [...ORDER_FIELDS],
+                      limit: RECENT_ORDERS,
+                  }),
         ])
+        const { address, ...turn } = given
         const decision = await context.agent.run({
             goal: goalOf(),
             purpose: "consult",
             input: {
-                ...given,
+                ...turn,
+                recentOrders: recentOrdersOf(orders),
+                remembered: { address },
                 catalogue: catalogue
                     .filter((row) => row.priceVnd !== null)
                     .map((row) => ({ id: row.id, name: row.name, priceVnd: row.priceVnd, imageUrl: row.imageUrl })),

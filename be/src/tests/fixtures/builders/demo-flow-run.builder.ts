@@ -217,6 +217,8 @@ export const play = async (
     const runId = `run-${shop.runs.length + 1}`
     const appended: Array<StepSpec> = []
     const runs = mock<AgentRunsService>({
+        // Every try of the demo still owns its step.
+        holds: () => Promise.resolve(true),
         open: (_tx: unknown, input: RunOpening) => {
             const view = runViewOf({ id: runId, agentId: seat.id, wakeId: input.wakeId, context: input.context })
             shop.runViews.set(runId, view)

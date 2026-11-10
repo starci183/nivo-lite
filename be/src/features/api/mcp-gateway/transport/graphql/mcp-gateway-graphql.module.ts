@@ -10,6 +10,13 @@ import { SyncMcpConnectorResolver } from "./sync-mcp-connector.resolver"
 import { ApproveMcpConnectorResolver } from "./approve-mcp-connector.resolver"
 import { CheckMcpConnectorResolver } from "./check-mcp-connector.resolver"
 import { SetMcpConnectorCredentialResolver } from "./set-mcp-connector-credential.resolver"
+import { ListProviderRightsResolver } from "./list-provider-rights.resolver"
+import { GetAgentAbilityProposalResolver } from "./get-agent-ability-proposal.resolver"
+import { ListProviderTemplateCandidatesResolver } from "./list-provider-template-candidates.resolver"
+import { AttachAgentProviderResolver } from "./attach-agent-provider.resolver"
+import { DetachAgentProviderResolver } from "./detach-agent-provider.resolver"
+import { SetAgentAbilityResolver } from "./set-agent-ability.resolver"
+import { AttachProviderByTemplateResolver } from "./attach-provider-by-template.resolver"
 
 @Module({
     imports: [McpGatewayApiModule.register({})],
@@ -23,6 +30,13 @@ import { SetMcpConnectorCredentialResolver } from "./set-mcp-connector-credentia
         ApproveMcpConnectorResolver,
         CheckMcpConnectorResolver,
         SetMcpConnectorCredentialResolver,
+        ListProviderRightsResolver,
+        GetAgentAbilityProposalResolver,
+        ListProviderTemplateCandidatesResolver,
+        AttachAgentProviderResolver,
+        DetachAgentProviderResolver,
+        SetAgentAbilityResolver,
+        AttachProviderByTemplateResolver,
     ],
 })
 /** The GraphQL transport of the MCP gateway console. */

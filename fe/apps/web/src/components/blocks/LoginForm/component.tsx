@@ -108,7 +108,7 @@ export const LoginFormBase = (props: LoginFormBaseProps) => {
                     onValueChange={props.on.setPassword}
                 />
                 <Cluster gap="inline" justify="end">
-                    <Link href={view.forgotHref}>{view.forgotLabel}</Link>
+                    <Link variant="plain" href={view.forgotHref}>{view.forgotLabel}</Link>
                 </Cluster>
                 <Button intent="commit" width="fill" type="submit" isPending={view.isPasswordPending}>
                     {view.submitLabel}

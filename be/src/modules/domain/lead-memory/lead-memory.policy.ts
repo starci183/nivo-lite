@@ -183,18 +183,18 @@ export const stepMemoryOfRow = (row: RecordRow): StepMemory | null => {
     }
 }
 
-/** The facts of a customer the lead record itself holds: the name, the phone, the email and what the consult kept. */
+/**
+ * The facts of a customer the lead record itself holds: the name, the phone, the email and the channel. The delivery details (address,
+ * recipient, time) are NOT read from the record's `consultFacts`: an order is the one home of how a delivery goes, and the facts a
+ * consult proves live in this memory; a copy kept on the record went stale and was handed to the next consult as if it were true.
+ */
 export const factsOfLead = (lead: RecordRow | null): Readonly<Partial<Record<LeadFact, JsonValue>>> => {
     if (lead === null) return {}
-    const consult = isObject(lead.data.consultFacts) ? lead.data.consultFacts : {}
     return factsOnly({
         name: lead.data.contactName,
         phone: lead.data.phone,
         email: lead.data.email,
         channel: lead.data.channel,
-        address: consult["address"],
-        recipientName: consult["recipient"],
-        deliveryAt: consult["deliveryAt"],
     })
 }
 

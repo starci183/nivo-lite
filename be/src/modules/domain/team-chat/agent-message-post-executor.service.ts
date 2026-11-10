@@ -43,6 +43,22 @@ interface StoppedGiven {
     readonly card: WorkflowStoppedPayload
 }
 
+/** What the engine hands over when a stopped step's run went on and ended well: the heading and line of the resolved card, and when. */
+interface ResolvedGiven {
+    readonly title: string
+    readonly summary: string
+    readonly at: string
+}
+
+const resolvedGivenOf = (payload: EffectPayload): ResolvedGiven | null => {
+    const resolved: unknown = payload["resolved"]
+    if (typeof resolved !== "object" || resolved === null) return null
+    const title: unknown = Reflect.get(resolved, "title")
+    const summary: unknown = Reflect.get(resolved, "summary")
+    const at: unknown = Reflect.get(resolved, "at")
+    return typeof title === "string" && typeof summary === "string" && typeof at === "string" ? { title, summary, at } : null
+}
+
 const stoppedGivenOf = (payload: EffectPayload): StoppedGiven | null => {
     const card = workflowStoppedPayload.safeParse(payload["card"])
     const { title, summary } = payload
@@ -126,6 +142,8 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
      * resuming the step. A retry of the same occurrence changes nothing but the freeze decisions it may bring (`sameStopOf`).
      */
     private async stopped(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<EffectFact> {
+        const resolved = resolvedGivenOf(payload)
+        if (resolved !== null) return this.resolvedStop(turn, resolved, lineKeyOf(call.dedupeKey ?? call.key))
         const given = stoppedGivenOf(payload)
         if (given === null) throw new TeamChatError({ code: TeamChatErrorCode.InvalidAgentMessage })
         const key = lineKeyOf(call.dedupeKey ?? call.key)
@@ -157,6 +175,28 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
             key,
         })
         return { kind: "chat-message", id: posted.messageId, facts: posted.facts }
+    }
+
+    /**
+     * The card of a stop whose run went on and ended well, rewritten in place under the same key: the same content, marked resolved,
+     * asking nothing (no reply options, no decisions), so the room keeps no stale ask. A stop that posted no card changes nothing and
+     * nothing is posted.
+     */
+    private async resolvedStop(turn: NodeTurn, resolved: ResolvedGiven, key: string): Promise<EffectFact> {
+        const previous = await this.audience.storedCard(turn.workspaceId, key)
+        const before = previous === null ? null : workflowStoppedPayload.safeParse(previous.payload)
+        if (before?.success !== true) return { kind: "chat-message", id: key, facts: { resolved: false } }
+        const message: TeamCardMessage = {
+            kind: STOPPED_KIND,
+            intent: "notify",
+            title: resolved.title,
+            summary: resolved.summary,
+            payload: { ...before.data, suggestions: [], decisions: [], resolvedAt: resolved.at },
+            options: [],
+            ...(previous?.occurrence === undefined ? {} : { occurrence: previous.occurrence }),
+        }
+        const folded = await this.audience.foldTeamCard(turn.workspaceId, key, message)
+        return { kind: "chat-message", id: folded ?? key, facts: { resolved: folded !== null } }
     }
 
     /** The message of a payload: the caller's words, or the card of the record it names. */

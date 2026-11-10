@@ -37,9 +37,6 @@ const CONSULT_NAMESPACE = "sales.consult"
 const LEAD_KEY = "lead:"
 const CONVERSATION_KEY = "conversation:"
 
-const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
-    typeof value === "object" && value !== null && !Array.isArray(value)
-
 /** The keys a customer's entries may sit under: their lead, then their conversation. */
 const keysOf = (subject: MemorySubject): ReadonlyArray<string> => [
     subject.key,
@@ -47,16 +44,10 @@ const keysOf = (subject: MemorySubject): ReadonlyArray<string> => [
     ...(subject.conversationId === null ? [] : [`${CONVERSATION_KEY}${subject.conversationId}`]),
 ]
 
-/** The facts the lead record itself holds, as the engine's lead memory reads them. */
+/** The facts the lead record itself holds, as the engine's lead memory reads them: the name; never a delivery detail of the record. */
 const factsOfLead = (lead: NodeRow | undefined): Readonly<Partial<Record<LeadFact, JsonValue>>> => {
     if (lead === undefined) return {}
-    const consult = isRecord(lead.consultFacts) ? lead.consultFacts : {}
-    const wanted: ReadonlyArray<[LeadFact, unknown]> = [
-        ["name", lead.contactName],
-        ["address", consult.address],
-        ["recipientName", consult.recipient],
-        ["deliveryAt", consult.deliveryAt],
-    ]
+    const wanted: ReadonlyArray<[LeadFact, unknown]> = [["name", lead.contactName]]
     return Object.fromEntries(wanted.filter(([, value]) => typeof value === "string" && value !== ""))
 }
 

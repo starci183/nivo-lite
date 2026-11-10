@@ -1,14 +1,13 @@
 "use client"
 
-import { useState } from "react"
-import { useTranslations } from "next-intl"
-import { abilityRowsOf, toggleAbility } from "@/components/composites/ProviderRightsCard/rows"
+import { useLocale, useTranslations } from "next-intl"
 import { useAgentInstallation } from "@/hooks/agentSettings"
 import { useAgentNivoTools } from "@/hooks/agentNivoTools"
-import { PROVIDER_KINDS, providerLogoOf, providerNameOf, useProviderRights, type HeldProvider } from "@/hooks/providerRights"
+import { useProviderDialogs, useProviderRights } from "@/hooks/providerRights"
 import { AUTOMATION_ROUTES, brainTabHref, workspaceHref } from "@/modules/routes"
 import { AgentConnectionsBase } from "./component"
-import type { AgentConnectionsBaseProps } from "./component"
+import type { AgentConnectionsBaseProps } from "./types"
+import { detachOf, drawerOf, groupsOf } from "./view"
 
 /** What the route hands the tab: the workspace and the installed agent of the url. */
 interface AgentConnectionsProps {
@@ -18,9 +17,9 @@ interface AgentConnectionsProps {
 }
 
 /**
- * The Quyền tab of an installed agent (route `/connections`, tab label "Quyền"): a card per provider it holds, with what it may do through
- * each (a write ability also Tự động or Hỏi), grouped Nhắn tin / Thanh toán / Sổ sách; "Gắn thêm provider" attaches another; under
- * them the NIVO tools it may call. The provider rights come from a FAKE source today (`hooks/providerRights/fakeProviderRights.ts`).
+ * The rights tab of an installed agent (route `/connections`, tab label "Permissions"): a card per provider it holds, with what it may do
+ * through each (a write ability also automatic or ask), grouped by kind; "attach a provider" adds another; under them the NIVO tools it may
+ * call. The provider rights come from the `providerRights` read and its mutations.
  */
 export const AgentConnections = (props: AgentConnectionsProps) => {
     const t = useTranslations("agentRights")
@@ -30,95 +29,49 @@ export const AgentConnections = (props: AgentConnectionsProps) => {
     const agentName = view?.name ?? ""
     const rights = useProviderRights(props.installationId, props.module)
     const tools = useAgentNivoTools(view?.agentId ?? null)
-    const [isDrawerOpen, setDrawerOpen] = useState(false)
-    const [picked, setPicked] = useState<string | null>(null)
-    const [detachKey, setDetachKey] = useState<string | null>(null)
-    const connectionsHref = workspaceHref(props.workspaceId, AUTOMATION_ROUTES.connections)
-    const detaching = rights.attached.find((one) => one.provider.provider === detachKey)
-
-    const cardOf = (one: HeldProvider): AgentConnectionsBaseProps["props"]["groups"][number]["cards"][number]["card"] => {
-        const key = one.provider.provider
-        const setAbility = (ability: string, mode: Parameters<typeof rights.setAbility>[2]) =>
-            void rights.setAbility(key, ability, mode)
-        return {
-            props: {
-                name: providerNameOf(key),
-                logo: providerLogoOf(key),
-                line: one.provider.connected
-                    ? t("lineConnected", { kind: t(`kind_${one.provider.kind}`) })
-                    : t("line", { kind: t(`kind_${one.provider.kind}`) }),
-                rows: abilityRowsOf(t, one.provider, one.held, setAbility),
-                menu: {
-                    label: t("menuLabel"),
-                    entries: [{ id: "detach", label: t("detach"), tone: "danger", onAction: () => setDetachKey(key) }],
-                },
-                connectLink: one.provider.connected ? undefined : { label: t("connectLink"), href: connectionsHref },
-            },
-            on: { toggle: (id, isOn) => toggleAbility(one.provider, one.held, id, isOn, setAbility) },
-        }
+    const locale = useLocale()
+    const dialogs = useProviderDialogs()
+    const scope = {
+        locale,
+        connectionsHref: workspaceHref(props.workspaceId, AUTOMATION_ROUTES.connections),
+        setAbility: (provider: string, ability: string, mode: Parameters<typeof rights.setAbility>[2]) =>
+            void rights.setAbility(provider, ability, mode),
+        askDetach: dialogs.setDetachKey,
     }
-    const groups: AgentConnectionsBaseProps["props"]["groups"] = PROVIDER_KINDS.flatMap((kind) => {
-        const cards = rights.attached.filter((one) => one.provider.kind === kind)
-        return cards.length === 0
-            ? []
-            : [{ id: kind, label: t(`kind_${kind}`), cards: cards.map((one) => ({ id: one.provider.provider, card: cardOf(one) })) }]
-    })
+    const viewProps: AgentConnectionsBaseProps["props"] = {
+        paneLabel: tabs("tab_connections"),
+        title: t("title"),
+        attachLabel: t("attachMore"),
+        groups: groupsOf(t, rights.attached, scope),
+        emptyLabel: t("empty", { agent: agentName }),
+        tools: {
+            title: t("toolsTitle"),
+            linkLabel: t("toolsLink"),
+            linkHref: workspaceHref(props.workspaceId, brainTabHref("facts")),
+            rows: tools.rows.map((row) => ({ id: row.tool, title: row.name, subtitle: row.description, isOn: row.isOn })),
+            isDisabled: tools.isSaving,
+        },
+        drawer: drawerOf(t, locale, rights.attachable, { isOpen: dialogs.isDrawerOpen, pickedId: dialogs.picked }),
+        detach: detachOf(t, dialogs.detachKey, agentName),
+    }
     return (
         <AgentConnectionsBase
-            props={{
-                paneLabel: tabs("tab_connections"),
-                title: t("title"),
-                attachLabel: t("attachMore"),
-                groups,
-                emptyLabel: t("empty", { agent: agentName }),
-                tools: {
-                    title: t("toolsTitle"),
-                    linkLabel: t("toolsLink"),
-                    linkHref: workspaceHref(props.workspaceId, brainTabHref("facts")),
-                    rows: tools.rows.map((row) => ({ id: row.tool, title: row.name, subtitle: row.description, isOn: row.isOn })),
-                    isDisabled: tools.isSaving,
-                },
-                drawer: {
-                    isOpen: isDrawerOpen,
-                    title: t("drawerTitle"),
-                    closeLabel: t("close"),
-                    optionsLabel: t("drawerOptions"),
-                    options: rights.attachable.map((option) => ({
-                        id: option.provider,
-                        title: providerNameOf(option.provider),
-                        subtitle: t("line", { kind: t(`kind_${option.kind}`) }),
-                    })),
-                    pickedId: picked,
-                    emptyLabel: t("drawerEmpty"),
-                    cancelLabel: t("cancel"),
-                    submitLabel: t("attach"),
-                },
-                detach: {
-                    isOpen: detaching !== undefined,
-                    title: t("detachTitle", {
-                        provider: detaching === undefined ? "" : providerNameOf(detaching.provider.provider),
-                        agent: agentName,
-                    }),
-                    description: t("detachDescription", { agent: agentName }),
-                    confirm: t("detach"),
-                    cancel: t("cancel"),
-                },
-            }}
+            props={viewProps}
             on={{
                 openDrawer: () => {
-                    setPicked(null)
-                    setDrawerOpen(true)
+                    dialogs.setPicked(null)
+                    dialogs.setIsDrawerOpen(true)
                 },
-                closeDrawer: () => setDrawerOpen(false),
-                pickAttach: setPicked,
+                closeDrawer: () => dialogs.setIsDrawerOpen(false),
+                pickAttach: dialogs.setPicked,
                 submitAttach: () => {
-                    if (picked !== null) void rights.attach(picked)
-                    setDrawerOpen(false)
+                    if (dialogs.picked !== null) void rights.attach(dialogs.picked)
+                    dialogs.setIsDrawerOpen(false)
                 },
-                cancelDetach: () => setDetachKey(null),
+                cancelDetach: () => dialogs.setDetachKey(null),
                 confirmDetach: () => {
-                    if (detachKey !== null) void rights.detach(detachKey)
-                    setDetachKey(null)
+                    if (dialogs.detachKey !== null) void rights.detach(dialogs.detachKey)
+                    dialogs.setDetachKey(null)
                 },
                 toggleTool: tools.set,
             }}

@@ -15,6 +15,7 @@ import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
+import { PaymentTimersService } from "./payment-timers.service"
 import { SalesEffectsError, SalesEffectsErrorCode } from "./errors/sales-effects.error"
 import { OPEN_ORDER, isRecordId, payloadOf, pricedFromCatalogue, standsFor, textOrNull } from "./sales-effects.policy"
 import type { CatalogueRow, OrderRequest } from "./sales-effects.policy"
@@ -85,6 +86,7 @@ export class OrderEffectsService implements OnModuleInit {
         private readonly engine: EntityEngineService,
         private readonly ports: EntityPortsService,
         @Optional() private readonly registry?: GraphNodeRegistryService,
+        @Optional() private readonly timers?: PaymentTimersService,
     ) {}
 
     /** Registers the executors when the app hosts graph nodes; otherwise there is nothing to serve. */
@@ -257,7 +259,7 @@ export class OrderEffectsService implements OnModuleInit {
 
     private async void(turn: NodeTurn, payload: EffectPayload): Promise<SubjectRef> {
         const { id } = payloadOf(voidSchema, payload)
-        return await this.inScope(turn, async (api) => {
+        const voided = await this.inScope(turn, async (api) => {
             const record = isRecordId(id) ? await api.get(ORDER, id) : null
             const order = record === null ? null : orderRowOf(record)
             if (order === null || order.status === "failed_system") return subjectOf(id)
@@ -265,6 +267,9 @@ export class OrderEffectsService implements OnModuleInit {
             if (!written.ok) throw new SalesEffectsError({ code: SalesEffectsErrorCode.WriteRefused })
             return subjectOf(id)
         })
+        // A cut order waits for no money: its payment timers, if any were armed, have nothing left to wake for.
+        if (isRecordId(id)) await this.timers?.closeOf(turn.workspaceId, id)
+        return voided
     }
 
     /** Runs the effect in one transaction scoped to the workspace of the turn. */

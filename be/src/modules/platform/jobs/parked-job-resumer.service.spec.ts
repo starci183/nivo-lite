@@ -16,6 +16,7 @@ import { JobsErrorCode } from "./errors/jobs.error"
 import { JOBS_MANAGERS, JOBS_OPTIONS } from "./jobs.decorators"
 import { JobsLogEvent } from "./jobs.log-events"
 import type { JobsOptions } from "./jobs.options"
+import { ParkedJobCloseService } from "./parked-job-close.service"
 import { ParkedJobResumerService } from "./parked-job-resumer.service"
 import { JobEntity } from "./persistence/entities"
 
@@ -52,6 +53,7 @@ const build = async (em: MockEntityManager, buildId?: string) => {
             },
             { provide: QUEUE_OUTBOX, useValue: outbox },
             { provide: LOGGER, useValue: logger },
+            ParkedJobCloseService,
         ],
     }).compile()
     return { resumer: moduleRef.get(ParkedJobResumerService), logger, outbox }
@@ -115,6 +117,33 @@ describe("ParkedJobResumerService resume", () => {
     })
 })
 
+describe("ParkedJobResumerService close", () => {
+    it("closes one parked job on the jobs connection with the reason, and a closed job is no longer among those a sweep hands back", async () => {
+        const em = mockEntityManager({ find: [JobEntity, []] })
+        em.update.mockResolvedValue({ affected: 1, raw: [], generatedMaps: [] })
+        const { resumer, outbox } = await build(em)
+
+        await expect(resumer.close("j-1", "old test payment")).resolves.toBe(true)
+
+        expect(em.update).toHaveBeenCalledWith(
+            JobEntity,
+            { id: "j-1", status: "failed_awaiting_fix" },
+            { status: "failed", error: "closed: old test payment", parkedBuild: null, parkedAt: null },
+        )
+        await expect(resumer.resumeAll()).resolves.toBe(0)
+        expect(em.find.mock.calls[0]?.[1]).toMatchObject({ where: { status: "failed_awaiting_fix" } })
+        expect(outbox.jobs).toEqual([])
+    })
+
+    it("refuses a job that is not parked", async () => {
+        const em = mockEntityManager({})
+        em.update.mockResolvedValue({ affected: 0, raw: [], generatedMaps: [] })
+        const { resumer } = await build(em)
+
+        await expect(resumer.close("j-9", "why")).resolves.toBe(false)
+    })
+})
+
 describe("ParkedJobResumerService resume one", () => {
     it("hands back one job by id and nothing for an id that is not parked", async () => {
         const em = mockEntityManager({ find: [JobEntity, []] })
@@ -173,6 +202,7 @@ describe("ParkedJobResumerService without a connection", () => {
                 },
                 { provide: QUEUE_OUTBOX, useValue: recordingQueueOutbox() },
                 { provide: LOGGER, useValue: mock<Logger>() },
+                ParkedJobCloseService,
             ],
         }).compile()
 

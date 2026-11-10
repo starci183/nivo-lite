@@ -27,6 +27,8 @@ export const AGENT_GRAPHS_MESSAGES: MessageBundle = {
         "agentGraphs.runDead.title": "AI gặp lỗi xử lý tin – cần xem",
         "agentGraphs.sideStepFailed.title": "Một bước thông báo của AI bị lỗi – khách vẫn được phục vụ, cần xem",
         "agentGraphs.stuck.title": "Quy trình đang dừng – cần bạn trả lời",
+        "agentGraphs.stuck.resolvedTitle": "Quy trình đã chạy tiếp",
+        "agentGraphs.stuck.resolvedSummary": "Bước này đã chạy xong sau khi dừng, không cần bạn trả lời nữa.",
         "agentGraphs.stuck.aiFailed":
             "AI lỗi: AI không xử lý được bước này (không gọi được AI hoặc câu trả lời của AI không hợp lệ). Quy trình đã dừng ở bước này và chờ bạn.",
         "agentGraphs.stuck.engine": "Quy trình đã dừng và chờ bạn xem.",
@@ -135,6 +137,8 @@ export const AGENT_GRAPHS_MESSAGES: MessageBundle = {
         "agentGraphs.sideStepFailed.title":
             "A notice step of the AI failed – the customer was still served, please review",
         "agentGraphs.stuck.title": "A workflow stopped – it needs your answer",
+        "agentGraphs.stuck.resolvedTitle": "The workflow went on",
+        "agentGraphs.stuck.resolvedSummary": "This step finished after it stopped; it needs no answer from you any more.",
         "agentGraphs.stuck.aiFailed":
             "AI error: the AI could not handle this step (it could not be reached, or its answer was not valid). The workflow stopped at this step and waits for you.",
         "agentGraphs.stuck.engine": "The workflow stopped and waits for you.",

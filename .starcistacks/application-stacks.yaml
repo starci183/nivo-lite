@@ -599,7 +599,7 @@ environments:
             # The refresh cookie takes Domain=starci.org on the dev tunnel host and stays host-only on localhost (@starci/auth 0.4.0 domains).
             AUTH_COOKIE_DOMAINS: "starci.org"
             PUBLIC_API_URL: "https://nivo-local.starci.org"
-            HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web},http://localhost:${port.landing},http://localhost:${port.admin},https://nivo-local-app.starci.org,https://nivo-local-admin.starci.org"
+            HTTP_SECURITY_ALLOWED_ORIGINS: "http://localhost:${port.web},http://localhost:${port.landing},http://localhost:${port.admin},http://localhost:3900,https://nivo-local-app.starci.org,https://nivo-local-admin.starci.org"
             # Dev only: UI agents screenshot in parallel and each signs in once; the default strict limit (30/min) refused them with 429.
             HTTP_SECURITY_RATE_STRICT_LIMIT: "300"
             # SITE_URL is the public tunnel origin, so the private-target guards of a workspace SMTP account and a data source no longer see a development site.

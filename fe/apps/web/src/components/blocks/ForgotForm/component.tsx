@@ -51,7 +51,7 @@ export const ForgotFormBase = (props: ForgotFormBaseProps) => {
                 submitLabel={view.submitLabel}
                 footer={
                     <Stack gap="inline" align="center">
-                        <Link href={view.loginHref}>{view.backLabel}</Link>
+                        <Link variant="plain" href={view.loginHref}>{view.backLabel}</Link>
                     </Stack>
                 }
             >

@@ -20,10 +20,10 @@ Vì sao: two flat fields on the white dialog: title above the input (14/500, pin
 Luật: `surfacecard-select-subtitle.md` (flat fields: title Label 14/500 + description + content; spacing only between fields).
 Grammar: `Input label description isRequired` (`branch/Input/index.d.ts`). Code: `blocks/AgentCreateDialog/component.tsx` (`NameFields`).
 
-## Channels ("Kênh")
-Vì sao: a choice list = `SurfaceCard kind="select" selectionMode="multiple"`, bordered because it stands on the white dialog. One row per channel: the title is the provider ("Telegram", "Zalo OA"), the subtitle the account and its state ("@nivo_bot · đang trống"). A channel another agent of the role already answers is disabled and says "<Agent> đang trả lời kênh này". The title "Kênh" is the card label, with no description and no loose line about one agent per channel.
-Luật: `surfacecard-select-subtitle.md` (every choice list is SurfaceCard kind="select"; a subtitle only under a title; no loose lines), `WHITE-LIST-BORDERED-CARD`, `CARD-NO-DESCRIPTION`.
-Grammar: `SurfaceCard kind="select" selectionMode="multiple" items: SelectItemData` (`frame/SurfaceCard/index.d.ts`, `surfaceCardData.d.ts`). Code: `blocks/AgentCreateDialog/index.tsx` (`channelsOf`).
+## Provider ("Provider", chip "Theo mẫu Bán hàng")
+Vì sao: replaces the old "Kênh" card. The section label "Provider" carries a chip "Theo mẫu <Agent>": every provider the shop has connected whose kind the template needs is already attached and pre-ticked, and the owner may edit it before "Tạo agent". One bordered select card per provider (it stands on the white dialog): the head is the provider logo, name and its kind, the rows are the abilities (a checkbox each; a write ability also has the "Tự động | Hỏi" pill, dimmed while off). A provider the template names that is not connected is a dimmed 12 line "Telegram · Chưa nối · khi nối sẽ hỏi gắn theo mẫu". The edits go out with the create button as `providerRights` of `createAgentInstallation`.
+Luật: `surfacecard-select-subtitle.md` (every choice list is SurfaceCard kind="select"; a subtitle only under a title), `WHITE-LIST-BORDERED-CARD`, `table-heroui-native-section-head.md` (label + chip at the start).
+Grammar: `Section kind="region" title fact`, `SurfaceCard kind="select" selectionMode="multiple"` with `control` (`frame/SurfaceCard/index.d.ts`, `surfaceCardData.d.ts`), `IdentityLockup` (`composite/IdentityLockup/index.d.ts`). Code: `blocks/AgentCreateDialog/choices.tsx` (`ProvidersChoice`), `composites/ProviderRightsCard`.
 
 ## Start from ("Bắt đầu từ")
 Vì sao: `SurfaceCard kind="select" selectionMode="single"`: "Bản sao của <agent>" ("Lấy sơ đồ, quyền, tri thức và cài đặt; không lấy kênh.") and "Thiết lập mặc định" ("Bắt đầu từ thiết lập gốc của vai trò."). Checkbox look for single choice too; no pink radio blocks.

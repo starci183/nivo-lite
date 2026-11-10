@@ -4,6 +4,8 @@ import type { ProviderAttachmentView } from "@modules/domain/mcp-tool-grants"
 import { ABILITY_LABELS, KIND_LABELS, PROVIDER_LABELS } from "./messages/provider-abilities.labels"
 import {
     PROVIDER_CATALOGUE,
+    cappedTicks,
+    exceedsCeiling,
     isAbilityTool,
     isChannelBound,
     judgeAbility,
@@ -163,6 +165,14 @@ describe("ticks", () => {
             sepay: { "transactions.read": "auto", "credit.rematch": "auto" },
             google: { "ledger.read": "auto", "ledger.write": "auto" },
         })
+    })
+
+    it("knows what only the owner may give: a write ability on auto; capped, it asks, and a read ability stays ticked", () => {
+        const sepay = providerSpecOf("sepay") ?? PROVIDER_CATALOGUE[0]!
+        const ticks = { "transactions.read": "auto", "qr.create": "auto", "credit.rematch": "ask" } as const
+        expect(exceedsCeiling(sepay, ticks)).toBe(true)
+        expect(exceedsCeiling(sepay, { "transactions.read": "auto", "credit.rematch": "ask" })).toBe(false)
+        expect(cappedTicks(sepay, ticks)).toEqual({ "transactions.read": "auto", "qr.create": "ask", "credit.rematch": "ask" })
     })
 
     it("lets a provider's own entry replace its kind's, and proposes nothing to a module that names neither", () => {

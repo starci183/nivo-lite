@@ -49,6 +49,18 @@ export const troubleOfThrow = (cause: unknown): StepTrouble => {
     }
 }
 
+/**
+ * The codes a step fails with when the AI itself failed: every try of a model call failed (the deadline, a cut or empty answer, the
+ * provider), or its answers were never the JSON asked for. The prompt library made all its tries before it threw one of them.
+ */
+const AI_FAILURE_CODES: ReadonlySet<string> = new Set(["AI_TASKS_UNAVAILABLE", "AI_TASKS_JSON_NOT_RETURNED"])
+
+/**
+ * True when the trouble is the AI's own failure. The AI core is then not asked: it is the same AI, which just failed all its
+ * tries, so the engine reports in its own words with the facts (the tries made and what each failed as).
+ */
+export const isAiFailure = (trouble: StepTrouble): boolean => AI_FAILURE_CODES.has(trouble.code)
+
 /** The trouble of a refusal the node step already named by its code. */
 export const troubleOfRefusal = (code: string, text: string): StepTrouble => ({ kind: "refused", code, text, data: {} })
 

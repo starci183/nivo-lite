@@ -40,7 +40,7 @@ describe("routerOptionsOf", () => {
             ["upstream", ["m-work", "m-embed"]],
         ])
         expect(router?.profiles).toEqual({
-            work: { model: "m-work", providers: ["upstream"] },
+            work: { model: "m-work", providers: ["upstream"], maxAttempts: 1, timeoutMs: 125_000, deadlineMs: 130_000 },
             embed: { model: "m-embed", allowFallback: false, providers: ["upstream"] },
         })
     })

@@ -4,6 +4,8 @@ export enum StorageId {
     ZaloOAuthWorkspace = "NIVO_ZALO_OAUTH_WORKSPACE",
     /** Which console rails each person collapsed, by person id. */
     RailCollapsed = "NIVO_RAIL_COLLAPSED",
+    /** Whether this browser shows the floating NIVO assistant button (off until switched on). */
+    GuideBubbleShown = "NIVO_GUIDE_BUBBLE_SHOWN",
     /** Which notices the reader closed, one record keyed by notice. */
     /** The Zalo connection whose permission page the browser was sent to from its own page, so the return lands back there. */
     ZaloReturn = "NIVO_ZALO_RETURN",

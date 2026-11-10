@@ -1,6 +1,12 @@
 export { GRAPH_NODES_ERROR_KINDS, GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error"
 export { GRAPH_NODES_MESSAGES } from "./messages/graph-nodes.messages"
-export { GRAPH_NODE_MODEL, GRAPH_NODE_TOOL_DOOR, GRAPH_NODES_OPTIONS } from "./graph-nodes.decorators"
+export {
+    GRAPH_EFFECT_ONCE,
+    GRAPH_NODE_MODEL,
+    GRAPH_NODE_TOOL_DOOR,
+    GRAPH_NODES_OPTIONS,
+    InjectGraphEffectOnce,
+} from "./graph-nodes.decorators"
 export { GraphNodesModule } from "./graph-nodes.module"
 export { GraphNodeHostService } from "./graph-node-host.service"
 export { GraphNodeEffectsService, ledgerKeyOf } from "./graph-node-effects.service"
@@ -9,11 +15,13 @@ export { GraphNodeRunTokensService } from "./graph-node-run-tokens.service"
 export { toolFingerprintOf } from "./node-run-token.policy"
 export type { NodeRunClaims, NodeToolApproval, NodeToolCall } from "./node-run-token.contracts"
 export type {
+    EffectOnce,
     NodeDataPort,
     NodeEffectExecutor,
     NodeInstall,
     NodeModelDoor,
     NodeRow,
+    NodeEffectRightCall,
     NodeToolDoor,
     NodeTurn,
 } from "./graph-nodes.contracts"

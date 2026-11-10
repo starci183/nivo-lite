@@ -8,6 +8,13 @@ import { SyncMcpConnectorHandler } from "./application/sync-mcp-connector.handle
 import { ApproveMcpConnectorHandler } from "./application/approve-mcp-connector.handler"
 import { CheckMcpConnectorHandler } from "./application/check-mcp-connector.handler"
 import { SetMcpConnectorCredentialHandler } from "./application/set-mcp-connector-credential.handler"
+import { ListProviderRightsHandler } from "./application/list-provider-rights.handler"
+import { GetAgentAbilityProposalHandler } from "./application/get-agent-ability-proposal.handler"
+import { ListProviderTemplateCandidatesHandler } from "./application/list-provider-template-candidates.handler"
+import { AttachAgentProviderHandler } from "./application/attach-agent-provider.handler"
+import { DetachAgentProviderHandler } from "./application/detach-agent-provider.handler"
+import { SetAgentAbilityHandler } from "./application/set-agent-ability.handler"
+import { AttachProviderByTemplateHandler } from "./application/attach-provider-by-template.handler"
 import { ConfigurableModuleClass } from "./mcp-gateway.module-definition"
 
 @Module({
@@ -21,6 +28,13 @@ import { ConfigurableModuleClass } from "./mcp-gateway.module-definition"
         ApproveMcpConnectorHandler,
         CheckMcpConnectorHandler,
         SetMcpConnectorCredentialHandler,
+        ListProviderRightsHandler,
+        GetAgentAbilityProposalHandler,
+        ListProviderTemplateCandidatesHandler,
+        AttachAgentProviderHandler,
+        DetachAgentProviderHandler,
+        SetAgentAbilityHandler,
+        AttachProviderByTemplateHandler,
     ],
 })
 /** The MCP gateway console feature: connectors, grants and the audit log. */

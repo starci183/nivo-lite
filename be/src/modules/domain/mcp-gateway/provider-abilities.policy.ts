@@ -166,6 +166,24 @@ export const holdsTool = (row: ProviderAttachmentView, tool: string): boolean =>
 const storedMode = (ability: ProviderAbility, mode: AbilityMode): AbilityMode =>
     ability.scope === "read" ? "auto" : mode
 
+/**
+ * The ticks as a person below the owner may hold them: a write ability on `auto` becomes `ask` (only the owner lets an agent act on a
+ * provider by itself); a read ability, which only reads, stays ticked.
+ */
+export const cappedTicks = (spec: ProviderSpec, ticks: AbilityTicks): AbilityTicks =>
+    Object.fromEntries(
+        Object.entries(ticks).map(([id, mode]): [string, AbilityMode] => [
+            id,
+            spec.abilities.find((ability) => ability.id === id)?.scope === "write" ? "ask" : mode,
+        ]),
+    )
+
+/** True when the ticks hold a write ability on `auto`: more than a person below the owner may give. */
+export const exceedsCeiling = (spec: ProviderSpec, ticks: AbilityTicks): boolean =>
+    Object.entries(ticks).some(
+        ([id, mode]) => mode === "auto" && spec.abilities.find((ability) => ability.id === id)?.scope === "write",
+    )
+
 /** The ticks a person asked for, as they are stored, or the first entry that is no ability of the provider or no valid mode. */
 export type WishedTicks =
     | { readonly ok: true; readonly ticks: AbilityTicks }

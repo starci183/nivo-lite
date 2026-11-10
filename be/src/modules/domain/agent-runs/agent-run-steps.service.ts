@@ -5,7 +5,7 @@ import { isDomainError } from "@modules/platform/errors"
 import type { ErrorParams } from "@modules/platform/errors"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { classifyFailure } from "@modules/platform/queue"
+import { classifyFailure, startLocalInterval } from "@modules/platform/queue"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
@@ -13,10 +13,20 @@ import { AgentRunResumeService } from "./agent-run-resume.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentStepLedgerService } from "./agent-step-ledger.service"
 import { AgentRunsLogEvent } from "./agent-runs.log-events"
-import { DEFAULT_MAX_ATTEMPTS, HANDLER_THREW, NO_HANDLER } from "./policies/agent-runs.policy"
+import { DEFAULT_MAX_ATTEMPTS, HANDLER_THREW, NO_HANDLER, stepHeartbeatMsOf } from "./policies/agent-runs.policy"
 import { routeFailure, triesLeft } from "./policies/failure-route.policy"
 import type { OptionalStepPassOver, StepAnswer, StepPassOver, StepView } from "./agent-runs.contracts"
 import type { StepEnd } from "./agent-runs-engine.contracts"
+
+/** The claim a running step holds: its fence as the last renewal left it, whether it was lost, and the renewal still in flight. */
+interface HeldClaim {
+    /** The fence of the claim now. */
+    fence: number
+    /** True once a renewal found the claim taken by another try. */
+    lost: boolean
+    /** The renewal in flight, so a commit never races it. */
+    renewing: Promise<void>
+}
 
 @Injectable()
 /**
@@ -38,9 +48,27 @@ export class AgentRunStepsService {
         private readonly resume: AgentRunResumeService,
     ) {}
 
-    /** Runs the claimed step through its handler and commits what it answered, under the fence of the claim. */
-    async execute(step: StepView, signal: AbortSignal): Promise<StepEnd> {
-        const answer = await this.answerOf(step, signal)
+    /**
+     * Runs the claimed step through its handler and commits what it answered, under the fence of the claim. While the handler works
+     * the claim is renewed (a heartbeat), so the step is never taken by a second try while this one is alive: a model call and its
+     * retry may take longer than the step's deadline. A try whose claim was lost all the same (the worker stalled past it) stops:
+     * its handler's signal is aborted, and it commits and reports nothing, since another try owns the step now.
+     */
+    async execute(claimed: StepView, signal: AbortSignal): Promise<StepEnd> {
+        const held: HeldClaim = { fence: claimed.fence, lost: false, renewing: Promise.resolve() }
+        const lost = new AbortController()
+        const heartbeat = startLocalInterval(stepHeartbeatMsOf(claimed.deadlineMs), () => {
+            held.renewing = held.renewing.then(() => this.renew(claimed, held, lost))
+        })
+        let answer: StepAnswer
+        try {
+            answer = await this.answerOf(claimed, AbortSignal.any([signal, lost.signal]))
+        } finally {
+            heartbeat.cancel()
+            await held.renewing
+        }
+        if (held.lost) return this.fenced(claimed)
+        const step: StepView = { ...claimed, fence: held.fence }
         if (answer.kind === "retry" || answer.kind === "failed") {
             return this.fail(
                 step,
@@ -157,6 +185,23 @@ export class AgentRunStepsService {
             })
         }
         return { kind: "done", result: pass.result }
+    }
+
+    /** One beat: holds the claim for another deadline and keeps its new fence; a claim another try took is marked lost and the handler stopped. */
+    private async renew(step: StepView, held: HeldClaim, lost: AbortController): Promise<void> {
+        if (held.lost) return
+        try {
+            const fence = await this.ledger.renew({ ...step, fence: held.fence })
+            if (fence !== null) {
+                held.fence = fence
+                return
+            }
+            held.lost = true
+            this.logger.warn(AgentRunsLogEvent.StepClaimLost, { runId: step.runId, stepKey: step.stepKey })
+            lost.abort()
+        } catch (cause) {
+            this.logger.error(AgentRunsLogEvent.StepRenewFailed, cause, { runId: step.runId, stepKey: step.stepKey })
+        }
     }
 
     private fenced(step: StepView): StepEnd {

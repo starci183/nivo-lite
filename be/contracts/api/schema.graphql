@@ -1,5 +1,20 @@
 directive @inputBounds(version: Int = 1, maxLength: Int, maxItems: Int, min: Float, max: Float, itemMaxLength: Int, itemMaxItems: Int, itemMin: Float, itemMax: Float) on INPUT_FIELD_DEFINITION
 
+type AbilityLabelType {
+  en: String!
+  vi: String!
+}
+
+type AbilityTickType {
+  id: String!
+  mode: String!
+}
+
+input AbilityWishInput {
+  id: String! @inputBounds(maxLength: 41)
+  mode: String!
+}
+
 input AcceptAgentWorkflowTemplateInput {
   expectedLatest: Int @inputBounds(min: 0, max: 100000)
   installationId: ID! @inputBounds(maxLength: 36)
@@ -310,6 +325,10 @@ input AdminWorkspacesInput {
   query: String! = "" @inputBounds(maxLength: 120)
 }
 
+input AgentAbilityProposalInput {
+  moduleKey: String! @inputBounds(maxLength: 24)
+}
+
 type AgentAckType {
   ok: Boolean!
 }
@@ -320,6 +339,12 @@ type AgentAppliedRuleType {
   limitVnd: Float
   mode: String!
   note: String!
+}
+
+type AgentAttachmentType {
+  abilities: [AbilityTickType!]!
+  agentId: ID!
+  provider: String!
 }
 
 type AgentAvatarUploadType {
@@ -740,6 +765,16 @@ type AgentPageType {
   ownership: AgentOwnershipType!
   recent: AgentRecentRegionType!
   rules: AgentRulesRegionType!
+}
+
+input AgentProviderAbilityInput {
+  id: String! @inputBounds(maxLength: 41)
+  mode: String!
+}
+
+input AgentProviderRightInput {
+  abilities: [AgentProviderAbilityInput!]! @inputBounds(maxItems: 20)
+  provider: String! @inputBounds(maxLength: 31)
 }
 
 type AgentRecentRegionType {
@@ -1219,6 +1254,17 @@ input AssignDossierFindingInput {
 input AssignInboxLeadInput {
   agentId: ID = null @inputBounds(maxLength: 36)
   leadId: ID! @inputBounds(maxLength: 36)
+}
+
+input AttachAgentProviderInput {
+  abilities: [AbilityWishInput!]! @inputBounds(maxItems: 20)
+  agentId: ID! @inputBounds(maxLength: 36)
+  provider: String! @inputBounds(maxLength: 31)
+}
+
+input AttachProviderByTemplateInput {
+  agentIds: [ID!]! @inputBounds(maxItems: 50, itemMaxLength: 36)
+  provider: String! @inputBounds(maxLength: 31)
 }
 
 input AttachedFileInput {
@@ -2455,6 +2501,7 @@ input CreateAgentInstallationInput {
   handle: String = null @inputBounds(maxLength: 40)
   moduleKey: String! @inputBounds(maxLength: 24)
   name: String! @inputBounds(maxLength: 80)
+  providerRights: [AgentProviderRightInput!] = null @inputBounds(maxItems: 20)
   startFrom: String = "default"
 }
 
@@ -2770,6 +2817,11 @@ input DeleteKnowledgeSourceInput {
 
 input DeleteWorkspaceInput {
   confirmName: String! @inputBounds(maxLength: 120)
+}
+
+input DetachAgentProviderInput {
+  agentId: ID! @inputBounds(maxLength: 36)
+  provider: String! @inputBounds(maxLength: 31)
 }
 
 type DeviceSessionType {
@@ -4274,6 +4326,8 @@ type Mutation {
   assignBrainDossier(input: AssignBrainDossierInput!): BrainDossierOwnerType!
   assignDossierFinding(input: AssignDossierFindingInput!): DossierFindingType!
   assignInboxLead(input: AssignInboxLeadInput!): Boolean!
+  attachAgentProvider(input: AttachAgentProviderInput!): Boolean!
+  attachProviderByTemplate(input: AttachProviderByTemplateInput!): [ID!]!
   authorizeDrive(input: AuthorizeDriveInput!): DriveAuthorizeUrlType!
   authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!
   authorizeMeta(input: AuthorizeMetaInput!): MetaAuthorizationType!
@@ -4321,6 +4375,7 @@ type Mutation {
   deleteHiringCandidate(input: HiringCandidateRefInput!): DeleteCandidateType!
   deleteKnowledgeSource(input: DeleteKnowledgeSourceInput!): Boolean!
   deleteWorkspace(input: DeleteWorkspaceInput!): Boolean!
+  detachAgentProvider(input: DetachAgentProviderInput!): Boolean!
   disconnectConnection(input: DisconnectConnectionInput!): Boolean!
   disconnectDrive: Boolean!
   dismissContextNote(input: DismissContextNoteInput!): Boolean!
@@ -4459,6 +4514,7 @@ type Mutation {
   sendChatMessage(input: SendChatMessageInput!): ChatMessagePayloadType!
   sendSmtpTest(input: SendSmtpTestInput!): SmtpTestResultType!
   sendZaloTestMessage(input: SendZaloTestInput!): ZaloTestSendType!
+  setAgentAbility(input: SetAgentAbilityInput!): Boolean!
   setAgentAvatar(input: SetAgentAvatarInput!): AgentAckType!
   setAgentAvatarPreset(input: SetAgentAvatarPresetInput!): AgentAckType!
   setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
@@ -4707,9 +4763,22 @@ input ProposeBrandKitInput {
   setupSessionId: String! = "" @inputBounds(maxLength: 36)
 }
 
+type ProposedAttachmentType {
+  abilities: [AbilityTickType!]!
+  connected: Boolean!
+  provider: String!
+}
+
 type ProposedRightType {
   kind: String!
   scope: String!
+}
+
+type ProviderAbilityType {
+  id: String!
+  label: AbilityLabelType!
+  scope: String!
+  tools: [String!]!
 }
 
 input ProviderKeysInput {
@@ -4722,6 +4791,32 @@ input ProviderKeysInput {
 type ProviderKeysResultType {
   confirmed: Boolean!
   localOnly: Boolean!
+}
+
+type ProviderRightType {
+  abilities: [ProviderAbilityType!]!
+  accountLabel: String
+  connected: Boolean!
+  kind: String!
+  kindLabel: AbilityLabelType!
+  label: AbilityLabelType!
+  provider: String!
+}
+
+type ProviderRightsType {
+  attachments: [AgentAttachmentType!]!
+  providers: [ProviderRightType!]!
+}
+
+type ProviderTemplateCandidateType {
+  abilities: [AbilityTickType!]!
+  agentId: ID!
+  agentName: String!
+  module: String!
+}
+
+input ProviderTemplateCandidatesInput {
+  provider: String! @inputBounds(maxLength: 31)
 }
 
 input PublicBookingPageInput {
@@ -4890,6 +4985,7 @@ type Query {
   adminSession: AdminSessionType!
   adminWorkspace(input: AdminWorkspaceInput!): AdminWorkspaceDetailType!
   adminWorkspaces(input: AdminWorkspacesInput!): AdminWorkspaceListType!
+  agentAbilityProposal(input: AgentAbilityProposalInput!): [ProposedAttachmentType!]!
   agentCatalog: [AgentCatalogEntryType!]!
   agentChannelChoices(input: AgentChannelChoicesInput!): [AgentChannelChoiceType!]!
   agentConnectionCandidates(input: AgentConnectionCandidatesInput!): [AgentConnectionCandidateType!]!
@@ -5017,6 +5113,8 @@ type Query {
   paymentOrders: [BillingPaymentOrderType!]!
   previewCsvSource(input: PreviewCsvSourceInput!): CsvPreviewType!
   previewDatabaseTable(input: PreviewDatabaseTableInput!): DatabasePreviewType!
+  providerRights: ProviderRightsType!
+  providerTemplateCandidates(input: ProviderTemplateCandidatesInput!): [ProviderTemplateCandidateType!]!
   publicBookingPage(input: PublicBookingPageInput!): PublicBookingPageType!
   publicBookingTimes(input: PublicBookingTimesInput!): PublicBookingTimesType!
   publicDocuments: [PublicDocumentType!]!
@@ -5849,6 +5947,13 @@ type SepayWebhookEventType {
   kind: String!
   outcome: String!
   providerEventId: String
+}
+
+input SetAgentAbilityInput {
+  ability: String! @inputBounds(maxLength: 41)
+  agentId: ID! @inputBounds(maxLength: 36)
+  mode: String!
+  provider: String! @inputBounds(maxLength: 31)
 }
 
 input SetAgentAvatarInput {

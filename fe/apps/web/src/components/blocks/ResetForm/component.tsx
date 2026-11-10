@@ -50,7 +50,7 @@ export const ResetFormBase = (props: ResetFormBaseProps) => {
                         {view.newLinkLabel}
                     </Button>
                     <Stack gap="inline" align="center">
-                        <Link href={view.backHref}>{view.backLabel}</Link>
+                        <Link variant="plain" href={view.backHref}>{view.backLabel}</Link>
                     </Stack>
                 </Stack>
             </AuthPanel>

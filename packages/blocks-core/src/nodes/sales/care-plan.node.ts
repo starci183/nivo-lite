@@ -18,7 +18,6 @@ import {
     schedulable,
     shipSuffixOf,
 } from "./care.policy"
-import type { CareFacts } from "./care.policy"
 import { arm } from "./care.steps"
 
 /** What the care plan is given: the paid order. */
@@ -93,14 +92,13 @@ const deliveryDayRead = async (context: Context, deliveryAt: string | null, now:
 
 /**
  * When to look in after the delivery: the day after it shipped; else the morning after the delivery day of the ORDER (the time the
- * customer settled for this order), the time lead memory remembers only for an older order that holds none; else a wait for the shipment.
+ * customer settled for this order: the one home of it); else a wait for the shipment.
  */
-const deliveryCheckOf = async (context: Context, order: CareOrder, facts: CareFacts): Promise<DeliveryCheck> => {
+const deliveryCheckOf = async (context: Context, order: CareOrder): Promise<DeliveryCheck> => {
     const shipped = shippedAtOf(order)
     if (shipped !== null) return { dueAt: dayAfter(shipped), known: true }
     const now = context.now()
-    const ordered = (await careDeliveryOf(context, order.id)).deliveryAt
-    const day = await deliveryDayRead(context, ordered ?? facts.deliveryAt, now)
+    const day = await deliveryDayRead(context, (await careDeliveryOf(context, order.id)).deliveryAt, now)
     return day === null
         ? { dueAt: afterMinutes(now, FALLBACK_CHECK_MINUTES), known: false }
         : { dueAt: deliveryCheckAtOf(day), known: true }
@@ -131,7 +129,7 @@ export const salesCarePlanNode: NodeDefinition<typeof input, typeof output, type
         if (order === undefined) return none
         const facts = careFactsOfLead(await careLeadOf(context, order.leadId))
         if (facts.optedOut) return none
-        const check = await deliveryCheckOf(context, order, facts)
+        const check = await deliveryCheckOf(context, order)
         await arm(context, { kind: "delivery-check", ref: order.id, suffix: check.known ? "" : shipSuffixOf(0), dueAt: check.dueAt })
         const now = context.now()
         const ahead = facts.occasions.flatMap((occasion) => {
@@ -158,8 +156,8 @@ export const salesCarePlanNode: NodeDefinition<typeof input, typeof output, type
                 { kind: TOOL.careSchedule, payload: { kind: "delivery-check", ref: "o1", dueAt: "1970-01-03T02:00:00.000Z" } },
             ],
             store: {
-                order: [ORDER],
-                "sales-lead": [{ id: "l1", contactName: "An", consultFacts: { deliveryAt: "tomorrow afternoon" } }],
+                order: [{ ...ORDER, deliveryAt: "tomorrow afternoon" }],
+                "sales-lead": [{ id: "l1", contactName: "An", consultFacts: { deliveryAt: "next week" } }],
             },
         },
         {

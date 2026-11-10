@@ -112,6 +112,8 @@ export interface WorkflowStoppedPayload {
     readonly repeats: number
     readonly firstAt: string
     readonly lastAt: string
+    /** When the run went on and ended well after this stop, ISO; absent or null while it still waits. The card then asks nothing. */
+    readonly resolvedAt?: string | null | undefined
 }
 
 /** The payload schema of the message of a stopped workflow. */
@@ -130,6 +132,7 @@ export const workflowStoppedPayload: z.ZodType<WorkflowStoppedPayload> = z.objec
     repeats: z.number().int().min(1),
     firstAt: z.string().max(40),
     lastAt: z.string().max(40),
+    resolvedAt: z.string().max(40).nullable().optional(),
 })
 
 /** The common team message of a stopped workflow, built by the engine only (never by a tool call). Read only: answers are replies and the freeze decisions. */

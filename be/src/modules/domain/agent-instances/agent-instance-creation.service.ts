@@ -4,6 +4,7 @@ import { AgentIdentityService } from "@modules/domain/agents"
 import { AvatarsService } from "@modules/domain/avatars"
 import { ConnectionGrantsService, purposeFor } from "@modules/domain/connection-grants"
 import { ConnectionsService } from "@modules/domain/connections"
+import { McpGatewayError, McpGatewayErrorCode, ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
 import { ModuleInstallService, ModulesService } from "@modules/domain/modules"
@@ -31,7 +32,10 @@ const GOVERNORS = ["owner", "manager"] as const
  * One role, many agents: creates one more agent of a role (the create dialog of the agents page) with the name its customers see, a
  * @handle, a picture, the channels it answers and, on request, the setup of a sibling of the same role. Each channel is answered by
  * exactly one agent of a role, so a channel another agent of the role answers is refused before anything is written. Managers create
- * agents; only the owner gives an agent connections.
+ * agents; only the owner gives an agent connections. The new agent is attached to the connected providers its module names, with the
+ * abilities of the module's proposal or of the owner's edit of it (checked before anything is written); these rights are then the
+ * workspace's. Only the owner lets an agent act on a provider by itself: a manager's proposal ticks its write abilities `ask`, and a
+ * manager's edit that asks for `auto` is refused.
  */
 export class AgentInstanceCreationService {
     constructor(
@@ -45,6 +49,7 @@ export class AgentInstanceCreationService {
         private readonly grants: ConnectionGrantsService,
         private readonly owners: ChannelOwnersService,
         private readonly setupCopy: AgentSetupCopyService,
+        private readonly abilities: ProviderAbilitiesService,
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
@@ -69,6 +74,11 @@ export class AgentInstanceCreationService {
         if (wanted.length > 0 && member.role !== "owner") {
             throw new AgentInstancesError({ code: AgentInstancesErrorCode.ChannelsNeedOwner })
         }
+        const rights = request.providerRights ?? null
+        const giver = member.role === "owner" ? "owner" : "manager"
+        const problem = rights === null ? null : await this.abilities.wishProblem(request.workspaceId, rights, giver)
+        if (problem !== null)
+            throw new McpGatewayError({ code: McpGatewayErrorCode.AttachmentRefused, params: { reason: problem } })
         const source = await this.sourceOf(request, module.key)
         await this.requireChannelsFree(request.workspaceId, module.key, wanted)
         const present = await this.installations.firstOfModule(request.workspaceId, module.key)
@@ -87,6 +97,13 @@ export class AgentInstanceCreationService {
         const outcome = await this.copyOf(principalId, member, request, source, target)
         const shared = member.role === "owner" ? (outcome?.grants ?? []) : []
         await this.grantAll(principalId, request.workspaceId, agentId, wanted, shared)
+        // The rights of the new agent on the connected providers: the owner's edit of the proposal, else the module's proposal as it is.
+        await this.abilities.attachDefaults(
+            { workspaceId: request.workspaceId, agentId, moduleKey: module.key },
+            rights,
+            principalId,
+            giver,
+        )
         this.logger.info(AgentInstancesLogEvent.Created, {
             workspaceId: request.workspaceId,
             moduleKey: module.key,

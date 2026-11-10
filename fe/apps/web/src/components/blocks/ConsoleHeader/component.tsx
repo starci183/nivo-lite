@@ -1,5 +1,6 @@
-import type { DropdownMenuEntry, DropdownMenuItem } from "@starci/grammar/common"
 import {
+    type DropdownMenuEntry,
+    type DropdownMenuItem,
     AvatarButton,
     Cluster,
     DropdownMenu,
@@ -35,6 +36,9 @@ export interface ConsoleHeaderBaseProps {
         readonly isLocalePending: boolean
         readonly localeOptions: ReadonlyArray<{ readonly value: string; readonly label: string; readonly name: string }>
         readonly themeLabel: string
+        readonly guideBubbleLabel: string
+        readonly guideBubbleDescription: string
+        readonly isGuideBubbleShown: boolean
         readonly isDark: boolean
         readonly bellLabel: string
         readonly bellHref: string
@@ -43,6 +47,7 @@ export interface ConsoleHeaderBaseProps {
     readonly on: {
         readonly chooseLocale: (locale: string) => void
         readonly chooseDark: (isDark: boolean) => void
+        readonly chooseGuideBubble: (shown: boolean) => void
     }
 }
 
@@ -61,6 +66,8 @@ const Brand = ({ props }: BrandProps) => (
         </div>
     </Cluster>
 )
+
+const GUIDE_BUBBLE_ITEM = "guide-bubble-shown"
 
 /** The glyph and tone of the account menu's two commands, keyed by the ids `modules/types` shares with the entries builder. */
 const COMMAND_LOOKS: Record<
@@ -82,8 +89,22 @@ const withCommandLook = (item: DropdownMenuItem): DropdownMenuItem => {
 /** Gives the account page and sign-out items their leading glyph (sign out marked destructive). */
 const withLooks = (entries: ReadonlyArray<DropdownMenuEntry>): ReadonlyArray<DropdownMenuEntry> =>
     entries.map((entry) =>
-        entry.kind === "section" ? { ...entry, items: entry.items.map(withCommandLook) } : withCommandLook(entry),
+        entry.kind === "section"
+            ? { ...entry, items: entry.items.map((item) => withCommandLook(item)) }
+            : withCommandLook(entry),
     )
+
+/** The assistant toggle: a one-item checkable section (Grammar's menu has no switch entry), hidden until the member checks it. */
+const guideBubbleSection = ({ props, on }: ConsoleHeaderBaseProps): DropdownMenuEntry => ({
+    kind: "section",
+    id: "guide-bubble",
+    items: [{ id: GUIDE_BUBBLE_ITEM, label: props.guideBubbleLabel, description: props.guideBubbleDescription }],
+    selection: {
+        mode: "multiple",
+        selectedIds: props.isGuideBubbleShown ? [GUIDE_BUBBLE_ITEM] : [],
+        onChange: (ids) => on.chooseGuideBubble(ids.includes(GUIDE_BUBBLE_ITEM)),
+    },
+})
 
 const Actions = ({ props, on }: ConsoleHeaderBaseProps) => {
     const overflow = useTopBarOverflowEntries()
@@ -122,7 +143,7 @@ const Actions = ({ props, on }: ConsoleHeaderBaseProps) => {
             </div>
             <DropdownMenu
                 placement="bottom end"
-                entries={[...withLooks(props.accountEntries), ...overflow]}
+                entries={[...withLooks(props.accountEntries), guideBubbleSection({ props, on }), ...overflow]}
                 trigger={
                     <AvatarButton
                         size="control"

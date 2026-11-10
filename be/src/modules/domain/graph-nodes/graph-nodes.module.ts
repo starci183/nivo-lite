@@ -4,7 +4,12 @@ import { GraphNodeEffectsService } from "./graph-node-effects.service"
 import { GraphNodeHostService } from "./graph-node-host.service"
 import { GraphNodeRegistryService } from "./graph-node-registry.service"
 import { GraphNodeRunTokensService } from "./graph-node-run-tokens.service"
-import { GRAPH_NODE_MODEL, GRAPH_NODES_OPTIONS, GRAPH_NODE_TOOL_DOOR } from "./graph-nodes.decorators"
+import {
+    GRAPH_EFFECT_ONCE,
+    GRAPH_NODES_OPTIONS,
+    GRAPH_NODE_MODEL,
+    GRAPH_NODE_TOOL_DOOR,
+} from "./graph-nodes.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./graph-nodes.module-definition"
 
 @Module({})
@@ -31,8 +36,9 @@ export class GraphNodesModule extends ConfigurableModuleClass {
                 GraphNodeHostService,
                 GraphNodeRunTokensService,
                 { provide: GRAPH_NODE_TOOL_DOOR, useClass: options.tools },
+                { provide: GRAPH_EFFECT_ONCE, useExisting: GraphNodeEffectsService },
             ],
-            exports: [GraphNodeRegistryService, GraphNodeHostService, GraphNodeRunTokensService],
+            exports: [GraphNodeRegistryService, GraphNodeHostService, GraphNodeRunTokensService, GRAPH_EFFECT_ONCE],
         }
     }
 }

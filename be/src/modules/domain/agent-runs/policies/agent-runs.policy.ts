@@ -9,6 +9,20 @@ export const MAX_ATTEMPTS_CEILING = 10
 /** How long one try may run when the spec names none, milliseconds. */
 export const DEFAULT_DEADLINE_MS = 120_000
 
+/**
+ * How often a running step's claim is renewed, as a share of its deadline: three beats per deadline, so a missed beat or two never
+ * lets the claim lapse while the step's handler is alive. The deadline is then how long a DEAD worker's step waits to be taken,
+ * never a bound on how long live work may take (a model call and its retry may be longer than the deadline).
+ */
+export const HEARTBEATS_PER_DEADLINE = 3
+
+/** The shortest pause between two renewals of a step's claim, milliseconds. */
+export const HEARTBEAT_MIN_MS = 1000
+
+/** How often the claim of a step with this deadline is renewed, milliseconds. */
+export const stepHeartbeatMsOf = (deadlineMs: number | undefined): number =>
+    Math.max(HEARTBEAT_MIN_MS, Math.floor((deadlineMs ?? DEFAULT_DEADLINE_MS) / HEARTBEATS_PER_DEADLINE))
+
 /** The shortest deadline a try may be given, milliseconds. */
 export const DEADLINE_MIN_MS = 1000
 

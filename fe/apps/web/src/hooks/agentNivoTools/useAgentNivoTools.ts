@@ -5,8 +5,8 @@ import { useMcpGrantCommands } from "@/hooks/mcpGrants"
 import { useQueryMcpConnectorsSwr, useQueryMcpToolGrantsSwr } from "@/hooks/swr"
 import { toolNameOf, toolTextOf } from "@/modules/mcpGateway"
 
-/** One NIVO tool as the Quyền tab draws it for one agent. */
-export interface AgentNivoToolRow {
+/** One NIVO tool as the rights tab draws it for one agent. */
+interface AgentNivoToolRow {
     readonly tool: string
     readonly name: string
     readonly description: string
@@ -15,7 +15,8 @@ export interface AgentNivoToolRow {
 }
 
 /** The NIVO tools (the tools of the native connectors) with the grant of one agent, and the switch. */
-export interface AgentNivoTools {
+interface AgentNivoTools {
+    readonly isLoading: boolean
     readonly rows: ReadonlyArray<AgentNivoToolRow>
     readonly isSaving: boolean
     readonly set: (tool: string, isOn: boolean) => void
@@ -23,7 +24,7 @@ export interface AgentNivoTools {
 
 /**
  * The tools of the native connectors with this agent's grant on each (`mcpToolGrants`), and the command that turns one on or off
- * (`setMcpToolGrant` through `useMcpGrantCommands`). Both are the same reads and writes the gateway region of Kết nối uses.
+ * (`setMcpToolGrant` through `useMcpGrantCommands`). Both are the same reads and writes the gateway region of the Connections page uses.
  */
 export const useAgentNivoTools = (agentId: string | null): AgentNivoTools => {
     const t = useTranslations("mcpGateway")
@@ -44,6 +45,7 @@ export const useAgentNivoTools = (agentId: string | null): AgentNivoTools => {
         })),
     )
     return {
+        isLoading: connectors.isLoading || grants.isLoading,
         rows,
         isSaving: commands.busyKey !== null,
         set: (tool, isOn) => {

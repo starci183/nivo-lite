@@ -295,6 +295,35 @@ describe("AgentMessagePostExecutorService the card of a stopped workflow", () =>
         expect(message?.payload).toEqual({ ...CARD, decisions: ["retry", "take_over", "skip"] })
     })
 
+    it("rewrites a stop whose run then ended well in place, as resolved and asking nothing, and posts nothing when there was no card", async () => {
+        const { chat, executor } = await build()
+        const RESOLVED = { kind: "workflow.stopped", resolved: { title: "Quy trình đã chạy tiếp", summary: "Xong", at: "2026-11-10T10:00:00.000Z" } }
+        const RESOLVE_CALL: EffectCall = { key: "run-stuck:run-1:settle:resolved", dedupeKey: STOP_CALL.dedupeKey }
+        chat.storedCard.mockResolvedValue({
+            kind: "workflow.stopped",
+            intent: "ask",
+            title: "Dừng",
+            summary: "Khách chuyển dư",
+            payload: CARD,
+            occurrence: STOP_CALL.key,
+        })
+        chat.foldTeamCard.mockResolvedValue("msg-9")
+
+        await expect(executor?.execute(TURN, RESOLVED, RESOLVE_CALL)).resolves.toMatchObject({ id: "msg-9", facts: { resolved: true } })
+
+        expect(chat.postTeamCard).not.toHaveBeenCalled()
+        const [, key, message] = chat.foldTeamCard.mock.calls[0] ?? []
+        expect(key).toBe(lineKeyOf("run-stuck:run-1:settle"))
+        expect(message).toMatchObject({ intent: "notify", title: "Quy trình đã chạy tiếp", summary: "Xong", options: [] })
+        expect(message?.payload).toEqual({ ...CARD, suggestions: [], decisions: [], resolvedAt: "2026-11-10T10:00:00.000Z" })
+
+        chat.storedCard.mockResolvedValue(null)
+        chat.foldTeamCard.mockClear()
+        await expect(executor?.execute(TURN, RESOLVED, RESOLVE_CALL)).resolves.toMatchObject({ facts: { resolved: false } })
+        expect(chat.foldTeamCard).not.toHaveBeenCalled()
+        expect(chat.postTeamCard).not.toHaveBeenCalled()
+    })
+
     it("refuses a card whose content does not fit the kind, and posts nothing", async () => {
         const { chat, executor } = await build()
         await expect(

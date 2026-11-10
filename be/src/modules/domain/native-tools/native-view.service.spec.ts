@@ -59,6 +59,22 @@ describe("NativeViewService internalOf", () => {
         })
     })
 
+    it("gives the engine's own caller (a module's declared job as the internal agent) its internal view, whatever its module", async () => {
+        const { view, scopes } = await build()
+        scopes.lensOf.mockResolvedValue({ module: "nivo", installationId: null })
+
+        await expect(view.internalOf(WS, { agentId: "nivo-1", conversationId: null })).rejects.toMatchObject({
+            params: { reason: "internal_only" },
+        })
+        await expect(view.internalOf(WS, { agentId: "nivo-1", conversationId: null, engine: true })).resolves.toMatchObject({
+            module: "nivo",
+            audience: "internal",
+        })
+        await expect(view.internalOf(WS, { agentId: "nivo-1", conversationId: "c1", engine: true })).rejects.toMatchObject({
+            params: { reason: "internal_only" },
+        })
+    })
+
     it("refuses a conversation before reading the agent", async () => {
         const { view, scopes } = await build()
 

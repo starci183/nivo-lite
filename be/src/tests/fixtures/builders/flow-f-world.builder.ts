@@ -10,6 +10,7 @@ import { isRefused } from "@nivo-lite/agent-sdk/node"
 import type { EffectPayload, NodeModelRequest, NodeQuery, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { coreDataKinds, coreEffects, coreNodes, coreTools, TOOL } from "@nivo-lite/blocks-core"
 import { AgentRunHandlersService, AgentRunsService } from "@modules/domain/agent-runs"
+
 import type { StepJson, StepSpec, StepView } from "@modules/domain/agent-runs"
 import { AgentWorkHandlersService } from "@modules/domain/agent-work"
 import type { AgentWakeContext } from "@modules/domain/agent-work"
@@ -49,6 +50,9 @@ import type { WorkflowWorld } from "./workflow-world.builder"
 import { stateOf } from "./agent-graph.builder"
 import { stepViewOf } from "./agent-runs.builder"
 import { agentTurnViewOf } from "./agent-work.builder"
+
+/** A run engine in which every try still owns its step: no step of the world is superseded by another try. */
+const ownTriesEngine = (): AgentRunsService => mock<AgentRunsService>({ holds: jest.fn().mockResolvedValue(true) })
 
 /** Where the seed keeps its graph files, from this folder. */
 const SEEDS_DIR = "../../../../../.starcistacks/dev/seeds/data/graphs"
@@ -274,7 +278,7 @@ const engineProvidersOf = (engine: FlowEngine, graphs: AgentGraphsService): Read
                   { provide: AgentWorkflowRecordsService, useValue: workflows.records },
               ]
     return [
-        { provide: AgentRunsService, useValue: engine.runs ?? mock<AgentRunsService>() },
+        { provide: AgentRunsService, useValue: engine.runs ?? ownTriesEngine() },
         ...(gate === undefined ? [] : [{ provide: AgentGraphFreezeGateService, useValue: gate }]),
         ...(workflows === undefined ? [] : [{ provide: AgentWorkflowRunsService, useValue: workflows.service }]),
         ...guards,

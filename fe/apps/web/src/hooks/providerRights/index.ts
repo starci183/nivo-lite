@@ -1,24 +1,15 @@
 export {
     PROVIDER_KINDS,
-    abilityKeyOf,
     isOnMode,
     modeOfAbility,
+    pickLabel,
     onModeOf,
     providerLogoOf,
     providerNameOf,
 } from "./providerRights.shared"
-export type {
-    AbilityMode,
-    AbilityScope,
-    AbilityWire,
-    HeldAbilityWire,
-    OnMode,
-    ProviderKind,
-    ProviderWire,
-} from "./providerRights.types"
 export { useAgentAbilityProposal } from "./useAgentAbilityProposal"
-export type { CreateAgentAbilities, ProposedProvider } from "./useAgentAbilityProposal"
+export { useProviderDialogs } from "./useProviderDialogs"
 export { useProviderRights } from "./useProviderRights"
-export type { AgentProviderRights, HeldProvider } from "./useProviderRights"
+export type { HeldProvider } from "./useProviderRights"
 export { useProviderTemplateCandidates } from "./useProviderTemplateCandidates"
-export type { PendingProvider, ProviderTemplateCandidates } from "./useProviderTemplateCandidates"
+export type { AbilityMode, HeldAbilityWire, ProviderWire } from "@/modules/providerRights"

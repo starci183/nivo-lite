@@ -1,4 +1,5 @@
 import { Command, CommandRunner } from "nest-commander"
+import { CloseJobsCli } from "./subs/close.cli"
 import { FailedJobsCli } from "./subs/failed.cli"
 import { OpenJobsCli } from "./subs/open.cli"
 import { RetryJobsCli } from "./subs/retry.cli"
@@ -9,7 +10,7 @@ import { WatchdogJobsCli } from "./subs/watchdog.cli"
 
 @Command({
     name: "jobs",
-    description: "Inspect and retry background jobs through the back end",
+    description: "Inspect, retry and close background jobs through the back end",
     subCommands: [
         StatsJobsCli,
         FailedJobsCli,
@@ -18,6 +19,7 @@ import { WatchdogJobsCli } from "./subs/watchdog.cli"
         RetryFailedJobsCli,
         WatchdogJobsCli,
         TickJobsCli,
+        CloseJobsCli,
     ],
 })
 /** `cli jobs`: the operator commands for background jobs. */

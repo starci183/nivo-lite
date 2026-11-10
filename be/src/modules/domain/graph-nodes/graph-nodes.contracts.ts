@@ -1,7 +1,7 @@
 import type { EffectCall, NodeModel, NodeModelRequest, NodeQuery, SubjectRef, TurnRef } from "@nivo-lite/agent-sdk/node"
 import type { RightScope, RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import type { Locale } from "@modules/platform/i18n"
-import type { NodeToolApproval, NodeToolCall, RunOrigin } from "./node-run-token.contracts"
+import type { NodeToolApproval, NodeToolArgs, NodeToolCall, RunOrigin } from "./node-run-token.contracts"
 
 export type { NodeInstall } from "@nivo-lite/agent-sdk/node"
 
@@ -105,10 +105,34 @@ export interface NodeModelDoor {
     nodeJson(scope: NodeModelScope, ask: NodeModelRequest, schema: NodeJsonSchema): Promise<NodeJsonAnswer>
 }
 
+/** The once-per-key ledger of effects, as another capability uses it: the act runs once per key in a workspace, a replay answers what it kept. */
+export interface EffectOnce {
+    /** Runs the act once per key and answers the subject the first run touched. */
+    once(workspaceId: string, effect: string, call: EffectCall, act: EffectAct): Promise<SubjectRef>
+}
+
 /** The door every node tool call goes through: the NIVO MCP, resolved to the provider the workspace connected. */
 export interface NodeToolDoor {
     /** Calls one tool for the run its token names, under the call's replay key. */
     call(call: NodeToolCall): Promise<unknown>
+    /**
+     * The right of the run's agent to perform an effect that is a right on a provider the workspace connected (a payment QR), judged
+     * exactly as the same tool is on the gateway: null when the effect may run (or is no provider right), the refusal fact the effect
+     * answers instead of running, or the typed approval error thrown when the right asks a person first.
+     */
+    effectRight?(call: NodeEffectRightCall): Promise<SubjectRef | null>
+}
+
+/** One effect of a node whose right the door is asked for. */
+export interface NodeEffectRightCall {
+    /** The run token the host minted. */
+    readonly token: string
+    /** The effect id. */
+    readonly effect: string
+    /** The payload of the call. */
+    readonly payload: NodeToolArgs
+    /** The person's approval this call replays, or null. */
+    readonly approval: NodeToolApproval | null
 }
 
 /** One run of an installed node. */

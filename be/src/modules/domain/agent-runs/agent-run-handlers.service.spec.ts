@@ -38,4 +38,15 @@ describe("AgentRunHandlersService", () => {
             new AgentRunsError({ code: AgentRunsErrorCode.HandlerDuplicate, params: { kind: "turn" } }),
         )
     })
+
+    it("tells every listener that a run ended, in the order they registered", async () => {
+        const service = await build()
+        const told: Array<string> = []
+        service.onEnded((workspaceId, runId) => Promise.resolve(void told.push(`a:${workspaceId}:${runId}`)))
+        service.onEnded((_workspaceId, runId) => Promise.resolve(void told.push(`b:${runId}`)))
+
+        await service.ended("ws-1", "run-1")
+
+        expect(told).toEqual(["a:ws-1:run-1", "b:run-1"])
+    })
 })

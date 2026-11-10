@@ -6,6 +6,8 @@ import { AI } from "@modules/integrations/ai"
 import type { AiService } from "@modules/integrations/ai"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { TIMER } from "@modules/platform/retry"
+import type { Timer } from "@modules/platform/retry"
 import {
     ANSWER,
     BOT,
@@ -24,6 +26,7 @@ import { NodeImagesService } from "./node-images.service"
 import { NotesService } from "./notes.service"
 import type { AiTaskScope } from "./ai-tasks.contracts"
 import { AI_TASKS_METER, AI_TASKS_OPTIONS } from "./ai-tasks.decorators"
+import type { AiTasksOptions } from "./ai-tasks.options"
 import type { AiTaskMeter } from "./ai-tasks.port"
 import { AiTasksErrorCode } from "./errors/ai-tasks.error"
 import { leadTurnPrompt } from "./lead-turn-prompt.policy"
@@ -38,10 +41,14 @@ interface Sent extends Pick<Parameters<AiService["chat"]>[0], "messages" | "json
     module?: string
 }
 
-const build = async (jsonRetries = 1, available = true) => {
+const build = async (_unused = 1, available = true, limits: Partial<AiTasksOptions> = {}) => {
     const generator = { generate: jest.fn<Promise<string>, [Sent]>() }
     const ai = mock<AiService>()
     ai.available.mockReturnValue(available)
+    ai.attempt.mockImplementation(async (request) => {
+        const answer = await ai.chat(request)
+        return answer === null ? { ok: false, failure: "timeout" } : { ok: true, answer }
+    })
     const sent: Array<Sent> = []
     ai.chat.mockImplementation(async ({ messages, json }) => {
         const prompt: Sent = { messages, json }
@@ -56,21 +63,29 @@ const build = async (jsonRetries = 1, available = true) => {
         return Promise.resolve()
     })
     const logger = mock<Logger>()
+    // The pause before a retry runs at once, and is recorded.
+    const timer = mock<Timer>({
+        schedule: jest.fn((callback: () => void) => {
+            callback()
+            return () => undefined
+        }),
+    })
     const images = mock<NodeImagesService>({ inline: jest.fn(dataUrls) })
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AiTasksService,
-            { provide: AI_TASKS_OPTIONS, useValue: { jsonRetries, timeoutMs: 30_000 } },
+            { provide: AI_TASKS_OPTIONS, useValue: { timeoutMs: 30_000, ...limits } },
             { provide: AI, useValue: ai },
             { provide: AI_TASKS_METER, useValue: meter },
             { provide: NotesService, useValue: notes },
             { provide: NodeImagesService, useValue: images },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: LOGGER, useValue: logger },
+            { provide: TIMER, useValue: timer },
         ],
     }).compile()
-    return { client: moduleRef.get(AiTasksService), generator, ai, meter, notes, logger, catalog, images }
+    return { client: moduleRef.get(AiTasksService), generator, ai, meter, notes, logger, catalog, images, timer }
 }
 
 describe("AiTasksService text prompts", () => {
@@ -265,6 +280,21 @@ describe("AiTasksService node calls and authority", () => {
         expect(generator.generate.mock.calls[1]?.[0].messages[1]?.content).toBe("null")
     })
 
+    it("gives a node's call its own deadline and a bounded reasoning, and leaves a task with the library's", async () => {
+        const { client, ai } = await build(1, true, { nodeTimeoutMs: 90_000, nodeReasoning: "low" })
+        ai.chat.mockResolvedValue({ ...ANSWER, text: '{"items":"x"}', usage: USAGE, model: "m" })
+        const ask = { purpose: "sales.consult-turn:consult", instructions: "i", input: {} }
+
+        await client.nodeJson(scope, ask, ORDER_SCHEMA)
+        await client.nodeText(scope, ask)
+        await client.summarizeContext(scope, lead, [])
+
+        expect(ai.chat.mock.calls[0]?.[0]).toMatchObject({ timeoutMs: 90_000, budget: { effort: "low" } })
+        expect(ai.chat.mock.calls[1]?.[0]).toMatchObject({ timeoutMs: 90_000, budget: { effort: "low" } })
+        expect(ai.chat.mock.calls[2]?.[0]).toMatchObject({ timeoutMs: 30_000 })
+        expect(ai.chat.mock.calls[2]?.[0]).not.toHaveProperty("budget")
+    })
+
     it("carries a node's pictures as bytes to the AI endpoint", async () => {
         const { client, ai, images } = await build(1, true)
         ai.chat.mockResolvedValue({ ...ANSWER, text: "ok", usage: USAGE, model: "m" })
@@ -343,20 +373,15 @@ describe("AiTasksService json parsing", () => {
         await expect(client.designModule(scope, "x")).resolves.toMatchObject({ name: "A" })
     })
 
-    it("fails with a typed error when the model never answers with JSON", async () => {
-        const { client, generator } = await build(1)
+    it("fails with a typed error when the model never answers with JSON: three tries in all, each named", async () => {
+        const { client, generator } = await build()
         generator.generate.mockResolvedValue("no json here")
 
-        await expect(client.designModule(scope, "x")).rejects.toMatchObject({ code: AiTasksErrorCode.JsonNotReturned })
-        expect(generator.generate).toHaveBeenCalledTimes(2)
-    })
-
-    it("does not ask again when no retries are configured", async () => {
-        const { client, generator } = await build(0)
-        generator.generate.mockResolvedValue("no json here")
-
-        await expect(client.designModule(scope, "x")).rejects.toMatchObject({ code: AiTasksErrorCode.JsonNotReturned })
-        expect(generator.generate).toHaveBeenCalledTimes(1)
+        await expect(client.designModule(scope, "x")).rejects.toMatchObject({
+            code: AiTasksErrorCode.JsonNotReturned,
+            params: { tries: 3, failures: "not_json, not_json, not_json" },
+        })
+        expect(generator.generate).toHaveBeenCalledTimes(3)
     })
 })
 
@@ -418,29 +443,86 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
         })
     })
 
-    it("asks once more when the endpoint gave no answer (a timeout), with the very same call, and meters the one answer", async () => {
+    it("AI failure: fails twice then answers on the third try, with the same prompt and limits: one metered answer, nothing thrown", async () => {
         const { client, ai, meter, logger } = await build(1, true)
-        ai.chat.mockResolvedValueOnce(null).mockResolvedValueOnce({ ...ANSWER, text: "thanks", model: "work", usage: USAGE })
+        ai.attempt
+            .mockResolvedValueOnce({ ok: false, failure: "timeout" })
+            .mockResolvedValueOnce({ ok: false, failure: "length" })
+            .mockResolvedValueOnce({ ok: true, answer: { ...ANSWER, text: "thanks", model: "work", usage: USAGE } })
 
         await expect(client.draftCare(scope, lead, "note", "")).resolves.toBe("thanks")
 
-        expect(ai.chat).toHaveBeenCalledTimes(2)
-        expect(ai.chat.mock.calls[1]?.[0]).toBe(ai.chat.mock.calls[0]?.[0])
-        expect(ai.chat.mock.calls[0]?.[0]).toMatchObject({ affinity: "ws-1" })
-        expect(logger.warn).toHaveBeenCalledWith("ai_tasks.retried", { workspaceId: "ws-1", module: "sales" })
+        expect(ai.attempt).toHaveBeenCalledTimes(3)
+        expect(ai.attempt.mock.calls[1]?.[0]).toEqual(ai.attempt.mock.calls[0]?.[0])
+        expect(ai.attempt.mock.calls[2]?.[0]).toEqual(ai.attempt.mock.calls[0]?.[0])
+        expect(ai.attempt.mock.calls[0]?.[0]).toMatchObject({ affinity: "ws-1" })
+        expect(logger.warn).toHaveBeenCalledWith("ai_tasks.retried", {
+            workspaceId: "ws-1",
+            module: "sales",
+            tried: 1,
+            failure: "timeout",
+            again: true,
+        })
         expect(meter.blockedBy).toHaveBeenCalledTimes(1)
         expect(meter.record).toHaveBeenCalledTimes(1)
     })
 
-    it("fails as unavailable when the endpoint did not answer twice: one retry, never a loop, and meters nothing", async () => {
+    it("AI failure: fails three times and stops, naming the tries made and what each failed as; never a fourth try, nothing metered", async () => {
         const { client, ai, meter } = await build(1, true)
-        ai.chat.mockResolvedValue(null)
+        ai.attempt
+            .mockResolvedValueOnce({ ok: false, failure: "timeout" })
+            .mockResolvedValueOnce({ ok: false, failure: "provider" })
+            .mockResolvedValueOnce({ ok: false, failure: "empty" })
 
         await expect(client.draftCare(scope, lead, "note", "")).rejects.toMatchObject({
             code: AiTasksErrorCode.Unavailable,
+            params: { tries: 3, failures: "timeout, provider, empty" },
         })
-        expect(ai.chat).toHaveBeenCalledTimes(2)
+        expect(ai.attempt).toHaveBeenCalledTimes(3)
         expect(meter.record).not.toHaveBeenCalled()
+    })
+
+    it("gives a node call 90 s on its first try and 45 s on each retry (three minutes at worst), and a task 45 s on every try", async () => {
+        const limits = { timeoutMs: 45_000, nodeTimeoutMs: 90_000, nodeRetryTimeoutMs: 45_000, nodeReasoning: "low" as const }
+        const { client, ai } = await build(1, true, limits)
+        ai.attempt.mockResolvedValue({ ok: false, failure: "timeout" })
+        const ask = { purpose: "sales.consult-turn:consult", instructions: "i", input: {} }
+
+        await expect(client.nodeJson(scope, ask, ORDER_SCHEMA)).rejects.toMatchObject({ params: { tries: 3 } })
+        await expect(client.summarizeContext(scope, lead, [])).rejects.toMatchObject({ params: { tries: 3 } })
+
+        const deadlines = ai.attempt.mock.calls.map(([call]) => call.timeoutMs)
+        expect(deadlines).toEqual([90_000, 45_000, 45_000, 45_000, 45_000, 45_000])
+        expect(deadlines.slice(0, 3).reduce((sum, ms) => sum + ms, 0)).toBe(180_000)
+        // Every try of the node call keeps its bounded reasoning.
+        expect(ai.attempt.mock.calls.slice(0, 3).every(([call]) => call.budget?.effort === "low")).toBe(true)
+    })
+
+    it("waits two seconds before it retries a provider error, and not at all after a timeout or once no try is left", async () => {
+        const { client, ai, timer } = await build(1, true)
+        ai.attempt
+            .mockResolvedValueOnce({ ok: false, failure: "provider" })
+            .mockResolvedValueOnce({ ok: false, failure: "timeout" })
+            .mockResolvedValueOnce({ ok: false, failure: "provider" })
+
+        await expect(client.draftCare(scope, lead, "note", "")).rejects.toMatchObject({ params: { tries: 3 } })
+
+        expect(timer.schedule.mock.calls.map(([, ms]) => ms)).toEqual([2000])
+    })
+
+    it("AI failure: an answer that is no JSON draws on the same three tries as a timeout, never on a count of its own", async () => {
+        const { client, ai } = await build(1, true)
+        const prose = { ok: true as const, answer: { ...ANSWER, text: "not json", model: "work", usage: USAGE } }
+        ai.attempt
+            .mockResolvedValueOnce({ ok: false, failure: "timeout" })
+            .mockResolvedValueOnce(prose)
+            .mockResolvedValueOnce(prose)
+
+        await expect(client.nodeJson(scope, { purpose: "sales.consult:x", instructions: "i", input: {} }, ORDER_SCHEMA)).rejects.toMatchObject({
+            code: AiTasksErrorCode.JsonNotReturned,
+            params: { tries: 3, failures: "timeout, not_json, not_json" },
+        })
+        expect(ai.attempt).toHaveBeenCalledTimes(3)
     })
 
     it("refuses a workspace over its allowance before calling the endpoint", async () => {

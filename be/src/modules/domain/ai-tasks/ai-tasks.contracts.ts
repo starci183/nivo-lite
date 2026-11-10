@@ -293,6 +293,8 @@ export interface NodeAsk {
     readonly instructions: string
     /** Words that hold for this call only; they go after the stable part, never inside it. */
     readonly volatile?: string | undefined
+    /** The reasoning the node asks a reasoning model for on this call; absent takes the default of node calls. */
+    readonly reasoning?: "off" | "low" | "medium" | "high" | undefined
     /** What the node asks about, sent as JSON. */
     readonly input: unknown
     /** Pictures to look at, sent with the input as image parts of the user message. */

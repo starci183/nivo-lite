@@ -177,6 +177,27 @@ describe("AiService chat", () => {
         await expect(client.chat(ASK)).resolves.toMatchObject({ usage: { promptTokens: 50, cachedTokens: 40 } })
     })
 
+    it("says why a try gave no answer: the deadline, a cut answer, an empty one, the provider, no endpoint", async () => {
+        const { client, runner, logger } = await build(true)
+        const timeout = Object.assign(new Error("deadline"), { name: "TimeoutError" })
+        runner.chat
+            .mockRejectedValueOnce(timeout)
+            .mockResolvedValueOnce(reply('{"half": "an obj', { responseMetadata: { finish_reason: "length" } }))
+            .mockResolvedValueOnce(reply("   "))
+            .mockRejectedValueOnce(Object.assign(new Error("bad gateway"), { status: 502 }))
+            .mockResolvedValueOnce(reply("ok"))
+
+        await expect(client.attempt(ASK)).resolves.toEqual({ ok: false, failure: "timeout" })
+        await expect(client.attempt(ASK)).resolves.toEqual({ ok: false, failure: "length" })
+        await expect(client.attempt(ASK)).resolves.toEqual({ ok: false, failure: "empty" })
+        await expect(client.attempt(ASK)).resolves.toEqual({ ok: false, failure: "provider" })
+        await expect(client.attempt(ASK)).resolves.toMatchObject({ ok: true, answer: { text: "ok" } })
+        expect(logger.warn).toHaveBeenCalledWith("ai.chat.cut", expect.objectContaining({ answerChars: 16 }))
+
+        const off = await build(false)
+        await expect(off.client.attempt(ASK)).resolves.toEqual({ ok: false, failure: "unconfigured" })
+    })
+
     it("answers null and logs when the answer is empty", async () => {
         const { client, runner, logger } = await build(true)
         runner.chat

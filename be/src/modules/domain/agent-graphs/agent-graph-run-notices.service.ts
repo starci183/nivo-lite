@@ -1,7 +1,9 @@
 import { Injectable, Optional } from "@nestjs/common"
+import type { OnModuleInit } from "@nestjs/common"
 import { TOOL, STOPPED_DECISIONS } from "@nivo-lite/blocks-core"
 import { workflowTemplateOf } from "@nivo-lite/blocks-core/modules"
 import type { WorkflowStoppedPayload } from "@nivo-lite/blocks-core"
+import { AgentRunHandlersService, AgentRunsService, AgentRunsViewService } from "@modules/domain/agent-runs"
 import type { StepJson, StepView } from "@modules/domain/agent-runs"
 import { ChatConversationsService, HOLDING_LINE_KEY_PREFIX } from "@modules/domain/chat-records"
 import { GraphNodeRegistryService, type NodeTurn } from "@modules/domain/graph-nodes"
@@ -110,7 +112,7 @@ const answersCountOf = (trigger: StepJson): number => {
  * their conversation; the engine writes no line to a customer itself. A run that stopped for good also gets its freeze, or, in an app
  * that keeps no freezes, one review item per run; a side step that was passed over gets one review item.
  */
-export class AgentGraphRunNoticesService {
+export class AgentGraphRunNoticesService implements OnModuleInit {
     constructor(
         private readonly nodes: GraphNodeRegistryService,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
@@ -119,7 +121,46 @@ export class AgentGraphRunNoticesService {
         @Optional() private readonly freezes?: AgentGraphFreezeGateService,
         @Optional() private readonly conversations?: ChatConversationsService,
         @Optional() private readonly runs?: AgentWorkflowRunsService,
+        @Optional() private readonly handlers?: AgentRunHandlersService,
+        @Optional() private readonly agentRuns?: AgentRunsService,
+        @Optional() private readonly runViews?: AgentRunsViewService,
     ) {}
+
+    /** Listens for runs that end well, so the card of a step that stopped in them is marked resolved. */
+    onModuleInit(): void {
+        this.handlers?.onEnded((workspaceId, runId) => this.runResolved(workspaceId, runId))
+    }
+
+    /**
+     * A run ended `done`: every card of a step that stopped in it (a lead-frozen run retried, a bank-fed run resumed by the owner) is
+     * rewritten in place as resolved, asking nothing, so the room keeps no stale ask. A step that posted no card changes nothing. A
+     * failure is logged; it never fails the run.
+     */
+    async runResolved(workspaceId: string, runId: string): Promise<void> {
+        const post = this.nodes.optionalExecutorOf(TEAM_EFFECT)
+        if (post === undefined || this.agentRuns === undefined || this.runViews === undefined) return
+        try {
+            const run = await this.agentRuns.runOf(workspaceId, runId)
+            if (run === null) return
+            const detail = await this.runViews.detail(workspaceId, run.agentId, runId)
+            const locale = run.context.locale === "en" ? "en" : "vi"
+            const turn: NodeTurn = { turnId: runId, workspaceId, agentId: run.agentId, subject: null, conversationId: null, locale }
+            const payload = {
+                kind: TEAM_KIND,
+                resolved: {
+                    title: this.catalog.get("agentGraphs.stuck.resolvedTitle", {}, locale),
+                    summary: this.catalog.get("agentGraphs.stuck.resolvedSummary", {}, locale),
+                    at: this.clock.now().toISOString(),
+                },
+            }
+            for (const step of detail?.steps ?? []) {
+                const key = stuckKeyOf(runId, step.stepKey)
+                await post.execute(turn, payload, { key: `${key}:resolved`, dedupeKey: key })
+            }
+        } catch (cause) {
+            this.logger.error(AgentGraphsLogEvent.StuckResolveFailed, cause, { runId })
+        }
+    }
 
     /**
      * A run that stopped at a node step: its customer is frozen (the freeze holds the owner's one item), or the run gets its own
@@ -215,11 +256,12 @@ export class AgentGraphRunNoticesService {
         const key = stuckKeyOf(step.runId, step.stepKey)
         const workflow = notice.workflow ?? workflowRefOf("")
         const nodeId = notice.nodeId ?? step.nodeKey
+        const leadId = notice.leadId ?? (await this.leadOfConversation(step.workspaceId, turn.conversationId))
         const card: WorkflowStoppedPayload = {
             workflow: { ...workflow, title: await this.workflowTitleOf(notice, workflow, turn.locale) },
             step: { key: step.stepKey, nodeId, title: this.stepTitleOf(nodeId, turn.locale) ?? step.nodeKey },
             runId: step.runId,
-            leadId: notice.leadId ?? null,
+            leadId,
             conversationId: turn.conversationId,
             by: said.by,
             reason: said.reason,
@@ -264,6 +306,17 @@ export class AgentGraphRunNoticesService {
         if (own !== undefined && own !== "") return own
         const template = workflowTemplateOf(`${workflow.moduleKey}.${workflow.key}`)
         return template === null ? workflow.title : locale === "en" ? template.name.en : template.name.vi
+    }
+
+    /** The customer of the run's conversation when the run itself names none yet (a consult that stopped before the lead was ensured). */
+    private async leadOfConversation(workspaceId: string, conversationId: string | null): Promise<string | null> {
+        if (conversationId === null || this.conversations === undefined) return null
+        try {
+            return await this.conversations.leadIdOf(workspaceId, conversationId)
+        } catch (cause) {
+            this.logger.error(AgentGraphsLogEvent.StuckLeadUnread, cause, { conversationId })
+            return null
+        }
     }
 
     /** The title of the installed node a step runs, in the team's language; null for a step no installed node is. */

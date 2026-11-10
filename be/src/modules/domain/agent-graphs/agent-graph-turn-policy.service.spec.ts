@@ -131,7 +131,7 @@ describe("AgentGraphTurnPolicyService: the policy of the module's agent", () => 
         const told = await policy.toldOf(TURN, "accounting", "run-1:match")
 
         expect(told.guidance).toBe(agentGuidanceOf("accounting", "vi"))
-        expect(told.policy).toEqual({ overpayment: "settle", underpayment: "ask", refund: "never" })
+        expect(told.policy).toEqual({ refund: "never" })
         expect(engine.list).not.toHaveBeenCalled()
     })
 

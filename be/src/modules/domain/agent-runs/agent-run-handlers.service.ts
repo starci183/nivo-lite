@@ -3,6 +3,9 @@ import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import type { AgentStepHandler } from "./agent-runs.contracts"
 import type { OptionalAgentStepHandler } from "./agent-runs-engine.contracts"
 
+/** Told that a run ended `done`, after the commit that ended it. */
+export type AgentRunEnded = (workspaceId: string, runId: string) => Promise<void>
+
 @Injectable()
 /**
  * Who does the work of a step: the handlers by step kind. Each capability that owns a kind registers its handler when its module starts
@@ -11,6 +14,21 @@ import type { OptionalAgentStepHandler } from "./agent-runs-engine.contracts"
  */
 export class AgentRunHandlersService {
     private readonly handlers = new Map<string, AgentStepHandler>()
+
+    private readonly endings: Array<AgentRunEnded> = []
+
+    /**
+     * Registers who is told, after the commit, that a run the job drove ended `done` (a freeze whose retry outlived the door's answer
+     * settles then, not on the customer's next message).
+     */
+    onEnded(listener: AgentRunEnded): void {
+        this.endings.push(listener)
+    }
+
+    /** Tells every listener that the run ended; a listener that fails is the listener's to log, never the run's. */
+    async ended(workspaceId: string, runId: string): Promise<void> {
+        for (const listener of this.endings) await listener(workspaceId, runId)
+    }
 
     /** Registers a handler under the kind it names; a second handler for a kind is a wiring bug. */
     add(handler: AgentStepHandler): void {

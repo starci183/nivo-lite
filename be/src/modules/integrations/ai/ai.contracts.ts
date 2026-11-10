@@ -75,8 +75,8 @@ export interface AiChatRequest {
 export interface AiBudget {
     /** The reasoning the endpoint is asked for: none, or an effort. */
     readonly effort: "off" | "low" | "medium" | "high"
-    /** The most completion tokens the call may produce, reasoning included. */
-    readonly maxTokens: number
+    /** The most completion tokens the call may produce, reasoning included; absent leaves the cap to the provider. */
+    readonly maxTokens?: number
 }
 
 /** One chat answer. */
@@ -110,6 +110,18 @@ export interface AiEmbedding {
     /** LangChain does not report embedding usage, so this is always null and callers estimate from the text. */
     readonly usage: AiUsage | null
 }
+
+/**
+ * Why a chat call gave no answer, as the AI's own failure: the deadline passed (`timeout`), the answer was cut at the token limit
+ * (`length`), the model answered nothing (`empty`), the endpoint or the provider failed (`provider`), or no endpoint is
+ * configured (`unconfigured`).
+ */
+export type AiFailure = "timeout" | "length" | "empty" | "provider" | "unconfigured"
+
+/** One try of a chat call: its answer, or why there is none. */
+export type AiChatAttempt =
+    | { readonly ok: true; readonly answer: AiChatAnswer }
+    | { readonly ok: false; readonly failure: AiFailure }
 
 /** A chat answer, or null when AI is unavailable (no key), the call failed or the answer was empty. */
 export type AiChatResult = AiChatAnswer | null

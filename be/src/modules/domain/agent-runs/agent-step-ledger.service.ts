@@ -203,6 +203,36 @@ export class AgentStepLedgerService {
         return { status: steps.some(open) ? "running" : "waiting" }
     }
 
+    /**
+     * Holds the claim of a running step for another deadline from now, under its fence, and answers the fence the claim has after
+     * it; null when the claim already moved on (another try took the step, or it ended). The step runner calls it while the step's
+     * handler is still working, so a step is never taken by a second try while its first is alive, however long its work takes.
+     */
+    renew(step: StepView): Promise<number | null> {
+        return this.store.at(step.workspaceId, undefined, async (scoped) => {
+            const current = (await this.records.stepsOf(scoped, step.runId)).find((s) => s.stepKey === step.stepKey)
+            if (current === undefined) return null
+            if (Number(current.version) !== step.fence || current.status !== "running" || current.waitItemId !== null)
+                return null
+            const held = await this.records.patchStep(scoped, current, {
+                claimedUntil: iso(new Date(this.clock.now().getTime() + current.deadlineMs)),
+            })
+            return held === null ? null : Number(held.version)
+        })
+    }
+
+    /**
+     * True while the try this view was claimed as still owns its step: the step is running and no later try took it. A handler
+     * asks before it tells anyone about a failure: a try another try superseded reports nothing, since the step is the other's now.
+     * It reads the try's number, not the fence, because renewing a claim moves the fence and leaves the try the same.
+     */
+    holds(step: StepView): Promise<boolean> {
+        return this.store.at(step.workspaceId, undefined, async (scoped) => {
+            const current = (await this.records.stepsOf(scoped, step.runId)).find((s) => s.stepKey === step.stepKey)
+            return current !== undefined && current.status === "running" && current.attempt === step.attempt
+        })
+    }
+
     /** Gives the claim of a step back at once; false when the claim already moved on. */
     release(step: StepView): Promise<boolean> {
         return this.store.at(step.workspaceId, undefined, async (scoped) => {

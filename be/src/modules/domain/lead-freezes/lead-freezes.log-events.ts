@@ -8,6 +8,8 @@ export enum LeadFreezesLogEvent {
     RetryStarted = "lead_freezes.retry_started",
     /** The customer was released and the pending events written again as wakes. */
     Released = "lead_freezes.released",
+    /** A retried run ended but its freeze could not be settled then; the next read settles it. */
+    SettleFailed = "lead_freezes.settle_failed",
     /** The owner took the conversation over. */
     TakenOver = "lead_freezes.taken_over",
     /** Another run of a customer already frozen stopped; it is held for the owner, the freeze keeps its own run. */

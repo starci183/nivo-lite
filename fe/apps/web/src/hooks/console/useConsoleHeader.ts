@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl"
 import { authActionsOf } from "@/hooks/auth"
 import { useBrainTodoCount } from "@/hooks/knowledge"
+import { useGuideBubbleShown } from "@/hooks/guide"
 import { useLocaleSwitch } from "@/hooks/locale"
 import { useThemeSwitch } from "@/hooks/theme"
 import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
@@ -37,6 +38,9 @@ export interface ConsoleHeaderView {
             readonly name: string
         }[]
         themeLabel: string
+        guideBubbleLabel: string
+        guideBubbleDescription: string
+        isGuideBubbleShown: boolean
         isDark: boolean
         bellLabel: string
         bellHref: string
@@ -45,6 +49,7 @@ export interface ConsoleHeaderView {
     on: {
         chooseLocale: (next: string) => void
         chooseDark: (isDark: boolean) => void
+        chooseGuideBubble: (shown: boolean) => void
     }
 }
 
@@ -59,6 +64,7 @@ export const useConsoleHeader = (): ConsoleHeaderView => {
     const switchWorkspace = useSwitchWorkspace(session.currentWorkspaceId)
     const language = useLocaleSwitch()
     const theme = useThemeSwitch()
+    const guideBubble = useGuideBubbleShown()
     const workspaceLogoUrl = useWorkspaceLogo()
     const waitingCount = useBrainTodoCount()
 
@@ -96,6 +102,9 @@ export const useConsoleHeader = (): ConsoleHeaderView => {
             isLocalePending: language.isPending,
             localeOptions: language.options,
             themeLabel: t("themeLabel"),
+            guideBubbleLabel: t("guideBubbleLabel"),
+            guideBubbleDescription: t("guideBubbleDescription"),
+            isGuideBubbleShown: guideBubble.isShown,
             isDark: theme.isDark,
             bellLabel: t("bellLabel"),
             bellHref: workspaceHref(session.currentWorkspaceId, CONSOLE_ROUTES.inbox),
@@ -104,6 +113,7 @@ export const useConsoleHeader = (): ConsoleHeaderView => {
         on: {
             chooseLocale: language.choose,
             chooseDark: theme.choose,
+            chooseGuideBubble: guideBubble.setShown,
         },
     }
 }

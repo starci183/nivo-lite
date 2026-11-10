@@ -5,7 +5,8 @@ import {
     GraphNodesErrorCode,
     toolFingerprintOf,
 } from "@modules/domain/graph-nodes"
-import type { NodeRunClaims, NodeToolCall, NodeToolDoor } from "@modules/domain/graph-nodes"
+import type { NodeEffectRightCall, NodeRunClaims, NodeToolCall, NodeToolDoor } from "@modules/domain/graph-nodes"
+import type { SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { AgentViewScopeService } from "@modules/domain/agents"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { InjectLogger } from "@modules/platform/logging"
@@ -17,6 +18,8 @@ import type { StepClaims } from "./gateway-run.policy"
 import type { GatewayCallResult, GatewayCaller } from "./mcp-gateway.contracts"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import { McpGatewayService } from "./mcp-gateway.service"
+import { isAbilityTool, isChannelBound } from "./provider-abilities.policy"
+import { ProviderAbilitiesService } from "./provider-abilities.service"
 
 /** The reason a native tool gives when the workspace has no connected provider for it. */
 const NOT_CONNECTED = "not_connected"
@@ -71,7 +74,50 @@ export class NodeToolDoorService implements NodeToolDoor {
         @InjectLogger() private readonly logger: Logger,
         @Optional() private readonly members?: WorkspaceMembersReadService,
         @Optional() private readonly scopes?: AgentViewScopeService,
+        @Optional() private readonly abilities?: ProviderAbilitiesService,
     ) {}
+
+    /**
+     * The right of the run's agent to perform an effect through `context.effect`, judged as the gateway judges the same tool, so the
+     * two roads to an effect cannot disagree. An effect that is no provider right, or whose provider only its conversation tells (the
+     * customer send: its executor asks), is not judged here. Not attached or not ticked: the ordinary refusal fact
+     * `{ kind: "refused", id, facts }`, which the step reads and the engine reports. Ticked `ask`: the typed approval error with the
+     * fingerprint of the effect and its payload, unless the call replays an approval of that fingerprint.
+     */
+    async effectRight(call: NodeEffectRightCall): Promise<SubjectRef | null> {
+        if (this.abilities === undefined || !isAbilityTool(call.effect) || isChannelBound(call.effect)) return null
+        const claims = this.tokens.verify(call.token)
+        if (claims === null) {
+            throw this.failed(
+                call.effect,
+                null,
+                new GraphNodesError({ code: GraphNodesErrorCode.ToolTokenInvalid, params: { tool: call.effect } }),
+            )
+        }
+        const fingerprint = toolFingerprintOf(call.effect, call.payload)
+        const approved = call.approval?.fingerprint === fingerprint
+        const verdict = await this.abilities.judge(claims.workspaceId, claims.agentId, call.effect, approved)
+        if (verdict === null || verdict.kind === "allow") return null
+        if (verdict.kind === "approval") {
+            throw new GraphNodesError({
+                code: GraphNodesErrorCode.ToolApprovalRequired,
+                params: { tool: call.effect, fingerprint, reason: "ask_mode" },
+            })
+        }
+        this.failed(
+            call.effect,
+            claims,
+            new GraphNodesError({
+                code: GraphNodesErrorCode.ToolNotGranted,
+                params: { tool: call.effect, reason: verdict.reason },
+            }),
+        )
+        return {
+            kind: "refused",
+            id: verdict.reason,
+            facts: { tool: call.effect, ability: verdict.ability, providers: [...verdict.providers] },
+        }
+    }
 
     /** Calls the tool for the run its token names and answers its value. */
     async call(call: NodeToolCall): Promise<unknown> {

@@ -5,7 +5,8 @@ import { NodeBusinessFailure, NodeConfused } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { NOW, TRIGGER, stepOf } from "@tests/fixtures/builders/agent-graph-node-step.builder"
-import { AgentRunHandlersService } from "@modules/domain/agent-runs"
+import { AgentRunHandlersService, AgentRunsService } from "@modules/domain/agent-runs"
+import { AiTasksError, AiTasksErrorCode } from "@modules/domain/ai-tasks"
 import { ChatMessagesService } from "@modules/domain/chat-records"
 import { GraphNodeHostService, GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
@@ -209,7 +210,7 @@ const FLOW: GraphSpec = {
     ],
 }
 
-const buildSteps = async () => {
+const buildSteps = async (holds: boolean | undefined = true) => {
     const core = mock<AgentGraphAiCoreService>()
     const host = mock<GraphNodeHostService>()
     const notices = mock<AgentGraphRunNoticesService>()
@@ -237,6 +238,7 @@ const buildSteps = async () => {
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: AgentGraphRunNoticesService, useValue: notices },
             { provide: AgentGraphAiCoreService, useValue: core },
+            { provide: AgentRunsService, useValue: mock<AgentRunsService>({ holds: jest.fn().mockResolvedValue(holds) }) },
         ],
     }).compile()
     return { steps: moduleRef.get(AgentGraphNodeStepService), host, core, notices }
@@ -245,6 +247,55 @@ const buildSteps = async () => {
 const at = (nodeKey: string) => stepOf(nodeKey, { earlier: {} })
 
 describe("AgentGraphNodeStepService a step that cannot complete (the one wrapper)", () => {
+    it("AI failure: reports once in the engine's own words, with the tries made and what each failed as, and never asks the AI that just failed", async () => {
+        const { steps, host, core, notices } = await buildSteps()
+        host.run.mockRejectedValue(
+            new AiTasksError({
+                code: AiTasksErrorCode.Unavailable,
+                params: { tries: 3, failures: "timeout, timeout, length" },
+            }),
+        )
+
+        await expect(steps.run(at("evidence"))).resolves.toEqual({ kind: "failed", code: "AI_TASKS_UNAVAILABLE" })
+
+        expect(core.decide).not.toHaveBeenCalled()
+        expect(notices.stuck).toHaveBeenCalledTimes(1)
+        const [notice, told] = notices.stuck.mock.calls[0] ?? []
+        expect(notice).toMatchObject({ code: "AI_TASKS_UNAVAILABLE", nodeId: "payment.evidence" })
+        // No AI words (the AI is what failed) and no line to the customer: the engine's static reason and the facts.
+        expect(told).toMatchObject({ report: null, customerLine: null })
+        expect(told?.facts).toEqual(
+            expect.arrayContaining([
+                ["workflow", "accounting"],
+                ["step", "evidence (payment.evidence)"],
+                ["code", "AI_TASKS_UNAVAILABLE"],
+                ["tries", "3"],
+                ["failures", "timeout, timeout, length"],
+            ]),
+        )
+    })
+
+    it("still reports when the run engine gives no answer about the try: only an explicit `false` silences a stop", async () => {
+        const { steps, host, core, notices } = await buildSteps(undefined)
+        host.run.mockRejectedValue(Object.assign(new Error("payment_refused"), { code: "payment_refused" }))
+        core.decide.mockResolvedValue({ kind: "ai_failed", code: "ai_core_failed" })
+
+        await expect(steps.run(at("evidence"))).resolves.toEqual({ kind: "failed", code: "payment_refused" })
+
+        expect(notices.stuck).toHaveBeenCalledTimes(1)
+    })
+
+    it("says nothing for a try another try took over: no AI core call, no report to the team, no line to the customer", async () => {
+        const { steps, host, core, notices } = await buildSteps(false)
+        host.run.mockRejectedValue(Object.assign(new Error("AI_TASKS_UNAVAILABLE"), { code: "AI_TASKS_UNAVAILABLE" }))
+
+        await expect(steps.run(at("evidence"))).resolves.toEqual({ kind: "failed", code: "AI_TASKS_UNAVAILABLE" })
+
+        expect(core.decide).not.toHaveBeenCalled()
+        expect(notices.stuck).not.toHaveBeenCalled()
+        expect(notices.recovered).not.toHaveBeenCalled()
+    })
+
     it("hands a node that threw to the AI core first, and goes on with the output it produced: the step is done, marked recovered by the AI, the raw cause logged", async () => {
         const { steps, host, core, notices } = await buildSteps()
         host.run.mockRejectedValue(new TypeError("claim.names is not iterable"))

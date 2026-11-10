@@ -17,6 +17,7 @@ import { JobClaimService } from "./job-claim.service"
 import { JobFenceService } from "./job-fence.service"
 import { JobRenewalService } from "./job-renewal.service"
 import { JobRunnerService } from "./job-runner.service"
+import { ParkedJobCloseService } from "./parked-job-close.service"
 import { ParkedJobResumerService } from "./parked-job-resumer.service"
 import type { JobTickScheduler } from "./jobs.port"
 
@@ -50,6 +51,7 @@ export class JobsModule extends ConfigurableModuleClass {
                 JobFenceService,
                 JobRenewalService,
                 JobRunnerService,
+                ParkedJobCloseService,
                 ParkedJobResumerService,
                 ...(options.scheduler.enabled
                     ? [
@@ -62,7 +64,14 @@ export class JobsModule extends ConfigurableModuleClass {
                 { provide: JOB_PROCESSOR_REGISTRY, useExisting: JobRunnerService },
                 { provide: PARKED_JOB_RESUMER, useExisting: ParkedJobResumerService },
             ],
-            exports: [JOB_CLAIMS, JOB_FENCE, JOB_PROCESSOR_REGISTRY, PARKED_JOB_RESUMER, ParkedJobResumerService],
+            exports: [
+                JOB_CLAIMS,
+                JOB_FENCE,
+                JOB_PROCESSOR_REGISTRY,
+                PARKED_JOB_RESUMER,
+                ParkedJobResumerService,
+                ParkedJobCloseService,
+            ],
         }
     }
 }

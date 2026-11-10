@@ -45,7 +45,7 @@ export const LandingNavDrawerBase = (props: LandingNavDrawerBaseProps) => (
             <Stack gap="section">
                 <Stack gap="row">
                     {props.props.links.map((link) => (
-                        <Link key={link.id} href={link.href} onFollow={() => props.on.setOpen(false)}>
+                        <Link key={link.id} variant="plain" href={link.href} onFollow={() => props.on.setOpen(false)}>
                             {link.label}
                         </Link>
                     ))}

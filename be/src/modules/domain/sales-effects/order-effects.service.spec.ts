@@ -9,6 +9,7 @@ import type { ScopedTx } from "@modules/domain/entity-engine"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeDataPort, NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
 import { CLOCK } from "@modules/platform/clock"
+import { PaymentTimersService } from "./payment-timers.service"
 import { OrderEffectsService } from "./order-effects.service"
 import { SalesEffectsErrorCode } from "./errors/sales-effects.error"
 
@@ -80,9 +81,11 @@ const build = async () => {
     ports.entitiesApi.mockReturnValue(api)
     ports.entityApi.mockReturnValue(settings)
     ports.outboxApi.mockReturnValue(outbox)
+    const timers = mock<PaymentTimersService>({ closeOf: jest.fn().mockResolvedValue(2) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             OrderEffectsService,
+            { provide: PaymentTimersService, useValue: timers },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: EntityEngineService, useValue: engine },
             { provide: EntityPortsService, useValue: ports },
@@ -96,7 +99,7 @@ const build = async () => {
         assert(found !== undefined, `The service must register an executor for ${effect}`)
         return found
     }
-    return { engine, registry, api, outbox, settings, catalogue, executorOf }
+    return { engine, registry, api, outbox, settings, catalogue, executorOf, timers }
 }
 
 const run = (executor: NodeEffectExecutor, payload: Readonly<Record<string, unknown>>): Promise<SubjectRef> =>
@@ -445,6 +448,14 @@ describe("OrderEffectsService order.confirm", () => {
 })
 
 describe("OrderEffectsService order.void", () => {
+    it("closes the payment timers of the order it cuts short", async () => {
+        const { executorOf, api, timers } = await build()
+        api.get.mockResolvedValue(orderRecord({ status: "confirmed" }))
+        api.update.mockResolvedValue(ok(orderRecord({ status: "failed_system" })))
+        await run(executorOf("order.cancel"), { id: ORDER })
+        expect(timers.closeOf).toHaveBeenCalledWith(expect.any(String), ORDER)
+    })
+
     it("marks the order failed_system and keeps every other field", async () => {
         const { executorOf, api } = await build()
         api.get.mockResolvedValue(orderRecord())

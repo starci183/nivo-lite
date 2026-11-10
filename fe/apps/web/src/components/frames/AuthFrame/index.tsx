@@ -22,8 +22,8 @@ export const AuthFrame = (props: AuthFrameProps) => (
         tools={props.localeSwitch}
         footer={
             <NavLandmark label={props.legalLabel} layout="bar">
-                <Link href={privacyHref()}>{props.privacyLabel}</Link>
-                <Link href={termsHref()}>{props.termsLabel}</Link>
+                <Link variant="plain" href={privacyHref()}>{props.privacyLabel}</Link>
+                <Link variant="plain" href={termsHref()}>{props.termsLabel}</Link>
             </NavLandmark>
         }
     >

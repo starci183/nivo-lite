@@ -24,6 +24,11 @@ Vì sao: SAI/OK split. OK: a label + count at the left of the block, and a list 
 Luật: `table-heroui-native-section-head.md` (pink only for work waiting on the owner; section head label + chip), `suggestion-button-sm.md`.
 Grammar: `Section`, `SurfaceCard` + `ListRow`, `Badge tone`, `Button size="sm"`, `node_modules/@starci/grammar/dist/core/composite/ListRow/index.d.ts`.
 
+## Hàng "Gắn <provider> cho <agent> và <agent> theo mẫu?" (trong "Cần bạn xử lý")
+Vì sao: a provider connected after the agents were made is NOT attached to any agent (connected is not usable). The page asks once, in the owner's "Cần bạn xử lý" list: a row with the provider mark, the question naming the provider and the agents that could get it (joined by the reader's language), the sub line "<Provider> vừa nối. Chưa agent nào được dùng cho tới khi bạn gắn.", and two neutral small pills "Để sau" (remembered by the page, the back end keeps answering) and "Gắn theo mẫu" (attaches with the template defaults). The section count includes this row.
+Luật: `table-heroui-native-section-head.md` (section head label + chip; waiting-on-owner count), `suggestion-button-sm.md` (neutral sm pills, no icon), `surfacecard-select-subtitle.md` (a subtitle only under a title).
+Grammar: `Section kind="list"` row `ListRowData` with `detail` holding two `Button size="sm" intent="neutral"` (`surfaceCardData.d.ts`; the row `action` takes only one command). Code: `blocks/ConnectionsHome/pending.tsx`.
+
 ## Dải số liệu (Đang chạy 3, Chờ sự kiện 2, Cần xử lý 2, Agent dùng 3)
 Vì sao: one figures ribbon in one card (four cells with a 14 muted label, a figure, and a 12 muted note), the figures-ribbon content type of the one-content-per-card law; the figures wrap 2x2 on the phone rather than break a number.
 Luật: `surfacecard-zones-api.md` (header kind `figures`; figures wrap 2x2 or one column), `table-heroui-native-section-head.md`.

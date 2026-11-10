@@ -400,6 +400,11 @@ export interface NativeCaller {
     readonly run?: GatewayRun | undefined
     /** True when the call is a step of a workflow: the conversation is the run's, and the agent's own audience judges an internal tool. */
     readonly graphStep?: true | undefined
+    /**
+     * True for the engine's own caller (a module's declared job run as the workspace's internal agent): it is internal by what it is,
+     * whatever the catalogue says of its agent's module.
+     */
+    readonly engine?: true | undefined
 }
 
 /**

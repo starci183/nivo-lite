@@ -7,6 +7,7 @@ import {
     useMutateCreateAgentInstallationSwr,
 } from "@/hooks/swr"
 import { useWorkspaceId } from "@/hooks/workspaces"
+import type { CreateProviderRightsInput } from "@/modules/providerRights"
 import { storedPresetOf } from "@/modules/agentAvatar"
 import { navigation } from "@/modules/i18n"
 import { agentHref } from "@/modules/installations"
@@ -35,6 +36,7 @@ export const useAgentCreateSubmit = (
     form: AgentCreateForm,
     picture: AgentCreatePicture,
     t: CreateCopy,
+    providerRights: () => ReadonlyArray<CreateProviderRightsInput>,
 ): AgentCreateSubmit => {
     const router = navigation.useRouter()
     const pathname = navigation.usePathname()
@@ -62,6 +64,7 @@ export const useAgentCreateSubmit = (
                     connectionIds: form.canGrantChannels ? [...form.chosenChannels] : [],
                     startFrom: copyFrom === null ? "default" : "copy",
                     copyFrom,
+                    providerRights: providerRights().map((one) => ({ provider: one.provider, abilities: [...one.abilities] })),
                 }),
             { successMessage: t("created", { name }) },
         )

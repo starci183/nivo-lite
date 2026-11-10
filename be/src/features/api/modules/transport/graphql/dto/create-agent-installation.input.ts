@@ -1,5 +1,51 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { ArrayMaxSize, IsArray, IsIn, IsOptional, IsString, IsUUID, Matches, MaxLength } from "class-validator"
+import { Type } from "class-transformer"
+import {
+    ArrayMaxSize,
+    IsArray,
+    IsIn,
+    IsOptional,
+    IsString,
+    IsUUID,
+    Matches,
+    MaxLength,
+    ValidateNested,
+} from "class-validator"
+
+@InputType()
+/** One ability of a new agent on a provider, as the owner left the proposal. */
+export class AgentProviderAbilityInput {
+    /** The ability id. */
+    @Field(() => String)
+    @IsString()
+    @MaxLength(41)
+    @Matches(/^[a-z][a-z0-9.-]{1,40}$/u)
+    id!: string
+
+    /** off (not ticked), auto or ask. */
+    @Field(() => String)
+    @IsIn(["off", "auto", "ask"])
+    mode!: "off" | "auto" | "ask"
+}
+
+@InputType()
+/** One connected provider a new agent is attached to, with its abilities. */
+export class AgentProviderRightInput {
+    /** The provider key. */
+    @Field(() => String)
+    @IsString()
+    @MaxLength(31)
+    @Matches(/^[a-z][a-z0-9_-]{1,30}$/u)
+    provider!: string
+
+    /** The abilities wanted; an ability left out is off. */
+    @Field(() => [AgentProviderAbilityInput])
+    @IsArray()
+    @ArrayMaxSize(20)
+    @ValidateNested({ each: true })
+    @Type(() => AgentProviderAbilityInput)
+    abilities!: Array<AgentProviderAbilityInput>
+}
 
 @InputType()
 /** Creates one more agent of a role: the name its customers see, its handle, picture and channels, and where its setup starts. */
@@ -59,4 +105,16 @@ export class CreateAgentInstallationInput {
     @IsUUID("4")
     @MaxLength(36)
     copyFrom: string | null = null
+
+    /**
+     * The rights of the new agent on connected providers, as the owner left the proposal of agentAbilityProposal; null or absent
+     * takes the proposal as it is, an empty list attaches nothing.
+     */
+    @Field(() => [AgentProviderRightInput], { nullable: true })
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(20)
+    @ValidateNested({ each: true })
+    @Type(() => AgentProviderRightInput)
+    providerRights: Array<AgentProviderRightInput> | null = null
 }

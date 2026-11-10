@@ -7,6 +7,16 @@ export const WORK_PROFILE = "work"
 /** The profile of embeddings: the `model` an OpenAI client asks for. */
 export const EMBED_PROFILE = "embed"
 
+/**
+ * How long one attempt of a chat call may take at the gateway, milliseconds. The caller sets the real deadline of each call by its
+ * kind (a task, a graph node's call: at most two minutes); the gateway must never cut an attempt before the caller would, or a
+ * call the caller still waits for fails as a gateway timeout. So it sits above the longest deadline a caller may set.
+ */
+export const WORK_ATTEMPT_TIMEOUT_MS = 125_000
+
+/** The whole chat call at the gateway, waits and backoff included: one full attempt, with room to fail over after a quick failure. */
+export const WORK_DEADLINE_MS = 130_000
+
 /** US dollars per million tokens of the default models, so the gateway can enforce and account cost quotas. */
 const WORK_COST = { input: 0.14, output: 0.42 }
 const EMBED_COST = { input: 0.01, output: 0 }
@@ -38,7 +48,15 @@ const poolOf = (options: AiGatewayOptions): AiRouterModuleOptions => {
     return {
         providers: options.providers.map((provider) => providerOf(provider, modelsOf(provider))),
         profiles: {
-            [WORK_PROFILE]: { model: options.models.work, providers: ["upstream"] },
+            [WORK_PROFILE]: {
+                model: options.models.work,
+                providers: ["upstream"],
+                // One attempt per call: the caller (the AI task layer) owns the count of tries of a model call, so the gateway
+                // never multiplies it by retrying on its own.
+                maxAttempts: 1,
+                timeoutMs: WORK_ATTEMPT_TIMEOUT_MS,
+                deadlineMs: WORK_DEADLINE_MS,
+            },
             [EMBED_PROFILE]: {
                 model: options.models.embed,
                 allowFallback: false,

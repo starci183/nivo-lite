@@ -109,6 +109,12 @@ export interface NodeModelRequest {
     readonly input: unknown
     /** Pictures the model should look at, as short-lived addresses the model host can fetch; none when absent. */
     readonly images?: ReadonlyArray<string> | undefined
+    /**
+     * How hard a reasoning model should think on this call, when the node's author knows better than the host's default: `off`
+     * for a call that only fills a form, `medium` or `high` for one that weighs evidence (money, a disputed fact). Absent: the
+     * host's default for node calls. It bounds what the model spends on thinking nobody reads, never what the node may do.
+     */
+    readonly reasoning?: "off" | "low" | "medium" | "high" | undefined
 }
 
 /** What the AI of a node says when it cannot decide: why, in its own words, and what it needs a person to answer. */
@@ -159,6 +165,12 @@ export interface NodeAgentRequest<S extends z.ZodType = z.ZodType> {
     readonly purpose?: string | undefined
     /** Pictures the agent should look at; none when absent. */
     readonly images?: ReadonlyArray<string> | undefined
+    /**
+     * How hard a reasoning model should think on the turns of this agent, when the node's author knows better than the host's default: `off`
+     * for a call that only fills a form, `medium` or `high` for one that weighs evidence (money, a disputed fact). Absent: the
+     * host's default for node calls. It bounds what the model spends on thinking nobody reads, never what the node may do.
+     */
+    readonly reasoning?: "off" | "low" | "medium" | "high" | undefined
 }
 
 /** The agent of a step: the model with the step's own tools in its hands. */

@@ -1,15 +1,9 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import { abilityRowsOf, toggleAbility, type RightsTranslate } from "@/components/composites/ProviderRightsCard/rows"
+import { useLocale, useTranslations } from "next-intl"
+import { abilityRowsOf, toggleAbility, type RightsTranslate } from "@/components/composites/ProviderRightsCard"
 import { useAgentCreate, type AgentCreateView } from "@/hooks/agentCreate"
-import {
-    providerLogoOf,
-    providerNameOf,
-    useAgentAbilityProposal,
-    type AbilityMode,
-    type CreateAgentAbilities,
-} from "@/hooks/providerRights"
+import { pickLabel, providerLogoOf, providerNameOf, type AbilityMode } from "@/hooks/providerRights"
 import { AgentCreateDialogBase, type AgentCreateDialogBaseProps } from "./component"
 
 /** The translator of the dialog copy. */
@@ -32,8 +26,9 @@ const pictureOf = (view: AgentCreateView, t: CreateCopy): AgentCreateDialogBaseP
  */
 const providersOf = (
     view: AgentCreateView,
-    rights: CreateAgentAbilities,
+    rights: AgentCreateView["abilities"],
     t: RightsTranslate,
+    locale: string,
 ): AgentCreateDialogBaseProps["props"]["providers"] =>
     view.role === null
         ? null
@@ -50,10 +45,10 @@ const providersOf = (
                           props: {
                               name: providerNameOf(provider.provider),
                               logo: providerLogoOf(provider.provider),
-                              line: t("line", { kind: t(`kind_${provider.kind}`) }),
+                              line: pickLabel(provider.kindLabel, locale),
                               menu: undefined,
                               connectLink: undefined,
-                              rows: abilityRowsOf(t, provider, held, setAbility),
+                              rows: abilityRowsOf(t, locale, provider, held, setAbility),
                           },
                           on: { toggle: (id: string, isOn: boolean) => toggleAbility(provider, held, id, isOn, setAbility) },
                       },
@@ -86,8 +81,9 @@ const startOf = (view: AgentCreateView, t: CreateCopy): AgentCreateDialogBasePro
 export const AgentCreateDialog = () => {
     const t = useTranslations("agentCreate")
     const tRights = useTranslations("agentRights")
+    const locale = useLocale()
     const view = useAgentCreate()
-    const rights = useAgentAbilityProposal(view.role)
+    const rights = view.abilities
     return (
         <AgentCreateDialogBase
             props={{
@@ -105,7 +101,7 @@ export const AgentCreateDialog = () => {
                 name: { label: t("nameLabel"), description: t("nameHint"), value: view.name },
                 handle: { label: t("handleLabel"), description: t("handleHint"), value: view.handle },
                 picture: pictureOf(view, t),
-                providers: providersOf(view, rights, tRights),
+                providers: providersOf(view, rights, tRights, locale),
                 start: startOf(view, t),
                 submitLabel: t("submit"),
                 cancelLabel: t("cancel"),
@@ -120,11 +116,7 @@ export const AgentCreateDialog = () => {
                 upload: (files) => void view.picture.upload(files),
                 removeUpload: () => view.choosePreset("sprout"),
                 start: view.setStart,
-                submit: () => {
-                    // FAKE: the real createAgent takes `providerRights`; until it exists the edits are only logged.
-                    console.info("createAgent providerRights (fake)", rights.input())
-                    view.create()
-                },
+                submit: view.create,
             }}
         />
     )

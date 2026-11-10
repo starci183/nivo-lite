@@ -1,7 +1,10 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { ParkedJobCloseService } from "@modules/platform/jobs"
 import { JobOpsConsoleService, JobOpsTickService } from "@modules/domain/job-ops"
 import { JobsCli } from "./jobs.cli"
+import { CloseJobsCli } from "./subs/close.cli"
 import { FailedJobsCli } from "./subs/failed.cli"
 import { OpenJobsCli } from "./subs/open.cli"
 import { RetryJobsCli } from "./subs/retry.cli"
@@ -22,7 +25,7 @@ describe("JobsCli", () => {
         expect(help).toHaveBeenCalledTimes(1)
     })
 
-    it("constructs the group and all seven commands with their explicit capabilities", async () => {
+    it("constructs the group and all eight commands with their explicit capabilities", async () => {
         const jobs = mock<JobOpsConsoleService>()
         const ticks = mock<JobOpsTickService>()
         const moduleRef = await Test.createTestingModule({
@@ -35,6 +38,9 @@ describe("JobsCli", () => {
                 RetryFailedJobsCli,
                 WatchdogJobsCli,
                 TickJobsCli,
+                CloseJobsCli,
+                { provide: ParkedJobCloseService, useValue: mock<ParkedJobCloseService>() },
+                { provide: PRIMARY_ENTITY_MANAGER, useValue: mockEntityManager({}) },
                 { provide: JobOpsConsoleService, useValue: jobs },
                 { provide: JobOpsTickService, useValue: ticks },
             ],
@@ -49,6 +55,7 @@ describe("JobsCli", () => {
             RetryFailedJobsCli,
             WatchdogJobsCli,
             TickJobsCli,
+            CloseJobsCli,
         ]) {
             expect(moduleRef.get(command)).toBeInstanceOf(command)
         }

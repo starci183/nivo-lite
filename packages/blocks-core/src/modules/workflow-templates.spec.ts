@@ -92,7 +92,7 @@ describe("the agent of each module", () => {
         for (const module of [accountingModule, chatbotModule, salesModule]) {
             expect(module.agent?.policy.guidance.vi).toContain("/chat")
         }
-        expect(accountingModule.agent?.policy.limits).toEqual({ overpayment: "settle", underpayment: "ask", refund: "never" })
+        expect(accountingModule.agent?.policy.limits).toEqual({ refund: "never" })
     })
 })
 

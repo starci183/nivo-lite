@@ -2,6 +2,10 @@
 export enum AgentRunsLogEvent {
     /** A step's commit found its fence moved on, so it changed nothing. */
     StepFenced = "agent_runs.step_fenced",
+    /** A running step lost its claim while its handler was still working: the handler's signal is aborted and its try reports nothing. */
+    StepClaimLost = "agent_runs.step_claim_lost",
+    /** The renewal of a running step's claim failed; the next beat tries again. */
+    StepRenewFailed = "agent_runs.step_renew_failed",
     /** A handler threw; the step is tried again or given up. */
     HandlerThrew = "agent_runs.handler_threw",
     /** A step kind had no handler registered. */

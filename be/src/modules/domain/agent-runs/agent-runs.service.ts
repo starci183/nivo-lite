@@ -16,6 +16,7 @@ import type {
     StepSpec,
     StepLink,
     StepJson,
+    StepView,
     OptionalRunWait,
 } from "./agent-runs.contracts"
 import type {
@@ -51,6 +52,14 @@ export class AgentRunsService {
         private readonly steps: AgentRunStepsService,
         private readonly compensation: AgentRunCompensationService,
     ) {}
+
+    /**
+     * True while the try a handler was given still owns its step. A handler calls it before it reports a failure of the step to a
+     * person: a superseded try (another try claimed the step meanwhile) must stay silent, its commit changes nothing anyway.
+     */
+    holds(step: StepView): Promise<boolean> {
+        return this.ledger.holds(step)
+    }
 
     /** Opens the one run of a wake in `tx`; a replay of the same wake answers the run it already has. */
     open(tx: EntityManager, input: RunOpen): Promise<RunView> {
@@ -115,7 +124,9 @@ export class AgentRunsService {
      */
     async advance(workspaceId: string, runId: string, signal: AbortSignal): Promise<RunAdvance> {
         const retryAfterMs = await this.drive({ workspaceId, runId }, signal, ADVANCE_MAX_STEPS)
-        return { run: await this.store.runById(workspaceId, runId), retryAfterMs }
+        const run = await this.store.runById(workspaceId, runId)
+        if (run?.status === "done") await this.handlers.ended(workspaceId, runId)
+        return { run, retryAfterMs }
     }
 
     private async drive(ref: RunRef, signal: AbortSignal, left: number): Promise<number | null> {

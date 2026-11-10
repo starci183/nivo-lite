@@ -1,4 +1,4 @@
-export { AI_TASKS_ERROR_KINDS } from "./errors/ai-tasks.error"
+export { AI_TASKS_ERROR_KINDS, AiTasksError, AiTasksErrorCode } from "./errors/ai-tasks.error"
 export { AI_TASKS_MESSAGES } from "./messages/ai-tasks.messages"
 export { AiTasksService } from "./ai-tasks.service"
 export { parseAiTasksConfig } from "./ai-tasks.config"

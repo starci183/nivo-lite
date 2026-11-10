@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 import { PROVIDERS, isProvider } from "@/hooks/connection-providers"
 import { installationPersonName } from "@/modules/installations"
 import { PICTURE_CHOICES, choiceSrcOf, isPictureChoice } from "@/modules/agentAvatar"
+import { useAgentAbilityProposal } from "@/hooks/providerRights"
 import { useAgentCreateForm, type AgentCreateForm } from "./useAgentCreateForm"
 import { useAgentCreatePicture, type AgentCreatePicture } from "./useAgentCreatePicture"
 import { useAgentCreateSubmit } from "./useAgentCreateSubmit"
@@ -53,6 +54,8 @@ export interface AgentCreateView extends Omit<AgentCreateForm, "channels" | "sib
     readonly isChannelsLoading: boolean
     /** The setup starts; empty while the role has no agent to copy. */
     readonly startOptions: ReadonlyArray<StartOptionView>
+    /** The provider cards of the template with the owner edits. */
+    readonly abilities: ReturnType<typeof useAgentAbilityProposal>
     readonly isCreating: boolean
     readonly create: () => void
     readonly close: () => void
@@ -107,7 +110,8 @@ export const useAgentCreate = (): AgentCreateView => {
     const t = useTranslations("agentCreate")
     const form = useAgentCreateForm()
     const picture = useAgentCreatePicture()
-    const submit = useAgentCreateSubmit(form, picture, t)
+    const abilities = useAgentAbilityProposal(form.role)
+    const submit = useAgentCreateSubmit(form, picture, t, abilities.input)
     const role = form.role ?? FALLBACK_ROLE
     const choice = picture.choice
     return {
@@ -128,6 +132,7 @@ export const useAgentCreate = (): AgentCreateView => {
         channelOptions: channelOptionsOf(form),
         isChannelsLoading: form.channels.isLoading,
         startOptions: startOptionsOf(form),
+        abilities,
         isCreating: submit.isCreating,
         create: () => void submit.create(),
         close: submit.close,

@@ -1,7 +1,7 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { ZodType } from "zod"
 import { guidedModelRequest, runNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeHostPorts, NodeModelRequest, NodeRun } from "@nivo-lite/agent-sdk/node"
+import type { EffectPayload, NodeHostPorts, NodeModelRequest, NodeRun, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { eachInOrder, isRecord } from "@modules/platform/primitives"
@@ -115,6 +115,29 @@ export class GraphNodeHostService {
         return subject === null ? this.firstSubject(turn, rest) : { ...turn, subject }
     }
 
+    /**
+     * The refusal an effect answers instead of running, when it is a right on a connected provider the run's agent does not hold; null
+     * when it may run. A right that asks a person first stops the node like a tool that waits for approval: the ask is kept, so no
+     * later write or effect runs, and the step waits for the person. Nothing of a refused or waiting effect reaches the ledger.
+     */
+    private async effectRefusal(
+        turn: NodeTurn,
+        effect: string,
+        payload: EffectPayload,
+        approval: NodeToolApproval | null,
+        asks: Array<GraphNodesError>,
+    ): Promise<SubjectRef | null> {
+        if (this.door?.effectRight === undefined) return null
+        const call = { token: this.tokens?.mint(turn) ?? "", effect, payload, approval }
+        try {
+            return (await this.door.effectRight(call)) ?? null
+        } catch (cause) {
+            if (cause instanceof GraphNodesError && cause.code === GraphNodesErrorCode.ToolApprovalRequired)
+                asks.push(cause)
+            throw cause
+        }
+    }
+
     private portsOf(turn: NodeTurn, approval: NodeToolApproval | null, asks: Array<GraphNodesError>): NodeHostPorts {
         const scope: NodeModelScope = { workspaceId: turn.workspaceId, locale: turn.locale }
         return {
@@ -126,8 +149,10 @@ export class GraphNodeHostService {
                     throw new GraphNodesError({ code: GraphNodesErrorCode.PortMissing, params: { kind } })
                 return port.write(turn, record)
             },
-            execute: (effect, payload, call) => {
+            execute: async (effect, payload, call) => {
                 if (asks[0] !== undefined) throw asks[0]
+                const refused = await this.effectRefusal(turn, effect.id, payload, approval, asks)
+                if (refused !== null) return refused
                 const executor = this.registry.executorOf(effect.id)
                 return this.effects.once(turn.workspaceId, effect.id, call, () => executor.execute(turn, payload, call))
             },

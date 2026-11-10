@@ -36,6 +36,10 @@ export enum AgentGraphsLogEvent {
     StepRecovered = "agent_graphs.step_recovered",
     /** A step nothing could complete was reported to the team in the team chat, and the run stops there for the founder. */
     StuckReported = "agent_graphs.stuck_reported",
+    /** The customer of a stopped run's conversation could not be read; the card names none. */
+    StuckLeadUnread = "agent_graphs.stuck_lead_unread",
+    /** The cards of a run that ended well could not be marked resolved; they keep their last words. */
+    StuckResolveFailed = "agent_graphs.stuck_resolve_failed",
     /** The name of a stopped run's workflow could not be read; the card names it from its template or key. */
     WorkflowNameFailed = "agent_graphs.workflow_name_failed",
     /** The line the AI core chose for the customer of a stuck run went out. */

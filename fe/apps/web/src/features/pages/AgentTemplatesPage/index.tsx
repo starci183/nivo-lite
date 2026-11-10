@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { agentPageTabsOf, agentsSubpageCrumbsOf } from "@/modules/page-header"
-import { APP_ROUTES, workspaceHref } from "@/modules/routes"
+import { AGENTS_ROUTE, APP_ROUTES, workspaceHref } from "@/modules/routes"
 import { AgentTemplatesPageBase, type AgentTemplatesView } from "./component"
 
 /** What the route hands the page: the view, and for the packaging view the installation. */
@@ -63,6 +63,7 @@ export const AgentTemplatesPage = async (props: AgentTemplatesPageProps): Promis
                           home: ts("crumbHome"),
                           agents: t("crumbAgents"),
                           current: title,
+                          parent: { label: tt("title"), href: workspaceHref(props.workspaceId, `${AGENTS_ROUTE}/templates`) },
                       }),
                 title,
                 description: tabbed ? tc("description") : t("description"),
