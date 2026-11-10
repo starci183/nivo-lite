@@ -33,8 +33,10 @@ export {
     reportDailyCloseEffect,
     refusalOf,
     TOOL,
+    TOOL_LABELS,
+    toolLabelOf,
 } from "./vocabulary"
-export type { CardOrder, EffectFact, EffectFacts, TeamAudience, TeamCard, ToolId } from "./vocabulary"
+export type { CardOrder, EffectFact, EffectFacts, TeamAudience, TeamCard, ToolId, ToolLabel, ToolLabelKind } from "./vocabulary"
 export type {
     AgentTagPayload,
     CareSchedulePayload,
@@ -113,6 +115,26 @@ export {
     schedulable,
 } from "./nodes/sales/care.policy"
 export type { CareKind, CareTask } from "./nodes/sales/care.policy"
+
+export {
+    AUTO_MODEL,
+    AUTO_MODEL_OF_WEIGHT,
+    DEEPSEEK_MODEL,
+    DEFAULT_MODEL,
+    ENGINE_CORE_MODEL,
+    MODEL_ENTRIES,
+    MODEL_IDS,
+    NODE_MODELS,
+    SONNET_MODEL,
+    STRONGER_MODEL,
+    graphModelProblems,
+    isModelChoice,
+    isModelId,
+    modelEntryOf,
+    nodeModelOf,
+    withDeclaredModels,
+} from "./models"
+export type { GraphModelProblem, ModelChoice, ModelEntry, ModelId, ModelProvider, NodeModel, StepWeight } from "./models"
 
 export { messageOrderShape } from "./entities/chat/message-media.shape"
 export { orderAddressOf, orderCardOf, orderCardWithPhotos } from "./nodes/sales/order-card.policy"

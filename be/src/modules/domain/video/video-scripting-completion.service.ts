@@ -90,7 +90,7 @@ export class VideoScriptingCompletionService {
                 {
                     workspaceId,
                     kind: "video.script_generated",
-                    actor: "OpenClaw",
+                    actor: "NIVO",
                     summary: this.catalog.get(
                         "video.script.generated",
                         { title: parsed.title || project.title, scenes: scenes.length },

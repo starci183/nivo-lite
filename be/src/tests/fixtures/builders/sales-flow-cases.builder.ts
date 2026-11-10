@@ -221,7 +221,7 @@ const careStore = (status: string): Record<string, Array<NodeRow>> => ({
             shippedAt: null,
         },
     ],
-    "sales-lead": [{ id: "lead-1", contactName: "An", consultFacts: { address: POT_ADDRESS } }],
+    "sales-lead": [{ id: "lead-1", contactName: "An" }],
     conversation: [{ id: "conv-1", leadId: "lead-1", lastAt: "2026-11-04T09:00:00.000Z" }],
 })
 
@@ -329,7 +329,7 @@ export const SALES_FLOW_CASES: ReadonlyArray<SalesFlowCase> = [
                         args: {
                             leadId: "lead-1",
                             consultStage: "close",
-                            consultFacts: { address: POT_ADDRESS, picks: [{ catalogueItemId: "c1", quantity: 2 }] },
+                            facts: { address: POT_ADDRESS },
                         },
                     },
                 },

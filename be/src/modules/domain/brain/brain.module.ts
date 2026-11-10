@@ -9,7 +9,10 @@ import { BrainTodoService } from "./brain-todo.service"
 import { BrainService } from "./brain.service"
 import { BRAIN_CORRECTIONS } from "./brain.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./brain.module-definition"
+import { BrainGraphService } from "./brain-graph.service"
 import { DocumentFactsService } from "./document-facts.service"
+import { DocumentRelationsService } from "./document-relations.service"
+import { FactEmbeddingsService } from "./fact-embeddings.service"
 import { DocumentReviewService } from "./document-review.service"
 import { IndexedSourcesService } from "./indexed-sources.service"
 import { ModelJsonService } from "./model-json.service"
@@ -33,6 +36,9 @@ export class BrainModule extends ConfigurableModuleClass {
                 BrainLearningService,
                 BrainCommandRunnerService,
                 DocumentFactsService,
+                DocumentRelationsService,
+                FactEmbeddingsService,
+                BrainGraphService,
                 DocumentReviewService,
                 IndexedSourcesService,
                 ModelJsonService,
@@ -46,6 +52,8 @@ export class BrainModule extends ConfigurableModuleClass {
                 BrainBulkService,
                 BrainLearningService,
                 DocumentFactsService,
+                BrainGraphService,
+                FactEmbeddingsService,
             ],
         }
     }

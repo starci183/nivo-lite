@@ -1,5 +1,4 @@
 import { Field, ID, Int, ObjectType } from "@nestjs/graphql"
-import { AdminAgentSyncType } from "./admin-agent-sync.type"
 
 @ObjectType()
 /** One agent installation of the workspace. */
@@ -24,10 +23,6 @@ export class AdminModuleType {
     @Field()
     live!: boolean
 
-    /** The processor. */
-    @Field()
-    processor!: string
-
     /** The context version. */
     @Field(() => Int, { nullable: true })
     contextVersion!: number | null
@@ -35,8 +30,4 @@ export class AdminModuleType {
     /** The context applied at. */
     @Field(() => String, { nullable: true })
     contextAppliedAt!: string | null
-
-    /** The sync. */
-    @Field(() => AdminAgentSyncType, { nullable: true })
-    sync!: AdminAgentSyncType | null
 }

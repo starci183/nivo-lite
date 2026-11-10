@@ -60,8 +60,6 @@ export const AgentGeneralForm = (props: AgentGeneralFormProps) => {
                     ? {
                           title: t("sublabelReply"),
                           description: t("replyNote"),
-                          timeoutLabel: tm("timeoutLabel"),
-                          timeout: draft.timeout,
                           holdingLabel: tm("holdingLabel"),
                           holdingPlaceholder: tm("holdingDefault"),
                           holding: draft.holding,
@@ -82,7 +80,6 @@ export const AgentGeneralForm = (props: AgentGeneralFormProps) => {
                 removeRange: editor.remove,
                 editRange: editor.edit,
                 splitRange: editor.split,
-                timeout: draft.setTimeout,
                 holding: draft.setHolding,
                 cancel: draft.cancel,
                 save: () => void draft.save(),

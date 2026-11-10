@@ -22,7 +22,7 @@ describe("node-prompt policy", () => {
 
     it("sends the instructions as the system message and the input as JSON in the user message", () => {
         expect(policy.nodeMessagesOf(ASK)).toEqual([
-            { role: "system", content: "Rules" },
+            { role: "system", content: "Rules", cacheMark: true },
             { role: "user", content: '{"text":"hi"}' },
         ])
         expect(policy.nodeMessagesOf({ ...ASK, input: undefined })[1]).toEqual({ role: "user", content: "null" })
@@ -38,7 +38,7 @@ describe("node-prompt policy", () => {
     })
 
     it("keeps the instructions alone for a free-text call", () => {
-        expect(policy.nodeMessagesOf(ASK)[0]).toEqual({ role: "system", content: "Rules" })
+        expect(policy.nodeMessagesOf(ASK)[0]).toEqual({ role: "system", content: "Rules", cacheMark: true })
     })
 
     it("attaches the pictures of the call to the user message, and leaves the key out when there are none", () => {
@@ -64,7 +64,7 @@ describe("node-prompt policy", () => {
         ])
         // What is sent is the stable part, then the volatile one.
         expect(policy.nodeMessagesOf({ ...ASK, volatile: "V" })).toEqual([
-            { role: "system", content: "Rules" },
+            { role: "system", content: "Rules", cacheMark: true },
             { role: "system", content: "V" },
             { role: "user", content: '{"text":"hi"}' },
         ])

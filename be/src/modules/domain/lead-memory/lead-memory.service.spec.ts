@@ -109,6 +109,22 @@ describe("LeadMemoryService", () => {
         })
     })
 
+    it("remembers what lead.update says the consult learned over the held facts entry, care facts included, and nothing for none", async () => {
+        const held = rowOf(factsValuesOf(LEAD, {}, { phone: "0901" }, NOW), "f1")
+        const { store, mutations } = await build([held])
+        await store.remember("ws", LEAD, { careOptOut: true, occasions: [{ label: "sinh nhat", date: "11-14" }], budget: 5 })
+        await store.remember("ws", LEAD, {})
+        const ops = jest.mocked(mutations.mutate).mock.calls.map(([, mutation]) => mutation)
+        expect(ops).toHaveLength(1)
+        expect(ops[0]).toMatchObject({
+            op: "update",
+            key: "f1",
+            values: {
+                output: { value: { phone: "0901", careOptOut: true, occasions: [{ label: "sinh nhat", date: "11-14" }] } },
+            },
+        })
+    })
+
     it("answers the snapshot raw for a step and masked for display, and null for a customer with nothing", async () => {
         const rows = [
             rowOf(stepValuesOf(WRITE, NOW), "s1"),

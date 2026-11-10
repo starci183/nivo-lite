@@ -2,21 +2,15 @@
 
 import { useMemo, useState } from "react"
 import { partiesOf } from "./teamChat.shared"
-import { useTeamChatCards } from "./useTeamChatCards"
-import type { TeamChatCardsView } from "./useTeamChatCards"
+import { useTeamChatCards, type TeamChatCardsView } from "./useTeamChatCards"
 import { createPendingTaps } from "@/modules/teamChat"
-import { useTeamChatComposer } from "./useTeamChatComposer"
-import type { TeamChatComposerView } from "./useTeamChatComposer"
-import { useTeamChatRooms } from "./useTeamChatRooms"
-import type { TeamChatRoomsView, TeamChatTarget } from "./useTeamChatRooms"
-import { useTeamChatPinned } from "./useTeamChatPinned"
-import type { TeamChatPinnedView } from "./useTeamChatPinned"
-import { useTeamChatForward } from "./useTeamChatForward"
-import type { TeamChatForwardState } from "./useTeamChatForward"
-import { useTeamChatReactions } from "./useTeamChatReactions"
-import type { TeamChatReactionsView } from "./useTeamChatReactions"
-import { useTeamChatThread } from "./useTeamChatThread"
-import type { TeamChatThreadView } from "./useTeamChatThread"
+import { useTeamChatComposer, type TeamChatComposerView } from "./useTeamChatComposer"
+import { useTeamChatRooms, type TeamChatRoomsView, type TeamChatTarget } from "./useTeamChatRooms"
+import { useTeamChatPinned, type TeamChatPinnedView } from "./useTeamChatPinned"
+import { useTeamChatForward, type TeamChatForwardState } from "./useTeamChatForward"
+import { useTeamChatReactions, type TeamChatReactionsView } from "./useTeamChatReactions"
+import { useTeamChatStops, type TeamChatStopsView } from "./useTeamChatStops"
+import { useTeamChatThread, type TeamChatThreadView } from "./useTeamChatThread"
 import type { TeamChatMessageRow, TeamChatPanel } from "@/modules/types"
 
 /** The whole state of one open room: the room, its thread and cards, and the composer. */
@@ -24,6 +18,8 @@ export interface TeamChatRoomState {
     readonly rooms: TeamChatRoomsView
     readonly thread: TeamChatThreadView
     readonly cards: TeamChatCardsView
+    /** The typed stop cards of runs: who may approve, the card in flight, and their actions. */
+    readonly stops: TeamChatStopsView
     readonly composer: TeamChatComposerView
     /** The reactions: one tap of an emoji on a message. */
     readonly reactions: TeamChatReactionsView
@@ -51,7 +47,7 @@ export interface TeamChatRoomState {
 export const useTeamChatRoomState = (target: TeamChatTarget): TeamChatRoomState => {
     const rooms = useTeamChatRooms(target)
     const [panel, setPanel] = useState<TeamChatPanel | null>(null)
-    const [pending] = useState(createPendingTaps)
+    const pending = useMemo(() => createPendingTaps(), [])
     const [replyId, setReplyId] = useState<string | null>(null)
     const thread = useTeamChatThread({
         roomId: rooms.roomId,
@@ -79,6 +75,10 @@ export const useTeamChatRoomState = (target: TeamChatTarget): TeamChatRoomState 
         thread.refresh()
         pinned.refresh()
     })
+    const stops = useTeamChatStops(() => {
+        thread.refresh()
+        pinned.refresh()
+    })
     const parties = useMemo(() => partiesOf(rooms.room, rooms.viewerId), [rooms.room, rooms.viewerId])
     const composer = useTeamChatComposer({
         roomId: rooms.roomId,
@@ -94,6 +94,7 @@ export const useTeamChatRoomState = (target: TeamChatTarget): TeamChatRoomState 
         rooms,
         thread,
         cards,
+        stops,
         composer,
         reactions,
         replying,

@@ -10,9 +10,6 @@ const HANDLE_LIMIT = 1000
 /** The limits of the display name of an agent. */
 export const AGENT_NAME_LIMITS = { min: 2, max: 40 } as const
 
-/** The shortest and the longest reply timeout a setting may hold, seconds. */
-const TIMEOUT_RANGE = { min: 5, max: 120 } as const
-
 /** The longest holding message, characters. */
 const HOLDING_MAX = 400
 
@@ -63,7 +60,7 @@ export type SettingValue = string | number | null
 /** One setting of an installation a change writes: the name and the value (null removes it). */
 export interface SettingChange {
     /** The setting. */
-    readonly name: "openclawTimeoutSec" | "holdingMessage" | "workingHours"
+    readonly name: "holdingMessage" | "workingHours"
     /** The value; null removes the setting. */
     readonly value: SettingValue
 }
@@ -77,10 +74,6 @@ const workingHoursSettingOf = (value: SettingValue): SettingChange | null => {
 
 /** The setting a name and a raw value stand for, or null when the value is outside its limits. */
 export const settingOf = (name: string, value: SettingValue): SettingChange | null => {
-    if (name === "openclawTimeoutSec") {
-        const seconds = Math.round(Number(value))
-        return seconds >= TIMEOUT_RANGE.min && seconds <= TIMEOUT_RANGE.max ? { name, value: seconds } : null
-    }
     if (name === "workingHours") return workingHoursSettingOf(value)
     if (name !== "holdingMessage" || typeof value !== "string") return null
     const text = value.trim().slice(0, HOLDING_MAX)

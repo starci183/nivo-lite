@@ -1,6 +1,17 @@
 import { Test } from "@nestjs/testing"
 import type { GatewayConnectorManifest, GatewayToolSpec, ToolGrant } from "./mcp-gateway.contracts"
-import { addressOf, fullNameOf, grantFor, specOf, searchTools } from "./tool-name.policy"
+import type { NativeAdapter } from "./mcp-gateway.contracts"
+import {
+    addressOf,
+    duplicateNamesOf,
+    fullNameOf,
+    grantFor,
+    namedToolIn,
+    specOf,
+    searchTools,
+    toolNameOf,
+    withUniqueNames,
+} from "./tool-name.policy"
 
 const toolSpec = (name: string, description: string, scope: GatewayToolSpec["scope"] = "read"): GatewayToolSpec => ({
     name,
@@ -96,5 +107,60 @@ describe("tool-name.policy", () => {
         expect(subject.searchTools([MANIFEST], grants, "", 50)).toHaveLength(10)
         expect(subject.searchTools([MANIFEST], grants, "zzz", 0)).toEqual([])
         expect(subject.searchTools([MANIFEST], [], "", 5)).toEqual([])
+    })
+})
+
+describe("tool-name.policy: full names through an index, not by the first dot", () => {
+    const nivoContext: GatewayConnectorManifest = {
+        key: "nivo-context",
+        namespace: "nivo",
+        name: "NIVO",
+        kind: "native",
+        contractVersion: "nivo-native@1",
+        tools: [toolSpec("lead.order.list", "Orders."), toolSpec("conversation.message.list", "Thread.")],
+    }
+    const nivoBrain: GatewayConnectorManifest = { ...nivoContext, key: "nivo-brain", tools: [toolSpec("brain.change.propose", "Propose.", "write")] }
+    const ledger: GatewayConnectorManifest = {
+        key: "ledger",
+        name: "Ledger",
+        kind: "native",
+        contractVersion: "ledger@1",
+        tools: [toolSpec("append", "Append.", "write")],
+    }
+    const entries = [nivoContext, nivoBrain, ledger].map((manifest) => ({ manifest }))
+
+    it("names a tool by its connector's public prefix, the key when it has none", () => {
+        expect(toolNameOf(nivoContext, "lead.order.list")).toBe("nivo.lead.order.list")
+        expect(toolNameOf(ledger, "append")).toBe("ledger.append")
+    })
+
+    it("resolves two connectors that share the `nivo` prefix, each to its own tool, and an old id beside them", () => {
+        expect(namedToolIn(entries, "nivo.lead.order.list")?.connector.manifest.key).toBe("nivo-context")
+        expect(namedToolIn(entries, "nivo.brain.change.propose")?.connector.manifest.key).toBe("nivo-brain")
+        expect(namedToolIn(entries, "ledger.append")?.spec.name).toBe("append")
+        expect(namedToolIn(entries, "nivo.ledger.append")).toBeNull()
+        expect(namedToolIn(entries, "nivo-context.lead.order.list")).toBeNull()
+    })
+
+    it("refuses the start when two adapters hold one full name", () => {
+        const adapterOf = (manifest: GatewayConnectorManifest): NativeAdapter =>
+            ({ manifest, invoke: () => Promise.resolve({}) }) as unknown as NativeAdapter
+        const twin: GatewayConnectorManifest = { ...nivoBrain, key: "nivo-twin", tools: [toolSpec("lead.order.list", "Again.")] }
+
+        expect(duplicateNamesOf([nivoContext, nivoBrain, ledger])).toEqual([])
+        expect(duplicateNamesOf([nivoContext, twin])).toEqual(["nivo.lead.order.list"])
+        expect(() => withUniqueNames([adapterOf(nivoContext), adapterOf(twin)])).toThrow()
+        expect(withUniqueNames([adapterOf(nivoContext), adapterOf(ledger)])).toHaveLength(2)
+    })
+
+    it("matches a wildcard grant by the longest prefix, and never by a bare `nivo.*`", () => {
+        const g = (tool: string, mode: ToolGrant["mode"]): ToolGrant => ({ tool, mode, limitVnd: null, constraints: [] })
+        const grants = [g("nivo.*", "auto"), g("nivo.lead.*", "never"), g("nivo.lead.order.*", "ask")]
+
+        expect(grantFor(grants, "nivo.lead.order.list")?.mode).toBe("ask")
+        expect(grantFor(grants, "nivo.lead.profile.get")?.mode).toBe("never")
+        expect(grantFor(grants, "nivo.ledger.entry.append")).toBeNull()
+        expect(grantFor([...grants, g("nivo.lead.order.list", "auto")], "nivo.lead.order.list")?.mode).toBe("auto")
+        expect(grantFor([g("ledger.*", "auto")], "ledger.append")?.mode).toBe("auto")
     })
 })

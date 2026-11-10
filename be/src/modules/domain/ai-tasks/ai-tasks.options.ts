@@ -1,5 +1,6 @@
 import type { InjectionToken } from "@nestjs/common"
 import type { AiOptions, AiRouting } from "@modules/integrations/ai"
+import type { ConfiguredProviders } from "./ai-tasks.contracts"
 
 /** The reasoning a node call asks for: none, an effort, or the model's own default. */
 export type NodeReasoning = "off" | "minimal" | "low" | "medium" | "high" | "default"
@@ -33,6 +34,11 @@ export interface AiTasksOptions {
      * is sent and the endpoint routes the call as it likes. A task never carries it.
      */
     readonly nodeRouting?: AiRouting
+    /**
+     * Which providers of the pool hold a key, for the model of a graph node's call. Absent: the upstream alone (no Anthropic key),
+     * so the default model is the cheap one and an explicit Sonnet fails loudly.
+     */
+    readonly providers?: ConfiguredProviders
     /** The AI endpoint the app root registers the LangChain client with: the gateway of this deployment, or a provider. */
     readonly endpoint: AiOptions
 }

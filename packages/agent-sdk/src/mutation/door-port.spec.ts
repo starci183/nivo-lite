@@ -42,4 +42,12 @@ describe("door tool names", () => {
         expect(isDomainTool("chat.zalo.send")).toBe(false)
         expect(isDomainTool("send")).toBe(false)
     })
+
+    it("takes NIVO's renamed tools of three and four parts as domain tools, never five", () => {
+        for (const tool of ["nivo.chat.send", "nivo.ledger.entry.append", "nivo.team-chat.post-report", "nivo.ledger.status.get"]) {
+            expect([tool, isDoorTool(tool), isDomainTool(tool)]).toEqual([tool, true, true])
+        }
+        expect(isDoorTool("nivo.ledger.entry.append.now")).toBe(false)
+        expect(isDoorTool("chat.zalo.send.now")).toBe(false)
+    })
 })

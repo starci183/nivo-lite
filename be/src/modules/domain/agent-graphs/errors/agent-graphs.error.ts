@@ -15,6 +15,8 @@ export enum AgentGraphsErrorCode {
     PublishRefused = "AGENT_GRAPHS_PUBLISH_REFUSED",
     /** A new version whose params or refs are broken (`graphRefProblems`): an unknown field, a type mismatch, a ref that may not have run. */
     RefsRefused = "AGENT_GRAPHS_REFS_REFUSED",
+    /** A draft whose flow names a model the vocabulary does not know, or a model on a node that calls no AI. */
+    ModelRefused = "AGENT_GRAPHS_MODEL_REFUSED",
     /** A new version whose triggers, outcomes or end hand-offs break a workflow contract, or that would break a workflow that calls it. */
     ContractRefused = "AGENT_GRAPHS_CONTRACT_REFUSED",
     /** The change gives the agent more reach, and only the owner may publish that. */
@@ -47,6 +49,7 @@ export const AGENT_GRAPHS_ERROR_KINDS: Record<AgentGraphsErrorCode, ErrorKind> =
     [AgentGraphsErrorCode.DraftConflict]: "conflict",
     [AgentGraphsErrorCode.PublishRefused]: "invalid",
     [AgentGraphsErrorCode.RefsRefused]: "invalid",
+    [AgentGraphsErrorCode.ModelRefused]: "invalid",
     [AgentGraphsErrorCode.ContractRefused]: "invalid",
     [AgentGraphsErrorCode.WidensNeedsOwner]: "forbidden",
     [AgentGraphsErrorCode.DocumentInvalid]: "internal",

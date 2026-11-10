@@ -2,7 +2,7 @@ import type { DoorCallResult } from "@nivo-lite/agent-sdk/mutation"
 
 /**
  * The door tools the internal "nivo" agent holds, as data: exactly the tools the declared jobs of the flow F modules call (the `tools`
- * of their module declarations, the agent turn and history reads of the turn sync, and `chat.profile` of the Zalo profile round). Every other tool is default deny.
+ * of their module declarations and `chat.profile` of the Zalo profile round). Every other tool is default deny.
  */
 export const DOOR_GRANTS: ReadonlyArray<string> = [
     "chat.send",
@@ -11,8 +11,6 @@ export const DOOR_GRANTS: ReadonlyArray<string> = [
     "chat.profile",
     "ledger.append",
     "ledger.status",
-    "ai.agent.turn",
-    "ai.agent.history",
 ]
 
 /** The module key of the internal agent: the workspace row seeds one `agents` row of this module (its grants are the gateway names of `DOOR_GRANTS`). */

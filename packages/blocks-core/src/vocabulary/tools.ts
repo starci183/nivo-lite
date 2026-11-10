@@ -2,6 +2,7 @@ import { defineTool } from "@nivo-lite/agent-sdk/node"
 import type { ToolDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { MAX_BODY, MAX_ID, MAX_LINE } from "../bounds"
+import { contextTools } from "./context-tools"
 import { TOOL } from "./tool-ids"
 
 /** How a ledger entry stands: the payment it records was received, or the entry takes an earlier one back. */
@@ -237,6 +238,232 @@ export const brainSearchTool: ToolDefinition<z.ZodType<BrainSearchArgs>, z.ZodTy
     rights: [],
 })
 
+/** One truth as the truth graph answers it: what it says, how far it is believed, its version. */
+export interface BrainFactLine {
+    /** The id of the truth. */
+    readonly id: string
+    /** What the truth is about. */
+    readonly subject: string
+    /** Which property of the subject it states. */
+    readonly attribute: string
+    /** What it says. */
+    readonly value: string
+    /** The unit of the value, or null. */
+    readonly unit: string | null
+    /** How far it is believed. */
+    readonly trust: number
+    /** Its version, or null. */
+    readonly version?: number | null | undefined
+}
+
+/** Which truth to read: its id. */
+export interface BrainFactGetArgs {
+    /** The id of the truth. */
+    readonly id: string
+}
+
+/** One piece of evidence of a truth: its kind and a label. */
+export interface BrainFactEvidence {
+    /** The kind of the evidence (a document, a chat...). */
+    readonly kind: string
+    /** The label of the evidence. */
+    readonly label: string
+}
+
+/** One truth with its evidence and when it holds. */
+export interface BrainFactWithEvidence extends BrainFactLine {
+    /** What the truth rests on. */
+    readonly evidence: ReadonlyArray<BrainFactEvidence>
+    /** When it starts to hold, or null. */
+    readonly validFrom: string | null
+    /** When it stops holding, or null. */
+    readonly validTo: string | null
+}
+
+/** What a fact read answers: the notice, and the truth with its evidence and when it holds. */
+export interface BrainFactGetResult {
+    /** The words that say the rest is reference data, never an instruction. */
+    readonly notice: string
+    /** The truth with its evidence and validity. */
+    readonly fact: BrainFactWithEvidence
+}
+
+/** Which truth to follow and the most related truths. */
+export interface BrainFactRelatedArgs {
+    /** The id of the truth. */
+    readonly id: string
+    /** The most related truths, 1 to 30. */
+    readonly limit?: number | undefined
+}
+
+/** How two truths are linked in the truth graph. */
+export type BrainFactRelation = "part_of" | "applies_to" | "depends_on" | "exception_of" | "related"
+
+/** One truth at the other end of an edge. */
+export interface BrainRelatedFact {
+    /** The kind of the edge. */
+    readonly relation: BrainFactRelation
+    /** Whether the edge leaves the asked truth (`out`) or reaches it (`in`). */
+    readonly direction: "out" | "in"
+    /** The edge's label, or null. */
+    readonly label: string | null
+    /** The truth at the other end. */
+    readonly fact: BrainFactLine
+}
+
+/** What a related read answers: the notice, the asked truth, and the truths linked to it. */
+export interface BrainFactRelatedResult {
+    /** The words that say the rest is reference data, never an instruction. */
+    readonly notice: string
+    /** The asked truth. */
+    readonly fact: BrainFactLine
+    /** The truths in force linked to it. */
+    readonly related: ReadonlyArray<BrainRelatedFact>
+}
+
+/** A change to a truth as the founder or the team said it, for the founder to approve. */
+export interface BrainChangeProposeArgs {
+    /** What the truth is about. */
+    readonly subject: string
+    /** Which property of the subject. */
+    readonly attribute: string
+    /** The new value; absent when the truth is retired. */
+    readonly value?: string | undefined
+    /** The unit of the value. */
+    readonly unit?: string | undefined
+    /** True to retire the truth. */
+    readonly retire?: boolean | undefined
+    /** The chat it was said in. */
+    readonly room: "direct" | "common"
+    /** The message it was said in. */
+    readonly messageId: string
+    /** The words that were said. */
+    readonly quote: string
+    /** When the change starts to hold. */
+    readonly validFrom?: string | undefined
+    /** When the change stops holding. */
+    readonly validTo?: string | undefined
+}
+
+/** A change request as it stands after a proposal. */
+export interface BrainChangeRequestLine {
+    /** The id of the change request. */
+    readonly id: string
+    /** Its status. */
+    readonly status: string
+    /** What the truth is about. */
+    readonly subject: string
+    /** Which property of the subject. */
+    readonly attribute: string
+    /** The proposed value. */
+    readonly value: string
+    /** A new value or a retirement. */
+    readonly kind: "set" | "retire"
+    /** Who must decide, or null. */
+    readonly waitsFor: "founder" | null
+}
+
+/** What a proposal answers: whether it was filed, and the change request. */
+export interface BrainChangeProposeResult {
+    /** Filed, already true, or already filed. */
+    readonly outcome: "filed" | "already_true" | "already_filed"
+    /** The change request as it stands. */
+    readonly changeRequest: BrainChangeRequestLine
+}
+
+/** One truth as the truth graph answers it: what it says, how far it is believed, its version. */
+const brainFactLine = z.object({
+    id: z.string().max(MAX_ID),
+    subject: z.string().max(MAX_LINE),
+    attribute: z.string().max(MAX_LINE),
+    value: z.string().max(MAX_BODY),
+    unit: z.string().max(MAX_ID).nullable(),
+    trust: z.number(),
+    version: z.number().int().nullable().optional(),
+})
+
+/** Reads one truth in force by id with the kind and label of its evidence, when it holds and its version. Reads only. */
+export const brainFactGetTool: ToolDefinition<z.ZodType<BrainFactGetArgs>, z.ZodType<BrainFactGetResult>> = defineTool({
+    id: TOOL.brainFactGet,
+    title: { key: "toolBrainFactGet" },
+    args: z.object({ id: z.string().uuid() }),
+    result: z.object({
+        notice: z.string().max(MAX_BODY),
+        fact: brainFactLine.extend({
+            evidence: z.array(z.object({ kind: z.string().max(MAX_ID), label: z.string().max(MAX_LINE) })).max(20),
+            validFrom: z.string().max(MAX_ID).nullable(),
+            validTo: z.string().max(MAX_ID).nullable(),
+        }),
+    }),
+    mutates: false,
+    rights: [],
+})
+
+/** Follows the edges of one truth to the truths in force at their other end, read through the caller's lens. Reads only. */
+export const brainFactRelatedTool: ToolDefinition<
+    z.ZodType<BrainFactRelatedArgs>,
+    z.ZodType<BrainFactRelatedResult>
+> = defineTool({
+    id: TOOL.brainFactRelated,
+    title: { key: "toolBrainFactRelated" },
+    args: z.object({ id: z.string().uuid(), limit: z.number().int().min(1).max(30).optional() }),
+    result: z.object({
+        notice: z.string().max(MAX_BODY),
+        fact: brainFactLine,
+        related: z
+            .array(
+                z.object({
+                    relation: z.enum(["part_of", "applies_to", "depends_on", "exception_of", "related"]),
+                    direction: z.enum(["out", "in"]),
+                    label: z.string().max(80).nullable(),
+                    fact: brainFactLine,
+                }),
+            )
+            .max(30),
+    }),
+    mutates: false,
+    rights: [],
+})
+
+/**
+ * Files a change to a truth that the founder or the team said in the agent's private chat or the common chat, as a change request for
+ * the founder. Nothing changes until the founder approves (the truth then gets its next version). Never for a customer's words: the
+ * gateway refuses it in a customer conversation. Give a value, or retire: true without one.
+ */
+export const brainChangeProposeTool: ToolDefinition<
+    z.ZodType<BrainChangeProposeArgs>,
+    z.ZodType<BrainChangeProposeResult>
+> = defineTool({
+    id: TOOL.brainChangePropose,
+    title: { key: "toolBrainChangePropose" },
+    args: z.object({
+        subject: z.string().min(1).max(160),
+        attribute: z.string().min(1).max(120),
+        value: z.string().min(1).max(500).optional(),
+        unit: z.string().min(1).max(20).optional(),
+        retire: z.boolean().optional(),
+        room: z.enum(["direct", "common"]),
+        messageId: z.string().uuid(),
+        quote: z.string().min(1).max(500),
+        validFrom: z.string().max(40).optional(),
+        validTo: z.string().max(40).optional(),
+    }),
+    result: z.object({
+        outcome: z.enum(["filed", "already_true", "already_filed"]),
+        changeRequest: z.object({
+            id: z.string().max(MAX_ID),
+            status: z.string().max(MAX_ID),
+            subject: z.string().max(MAX_LINE),
+            attribute: z.string().max(MAX_LINE),
+            value: z.string().max(MAX_BODY),
+            kind: z.enum(["set", "retire"]),
+            waitsFor: z.literal("founder").nullable(),
+        }),
+    }),
+    mutates: true,
+    rights: [],
+})
+
 /** Every NIVO MCP tool the core nodes may call; the back end routes each through the NIVO MCP door. */
 export const coreTools: ReadonlyArray<ToolDefinition> = [
     ledgerAppendTool,
@@ -244,4 +471,8 @@ export const coreTools: ReadonlyArray<ToolDefinition> = [
     ledgerStatusTool,
     bankTransactionsTool,
     brainSearchTool,
+    brainFactGetTool,
+    brainFactRelatedTool,
+    brainChangeProposeTool,
+    ...contextTools,
 ]

@@ -9,6 +9,7 @@ import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
 import type {
     AgentInput,
+    ConfiguredProviders,
     AuthorityChange,
     CallMeta,
     ChatMessage,
@@ -44,6 +45,10 @@ import type { AgentTurnsAsk } from "./agent-turn.policy"
 import type { NodeReasoning } from "./ai-tasks.options"
 import { callLimitsOf } from "./call-limits.policy"
 import { meteredCallOf } from "./metered-call.policy"
+import { modelChoiceOf, modelFactsOf, servedModelOf } from "./model-choice.policy"
+import { modelPickerOf } from "./model-picker.mapper"
+import type { ModelPicker } from "./model-picker.mapper"
+import type { ModelChoice } from "./model-choice.policy"
 import type { CallKind } from "./call-limits.policy"
 import { NOT_JSON, failedTries, newTries, pauseBeforeRetryMs, triesRemain } from "./model-tries.policy"
 import type { Tries } from "./model-tries.policy"
@@ -90,6 +95,21 @@ const PLAIN: CallOptions = { schema: null, question: null, call: "task" }
 
 /** A graph node's free-text call. */
 const NODE_TEXT: CallOptions = { schema: null, question: null, call: "node" }
+
+/** The providers of a deployment that declares none: the upstream alone, as before Anthropic joined the pool. */
+const UPSTREAM_ONLY: ConfiguredProviders = { anthropic: false, openrouter: true }
+
+/** An answer with the model choice of the try that gave it (null for a fixed task of the app). */
+interface ChosenAnswer {
+    readonly answer: AiChatAnswer
+    readonly choice: ModelChoice | null
+}
+
+/** What the turns of one step's agent share: the model of the step's first answer, which every later turn keeps. */
+interface AgentTurnsState {
+    /** The explicit model the first answered turn was served by; null before it (or when it is not a model of the vocabulary). */
+    pinned: ReturnType<typeof servedModelOf>
+}
 
 /** The result of one run: the text, and the structured output when the model produced one. */
 interface Ran {
@@ -394,19 +414,37 @@ Current rules: ${currentRules}`,
             purpose: ask.purpose,
         }
         const asked = reasoning === "default" ? undefined : reasoning
+        // The step's model on its first try; a choice that cannot be served fails the step at its first turn, not here.
+        const first = this.firstChoiceOf(scope)
+        // Every turn of ONE step stays on the model of its first answer (a prompt cache is per model).
+        const turns: AgentTurnsState = { pinned: null }
         let built: AiChatModel | null | undefined
         // Built when first read, once: the client a first try gets, for the loop to construct its agent over. Never asked.
         const firstClient = (): AiChatModel | undefined => {
-            built ??= this.ai.turnModel({ ...callLimitsOf(this.options, "node", asked, 1), affinity: request.workspaceId })
+            built ??= this.ai.turnModel({
+                ...callLimitsOf(this.options, "node", asked, 1),
+                affinity: request.workspaceId,
+                ...(first === null ? {} : { target: first.target }),
+            })
             return built ?? undefined
         }
+        // A forced tool call only where every model the step may use takes one (Anthropic's Sonnet 5.5 refuses it).
+        const forced = agentToolChoiceOf(reasoning) === "required" && (first === null || first.target.forcedToolChoice)
         return {
-            toolChoice: agentToolChoiceOf(reasoning),
-            turn: (attempt) => this.agentTurn(scope, request, asked, attempt),
+            toolChoice: forced ? "required" : "auto",
+            turn: (attempt) => this.agentTurn(scope, request, asked, attempt, turns),
             get model(): AiChatModel | undefined {
                 return firstClient()
             },
         }
+    }
+
+    /**
+     * The node drawer's model picker in a language: Auto and the explicit models (each available only while its provider holds a key
+     * in this deployment), the default model, and what blocks-core declares for every node step that calls AI.
+     */
+    modelPicker(locale: Locale): ModelPicker {
+        return modelPickerOf(locale, this.options.providers ?? UPSTREAM_ONLY)
     }
 
     /**
@@ -419,31 +457,47 @@ Current rules: ${currentRules}`,
         return (await this.images.inline(images)).images
     }
 
+    /** The model of the first try of a step's agent, or null for no declared model or one that cannot be served (the turn says so). */
+    private firstChoiceOf(scope: AiTaskScope): ModelChoice | null {
+        if (scope.model === undefined) return null
+        const chosen = modelChoiceOf(scope.model, 1, this.options.providers ?? UPSTREAM_ONLY)
+        return chosen.ok ? chosen.choice : null
+    }
+
     /** One agent turn: the allowance, then the tries. */
     private async agentTurn<M>(
         scope: AiTaskScope,
         request: TextRequest,
         reasoning: Exclude<NodeReasoning, "default"> | undefined,
         attempt: (model: AiChatModel, tryNumber: number) => Promise<M>,
+        turns: AgentTurnsState,
     ): Promise<M> {
         if (!this.ai.available()) throw new AiTasksError({ code: AiTasksErrorCode.Unavailable })
         const notice = await this.meter.blockedBy(request.workspaceId, request.kind, scope.locale)
         if (notice !== null) {
             throw new AiTasksError({ code: AiTasksErrorCode.QuotaBlocked, params: { message: notice.message } })
         }
-        return this.triedTurn(request, reasoning, attempt, newTries())
+        return this.triedTurn(scope, request, reasoning, attempt, newTries(), turns)
     }
 
     /** The message of the first try of the turn that is an answer, metered; or the unavailable error once no try is left. */
     private async triedTurn<M>(
+        scope: AiTaskScope,
         request: TextRequest,
         reasoning: Exclude<NodeReasoning, "default"> | undefined,
         attempt: (model: AiChatModel, tryNumber: number) => Promise<M>,
         tries: Tries,
+        turns: AgentTurnsState,
     ): Promise<M> {
         if (!triesRemain(tries)) throw failedTries(AiTasksErrorCode.Unavailable, tries)
         tries.made += 1
-        const limits = { ...callLimitsOf(this.options, "node", reasoning, tries.made), affinity: request.workspaceId }
+        // Before the step's first answer the model is chosen per try (Auto may step up); after it, every turn keeps that model.
+        const choice = this.choiceOf(scope, tries.made, turns.pinned)
+        const limits = {
+            ...callLimitsOf(this.options, "node", reasoning, tries.made),
+            affinity: request.workspaceId,
+            ...(choice === null ? {} : { target: choice.target }),
+        }
         const model = this.ai.turnModel(limits)
         if (model === null) throw new AiTasksError({ code: AiTasksErrorCode.Unavailable })
         const elapsed = this.ai.stopwatch()
@@ -452,6 +506,7 @@ Current rules: ${currentRules}`,
             (cause: unknown) => ({ message: undefined, read: { ok: false as const, failure: this.ai.failureOfThrow(cause) } }),
         )
         if (tried.read.ok && tried.message !== undefined) {
+            turns.pinned ??= servedModelOf(tried.read.model)
             await this.meter.record({
                 workspaceId: request.workspaceId,
                 kind: request.kind,
@@ -464,7 +519,13 @@ Current rules: ${currentRules}`,
                     model: tried.read.model,
                 },
                 completionChars: tried.read.textChars,
-                call: meteredCallOf(request.purpose, tried.read.usage, tries.made, tried.read.served),
+                call: meteredCallOf(
+                    request.purpose,
+                    tried.read.usage,
+                    tries.made,
+                    tried.read.served,
+                    choice === null ? null : modelFactsOf(choice, tried.read.model),
+                ),
             })
             return tried.message
         }
@@ -478,7 +539,7 @@ Current rules: ${currentRules}`,
             again: triesRemain(tries),
         })
         if (triesRemain(tries)) await this.paused(pauseBeforeRetryMs(failure))
-        return this.triedTurn(request, reasoning, attempt, tries)
+        return this.triedTurn(scope, request, reasoning, attempt, tries, turns)
     }
 
     /** The node's call with its pictures carried as bytes: a provider outside the deployment cannot fetch the store's own addresses. */
@@ -546,7 +607,7 @@ Current rules: ${currentRules}`,
             context: this.notes.contextOf(scope, options.question),
             affinity: request.workspaceId,
         }
-        const answer = await this.answered(request, call, options, tries)
+        const { answer, choice } = await this.answered(scope, request, call, options, tries)
         // Read after the answer: `answered` counted the try that gave it.
         const answeredOnTry = tries.made
         await this.meter.record({
@@ -561,7 +622,13 @@ Current rules: ${currentRules}`,
                 model: answer.model,
             },
             completionChars: answer.text.length,
-            call: meteredCallOf(request.purpose, answer.usage, answeredOnTry, answer.served),
+            call: meteredCallOf(
+                request.purpose,
+                answer.usage,
+                answeredOnTry,
+                answer.served,
+                choice === null ? null : modelFactsOf(choice, answer.model),
+            ),
         })
         return { text: answer.text, parsed: answer.parsed }
     }
@@ -574,19 +641,41 @@ Current rules: ${currentRules}`,
         })
     }
 
+    /**
+     * The model of one try of a graph node's call (`model-choice.policy.ts`), or null for a fixed task of the app (the endpoint's chat
+     * profile, as before). An explicit model whose provider holds no key fails the call loudly before any try: it never switches.
+     */
+    private choiceOf(
+        scope: AiTaskScope,
+        tryNumber: number,
+        pinned: ReturnType<typeof servedModelOf> = null,
+    ): ModelChoice | null {
+        if (scope.model === undefined) return null
+        const chosen = modelChoiceOf(scope.model, tryNumber, this.options.providers ?? UPSTREAM_ONLY, pinned)
+        if (chosen.ok) return chosen.choice
+        this.logger.warn(AiTasksLogEvent.ModelNotConfigured, { workspaceId: scope.workspaceId, model: chosen.model })
+        throw new AiTasksError({
+            code: AiTasksErrorCode.Unavailable,
+            params: { tries: 0, failures: `model_not_configured:${chosen.model}` },
+        })
+    }
+
     /** The answer of the call within the tries left, or the unavailable error that names every try's failure. */
     private async answered(
+        scope: AiTaskScope,
         request: TextRequest,
         call: Omit<Parameters<AiService["attempt"]>[0], "timeoutMs" | "budget">,
         options: CallOptions,
         tries: Tries,
-    ): Promise<AiChatAnswer> {
+    ): Promise<ChosenAnswer> {
         if (!triesRemain(tries)) throw failedTries(AiTasksErrorCode.Unavailable, tries)
         tries.made += 1
+        // The model of a node's call is chosen per try: Auto may step a light step up after a failed try.
+        const choice = this.choiceOf(scope, tries.made)
         // The deadline of a try depends on which try it is: a node call's retries are given less time than its first try.
         const limits = callLimitsOf(this.options, options.call, options.reasoning, tries.made)
-        const tried = await this.ai.attempt({ ...call, ...limits })
-        if (tried.ok) return tried.answer
+        const tried = await this.ai.attempt({ ...call, ...limits, ...(choice === null ? {} : { target: choice.target }) })
+        if (tried.ok) return { answer: tried.answer, choice }
         tries.failures.push(tried.failure)
         this.logger.warn(AiTasksLogEvent.Retried, {
             workspaceId: request.workspaceId,
@@ -596,7 +685,7 @@ Current rules: ${currentRules}`,
             again: triesRemain(tries),
         })
         if (triesRemain(tries)) await this.paused(pauseBeforeRetryMs(tried.failure))
-        return this.answered(request, call, options, tries)
+        return this.answered(scope, request, call, options, tries)
     }
 
     /**

@@ -9,8 +9,15 @@ import type { ProviderUsage, UsageFigures, UsageInput } from "./ai-usage-events.
  */
 export const CREDIT_USD_VALUE = 0.00113
 
-/** USD per 1M tokens, used only when the provider returns no cost. Approximate list prices, not a contract. */
-const PRICES: ReadonlyArray<{ readonly match: string; readonly in: number; readonly out: number }> = [
+/**
+ * USD per 1M tokens, used only when the provider returns no cost. Approximate list prices, not a contract. `cachedIn` is the price of a
+ * prompt token read from the provider's cache (absent: the full input price, as before). Claude Sonnet 5.5: $2 in, $10 out, $0.10
+ * cache read (Anthropic first-party list price as cached by the Claude API reference on 2026-11-03; NOT re-read from the live pricing
+ * page). Its cache WRITE ($2.50, 1.25x input for the 5-minute TTL) is not priced: the router 0.5.0 folds written tokens into the
+ * prompt unsaid, so they are booked at the input price, an under-count of 0.50 USD per million written.
+ */
+const PRICES: ReadonlyArray<{ readonly match: string; readonly in: number; readonly out: number; readonly cachedIn?: number }> = [
+    { match: "claude-sonnet-5-5", in: 2, out: 10, cachedIn: 0.1 },
     { match: "deepseek-v4.1-flash", in: 0.14, out: 0.42 },
     { match: "deepseek", in: 0.14, out: 0.28 },
     { match: "qwen3-embedding", in: 0.01, out: 0 },
@@ -19,10 +26,12 @@ const PRICES: ReadonlyArray<{ readonly match: string; readonly in: number; reado
 ]
 const DEFAULT_PRICE = { in: 0.3, out: 1.2 }
 
-/** Cost in USD from the price table. */
-export const priceOf = (model: string, promptTokens: number, completionTokens: number): number => {
-    const price = PRICES.find((entry) => model.toLowerCase().includes(entry.match)) ?? DEFAULT_PRICE
-    return (promptTokens * price.in + completionTokens * price.out) / 1_000_000
+/** Cost in USD from the price table; `cachedTokens` (a part of the prompt) at the cached price where the table names one. */
+export const priceOf = (model: string, promptTokens: number, completionTokens: number, cachedTokens = 0): number => {
+    const price: { readonly in: number; readonly out: number; readonly cachedIn?: number } = PRICES.find((entry) => model.toLowerCase().includes(entry.match)) ?? DEFAULT_PRICE
+    const cached = price.cachedIn === undefined ? 0 : Math.min(cachedTokens, promptTokens)
+    const cachedPrice = price.cachedIn ?? price.in
+    return ((promptTokens - cached) * price.in + cached * cachedPrice + completionTokens * price.out) / 1_000_000
 }
 
 /** Rough token count when the provider sent none (Vietnamese is about 3 characters per token). */
@@ -48,12 +57,19 @@ export const figuresOf = (
         : (prompt ?? Math.max(0, (total ?? 0) - (completion ?? 0)))
     const estimatedCompletion = input.completionChars > 0 ? estimateTokens(input.completionChars) : 0
     const completionTokens = estimated ? estimatedCompletion : (completion ?? Math.max(0, (total ?? 0) - promptTokens))
-    const cost = countOf(usage?.cost) ?? priceOf(input.model, promptTokens, completionTokens)
+    // A cached count is a part of the prompt it was read with: it is never estimated and never exceeds the prompt.
+    const cachedTokens = estimated ? 0 : Math.min(Math.round(countOf(usage?.cached_tokens) ?? 0), Math.round(promptTokens))
+    // A cost of zero for tokens that were used is no cost said (the prompt library books 0 when the endpoint gave none, as Anthropic
+    // through the router does): the price table prices it, so a model without a reported cost never books free.
+    const reported = countOf(usage?.cost)
+    const cost =
+        reported !== null && (reported > 0 || promptTokens + completionTokens === 0)
+            ? reported
+            : priceOf(input.model, promptTokens, completionTokens, cachedTokens)
     return {
         promptTokens: Math.round(promptTokens),
         completionTokens: Math.round(completionTokens),
-        // A cached count is a part of the prompt it was read with: it is never estimated and never exceeds the prompt.
-        cachedTokens: estimated ? 0 : Math.min(Math.round(countOf(usage?.cached_tokens) ?? 0), Math.round(promptTokens)),
+        cachedTokens,
         costUsd: Number(cost.toFixed(8)),
         estimated,
     }

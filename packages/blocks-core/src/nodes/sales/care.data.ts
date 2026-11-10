@@ -31,9 +31,13 @@ export interface CareLead {
     readonly id: string
     /** The name the customer gave. */
     readonly contactName: string
-    /** What the consult found out, as the record keeps it; `careFactsOf` reads it. */
-    readonly consultFacts: unknown
 }
+
+/** The data kind of a customer's lead memory: the facts the consult learned live there, never on the record. */
+const MEMORY_KIND = "agent-lead-memory"
+
+/** The key of a customer's facts entry in lead memory (`<subject>|<namespace>|<node>`, as the memory writes it). */
+export const careFactsKeyOf = (leadId: string): string => `lead:${leadId}|$lead|$facts`
 
 /** The rights care reads with: the order, and the customer, workspace wide (a timer wake serves no turn). */
 export const CARE_RIGHTS: ReadonlyArray<DataRight> = [
@@ -43,7 +47,8 @@ export const CARE_RIGHTS: ReadonlyArray<DataRight> = [
         scope: "workspace",
         fields: ["id", "orderNo", "amountVnd", "status", "items", "leadId", "shippedAt", "confirmedAt"],
     },
-    { kind: "sales-lead", access: "read", scope: "workspace", fields: ["id", "contactName", "consultFacts"] },
+    { kind: "sales-lead", access: "read", scope: "workspace", fields: ["id", "contactName"] },
+    { kind: MEMORY_KIND, access: "read", scope: "workspace", fields: ["id", "entryKey", "output"] },
 ]
 
 const ORDER_FIELDS = ["id", "orderNo", "amountVnd", "status", "items", "leadId", "shippedAt", "confirmedAt"] as const
@@ -89,7 +94,7 @@ export const careDeliveryOf = async (context: Reader, orderId: string): Promise<
         deliveryAt: textOrNullOf(row?.deliveryAt),
     }
 }
-const LEAD_FIELDS = ["id", "contactName", "consultFacts"] as const
+const LEAD_FIELDS = ["id", "contactName"] as const
 
 type Reader = Pick<NodeContext, "data">
 
@@ -119,8 +124,35 @@ export const careLeadOf = async (context: Reader, leadId: string | null): Promis
               })
           )[0]
 
-/** What care knows about the customer, from the consult facts the customer's record keeps. */
-export const careFactsOfLead = (lead: CareLead | undefined): CareFacts => careFactsOf(lead?.consultFacts)
+/** A customer's facts entry of lead memory as an example store holds it: what the consult learned, under `output.value`. */
+export const careMemoryRowOf = (
+    leadId: string,
+    facts: Readonly<Record<string, unknown>>,
+): { readonly id: string; readonly entryKey: string; readonly output: { readonly value: Readonly<Record<string, unknown>> } } => ({
+    id: `memory-${leadId}`,
+    entryKey: careFactsKeyOf(leadId),
+    output: { value: facts },
+})
+
+/** A member of a record, or undefined. */
+const memberOf = (value: unknown, name: string): unknown =>
+    typeof value === "object" && value !== null && !Array.isArray(value) ? Reflect.get(value, name) : undefined
+
+/**
+ * What care knows about the customer: the facts the consult learned, read from the customer's lead memory (its facts entry, by key);
+ * nothing known for no customer or one with no memory. Lead memory names the receiver `recipientName`.
+ */
+export const careFactsOfLead = async (context: Reader, leadId: string | null | undefined): Promise<CareFacts> => {
+    if (leadId === null || leadId === undefined) return careFactsOf(undefined)
+    const [entry] = await context.data.read<Readonly<Record<string, unknown>>>(MEMORY_KIND, {
+        where: { entryKey: careFactsKeyOf(leadId) },
+        fields: ["output"],
+        limit: 1,
+    })
+    const value: unknown = memberOf(entry?.output, "value")
+    if (typeof value !== "object" || value === null) return careFactsOf(undefined)
+    return careFactsOf({ ...value, recipient: memberOf(value, "recipientName") })
+}
 
 /**
  * The customer's paid orders, the newest first: read among the customer's latest orders (the index of an order is its customer and its

@@ -51,7 +51,7 @@ import type {
 } from "./mcp-gateway.contracts"
 import type { McpGatewayOptions } from "./mcp-gateway.options"
 import { NativeRunnerService } from "./native-runner.service"
-import { addressOf, fullNameOf, grantFor, searchTools, specOf } from "./tool-name.policy"
+import { addressOf, grantFor, namedToolIn, searchTools, toolNameOf } from "./tool-name.policy"
 
 /** A resolved call: the connector, the spec and the full name. */
 interface Resolved {
@@ -257,7 +257,7 @@ export class McpGatewayService {
                 (spec) =>
                     usable(connector, spec.name) &&
                     toolVisibleTo(caller, spec) &&
-                    listed(fullNameOf(connector.manifest.key, spec.name)),
+                    listed(toolNameOf(connector.manifest, spec.name)),
             ),
         }))
         return searchTools(manifests, grants, query, limit)
@@ -512,14 +512,12 @@ export class McpGatewayService {
 
     /** The connector and spec of a full name, or the failure that stops the call before any grant is read. */
     private async resolve(workspaceId: string, name: string): Promise<Resolved | GatewayCallResult> {
-        const address = addressOf(name)
-        if (address === null) return failure("invalid_name", name)
-        const connectors = await this.connectorsOf(workspaceId)
-        const connector = connectors.find((entry) => entry.manifest.key === address.connector)
-        const spec = connector === undefined ? null : specOf(connector.manifest, address.tool)
-        if (connector === undefined || spec === null) return failure("unknown_tool", name)
+        if (addressOf(name) === null) return failure("invalid_name", name)
+        const found = namedToolIn(await this.connectorsOf(workspaceId), name)
+        if (found === null) return failure("unknown_tool", name)
+        const { connector, spec } = found
         if (connector.status === "disabled") return failure("connector_disabled", connector.manifest.key)
-        return { connector, spec, name: fullNameOf(connector.manifest.key, spec.name) }
+        return { connector, spec, name: toolNameOf(connector.manifest, spec.name) }
     }
 
     /** Runs the adapter under the connector's time limit; every failure is an answer. */

@@ -516,6 +516,22 @@ describe("ConnectionsService > intake", () => {
             ["meta", '{"authorized":true}'],
         ])
     })
+
+    it("keeps the OA name Zalo reported among the public facts, trimmed and bounded, and never a blank one", async () => {
+        const em = mockEntityManager()
+        const { fakes } = withBuilders([{ execute: {} }, { execute: {} }], em)
+        const service = await build(em)
+
+        await service.applyZaloOaName("c-1", "  Tiệm hoa NIVO ")
+        await service.applyZaloOaName("c-1", "   ")
+        await service.applyZaloOaName("c-1", "x".repeat(200))
+
+        expect(setOf(fakes[0])).toEqual({ publicMeta: "jsonb_concat(public_meta, CAST(:meta AS jsonb))" })
+        expect(fakes.map((fake) => fake.callsOf("setParameter")[0])).toEqual([
+            ["meta", '{"oa_name":"Tiệm hoa NIVO"}'],
+            ["meta", JSON.stringify({ oa_name: "x".repeat(120) })],
+        ])
+    })
 })
 
 describe("ConnectionsService > upkeep", () => {

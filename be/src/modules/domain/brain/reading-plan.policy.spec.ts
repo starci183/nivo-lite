@@ -22,6 +22,8 @@ describe("readingPlanOf", () => {
         expect(subject.readingPlanOf(TEXT, [])).toEqual({
             partial: false,
             hashes: hashesOf(TEXT),
+            passages: chunkPassages(TEXT).map((text) => ({ text, hash: passageTextHashOf(text) })),
+            unchangedHashes: [],
             unchangedText: "",
             windows: windowsOf(TEXT),
         })
@@ -43,6 +45,11 @@ describe("readingPlanOf", () => {
         expect(plan.windows).toEqual(["## Fees\nA visit is 120k."])
         expect(plan.unchangedText).toBe("## Hours\nOpen 8 to 21. ## Refunds\nWithin 7 days.")
         expect(plan.hashes).toEqual(hashesOf(edited))
+        // The unchanged chunks by hash: a fact born from one of them is not touched.
+        expect(plan.unchangedHashes).toEqual(
+            hashesOf(TEXT).filter((hash) => hashesOf(edited).includes(hash)),
+        )
+        expect(plan.unchangedHashes).toHaveLength(2)
     })
 
     it("reads nothing when passages only moved or went", async () => {

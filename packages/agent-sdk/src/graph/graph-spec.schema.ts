@@ -55,6 +55,8 @@ const node = z.strictObject({
             reminder: waitDuration.optional(),
         })
         .optional(),
+    // `auto` or a model id (`claude-sonnet-5-5`, `deepseek/deepseek-v4.1-flash`); the host checks it against its vocabulary.
+    model: keyText.regex(/^[a-z0-9][a-z0-9./:-]{0,79}$/).optional(),
 })
 
 const source = z.enum(["channel", "chats-group", "agent", "system-event", "schedule"])

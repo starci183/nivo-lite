@@ -123,7 +123,7 @@ describe("VideoScriptingCompletionService", () => {
                 {
                     workspaceId: WS,
                     kind: "video.script_generated",
-                    actor: "OpenClaw",
+                    actor: "NIVO",
                     summary: 'video.script.generated:{"title":"Spring sale","scenes":2}',
                     evidence: "1. Fresh\n2. Visit",
                 },
@@ -318,7 +318,7 @@ describe("VideoScriptingCompletionService", () => {
                 {
                     workspaceId: WS,
                     kind: "video.script_generated",
-                    actor: "OpenClaw",
+                    actor: "NIVO",
                     summary: 'video.script.generated:{"title":"Draft","scenes":2}',
                     evidence: "1. First\n2. Last",
                 },

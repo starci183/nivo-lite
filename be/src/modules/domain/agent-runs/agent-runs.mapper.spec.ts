@@ -69,7 +69,7 @@ describe("run records", () => {
         expect(runEngineOf(runRowOf())).toBe("legacy")
         expect(runEngineOf(runRowOf({ engine: null }))).toBe("legacy")
         expect(runEngineOf(runRowOf({ engine: "langgraph" }))).toBe("langgraph")
-        expect(() => runEngineOf(runRowOf({ engine: "openclaw" }))).toThrow()
+        expect(() => runEngineOf(runRowOf({ engine: "unknown-engine" }))).toThrow()
     })
 
     it.each([

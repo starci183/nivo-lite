@@ -1,7 +1,9 @@
 import type { Namespaced, SpecLocale, SpecText } from "./schema.types"
 
-/** `<namespace>.<name>` or `<domain>.<object>.<verb>`: two or three kebab-case ASCII parts. */
-const NAMESPACED = /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*){1,2}$/
+/**
+ * `<namespace>.<name>`, `<domain>.<object>.<verb>` or NIVO's own `nivo.<domain>.<object>.<verb>`: two to four kebab-case ASCII parts.
+ */
+const NAMESPACED = /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*){1,3}$/
 
 /** Whether a string is a well-formed registry id. */
 export const isNamespaced = (value: string): value is Namespaced => NAMESPACED.test(value)

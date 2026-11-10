@@ -1,6 +1,10 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
-import { BrainFactsReadService } from "@modules/domain/brain-facts"
+import {
+    BrainChangeRequestsService,
+    BrainFactRelationsService,
+    BrainFactsReadService,
+} from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { KnowledgeSearchService } from "@modules/domain/knowledge"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
@@ -100,6 +104,10 @@ const build = async (scope: Scope = { module: "sales", installationId: null }) =
     knowledge.forAgent.mockResolvedValue([passage()])
     const documents = mock<KnowledgeSourcesReadService>()
     documents.textOf.mockResolvedValue(document())
+    const relations = mock<BrainFactRelationsService>()
+    relations.ofFacts.mockResolvedValue([])
+    facts.byIds.mockResolvedValue([])
+    const changes = mock<BrainChangeRequestsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             BrainNativeService,
@@ -107,29 +115,42 @@ const build = async (scope: Scope = { module: "sales", installationId: null }) =
             { provide: BrainFactsReadService, useValue: facts },
             { provide: KnowledgeSearchService, useValue: knowledge },
             { provide: KnowledgeSourcesReadService, useValue: documents },
+            { provide: BrainFactRelationsService, useValue: relations },
+            { provide: BrainChangeRequestsService, useValue: changes },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
         ],
     }).compile()
-    return { brain: moduleRef.get(BrainNativeService), views, facts, knowledge, documents }
+    return { brain: moduleRef.get(BrainNativeService), views, facts, knowledge, documents, relations, changes }
 }
 
 describe("BrainNativeService manifest", () => {
-    it("declares four read tools that start at auto; only the document read is closed to a customer turn", () => {
+    it("declares five read tools at auto and one change request write; the document read and the change request are closed to a customer turn", () => {
         expect(BRAIN_MANIFEST.key).toBe("brain")
         expect(BRAIN_MANIFEST.tools.map((tool) => [tool.name, tool.scope, tool.defaultMode])).toEqual([
             ["search", "read", "auto"],
             ["facts.list", "read", "auto"],
             ["facts.get", "read", "auto"],
             ["documents.read", "read", "auto"],
+            ["fact.related", "read", "auto"],
+            ["change.propose", "write", "auto"],
         ])
-        expect(BRAIN_MANIFEST.tools.map((tool) => tool.internalOnly)).toEqual([undefined, undefined, undefined, true])
+        expect(BRAIN_MANIFEST.tools.map((tool) => tool.internalOnly)).toEqual([
+            undefined,
+            undefined,
+            undefined,
+            true,
+            undefined,
+            true,
+        ])
         expect(BRAIN_MANIFEST.tools.map((tool) => tool.secretFields)).toEqual([
             ["notice", "query", "subject", "attribute", "value", "content", "title", "topic"],
             ["notice", "subject", "attribute", "value"],
             ["notice", "subject", "attribute", "value", "label"],
             ["notice", "title", "topic", "text"],
+            ["notice", "subject", "attribute", "value", "label"],
+            ["notice", "subject", "attribute", "value", "quote"],
         ])
-        expect(BRAIN_MANIFEST.tools.map((tool) => tool.taints)).toEqual([true, true, true, true])
+        expect(BRAIN_MANIFEST.tools.map((tool) => tool.taints)).toEqual([true, true, true, true, true, undefined])
     })
 })
 
@@ -318,6 +339,7 @@ describe("BrainNativeService facts.get", () => {
                 evidence: [{ kind: "document", label: "Price list" }],
                 validFrom: "2026-01-01T00:00:00.000Z",
                 validTo: "2027-01-01T00:00:00.000Z",
+                version: null,
             },
         })
         expect(JSON.stringify(answer)).not.toContain("private words")
@@ -408,3 +430,4 @@ describe("BrainNativeService documents.read", () => {
         })
     })
 })
+

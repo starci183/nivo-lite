@@ -138,3 +138,12 @@ describe("data-rights.policy fields", () => {
         })
     })
 })
+
+describe("judgeDataRight: the locked context reads", () => {
+    it("lets a governed agent read its run's own customer: the door's lock is narrower than any right", () => {
+        const caller = { workspaceId: "ws-1", agentId: "a-1", conversationId: "conv-1", workItemId: null, audience: "customer" } as const
+
+        expect(judgeDataRight([], "nivo.lead.order.list", caller)).toEqual({ kind: "open" })
+        expect(judgeDataRight([], "nivo.lead.secret.list", caller)).toEqual({ kind: "deny", reason: "no_kind" })
+    })
+})

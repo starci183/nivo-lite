@@ -31,7 +31,8 @@ export interface NodePrompt {
 export const nodePromptOf = (ask: NodeAsk, schema: TaskSchema | null = null): NodePrompt => {
     const words = (ask.volatile ?? "").trim()
     return {
-        stable: [{ role: "system", content: instructionsOf(ask, schema) }],
+        // The end of the stable part: the one cache breakpoint of a node's call (inert until `CACHE_MARKS_ON_THE_WIRE`).
+        stable: [{ role: "system", content: instructionsOf(ask, schema), cacheMark: true }],
         volatile: [
             ...(words === "" ? [] : [{ role: "system" as const, content: words }]),
             {

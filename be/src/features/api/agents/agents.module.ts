@@ -7,7 +7,7 @@ import { GenerateTextHandler } from "./application/generate-text.handler"
 import { GetAgentDashboardHandler } from "./application/get-agent-dashboard.handler"
 import { GetAgentKnowledgeHandler } from "./application/get-agent-knowledge.handler"
 import { GetAgentPageHandler } from "./application/get-agent-page.handler"
-import { GetEngineStatusHandler } from "./application/get-engine-status.handler"
+import { GetAgentToolsHandler } from "./application/get-agent-tools.handler"
 import { GetGenerationStatusHandler } from "./application/get-generation-status.handler"
 import { GrantAgentConnectionHandler } from "./application/grant-agent-connection.handler"
 import { ListAgentCatalogHandler } from "./application/list-agent-catalog.handler"
@@ -16,7 +16,6 @@ import { ListConnectionGrantsHandler } from "./application/list-connection-grant
 import { ListAgentsHandler } from "./application/list-agents.handler"
 import { RenameAgentHandler } from "./application/rename-agent.handler"
 import { RequestAgentAvatarUploadHandler } from "./application/request-agent-avatar-upload.handler"
-import { RequestAgentSyncHandler } from "./application/request-agent-sync.handler"
 import { RequestGenerationHandler } from "./application/request-generation.handler"
 import { RevokeAgentConnectionHandler } from "./application/revoke-agent-connection.handler"
 import { SetAgentAvatarHandler } from "./application/set-agent-avatar.handler"
@@ -34,7 +33,7 @@ import { SetAgentTextsHandler } from "./application/set-agent-texts.handler"
         GetAgentDashboardHandler,
         GetAgentKnowledgeHandler,
         GetAgentPageHandler,
-        GetEngineStatusHandler,
+        GetAgentToolsHandler,
         GetGenerationStatusHandler,
         GrantAgentConnectionHandler,
         ListAgentCatalogHandler,
@@ -43,7 +42,6 @@ import { SetAgentTextsHandler } from "./application/set-agent-texts.handler"
         ListConnectionGrantsHandler,
         RenameAgentHandler,
         RequestAgentAvatarUploadHandler,
-        RequestAgentSyncHandler,
         RequestGenerationHandler,
         RevokeAgentConnectionHandler,
         SetAgentAvatarHandler,

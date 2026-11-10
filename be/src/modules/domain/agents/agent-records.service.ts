@@ -28,7 +28,7 @@ const keptInstructions = (given: string, stored: string): string => {
 @Injectable()
 /**
  * The agent rows a configuration run keeps by handle, over the entity manager alone so the cli can compose it without the
- * OpenClaw engine. The caller has already proven the workspace owner; the Agents pages keep using AgentsService.
+ * NIVO engine. The caller has already proven the workspace owner; the Agents pages keep using AgentsService.
  */
 export class AgentRecordsService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}

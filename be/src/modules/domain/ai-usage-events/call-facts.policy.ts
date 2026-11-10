@@ -4,6 +4,10 @@ import type { UsageCallFacts, UsageFigures } from "./ai-usage-events.contracts"
 const PURPOSE_CHARS = 200
 const UPSTREAM_CHARS = 120
 const FINISH_CHARS = 40
+/** The longest declared model, provider and reason booked, in characters (the columns' checks, migration 012800). */
+const DECLARED_CHARS = 120
+const PROVIDER_CHARS = 40
+const REASON_CHARS = 40
 /** The highest try number the column takes. */
 const MAX_TRY = 10
 
@@ -29,6 +33,12 @@ export interface CallColumns {
     readonly upstream: string | null
     /** Why the model stopped, or null. */
     readonly finishReason: string | null
+    /** What a graph node's call declared (`auto` or a model id), or null. */
+    readonly declaredModel: string | null
+    /** The provider of the model that served the call, or null. */
+    readonly modelProvider: string | null
+    /** Why the call went to that model, or null. */
+    readonly modelReason: string | null
 }
 
 /**
@@ -46,5 +56,8 @@ export const callColumnsOf = (call: UsageCallFacts | undefined, figures: UsageFi
         tryNumber: tryNumber !== null && tryNumber >= 1 && tryNumber <= MAX_TRY ? tryNumber : null,
         upstream: textOf(call?.upstream ?? null, UPSTREAM_CHARS),
         finishReason: textOf(call?.finishReason ?? null, FINISH_CHARS),
+        declaredModel: textOf(call?.declaredModel ?? null, DECLARED_CHARS),
+        modelProvider: textOf(call?.modelProvider ?? null, PROVIDER_CHARS),
+        modelReason: textOf(call?.modelReason ?? null, REASON_CHARS),
     }
 }

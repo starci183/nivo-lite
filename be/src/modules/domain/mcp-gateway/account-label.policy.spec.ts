@@ -2,7 +2,7 @@ import { accountLabelOf } from "./account-label.policy"
 
 describe("accountLabelOf", () => {
     it("names a bank feed by its bank and masked number", () => {
-        expect(accountLabelOf("sepay", "SePay", { bank_code: "MBBANK", account_masked: "•••• 9999" })).toBe("MBBANK •••• 9999")
+        expect(accountLabelOf("sepay", "SePay", { bank_code: "MBBANK", account_masked: "•••• 9999" })).toBe("MB Bank •••• 9999")
         expect(accountLabelOf("sepay", "SePay", { bank_code: "timo", account_masked: "•••• 1010" })).toBe("Timo •••• 1010")
         expect(accountLabelOf("sepay", "SePay", { account_masked: "•••• 9999" })).toBe("•••• 9999")
         expect(accountLabelOf("sepay", "SePay", {})).toBe("SePay")

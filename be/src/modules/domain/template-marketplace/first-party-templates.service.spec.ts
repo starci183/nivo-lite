@@ -63,7 +63,7 @@ const installationOf = builder<InstallationRecord>({
     operatingMode: "assist",
     liveEnabled: true,
     activeContextVersionId: null,
-    settings: { processor: "openclaw" },
+    settings: {},
     createdAt: "2026-11-03T00:00:00.000Z",
 })
 

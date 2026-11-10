@@ -1,6 +1,5 @@
 import { ACCOUNTING_DESK_QUEUE, ACCOUNTING_MORNING_JOB } from "@modules/queues/accounting-desk"
 import { AGENT_TURN_QUEUE, AgentTurnJob } from "@modules/queues/agent-turn"
-import { AGENTS_QUEUE, AgentsJob } from "@modules/queues/agents"
 import { CONNECTION_POLL_QUEUE, POLL_DUE_CONNECTIONS_JOB } from "@modules/queues/connection-poll"
 import { CONNECTION_HEALTH_QUEUE } from "@modules/queues/connection-health"
 import { CONTENT_TICK_QUEUE } from "@modules/queues/content-tick"
@@ -32,7 +31,6 @@ export const JOB_TICKS: Readonly<Record<string, JobTick>> = {
         minutes: 1440,
     },
     "agent-work-sweep": { queue: AGENT_TURN_QUEUE, job: AgentTurnJob.Sweep, payload: {}, minutes: 1 },
-    "agents-sync-all": { queue: AGENTS_QUEUE, job: AgentsJob.Sync, payload: {}, minutes: 5 },
     "connection-health-tick": {
         queue: CONNECTION_HEALTH_QUEUE,
         job: CONNECTION_HEALTH_QUEUE,

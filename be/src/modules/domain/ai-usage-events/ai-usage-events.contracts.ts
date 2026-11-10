@@ -64,6 +64,12 @@ export interface UsageCallFacts {
     readonly upstream: string | null
     /** Why the model stopped (`stop`, `tool_calls`); null when it did not say. */
     readonly finishReason: string | null
+    /** What a graph node's call declared (`auto` or a model id); absent for a fixed task of the app. */
+    readonly declaredModel?: string | undefined
+    /** The provider of the model that served the call (`anthropic`, `openrouter`); absent when not known. */
+    readonly modelProvider?: string | undefined
+    /** Why the call went to the model it went to (`auto-heavy`, `default-no-key`, ...); absent for a fixed task. */
+    readonly modelReason?: string | undefined
 }
 
 /**
@@ -95,6 +101,14 @@ export interface RunCallKindUsage {
     readonly upstreams: ReadonlyArray<string>
     /** Why the model stopped, sorted, without repeats. */
     readonly finishReasons: ReadonlyArray<string>
+    /** The models that served the calls, sorted, without repeats. */
+    readonly models: ReadonlyArray<string>
+    /** What the node declared (`auto` or a model id), sorted, without repeats; empty for a fixed task. */
+    readonly declaredModels: ReadonlyArray<string>
+    /** The providers of the models that served them, sorted, without repeats. */
+    readonly modelProviders: ReadonlyArray<string>
+    /** Why the calls went to those models, sorted, without repeats. */
+    readonly modelReasons: ReadonlyArray<string>
 }
 
 /** The tokens and cost one call is booked with. */

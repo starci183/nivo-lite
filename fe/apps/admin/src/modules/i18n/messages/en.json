@@ -76,8 +76,6 @@
     "noAgents": "No agent installed.",
     "contextApplied": "context v{version} applied {date}",
     "contextNone": "no context version applied",
-    "syncLine": "OpenClaw {agent}: {status}, copy v{version}, checked {checked}",
-    "syncBadge": "sync {status}",
     "cardConnections": "Connections",
     "noConnections": "No connection.",
     "connectionDetail": "{provider} · {environment} · last event {event}",

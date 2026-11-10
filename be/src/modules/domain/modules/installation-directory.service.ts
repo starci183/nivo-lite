@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common"
 import type {
     Installation,
     InstallationDirectory,
-    InstallationRef,
     OptionalContextVersion,
     OptionalInstallation,
 } from "@modules/domain/agents"
@@ -10,7 +9,6 @@ import { ContextVersionsService } from "@modules/domain/module-context-versions"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type {
     InstallationRecord,
-    OptionalRowId,
     OptionalInstallationRecord,
 } from "@modules/domain/module-installations"
 import { ModulesService } from "./modules.service"
@@ -35,7 +33,7 @@ const toInstallation = (record: InstallationRecord): Installation => ({
 })
 
 @Injectable()
-/** The installed agents as the agents capability reads them for the OpenClaw copy: the installation, its settings and its active version. */
+/** The installed agents as the agents capability reads them: the installation, its settings and its active version. */
 export class InstallationDirectoryService implements InstallationDirectory {
     constructor(
         private readonly installations: InstallationRecordsService,
@@ -56,11 +54,6 @@ export class InstallationDirectoryService implements InstallationDirectory {
     /** The installation that owns an agent. */
     async ofAgent(workspaceId: string, agentId: string): Promise<OptionalInstallation> {
         return installationOf(await this.installations.ofAgent(workspaceId, agentId))
-    }
-
-    /** Up to `limit` installations that run on OpenClaw, of one workspace or of all when `workspaceId` is null. */
-    onOpenclaw(workspaceId: OptionalRowId, limit: number): Promise<ReadonlyArray<InstallationRef>> {
-        return this.installations.onOpenclaw(workspaceId, limit)
     }
 
     /** The context version with that id, flattened for the bundle: the confirmed gates in the order of the module, the facts, the tone. */

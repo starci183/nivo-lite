@@ -37,10 +37,8 @@ describe("ModuleInstallationsAdminReadService", () => {
         })
     })
 
-    it("reads the installations of a workspace with the processor setting when it is text", async () => {
-        const em = mockEntityManager({
-            find: [ModuleInstallationEntity, [install({ processor: "openclaw" }), install({ processor: 3 })]],
-        })
+    it("reads the installations of a workspace, bounded, without their settings", async () => {
+        const em = mockEntityManager({ find: [ModuleInstallationEntity, [install({ holdingMessage: "Wait" })]] })
 
         await expect((await build(em)).ofWorkspace("ws-1", 50)).resolves.toEqual([
             {
@@ -50,13 +48,19 @@ describe("ModuleInstallationsAdminReadService", () => {
                 operatingMode: "assist",
                 liveEnabled: true,
                 activeContextVersionId: "cv-1",
-                processor: "openclaw",
             },
-            expect.objectContaining({ processor: null }),
         ])
-        expect(em.find).toHaveBeenCalledWith(
-            ModuleInstallationEntity,
-            expect.objectContaining({ where: { workspaceId: "ws-1" }, take: 50 }),
-        )
+        expect(em.find).toHaveBeenCalledWith(ModuleInstallationEntity, {
+            select: {
+                id: true,
+                moduleKey: true,
+                status: true,
+                operatingMode: true,
+                liveEnabled: true,
+                activeContextVersionId: true,
+            },
+            where: { workspaceId: "ws-1" },
+            take: 50,
+        })
     })
 })

@@ -104,7 +104,6 @@ export type {
     AgentKnowledgeLensesQuery,
     AgentKnowledgeQuery,
     AgentPageQuery,
-    AgentSyncStatusQuery,
 } from "./graphql/__generated__/graphql"
 export type {
     AgentTemplatePreviewQuery,
@@ -228,7 +227,6 @@ export type { RemoveMemberMutation } from "./graphql/__generated__/graphql"
 export type { RenameAgentMutation, RenameInstallationAgentMutation } from "./graphql/__generated__/graphql"
 export type { RenameModuleInstallationMutation, ReopenDossierFindingMutation } from "./graphql/__generated__/graphql"
 export type { RequestAgentAvatarUploadMutation } from "./graphql/__generated__/graphql"
-export type { RequestAgentSyncMutation } from "./graphql/__generated__/graphql"
 
 export type { RequestDataSyncMutation, RequestDossierRemedyDraftMutation } from "./graphql/__generated__/graphql"
 export type { RequestDossierReviewMutation, RequestHiringInterviewMutation } from "./graphql/__generated__/graphql"
@@ -261,7 +259,6 @@ export type { SaveWorkingHoursMutation } from "./graphql/__generated__/graphql"
 export type { SaveImapConnectionMutation } from "./graphql/__generated__/graphql"
 export type { SaveMemberGrantsMutation } from "./graphql/__generated__/graphql"
 export type { SaveOpenApiConnectionMutation, SaveProviderKeysMutation } from "./graphql/__generated__/graphql"
-export type { SaveReplyTimeoutMutation } from "./graphql/__generated__/graphql"
 export type { SaveTelegramUserSetupMutation } from "./graphql/__generated__/graphql"
 export type { SaveVideoBrandMutation, SaveZaloOaSecretMutation } from "./graphql/__generated__/graphql"
 export type { SaveZnsRenewalMutation } from "./graphql/__generated__/graphql"
@@ -306,6 +303,7 @@ export type { WorkspaceStaffQuery, WritePublicDocumentMutation } from "./graphql
 export type { ZaloConnectionPageQuery } from "./graphql/__generated__/graphql"
 export type { ZaloConnectionQuery } from "./graphql/__generated__/graphql"
 export type { ChatMessagesQuery, ChatRoomsQuery, ChatUnreadQuery } from "./graphql/__generated__/graphql"
+export type { DecideRunStopMutation, RunFlowMutation } from "./graphql/__generated__/graphql"
 export type {
     CreateChatRoomMutation,
     DecideChatApprovalMutation,
@@ -340,3 +338,4 @@ export type {
     WorkflowTemplatesQuery,
 } from "./graphql/__generated__/graphql"
 export type { AgentAbilityProposalQuery, ProviderRightsQuery, ProviderTemplateCandidatesQuery } from "./graphql/__generated__/graphql"
+export type { AgentRunAiCallsQuery, AgentToolsQuery } from "./graphql/__generated__/graphql"

@@ -115,4 +115,24 @@ export class BrainFactEntity extends UuidAbstractEntity {
     /** Whether the proposal sets a value or retires one. */
     @Column({ name: "proposal_kind", type: "text", default: () => "'set'::text" })
     proposalKind!: FactProposalKind
+
+    /** Which value of its key this is: 1 on the first activation, one more on each replacement; null until it was in force. */
+    @Column({ name: "version", type: "integer", nullable: true })
+    version?: number | null
+
+    /** The vector of the fact's line (embedding standard W2): never read back by default. */
+    @Column({ name: "embedding", type: "vector", nullable: true, select: false })
+    embedding?: string | null
+
+    /** The embedding identity (pinned profile / model) the vector was made with. */
+    @Column({ name: "embedding_model", type: "text", nullable: true })
+    embeddingModel?: string | null
+
+    /** `passageTextHashOf` of the embedded line: the same hash and identity mean the vector is current. */
+    @Column({ name: "embedding_hash", type: "text", nullable: true })
+    embeddingHash?: string | null
+
+    /** The vector's dimensions, computed by the database from the vector itself. */
+    @Column({ name: "embedding_dimensions", type: "integer", nullable: true, insert: false, update: false })
+    embeddingDimensions?: number | null
 }

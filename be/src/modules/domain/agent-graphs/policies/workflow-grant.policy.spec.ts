@@ -3,6 +3,8 @@ import type { GraphSpecGrant } from "@nivo-lite/agent-sdk/graph"
 import type { DataRight } from "@nivo-lite/agent-sdk/rights"
 import { coreNodes } from "@nivo-lite/blocks-core"
 import { WORKFLOW_TEMPLATES, latestTemplateVersion } from "@nivo-lite/blocks-core/modules"
+import { TOOL } from "@nivo-lite/blocks-core"
+import { withDefaultReads } from "./agent-tools.policy"
 import { agentToolsOf } from "./flow.policy"
 import { EMPTY_GRANT, effectsBeyond, ownRunGrantOf, workflowRunGrantOf } from "./workflow-grant.policy"
 
@@ -47,9 +49,17 @@ describe("workflowRunGrantOf", () => {
 
         expect(subject.workflowRunGrantOf(own, AGENT_TOOLS)).toEqual({
             rights: own.rights,
-            tools: ["ledger.append"],
+            tools: withDefaultReads(["ledger.append"]),
             effects: ["ledger.post"],
         })
+    })
+
+    it("joins the default context reads to every run's tools, the agent's own graph included; the owner's row still refuses at the gateway", async () => {
+        const subject = await build()
+
+        expect(subject.workflowRunGrantOf({ ...AGENT, tools: [] }, AGENT_TOOLS).tools).toEqual(withDefaultReads([]))
+        expect(subject.ownRunGrantOf(AGENT).tools).toEqual(withDefaultReads(["ledger.append"]))
+        expect(subject.ownRunGrantOf(AGENT).tools).toContain(TOOL.leadOrderList)
     })
 
     it("reaches no tool and no effect for a module that declares no agent", async () => {
@@ -68,7 +78,7 @@ describe("every workflow template of the three agents, run as a workflow of its 
             const graph = latestTemplateVersion(template).graph
             const grant = subject.workflowRunGrantOf(graph.grant, agentToolsOf(template.moduleKey))
             expect(grant.effects).toEqual(graph.grant.effects)
-            expect(grant.tools).toEqual(graph.grant.tools)
+            expect(grant.tools).toEqual(withDefaultReads(graph.grant.tools))
             for (const node of graph.nodes) {
                 expect(subject.effectsBeyond(nodes.get(node.step)?.effects ?? [], grant)).toEqual([])
             }

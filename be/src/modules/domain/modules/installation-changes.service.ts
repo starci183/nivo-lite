@@ -13,12 +13,12 @@ export interface InstallationChange {
     readonly workspaceId: string
     /** The installation that changed; null when the workspace's shared business knowledge changed. */
     readonly installationId: string | null
-    /** Rebuild the OpenClaw copy even when the installation is not on OpenClaw yet. */
+    /** True on an install: the event's version-1 `force` member (no consumer reads it since the agent copy sync went). */
     readonly force: boolean
 }
 
 @Injectable()
-/** Tells the event bus that an installation changed, so the OpenClaw copy of its agent follows (`installation_changed`). */
+/** Tells the event bus that an installation changed (`installation_changed`), so its consumers (the agent wakes) follow. */
 export class InstallationChangesService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
@@ -41,7 +41,7 @@ export class InstallationChangesService {
 
     /**
      * Publishes a change whose write already committed in a service of another capability (it hands out no manager): the event goes
-     * in a transaction of its own and the sync reactor is retried until it holds.
+     * in a transaction of its own and each consumer is retried until it holds.
      */
     announceNow(change: InstallationChange): Promise<void> {
         return this.entityManager.transaction((tx) => this.announce(change, tx))

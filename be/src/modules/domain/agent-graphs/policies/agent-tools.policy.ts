@@ -1,5 +1,6 @@
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import type { NodeIndex } from "@nivo-lite/agent-sdk/node"
+import { DEFAULT_READ_TOOLS } from "@modules/domain/context-sources"
 
 /** The code of a step whose tool lies outside the tool set of its module's agent. */
 export const GRAPH_TOOL_OUTSIDE_AGENT = "GRAPH_TOOL_OUTSIDE_AGENT"
@@ -15,7 +16,8 @@ export interface ToolOutsideAgent {
 /**
  * The tools of a workflow's steps that lie outside the tool set of its module's agent: the second of the two rights (a step may call
  * only what its agent may ever use). A step's tools are the effects and the tools its node declares. `agentTools` is the set the module
- * declares for its agent; null (the module declares no agent) judges nothing, since there is no set to hold a step to.
+ * declares for its agent, which holds the default reads too (`withDefaultReads`); null (the module declares no agent) judges nothing,
+ * since there is no set to hold a step to.
  */
 export const toolsOutsideAgent = (
     flow: GraphSpec,
@@ -23,7 +25,7 @@ export const toolsOutsideAgent = (
     agentTools: ReadonlyArray<string> | null,
 ): ReadonlyArray<ToolOutsideAgent> => {
     if (agentTools === null) return []
-    const held = new Set(agentTools)
+    const held = new Set(withDefaultReads(agentTools))
     return flow.nodes.flatMap((node) => {
         const definition = installed.nodes.get(node.step)
         const reach = [...new Set([...(definition?.effects ?? []), ...(definition?.tools ?? [])])]
@@ -32,3 +34,12 @@ export const toolsOutsideAgent = (
             .map((tool): ToolOutsideAgent => ({ code: GRAPH_TOOL_OUTSIDE_AGENT, at: `${node.key}:${tool}` }))
     })
 }
+
+/**
+ * An agent's tool set as it holds it: the set its module declares and every default read of the registered context sources (the second
+ * brain's search, `nivo.conversation.*`, `nivo.lead.*`), in the declared order then name order, each once. The owner's grant row can
+ * still forbid a default read at the gateway; the door still locks the context reads to the run's own conversation and customer.
+ */
+export const withDefaultReads = (declared: ReadonlyArray<string>): ReadonlyArray<string> => [
+    ...new Set([...declared, ...DEFAULT_READ_TOOLS]),
+]

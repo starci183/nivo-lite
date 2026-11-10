@@ -27,6 +27,7 @@ import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.er
 import type { GraphDocument } from "./agent-graphs.contracts"
 import type { GraphNodeStepInput } from "./policies/graph-flow.policy"
 import { EMPTY_GRANT, ownRunGrantOf } from "./policies/workflow-grant.policy"
+import { withDefaultReads } from "./policies/agent-tools.policy"
 
 const raise = mock<NodeEffectExecutor>({ effect: TOOL.workItemRaise })
 raise.execute.mockResolvedValue({ kind: "work-item", id: "w-1" })
@@ -130,7 +131,7 @@ describe("AgentGraphNodeStepService", () => {
                 memberId: null,
                 handedOffBy: null,
             },
-            grant: { rights: [], tools: ["order.look"] },
+            grant: { rights: [], tools: withDefaultReads(["order.look"]) },
             key: "run-1:keep",
         })
     })
@@ -551,5 +552,27 @@ describe("AgentGraphNodeStepService approval edge cases", () => {
             result: { output: null, effects: [], approval },
             next: [{ stepKey: `keep~approved-${FINGERPRINT.slice(0, 16)}`, input: { approval } }],
         })
+    })
+})
+
+describe("AgentGraphNodeStepService the model of the node (model per node)", () => {
+    it("hands the host the model the graph's node names, the shop's choice over blocks-core's table, and none when it names none", async () => {
+        const chosen = {
+            ...FLOW,
+            nodes: FLOW.nodes.map((node) => (node.key === "keep" ? { ...node, model: "claude-sonnet-5-5" } : node)),
+        }
+        const shop = await build({ nodes: [], rights: [], flow: chosen })
+        shop.host.run.mockResolvedValue({ output: { done: true }, effects: [] })
+
+        await shop.steps.run(stepOf("keep"))
+
+        expect(shop.host.run.mock.calls[0]?.[0].model).toBe("claude-sonnet-5-5")
+
+        const plain = await build()
+        plain.host.run.mockResolvedValue({ output: { done: true }, effects: [] })
+
+        await plain.steps.run(stepOf("keep"))
+
+        expect(plain.host.run.mock.calls[0]?.[0]).not.toHaveProperty("model")
     })
 })

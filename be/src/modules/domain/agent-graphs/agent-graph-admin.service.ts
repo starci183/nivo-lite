@@ -18,6 +18,7 @@ import type { GraphState } from "./agent-graphs.service"
 import { applyConflict } from "./policies/conflict-patch.policy"
 import type { ConflictPatch } from "./policies/conflict-patch.policy"
 import { applyContract } from "./policies/contract-patch.policy"
+import { requireKnownModels } from "./policies/graph-models.policy"
 import { localeOf, wireOfView } from "./policies/graph-wire.policy"
 import { applyLearned } from "./policies/proposal-patch.policy"
 import type {
@@ -92,7 +93,10 @@ export class AgentGraphAdminService {
     /** Saves the draft the editor read at `rev`; answers the new revision. */
     async saveDraft(actor: GraphActor, agentId: string, rev: number, documentJson: string): Promise<number> {
         await this.publisherOf(actor)
-        return (await this.graphs.saveDraft(actor.workspaceId, agentId, rev, parsed(documentJson))).draftRev
+        const document = parsed(documentJson)
+        // A node's model (the drawer's picker) must be Auto or a model of the vocabulary, on a node that calls AI.
+        requireKnownModels(document)
+        return (await this.graphs.saveDraft(actor.workspaceId, agentId, rev, document)).draftRev
     }
 
     /** Publishes the draft as the next version. */

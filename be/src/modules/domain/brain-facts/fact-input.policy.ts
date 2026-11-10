@@ -31,8 +31,11 @@ export const normalFact = (input: Pick<FactInput, "subjectLabel" | "attributeLab
     return { subjectLabel, attributeLabel, value, subjectKey, attribute, valueNumber: numberOf(value) }
 }
 
+/** What makes two pieces of evidence the same: the kind, the address and, for a document, the passage it was read from. */
+const evidenceKeyOf = (item: Evidence): string => `${item.kind}:${item.ref}:${item.chunkHash ?? ""}`
+
 /** The evidence a fact has plus what is new, without repeats, keeping the newest. */
 export const mergeEvidence = (have: ReadonlyArray<Evidence>, add: ReadonlyArray<Evidence>): Array<Evidence> => {
-    const seen = new Set(have.map((item) => `${item.kind}:${item.ref}`))
-    return [...have, ...add.filter((item) => !seen.has(`${item.kind}:${item.ref}`))].slice(-EVIDENCE_MAX)
+    const seen = new Set(have.map(evidenceKeyOf))
+    return [...have, ...add.filter((item) => !seen.has(evidenceKeyOf(item)))].slice(-EVIDENCE_MAX)
 }

@@ -10,7 +10,7 @@ import type {
     WorkspaceConnector,
 } from "./mcp-gateway.contracts"
 import type { AbilityVerdict } from "./provider-abilities.policy"
-import { fullNameOf } from "./tool-name.policy"
+import { toolNameOf } from "./tool-name.policy"
 
 /** What the tick of one ability on one connected account decides about a call: not allowed, run by itself, or ask a person first. */
 export type AbilityDecision = "off" | "auto" | "ask"
@@ -105,7 +105,7 @@ export const roleIn = (connectors: ReadonlyArray<WorkspaceConnector>, role: Capa
                 .filter((spec) => spec.role === role && usable(connector, spec.name))
                 .map((spec) => ({
                     role,
-                    name: fullNameOf(connector.manifest.key, spec.name),
+                    name: toolNameOf(connector.manifest, spec.name),
                     connector: connector.manifest.key,
                     connectorName: connector.manifest.name,
                 })),
@@ -114,7 +114,8 @@ export const roleIn = (connectors: ReadonlyArray<WorkspaceConnector>, role: Capa
 }
 
 /**
- * The full tool name that plays a domain tool among connectors: the first tool declaring the domain among those not disabled
+ * The full tool name (its connector's public prefix and its own name) that plays a domain tool among connectors, `chat.send` or a
+ * renamed `nivo.chat.send` alike: the first tool declaring the domain among those not disabled
  * (natives first, then remotes by key) that may run; null when the workspace has none.
  */
 export const domainNameIn = (connectors: ReadonlyArray<WorkspaceConnector>, domain: string): OptionalToolName => {
@@ -123,7 +124,7 @@ export const domainNameIn = (connectors: ReadonlyArray<WorkspaceConnector>, doma
         .flatMap((connector) =>
             connector.manifest.tools
                 .filter((spec) => spec.domain === domain && usable(connector, spec.name))
-                .map((spec) => fullNameOf(connector.manifest.key, spec.name)),
+                .map((spec) => toolNameOf(connector.manifest, spec.name)),
         )
     return name ?? null
 }

@@ -8,6 +8,8 @@ export interface ChatMessage {
     readonly content: string
     /** The pictures said with it, as addresses the model host can fetch. */
     readonly images?: ReadonlyArray<string>
+    /** True on the last message of the stable part: where a model that takes explicit cache breakpoints gets one. */
+    readonly cacheMark?: boolean
 }
 
 /** The lane of the Second Brain a drafting task reads: the module and agent instance that owns it, and who the text reaches. */
@@ -32,6 +34,29 @@ export interface AiTaskScope {
     readonly module?: string
     /** The lane a drafting task retrieves business notes from; without it the task reads no notes. */
     readonly lane?: AiTaskLane
+    /**
+     * The model a graph node's call is declared with (the node's own, else blocks-core's for its step, else the default); absent for
+     * a fixed task of the app, which keeps the endpoint's chat profile.
+     */
+    readonly model?: DeclaredModel | undefined
+}
+
+/** The model a graph node's call is declared with, and where the declaration came from. */
+export interface DeclaredModel {
+    /** `auto`, or a model id (an unknown id is booked as such and served by the default). */
+    readonly model: string
+    /** The step's weight as blocks-core declares it; Auto reads it. */
+    readonly weight: "light" | "heavy"
+    /** `node`: the graph's node names it (the shop's choice); `declared`: blocks-core's table; `default`: neither. */
+    readonly source: "node" | "declared" | "default"
+}
+
+/** Which providers of the AI pool hold a key in this deployment (an explicit model of a provider without one fails loudly). */
+export interface ConfiguredProviders {
+    /** Anthropic (Claude Sonnet 5.5). */
+    readonly anthropic: boolean
+    /** OpenRouter, or the OpenAI-compatible upstream in its place (the cheap model). */
+    readonly openrouter: boolean
 }
 
 /** One retrieval of business notes for a drafting task. */
@@ -413,6 +438,12 @@ export interface MeteredCall {
     readonly upstream: string | null
     /** Why the model stopped; null when it did not say. */
     readonly finishReason: string | null
+    /** What the node declared (`auto` or a model id); absent for a fixed task of the app. */
+    readonly declaredModel?: string | undefined
+    /** The provider of the model that served the call (`anthropic`, `openrouter`); absent when not known. */
+    readonly modelProvider?: string | undefined
+    /** Why the call went to the model it went to (`model-choice.policy.ts`); absent for a fixed task. */
+    readonly modelReason?: string | undefined
 }
 
 /** The sentence a workspace over its allowance is shown. */

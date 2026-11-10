@@ -1,5 +1,7 @@
 # Cutover: from the engine and Next route handlers to the api
 
+> State 2026-11-11: OpenClaw is removed (owner: "chốt bỏ openclaw"; code steps 4 to 6 in wave 2, migration `20261112012300_openclaw_contract_drop-sync.sql`). No `nivo-openclaw` service, image, volume or sealed `openclaw` member remains in the stack files; agents run in the NIVO engine with tools on the NIVO MCP ([../guides/engine-threads.md](../guides/engine-threads.md)). OpenClaw lines left below are the record of the earlier layout.
+
 This is the runbook for the day `lite/convert` becomes `main`, kept as the record of that cutover and of the reasons behind the current layout. Nothing in the
 conversion branch deploys by itself: the deploy workflow (`.github/workflows/stack-deploy.yml`) has no push trigger and runs by hand only. **Deploy stack** handles deployment and rollback through its `operation` input; the current procedure is `be/docs/runbooks/vps-stack.md`. **Production runs on Docker Swarm** (one VPS, single-manager swarm), not on Docker Compose: the three compose deploy workflows (api, edge and web) and the host crontab watchdog no longer exist on this branch; they stay reachable only from the rollback tag `pre-lite-cutover` (the old model).
 

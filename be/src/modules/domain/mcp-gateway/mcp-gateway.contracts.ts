@@ -152,8 +152,14 @@ export type RoleResolution =
 
 /** The manifest of a connector: its namespace, contract and tools. */
 export interface GatewayConnectorManifest {
-    /** The namespace, for example "shop". */
+    /** The namespace, for example "shop": the connector's row key, and the prefix of its tools' full names unless `namespace` says another. */
     readonly key: string
+    /**
+     * The public prefix of its tools' full names when it is not the key (`nivo` for NIVO's own connectors, whose keys stay distinct row
+     * keys: `nivo-context`). A full name is resolved through the index of every connector's full names, never by splitting at a dot,
+     * so two connectors may share a prefix; two tools with one full name refuse the app's start.
+     */
+    readonly namespace?: string
     /** The display name. */
     readonly name: string
     /** Native (code) or remote (MCP server). */

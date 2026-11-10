@@ -2,6 +2,7 @@ import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import type { Bilingual } from "@nivo-lite/agent-sdk/module"
 import { z } from "zod"
+import { withDeclaredModels } from "../models"
 import reconcile from "./accounting/template/workflows/reconcile.json"
 import reports from "./accounting/template/workflows/reports.json"
 import frontDesk from "./chatbot/template/workflows/front-desk.json"
@@ -90,8 +91,17 @@ const templateSchema = z
     })
     .strict()
 
-/** Reads one template file; a file that does not parse fails the import, so a broken template never ships. */
-const templateOf = (raw: unknown): WorkflowTemplate => templateSchema.parse(raw)
+/**
+ * Reads one template file; a file that does not parse fails the import, so a broken template never ships. Every node that calls AI
+ * gets its declared model written on it (`withDeclaredModels`), so the model travels into the graph a workflow copies.
+ */
+const templateOf = (raw: unknown): WorkflowTemplate => {
+    const template = templateSchema.parse(raw)
+    return {
+        ...template,
+        versions: template.versions.map((version) => ({ ...version, graph: withDeclaredModels(version.graph) })),
+    }
+}
 
 /** Every workflow template NIVO ships, in catalogue order. */
 export const WORKFLOW_TEMPLATES: ReadonlyArray<WorkflowTemplate> = [

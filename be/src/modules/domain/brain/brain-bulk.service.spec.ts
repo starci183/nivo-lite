@@ -13,6 +13,7 @@ import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { BrainBulkService } from "./brain-bulk.service"
 import { BrainLogEvent } from "./brain.log-events"
+import { FactEmbeddingsService } from "./fact-embeddings.service"
 import { BrainErrorCode } from "./errors/brain.error"
 
 const WS = "ws-1"
@@ -85,6 +86,7 @@ const build = async () => {
             { provide: BrainFactsService, useValue: facts },
             { provide: BrainFactsReadService, useValue: reads },
             { provide: BrainFactBatchService, useValue: batches },
+            { provide: FactEmbeddingsService, useValue: mock<FactEmbeddingsService>() },
         ],
     }).compile()
     return { service: moduleRef.get(BrainBulkService), members, sources, facts, reads, batches, logger }
@@ -100,7 +102,8 @@ describe("BrainBulkService applyDocument", () => {
 
         await expect(service.applyDocument("u1", WS, "s1")).resolves.toEqual({ batchId: BATCH, applied: 1, skipped: 2 })
 
-        expect(members.require).toHaveBeenCalledWith("u1", WS, ["owner", "manager"])
+        // Applying a batch puts truths in force: the founder's alone.
+        expect(members.require).toHaveBeenCalledWith("u1", WS, ["owner"])
         expect(reads.ofSources).toHaveBeenCalledWith(WS, ["s1"], ["proposed"], 2000)
         expect(facts.apply).toHaveBeenCalledTimes(1)
         expect(facts.apply).toHaveBeenCalledWith(

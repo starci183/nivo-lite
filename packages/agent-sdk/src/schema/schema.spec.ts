@@ -14,6 +14,13 @@ describe("isNamespaced and namespaceOf", () => {
         expect(isNamespaced("Core.x")).toBe(false)
         expect(isNamespaced("core.1x")).toBe(false)
     })
+
+    it("takes two to four parts: `nivo.<domain>.<object>.<verb>` is the longest", () => {
+        expect(isNamespaced("customer.message.send")).toBe(true)
+        expect(isNamespaced("nivo.lead.order.list")).toBe(true)
+        expect(isNamespaced("nivo.lead.order.list.more")).toBe(false)
+        expect(namespaceOf("nivo.lead.order.list")).toBe("nivo")
+    })
 })
 
 describe("wordsOf", () => {

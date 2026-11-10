@@ -1,4 +1,4 @@
-import { defineEffect } from "@nivo-lite/agent-sdk/node"
+import { LEAD_FACTS, defineEffect } from "@nivo-lite/agent-sdk/node"
 import type { EffectDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { MAX_BODY, MAX_ENTRIES, MAX_ID, MAX_LINE } from "../bounds"
@@ -33,14 +33,20 @@ export type ChannelSendPayload =
           readonly channel?: string | undefined
       })
 
-/** What a node changes on a customer: the stage of the sales consult and what it found out so far; a member left out is kept. */
+/**
+ * What a node changes on a customer: the stage of the sales consult on the record, and what it found out into the customer's lead memory
+ * (the one home of those facts; the record keeps no copy); a member left out is kept.
+ */
 export interface LeadUpdatePayload {
     /** The customer. */
     readonly leadId: string
     /** The stage the consult moved to. */
     readonly consultStage?: string | undefined
-    /** What the consult found out: who it is for, the occasion, the budget, the time, the address, the products shown and picked. */
-    readonly consultFacts?: { readonly [key: string]: JsonValue } | undefined
+    /**
+     * What the consult found out, as lead facts (`address`, `recipientName`, `deliveryAt`, `occasions`, `careOptOut`...): laid over what
+     * the customer's memory holds.
+     */
+    readonly facts?: { readonly [fact: string]: JsonValue } | undefined
 }
 
 /** A customer's deal moved to a stage of the pipeline. */
@@ -311,10 +317,18 @@ const orderConfirmPayload: z.ZodType<OrderConfirmPayload> = z
         "Confirm a draft order. An order at or above the shop's owner-approval limit is not confirmed: the tool answers that it waits for the owner, with the amount and the limit.",
     )
 
+/** The names a lead fact may have: what lead memory keeps. */
+const LEAD_FACT_NAMES: ReadonlySet<string> = new Set(LEAD_FACTS)
+
 const leadUpdatePayload: z.ZodType<LeadUpdatePayload> = z.object({
     leadId: id,
     consultStage: z.enum(CONSULT_STAGES).optional(),
-    consultFacts: boundedRecord.optional(),
+    facts: boundedRecord
+        .refine((facts) => Object.keys(facts).every((name) => LEAD_FACT_NAMES.has(name)), {
+            message: "Only lead facts may be remembered",
+        })
+        .optional()
+        .describe("What the consult found out, as lead facts; laid over what the customer's memory holds."),
 })
 
 const leadStageUpdatePayload: z.ZodType<LeadStageUpdatePayload> = z
@@ -446,14 +460,15 @@ export const leadEnsureEffect: EffectDefinition<z.ZodType<LeadEnsurePayload>> = 
 })
 
 /**
- * Updates a customer: the stage of the sales consult and what it found out; the subject is the customer. The next step of the same consult
+ * Updates a customer: the stage of the sales consult on the record and what it found out into the customer's lead memory; the subject is
+ * the customer. The next step of the same consult
  * writes it again, so no undo is kept.
  */
 export const leadUpdateEffect: EffectDefinition<z.ZodType<LeadUpdatePayload>> = defineEffect({
     id: TOOL.leadUpdate,
     title: { key: "effectLeadUpdate" },
     payload: leadUpdatePayload,
-    rights: [{ kind: "sales-lead", access: "write", scope: "turn", fields: ["consultStage", "consultFacts"] }],
+    rights: [{ kind: "sales-lead", access: "write", scope: "turn", fields: ["consultStage"] }],
 })
 
 /** Moves a customer's deal to a pipeline stage; the subject is the customer, the stage before and after ride as facts. */

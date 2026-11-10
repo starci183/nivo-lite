@@ -1,11 +1,8 @@
-/** The arguments of a tool call as OpenClaw sent them: untrusted, sanitised by the tool-args policy. */
+/** The arguments of a tool call as the model sent them: untrusted, sanitised by the tool-args policy. */
 export interface ToolArgs {
     /** Any member. */
     readonly [key: string]: unknown
 }
-
-/** The value of an Authorization header, or undefined when the request has none. */
-export type OptionalAuthorization = string | undefined
 
 /** The JSON object a tool answers with. */
 export interface JsonResult {
@@ -13,7 +10,7 @@ export interface JsonResult {
     readonly [key: string]: unknown
 }
 
-/** The job a tool call runs for (and a token is minted for), taken only from the verified token claims. */
+/** The job a tool call runs for, taken only from the engine and never from what the model sent. */
 export interface ToolContext {
     /** The job whose token was presented. */
     readonly jobId: string
@@ -21,62 +18,14 @@ export interface ToolContext {
     readonly workspaceId: string
     /** The conversation of the job. */
     readonly conversationId: string
-    /** The intent a split turn is pinned to, when the call comes from the bridge; absent on a per-job token. */
+    /** The intent a split turn is pinned to, when one is; absent otherwise. */
     readonly pinnedIntent?: string | null
     /** The wake of the turn on the core road, whose run holds its steps; absent on the legacy road. */
     readonly wakeId?: string
 }
 
-/** Who a credential admits: the job and the workspace it acts for, nothing else. */
-export interface ToolPrincipal {
-    /** The job (or, on the bridge, the wake or message) whose turn runs. */
-    readonly jobId: string
-    /** The workspace of the turn. */
-    readonly workspaceId: string
-}
-
-/** What woke the turn a bridge call serves: the key of the adapter that normalized the wake. */
-export type BridgeSource = "customer" | "tag" | "internal" | "schedule" | (string & Record<never, never>)
-
-/** The running turn a bridge call belongs to: read from the turn row and never from what the model sent. */
-export interface BridgeTurn extends ToolPrincipal {
-    /** The agent of the turn. */
-    readonly agentId: string
-    /** The turn row. */
-    readonly turnId: string
-    /** The wake it answers. */
-    readonly wakeId: string
-    /** What woke the agent. */
-    readonly source: BridgeSource
-    /** The customer conversation of the wake, or null for a tag, an event or a clock. */
-    readonly conversationId: string | null
-    /** The account that wrote the tagging message, or null. */
-    readonly authorUserId: string | null
-    /** The intent a split turn is pinned to, or null: read from the wake, never from what the model sent. */
-    readonly pinnedIntent?: string | null
-}
-
-/** A running turn, or null when the credential names none. */
-export type OptionalBridgeTurn = BridgeTurn | null
-
-/** One tool OpenClaw may call. */
-export interface ToolManifestEntry {
-    /** The supported dotted name used to dispatch this tool to its capability. */
-    readonly name: ToolName
-    /** What the tool does, for the model. */
-    readonly description: string
-    /** Argument name to type text; a trailing question mark marks an optional argument. */
-    readonly args: Readonly<Record<string, string>>
-}
-
 /** The booking tools served by the booking lane. */
 export type BookingToolName = "booking.find_slots" | "booking.request" | "booking.cancel"
-
-/** The connector meta-tools of the gateway: find, describe and call the connector tools the agent is granted. */
-export type GatewayToolName = "tool.search" | "tool.describe" | "tool.call" | "tool.sequence"
-
-/** The reads of NIVO's own knowledge, each audited in mcp_call_log. */
-export type ReadToolName = "knowledge.search" | "memory.read"
 
 /** Who makes a read of NIVO's own knowledge; a turn with no conversation reads as its agent. */
 export interface KnowledgeCaller {
@@ -86,23 +35,6 @@ export interface KnowledgeCaller {
     readonly conversationId: string | null
     /** The agent of the turn, when known. */
     readonly agentId: string | null
-}
-
-/** The supported tool names used to validate calls before dispatching them to a capability. */
-export type ToolName =
-    | ReadToolName
-    | "lead.create_or_update"
-    | "approval.request"
-    | "conversation.handOff"
-    | BookingToolName
-    | GatewayToolName
-
-/** A hand-over of the conversation to another agent of the workspace, already clipped. */
-export interface AgentHandoffRequest {
-    /** The agent to hand to: its id, or the department (module key) whose active agent takes it. */
-    readonly to: string
-    /** Why, in one line; the hand-off note and the ownership history keep it. */
-    readonly note: string
 }
 
 /** Sanitised slot-search arguments used to query a workspace's booking availability. */
@@ -208,15 +140,6 @@ export interface ApprovalResult {
     /** The status of the work item. */
     readonly status: string
 }
-
-/** The claims of a tool token: its job and an expiry in unix seconds. */
-export interface TokenClaims extends ToolContext {
-    /** Expiry, unix seconds. */
-    readonly exp: number
-}
-
-/** The claims of a valid token, or null. */
-export type OptionalToolClaims = TokenClaims | null
 
 /** A lead id, or null when there is none. */
 export type OptionalToolLeadId = string | null

@@ -198,7 +198,7 @@ export const HIRING_VI: Readonly<Record<string, string>> = {
     "hiring.screen.noCriteria": "(không có tiêu chí để chấm)",
     "hiring.screen.noAnswers": "(chưa có)",
     "hiring.screen.noAvailability": "(chưa ghi)",
-    "hiring.screen.noSummary": "Chưa có tóm tắt từ OpenClaw: điểm bên dưới là kết quả đối chiếu tiêu chí.",
+    "hiring.screen.noSummary": "Chưa có tóm tắt từ AI: điểm bên dưới là kết quả đối chiếu tiêu chí.",
     "hiring.screen.questions": "Gợi ý câu hỏi phỏng vấn:\n{{list}}",
     "hiring.screen.summary": 'Sàng lọc {{name}}: {{score}}/100 ({{label}}) cho "{{title}}"',
     "hiring.screen.done": "{{name}}: {{score}}/100 ({{label}})",
@@ -238,7 +238,7 @@ export const HIRING_VI: Readonly<Record<string, string>> = {
     "hiring.offer.termValid": "- Thư mời có hiệu lực {{days}} ngày kể từ khi gửi",
     "hiring.offer.summary": "Gửi thư mời nhận việc cho {{name}} ({{title}}, {{pay}})",
     "hiring.offer.summaryTemplate":
-        "Gửi thư mời nhận việc cho {{name}} ({{title}}, {{pay}}) - bản nháp mẫu, OpenClaw chưa soạn được",
+        "Gửi thư mời nhận việc cho {{name}} ({{title}}, {{pay}}) - bản nháp mẫu, AI chưa soạn được",
     "hiring.offer.asked": "Đã soạn thư mời cho {{name}} và gửi cho chủ duyệt.",
     "hiring.offer.subject": "Thư mời nhận việc: {{title}}",
     "hiring.offer.replyAt": "Xem và trả lời thư mời tại: {{link}}",

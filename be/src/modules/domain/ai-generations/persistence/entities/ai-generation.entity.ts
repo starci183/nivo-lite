@@ -5,7 +5,7 @@ import { Column, Entity } from "typeorm"
 export type AiGenerationStatus = "queued" | "running" | "done" | "error" | "cancelled"
 
 @Entity({ schema: "public", name: "ai_generations" })
-/** One text the app asked OpenClaw to write: the prompt, the answer and the metering of public.ai_generations. */
+/** One text the app asked the model to write: the prompt, the answer and the metering of public.ai_generations. */
 export class AiGenerationEntity extends UuidAbstractEntity {
     /** The workspace that asked. */
     @Column({ name: "workspace_id", type: "uuid" })

@@ -573,3 +573,47 @@ describe("NodeToolDoorService repeat guard: one customer line per stop", () => {
         await expect(door.repeatGuard(sendOf({ conversationId: "c-1", text: "x" }))).resolves.toBeNull()
     })
 })
+
+describe("NodeToolDoorService hard lock of the context reads", () => {
+    const LOCKED = { ...CLAIMS, leadId: "lead-1" } as NodeRunClaims
+
+    it("refuses a read naming another conversation before the gateway (its executor) is called", async () => {
+        const { door, gateway } = await build(LOCKED)
+
+        await expect(
+            door.call(callOf({ tool: TOOL.leadOrderList, args: { conversationId: "conv-OTHER" } })),
+        ).rejects.toMatchObject({ code: GraphNodesErrorCode.ToolNotGranted, params: { reason: "other_conversation" } })
+        expect(gateway.call).not.toHaveBeenCalled()
+    })
+
+    it("refuses a read naming another customer before the gateway is called", async () => {
+        const { door, gateway } = await build(LOCKED)
+
+        await expect(
+            door.call(callOf({ tool: TOOL.leadProfileGet, args: { leadId: "lead-OTHER" } })),
+        ).rejects.toMatchObject({ code: GraphNodesErrorCode.ToolNotGranted, params: { reason: "other_lead" } })
+        expect(gateway.call).not.toHaveBeenCalled()
+    })
+
+    it("fills the run's own conversation and customer from the token, never from the call", async () => {
+        const { door, gateway } = await build(LOCKED)
+
+        await door.call(callOf({ tool: TOOL.leadOrderList, args: { limit: 3 } }))
+
+        expect(gateway.call).toHaveBeenCalledWith(expect.anything(), TOOL.leadOrderList, {
+            limit: 3,
+            conversationId: "conv-1",
+            leadId: "lead-1",
+        })
+    })
+
+    it("leaves out a lock id the token does not carry, and passes any other tool's arguments as given", async () => {
+        const { door, gateway } = await build({ ...CLAIMS, conversationId: null })
+
+        await door.call(callOf({ tool: TOOL.conversationMessageList, args: {} }))
+        await door.call(callOf())
+
+        expect(gateway.call).toHaveBeenNthCalledWith(1, expect.anything(), TOOL.conversationMessageList, {})
+        expect(gateway.call).toHaveBeenNthCalledWith(2, expect.anything(), "bank.transactions", ARGS)
+    })
+})

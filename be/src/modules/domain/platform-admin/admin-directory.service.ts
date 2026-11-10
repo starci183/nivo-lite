@@ -136,14 +136,13 @@ export class AdminDirectoryService {
         const nowMs = this.clock.now().getTime()
         const workspace = await this.reads.workspace(workspaceId)
         if (workspace === undefined) throw new PlatformAdminError({ code: PlatformAdminErrorCode.WorkspaceNotFound })
-        const [members, invites, orders, billingEvents, installs, versions, syncs] = await Promise.all([
+        const [members, invites, orders, billingEvents, installs, versions] = await Promise.all([
             this.reads.members(workspaceId),
             this.reads.pendingInvites(workspaceId),
             this.reads.orders(workspaceId),
             this.reads.billingEvents(workspaceId),
             this.reads.installs(workspaceId),
             this.reads.contextVersions(workspaceId),
-            this.reads.agentSync(workspaceId),
         ])
         const [connections, errors, sources, stats, quota, override] = await Promise.all([
             this.reads.connections(workspaceId),
@@ -172,7 +171,7 @@ export class AdminDirectoryService {
             orders: orders.map(toOrder),
             transfers: transfers.map(toTransfer),
             billingEvents: billingEvents.map(toBillingEvent),
-            modules: this.workspaceModules(installs, versions, syncs),
+            modules: this.workspaceModules(installs, versions),
             connections: connections.map((connection) => toConnection(connection, nowMs)),
             errors: errors.map(toError),
             knowledgeTotal: sources.length,
@@ -229,30 +228,17 @@ export class AdminDirectoryService {
     private workspaceModules(
         installs: ReadonlyArray<R.InstallFacts>,
         versions: ReadonlyArray<R.ContextVersionFacts>,
-        syncs: ReadonlyArray<R.AgentSyncFacts>,
     ): Array<AdminModule> {
         return installs.map((install): AdminModule => {
             const version = versions.find((candidate) => candidate.id === install.active_context_version_id)
-            const sync = syncs.find((candidate) => candidate.installation_id === install.id)
             return {
                 id: install.id,
                 key: install.module_key,
                 status: install.status,
                 operatingMode: install.operating_mode,
                 live: install.live_enabled,
-                processor: install.processor === "openclaw" ? "openclaw" : "nivo",
                 contextVersion: version?.version ?? null,
                 contextAppliedAt: isoOrNull(version?.applied_at ?? null),
-                sync:
-                    sync === undefined
-                        ? null
-                        : {
-                              agentId: sync.agent_id,
-                              contextVersion: sync.context_version,
-                              checkedAt: iso(sync.checked_at),
-                              status: sync.status,
-                              error: sync.error,
-                          },
             }
         })
     }

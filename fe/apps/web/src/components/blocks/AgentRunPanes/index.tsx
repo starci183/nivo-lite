@@ -3,13 +3,12 @@
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { usePaneCopy } from "@/hooks/paneFrame"
-import { agentRunGridOf, useAgentRunDetail, useRunAsideWide } from "@/hooks/agentRuns"
+import { agentRunGridOf, useAgentRunAiCalls, useAgentRunDetail, useRunAsideWide } from "@/hooks/agentRuns"
 import { useOverviewPhone } from "@/hooks/overview"
 import { useSlotLabels } from "@/hooks/slot"
 import { EMPTY_STEPS_MAP } from "@/hooks/workflowSteps"
 import type { RunDetailView } from "@/modules/types"
-import { AgentRunPanesBase } from "./component"
-import type { AgentRunPanesCopy } from "./component"
+import { AgentRunPanesBase, type AgentRunPanesCopy } from "./component"
 
 /** The run of the instance the page shows. */
 type AgentRunPanesProps = {
@@ -121,8 +120,9 @@ export const AgentRunPanes = (props: AgentRunPanesProps) => {
     const slotLabels = useSlotLabels()
     const isPhone = useOverviewPhone()
     const run = useAgentRunDetail(props.module, props.installationId, props.runId)
+    const aiCalls = useAgentRunAiCalls(props.installationId, props.runId)
     const pane = usePaneCopy()
-    const [isAsideOpen, setAsideOpen] = useState(false)
+    const [isAsideOpen, setIsAsideOpen] = useState(false)
     const isWide = useRunAsideWide()
     const selected = "items" in run.slot ? run.slot.items.selected : null
     return (
@@ -143,14 +143,29 @@ export const AgentRunPanes = (props: AgentRunPanesProps) => {
                     description: selected?.kindLabel ?? "",
                 },
                 grid: agentRunGridOf(),
+                aiCalls: {
+                    copy: {
+                        title: t("aiTitle"),
+                        kinds: t("aiKinds", { count: aiCalls.length }),
+                        empty: t("aiEmpty"),
+                        purpose: t("aiColPurpose"),
+                        calls: t("aiColCalls"),
+                        prompt: t("aiColPrompt"),
+                        completion: t("aiColCompletion"),
+                        time: t("aiColTime"),
+                        cost: t("aiColCost"),
+                        model: t("aiColModel"),
+                    },
+                    rows: aiCalls,
+                },
             }}
             on={{
                 select: run.select,
                 pressStep: (nodeKey) => {
                     run.select(nodeKey)
-                    if (!isWide) setAsideOpen(true)
+                    if (!isWide) setIsAsideOpen(true)
                 },
-                asideOpenChange: setAsideOpen,
+                asideOpenChange: setIsAsideOpen,
                 resume: run.resume,
                 cancel: run.cancel,
                 decide: run.decide,

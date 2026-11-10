@@ -4,7 +4,7 @@ import { InstallationRecordsService } from "@modules/domain/module-installations
 import { InstallationChangesService } from "./installation-changes.service"
 
 @Injectable()
-/** Renames an agent from its profile by the agent's id, then tells the sync so the OpenClaw copy of its installation carries the new name. */
+/** Renames an agent from its profile by the agent's id, then announces `installation_changed` for its installation. */
 export class AgentRenameService {
     constructor(
         private readonly identity: AgentIdentityService,

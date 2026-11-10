@@ -78,6 +78,12 @@ const composerOf = (context: RoomViewContext): TeamChatRoomViewProps["composer"]
     }
 }
 
+/** Why the last forward failed, in the viewer's words, or null. */
+const forwardErrorOf = (t: Words, error: string | null): string | null => {
+    if (error === null) return null
+    return error === "failed" ? t("forwardFailed") : refusalWordsOf(t, error)
+}
+
 /** The dialog that picks the room a message is forwarded to. */
 const forwardOf = (context: RoomViewContext): TeamChatForwardView => {
     const { room, t } = context
@@ -90,7 +96,7 @@ const forwardOf = (context: RoomViewContext): TeamChatForwardView => {
         empty: t("forwardEmpty"),
         rooms: forward.rooms,
         sendingId: forward.sendingId,
-        error: forward.error === null ? null : forward.error === "failed" ? t("forwardFailed") : refusalWordsOf(t, forward.error),
+        error: forwardErrorOf(t, forward.error),
     }
 }
 
@@ -122,6 +128,7 @@ const roomViewPropsOf = (context: RoomViewContext): TeamChatRoomViewProps => {
         isLoadingOlder: thread.isLoadingOlder,
         decidingId: cards.decidingId,
         decideError: cards.decideRefusal === null ? null : refusalWordsOf(t, cards.decideRefusal),
+        stops: { isOwner: room.stops.isOwner, pendingKey: room.stops.pendingKey },
         forward: forwardOf(context),
         composer: composerOf(context),
     }

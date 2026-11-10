@@ -27,7 +27,7 @@ export interface Installation {
     readonly agentId: string | null
     /** assist or autopilot. */
     readonly operatingMode: string
-    /** The instance settings (processor, openclawTimeoutSec...). */
+    /** The instance settings (holdingMessage, workingHours...). */
     readonly settings: Readonly<Record<string, unknown>>
     /** The active context version, or null. */
     readonly activeContextVersionId: string | null
@@ -84,8 +84,6 @@ export interface InstallationDirectory {
     firstOfModule(workspaceId: string, module: string): Promise<OptionalInstallation>
     /** The installation that owns an agent. */
     ofAgent(workspaceId: string, agentId: string): Promise<OptionalInstallation>
-    /** Up to `limit` installations that run on OpenClaw (settings processor is not "nivo"), of one workspace or of all when null. */
-    onOpenclaw(workspaceId: OptionalId, limit: number): Promise<ReadonlyArray<InstallationRef>>
     /** The context version with that id, flattened. */
     contextVersionOf(versionId: string): Promise<OptionalContextVersion>
 }

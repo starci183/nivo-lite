@@ -131,6 +131,41 @@ export class BrainFactsReadService {
         return rows.map(toFactRecord)
     }
 
+    /** The facts of the workspace with these ids (on the primary key), in no order; an id of another workspace is not answered. */
+    async byIds(workspaceId: string, ids: ReadonlyArray<string>): Promise<ReadonlyArray<FactRecord>> {
+        const unique = [...new Set(ids)].slice(0, LIST_MAX)
+        if (unique.length === 0) return []
+        const rows = await this.entityManager.find(BrainFactEntity, {
+            where: { workspaceId, id: In(unique) },
+            take: unique.length,
+        })
+        return rows.map(toFactRecord)
+    }
+
+    /**
+     * The facts born from one passage (chunk) of a document, in these statuses: one read on the evidence index (`brain_facts_evidence`,
+     * GIN jsonb_path_ops, which serves the containment below).
+     */
+    async bornFrom(
+        workspaceId: string,
+        sourceId: string,
+        chunkHash: string,
+        statuses: ReadonlyArray<FactStatus>,
+    ): Promise<ReadonlyArray<FactRecord>> {
+        if (statuses.length === 0) return []
+        const rows = await this.entityManager
+            .createQueryBuilder(BrainFactEntity, "f")
+            .where("f.workspaceId = :workspaceId AND f.status IN (:...statuses) AND f.evidence @> :pattern::jsonb", {
+                workspaceId,
+                statuses: [...statuses],
+                pattern: JSON.stringify([{ kind: "document", ref: sourceId, chunkHash }]),
+            })
+            .orderBy("f.updatedAt", "DESC")
+            .limit(LIST_MAX)
+            .getMany()
+        return rows.map(toFactRecord)
+    }
+
     /** One fact through a manager. */
     async fetch(em: EntityManager, workspaceId: string, id: string): Promise<MaybeFact> {
         const row = await em.findOne(BrainFactEntity, { where: { workspaceId, id } })

@@ -10,7 +10,6 @@ import type {
     InstallationStatus,
     InstanceName,
     NewInstallation,
-    OpenclawInstallation,
     OptionalRowId,
     OptionalInstallationRecord,
     OptionalInstallationStatus,
@@ -282,22 +281,6 @@ export class InstallationRecordsService {
             .returning("status")
             .execute()
         return [settled.raw].flat().find(isSettledRow)?.status ?? null
-    }
-
-    /** Up to `limit` installations that run on OpenClaw, of one workspace or of all when `workspaceId` is null. */
-    onOpenclaw(workspaceId: OptionalRowId, limit: number): Promise<ReadonlyArray<OpenclawInstallation>> {
-        const query = this.entityManager
-            .createQueryBuilder(ModuleInstallationEntity, "i")
-            .select("i.id", "id")
-            .addSelect("i.workspaceId", "workspaceId")
-            .where("i.status <> 'removed'")
-            .andWhere("COALESCE(i.settings ->> 'processor', '') <> 'nivo'")
-        if (workspaceId !== null) query.andWhere("i.workspaceId = :workspaceId", { workspaceId })
-        return query
-            .orderBy("i.createdAt", "ASC")
-            .addOrderBy("i.id", "ASC")
-            .limit(limit)
-            .getRawMany<OpenclawInstallation>()
     }
 
     private async write(run: () => Promise<UpdateResult>): Promise<InstallationWrite> {

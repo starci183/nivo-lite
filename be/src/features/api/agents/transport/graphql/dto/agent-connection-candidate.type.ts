@@ -34,8 +34,4 @@ export class AgentConnectionCandidateType {
     /** Whether the agent is bound to it. */
     @Field()
     bound!: boolean
-
-    /** Deprecated: `auto` when bound, null when not (rights live in the agent's attachments). */
-    @Field(() => String, { nullable: true, deprecationReason: "Rights live in the agent's attachments (tab Quyền); a binding has no level. Always \"auto\" for a bound pair; removed next release." })
-    access!: string | null
 }

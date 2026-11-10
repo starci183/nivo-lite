@@ -23,7 +23,7 @@ export class AgentTurnEntity extends UuidAbstractEntity {
     fence!: number
 
     /** What ran the turn. */
-    @Column({ name: "runner", type: "text", default: () => "'openclaw'" })
+    @Column({ name: "runner", type: "text", default: () => "'nivo'" })
     runner!: string
 
     /** The runtime's id of the agent, set before the model runs so tool calls find the turn. */

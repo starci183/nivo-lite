@@ -1,5 +1,4 @@
 import { builder } from "@starci/jest-preset"
-import type { AgentSyncStatus } from "@modules/domain/module-installations"
 import type { InstallRequest } from "@modules/domain/modules"
 
 /** What the readiness double adds to an installation record to make it a view. */
@@ -22,12 +21,3 @@ export const installRequestOf: (overrides?: Partial<InstallRequest>) => InstallR
     newInstance: false,
     name: null,
 })
-
-/** A copy in sync with the active version. */
-export const SYNCED_AGENT_COPY: AgentSyncStatus = {
-    state: "ok",
-    syncedVersion: 1,
-    activeVersion: 1,
-    checkedAt: null,
-    error: null,
-}

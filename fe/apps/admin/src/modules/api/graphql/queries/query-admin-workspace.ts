@@ -66,16 +66,8 @@ const query1: TypedDocumentNode<AdminWorkspaceQuery, InputVariables<QueryAdminWo
                 status
                 operatingMode
                 live
-                processor
                 contextVersion
                 contextAppliedAt
-                sync {
-                    agentId
-                    contextVersion
-                    checkedAt
-                    status
-                    error
-                }
             }
             connections {
                 id

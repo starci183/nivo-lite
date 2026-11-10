@@ -4,6 +4,12 @@ How a NIVO agent works around the clock while costing nothing when idle. An agen
 stateless worker runs one turn, and the result lands in Postgres. Paths are from the repository root. [nivo-mcp.md](nivo-mcp.md)
 owns the tool door and [jobs.md](jobs.md) owns the queue; this page adds to them and never restates them.
 
+> State 2026-11-10: this page is the design of the wake road as built in October. The turn runner it describes (OpenClaw, the
+> `/agent-tools` bridge, the agent sync) is removed (OpenClaw steps 1 to 6 in code by 2026-11-11, migration 012300; every OpenClaw line
+> below is history, not the running system). The wake road, the lease and
+> the drain of sections 4 and 5 still hold; a workflow run now executes in the engine, and on a LangGraph thread when its workflow
+> is flagged: see [engine-threads.md](engine-threads.md) for threads, stops, deadlines, the sweep, the effect ledger and metering.
+
 ## 1. The system on one page
 
 ```

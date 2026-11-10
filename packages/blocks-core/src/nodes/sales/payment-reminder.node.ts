@@ -64,7 +64,7 @@ const OPEN_ORDER = {
 
 const STORE = {
     order: [OPEN_ORDER],
-    "sales-lead": [{ id: "l1", contactName: "An", consultFacts: {} }],
+    "sales-lead": [{ id: "l1", contactName: "An" }],
 }
 
 const REMINDER = "Shop nhắc nhẹ chị An: đơn DH-1 vẫn đang chờ thanh toán ạ, thông tin chuyển khoản ở tin nhắn phía trên."
@@ -89,7 +89,7 @@ export const salesPaymentReminderNode: NodeDefinition<typeof input, typeof outpu
         const order = await careOrderOf(context, given.orderId)
         if (order === undefined || paymentStateOf(order.status) !== "open") return settled
         const lead = await careLeadOf(context, order.leadId)
-        if (careFactsOfLead(lead).optedOut) return settled
+        if ((await careFactsOfLead(context, order.leadId)).optedOut) return settled
         return agentAnswer(context, {
             goal: `${nodeGoalOf(ID, "en")} ${GUIDANCE} ${CARE_VOICE}`,
             input: {

@@ -15,7 +15,7 @@ export const SETTINGS_READ: ReadDefinition = defineRead({
     id: "chatbot.settings",
     dataKind: "chatbot-settings",
     shape: "record",
-    fields: ["openclawTimeoutSec", "holdingMessage", "updatedBy"],
+    fields: ["holdingMessage", "updatedBy"],
     paths: {},
     variables,
     permission: "chatbot.view",

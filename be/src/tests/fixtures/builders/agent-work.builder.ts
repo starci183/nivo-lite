@@ -167,7 +167,7 @@ export const agentTurnRowOf: (overrides?: Partial<AgentTurnEntity>) => AgentTurn
     agentId: "agent-1",
     wakeId: "wake-1",
     fence: 1,
-    runner: "openclaw",
+    runner: "nivo",
     runtimeAgentId: null,
     threadKey: null,
     status: "settled",

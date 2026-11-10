@@ -147,8 +147,6 @@ export interface InstallFacts {
     readonly live_enabled: boolean
     /** The active context version id. */
     readonly active_context_version_id: string | null
-    /** The processor. */
-    readonly processor: string | null
 }
 
 /** The context-version columns of the detail. */
@@ -159,22 +157,6 @@ export interface ContextVersionFacts {
     readonly version: number
     /** The applied at. */
     readonly applied_at: string
-}
-
-/** The sync columns of the detail. */
-export interface AgentSyncFacts {
-    /** The installation id. */
-    readonly installation_id: string
-    /** The agent id. */
-    readonly agent_id: string
-    /** The context version. */
-    readonly context_version: number | null
-    /** The checked at. */
-    readonly checked_at: string
-    /** The status. */
-    readonly status: string
-    /** The error. */
-    readonly error: string | null
 }
 
 /** The connection columns of the detail. */

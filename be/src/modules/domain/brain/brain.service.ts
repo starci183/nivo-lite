@@ -6,7 +6,7 @@ import type { LessonRecord } from "@modules/domain/brain-lessons"
 import { FACT_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
+import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
@@ -15,14 +15,15 @@ import { eachInOrder } from "@modules/platform/primitives"
 import type { FactDecision, FactForm, KeepCurrentInput, LessonDecision, LessonForm } from "./brain.contracts"
 import { BrainLogEvent } from "./brain.log-events"
 import { DocumentFactsService } from "./document-facts.service"
-
-/** Who may change the brain of a workspace. */
-const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
+import { FactEmbeddingsService } from "./fact-embeddings.service"
+import { MANAGERS, rolesToDecide } from "./founder.policy"
 
 @Injectable()
 /**
- * What an owner or manager does on the Second Brain page. What they write is applied at once (they are the reviewer); everything the
- * agents or customers say arrives as a proposal. A fact that becomes active also answers the customer questions it covers.
+ * What an owner or manager does on the Second Brain page. Only the founder (the owner) puts a truth in force: what the founder writes is
+ * applied at once, what a manager writes arrives as a proposal like everything the agents, documents, chats or customers say, and only
+ * the founder applies, chooses, splits or retires. A manager may turn a proposal down. A fact that becomes active also answers the
+ * customer questions it covers.
  */
 export class BrainService {
     constructor(
@@ -34,9 +35,13 @@ export class BrainService {
         private readonly gaps: KnowledgeGapsService,
         private readonly sources: KnowledgeSourcesService,
         private readonly documentFacts: DocumentFactsService,
+        private readonly vectors: FactEmbeddingsService,
     ) {}
 
-    /** Adds a fact, or a new value for an existing one (the old value is superseded and kept in history). */
+    /**
+     * Adds a fact, or a new value for an existing one (the old value is superseded and kept in history): in force at once when the
+     * founder writes it, a proposal for the founder when a manager does.
+     */
     async saveFact(userId: string, workspaceId: string, form: FactForm): Promise<ProposeResult> {
         const me = await this.manager(userId, workspaceId)
         const now = this.clock.now()
@@ -51,7 +56,7 @@ export class BrainService {
             validTo: form.validTo,
             sourceKind: me.role === "owner" ? "owner" : "manager",
             proposedBy: me.displayName,
-            autoApply: true,
+            autoApply: me.role === "owner",
             evidence: [
                 {
                     kind: "manual",
@@ -69,9 +74,9 @@ export class BrainService {
         return result
     }
 
-    /** Decides a fact: apply, reject, choose among competing values, split into its own fact, or retire. */
+    /** Decides a fact: apply, reject, choose among competing values, split into its own fact, or retire. Only rejecting is a manager's too. */
     async decideFact(userId: string, decision: FactDecision): Promise<FactRecord> {
-        const me = await this.manager(userId, decision.workspaceId)
+        const me = await this.members.require(userId, decision.workspaceId, rolesToDecide(decision.action))
         const { workspaceId, id } = decision
         const fact = await this.decided(workspaceId, id, me.displayName, decision)
         await this.answered(workspaceId, fact)
@@ -156,8 +161,12 @@ export class BrainService {
         }
     }
 
-    /** A public fact that is in force answers the customer questions it covers; a failure here never blocks the fact. */
+    /**
+     * A fact that is in force gets its vector (only the facts whose line or identity changed are embedded), and a public one answers
+     * the customer questions it covers; a failure here never blocks the fact.
+     */
     private async answered(workspaceId: string, fact: FactRecord): Promise<void> {
+        if (fact.status === "active") await this.vectors.refresh(workspaceId)
         if (fact.status !== "active" || fact.scope !== "public") return
         try {
             await this.gaps.resolve(workspaceId, {

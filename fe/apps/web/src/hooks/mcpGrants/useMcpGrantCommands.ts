@@ -1,7 +1,6 @@
 "use client"
 
-import { useMutateSetMcpToolGrantSwr } from "@/hooks/swr"
-import type { useQueryMcpToolGrantsSwr } from "@/hooks/swr"
+import { useMutateSetMcpToolGrantSwr, type useQueryMcpToolGrantsSwr } from "@/hooks/swr"
 import { useGraphQLWithToast } from "@/modules/toast"
 import { useTranslations } from "next-intl"
 import { useCallback, useState } from "react"
@@ -16,10 +15,15 @@ const modeOf = (isOn: boolean, held: string | undefined): string => {
     return held === undefined || held === "never" ? "auto" : held
 }
 
+/** The modes a grant row holds: by itself, after the owner approves each use, or never. */
+type GrantMode = "auto" | "ask" | "never"
+
 /** The switches of the gateway tools (owner | manager), and which one is saving. */
 export interface McpGrantCommands {
     /** Turns one tool on (`auto`, or the mode the agent already had) or off (`never`) for one agent, then reloads the grants. */
     readonly toggle: (agentId: string, tool: string, isOn: boolean) => Promise<void>
+    /** Sets one tool of one agent to a mode (`auto`, `ask` or `never`), keeping its constraints and money limit, then reloads the grants. */
+    readonly setMode: (agentId: string, tool: string, mode: GrantMode) => Promise<void>
     /** The `agentId:tool` a save is running for, or null. */
     readonly busyKey: string | null
 }
@@ -36,10 +40,9 @@ export const useMcpGrantCommands = (
     const runGraphQL = useGraphQLWithToast()
     const { trigger } = useMutateSetMcpToolGrantSwr()
     const [busyKey, setBusyKey] = useState<string | null>(null)
-    const toggle = useCallback(
-        async (agentId: string, tool: string, isOn: boolean) => {
+    const setMode = useCallback(
+        async (agentId: string, tool: string, mode: string) => {
             const held = grants.find((grant) => grant.agentId === agentId && grant.tool === tool)
-            const mode = modeOf(isOn, held?.mode)
             setBusyKey(grantKeyOf(agentId, tool))
             const saved = await runGraphQL(
                 () =>
@@ -57,5 +60,10 @@ export const useMcpGrantCommands = (
         },
         [grants, runGraphQL, trigger, reload, t],
     )
-    return { toggle, busyKey }
+    const toggle = useCallback(
+        (agentId: string, tool: string, isOn: boolean) =>
+            setMode(agentId, tool, modeOf(isOn, grants.find((grant) => grant.agentId === agentId && grant.tool === tool)?.mode)),
+        [grants, setMode],
+    )
+    return { toggle, setMode, busyKey }
 }

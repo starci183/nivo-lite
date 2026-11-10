@@ -1,5 +1,6 @@
 import type { EnvSource } from "@modules/platform/config"
 import type { AiOptions, AiRouting } from "@modules/integrations/ai"
+import type { ConfiguredProviders } from "./ai-tasks.contracts"
 import type { AiTasksOptions, NodeReasoning } from "./ai-tasks.options"
 import { NODE_TIMEOUT_CEILING_MS } from "./call-limits.policy"
 
@@ -73,6 +74,15 @@ const nodeReasoningOf = (declared: string | undefined): NodeReasoning =>
     NODE_REASONINGS.find((known) => known === declared?.trim().toLowerCase()) ?? NODE_REASONING_DEFAULT
 
 /**
+ * Which providers of the pool hold a key, by the same variables the gateway pools them from (`integrations/ai-gateway`): the upstream
+ * by `OPENROUTER_API_KEY` or `LLM_API_KEY`, Anthropic by `ANTHROPIC_API_KEY`, pooled only beside the upstream. Only presence is read.
+ */
+const configuredProvidersOf = (env: EnvSource): ConfiguredProviders => {
+    const openrouter = env.has("OPENROUTER_API_KEY") || env.has("LLM_API_KEY")
+    return { openrouter, anthropic: openrouter && env.has("ANTHROPIC_API_KEY") }
+}
+
+/**
  * Reads the prompt library tunables: `AI_TIMEOUT` (one try of a task), `AI_NODE_TIMEOUT` (the first try of a graph node's call) and
  * `AI_NODE_RETRY_TIMEOUT` (each retry of it), both capped at the ceiling, and `AI_NODE_REASONING` (`off`, `minimal`, `low`, `medium`, `high` or `default`: what a node call asks a reasoning model for),
  * `AI_NODE_MAX_TOKENS` (the output limit of a node call, reasoning included) and `AI_NODE_REASONING_MAX_TOKENS` (a direct cap on its
@@ -91,4 +101,5 @@ export const parseAiTasksConfig = (env: EnvSource, endpoint: AiOptions): AiTasks
     nodeReasoning: nodeReasoningOf(env.optional("AI_NODE_REASONING")),
     ...nodeCapsOf(env),
     ...nodeRoutingOf(env),
+    providers: configuredProvidersOf(env),
 })

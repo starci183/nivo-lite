@@ -17,7 +17,7 @@ interface ChatComposerBandProps {
 
 /** The composer of every chat pane, pinned under the thread: the separator, a row of small suggestion buttons, then the field with its send. */
 export const ChatComposerBand = (props: ChatComposerBandProps) => (
-    <PaneSection as="footer" isLoading={props.isWaiting} rule="start" gap="row">
+    <PaneSection as="footer" isLoading={props.isWaiting} gap="row">
         {props.suggestions.length === 0 ? null : (
             <Cluster gap="inline">
                 {props.suggestions.map((suggestion) => (

@@ -81,3 +81,13 @@ export interface ExtractionState {
     /** Where the reading stands. */
     readonly status: ExtractionStatus
 }
+
+/** How far the reading of one document got, as the truth graph's list of sources shows it. */
+export interface ExtractionProgressView extends ExtractionState {
+    /** Windows read. */
+    readonly windowsDone: number
+    /** Windows the reading has (only the changed passages on a partial reading). */
+    readonly windowsTotal: number
+    /** Facts filed by the reading. */
+    readonly factsProposed: number
+}

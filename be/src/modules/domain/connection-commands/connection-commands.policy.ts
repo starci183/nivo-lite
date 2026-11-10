@@ -35,8 +35,6 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
 const CONNECTOR_ID = /^[a-z0-9_]{1,60}$/u
 const MAX_WISHES = 200
 const MAX_EVENTS = 20
-const LEVELS = ["read", "ask", "auto"] as const
-type Level = (typeof LEVELS)[number]
 
 const invalid = (field: string): never => {
     throw new ConnectionsError({ code: ConnectionsErrorCode.CommandInvalid, params: { field } })
@@ -51,26 +49,25 @@ const uuidOf = (value: unknown, field: string): string =>
 const textOf = (value: unknown, field: string, max: number): string =>
     typeof value === "string" && value.length <= max ? value : invalid(field)
 
-const levelOf = (value: unknown, field: string): Level => LEVELS.find((level) => level === value) ?? invalid(field)
-
 const idField = (input: Input, field: string): string => uuidOf(input[field], field)
+
+/** Whether a grant binds: `bound` true binds, false removes; anything else is refused (a binding has no level). */
+const boundOf = (input: Input): boolean => (typeof input.bound === "boolean" ? input.bound : invalid("bound"))
 const connectionOf = (input: Input): string => idField(input, "connectionId")
 
-/** One wish of a list: the id of the other side (a level a client still sends is checked and ignored: rights live in attachments). */
+/** One wish of a list: the id of the other side (a binding has no level: rights live in attachments). */
 interface Wish {
     readonly id: string
 }
 
-/** A list of wishes: each entry is a bare id or an object with the id and an optional level. */
+/** A list of wishes: each entry is a bare id or an object with the id. */
 const wishesOf = (input: Input, listKey: string, idKey: string): ReadonlyArray<Wish> => {
     const list = input[listKey]
     if (!Array.isArray(list) || list.length > MAX_WISHES) return invalid(listKey)
     return list.map((entry: unknown): Wish => {
         if (typeof entry === "string") return { id: uuidOf(entry, listKey) }
         if (!isRecord(entry)) return invalid(listKey)
-        const id = uuidOf(entry[idKey], listKey)
-        if (entry.access !== undefined) levelOf(entry.access, listKey)
-        return { id }
+        return { id: uuidOf(entry[idKey], listKey) }
     })
 }
 
@@ -100,13 +97,7 @@ export const COMMANDS: Readonly<Record<string, Runner>> = {
     "connection.check": (s, a, i) => s.channels.check(a, connectionOf(i)),
     "connection.disconnect": (s, a, i) => s.lifecycle.disconnect(a, connectionOf(i)),
     "connection.delete": (s, a, i) => s.lifecycle.remove(a, connectionOf(i)),
-    "grant.set": (s, a, i) =>
-        s.grants.setGrant(
-            a,
-            connectionOf(i),
-            idField(i, "agentId"),
-            i.access === null ? false : levelOf(i.access, "access") !== undefined,
-        ),
+    "grant.set": (s, a, i) => s.grants.setGrant(a, connectionOf(i), idField(i, "agentId"), boundOf(i)),
     "grant.connection-agents": (s, a, i) =>
         s.grants.setConnectionAgents(
             a,

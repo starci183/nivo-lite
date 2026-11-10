@@ -7,8 +7,6 @@ interface ChatThreadBandProps {
     /** Where the content stands in the well: at the foot beside the composer (messages), or in the middle (the greeting notice). */
     readonly placement: "foot" | "middle"
     readonly isWaiting: boolean
-    /** The ground of the thread: the pink well (default) or the white surface. */
-    readonly tone?: "surface" | "background"
     /** The scroll owner, for a thread that opens at its newest message by itself. */
     readonly scrollRef?: Ref<HTMLDivElement>
     readonly children: ReactNode
@@ -20,7 +18,6 @@ export const ChatThreadBand = (props: ChatThreadBandProps) => (
         scroll={{
             label: props.label,
             role: "log",
-            tone: props.tone ?? "background",
             align: props.placement === "middle" ? "center" : "end",
             ...(props.scrollRef === undefined ? {} : { scrollRef: props.scrollRef }),
         }}

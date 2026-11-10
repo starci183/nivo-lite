@@ -59,6 +59,25 @@ describe("bankDisplayNameOf", () => {
         expect(subject.bankDisplayNameOf("timo")).toBe("Timo")
     })
 
+    it.each([
+        ["MBBANK", "MB Bank"],
+        ["MBBank", "MB Bank"],
+        ["ICB", "VietinBank"],
+        ["VietinBank", "VietinBank"],
+        ["VBA", "Agribank"],
+        ["Vietcombank", "Vietcombank"],
+        ["LienVietPostBank", "LPBank"],
+        ["NamABank", "Nam A Bank"],
+        ["BacABank", "Bac A Bank"],
+        ["BaoVietBank", "BaoViet Bank"],
+        ["KienLongBank", "KienlongBank"],
+        ["Nam A Bank", "Nam A Bank"],
+    ])("names SePay's spelling %s as %s", async (spelling, name) => {
+        const subject = await buildSubject()
+
+        expect(subject.bankDisplayNameOf(spelling)).toBe(name)
+    })
+
     it("keeps an unlisted code, trimmed and in upper case", async () => {
         const subject = await buildSubject()
 

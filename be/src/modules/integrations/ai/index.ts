@@ -11,6 +11,7 @@ export type {
     AiMessage,
     AiRouting,
     AiServed,
+    AiTarget,
     AiTurnRead,
     AiTurnRequest,
     AiUsage,

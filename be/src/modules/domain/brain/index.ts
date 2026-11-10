@@ -13,3 +13,14 @@ export { BrainService } from "./brain.service"
 export type { BulkApplied, BulkUndone, Correction, CorrectionSource } from "./brain.contracts"
 export { IndexedSourcesService } from "./indexed-sources.service"
 export { brainEntities } from "./persistence/entities"
+export { BrainGraphService } from "./brain-graph.service"
+export type { GraphLinkForm, GraphRequest, GraphUnlinkRequest } from "./brain-graph.service"
+export { FactEmbeddingsService } from "./fact-embeddings.service"
+export type {
+    BrainGraph,
+    BrainGraphFilter,
+    BrainGraphNode,
+    BrainGraphOrigin,
+    BrainGraphPending,
+    BrainGraphSource,
+} from "./brain.contracts"

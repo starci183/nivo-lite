@@ -56,6 +56,11 @@ export interface Evidence {
     readonly sourceId?: string
     /** Document evidence: the title of the source. */
     readonly title?: string
+    /**
+     * Document evidence: the hash of the passage (chunk) the fact was read from, `passageTextHashOf` of its text. A change of the
+     * document touches only the facts whose chunk hash is no longer among its passages.
+     */
+    readonly chunkHash?: string
 }
 
 /** One fact of the brain of a workspace. */
@@ -112,6 +117,11 @@ export interface FactRecord {
     readonly decidedAt: string | null
     /** The reason given with the decision. */
     readonly decisionNote: string | null
+    /**
+     * Which value of its key this is: 1 on the first activation, one more on each value that replaces it. Absent on a proposal that was
+     * never in force (and on a row the version backfill did not reach).
+     */
+    readonly version?: number
 }
 
 /** What decides who may read a fact: its scope, the modules it is restricted to and the instance it is kept for. */
@@ -201,3 +211,87 @@ export interface MaintenanceResult {
 
 /** An instant as a database driver answers it: a Date, or already text. */
 export type Instant = Date | string
+
+/**
+ * How two facts of the truth graph relate, read from the first to the second: `part_of` (a detail of a broader truth), `applies_to`
+ * (a rule or price that applies to it), `depends_on` (holds only when the other holds), `exception_of` (a narrower case that overrides
+ * it), `related` (anything else worth following).
+ */
+export type RelationKind = "part_of" | "applies_to" | "depends_on" | "exception_of" | "related"
+
+/** The relation kinds, in the order the store checks them. */
+export const RELATION_KINDS: ReadonlyArray<RelationKind> = [
+    "part_of",
+    "applies_to",
+    "depends_on",
+    "exception_of",
+    "related",
+]
+
+/** One edge of the truth graph. */
+export interface FactRelation {
+    /** The relation id. */
+    readonly id: string
+    /** The fact it starts from. */
+    readonly fromFactId: string
+    /** The fact it points at. */
+    readonly toFactId: string
+    /** How they relate. */
+    readonly kind: RelationKind
+    /** The relation in people's words ("giao bang"), or null. */
+    readonly label: string | null
+    /** Who made it: a person's name, or NIVO for the reading. */
+    readonly createdBy: string
+    /** When it was made. */
+    readonly createdAt: string
+}
+
+/** An edge to add. */
+export interface RelationInput {
+    /** The fact it starts from. */
+    readonly fromFactId: string
+    /** The fact it points at. */
+    readonly toFactId: string
+    /** How they relate. */
+    readonly kind: RelationKind
+    /** The relation in people's words, or null. */
+    readonly label?: string | null | undefined
+    /** Who makes it. */
+    readonly createdBy: string
+}
+
+/** A change to the truth that someone said in a chat, as an agent relays it. */
+export interface ChangeRequest {
+    /** The subject as people write it. */
+    readonly subjectLabel: string
+    /** The attribute as people write it. */
+    readonly attributeLabel: string
+    /** The new value; null asks to stop using the value in force. */
+    readonly value: string | null
+    /** The unit, when written apart from the value. */
+    readonly unit?: string | null | undefined
+    /** The chat the words were said in: an agent's private chat (`direct`) or the common chat. */
+    readonly room: "direct" | "common"
+    /** The chat message the words are in. */
+    readonly messageId: string
+    /** The words, verbatim. */
+    readonly quote: string
+    /** From when the new value holds, when said. */
+    readonly validFrom?: string | null | undefined
+    /** Until when the new value holds, when said ("this week"); else the one-year default applies on approval. */
+    readonly validTo?: string | null | undefined
+    /** Who relays it: the module of the agent. */
+    readonly proposedBy: string
+    /** The agent that relays it. */
+    readonly agentId: string
+    /** The agent instance the change is kept for; null = every instance. */
+    readonly installationId: string | null
+}
+
+/** What filing a change request did: the proposal waiting for the founder, or the value is already the one in force. */
+export interface ChangeFiled {
+    /** `filed`: a proposal waits; `already_true`: the value in force says it already; `already_filed`: the same proposal waits. */
+    readonly outcome: "filed" | "already_true" | "already_filed"
+    /** The proposal, or the fact in force for `already_true`. */
+    readonly fact: FactRecord
+}

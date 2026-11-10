@@ -1,20 +1,18 @@
 import type { BoundConnection, ConnectionGrant } from "@modules/domain/agent-connections"
 import type { AgentPage } from "@modules/domain/agent-profile"
 import type { GenerationRequested, GenerationStatus } from "@modules/domain/ai-generations"
-import type { AgentDashboardData, AgentSummary, EngineStatus } from "@modules/domain/agents"
+import type { AgentDashboardData, AgentSummary } from "@modules/domain/agents"
 import type { Locale } from "@modules/platform/i18n"
 import type { CreateAgentRequest } from "../../application/create-agent.contracts"
 import type { GetAgentPageRequest } from "../../application/get-agent-page.contracts"
 import type { SetAgentOwnershipRequest } from "../../application/set-agent-ownership.contracts"
 import type { GetAgentDashboardRequest } from "../../application/get-agent-dashboard.contracts"
 import type { GetGenerationStatusRequest } from "../../application/get-generation-status.contracts"
-import type { GetEngineStatusRequest } from "../../application/get-engine-status.contracts"
 import type { GrantAgentConnectionRequest } from "../../application/grant-agent-connection.contracts"
 import type { ListAgentConnectionsRequest } from "../../application/list-agent-connections.contracts"
 import type { ListAgentsRequest } from "../../application/list-agents.contracts"
 import type { RenameAgentRequest } from "../../application/rename-agent.contracts"
 import type { RequestGenerationRequest } from "../../application/request-generation.contracts"
-import type { RequestAgentSyncRequest } from "../../application/request-agent-sync.contracts"
 import type { RevokeAgentConnectionRequest } from "../../application/revoke-agent-connection.contracts"
 import type { SetAgentStatusRequest } from "../../application/set-agent-status.contracts"
 import type { SetAgentTextsRequest } from "../../application/set-agent-texts.contracts"
@@ -25,7 +23,6 @@ import type { AgentConnectionType } from "./dto/agent-connection.type"
 import type { ConnectionAgentGrantType } from "./dto/connection-agent-grant.type"
 import type { AgentDashboardInput } from "./dto/agent-dashboard.input"
 import type { AgentDashboardType } from "./dto/agent-dashboard.type"
-import type { AgentEngineStatusType } from "./dto/agent-engine-status.type"
 import type { AgentGenerationIdInput } from "./dto/agent-generation-id.input"
 import type { AgentGenerationRequestedType } from "./dto/agent-generation-requested.type"
 import type { AgentGenerationStatusType } from "./dto/agent-generation-status.type"
@@ -36,17 +33,10 @@ import type { GrantAgentConnectionInput } from "./dto/grant-agent-connection.inp
 import type { ListAgentsInput } from "./dto/list-agents.input"
 import type { RenameAgentInput } from "./dto/rename-agent.input"
 import type { RequestAgentGenerationInput } from "./dto/request-agent-generation.input"
-import type { RequestAgentSyncInput } from "./dto/request-agent-sync.input"
 import type { RevokeAgentConnectionInput } from "./dto/revoke-agent-connection.input"
 import type { SetAgentStatusInput } from "./dto/set-agent-status.input"
 import type { SetAgentTextsInput } from "./dto/set-agent-texts.input"
 
-
-/** What the deprecated `access` of a bound pair reads now: a binding has no level (rights live in the agent's attachments). */
-const BOUND_LEVEL = "auto"
-
-/** Maps the workspace of the request to the engine status request. */
-export const toWorkspaceRequest = (workspaceId: string): GetEngineStatusRequest => ({ workspaceId })
 
 /** Maps one agent to the GraphQL type. */
 export const toAgentType = (agent: AgentSummary): AgentSummaryType => ({ ...agent })
@@ -67,9 +57,6 @@ export const toDashboardRequest = (workspaceId: string, input: AgentDashboardInp
     ...input,
 })
 
-/** Maps the engine status to the GraphQL type. */
-export const toAgentEngineStatusType = (status: EngineStatus): AgentEngineStatusType => ({ ...status })
-
 /** Maps the agent of the GraphQL input, with the workspace it names, to the connections query request. */
 export const toListAgentConnectionsRequest = (
     workspaceId: string,
@@ -78,11 +65,11 @@ export const toListAgentConnectionsRequest = (
 
 /** Maps the connections granted to an agent to the GraphQL type. */
 export const toAgentConnectionsType = (connections: ReadonlyArray<BoundConnection>): Array<AgentConnectionType> =>
-    connections.map((connection) => ({ ...connection, access: BOUND_LEVEL }))
+    connections.map((connection) => ({ ...connection }))
 
 /** Maps the agents granted each connection to the GraphQL type. */
 export const toConnectionGrantsType = (grants: ReadonlyArray<ConnectionGrant>): Array<ConnectionAgentGrantType> =>
-    grants.map((grant) => ({ ...grant, access: BOUND_LEVEL }))
+    grants.map((grant) => ({ ...grant }))
 
 /** Maps the new agent of the GraphQL input, with the workspace it names, to the command request. */
 export const toCreateAgentRequest = (workspaceId: string, input: CreateAgentInput): CreateAgentRequest => ({
@@ -121,12 +108,6 @@ export const toSetAgentTextsRequest = (workspaceId: string, input: SetAgentTexts
 
 /** The answer of a mutation that returns nothing else. */
 export const toAgentAckType = (): AgentAckType => ({ ok: true })
-
-/** Maps the sync request of the GraphQL input, with the workspace it names, to the command request. */
-export const toRequestAgentSyncRequest = (
-    workspaceId: string,
-    input: RequestAgentSyncInput,
-): RequestAgentSyncRequest => ({ workspaceId, ...input })
 
 /** Maps the grant of the GraphQL input, with the workspace it names, to the command request. */
 export const toGrantAgentConnectionRequest = (

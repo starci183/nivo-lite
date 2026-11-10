@@ -25,6 +25,7 @@ describe("aiGatewayOf", () => {
             expect(options.models).toEqual({
                 work: "deepseek/deepseek-v4.1-flash",
                 embed: "qwen/qwen3-embedding-8b",
+                strong: "claude-sonnet-5-5",
             })
         })
     })
@@ -63,7 +64,7 @@ describe("aiGatewayOf", () => {
             })
 
             expect(options.providers[0]).toMatchObject({ baseUrl: "https://llm.test/v1" })
-            expect(options.models).toEqual({ work: "m-work", embed: "m-embed" })
+            expect(options.models).toEqual({ work: "m-work", embed: "m-embed", strong: "claude-sonnet-5-5" })
         })
 
         it("falls back to OpenRouter for a base URL that is not http(s)", async () => {
@@ -85,6 +86,31 @@ describe("aiGatewayOf", () => {
     })
 })
 
+describe("aiGatewayOf, Anthropic", () => {
+    it("pools ANTHROPIC_API_KEY and its numbered siblings as the anthropic provider beside the upstream", async () => {
+        const options = await parse({ OPENROUTER_API_KEY: "k", ANTHROPIC_API_KEY: "a", ANTHROPIC_API_KEY_2: "b" })
+
+        expect(options.providers.map((provider) => [provider.id, provider.kind ?? null, provider.baseUrl])).toEqual([
+            ["upstream", null, "https://openrouter.ai/api/v1"],
+            ["anthropic", "anthropic", "https://api.anthropic.com/v1"],
+        ])
+        expect(options.providers[1]?.keys.map((key) => key.alias)).toEqual(["ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY_2"])
+    })
+
+    it("keeps AI off with an Anthropic key alone: every fixed task asks `work`, which only the upstream serves", async () => {
+        const options = await parse({ ANTHROPIC_API_KEY: "a" })
+
+        expect(options.providers).toEqual([])
+        expect(options.gateway).toBeNull()
+    })
+
+    it("leaves Anthropic out without its key, so boot is unchanged", async () => {
+        const options = await parse({ OPENROUTER_API_KEY: "k" })
+
+        expect(options.providers.map((provider) => provider.id)).toEqual(["upstream"])
+    })
+})
+
 describe("aiGatewayOf, the gateway", () => {
     it("keeps the default key file and reads no port (it is the app port plus one)", async () => {
         const options = await parse({ OPENROUTER_API_KEY: "k" })
@@ -96,7 +122,20 @@ describe("aiGatewayOf, the gateway", () => {
         const options = await parse({ OPENROUTER_API_KEY: "k", STARCI_AI_KEY: "starci" })
 
         expect(options.gateway?.mountedKeys.map((key) => ({ ...key, secret: key.secret.reveal() }))).toEqual([
-            { label: "nivo", secret: "starci", profiles: ["work", "embed"] },
+            { label: "nivo", secret: "starci", profiles: ["work", "embed", "deepseek", "auto-light", "auto-heavy"] },
+        ])
+    })
+
+    it("binds the key to `sonnet` too once Anthropic holds a key", async () => {
+        const options = await parse({ OPENROUTER_API_KEY: "k", ANTHROPIC_API_KEY: "a", STARCI_AI_KEY: "starci" })
+
+        expect(options.gateway?.mountedKeys[0]?.profiles).toEqual([
+            "work",
+            "embed",
+            "sonnet",
+            "deepseek",
+            "auto-light",
+            "auto-heavy",
         ])
     })
 

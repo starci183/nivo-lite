@@ -1,5 +1,6 @@
 import type { DataSlot, SlotLabels } from "./slot"
 import type { ChatParty, ChatPartyKind, TeamChatComposerProps, TeamChatMessageRow, TeamChatMessagesCopy, TeamChatRoomRow } from "./team-chat"
+import type { TeamChatStopHandlers } from "./team-chat-stop"
 
 /** The words of the new-chat drawer. */
 interface TeamChatNewChatCopy {
@@ -144,6 +145,8 @@ export interface TeamChatRoomViewProps {
     readonly isLoadingOlder: boolean
     readonly decidingId: string | null
     readonly decideError: string | null
+    /** The stop cards of runs: whether the viewer is the owner (only the owner approves a leave request) and the card in flight. */
+    readonly stops: Omit<TeamChatStopHandlers, "onAction">
     readonly forward: TeamChatForwardView
     readonly composer: Omit<TeamChatComposerProps, "onDraft" | "onMention" | "onSend" | "onFile" | "onFileClear" | "onReplyClear">
 }
@@ -162,6 +165,7 @@ export interface TeamChatRoomHandlers {
     readonly shareTo: (roomId: string) => void
     readonly replyClear: () => void
     readonly decide: (decisionId: string, verdict: "approved" | "refused") => void
+    readonly stop: TeamChatStopHandlers["onAction"]
     readonly draft: (value: string) => void
     readonly mention: (party: ChatParty) => void
     readonly send: () => void

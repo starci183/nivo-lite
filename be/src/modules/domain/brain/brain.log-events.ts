@@ -18,4 +18,8 @@ export enum BrainLogEvent {
     BulkFactSkipped = "brain.bulk.fact_skipped",
     /** A job arrived with a payload of another shape and was dropped. */
     PayloadRefused = "brain.job.payload_refused",
+    /** Linking the facts of one document into the truth graph failed; the facts stand without edges. */
+    RelationsFailed = "brain.relations.link_failed",
+    /** Embedding the facts in force failed; they stay searchable by words and are embedded on the next refresh. */
+    EmbeddingsFailed = "brain.embeddings.refresh_failed",
 }

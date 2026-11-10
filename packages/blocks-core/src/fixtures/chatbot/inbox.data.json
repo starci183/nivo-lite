@@ -62,7 +62,6 @@
     "note": "Gửi cho khách qua Zalo với tên Nhà Mộc. Chỉnh lại bản AI đề xuất nếu cần."
   },
   "settings": {
-    "openclawTimeoutSec": 25,
     "holdingMessage": "Dạ chị chờ em kiểm tra một chút nhé ạ."
   },
   "counts": {

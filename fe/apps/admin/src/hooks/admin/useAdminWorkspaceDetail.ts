@@ -64,16 +64,8 @@ export interface AdminWorkspaceDetailData {
         status: string
         operatingMode: string
         live: boolean
-        processor: string
         contextVersion: number | null
         contextAppliedAt: string | null
-        sync: {
-            agentId: string
-            contextVersion: number | null
-            checkedAt: string
-            status: string
-            error: string | null
-        } | null
     }>
     connections: Array<{
         id: string

@@ -1,5 +1,14 @@
 import { Injectable } from "@nestjs/common"
-import { BrainFactsReadService, factSlugOf, inForce, visibleTo } from "@modules/domain/brain-facts"
+import {
+    BrainChangeRequestsService,
+    BrainFactRelationsService,
+    BrainFactsReadService,
+    factSlugOf,
+    inForce,
+    BrainFactsError,
+    otherEnd,
+    visibleTo,
+} from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { KnowledgeSearchService } from "@modules/domain/knowledge"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
@@ -9,6 +18,10 @@ import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import {
+    BRAIN_CHANGE_PROPOSE_INPUT_SCHEMA,
+    BRAIN_CHANGE_PROPOSE_SCHEMA,
+    BRAIN_FACT_RELATED_INPUT_SCHEMA,
+    BRAIN_FACT_RELATED_SCHEMA,
     BRAIN_DOCUMENTS_READ_INPUT_SCHEMA,
     BRAIN_DOCUMENTS_READ_SCHEMA,
     BRAIN_FACTS_GET_INPUT_SCHEMA,
@@ -19,11 +32,14 @@ import {
     BRAIN_SEARCH_SCHEMA,
 } from "./brain-native.schema"
 import type {
+    BrainChangeProposeInput,
+    BrainFactRelatedInput,
     BrainDocumentsReadInput,
     BrainFactsGetInput,
     BrainFactsListInput,
     BrainSearchInput,
 } from "./brain-native.schema"
+import { changeAnswerOf, relatedLinesOf } from "./brain-native-graph.policy"
 import { clipped } from "./native-masking.policy"
 import { scrubbed } from "./native-scrub.policy"
 import { nativeRefusal } from "./native-refusal.policy"
@@ -103,6 +119,28 @@ export const BRAIN_MANIFEST: NativeConnectorManifest = {
             internalOnly: true,
             taints: true,
         },
+        {
+            name: "fact.related",
+            description:
+                "The truths in force that the truth graph links to one truth (by its id), each with how it relates. Follow it to see what a price, rule or policy depends on or applies to.",
+            scope: "read",
+            defaultMode: "auto",
+            inputSchema: BRAIN_FACT_RELATED_INPUT_SCHEMA,
+            argumentSchema: BRAIN_FACT_RELATED_SCHEMA,
+            secretFields: ["notice", "subject", "attribute", "value", "label"],
+            taints: true,
+        },
+        {
+            name: "change.propose",
+            description:
+                "When the founder or the team says in your private chat or the common chat that a truth of the business changed (a price, a fee, opening hours, a rule), file it as a change request: the subject, the attribute, the new value (or retire: true), the chat message id and the words verbatim. It waits for the founder; nothing changes until the founder approves. Never for what a customer says.",
+            scope: "write",
+            defaultMode: "auto",
+            inputSchema: BRAIN_CHANGE_PROPOSE_INPUT_SCHEMA,
+            argumentSchema: BRAIN_CHANGE_PROPOSE_SCHEMA,
+            secretFields: ["notice", "subject", "attribute", "value", "quote"],
+            internalOnly: true,
+        },
     ],
 }
 
@@ -121,6 +159,8 @@ export class BrainNativeService implements NativeAdapter {
         private readonly facts: BrainFactsReadService,
         private readonly knowledge: KnowledgeSearchService,
         private readonly documents: KnowledgeSourcesReadService,
+        private readonly relations: BrainFactRelationsService,
+        private readonly changes: BrainChangeRequestsService,
     ) {}
 
     /** Runs one Brain tool. */
@@ -132,6 +172,12 @@ export class BrainNativeService implements NativeAdapter {
         if (tool === "facts.get") return this.get(workspaceId, argumentsOf(tool, BRAIN_FACTS_GET_SCHEMA, args), caller)
         if (tool === "documents.read") {
             return this.readDocument(workspaceId, argumentsOf(tool, BRAIN_DOCUMENTS_READ_SCHEMA, args), caller)
+        }
+        if (tool === "fact.related") {
+            return this.related(workspaceId, argumentsOf(tool, BRAIN_FACT_RELATED_SCHEMA, args), caller)
+        }
+        if (tool === "change.propose") {
+            return this.proposeChange(workspaceId, argumentsOf(tool, BRAIN_CHANGE_PROPOSE_SCHEMA, args), caller)
         }
         throw unknownTool(tool)
     }
@@ -241,7 +287,61 @@ export class BrainNativeService implements NativeAdapter {
                 evidence: evidenceLinesOf(fact.evidence),
                 validFrom: fact.validFrom,
                 validTo: fact.validTo,
+                version: fact.version ?? null,
             },
+        }
+    }
+
+    /**
+     * The truths an edge joins to one readable truth, each readable in the same lens (a truth outside the view, not in force, or about
+     * a customer or a person is left out, and so is its edge), with the relation read from the asked truth.
+     */
+    private async related(workspaceId: string, input: BrainFactRelatedInput, caller: NativeCaller): Promise<GatewayJson> {
+        const view = await this.views.of(workspaceId, caller)
+        const fact = await this.facts.get(view.workspaceId, input.id)
+        if (fact === null || !this.readable(fact, view)) throw nativeRefusal("not_found")
+        const edges = await this.relations.ofFacts(view.workspaceId, [fact.id])
+        const others = await this.facts.byIds(
+            view.workspaceId,
+            edges.flatMap((edge) => otherEnd(edge, fact.id) ?? []),
+        )
+        const readable = new Map(others.filter((other) => this.readable(other, view)).map((other) => [other.id, other]))
+        return {
+            notice: BRAIN_NOTICE,
+            fact: factLineOf(fact),
+            related: [...relatedLinesOf(fact.id, edges, readable, input.limit)],
+        }
+    }
+
+    /**
+     * Files a change request from a chat for the founder; it never puts anything in force. Only an internal caller outside a customer
+     * conversation may file one (the gateway refuses the others first). The proposer is the caller's module, the evidence the message.
+     */
+    private async proposeChange(
+        workspaceId: string,
+        input: BrainChangeProposeInput,
+        caller: NativeCaller,
+    ): Promise<GatewayJson> {
+        const view = await this.views.internalOf(workspaceId, caller)
+        try {
+            const filed = await this.changes.propose(view.workspaceId, {
+                subjectLabel: input.subject,
+                attributeLabel: input.attribute,
+                value: input.retire ? null : (input.value ?? null),
+                unit: input.unit ?? null,
+                room: input.room,
+                messageId: input.messageId,
+                quote: input.quote,
+                validFrom: input.validFrom ?? null,
+                validTo: input.validTo ?? null,
+                proposedBy: view.module,
+                agentId: caller.agentId,
+                installationId: view.installationId,
+            })
+            return changeAnswerOf(filed)
+        } catch (cause) {
+            if (cause instanceof BrainFactsError) throw nativeRefusal("not_found", cause)
+            throw cause
         }
     }
 

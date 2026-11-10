@@ -1,3 +1,5 @@
+import type { RunCallKindUsage } from "@modules/domain/ai-usage-events"
+
 /** What the runs of one agent instance take. */
 export interface ReadAgentRunsRequest {
     /** The workspace the caller names in X-Workspace-Id; the service proves their role. */
@@ -169,6 +171,9 @@ export interface AgentRunDecision {
     readonly options: ReadonlyArray<AgentRunDecisionOption>
 }
 
+/** The model calls of a run summed per call kind (a node's `<node id>:<tag>`, or the usage kind of a fixed task). */
+export type AgentRunAiCall = RunCallKindUsage
+
 /** One run with its steps and the work item it is about. */
 export interface AgentRunDetail {
     /** The run as the list draws it. */
@@ -183,4 +188,6 @@ export interface AgentRunDetail {
     readonly canCancel: boolean
     /** The decision the run waits on, or null when it waits on none. */
     readonly decision: AgentRunDecision | null
+    /** Its model calls per call kind, in the order of their first call: tries, tokens (cached, reasoning), time, cost, upstreams. */
+    readonly aiCalls: ReadonlyArray<AgentRunAiCall>
 }

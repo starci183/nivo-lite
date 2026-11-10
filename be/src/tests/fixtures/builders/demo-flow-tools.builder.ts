@@ -125,7 +125,7 @@ const markPaid = (desk: Desk, effect: string, payload: EffectPayload): SubjectRe
 /** Ensures the shop's one customer is a lead. */
 const ensureLead = (desk: Desk, effect: string, payload: EffectPayload): SubjectRef => {
     if (rowsOf(desk.store, "sales-lead").length === 0)
-        rowsOf(desk.store, "sales-lead").push({ id: "lead-1", consultStage: null, consultFacts: {} })
+        rowsOf(desk.store, "sales-lead").push({ id: "lead-1", consultStage: null })
     return desk.record(effect, payload, "sales-lead", "lead-1")
 }
 

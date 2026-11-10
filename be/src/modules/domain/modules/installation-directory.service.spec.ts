@@ -19,7 +19,7 @@ const recordOf = builder<InstallationRecord>({
     operatingMode: "assist",
     liveEnabled: true,
     activeContextVersionId: "version-1",
-    settings: { processor: "openclaw" },
+    settings: { holdingMessage: "Please wait." },
     createdAt: "2026-10-01T00:00:00.000Z",
 })
 
@@ -52,7 +52,7 @@ const INSTALLATION = {
     isMulti: false,
     agentId: "agent-1",
     operatingMode: "assist",
-    settings: { processor: "openclaw" },
+    settings: { holdingMessage: "Please wait." },
     activeContextVersionId: "version-1",
     liveEnabled: true,
     removed: false,
@@ -102,17 +102,6 @@ describe("InstallationDirectoryService > byId, firstOfModule and ofAgent", () =>
         await expect(service.byId("ws-1", "missing")).resolves.toBeNull()
         await expect(service.firstOfModule("ws-1", "accounting")).resolves.toBeNull()
         await expect(service.ofAgent("ws-1", "agent-9")).resolves.toBeNull()
-    })
-})
-
-describe("InstallationDirectoryService > onOpenclaw", () => {
-    it("answers the installations the records hold", async () => {
-        const { service, installations } = await build()
-        const refs = [{ id: "inst-1", workspaceId: "ws-1" }]
-        installations.onOpenclaw.mockResolvedValue(refs)
-
-        await expect(service.onOpenclaw(null, 10)).resolves.toEqual(refs)
-        expect(installations.onOpenclaw).toHaveBeenCalledWith(null, 10)
     })
 })
 

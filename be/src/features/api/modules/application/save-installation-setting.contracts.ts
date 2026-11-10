@@ -4,7 +4,7 @@ export interface SaveInstallationSettingRequest {
     readonly workspaceId: string
     /** The installation. */
     readonly installationId: string
-    /** The setting: openclawTimeoutSec, holdingMessage or workingHours. */
+    /** The setting: holdingMessage or workingHours. */
     readonly name: string
     /** The value; null or an empty text removes the setting. */
     readonly value: string | number | null

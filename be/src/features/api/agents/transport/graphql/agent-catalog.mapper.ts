@@ -10,6 +10,6 @@ export const toAgentCatalogType = (agents: ReadonlyArray<CatalogAgent>): Array<A
     agents.map((agent) => ({
         agentId: agent.agentId,
         installationId: agent.installationId,
-        grants: agent.grants.map((grant) => ({ ...grant, access: "auto" })),
+        grants: agent.grants.map((grant) => ({ ...grant })),
         knowledge: { ...agent.knowledge },
     }))

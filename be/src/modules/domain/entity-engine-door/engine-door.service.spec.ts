@@ -46,8 +46,8 @@ const deepArgs = (): Record<string, JsonValue> => {
 
 describe("EngineDoorService", () => {
     it("calls the gateway as the workspace agent, internal, under the job's replay key", async () => {
-        const { door, gateway } = await build()
-        const result = await door.doorApi(binding()).call("ai.agent.turn", { to: "a" })
+        const { door, gateway } = await build(undefined, [CHANNEL])
+        const result = await door.doorApi(binding()).call("chat.send", { to: "a" })
         expect(result).toEqual({ ok: true, output: { sent: true } })
         expect(gateway.call).toHaveBeenCalledWith(
             {
@@ -57,33 +57,33 @@ describe("EngineDoorService", () => {
                 workItemId: null,
                 audience: "internal",
                 engine: true,
-                opKey: `job-1:ai.agent.turn:${argsHashOf({ to: "a" })}`,
+                opKey: `job-1:chat.send:${argsHashOf({ to: "a" })}`,
             },
-            "agent.turn",
+            "zalo.send",
             { to: "a" },
         )
     })
 
     it("calls the gateway as the seeded nivo agent of the workspace, and refuses when the workspace has none", async () => {
-        const { door, gateway } = await build(undefined, [], [])
-        await expect(door.doorApi(binding()).call("ai.agent.turn", {})).rejects.toMatchObject({
+        const { door, gateway } = await build(undefined, [CHANNEL], [])
+        await expect(door.doorApi(binding()).call("chat.send", {})).rejects.toMatchObject({
             code: EntityEngineDoorErrorCode.NoAgent,
         })
         expect(gateway.call).not.toHaveBeenCalled()
     })
 
     it("maps a gateway refusal to a door failure", async () => {
-        const { door } = await build({ ok: false, code: "not_granted", detail: "agent.turn" })
-        expect(await door.doorApi(binding()).call("ai.agent.turn", {})).toEqual({
+        const { door } = await build({ ok: false, code: "not_granted", detail: "zalo.send" }, [CHANNEL])
+        expect(await door.doorApi(binding()).call("chat.send", {})).toEqual({
             ok: false,
             reason: "forbidden",
-            message: "agent.turn",
+            message: "zalo.send",
         })
     })
 
     it("refuses a call while an engine scope is open, and never reaches the gateway", async () => {
         const { door, gateway } = await build()
-        await expect(door.doorApi(binding(true)).call("ai.agent.turn", {})).rejects.toMatchObject({
+        await expect(door.doorApi(binding(true)).call("chat.send", {})).rejects.toMatchObject({
             code: EntityEngineDoorErrorCode.InScope,
         })
         expect(gateway.call).not.toHaveBeenCalled()
@@ -104,7 +104,7 @@ describe("EngineDoorService", () => {
 
     it("answers invalid for arguments the gateway cannot take", async () => {
         const { door, gateway } = await build()
-        const result = await door.doorApi(binding()).call("ai.agent.turn", { nested: deepArgs() })
+        const result = await door.doorApi(binding()).call("chat.send", { nested: deepArgs() })
         expect(result).toEqual({ ok: false, reason: "invalid", message: "invalid_arguments" })
         expect(gateway.call).not.toHaveBeenCalled()
     })
@@ -159,11 +159,5 @@ describe("EngineDoorService domain tools", () => {
             message: "no_provider",
         })
         expect(gateway.call).not.toHaveBeenCalled()
-    })
-
-    it("does not look a provider up for a tool that names one", async () => {
-        const { door, gateway } = await build()
-        await door.doorApi(binding()).call("ai.agent.turn", {})
-        expect(gateway.connectorsOf).not.toHaveBeenCalled()
     })
 })

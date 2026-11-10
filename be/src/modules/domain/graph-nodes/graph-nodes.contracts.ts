@@ -105,6 +105,18 @@ export interface NodeModelScope {
     readonly workspaceId: string
     /** The language the answer is written in. */
     readonly locale: Locale
+    /** The model the node's calls are declared with (`node-model.policy.ts`); the door picks each try's model from it. */
+    readonly model?: NodeDeclaredModel | undefined
+}
+
+/** The model a node's calls are declared with, and where the declaration came from. */
+export interface NodeDeclaredModel {
+    /** `auto`, or a model id. */
+    readonly model: string
+    /** The step's weight as blocks-core declares it; Auto reads it. */
+    readonly weight: "light" | "heavy"
+    /** `node`: the graph's node names it (the shop's choice); `declared`: blocks-core's table; `default`: neither. */
+    readonly source: "node" | "declared" | "default"
 }
 
 /** The agents' metered model path, as the host calls it for a node: the app root binds the prompt library to it. */
@@ -213,6 +225,11 @@ export interface NodeRunInput {
     readonly grant: RightsGrant
     /** The run step's idempotency key. */
     readonly key: string
+    /**
+     * The model the graph's node names (`GraphSpecNode.model`: `auto` or a model id, the shop's choice in the node drawer); absent,
+     * blocks-core's declaration for the node's step, else the default model.
+     */
+    readonly model?: string | undefined
     /** A person's approval of a tool call the node makes, carried into the run of the node it was asked for. */
     readonly approval?: NodeToolApproval
     /**

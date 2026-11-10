@@ -4,7 +4,10 @@ import {
     decisionOf as realDecisionOf,
     scheduleChanges as realScheduleChanges,
     activateChanges as realActivateChanges,
+    DEFAULT_VALIDITY,
+    DEFAULT_VALID_TO,
     SUPERSEDE,
+    nextVersion,
 } from "./fact-write.policy"
 
 const SUBJECT = Symbol("fact-write.policy")
@@ -72,6 +75,7 @@ describe("fact-write.policy scheduleChanges", () => {
             decidedBy: "user-1",
             decidedAt: "now()",
             decisionNote: "next season",
+            validTo: "coalesce(valid_to, coalesce(valid_from, now()) + interval '1 year')",
         })
     })
 
@@ -89,7 +93,7 @@ describe("fact-write.policy activateChanges", () => {
     it("approves the proposal as the value in force from its own start or now", async () => {
         const policy = await build()
 
-        expect(resolved(policy.activateChanges("fact-0", "user-1", "confirmed"))).toEqual({
+        expect(resolved(policy.activateChanges("fact-0", "user-1", "confirmed", 3))).toEqual({
             status: "active",
             supersedesId: "fact-0",
             conflictWith: null,
@@ -97,13 +101,15 @@ describe("fact-write.policy activateChanges", () => {
             decidedAt: "now()",
             decisionNote: "confirmed",
             validFrom: "coalesce(valid_from, now())",
+            validTo: "coalesce(valid_to, coalesce(valid_from, now()) + interval '1 year')",
+            version: 3,
         })
     })
 
     it("replaces nothing when there is no current value", async () => {
         const policy = await build()
 
-        expect(resolved(policy.activateChanges(null, "user-1", null))).toMatchObject({
+        expect(resolved(policy.activateChanges(null, "user-1", null, 1))).toMatchObject({
             supersedesId: null,
             decisionNote: null,
         })
@@ -114,7 +120,23 @@ describe("fact-write.policy SUPERSEDE", () => {
     it("closes the value in force as history", () => {
         expect(resolved(SUPERSEDE)).toEqual({
             status: "superseded",
-            validTo: "coalesce(valid_to, now())",
+            validTo: "greatest(least(coalesce(valid_to, now()), now()), valid_from + interval '1 millisecond')",
         })
+    })
+})
+
+describe("fact-write.policy one-year default and version", () => {
+    it("gives a truth with no stated end one year from its start, and keeps a stated end", () => {
+        expect(DEFAULT_VALIDITY).toBe("interval '1 year'")
+        expect(DEFAULT_VALID_TO).toBe("coalesce(valid_to, coalesce(valid_from, now()) + interval '1 year')")
+    })
+
+    it.each([
+        [undefined, 1],
+        [{}, 1],
+        [{ version: 1 }, 2],
+        [{ version: 7 }, 8],
+    ])("numbers the value replacing %j as version %i", (current, expected) => {
+        expect(nextVersion(current)).toBe(expected)
     })
 })

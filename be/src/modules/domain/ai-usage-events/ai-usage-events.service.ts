@@ -45,6 +45,10 @@ const RUN_KIND_SUMS: ReadonlyArray<readonly [string, string]> = [
     ["COALESCE(SUM(u.cost_usd), 0)::float8", "cost_usd"],
     ["array_agg(DISTINCT u.upstream)", "upstreams"],
     ["array_agg(DISTINCT u.finish_reason)", "finish_reasons"],
+    ["array_agg(DISTINCT u.model)", "models"],
+    ["array_agg(DISTINCT u.declared_model)", "declared_models"],
+    ["array_agg(DISTINCT u.model_provider)", "model_providers"],
+    ["array_agg(DISTINCT u.model_reason)", "model_reasons"],
 ]
 
 @Injectable()

@@ -93,7 +93,7 @@ describe("VideoApprovalPerformerService", () => {
         })
 
         it.each([
-            ["an actor who is not a person", itemOf(), PROPOSAL, { name: "OpenClaw" }],
+            ["an actor who is not a person", itemOf(), PROPOSAL, { name: "Model" }],
             ["another subject", itemOf({ subject_type: "lead" }), PROPOSAL, OWNER],
             ["an item with no project", itemOf({ subject_id: null }), PROPOSAL, OWNER],
             ["a proposal with no render", itemOf(), { ...PROPOSAL, fields: { project_id: "project-1" } }, OWNER],

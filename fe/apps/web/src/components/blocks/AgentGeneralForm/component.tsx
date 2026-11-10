@@ -7,8 +7,6 @@ import type { WorkingHoursListProps } from "@/components/composites/WorkingHours
 export interface ReplyLimitsView {
     readonly title: string
     readonly description: string
-    readonly timeoutLabel: string
-    readonly timeout: string
     readonly holdingLabel: string
     readonly holdingPlaceholder: string
     readonly holding: string
@@ -43,7 +41,6 @@ export interface AgentGeneralFormBaseProps {
         readonly removeRange: (days: ReadonlyArray<number>, at: number) => void
         readonly editRange: (days: ReadonlyArray<number>, at: number, side: "start" | "end", clock: string) => void
         readonly splitRange: (days: ReadonlyArray<number>) => void
-        readonly timeout: (value: string) => void
         readonly holding: (value: string) => void
         readonly cancel: () => void
         readonly save: () => void
@@ -69,7 +66,7 @@ interface HoursPart {
 interface ReplyPart {
     readonly reply: ReplyLimitsView
     readonly isDisabled: boolean
-    readonly on: Pick<On, "timeout" | "holding">
+    readonly on: Pick<On, "holding">
 }
 
 /** What the footer reads. */
@@ -102,14 +99,6 @@ const HoursBoard = (part: HoursPart) => (
 const ReplyFields = (part: ReplyPart) => (
     <FieldBlock title={part.reply.title} description={part.reply.description}>
         <Grid kind="form" columns={2}>
-            <Input
-                id="reply-timeout"
-                name="reply-timeout"
-                label={part.reply.timeoutLabel}
-                value={part.reply.timeout}
-                isDisabled={part.isDisabled}
-                onValueChange={part.on.timeout}
-            />
             <Input
                 id="holding-message"
                 name="holding-message"

@@ -71,15 +71,15 @@ interface CatalogueRow {
 
 const GUIDANCE =
     "The customer wrote through the website form, so nobody can answer them in a chat: the team calls them back. First keep what the " +
-    "request tells on the customer (`lead.update` with `consultStage` and `consultFacts`: who it is for, the occasion, the time, the " +
-    "address, the catalogue products named by id with their quantity). Then tell the team on the team chat, in one `message.text` with " +
+    "request tells on the customer (`lead.update` with `consultStage` and `facts`, the lead facts it names: `recipientName`, `occasion`, " +
+    "`deliveryAt`, `address`; the products go to the team in the message). Then tell the team on the team chat, in one `message.text` with " +
     "intent `ask`, in the team's language (`locale`), to call the customer to confirm the order: who, what they asked for, the products " +
     "matched, the phone or email. Never type a price or a total."
 
 const LEAD_UPDATE = {
     leadId: "lead-1",
     consultStage: "close",
-    consultFacts: { address: "25 Nguyễn Huệ", picks: [{ catalogueItemId: "c1", quantity: 2 }] },
+    facts: { address: "25 Nguyễn Huệ" },
 }
 
 const NOTICE = {
@@ -135,7 +135,7 @@ export const salesWebOrderNode: NodeDefinition<typeof input, typeof output, type
             grant: {
                 rights: [
                     READ_CATALOGUE,
-                    { kind: "sales-lead", access: "write", scope: "turn", fields: ["consultStage", "consultFacts"] },
+                    { kind: "sales-lead", access: "write", scope: "turn", fields: ["consultStage"] },
                 ],
             },
             model: [

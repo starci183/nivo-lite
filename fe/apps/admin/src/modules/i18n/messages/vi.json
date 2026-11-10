@@ -76,8 +76,6 @@
     "noAgents": "Chưa cài trợ lý nào.",
     "contextApplied": "ngữ cảnh v{version} áp dụng {date}",
     "contextNone": "chưa áp dụng phiên bản ngữ cảnh nào",
-    "syncLine": "OpenClaw {agent}: {status}, bản sao v{version}, kiểm tra {checked}",
-    "syncBadge": "đồng bộ {status}",
     "cardConnections": "Kết nối",
     "noConnections": "Chưa có kết nối.",
     "connectionDetail": "{provider} · {environment} · sự kiện gần nhất {event}",

@@ -82,7 +82,6 @@ import { moduleSetupWritesEntities } from "@modules/domain/module-setup-writes"
 import { modulesEntities } from "@modules/domain/modules"
 import { nivoKnowledgeEntities } from "@modules/domain/nivo-knowledge"
 import { officeRoomsEntities } from "@modules/domain/office-rooms"
-import { openclawAgentSyncEntities } from "@modules/domain/openclaw-agent-sync"
 import { paymentOrderRequestsEntities } from "@modules/domain/payment-order-requests"
 import { paymentOrdersEntities } from "@modules/domain/payment-orders"
 import { platformAdminEntities } from "@modules/domain/platform-admin"
@@ -206,7 +205,6 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...modulesEntities,
     ...nivoKnowledgeEntities,
     ...officeRoomsEntities,
-    ...openclawAgentSyncEntities,
     ...paymentOrderRequestsEntities,
     ...paymentOrdersEntities,
     ...platformAdminEntities,

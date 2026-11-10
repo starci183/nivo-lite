@@ -2,9 +2,6 @@ import { defineEntity, field } from "@nivo-lite/agent-sdk/entity"
 import type { EntityDefinition, FieldDef } from "@nivo-lite/agent-sdk/entity"
 
 import { MAX_BODY, MAX_LINE } from "../../bounds"
-import { boundedRecord } from "../../json.schema"
-import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
-import type { ZodType } from "zod"
 import { MAX_REASON_CHARS } from "../../rules/sales/stage"
 
 /** The channels a customer reaches the business through. */
@@ -50,7 +47,6 @@ type LeadFields = {
     readonly note: FieldDef<"text", true>
     readonly needs: FieldDef<"text", true>
     readonly consultStage: FieldDef<"enum", true>
-    readonly consultFacts: FieldDef<"jsonb", true> & { readonly shape: ZodType<{ readonly [key: string]: JsonValue }> }
 }
 
 const leadFields: LeadFields = {
@@ -72,7 +68,6 @@ const leadFields: LeadFields = {
     note: field.text({ maxLength: MAX_BODY, nullable: true }),
     needs: field.text({ maxLength: MAX_LINE, nullable: true }),
     consultStage: field.enum({ of: CONSULT_STAGES, nullable: true }),
-    consultFacts: field.jsonb({ shape: boundedRecord, nullable: true }),
 }
 
 /** One customer of a workspace. Graph node kind `sales-lead`. */

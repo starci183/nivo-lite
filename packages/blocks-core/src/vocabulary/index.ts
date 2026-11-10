@@ -62,7 +62,17 @@ export type {
     LedgerStatusResult,
 } from "./tools"
 export { bankTransactionsTool, coreTools, ledgerAppendTool, ledgerStatusTool, ledgerVoidTool } from "./tools"
+export {
+    contextTools,
+    conversationMessageListTool,
+    leadNoteListTool,
+    leadOrderListTool,
+    leadProfileGetTool,
+} from "./context-tools"
+export type { ContextListArgs, ContextReadResult } from "./context-tools"
 export { TOOL } from "./tool-ids"
+export { TOOL_LABELS, toolLabelOf } from "./tool-labels"
+export type { ToolLabel, ToolLabelKind } from "./tool-labels"
 export type { ToolId } from "./tool-ids"
 export { EFFECT_REFUSED, isRefusal, refusalOf } from "./facts"
 export type { EffectFact, EffectFacts } from "./facts"

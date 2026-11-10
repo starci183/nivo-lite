@@ -68,6 +68,12 @@ export interface TurnRef {
      * them to the step's agent so it does not say them again.
      */
     readonly alreadySent?: ReadonlyArray<{ readonly text: string; readonly at: string }> | undefined
+    /**
+     * The effect and tool ids THIS run + step already did in an earlier visit of the same stop (from the effect ledger), when it runs
+     * again after the founder's answer; absent otherwise. Never another run's. The runner counts each as a required call already
+     * met, so a step that told the customer before its stop can end without telling them a second time.
+     */
+    readonly alreadyDone?: ReadonlyArray<string> | undefined
 }
 
 /** A query a node runs through its rights-bound data port. */

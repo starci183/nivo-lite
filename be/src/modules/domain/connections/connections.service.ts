@@ -53,6 +53,9 @@ import type { ConnectionProjection } from "./persistence/connection.projection"
 /** The most rows any list of connections returns. */
 const LIST_MAX = 500
 
+/** The longest OA display name kept among the public facts of a Zalo connection. */
+const OA_NAME_MAX = 120
+
 /** A pending or failing connection that received something works now. */
 const RECOVERED_STATUS = "CASE WHEN status IN ('pending', 'error') THEN 'connected' ELSE status END"
 
@@ -400,6 +403,22 @@ export class ConnectionsService {
                 "meta",
                 JSON.stringify(oaId === undefined ? { authorized: true } : { authorized: true, oa_id: oaId }),
             )
+            .execute()
+    }
+
+    /**
+     * Keeps the display name Zalo reported for the OA (`oa_name`) among the public facts of the connection, so the account reads by its
+     * name ("Tiệm hoa NIVO"). Blank is never written; a long name is cut to 120 characters.
+     */
+    async applyZaloOaName(connectionId: string, oaName: string): Promise<void> {
+        const name = oaName.trim().slice(0, OA_NAME_MAX)
+        if (name === "") return
+        await this.entityManager
+            .createQueryBuilder(ConnectionEntity, "co")
+            .update()
+            .set({ publicMeta: () => "jsonb_concat(public_meta, CAST(:meta AS jsonb))" })
+            .where({ id: connectionId })
+            .setParameter("meta", JSON.stringify({ oa_name: name }))
             .execute()
     }
 

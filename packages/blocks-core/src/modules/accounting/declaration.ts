@@ -43,6 +43,7 @@ export const accountingModule: ModuleDeclaration = defineModule({
             TOOL.agentTag,
             TOOL.ledgerAppend,
             TOOL.reportDailyClose,
+            TOOL.brainChangePropose,
         ],
         abilities: {
             kinds: {

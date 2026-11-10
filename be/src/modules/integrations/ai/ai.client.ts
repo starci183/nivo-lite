@@ -6,7 +6,6 @@ import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts
 import { BaseRetriever } from "@langchain/core/retrievers"
 import { RunnableLambda, RunnableSequence } from "@langchain/core/runnables"
 import type { Runnable } from "@langchain/core/runnables"
-import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai"
 import { Injectable } from "@nestjs/common"
 import { InjectHttpClient } from "@modules/platform/http"
 import type { HttpClient } from "@modules/platform/http"
@@ -21,10 +20,13 @@ import type {
     AiRunner,
     AiTurnRequest,
     PassageSearch,
+    RoutedModels,
 } from "./ai.contracts"
 import { InjectAiEndpointOptions } from "./ai.decorators"
 import type { AiEndpoint } from "./ai.options"
 import { ANY_OBJECT } from "./ai.schema"
+import { markedContentOf } from "./cache-marks.policy"
+import { gatewayRoutedModels } from "./routed-models.adapter"
 import { fieldOf, notesBlock, withNotes } from "./reply.policy"
 import { providerFieldOf } from "./routing.policy"
 
@@ -50,8 +52,8 @@ class PassageRetriever extends BaseRetriever {
 const titleOf = (metadata: Record<string, unknown>): string | null =>
     typeof metadata.title === "string" ? metadata.title : null
 
-/** The value of `maxTokens` that leaves the cap to the provider (the client leaves `max_tokens` out of the body for it). */
-const NO_TOKEN_CAP = -1
+/** The sampling temperature of every chat call whose model takes one: the same prompt gives the same answer as far as it can. */
+const TEMPERATURE = 0
 
 /**
  * The `reasoning` field a budget adds to the chat body: the model's reasoning switched off, or bounded. A direct cap
@@ -73,13 +75,27 @@ const sessionFieldOf = (affinity: string | undefined): Readonly<Record<string, u
         ? {}
         : { session_id: createHash("sha256").update(affinity).digest("hex").slice(0, 32) }
 
+/** The upstream's own body fields of a call: the reasoning bound, the cache affinity and, when the call names one, the routing. */
+const upstreamFieldsOf = (request: AiTurnRequest): Readonly<Record<string, unknown>> => ({
+    ...(request.budget === undefined ? {} : reasoningFieldOf(request.budget)),
+    ...sessionFieldOf(request.affinity),
+    // Nothing unless the call names a routing: the body then has no `provider` field.
+    ...providerFieldOf(request.routing),
+})
+
 const urlOf = (input: string | URL | Request): string => {
     if (typeof input === "string") return input
     return input instanceof URL ? input.href : input.url
 }
 
+/** A system message, with its cache breakpoint when it is marked and breakpoints go on the wire (`cache-marks.policy.ts`). */
+const systemOf = (message: AiMessage): BaseMessage => {
+    const content = markedContentOf(message.content, message.cacheMark === true)
+    return typeof content === "string" ? new SystemMessage(content) : new SystemMessage({ content: [...content] })
+}
+
 const messageOf = (message: AiMessage): BaseMessage => {
-    if (message.role === "system") return new SystemMessage(message.content)
+    if (message.role === "system") return systemOf(message)
     if (message.role === "assistant") return new AIMessage(message.content)
     const images = message.images ?? []
     if (images.length === 0) return new HumanMessage(message.content)
@@ -98,10 +114,15 @@ const messageOf = (message: AiMessage): BaseMessage => {
  * network is the platform HTTP port (BE-INFRA-2), so every call has a deadline and the clients reach nothing else.
  */
 export class AiClient implements AiRunner {
+    /** The router's clients: the one door a chat or embeddings client comes from. */
+    private readonly routed: RoutedModels
+
     constructor(
         @InjectAiEndpointOptions() private readonly endpoint: AiEndpoint,
         @InjectHttpClient() private readonly http: HttpClient,
-    ) {}
+    ) {
+        this.routed = gatewayRoutedModels(endpoint, (timeoutMs) => this.fetcher(timeoutMs))
+    }
 
     /** Runs one chat chain: retrieve the notes (when asked), fill the prompt, call the model. */
     async chat(request: AiChatRequest): Promise<ChainReply> {
@@ -132,15 +153,12 @@ export class AiClient implements AiRunner {
     }
 
     /** Embeds the texts with LangChain embeddings pointed at the same endpoint. */
-    embed(request: AiEmbedRequest): Promise<unknown> {
-        return new OpenAIEmbeddings({
-            model: this.endpoint.embeddingModel,
-            apiKey: this.endpoint.virtualKey.reveal(),
+    async embed(request: AiEmbedRequest): Promise<unknown> {
+        const routed = await this.routed.embeddings(this.endpoint.embeddingModel, {
             dimensions: request.dimensions,
-            maxRetries: 0,
-            timeout: request.timeoutMs,
-            configuration: { baseURL: this.endpoint.gatewayUrl, fetch: this.fetcher(request.timeoutMs) },
-        }).embedDocuments([...request.input])
+            timeoutMs: request.timeoutMs,
+        })
+        return routed.embeddings.embedDocuments([...request.input])
     }
 
     /**
@@ -158,25 +176,27 @@ export class AiClient implements AiRunner {
         return model.withStructuredOutput(request.schema ?? ANY_OBJECT, { method: "jsonMode", includeRaw: true })
     }
 
-    /** The one way a chat client is built: at temperature 0, with no retry of its own, bounded by the call's deadline and budget. */
-    private clientOf(request: AiTurnRequest): ChatOpenAI {
-        return new ChatOpenAI({
-            model: this.endpoint.chatModel,
-            apiKey: this.endpoint.virtualKey.reveal(),
-            temperature: 0,
-            maxRetries: 0,
-            timeout: request.timeoutMs,
-            // The raw answer rides along so the upstream that served the call can be read (the prompt cache is per upstream).
-            __includeRawResponse: true,
-            maxTokens: request.budget?.maxTokens ?? NO_TOKEN_CAP,
-            modelKwargs: {
-                ...(request.budget === undefined ? {} : reasoningFieldOf(request.budget)),
-                ...sessionFieldOf(request.affinity),
-                // Nothing unless the call names a routing: the body then has no `provider` field.
-                ...providerFieldOf(request.routing),
+    /**
+     * The one way a chat client is built: from the router's door, for the call's model (the endpoint's chat profile when it names
+     * none), with no retry of its own, bounded by the call's deadline and budget. At temperature 0 where every provider the model can
+     * reach takes one; the upstream's own fields (reasoning, cache affinity, upstream routing) only where an OpenAI-compatible
+     * upstream can serve it.
+     */
+    private clientOf(request: AiTurnRequest): AiChatModel {
+        const { target } = request
+        // 0.7.0: `(await this.routed.chat(...)).model`, once `turnModel` may wait (see `routed-models.adapter.ts`).
+        return this.routed.chatNow(target?.name ?? this.endpoint.chatModel, {
+            timeoutMs: request.timeoutMs,
+            ...(request.budget?.maxTokens === undefined ? {} : { maxTokens: request.budget.maxTokens }),
+            // Only the `openai` kind's own fields: the sampling temperature where every provider of the name takes one, and the
+            // upstream's body fields where an OpenAI-compatible upstream can serve it. An `anthropic` client gets neither.
+            fields: {
+                openai: {
+                    ...(target?.sampling === false ? {} : { temperature: TEMPERATURE }),
+                    modelKwargs: target?.upstreamFields === false ? {} : upstreamFieldsOf(request),
+                },
             },
-            configuration: { baseURL: this.endpoint.gatewayUrl, fetch: this.fetcher(request.timeoutMs) },
-        })
+        }).model
     }
 
     /** A fetch over the platform HTTP port for the clients: the body goes as the bytes the client wrote, the answer comes back as text. */

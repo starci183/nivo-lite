@@ -7,10 +7,30 @@ import type { AiSchema } from "./ai.schema"
  */
 export type AiChatModel = BaseChatModel
 
+/**
+ * Which model a call asks the gateway for, and what its body may carry there. `name` is a gateway profile (`sonnet`, `deepseek`,
+ * `auto-light`, `auto-heavy`) or model; the router owns which provider and key serve it. The three flags are what every provider the
+ * name can reach accepts: a provider that refuses sampling settings or a forced tool choice gets neither, and the upstream's own
+ * fields (`reasoning`, `session_id`, `provider`) are sent only where an OpenAI-compatible upstream can serve the call. Absent on a
+ * call: the endpoint's chat profile (`work`), with every field as before.
+ */
+export interface AiTarget {
+    /** The gateway profile or model. */
+    readonly name: string
+    /** True when the body may set `temperature`. */
+    readonly sampling: boolean
+    /** True when the body may force a tool call. */
+    readonly forcedToolChoice: boolean
+    /** True when the upstream's own fields are worth sending. */
+    readonly upstreamFields: boolean
+}
+
 /** What the client of one try of an agent turn carries: its deadline, what a reasoning model may spend, whose calls these are. */
 export interface AiTurnRequest {
     /** The whole try in milliseconds. */
     readonly timeoutMs: number
+    /** The model the try asks for; absent, the endpoint's chat profile. */
+    readonly target?: AiTarget | undefined
     /** What a reasoning model may spend on the try; absent leaves the model's own defaults. */
     readonly budget?: AiBudget
     /** Whose calls these are, for cache affinity (see `AiChatRequest.affinity`). */
@@ -83,6 +103,11 @@ export interface AiMessage {
     readonly role: "system" | "user" | "assistant"
     /** What is said. */
     readonly content: string
+    /**
+     * True on the last message of a cacheable layer of the prompt (the end of the stable part of a node's call): a model that takes
+     * explicit cache breakpoints (Anthropic) gets one here and nowhere else. Nothing is sent for it yet (`cache-marks.policy.ts`).
+     */
+    readonly cacheMark?: boolean
     /** The pictures said with it, as data addresses. */
     readonly images?: ReadonlyArray<string>
 }
@@ -107,6 +132,11 @@ export interface AiUsage {
      * when the endpoint did not say. It is only measured: the provider caches the stable prefix of a prompt by itself.
      */
     readonly cachedTokens?: number | null
+    /**
+     * How many of the request's tokens the provider WROTE to its prompt cache (Anthropic bills them above the input price); absent
+     * or null when the endpoint did not say. The gateway of `@starci/ai-router` 0.5.0 folds them into `promptTokens` unsaid.
+     */
+    readonly cacheWriteTokens?: number | null
 }
 
 /** One retrieved passage of the business notes. */
@@ -153,6 +183,8 @@ export interface AiChatRequest {
     readonly affinity?: string
     /** Which upstreams may serve the call (see `AiRouting`); absent sends nothing. */
     readonly routing?: AiRouting
+    /** The model the call asks for; absent, the endpoint's chat profile. */
+    readonly target?: AiTarget | undefined
 }
 
 /** The spend a call caps: how hard a reasoning model thinks and how many tokens it may write (reasoning included). */
@@ -251,6 +283,74 @@ export interface ChainReply {
     readonly retrieved: number
     /** The upstream that served the call, as the endpoint names it in its raw answer (OpenRouter's `provider`); absent when it does not say. */
     readonly provider?: unknown
+}
+
+/**
+ * The protocols a routed chat client speaks, by kind (the shape of `@starci/ai-router/langchain` 0.7.0, `RoutedChatKinds`): `openai`
+ * for every OpenAI-compatible endpoint, the gateway included. 0.7.0 adds `anthropic: ChatAnthropic`; this map then grows by that line.
+ */
+export interface RoutedChatKinds {
+    /** `ChatOpenAI` over the gateway. */
+    readonly openai: AiChatModel
+}
+
+/** A protocol of `RoutedChatKinds`. */
+export type RoutedKind = keyof RoutedChatKinds
+
+/**
+ * A chat client the router hands out for a model or profile name (0.7.0's `RoutedChat`): its protocol, the name it asks for, the
+ * client, and the same name through its other protocols (a profile spanning two protocols: the next one is the caller's retry, which
+ * the tries policy owns). The common path never reads `kind`; only a provider's own fields do (`RoutedChatOptions.fields`).
+ */
+export interface RoutedChat {
+    /** The protocol. */
+    readonly kind: RoutedKind
+    /** The pool model or profile this client names on every call. */
+    readonly name: string
+    /** The client. */
+    readonly model: AiChatModel
+    /** The same name through its other protocols, in the pool's order; empty while every client is `openai` (0.5.0). */
+    readonly fallbacks: ReadonlyArray<RoutedChat>
+}
+
+/** What one `chat` call sets on the client it gets (0.7.0's `RoutedChatOptions`). */
+export interface RoutedChatOptions {
+    /** The limit of one call in milliseconds; the client retries nothing itself. */
+    readonly timeoutMs?: number | undefined
+    /** The most tokens an answer may hold; absent leaves the cap to the provider (Anthropic's client sends 16000). */
+    readonly maxTokens?: number | undefined
+    /**
+     * Extra constructor fields of each kind's own client, for a provider's own features: for `openai` the sampling temperature and
+     * the upstream's own body fields (`modelKwargs`: `reasoning`, `session_id`, `provider`). A kind not named gets none of them.
+     */
+    readonly fields?: Readonly<Partial<Record<RoutedKind, Readonly<Record<string, unknown>>>>> | undefined
+}
+
+/** An embeddings client the router hands out (0.7.0's `RoutedEmbeddings`, its `OpenAIEmbeddings` reduced to the one call made). */
+export interface RoutedEmbeddings {
+    /** Always `openai`: Anthropic has no embeddings API. */
+    readonly kind: "openai"
+    /** The profile or model it names. */
+    readonly name: string
+    /** The client. */
+    readonly embeddings: { embedDocuments(input: Array<string>): Promise<Array<Array<number>>> }
+}
+
+/**
+ * The ONE door to the router's clients (owner, 2026-11-10: "AI router returns the LangChain client"), shaped as 0.7.0's `RoutedModels`
+ * so the install swaps the implementation only. `chat` and `embeddings` are async there (a catalog read); `chatNow` is today's
+ * synchronous twin for the one caller that must hand a client over synchronously (`AiAgentTurns.model`), and goes at 0.7.0.
+ */
+export interface RoutedModels {
+    /** The chat client of a model or profile name. */
+    chat(name: string, options?: RoutedChatOptions): Promise<RoutedChat>
+    /** The embeddings client of a profile or model; `today` is 0.5.0's own (0.7.0 reads the vector size from the pool). */
+    embeddings(
+        name: string,
+        today?: { readonly dimensions?: number | undefined; readonly timeoutMs?: number | undefined },
+    ): Promise<RoutedEmbeddings>
+    /** Today only: `chat` without the wait. */
+    chatNow(name: string, options?: RoutedChatOptions): RoutedChat
 }
 
 /** The two calls the app makes through LangChain; the adapter over `@langchain/*` implements it and a spec stands in for it. */

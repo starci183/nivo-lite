@@ -34,4 +34,6 @@ export enum ChannelsLogEvent {
     ZnsSent = "channels.zalo.zns-sent",
     /** A wizard step was refused for a reason the owner can act on; the connection id and the command ride in the fields. */
     ZaloWizardRefused = "channels.zalo.wizard-refused",
+    /** The OA's display name could not be read from Zalo; the account keeps its connection name until a later view tries again. */
+    ZaloOaNameUnread = "channels.zalo.oa-name-unread",
 }

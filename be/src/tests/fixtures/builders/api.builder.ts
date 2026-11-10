@@ -74,7 +74,7 @@ const options = {
     },
     database: wiringSettings.database,
     storage: wiringSettings.storage,
-    aiGateway: { providers: [], models: { work: "wiring-chat", embed: "wiring-embedding" }, gateway: null },
+    aiGateway: { providers: [], models: { work: "wiring-chat", embed: "wiring-embedding", strong: "wiring-strong" }, gateway: null },
     passport: {
         issuer: "wiring",
         audience: "authenticated",
@@ -99,15 +99,6 @@ const options = {
     billing: {
         sepayApiKey: undefined,
         bankAccount: { account: "fixture", bank: "fixture", holder: "Wiring Fixture" },
-    },
-    openclaw: {
-        gateway: null,
-        turnTimeoutMs: 1000,
-        settleMs: 100,
-        configDir: undefined,
-        gatewayStateDir: "wiring-fixture",
-        manageAgents: false,
-        toolSecret: null,
     },
     agentTurns: { bridgeSecret: null },
     aiTasks: {

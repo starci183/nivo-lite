@@ -195,7 +195,7 @@ export const CHATBOT_FIXTURES: ModuleFixtures = {
             empty: chatDecisionQueueOf([], 0),
         },
         "chatbot.settings": {
-            ready: { openclawTimeoutSec: 25, holdingMessage: "Please wait a moment.", updatedBy: "Thu Ha" },
+            ready: { holdingMessage: "Please wait a moment.", updatedBy: "Thu Ha" },
         },
         "chatbot.thread": { ready: HANDLED_VIEW, waiting: WAITING_VIEW },
         "chatbot.messages": {

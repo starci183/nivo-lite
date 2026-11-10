@@ -8,26 +8,11 @@ export const AGENT_NAME_MIN = 2
 /** The longest name of an agent. */
 export const AGENT_NAME_MAX = 40
 
-/** How long a customer waits for the agent by default before the app answers directly, in seconds. */
-const DEFAULT_REPLY_TIMEOUT_SEC = 25
-
-/** The shortest time a customer waits for the agent before the app answers directly, in seconds. */
-export const REPLY_TIMEOUT_MIN = 5
-
-/** The longest time a customer waits for the agent before the app answers directly, in seconds. */
-export const REPLY_TIMEOUT_MAX = 120
-
 /** The longest holding message. */
 export const HOLDING_MAX = 400
 
 const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
     typeof value === "object" && value !== null && !Array.isArray(value)
-
-/** The reply timeout an installation holds in its settings, else the default. */
-export const replyTimeoutOf = (settings: unknown): number => {
-    const saved = isRecord(settings) ? Number(settings.openclawTimeoutSec) : Number.NaN
-    return Number.isFinite(saved) && saved >= REPLY_TIMEOUT_MIN ? Math.round(saved) : DEFAULT_REPLY_TIMEOUT_SEC
-}
 
 /** The holding message an installation holds in its settings; empty when it has none. */
 export const holdingMessageOf = (settings: unknown): string => {
@@ -41,54 +26,6 @@ export const workingHoursOf = (settings: unknown): string | null => {
     if (typeof saved === "string") return saved
     return isRecord(saved) ? JSON.stringify(saved) : null
 }
-
-/** Where the OpenClaw copy of an agent stands. */
-export type AgentSyncState = "none" | "syncing" | "ok" | "error"
-
-/** The OpenClaw copy of an agent against the context version in use. */
-export interface AgentSyncView {
-    readonly state: AgentSyncState
-    /** The version OpenClaw holds; null when there is no copy. */
-    readonly syncedVersion: number | null
-    /** The version in use. */
-    readonly activeVersion: number | null
-    readonly checkedAt: string | null
-    readonly error: string | null
-}
-
-/** What the card shows before the first answer. */
-export const UNKNOWN_SYNC: AgentSyncView = {
-    state: "none",
-    syncedVersion: null,
-    activeVersion: null,
-    checkedAt: null,
-    error: null,
-}
-
-const SYNC_STATES: ReadonlyArray<AgentSyncState> = ["none", "syncing", "ok", "error"]
-
-interface AgentSyncWire {
-    readonly state: string
-    readonly syncedVersion?: number | null
-    readonly activeVersion?: number | null
-    readonly checkedAt?: string | null
-    readonly error?: string | null
-}
-
-/** One back end sync status; a state outside the closed set reads as none. */
-export const toAgentSync = (row: AgentSyncWire): AgentSyncView => ({
-    state: SYNC_STATES.find((state) => state === row.state) ?? "none",
-    syncedVersion: row.syncedVersion ?? null,
-    activeVersion: row.activeVersion ?? null,
-    checkedAt: row.checkedAt ?? null,
-    error: row.error ?? null,
-})
-
-/** Poll the sync status this often while a sync is queued or running. */
-export const SYNC_POLL_BUSY_MS = 2500
-
-/** Poll the sync status this often while idle, so a background sync shows up on its own. */
-export const SYNC_POLL_IDLE_MS = 20_000
 
 /** How an agent runs: it proposes everything (assist) or follows the authority rules alone (autopilot). */
 export type AgentMode = "assist" | "autopilot"
@@ -118,7 +55,6 @@ export interface AgentInstallationView {
     readonly setupHref: string
     /** A context version was applied: the same truth as the lifecycle, never read apart from it. */
     readonly hasVersion: boolean
-    readonly timeoutSec: number
     readonly holdingMessage: string
     /** The weekly working hours text (JSON of the ranges per day); null when none is saved. */
     readonly workingHours: string | null
@@ -140,7 +76,6 @@ export const toAgentInstallationView = (installation: Installation, workspaceId:
     isSetupPending: isSetupPending(installation.lifecycle),
     setupHref: workspaceHref(workspaceId, agentHref(installation.moduleKey, installation.id)),
     hasVersion: !isSetupPending(installation.lifecycle),
-    timeoutSec: replyTimeoutOf(installation.settings),
     holdingMessage: holdingMessageOf(installation.settings),
     workingHours: workingHoursOf(installation.settings),
 })

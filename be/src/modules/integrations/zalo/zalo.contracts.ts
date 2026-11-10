@@ -149,6 +149,14 @@ export type ZaloMethod = "GET" | "POST"
 /** The `data` object of a successful OA API answer, as Zalo sent it. */
 export type ZaloData = Record<string, unknown>
 
+/** What Zalo says of the OA itself (Open API v2.0 `getoa`): public facts only, never a token. */
+export interface ZaloOaProfile {
+    /** The OA id; empty when Zalo does not say. */
+    readonly oaId: string
+    /** The OA's display name as followers see it; empty when Zalo does not say. */
+    readonly name: string
+}
+
 /** What Zalo says of a customer of the OA. */
 export interface ZaloUserProfile {
     /** The display name, or the alias the OA gave them; empty when Zalo says neither. */

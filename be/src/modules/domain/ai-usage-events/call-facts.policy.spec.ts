@@ -8,6 +8,9 @@ const CALL = {
     tryNumber: 2,
     upstream: "Parasail",
     finishReason: "stop",
+    declaredModel: "auto",
+    modelProvider: "anthropic",
+    modelReason: "auto-heavy",
 }
 
 describe("callColumnsOf", () => {
@@ -23,7 +26,16 @@ describe("callColumnsOf", () => {
             tryNumber: null,
             upstream: null,
             finishReason: null,
+            declaredModel: null,
+            modelProvider: null,
+            modelReason: null,
         })
+    })
+
+    it("books no model facts for a fixed task of the app (it declares none), and cuts them to their columns", () => {
+        const { declaredModel: _declared, modelProvider: _provider, modelReason: _reason, ...task } = CALL
+        expect(callColumnsOf(task, FIGURES)).toMatchObject({ declaredModel: null, modelProvider: null, modelReason: null })
+        expect(callColumnsOf({ ...CALL, modelReason: "r".repeat(60) }, FIGURES).modelReason).toBe("r".repeat(40))
     })
 
     it("keeps the hidden reasoning within the completion it was written with, and books none for an estimated call", () => {

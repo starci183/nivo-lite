@@ -90,7 +90,7 @@ export const OWNER_CASES: ReadonlyArray<FailureCase> = [
         at: { handler: "door", phase: "after" },
     }),
     approved("owner/killed-after-approval-before-delivery", { kind: "kill-after-approval" }),
-    survives("owner/openclaw-stopped-mid-turn", { kind: "runtime-down" }),
+    survives("owner/runtime-stopped-mid-turn", { kind: "runtime-down" }),
     survives("owner/duplicate-message", { kind: "duplicate-message" }),
     approved("owner/double-approval", { kind: "double-approval" }),
     survives("owner/browser-reload", { kind: "reload" }),

@@ -44,9 +44,9 @@ take the native backup (`starci app db dump`) and verify its receipt first.
 
 Run it from the release tag through Actions > seed demo workspace (`.github/workflows/cli-deploy.yml`) with task
 `cleanup-workspaces`. The job runs the cli inside the running `nivo-api` task (`docker exec` through `starci app stack connect`):
-deleting a workspace removes its OpenClaw agents first, with their sessions and files, retired agents included, and only that task
-holds the `agents` network, `OPENCLAW_GATEWAY_URL` and `OPENCLAW_GATEWAY_TOKEN`. Where no gateway is configured the delete refuses
-with `WORKSPACES_OPENCLAW_UNAVAILABLE` and removes nothing; a workspace whose agents could not be removed stays, and a re-run retries it.
+deleting a workspace is the database cascade only: no agent gateway is involved since OpenClaw was removed (2026-11-11), so the
+delete needs no gateway and has no `WORKSPACES_OPENCLAW_UNAVAILABLE` refusal any more; a workspace whose rows could not be removed
+stays, and a re-run retries it.
 
 1. Run with `keep` set to the HAKUEN workspace id and `mode` set to `dry-run`. Leave `allow_kept_cascade` off unless a refusal
    named kept rows that may go with the account.

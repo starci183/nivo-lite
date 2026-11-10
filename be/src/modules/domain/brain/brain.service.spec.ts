@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock } from "@starci/jest-preset"
-import { BrainFactsService } from "@modules/domain/brain-facts"
+import { BrainFactsError, BrainFactsErrorCode, BrainFactsService } from "@modules/domain/brain-facts"
 import type { FactRecord, ProposeResult } from "@modules/domain/brain-facts"
 import { BrainLessonsService } from "@modules/domain/brain-lessons"
 import type { LessonRecord } from "@modules/domain/brain-lessons"
@@ -15,6 +15,7 @@ import type { FactDecision, FactForm } from "./brain.contracts"
 import { BrainLogEvent } from "./brain.log-events"
 import { BrainService } from "./brain.service"
 import { DocumentFactsService } from "./document-facts.service"
+import { FactEmbeddingsService } from "./fact-embeddings.service"
 
 const WS = "ws-1"
 const AT = "2026-10-12T10:00:00.000Z"
@@ -86,6 +87,7 @@ const build = async () => {
     const gaps = mock<KnowledgeGapsService>()
     const sources = mock<KnowledgeSourcesService>()
     const documentFacts = mock<DocumentFactsService>()
+    const vectors = mock<FactEmbeddingsService>()
     members.require.mockResolvedValue(memberOf())
     facts.propose.mockResolvedValue({ fact: factOf(), outcome: "applied" })
     lessons.propose.mockResolvedValue(lesson)
@@ -100,9 +102,20 @@ const build = async () => {
             { provide: KnowledgeGapsService, useValue: gaps },
             { provide: KnowledgeSourcesService, useValue: sources },
             { provide: DocumentFactsService, useValue: documentFacts },
+            { provide: FactEmbeddingsService, useValue: vectors },
         ],
     }).compile()
-    return { service: moduleRef.get(BrainService), logger, members, facts, lessons, gaps, sources, documentFacts }
+    return {
+        service: moduleRef.get(BrainService),
+        logger,
+        members,
+        facts,
+        lessons,
+        gaps,
+        sources,
+        documentFacts,
+        vectors,
+    }
 }
 
 describe("BrainService saveFact", () => {
@@ -161,7 +174,8 @@ describe("BrainService saveFact", () => {
             validTo: undefined,
             sourceKind: "manager",
             proposedBy: "Bo",
-            autoApply: true,
+            // Only the founder puts a truth in force: a manager's write is a proposal for the founder.
+            autoApply: false,
             evidence: [
                 {
                     kind: "manual",
@@ -241,7 +255,12 @@ describe("BrainService decideFact", () => {
 
         await expect(service.decideFact("u1", decision)).resolves.toEqual(factOf())
 
-        expect(members.require).toHaveBeenCalledWith("u1", WS, ["owner", "manager"])
+        // Only turning a proposal down is a manager's too; every activation and retirement is the founder's alone.
+        expect(members.require).toHaveBeenCalledWith(
+            "u1",
+            WS,
+            decision.action === "reject" ? ["owner", "manager"] : ["owner"],
+        )
         expect(gaps.resolve).toHaveBeenCalledWith(WS, {
             text: "Shop - Hours: 8 to 21",
             minimum: 0.6,
@@ -409,5 +428,36 @@ describe("BrainService", () => {
         await expect(service.maintain("u1", WS)).resolves.toBeUndefined()
 
         expect(gaps.resolve).not.toHaveBeenCalled()
+    })
+})
+describe("BrainService founder-only activation", () => {
+    it.each(["apply", "choose", "split", "retire"] as const)(
+        "refuses a manager who tries to %s: nothing goes in force",
+        async (action) => {
+            const { service, members, facts } = await build()
+            const refused = new BrainFactsError({ code: BrainFactsErrorCode.NotProposed })
+            members.require.mockImplementation((_user, _ws, roles) =>
+                roles?.includes("manager") === true ? Promise.resolve(memberOf({ role: "manager" })) : Promise.reject(refused),
+            )
+
+            await expect(service.decideFact("u1", { workspaceId: WS, id: "f1", action })).rejects.toBe(refused)
+
+            expect(facts.apply).not.toHaveBeenCalled()
+            expect(facts.choose).not.toHaveBeenCalled()
+            expect(facts.split).not.toHaveBeenCalled()
+            expect(facts.retire).not.toHaveBeenCalled()
+        },
+    )
+
+    it("lets the founder approve a change request and refreshes the vectors of the truths in force", async () => {
+        const { service, facts, vectors } = await build()
+        facts.apply.mockResolvedValue(factOf({ status: "active", version: 2 }))
+
+        await expect(service.decideFact("u1", { workspaceId: WS, id: "f1", action: "apply" })).resolves.toMatchObject({
+            status: "active",
+            version: 2,
+        })
+
+        expect(vectors.refresh).toHaveBeenCalledWith(WS)
     })
 })

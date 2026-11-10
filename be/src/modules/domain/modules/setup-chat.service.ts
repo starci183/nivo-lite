@@ -165,7 +165,7 @@ export class SetupChatService {
 
     /**
      * Applies the open draft: a new immutable context version becomes the one in use and the agent of the installation runs on it right
-     * away (its instructions and notes carry the confirmed setup, its OpenClaw copy is synced). Answers the number of the version.
+     * away (its instructions and notes carry the confirmed setup). Answers the number of the version.
      */
     async apply(principalId: string, workspaceId: string, installationId: string, locale: Locale): Promise<number> {
         const member = await this.members.require(principalId, workspaceId, GOVERNORS)

@@ -33,9 +33,9 @@ Vì sao: a switch setting is ONE row: noun title + description on the left, swit
 Luật: surfacecard-select-subtitle.md (Switch rows, Row titles are nouns).
 Grammar: `Switch isLabelHidden` (`dist/core/leaf/Switch/index.d.ts`) in `FieldBlock trailing`.
 
-## Giới hạn (chatbot only)
-Vì sao: two inputs (reply wait in seconds, holding message) under one title; the description sits under the title only.
-Luật: surfacecard-select-subtitle.md (subtitle only under a title), ui-laws.md (no description under labels elsewhere).
+## Khi agent trả lời chậm (chatbot only)
+Vì sao: one input, the holding message the customer gets while the agent has not answered; the description sits under the title only. The reply-wait field is gone with the old engine.
+Luật: surfacecard-select-subtitle.md (subtitle only under a title), ui-laws.md (no description under labels elsewhere), openclaw-removed.md.
 Grammar: `Grid kind="form"`, `Input`.
 
 ## Footer Huỷ / Lưu
@@ -57,11 +57,6 @@ Grammar: `Switch` in `FieldBlock trailing`.
 Vì sao: a group of options is a choice list (its title is the card label, no description above): checkbox rows, full-width dividers, single selection; the note under it is about the card's data (authority is shared per type).
 Luật: surfacecard-select-subtitle.md.
 Grammar: `SurfaceCard kind="select" selectionMode="single"` (`dist/core/surfaceCardData.d.ts`, `SelectData`).
-
-## Bản đang chạy
-Vì sao: noun title, description "Bản 1 · đồng bộ 4 phút trước · tự cập nhật mỗi 5 phút", sm neutral "Đồng bộ lại" at the right; the version is plain text, no chip.
-Luật: surfacecard-select-subtitle.md (Versions), type-scale-14-12.md.
-Grammar: `RelativeTime`, `Button intent="neutral" size="sm"`.
 
 ## Gỡ agent
 Vì sao: noun title + description, danger button (verb) at the right, flat; the confirmation is a dialog.

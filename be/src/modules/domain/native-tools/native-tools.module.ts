@@ -3,8 +3,12 @@ import type { DynamicModule, Type } from "@nestjs/common"
 import { WorkspacePaymentAccountService } from "@modules/domain/channel-connections"
 import { SepayNativeService } from "@modules/domain/mcp-gateway"
 import type { NativeAdapter } from "@modules/domain/mcp-gateway"
+import { ContextReadsService } from "@modules/domain/context-sources"
 import { BankNativeService } from "./bank-native.service"
 import { BrainNativeService } from "./brain-native.service"
+import { ConversationNativeService } from "./conversation-native.service"
+import { LeadNativeService } from "./lead-native.service"
+import { NivoNativeService } from "./nivo-native.service"
 import { DossierNativeService } from "./dossier-native.service"
 import { DriveNativeService } from "./drive-native.service"
 import { LedgerNativeService } from "./ledger-native.service"
@@ -18,6 +22,7 @@ import { ZaloNativeService } from "./zalo-native.service"
 /**
  * The native tools NIVO builds, as the classes an app passes to the gateway's `natives` option: the Brain, the dossiers, Google
  * Drive, Telegram, Zalo OA and SePay with its status, plus the provider-neutral capability `bank.transactions`. The SePay one takes the place of the gateway's own SePay adapter.
+ * `nivo` holds NIVO's own context reads (`nivo.conversation.*`, `nivo.lead.*`), hard-locked to the run's own conversation and customer.
  */
 export const NATIVE_TOOL_ADAPTERS: ReadonlyArray<Type<NativeAdapter>> = [
     BrainNativeService,
@@ -28,6 +33,7 @@ export const NATIVE_TOOL_ADAPTERS: ReadonlyArray<Type<NativeAdapter>> = [
     SepayStatusNativeService,
     BankNativeService,
     LedgerNativeService,
+    NivoNativeService,
 ]
 
 @Module({})
@@ -44,6 +50,9 @@ export class NativeToolsModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 NativeViewService,
+                ContextReadsService,
+                ConversationNativeService,
+                LeadNativeService,
                 ProviderToolsService,
                 WorkspacePaymentAccountService,
                 SepayNativeService,

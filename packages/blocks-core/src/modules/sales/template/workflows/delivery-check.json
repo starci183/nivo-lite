@@ -119,8 +119,17 @@
                             "scope": "workspace",
                             "fields": [
                                 "id",
-                                "contactName",
-                                "consultFacts"
+                                "contactName"
+                            ]
+                        },
+                        {
+                            "kind": "agent-lead-memory",
+                            "access": "read",
+                            "scope": "workspace",
+                            "fields": [
+                                "id",
+                                "entryKey",
+                                "output"
                             ]
                         },
                         {

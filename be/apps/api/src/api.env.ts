@@ -34,7 +34,6 @@ import { parseAgentThreadsConfig } from "@modules/domain/agent-threads"
 import { parseAgentLoopConfig } from "@modules/domain/graph-nodes"
 import { parseLanggraphConfig } from "@modules/integrations/langgraph"
 import { parseEntityEngineConfig } from "@modules/domain/entity-engine"
-import { parseOpenclawConfig } from "@modules/integrations/openclaw"
 import { parseVideoConfig } from "@modules/domain/video"
 import { parseFfmpegConfig } from "@modules/integrations/ffmpeg"
 import { parseObjectStorageConfig } from "@modules/integrations/object-storage"
@@ -78,8 +77,6 @@ export interface ApiOptions {
     readonly redis: ReturnType<typeof parseRedisConfig>
     /** The limits every read of a remote file is held to: size, deadline and redirects. */
     readonly remoteFiles: ReturnType<typeof parseRemoteFilesConfig>
-    /** The OpenClaw gateway and the agent workspaces. */
-    readonly openclaw: ReturnType<typeof parseOpenclawConfig>
     /** The running build and how often a parked run is run again. */
     readonly agentRuns?: ReturnType<typeof parseAgentRunsConfig>
     /** The key that signs entity-engine cursors. */ readonly entityEngine: ReturnType<typeof parseEntityEngineConfig>
@@ -167,7 +164,6 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     connectionPoll: parseConnectionPollConfig(env),
     redis: parseRedisConfig(env),
     remoteFiles: parseRemoteFilesConfig(env),
-    openclaw: parseOpenclawConfig(env),
     agentRuns: parseAgentRunsConfig(env),
     entityEngine: parseEntityEngineConfig(env),
     aiTasks: parseAiTasksConfig(env, parseAiConfig(env)),

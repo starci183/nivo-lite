@@ -5,7 +5,6 @@ import { CreateAgentInstallationHandler } from "./application/create-agent-insta
 import { ContextNotesHandler } from "./application/context-notes.handler"
 import { DismissContextNoteHandler } from "./application/dismiss-context-note.handler"
 import { DecideSetupCardHandler } from "./application/decide-setup-card.handler"
-import { GetAgentSyncStatusHandler } from "./application/get-agent-sync-status.handler"
 import { GetCatalogHandler } from "./application/get-catalog.handler"
 import { GetInstallationHandler } from "./application/get-installation.handler"
 import { GetModuleHandler } from "./application/get-module.handler"
@@ -33,7 +32,6 @@ import { ConfigurableModuleClass } from "./modules.module-definition"
         ContextNotesHandler,
         DismissContextNoteHandler,
         DecideSetupCardHandler,
-        GetAgentSyncStatusHandler,
         GetCatalogHandler,
         GetInstallationHandler,
         GetModuleHandler,

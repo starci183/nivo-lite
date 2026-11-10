@@ -3,8 +3,8 @@ import type { EventPayload, ParsedEvent } from "@modules/platform/event-bus"
 import { isKey, isTextOrAbsent, whenPresent, openEnvelope } from "./money-event.policy"
 
 /**
- * The payload of the `installation_changed` event: an installation (or the workspace's shared business knowledge) changed in a way the
- * OpenClaw copy of its agent must follow. `dedupeKey` is a fresh id per change: two changes of one installation are two facts, and a
+ * The payload of the `installation_changed` event: an installation (or the workspace's shared business knowledge) changed in a way its
+ * consumers (the agent wakes) follow. `dedupeKey` is a fresh id per change: two changes of one installation are two facts, and a
  * redelivery of one change carries the same id.
  */
 export interface InstallationChangedInput {
@@ -12,7 +12,7 @@ export interface InstallationChangedInput {
     readonly workspaceId: string
     /** The installation that changed; null when the change touches the whole workspace (its business knowledge). */
     readonly installationId?: string
-    /** True to rebuild the copy even when the installation does not run on OpenClaw (an install asks for it). */
+    /** True on an install; kept in version 1 of the event (no consumer reads it since the agent copy sync went). */
     readonly force: boolean
 }
 

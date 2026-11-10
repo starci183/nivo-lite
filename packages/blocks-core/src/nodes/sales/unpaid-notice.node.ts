@@ -107,7 +107,7 @@ export const salesUnpaidNoticeNode: NodeDefinition<typeof input, typeof output, 
             grant: EXAMPLE_GRANT,
             model: [{ call: { tool: TOOL.teamMessagePost, args: NOTICE } }, { done: { orderId: "o1", result: "told" } }],
             effects: [{ kind: TOOL.teamMessagePost, payload: NOTICE }],
-            store: { order: [ORDER], "sales-lead": [{ id: "l1", contactName: "An", consultFacts: {} }] },
+            store: { order: [ORDER], "sales-lead": [{ id: "l1", contactName: "An" }] },
         },
         {
             name: "an order paid in the meantime is not told",

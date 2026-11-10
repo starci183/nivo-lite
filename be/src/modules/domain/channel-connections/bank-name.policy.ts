@@ -32,8 +32,45 @@ const BANK_NAMES: Readonly<Record<string, string>> = {
     TIMO: "Timo",
 }
 
-/** The human bank name of a bank code; an unlisted code stays as it is (trimmed, upper case). */
+/**
+ * The other spellings a provider prints for a listed bank, by the key `keyOf` makes: SePay's own codes and its short names
+ * (`qr.sepay.vn/banks.json`: code `ICB` short name `VietinBank`, code `MB` short name `MBBank`, `VBA` `Agribank`, ...), which SePay
+ * also reports upper-cased as the bank of a transaction (`MBBANK`).
+ */
+const ALIASES: Readonly<Record<string, string>> = {
+    ICB: "CTG",
+    VIETINBANK: "CTG",
+    VIETCOMBANK: "VCB",
+    MBBANK: "MB",
+    VBA: "AGR",
+    AGRIBANK: "AGR",
+    TECHCOMBANK: "TCB",
+    VPBANK: "VPB",
+    SACOMBANK: "STB",
+    TPBANK: "TPB",
+    HDBANK: "HDB",
+    SEABANK: "SEAB",
+    EXIMBANK: "EIB",
+    LPBANK: "LPB",
+    LIENVIETPOSTBANK: "LPB",
+    NAMABANK: "NAB",
+    BACABANK: "BAB",
+    ABBANK: "ABB",
+    BAOVIETBANK: "BVB",
+    VIETABANK: "VAB",
+    PVCOMBANK: "PVCB",
+    KIENLONGBANK: "KLB",
+}
+
+/** The lookup key of a bank spelling: upper case, without spaces, dashes, dots or underscores. */
+const keyOf = (spelling: string): string => spelling.toUpperCase().replace(/[\s._-]+/gu, "")
+
+/**
+ * The human bank name of a bank code or of a provider's spelling of it (`MBBANK`, `MBBank` and `MB` all read "MB Bank"); an unlisted
+ * code stays as it is (trimmed, upper case).
+ */
 export const bankDisplayNameOf = (bankCode: string): string => {
     const code = bankCode.trim().toUpperCase()
-    return BANK_NAMES[code] ?? code
+    const key = keyOf(code)
+    return BANK_NAMES[key] ?? BANK_NAMES[ALIASES[key] ?? ""] ?? code
 }

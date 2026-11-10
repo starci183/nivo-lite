@@ -29,7 +29,6 @@ describe("flow F entity declarations", () => {
             "loyalty.program",
             "loyalty.campaign",
             "loyalty.decision",
-            "agent.turn",
             "agent.run",
             "agent.run-step",
             "agent.node-effect",
@@ -132,17 +131,6 @@ describe("flow F entity declarations", () => {
             "accounting.adjustment",
         ])
         expect(book?.view).toBe(true)
-    })
-
-    it("keeps one synced turn per session index", () => {
-        expect(entityNamed("agent.turn")?.constraints).toEqual([
-            {
-                kind: "unique",
-                name: "session_turn_key",
-                on: ["sessionKey", "turnIndex"],
-                refusal: "turn-already-synced",
-            },
-        ])
     })
 
     it("opens one run per wake and planning flag, and one step per run and step key", () => {
@@ -248,11 +236,7 @@ describe("flow F entity declarations", () => {
 
     it("parses the declared jsonb shapes", () => {
         const names = entityNamed("payment.claim")?.fields["names"]?.shape
-        const calls = entityNamed("agent.turn")?.fields["toolCalls"]?.shape
         expect(names?.parse({ values: ["Dinh"] })).toEqual({ values: ["Dinh"] })
-        expect(calls?.parse({ calls: [{ name: "chat.send", argsJson: "{}" }] })).toEqual({
-            calls: [{ name: "chat.send", argsJson: "{}" }],
-        })
     })
 
     describe("the entities manifest", () => {

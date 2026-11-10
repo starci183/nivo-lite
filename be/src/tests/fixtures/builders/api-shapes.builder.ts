@@ -187,16 +187,6 @@ export type BuildWiringProofResultOptionsAiTasksShape = {
 }
 /** The build wiring proof result options agent turns record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsAgentTurnsShape = { bridgeSecret: null }
-/** The build wiring proof result options openclaw record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsOpenclawShape = {
-    gateway: null
-    turnTimeoutMs: number
-    settleMs: number
-    configDir: undefined
-    gatewayStateDir: string
-    manageAgents: boolean
-    toolSecret: null
-}
 /** The build wiring proof result options billing bank account record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsBillingBankAccountShape = { account: string; bank: string; holder: string }
 /** The build wiring proof result options billing record the builders hand out and the specs expect. */
@@ -249,7 +239,7 @@ export type BuildWiringProofResultOptionsPassportShape = {
     budget: BuildWiringProofResultOptionsPassportBudgetShape
 }
 /** The build wiring proof result options ai gateway models record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsAiGatewayModelsShape = { work: string; embed: string }
+export type BuildWiringProofResultOptionsAiGatewayModelsShape = { work: string; embed: string; strong: string }
 /** The build wiring proof result options ai gateway record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsAiGatewayShape = {
     providers: Array<never>
@@ -307,7 +297,6 @@ export type BuildWiringProofResultOptionsShape = {
     redis: BuildWiringProofResultOptionsRedisShape
     remoteFiles: BuildWiringProofResultOptionsRemoteFilesShape
     entityEngine: BuildWiringProofResultOptionsEntityEngineShape
-    openclaw: BuildWiringProofResultOptionsOpenclawShape
     agentTurns: BuildWiringProofResultOptionsAgentTurnsShape
     aiTasks: BuildWiringProofResultOptionsAiTasksShape
     connectionSecrets: BuildWiringProofResultOptionsConnectionSecretsShape

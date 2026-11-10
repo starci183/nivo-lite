@@ -26,7 +26,6 @@ import { agentLeadFreezeEntity } from "./agent/lead-freeze.entity"
 import { agentConversationHoldEntity } from "./agent/conversation-hold.entity"
 import { agentRunStopEntity } from "./agent/run-stop.entity"
 import { agentLeadMemoryEntity } from "./agent/lead-memory.entity"
-import { turnEntity } from "./agent/turn.entity"
 import { conversationEntity } from "./chat/conversation.entity"
 import { messageEntity } from "./chat/message.entity"
 import { chatSettingsEntity } from "./chat/settings.entity"
@@ -58,7 +57,6 @@ export const FLOW_F_ENTITIES: ReadonlyArray<AnyEntityDefinition> = [
     loyaltyProgramEntity,
     loyaltyCampaignEntity,
     loyaltyDecisionEntity,
-    turnEntity,
     agentRunEntity,
     agentRunStepEntity,
     agentNodeEffectEntity,

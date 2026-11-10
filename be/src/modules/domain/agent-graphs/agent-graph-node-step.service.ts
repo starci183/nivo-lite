@@ -602,6 +602,8 @@ export class AgentGraphNodeStepService implements AgentStepHandler, OnModuleInit
                 turn: await this.toldTurnOf(step, flow, input),
                 grant: { rights: grant.rights, tools: grant.tools },
                 key: replayKeyOf(step, input),
+                // The model the graph's node names (the shop's choice); absent, the host takes blocks-core's for the step.
+                ...(node.model === undefined ? {} : { model: node.model }),
                 ...(approval === undefined ? {} : { approval }),
             })
         } catch (cause) {

@@ -4,8 +4,8 @@ import { windowsOf } from "./extraction.policy"
 
 /**
  * What a reading of a document must do, given the hashes of the passages the last finished reading covered: only the changed passages
- * are read, and the unchanged ones are the text a fact may rest on to stay. With nothing in common the document is read whole, as a
- * first reading or a reading from before hashes is.
+ * are read, and the unchanged ones are what a fact may rest on to stay (by the chunk hash its evidence carries, or by their text for a
+ * fact read before hashes). With nothing in common the document is read whole, as a first reading or a reading from before hashes is.
  */
 export const readingPlanOf = (content: string, read: ReadonlyArray<string>): ReadingPlan => {
     const known = new Set(read)
@@ -16,6 +16,8 @@ export const readingPlanOf = (content: string, read: ReadonlyArray<string>): Rea
     return {
         partial,
         hashes: passages.map((passage) => passage.hash),
+        passages,
+        unchangedHashes: unchanged.map((passage) => passage.hash),
         unchangedText: unchanged.map((passage) => passage.text).join(" "),
         windows: windowsOf(partial ? changed.map((passage) => passage.text).join("\n\n") : content),
     }

@@ -51,7 +51,11 @@ export class ReadAgentRunHandler extends ICQRSHandler<ReadAgentRunQuery, AgentRu
             this.clock.now(),
             await this.usage.creditsByRun(workspaceId, [runId]),
         )
-        return { ...read, decision: await this.decisionFor(workspaceId, read) }
+        return {
+            ...read,
+            decision: await this.decisionFor(workspaceId, read),
+            aiCalls: await this.usage.callKindsByRun(workspaceId, runId),
+        }
     }
 
     /** The decision the run waits on, with the open request of the approval road when the graph asked a group; null when no item waits. */

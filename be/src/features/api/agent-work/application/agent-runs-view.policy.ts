@@ -263,5 +263,6 @@ export const detailOf = (
         item: item === null ? null : itemOf(item),
         ...runActionsOf(detail, entry.stepFailed, undone),
         decision: null,
+        aiCalls: [],
     }
 }

@@ -36,7 +36,6 @@ export const QUIET_INSTALLATIONS: Provider = {
             byId: jest.fn().mockResolvedValue(null),
             firstOfModule: jest.fn().mockResolvedValue(null),
             ofAgent: jest.fn().mockResolvedValue(null),
-            onOpenclaw: jest.fn().mockResolvedValue([]),
             contextVersionOf: jest.fn().mockResolvedValue(null),
         }),
 }

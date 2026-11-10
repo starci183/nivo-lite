@@ -43,7 +43,9 @@ type Speech = "reply" | "proactive"
 const MESSAGE = "message"
 
 /** The data kind of the customers, read for the care opt-out. */
-const LEAD_KIND = "sales-lead"
+
+/** The data kind of a customer's lead memory, where what the consult learned (`careOptOut`) lives. */
+const MEMORY_KIND = "agent-lead-memory"
 
 @Injectable()
 /**
@@ -331,13 +333,20 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         return turn.conversationId === conversation.id && turn.handedOffBy === conversation.agent.id
     }
 
-    /** True when the customer asked the shop to leave them alone (`careOptOut` in what the consult kept); a shop with no customer records has none. */
+    /**
+     * True when the customer asked the shop to leave them alone (`careOptOut` among the facts the consult kept in the customer's lead
+     * memory, read by the key of their facts entry); a shop with no lead memory port has none.
+     */
     private async optedOut(turn: NodeTurn, leadId: string | null): Promise<boolean> {
-        if (leadId === null || this.registry === undefined) return false
-        const [lead] = await this.registry
-            .portOf(LEAD_KIND)
-            .read(turn, { where: { id: leadId }, fields: ["consultFacts"], limit: 1 }, "workspace")
-        const facts: unknown = lead?.consultFacts
+        const port = this.registry?.optionalPortOf(MEMORY_KIND)
+        if (leadId === null || port === undefined) return false
+        const [entry] = await port.read(
+            turn,
+            { where: { entryKey: `lead:${leadId}|$lead|$facts` }, fields: ["output"], limit: 1 },
+            "workspace",
+        )
+        const output: unknown = entry?.output
+        const facts: unknown = isRecord(output) ? output["value"] : undefined
         return isRecord(facts) && facts["careOptOut"] === true
     }
 

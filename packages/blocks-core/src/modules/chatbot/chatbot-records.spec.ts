@@ -150,16 +150,15 @@ describe("the selected fields", () => {
 
 describe("settingsOf", () => {
     it("reads the rules a settings record holds, with who saved them, nobody when it says none", () => {
-        expect(settingsOf(recordOf({ openclawTimeoutSec: 40, holdingMessage: "Wait", updatedBy: "Lan" }))).toEqual({
-            openclawTimeoutSec: 40,
+        expect(settingsOf(recordOf({ holdingMessage: "Wait", updatedBy: "Lan" }))).toEqual({
             holdingMessage: "Wait",
             updatedBy: "Lan",
         })
-        expect(settingsOf(recordOf({ openclawTimeoutSec: 25, holdingMessage: "Wait" }))?.updatedBy).toBe("")
+        expect(settingsOf(recordOf({ holdingMessage: "Wait" }))?.updatedBy).toBe("")
     })
 
     it("answers nothing for fields that are not the rules, and selects only declared fields", () => {
-        expect(settingsOf(recordOf({ openclawTimeoutSec: "soon", holdingMessage: "Wait" }))).toBeNull()
+        expect(settingsOf(recordOf({ holdingMessage: 7 }))).toBeNull()
         expect(SETTINGS_FIELDS.every((name) => name in chatSettingsEntity.fields)).toBe(true)
     })
 })

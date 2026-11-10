@@ -1,4 +1,5 @@
 import { evaluateGate } from "@modules/domain/authority-rules"
+import { isDefaultRead } from "@modules/domain/context-sources"
 import type { GatewayCaller, GatewayJson, GatewayToolSpec, GrantVerdict, ToolGrant } from "./mcp-gateway.contracts"
 
 const numberOf = (value: unknown): number | null => (typeof value === "number" && Number.isFinite(value) ? value : null)
@@ -52,14 +53,21 @@ export const judgeGrant = (
 const DEFAULT_READ_CONNECTORS: ReadonlySet<string> = new Set(["brain"])
 
 /**
- * True for a tool every agent holds by default (owner rule 2026-11-10, "the second brain MCP is granted to agents by default"): a READ
- * tool of the second brain (`brain.search`, `brain.facts.list`, `brain.facts.get`, `brain.documents.read`). A tool that writes is never
- * one, whatever its connector. Inside a graph step the default holds only for a tool on the step's allow-list (its node declares it and
- * its workflow grants it). What the read may see is not decided here: the caller's audience lens and its data rights still narrow it.
+ * True for a context read of the registered sources (`nivo.conversation.*`, `nivo.lead.*`): the door locks it to the run's own
+ * conversation and customer, so the data rights of a governed agent need not judge it (`data-rights.policy.ts` asks this).
+ */
+export { isLockedContextRead } from "@modules/domain/context-sources"
+
+/**
+ * True for a tool every agent holds by default (owner rules 2026-11-10: "the second brain MCP is granted to agents by default", "MCP
+ * hết"): a READ tool of the second brain (`brain.search`, `brain.facts.list`, `brain.facts.get`, `brain.documents.read`) or a read
+ * of a registered context source (`nivo.conversation.message.list`, `nivo.lead.*`). A tool that writes is never one, whatever its
+ * connector. Inside a graph step the default holds only for a tool on the step's allow-list (its node declares it and its workflow grants
+ * it). What the read may see is not decided here: the caller's audience lens, the door's lock and the data rights still narrow it.
  */
 export const grantedByDefault = (spec: GatewayToolSpec, caller: GatewayCaller, name: string): boolean =>
     spec.scope === "read" &&
-    DEFAULT_READ_CONNECTORS.has(name.split(".", 1).join("")) &&
+    (DEFAULT_READ_CONNECTORS.has(name.split(".", 1).join("")) || isDefaultRead(name)) &&
     (caller.run === undefined || caller.run.stepTools.includes(name))
 
 /**

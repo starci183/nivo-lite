@@ -25,7 +25,7 @@ const timer = (careKind: string): FlowWake => ({
 const worldWith = (status: string) =>
     flowWorldOf({
         order: [{ ...ORDER_ROW, status, shippedAt: null }],
-        "sales-lead": [{ id: "lead-1", contactName: "An", consultFacts: {} }],
+        "sales-lead": [{ id: "lead-1", contactName: "An" }],
     })
 
 /** What a run said to anyone: a line to the customer, or a line or card to the team. */

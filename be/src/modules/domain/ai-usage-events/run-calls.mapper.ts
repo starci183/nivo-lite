@@ -26,6 +26,14 @@ export interface RunCallKindAggregate {
     readonly upstreams: ReadonlyArray<string | null> | null
     /** The finish reasons (nulls where one did not say), or null. */
     readonly finish_reasons: ReadonlyArray<string | null> | null
+    /** The models that served the calls, or null. */
+    readonly models?: ReadonlyArray<string | null> | null
+    /** What the nodes declared, or null. */
+    readonly declared_models?: ReadonlyArray<string | null> | null
+    /** The providers of the served models, or null. */
+    readonly model_providers?: ReadonlyArray<string | null> | null
+    /** Why the calls went to those models, or null. */
+    readonly model_reasons?: ReadonlyArray<string | null> | null
 }
 
 /** The named values of a text array, sorted, without repeats. */
@@ -51,4 +59,8 @@ export const toRunCallKind = (row: RunCallKindAggregate): RunCallKindUsage => ({
     costUsd: typeof row.cost_usd === "number" && Number.isFinite(row.cost_usd) ? row.cost_usd : 0,
     upstreams: namesOf(row.upstreams),
     finishReasons: namesOf(row.finish_reasons),
+    models: namesOf(row.models ?? null),
+    declaredModels: namesOf(row.declared_models ?? null),
+    modelProviders: namesOf(row.model_providers ?? null),
+    modelReasons: namesOf(row.model_reasons ?? null),
 })

@@ -51,4 +51,13 @@ export const toAgentRunDetailType = (detail: AgentRunDetail | null): AgentRunDet
               canResume: detail.canResume,
               canCancel: detail.canCancel,
               decision: detail.decision === null ? null : { ...detail.decision, options: [...detail.decision.options] },
+              aiCalls: detail.aiCalls.map((call) => ({
+                  ...call,
+                  upstreams: [...call.upstreams],
+                  finishReasons: [...call.finishReasons],
+                  models: [...call.models],
+                  declaredModels: [...call.declaredModels],
+                  modelProviders: [...call.modelProviders],
+                  modelReasons: [...call.modelReasons],
+              })),
           }

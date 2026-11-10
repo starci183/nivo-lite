@@ -213,6 +213,24 @@ describe("domainNameIn", () => {
         ).toBeNull()
         expect(policy.domainNameIn([connectorOf()], "chat.send")).toBeNull()
     })
+    it("resolves a renamed NIVO door tool by its full id on a connector under the `nivo` prefix, and keeps the old id as it is", async () => {
+        const policy = await build()
+        const ledger = connectorOf({
+            manifest: {
+                ...connectorOf().manifest,
+                key: "nivo-ledger",
+                namespace: "nivo",
+                name: "NIVO Ledger",
+                tools: [specOf({ name: "ledger.entry.append", domain: "nivo.ledger.entry.append", scope: "write" })],
+            },
+        })
+        const old = connectorOf({
+            manifest: { ...connectorOf().manifest, key: "ledger", tools: [specOf({ name: "append", domain: "ledger.append" })] },
+        })
+
+        expect(policy.domainNameIn([old, ledger], "nivo.ledger.entry.append")).toBe("nivo.ledger.entry.append")
+        expect(policy.domainNameIn([old, ledger], "ledger.append")).toBe("ledger.append")
+    })
 })
 
 describe("abilityDecisionOf", () => {

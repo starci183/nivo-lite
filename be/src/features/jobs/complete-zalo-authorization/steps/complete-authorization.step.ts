@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common"
-import { ZaloCredentialsService } from "@modules/domain/channels"
+import { ZaloConnectService, ZaloCredentialsService } from "@modules/domain/channels"
 import { InjectJobClaims } from "@modules/platform/jobs"
 import type { ClaimedJob, JobClaims, JobStep } from "@modules/platform/jobs"
+import { isZaloAuthorizationPayload } from "@modules/queues/zalo-authorization"
 
 @Injectable()
 /**
@@ -12,11 +13,18 @@ export class CompleteAuthorizationStep implements JobStep {
     constructor(
         @InjectJobClaims() private readonly claims: JobClaims,
         private readonly credentials: ZaloCredentialsService,
+        private readonly connect: ZaloConnectService,
     ) {}
 
-    /** Records the step with the token this worker holds FIRST; then completes the authorization the payload names. */
+    /**
+     * Records the step with the token this worker holds FIRST; then completes the authorization the payload names, then starts reading
+     * the OA's display name in the background (best effort: it never fails, retries or delays the job).
+     */
     async run(job: ClaimedJob): Promise<void> {
         await this.claims.advance({ jobId: job.jobId, expectedFencingToken: job.fencingToken, step: "complete" })
-        return this.credentials.completeFromJob(job.payload)
+        await this.credentials.completeFromJob(job.payload)
+        if (isZaloAuthorizationPayload(job.payload)) {
+            this.connect.rememberOaNameLater(job.payload.state.split(".")[0] ?? "")
+        }
     }
 }

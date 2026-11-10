@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
-import { grantOfCall, judgeGrant } from "./grant.policy"
+import { TOOL } from "@nivo-lite/blocks-core"
+import { grantOfCall, isLockedContextRead, judgeGrant } from "./grant.policy"
 import type { GatewayCaller, GatewayToolSpec, ToolGrant } from "./mcp-gateway.contracts"
 
 const grant = (tool: string, mode: ToolGrant["mode"], limits: Partial<ToolGrant> = {}): ToolGrant => ({
@@ -146,5 +147,30 @@ describe("grant.policy grantOfCall > the second brain by default", () => {
         expect(subject.grantOfCall(null, BRAIN_READ, NO_STEP, "ledger.status")).toBeNull()
         expect(subject.grantOfCall(null, BRAIN_READ, NO_STEP, "brainy.search")).toBeNull()
         expect(subject.grantOfCall(null, BRAIN_READ, STEP_CALLER, "brain.search")).toBeNull()
+    })
+})
+
+describe("grant.policy grantOfCall > the context reads by default", () => {
+    const CONTEXT_READ: GatewayToolSpec = { ...BRAIN_READ, name: "lead.order.list" }
+
+    it("grants every registered context read to an agent with no row, and never a write under the same prefix", async () => {
+        const subject = await build()
+
+        for (const name of [TOOL.conversationMessageList, TOOL.leadProfileGet, TOOL.leadOrderList, TOOL.leadNoteList]) {
+            expect(subject.grantOfCall(null, CONTEXT_READ, NO_STEP, name)).toEqual(grant(name, "auto"))
+        }
+        expect(subject.grantOfCall(null, BRAIN_WRITE, NO_STEP, TOOL.leadOrderList)).toBeNull()
+        expect(subject.grantOfCall(null, CONTEXT_READ, NO_STEP, "nivo.lead.secret.list")).toBeNull()
+        expect(isLockedContextRead(TOOL.leadOrderList)).toBe(true)
+        expect(isLockedContextRead(TOOL.brainSearch)).toBe(false)
+    })
+
+    it("lets an owner's row forbid one", async () => {
+        const subject = await build()
+        const never = grant(TOOL.leadOrderList, "never")
+
+        expect(subject.judgeGrant(subject.grantOfCall(never, CONTEXT_READ, NO_STEP, TOOL.leadOrderList), {}, false)).toEqual({
+            kind: "refuse",
+        })
     })
 })

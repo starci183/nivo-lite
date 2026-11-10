@@ -19,14 +19,6 @@ export interface JobTick {
 /** The ticks of this app, as data: JobTickService registers one cron job per entry. */
 export const JOB_TICKS: ReadonlyArray<JobTick> = [
     {
-        name: "agents-sync-all",
-        cron: "*/5 * * * *",
-        timeZone: "UTC",
-        queue: "agents",
-        job: "agents.sync",
-        payload: {},
-    },
-    {
         name: "connection-health-tick",
         cron: "*/15 * * * *",
         timeZone: "UTC",

@@ -445,3 +445,30 @@ describe("AgentGraphAdminService.contractFromGap", () => {
         expect(proposals.contractFromGap).not.toHaveBeenCalled()
     })
 })
+
+describe("AgentGraphAdminService the models a draft names", () => {
+    const draftOf = (model: unknown, step = "accounting.match-payment"): string =>
+        JSON.stringify({ nodes: [], rights: [], flow: { nodes: [{ key: "match", kind: "execute", step, model }] } })
+
+    it("saves Auto and every selectable model", async () => {
+        const { service, graphs } = await build()
+
+        for (const model of ["auto", "claude-sonnet-5-5", "deepseek/deepseek-v4.1-flash"]) {
+            await expect(service.saveDraft(ACTOR, "agent-1", 4, draftOf(model))).resolves.toBe(5)
+        }
+        expect(graphs.saveDraft).toHaveBeenCalledTimes(3)
+    })
+
+    it("refuses an unknown model id, and a model on a node that calls no AI, with a code of its own", async () => {
+        const { service, graphs } = await build()
+
+        await expect(service.saveDraft(ACTOR, "agent-1", 4, draftOf("gpt-9"))).rejects.toMatchObject({
+            code: AgentGraphsErrorCode.ModelRefused,
+            params: { count: "1", first: "match" },
+        })
+        await expect(service.saveDraft(ACTOR, "agent-1", 4, draftOf("auto", "core.if"))).rejects.toMatchObject({
+            code: AgentGraphsErrorCode.ModelRefused,
+        })
+        expect(graphs.saveDraft).not.toHaveBeenCalled()
+    })
+})

@@ -18,12 +18,23 @@ const numberOf = (value: unknown): number | null =>
 const firstNumber = (...candidates: ReadonlyArray<unknown>): number | null =>
     candidates.map(numberOf).find((candidate) => candidate !== null) ?? null
 
+/** The prompt tokens a call wrote to the provider's cache, as a field only when the endpoint said. */
+const cacheWriteOf = (usageMetadata: unknown, raw: unknown): Pick<AiUsage, "cacheWriteTokens"> => {
+    const written = firstNumber(
+        fieldOf(fieldOf(usageMetadata, "input_token_details"), "cache_creation"),
+        fieldOf(raw, "cache_creation_input_tokens"),
+    )
+    return written === null ? {} : { cacheWriteTokens: written }
+}
+
 /**
  * What a call used, read from LangChain: tokens from the message `usage_metadata` (input, output, total) or the `tokenUsage` of the
  * response metadata, the cost from the raw usage object the endpoint sent (OpenRouter and the gateway report `cost`), and the
  * prompt tokens the provider served from its cache: LangChain's `input_token_details.cache_read`, else the raw usage's
  * `prompt_tokens_details.cached_tokens` (OpenAI and OpenRouter) or `prompt_cache_hit_tokens` (DeepSeek's own name), and the
- * answer tokens that were hidden reasoning: `output_token_details.reasoning`, else `completion_tokens_details.reasoning_tokens`.
+ * answer tokens that were hidden reasoning: `output_token_details.reasoning`, else `completion_tokens_details.reasoning_tokens`, and
+ * the prompt tokens WRITTEN to the cache (`input_token_details.cache_creation`, else Anthropic's `cache_creation_input_tokens`).
+ * It is the one reader of a reply's usage, shaped like `usageOf(reply)` of `@starci/ai-router/langchain` (0.7.0), which replaces it.
  */
 export const usageOf = (usageMetadata: unknown, responseMetadata: unknown): AiUsage => {
     const tokenUsage = fieldOf(responseMetadata, "tokenUsage")
@@ -42,6 +53,8 @@ export const usageOf = (usageMetadata: unknown, responseMetadata: unknown): AiUs
             fieldOf(fieldOf(raw, "prompt_tokens_details"), "cached_tokens"),
             fieldOf(raw, "prompt_cache_hit_tokens"),
         ),
+        // Only when the endpoint said: the gateway of the router 0.5.0 never does.
+        ...cacheWriteOf(usageMetadata, raw),
     }
 }
 

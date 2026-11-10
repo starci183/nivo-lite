@@ -31,8 +31,8 @@ export type Installation = {
     readonly workspaceId: string
     readonly moduleKey: ModuleKey
     /**
-     * The one display name of the agent, as the owner gave it: the header, Settings, the profile, Office, the chat and the OpenClaw
-     * copy all show this name. The instance label the back end keeps beside it only tells instances of one type apart; no screen reads it.
+     * The one display name of the agent, as the owner gave it: the header, Settings, the profile, Office and the chat
+     * all show this name. The instance label the back end keeps beside it only tells instances of one type apart; no screen reads it.
      */
     readonly name: string
     /** The type allows several instances (copied from the catalogue at insert). */

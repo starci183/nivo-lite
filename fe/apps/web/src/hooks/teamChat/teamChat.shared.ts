@@ -1,5 +1,6 @@
 import type { useQueryChatMessagesSwr, useQueryChatRoomsSwr } from "@/hooks/swr"
-import { daysAgoOf, draftWithMention, mentionTriggerOf } from "@/modules/teamChat"
+import type { useTranslations } from "next-intl"
+import { daysAgoOf, draftWithMention, mentionTriggerOf, type StopCardWords } from "@/modules/teamChat"
 import type {
     ChatParty,
     ChatPartyKind,
@@ -31,6 +32,8 @@ export interface ChatRowWords {
     readonly pictureOf: (name: string) => string | null
     /** The words of the agent cards of a thread. */
     readonly copy: TeamChatMessagesCopy
+    /** The words of the typed stop cards of a thread. */
+    readonly stop: StopCardWords
     /** A path of the workspace as the address that opens it. */
     readonly hrefOf: (path: string) => string
 }
@@ -126,10 +129,58 @@ export const roomHandlersOf = (room: TeamChatRoomState, back: () => void): TeamC
     shareClose: room.forward.close,
     shareTo: (roomId) => void room.forward.forwardTo(roomId),
     decide: (decisionId, verdict) => void room.cards.decide(decisionId, verdict),
+    stop: (card, action) => void room.stops.act(card, action),
     draft: room.composer.setDraft,
     mention: mentionInto(room),
     send: () => void room.composer.send(),
     file: room.composer.file.choose,
     fileClear: room.composer.file.clear,
     toggleMute: () => void room.rooms.toggleMute(),
+})
+
+/** The translator of the team chat words. */
+type TeamChatWords = ReturnType<typeof useTranslations<"teamChat">>
+
+/** The words of the stop cards of a thread: the buttons, chips and reply words the web owns, and the clock of the viewer. */
+export const stopCardWordsOf = (t: TeamChatWords, timeOf: (iso: string) => string): StopCardWords => ({
+    labels: {
+        retry: t("stopCard.retry"),
+        takeOver: t("stopCard.takeOver"),
+        skip: t("stopCard.skip"),
+        send: t("stopCard.send"),
+        approve: t("stopCard.approve"),
+        refuse: t("stopCard.refuse"),
+        details: t("stopCard.details"),
+        answerLabel: t("stopCard.answerLabel"),
+        answerPlaceholder: t("stopCard.answerPlaceholder"),
+        contextPlaceholder: t("stopCard.contextPlaceholder"),
+        ownerOnly: t("stopCard.ownerOnly"),
+        traceLabel: t("stopCard.traceLabel"),
+        factsLabel: t("stopCard.factsLabel"),
+        approvalLabel: t("stopCard.approvalLabel"),
+        suggestionsLabel: t("stopCard.suggestionsLabel"),
+        decisionsLabel: t("stopCard.decisionsLabel"),
+    },
+    chips: {
+        needsYou: t("stopCard.chipNeedsYou"),
+        nivoReports: t("stopCard.chipNivo"),
+        answered: t("stopCard.chipAnswered"),
+        skipped: t("stopCard.chipSkipped"),
+        timedOut: t("stopCard.chipTimedOut"),
+        done: t("stopCard.chipDone"),
+        takenOver: t("stopCard.chipTakenOver"),
+    },
+    replies: {
+        answer: t("stopCard.replyAnswer"),
+        retry: t("stopCard.replyRetry"),
+        take_over: t("stopCard.replyTakeOver"),
+        skip: t("stopCard.replySkip"),
+        approve: t("stopCard.replyApprove"),
+        refuse: t("stopCard.replyRefuse"),
+    },
+    timedOutReply: t("stopCard.replyTimeout"),
+    repeats: (count) => t("stopCard.repeats", { count }),
+    account: t("stopCard.account"),
+    ability: t("stopCard.ability"),
+    timeOf,
 })

@@ -12,6 +12,7 @@ import { PublishAgentGraphResolver } from "./publish-agent-graph.resolver"
 import { RestoreAgentGraphVersionResolver } from "./restore-agent-graph-version.resolver"
 import { SetAgentGraphModeResolver } from "./set-agent-graph-mode.resolver"
 import { DeclineAgentGraphProposalResolver } from "./decline-agent-graph-proposal.resolver"
+import { GetAiModelPickerResolver } from "./get-ai-model-picker.resolver"
 
 @Module({
     imports: [AgentGraphsApiModule.register({})],
@@ -27,6 +28,7 @@ import { DeclineAgentGraphProposalResolver } from "./decline-agent-graph-proposa
         RestoreAgentGraphVersionResolver,
         SetAgentGraphModeResolver,
         DeclineAgentGraphProposalResolver,
+        GetAiModelPickerResolver,
     ],
 })
 /** The GraphQL transport of the agent graph editor. */

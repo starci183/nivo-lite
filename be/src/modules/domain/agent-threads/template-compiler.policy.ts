@@ -1,6 +1,7 @@
 import { STOP_STEP, type GraphSpec, type GraphSpecNode, type GraphSpecWait } from "@nivo-lite/agent-sdk/graph"
 import { BRANCH_FIELD, LOOP_BODY_ROUTE, LOOP_STEP, type NodeRole } from "@nivo-lite/agent-sdk/node"
-import { THREAD_END } from "@modules/integrations/langgraph/langgraph.port"
+import { THREAD_END } from "@modules/integrations/langgraph"
+import { loopProblemsOf, loopShapesOf, type LoopShapes } from "./compiler-loop.policy"
 
 /**
  * The name of the engine node every compiled graph carries: a step that cannot complete goes there, it stops the thread and the
@@ -63,6 +64,12 @@ export type StepExit =
           readonly otherwise: string
       }
 
+/** The cycle a for-each node draws: where an iteration starts. */
+export interface CompiledLoop {
+    /** The first node of the body, or null for a loop whose body is empty (it sums at once). */
+    readonly body: string | null
+}
+
 /**
  * One step node of a compiled graph: the template node it runs and every place it may go. It becomes the port's `ThreadGraphNode`
  * `{ key, run, next, ends }` once the engine gives it a `run`.
@@ -85,6 +92,13 @@ export interface CompiledStep {
      * `FREEZE_NODE` when it cannot complete), so a step that freezes never also follows its `next`.
      */
     readonly ends: ReadonlyArray<string>
+    /** On a for-each node: its cycle. Its `exit` is where the thread goes once every iteration ran. */
+    readonly loop?: CompiledLoop | undefined
+    /**
+     * On a node of a for-each body: the loop node. Every way out of the body (its exit's end) goes back to that node, which joins the
+     * iteration; the node runs under the step key `<node>[<index>]` of the iteration.
+     */
+    readonly inLoop?: string | undefined
 }
 
 /** The engine's freeze node: it interrupts, and the founder's decision sends the thread back to a step, to itself or to the end. */
@@ -118,6 +132,17 @@ export type TemplateProblemCode =
     | "TEMPLATE_TARGET_UNKNOWN"
     | "TEMPLATE_STEP_UNKNOWN"
     | "TEMPLATE_LOOP_PHASE_2"
+    | "TEMPLATE_LOOP_NESTED"
+    | "TEMPLATE_LOOP_SHARED"
+
+/**
+ * How a version is compiled. `loops` draws a for-each as a sequential cycle (`compiler-loop.policy.ts`); without it a for-each is
+ * refused `TEMPLATE_LOOP_PHASE_2`, for an engine whose node function does not drive a loop's frame yet.
+ */
+export interface CompileOptions {
+    /** True compiles a for-each into its cycle. */
+    readonly loops?: boolean | undefined
+}
 
 /** One problem and where it is: a node key, or `<from>-><to>` for an edge. */
 export interface TemplateProblem {
@@ -153,16 +178,22 @@ const targetOf = (nodes: ReadonlyMap<string, GraphSpecNode>, key: string): strin
     return node === undefined || isStop(node) ? THREAD_END : key
 }
 
-/** Where a node goes when it completes, with the same reading as the engine's `nextKeyOf`: a branching node ignores its `next`. */
-const exitOf = (nodes: ReadonlyMap<string, GraphSpecNode>, node: GraphSpecNode): StepExit => {
+/**
+ * Where a node goes when it completes, with the same reading as the engine's `nextKeyOf`: a branching node ignores its `next`. Inside a
+ * for-each body the end is the loop node (`end`): the iteration ends there and the loop joins it.
+ */
+const exitOf = (nodes: ReadonlyMap<string, GraphSpecNode>, node: GraphSpecNode, end: string = THREAD_END): StepExit => {
+    const to = (key: string): string => {
+        const target = targetOf(nodes, key)
+        return target === THREAD_END ? end : target
+    }
     const routes = Object.entries(node.routes ?? {}).filter(([branch]) => branch !== LOOP_BODY_ROUTE)
-    if (routes.length === 0)
-        return { kind: "next", to: node.next === undefined ? THREAD_END : targetOf(nodes, node.next) }
+    if (routes.length === 0) return { kind: "next", to: node.next === undefined ? end : to(node.next) }
     return {
         kind: "branch",
         field: BRANCH_FIELD,
-        routes: Object.fromEntries(routes.map(([branch, key]) => [branch, targetOf(nodes, key)])),
-        otherwise: THREAD_END,
+        routes: Object.fromEntries(routes.map(([branch, key]) => [branch, to(key)])),
+        otherwise: end,
     }
 }
 
@@ -194,17 +225,31 @@ const shapeProblems = (spec: GraphSpec, nodes: ReadonlyMap<string, GraphSpecNode
     ]
 }
 
-/** The problems of the steps: one not installed, or a for-each (a sequential cycle, phase 2 of the move). */
-const stepProblems = (spec: GraphSpec, installed: ReadonlySet<string>): ReadonlyArray<TemplateProblem> =>
-    spec.nodes.flatMap((node): ReadonlyArray<TemplateProblem> => {
-        if (node.step === LOOP_STEP) return [{ code: "TEMPLATE_LOOP_PHASE_2", at: node.key }]
+/**
+ * The problems of the steps: one not installed; a for-each when loops are not compiled (`TEMPLATE_LOOP_PHASE_2`), else a nested loop
+ * or a body node reached from outside its loop.
+ */
+const stepProblems = (
+    spec: GraphSpec,
+    installed: ReadonlySet<string>,
+    loops: LoopShapes | null,
+): ReadonlyArray<TemplateProblem> => [
+    ...spec.nodes.flatMap((node): ReadonlyArray<TemplateProblem> => {
+        if (node.step === LOOP_STEP && loops === null) return [{ code: "TEMPLATE_LOOP_PHASE_2", at: node.key }]
         if (isStop(node) || installed.has(node.step)) return []
         return [{ code: "TEMPLATE_STEP_UNKNOWN", at: node.key }]
-    })
+    }),
+    ...(loops === null ? [] : loopProblemsOf(spec, loops)),
+]
 
-/** The step node of a template node. */
-const nodeOf = (nodes: ReadonlyMap<string, GraphSpecNode>, node: GraphSpecNode): CompiledStep => {
-    const exit = exitOf(nodes, node)
+/** The step node of a template node; inside a for-each body its ends go back to the loop, and a for-each also goes to its body. */
+const nodeOf = (nodes: ReadonlyMap<string, GraphSpecNode>, node: GraphSpecNode, loops: LoopShapes | null): CompiledStep => {
+    const inLoop = loops?.loopOf.get(node.key)
+    const exit = exitOf(nodes, node, inLoop ?? THREAD_END)
+    const isLoop = loops?.bodies.has(node.key) === true
+    const bodyKey = isLoop ? node.routes?.[LOOP_BODY_ROUTE] : undefined
+    const target = bodyKey === undefined ? THREAD_END : targetOf(nodes, bodyKey)
+    const entry = target === THREAD_END ? null : target
     return {
         key: node.key,
         step: node.step,
@@ -212,22 +257,30 @@ const nodeOf = (nodes: ReadonlyMap<string, GraphSpecNode>, node: GraphSpecNode):
         ...(node.blocking === undefined ? {} : { blocking: node.blocking }),
         ...(node.wait === undefined ? {} : { wait: node.wait }),
         exit,
-        ends: [...targetsOf(exit), FREEZE_NODE],
+        ends: [...new Set([...(entry === null ? [] : [entry]), ...targetsOf(exit)]), FREEZE_NODE],
+        ...(isLoop ? { loop: { body: entry } } : {}),
+        ...(inLoop === undefined ? {} : { inLoop }),
     }
 }
 
 /**
- * Compiles one workflow version into the description of a LangGraph StateGraph. Pure: the same version and the same installed steps
- * always give the same description. Refused, with every named reason, when a key, an edge or a step cannot run: an unknown step id,
- * a reserved key, or a for-each (phase 2). `installed` is the ids of the installed nodes (the node registry).
+ * Compiles one workflow version into the description of a LangGraph StateGraph. Pure: the same version, the same installed steps and the
+ * same options always give the same description. Refused, with every named reason, when a key, an edge or a step cannot run: an unknown
+ * step id, a reserved key, a for-each when `options.loops` is off, or a loop a thread cannot hold. `installed` is the ids of the
+ * installed nodes (the node registry). With `options.loops` a for-each is a sequential cycle: see `CompiledStep.loop` and `inLoop`.
  */
-export const compileTemplate = (source: TemplateSource, installed: ReadonlySet<string>): TemplateCompile => {
+export const compileTemplate = (
+    source: TemplateSource,
+    installed: ReadonlySet<string>,
+    options: CompileOptions = {},
+): TemplateCompile => {
     const { pin, spec } = source
     const nodes = new Map(spec.nodes.map((node) => [node.key, node]))
-    const problems = [...shapeProblems(spec, nodes), ...stepProblems(spec, installed)]
+    const loops = options.loops === true ? loopShapesOf(spec) : null
+    const problems = [...shapeProblems(spec, nodes), ...stepProblems(spec, installed, loops)]
     const first = spec.nodes[0]
     if (problems.length > 0 || first === undefined) return { kind: "refused", pin, problems }
-    const steps = spec.nodes.filter((node) => !isStop(node)).map((node) => nodeOf(nodes, node))
+    const steps = spec.nodes.filter((node) => !isStop(node)).map((node) => nodeOf(nodes, node, loops))
     return {
         kind: "compiled",
         graph: {

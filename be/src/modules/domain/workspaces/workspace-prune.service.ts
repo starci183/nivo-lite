@@ -1,7 +1,5 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { InjectOpenclawGatewayAdmin } from "@modules/integrations/openclaw"
-import type { GatewayAdminClient } from "@modules/integrations/openclaw"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspacesError, WorkspacesErrorCode } from "./errors/workspaces.error"
@@ -16,16 +14,13 @@ const WORKSPACES_MAX = 1000
 
 @Injectable()
 /**
- * Deletes every workspace except the kept ones, with everything that hangs off them (the schema cascades; platform_audit and
- * app_errors keep their rows with the workspace link cleared) and its OpenClaw agents with their sessions and files, which go first
- * so a workspace whose agents could not be removed stays and a rerun retries it. Sign-in accounts are not deleted. It lists first and deletes only
- * after the operator types the confirmation word. Permanent: there is no undo.
+ * Deletes every workspace except the kept ones, with everything that hangs off them: the schema cascades (agents, their runs,
+ * conversations and memory live only in the NIVO database), platform_audit and app_errors keep their rows with the workspace link
+ * cleared. Sign-in accounts are not deleted. It lists first and deletes only after the operator types the confirmation word.
+ * Permanent: there is no undo.
  */
 export class WorkspacePruneService {
-    constructor(
-        @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @Optional() @InjectOpenclawGatewayAdmin() private readonly openclaw: GatewayAdminClient | null = null,
-    ) {}
+    constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
     /** Lists what is kept and what goes, asks for the confirmation, then deletes workspace by workspace. */
     async prune(request: PruneRequest, terminal: PruneConsole): Promise<PruneReport> {
@@ -58,13 +53,6 @@ export class WorkspacePruneService {
             terminal.print("Nothing to delete.")
             return { status: "nothing-to-delete", kept, doomed, left: all.length }
         }
-        const openclaw = this.openclaw
-        if (openclaw?.enabled !== true) {
-            terminal.print(
-                "Refused: no OpenClaw gateway is configured here, so these workspaces' agents cannot be removed. Nothing was deleted. Run this where OPENCLAW_GATEWAY_URL and OPENCLAW_GATEWAY_TOKEN are set (production: inside the nivo-api task).",
-            )
-            throw new WorkspacesError({ code: WorkspacesErrorCode.OpenclawUnavailable })
-        }
         if (request.yes !== true) {
             const answer = await terminal.ask(
                 `Type ${CONFIRMATION_WORD} to permanently delete these ${doomed.length} workspaces: `,
@@ -74,7 +62,7 @@ export class WorkspacePruneService {
                 return { status: "cancelled", kept, doomed, left: all.length }
             }
         }
-        const failed = await this.remove(doomed, openclaw, terminal)
+        const failed = await this.remove(doomed, terminal)
         const left = await this.entityManager.count(WorkspaceEntity)
         terminal.print(`Done. ${doomed.length - failed} deleted, ${failed} failed, ${left} workspace(s) left.`)
         if (failed > 0) {
@@ -84,15 +72,11 @@ export class WorkspacePruneService {
     }
 
     /** Deletes the workspaces one by one so a failure leaves the others deleted; answers how many failed. */
-    private async remove(
-        doomed: ReadonlyArray<WorkspaceBrief>,
-        openclaw: GatewayAdminClient,
-        terminal: PruneConsole,
-    ): Promise<number> {
+    private async remove(doomed: ReadonlyArray<WorkspaceBrief>, terminal: PruneConsole): Promise<number> {
         let failed = 0
         await eachInOrder(doomed, (workspace) =>
-            this.removeAgents(workspace, openclaw, terminal)
-                .then(() => this.entityManager.delete(WorkspaceEntity, { id: workspace.id }))
+            this.entityManager
+                .delete(WorkspaceEntity, { id: workspace.id })
                 .then(
                     () => terminal.print(`  deleted ${workspace.name}`),
                     (cause: unknown) => {
@@ -104,15 +88,5 @@ export class WorkspacePruneService {
                 ),
         )
         return failed
-    }
-
-    /** Removes the workspace's OpenClaw agents, retired ones included, with their sessions and files. */
-    private async removeAgents(
-        workspace: WorkspaceBrief,
-        openclaw: GatewayAdminClient,
-        terminal: PruneConsole,
-    ): Promise<void> {
-        const removed = await openclaw.removeWorkspaceAgents(workspace.id)
-        terminal.print(`  removed ${removed.length} OpenClaw agent(s) of ${workspace.name}`)
     }
 }

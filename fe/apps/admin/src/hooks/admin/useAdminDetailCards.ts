@@ -44,7 +44,6 @@ const memberRows = (
 
 const moduleRows = (detail: AdminWorkspaceDetail, format: AdminFormat, text: AdminText): ReadonlyArray<AdminRowView> =>
     detail.modules.map((entry): AdminRowView => {
-        const { sync } = entry
         const context =
             typeof entry.contextVersion === "number"
                 ? text("contextApplied", {
@@ -52,37 +51,11 @@ const moduleRows = (detail: AdminWorkspaceDetail, format: AdminFormat, text: Adm
                       date: format.date(entry.contextAppliedAt),
                   })
                 : text("contextNone")
-        const syncLine =
-            sync == null
-                ? []
-                : [
-                      text("syncLine", {
-                          agent: sync.agentId,
-                          status: sync.status,
-                          version: sync.contextVersion ?? text("empty"),
-                          checked: format.ago(sync.checkedAt),
-                      }),
-                  ]
-        const syncBadge =
-            sync == null
-                ? []
-                : [
-                      badgeOf(
-                          "sync",
-                          text("syncBadge", { status: sync.status }),
-                          sync.status === "ok" ? "success" : "danger",
-                      ),
-                  ]
         return {
             id: entry.id,
             title: entry.key,
-            lines: [`${context} · ${entry.operatingMode}`, ...syncLine],
-            ...(sync?.error ? { mono: sync.error } : {}),
-            badges: [
-                badgeOf("status", entry.status, moduleTone(entry.status), entry.live),
-                badgeOf("processor", entry.processor, entry.processor === "openclaw" ? "accent" : "neutral"),
-                ...syncBadge,
-            ],
+            lines: [`${context} · ${entry.operatingMode}`],
+            badges: [badgeOf("status", entry.status, moduleTone(entry.status), entry.live)],
         }
     })
 

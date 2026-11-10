@@ -1,6 +1,6 @@
 import type { MessageBundle } from "@modules/platform/i18n"
 
-/** Display text of the ai-generations codes, the sentence an interactive screen shows when OpenClaw cannot answer, and the NIVO guide's prompt words. */
+/** Display text of the ai-generations codes, the sentence an interactive screen shows when the model cannot answer, and the NIVO guide's prompt words. */
 export const AI_GENERATIONS_MESSAGES: MessageBundle = {
     vi: {
         "errors.AI_GENERATIONS_QUOTA_BLOCKED": "Hạn mức AI của không gian làm việc đã hết.",

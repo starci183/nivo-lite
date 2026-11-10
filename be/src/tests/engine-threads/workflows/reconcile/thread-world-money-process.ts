@@ -316,8 +316,12 @@ class MoneyWorldModule {}
 
 const tokenOf = (provider: Provider): InjectionToken => (typeof provider === "function" ? provider : provider.provide)
 
-/** One process of the app over the money database (the same composition as the 0-9 world's `processOf`). */
-export const moneyProcessOf = async (db: MoneyDb, flag: ReadonlyArray<string>): Promise<ThreadProcess> => {
+/** One process of the app over the money database (the same composition as the 0-9 world's `processOf`), plus the `extra` providers a spec adds. */
+export const moneyProcessOf = async (
+    db: MoneyDb,
+    flag: ReadonlyArray<string>,
+    extra: ReadonlyArray<Provider> = [],
+): Promise<ThreadProcess> => {
     const logger = mock<Logger>()
     const providers: Array<Provider> = [
         GraphNodeRegistryService,
@@ -356,6 +360,8 @@ export const moneyProcessOf = async (db: MoneyDb, flag: ReadonlyArray<string>): 
         { provide: MESSAGE_CATALOG, useValue: { get: (key: string) => key } },
         { provide: PRIMARY_ENTITY_MANAGER, useValue: { transaction: (work: (tx: object) => unknown) => work({}) } },
         { provide: CHECKPOINT_STORE, useValue: storeOf(db) },
+        // What a spec adds to the process (W8: the turn policy that tells a step what it already did and said); none by default.
+        ...extra,
     ]
     const world: DynamicModule = {
         module: MoneyWorldModule,

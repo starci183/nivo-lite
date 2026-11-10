@@ -15,11 +15,9 @@ const build = async (): Promise<GrantsSubject> => {
 }
 
 describe("door grants", () => {
-    it("holds exactly the tools the flow F module jobs and the turn sync call", async () => {
+    it("holds exactly the tools the flow F module jobs call", async () => {
         const subject = await build()
         expect([...subject.DOOR_GRANTS].sort()).toEqual([
-            "ai.agent.history",
-            "ai.agent.turn",
             "chat.profile",
             "chat.send",
             "ledger.append",

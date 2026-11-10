@@ -16,7 +16,7 @@ import { toInstallModuleRequest, toModuleInstallResultType } from "./modules.map
 export class InstallModuleResolver {
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
-    /** Installs a module (its agent, its default rules, its OpenClaw copy), or adds an instance of a multi-instance type; idempotent without `newInstance`. */
+    /** Installs a module (its agent and its default rules), or adds an instance of a multi-instance type; idempotent without `newInstance`. */
     @Mutation(() => ModuleInstallResultType, { name: "installModule" })
     async installModule(
         @CurrentPrincipal() principal: Principal,

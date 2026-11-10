@@ -10,7 +10,6 @@ import type { ConnectionBadgeRow } from "@modules/domain/connections"
 import { KnowledgeSourcesAdminReadService } from "@modules/domain/knowledge-sources"
 import { ContextVersionsAdminReadService } from "@modules/domain/module-context-versions"
 import { ModuleInstallationsAdminReadService } from "@modules/domain/module-installations"
-import { AgentSyncAdminReadService } from "@modules/domain/openclaw-agent-sync"
 import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import { SepayTransactionsAdminReadService } from "@modules/domain/sepay-transactions"
 import type { TransferAdminRow } from "@modules/domain/sepay-transactions"
@@ -117,7 +116,6 @@ export class AdminDirectoryReadsService {
         private readonly paymentOrders: PaymentOrdersService,
         private readonly billingEventReads: BillingEventsReadService,
         private readonly contextVersionReads: ContextVersionsAdminReadService,
-        private readonly agentSyncReads: AgentSyncAdminReadService,
         private readonly knowledge: KnowledgeSourcesAdminReadService,
         private readonly transferReads: SepayTransactionsAdminReadService,
         private readonly quotaOverrides: AiQuotaOverridesAdminReadService,
@@ -222,7 +220,6 @@ export class AdminDirectoryReadsService {
             operating_mode: row.operatingMode,
             live_enabled: row.liveEnabled,
             active_context_version_id: row.activeContextVersionId,
-            processor: row.processor,
         }))
     }
 
@@ -232,18 +229,6 @@ export class AdminDirectoryReadsService {
             id: row.id,
             version: row.version,
             applied_at: at(row.appliedAt),
-        }))
-    }
-
-    /** The OpenClaw sync state of a workspace's agents. */
-    agentSync(workspaceId: string): Promise<Array<R.AgentSyncFacts>> {
-        return factsOf(this.agentSyncReads.ofWorkspace(workspaceId, 50), (row) => ({
-            installation_id: row.installationId,
-            agent_id: row.agentId,
-            context_version: row.contextVersion,
-            checked_at: at(row.checkedAt),
-            status: row.status,
-            error: row.error,
         }))
     }
 

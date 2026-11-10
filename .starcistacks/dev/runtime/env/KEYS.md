@@ -15,8 +15,7 @@ into private files outside the repository (`<KEY>_FILE`, which the back end read
 | `ENTITY_ENGINE_CURSOR_KEY` | `platform` | base64 of 32 bytes: signs the list cursors of the entity engine (api, mcp and cli read it); changing it only invalidates open cursors |
 | `OTP_PEPPER` | `platform` | the pepper of the loyalty code hashes |
 | `N8N_SIGNING_SECRET` | `platform` | signs the n8n webhook calls |
-| `OPENCLAW_GATEWAY_TOKEN`, `OPENCLAW_BRIDGE_SECRET`, `OPENCLAW_TOOL_SECRET` | `openclaw` | the gateway token (api and gateway), the bridge plugin's signing secret and the per-turn tool token secret; the gateway container sees the first two through its least grant |
-| `OPENROUTER_API_KEY`, `STARCI_AI_KEY` | `ai` (the owner's) | the AI gateway's upstream key and the virtual key the api and OpenClaw use |
+| `OPENROUTER_API_KEY`, `STARCI_AI_KEY` | `ai` (the owner's) | the AI gateway's upstream key and the virtual key the api uses |
 | `AUTH_JWT_PRIVATE_KEY`, `AUTH_JWT_PUBLIC_KEY` | `auth` (the owner's) | the api's access-token signing pair |
 
 | Non-secret key | Value in dev |
@@ -28,8 +27,7 @@ into private files outside the repository (`<KEY>_FILE`, which the back end read
 | `AUTH_COOKIE_DOMAINS` | `starci.org`: the refresh cookie takes that `Domain` on the dev tunnel host and stays host-only on `localhost` (comma-separated bare domains). |
 | `STORAGE_ENDPOINT`, `STORAGE_BUCKET_PREFIX` | `http://127.0.0.1:59000`, `nivo-dev` |
 | `QUEUE_REDIS_HOST`, `QUEUE_REDIS_PORT`, `REALTIME_REDIS_URL` | the Redis container on `127.0.0.1:56379` |
-| `AI_BASE_URL` | the api's in-process AI gateway, `http://127.0.0.1:18788/v1` (the OpenClaw container reaches it through `host.docker.internal`) |
-| `OPENCLAW_GATEWAY_URL`, `OPENCLAW_CONFIG_DIR`, `OPENCLAW_MANAGE_AGENTS` | `ws://127.0.0.1:58790`, the agent workspace under the state base, `true` |
+| `AI_BASE_URL` | the api's in-process AI gateway, `http://127.0.0.1:18788/v1` |
 | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_DEVELOPER_API_URL` | `http://localhost:18787` |
 | `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_LANDING_URL`, `NEXT_PUBLIC_APP_URL` | the console `http://localhost:3000` and the landing `http://localhost:3002` |
 | `NEXT_PUBLIC_ADMIN_URL`, `NEXT_PUBLIC_LOCAL_ADMIN_URL` | the console (`/admin` redirects there): the tunnel admin `https://nivo-local-admin.starci.org`, and `http://localhost:3105` when the console is opened on localhost. The admin app itself takes `NEXT_PUBLIC_SITE_URL` (its own origin), `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_LOCAL_API_URL` and `NEXT_PUBLIC_APP_URL` (the console, where a person signs in). |

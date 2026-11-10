@@ -2,7 +2,6 @@ import { AgentKnowledgeModule } from "@modules/domain/agent-knowledge"
 import type { DynamicModule } from "@nestjs/common"
 import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
 import {
-    AgentNativeService,
     ENTITY_ENGINE_DOOR_ERROR_KINDS,
     ENTITY_ENGINE_DOOR_MESSAGES,
     EntityEngineDoorModule,
@@ -83,7 +82,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
         ...options.mcpGateway,
         console: true,
         keyCheck: true,
-        natives: [...NATIVE_TOOL_ADAPTERS, AgentNativeService, ChatSendNativeService, TeamChatNativeService],
+        natives: [...NATIVE_TOOL_ADAPTERS, ChatSendNativeService, TeamChatNativeService],
     }),
     EntityEngineDoorModule.register({ isGlobal: true }),
     // What an agent knows (the lens, the recall, the knowledge search): one registration, reachable from every capability.

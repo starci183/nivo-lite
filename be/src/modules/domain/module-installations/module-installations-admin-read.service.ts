@@ -29,19 +29,7 @@ export interface InstallationAdminRow {
     readonly liveEnabled: boolean
     /** The active context version, when one is applied. */
     readonly activeContextVersionId: string | null
-    /** The reply processor named in the settings, when one is set. */
-    readonly processor: string | null
 }
-
-/** The settings of an installation, of which only the reply processor is read here. */
-interface ProcessorSettings {
-    /** The reply processor, when the owner set one. */
-    readonly processor?: unknown
-}
-
-/** The text of the processor setting, or null when it is not text. */
-const processorOf = (settings: ProcessorSettings): string | null =>
-    typeof settings.processor === "string" ? settings.processor : null
 
 @Injectable()
 /** Installation reads for the platform team console. */
@@ -72,7 +60,6 @@ export class ModuleInstallationsAdminReadService {
                 operatingMode: true,
                 liveEnabled: true,
                 activeContextVersionId: true,
-                settings: true,
             },
             where: { workspaceId },
             take: limit,
@@ -84,7 +71,6 @@ export class ModuleInstallationsAdminReadService {
             operatingMode: row.operatingMode,
             liveEnabled: row.liveEnabled,
             activeContextVersionId: row.activeContextVersionId,
-            processor: processorOf(row.settings),
         }))
     }
 }

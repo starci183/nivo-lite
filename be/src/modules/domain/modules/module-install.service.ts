@@ -5,7 +5,6 @@ import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { EventsService } from "@modules/domain/events"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type {
-    AgentSyncStatus,
     InstallationMode,
     InstallationRecord,
     InstallationWrite,
@@ -47,7 +46,7 @@ const expectWritten = (written: InstallationWrite): void => {
 
 @Injectable()
 /**
- * The lifecycle of the installed agents of a workspace: installing a module (its agent, its default authority rules, its OpenClaw copy),
+ * The lifecycle of the installed agents of a workspace: installing a module (its agent and its default authority rules),
  * adding an instance of a multi-instance type, renaming, the operating mode, the live switch and the settings. Reads are open to every
  * member; every change is for owners and managers.
  */
@@ -93,8 +92,8 @@ export class ModuleInstallService {
 
     /**
      * Installs a module: its agent (reused when the workspace already has an unbound one, except for an added instance), the installation,
-     * its default authority rules (never overwriting what the owner already set) and the sync of its OpenClaw copy. Without `newInstance`
-     * the call is idempotent and answers the first installation of the type.
+     * its default authority rules (never overwriting what the owner already set) and the `installation_changed` event. Without
+     * `newInstance` the call is idempotent and answers the first installation of the type.
      */
     async install(principalId: string, request: InstallRequest): Promise<InstallResult> {
         const member = await this.members.require(principalId, request.workspaceId, GOVERNORS)
@@ -200,10 +199,7 @@ export class ModuleInstallService {
         return this.viewOf(workspaceId, installationId)
     }
 
-    /**
-     * Merges one setting into the settings of an installation: the longest a customer waits before the app answers directly
-     * (`openclawTimeoutSec`) or the holding message (`holdingMessage`, empty removes it).
-     */
+    /** Merges one setting into the settings of an installation: the holding message (`holdingMessage`, empty removes it) or the working hours. */
     async saveSetting(
         principalId: string,
         workspaceId: string,
@@ -225,14 +221,6 @@ export class ModuleInstallService {
     async requirementFacts(principalId: string, workspaceId: string): Promise<RequirementFacts> {
         await this.members.require(principalId, workspaceId)
         return this.facts.requirementFacts(workspaceId)
-    }
-
-    /** Where the OpenClaw copy of the agent of an installation stands; any member may look. */
-    async syncStatus(principalId: string, workspaceId: string, installationId: string): Promise<AgentSyncStatus> {
-        await this.members.require(principalId, workspaceId)
-        const status = await this.facts.syncStatus(workspaceId, installationId)
-        if (status === null) throw new ModulesError({ code: ModulesErrorCode.InstallationNotFound })
-        return status
     }
 
     /** The installation of the workspace with what it still needs connected. */

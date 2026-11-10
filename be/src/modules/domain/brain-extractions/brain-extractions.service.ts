@@ -4,6 +4,7 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type {
     ExtractionProgress,
+    ExtractionProgressView,
     ExtractionRecord,
     ExtractionStart,
     ExtractionState,
@@ -45,6 +46,22 @@ export class BrainExtractionsService {
             take: 500,
         })
         return rows.map((row) => ({ sourceId: row.sourceId, status: row.status }))
+    }
+
+    /** How far the reading of every document of the workspace got, for the truth graph's list of sources. */
+    async progress(workspaceId: string): Promise<ReadonlyArray<ExtractionProgressView>> {
+        const rows = await this.entityManager.find(BrainExtractionEntity, {
+            select: { sourceId: true, status: true, windowsDone: true, windowsTotal: true, factsProposed: true },
+            where: { workspaceId },
+            take: 500,
+        })
+        return rows.map((row) => ({
+            sourceId: row.sourceId,
+            status: row.status,
+            windowsDone: row.windowsDone,
+            windowsTotal: row.windowsTotal,
+            factsProposed: row.factsProposed,
+        }))
     }
 
     /** Starts the reading of a document from its first window. */

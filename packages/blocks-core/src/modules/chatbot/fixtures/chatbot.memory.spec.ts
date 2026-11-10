@@ -139,19 +139,19 @@ describe("the fake engine", () => {
     it("upsert a settings record by its unique key: add the first, set the fields of the one that holds the key", async () => {
         const world = memoryWorld()
         const api = settingsApi(world)
-        const first = await api.upsert("scope_key", { scope: "chatbot", openclawTimeoutSec: 25, holdingMessage: "a" })
-        const second = await api.upsert("scope_key", { scope: "chatbot", openclawTimeoutSec: 40, holdingMessage: "b" })
+        const first = await api.upsert("scope_key", { scope: "chatbot", holdingMessage: "a" })
+        const second = await api.upsert("scope_key", { scope: "chatbot", holdingMessage: "b" })
         expect(first).toMatchObject({ ok: true, created: true })
         expect(second).toMatchObject({ ok: true, version: "2" })
         expect(world.settings).toHaveLength(1)
-        expect(world.settings[0]?.data).toMatchObject({ openclawTimeoutSec: 40, holdingMessage: "b" })
+        expect(world.settings[0]?.data).toMatchObject({ holdingMessage: "b" })
     })
 
     it("treats a key that names no unique constraint as holding no record, so the upsert stores a new one", async () => {
         const world = memoryWorld()
         const api = settingsApi(world)
-        await api.upsert("scope_key", { scope: "chatbot", openclawTimeoutSec: 25, holdingMessage: "a" })
-        await api.upsert("no_such_key", { scope: "other", openclawTimeoutSec: 30, holdingMessage: "b" })
+        await api.upsert("scope_key", { scope: "chatbot", holdingMessage: "a" })
+        await api.upsert("no_such_key", { scope: "other", holdingMessage: "b" })
         expect(world.settings).toHaveLength(2)
     })
 

@@ -16,7 +16,6 @@ export const READ = {
     billingEvents: "billingEvents",
     installs: "installs",
     contextVersions: "contextVersions",
-    agentSync: "agentSync",
     connections: "connections",
     workspaceErrors: "workspaceErrors",
     knowledgeSources: "knowledgeSources",

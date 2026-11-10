@@ -1,3 +1,5 @@
+import type { TeamChatStopCardView } from "./team-chat-stop"
+
 /** What a person answers an approval card with. */
 export type TeamChatVerdict = "approved" | "refused"
 
@@ -97,6 +99,8 @@ export interface TeamChatMessageRow {
     readonly forwardedFrom: string | null
     /** Where the bubble stands in a run from one sender (a gap over three minutes ends a run). */
     readonly groupPosition: TeamChatGroupPosition
+    /** The typed stop card of a run (`workflow.stopped`), worded; absent or null for every other message. */
+    readonly stop?: TeamChatStopCardView | null
 }
 
 /** The words of the reactions of a message. */

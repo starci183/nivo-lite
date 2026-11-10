@@ -1,19 +1,14 @@
 import type {
-    AgentHandoffRequest,
     ApprovalRequest,
     ApprovalResult,
     BookingToolName,
-    GatewayToolName,
     JsonResult,
     KnowledgeCaller,
     KnowledgePassages,
     LeadDraft,
     LeadWriteResult,
-    OptionalBridgeTurn,
     ToolArgs,
     ToolContext,
-    BridgeTurn,
-    OptionalToolClaims,
     OptionalToolLeadId,
 } from "./agent-tools.contracts"
 
@@ -50,45 +45,8 @@ export interface ApprovalRequester {
     request(ctx: ToolContext, request: ApprovalRequest): Promise<ApprovalResult>
 }
 
-/**
- * Runs the connector meta-tools for the job's own conversation (owner: the customer turns, over the MCP gateway): the agent of the
- * conversation is the caller, so its grants, approvals and the audit apply; a call that needs a person opens its approval.
- */
-export interface GatewayTools {
-    /** Runs one meta-tool. */
-    run(ctx: ToolContext, tool: GatewayToolName, args: ToolArgs): Promise<JsonResult>
-}
-
-/** Hands the job's own conversation to another agent of the workspace (owner: the customer turns). */
-export interface AgentHandoff {
-    /** Moves the conversation and posts the hand-off note; the answer says where it went or why it stayed. */
-    handOff(ctx: ToolContext, request: AgentHandoffRequest): Promise<JsonResult>
-}
-
 /** Reads the lead a conversation is tied to (owner: the chat records), for the evidence trace. */
 export interface ConversationLeads {
     /** The lead of the conversation, or null. */
     leadIdOf(ctx: ToolContext): Promise<OptionalToolLeadId>
-}
-
-/** The short-lived per-job tool tokens; the app root binds it to the OpenClaw ToolTokenService. */
-export interface ToolTokens {
-    /** Mints a token for a job; an empty text when the bridge has no secret. */
-    mint(subject: ToolContext, ttlSeconds: number): string
-    /** Ends the token of a job. */
-    revoke(jobId: string): void
-    /** The claims of a valid token of a running job, or null; admission passes false to avoid consuming a call. */
-    verify(token: string, consume?: boolean): OptionalToolClaims
-}
-
-/** Admits the call of the OpenClaw bridge plugin: checks its signed credential and finds the one turn that is running (owner: the agent turns). */
-export interface BridgeTurns {
-    /** The running turn the signed token names; null for a forged or expired token, a foreign session or a turn that is not running. */
-    admit(token: string): Promise<OptionalBridgeTurn>
-}
-
-/** Runs the connector meta-tools for a turn that has no customer conversation (a tag, an event or a clock; owner: the agent turns). */
-export interface InternalTools {
-    /** Runs one meta-tool as the turn's agent, under its grants. */
-    run(turn: BridgeTurn, tool: GatewayToolName, args: ToolArgs): Promise<JsonResult>
 }

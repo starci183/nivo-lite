@@ -6,7 +6,7 @@ import { useInstallations } from "@/hooks/installations"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { workspaceHref } from "@/modules/routes"
 import { messagesCopyOf } from "./teamChat.copy"
-import type { ChatRowWords } from "./teamChat.shared"
+import { stopCardWordsOf, type ChatRowWords } from "./teamChat.shared"
 
 /** How often the clock of the rows is read again (milliseconds). */
 const CLOCK_REFRESH_MS = 60_000
@@ -23,11 +23,12 @@ export const useChatRowWords = (): ChatRowWords => {
             installations?.find((installation) => installation.name === name)?.agentAvatarUrl ?? null,
         [installations],
     )
-    return useMemo(
-        () => ({
+    return useMemo(() => {
+        const timeOf = (iso: string): string =>
+            format.dateTime(new Date(iso), { hour: "2-digit", minute: "2-digit", hour12: false })
+        return {
             now,
-            timeOf: (iso: string) =>
-                format.dateTime(new Date(iso), { hour: "2-digit", minute: "2-digit", hour12: false }),
+            timeOf,
             dateOf: (iso: string) => format.dateTime(new Date(iso), { day: "2-digit", month: "2-digit" }),
             dateWithYearOf: (iso: string) =>
                 format.dateTime(new Date(iso), { day: "2-digit", month: "2-digit", year: "numeric" }),
@@ -38,8 +39,8 @@ export const useChatRowWords = (): ChatRowWords => {
             attachment: t("attachmentLine"),
             pictureOf,
             copy: messagesCopyOf(t),
+            stop: stopCardWordsOf(t, timeOf),
             hrefOf: (path: string) => workspaceHref(workspaceId, path),
-        }),
-        [format, now, pictureOf, t, workspaceId],
-    )
+        }
+    }, [format, now, pictureOf, t, workspaceId])
 }

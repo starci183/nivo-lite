@@ -10,6 +10,7 @@ import type { NodeEffectRightCall, NodeRunClaims, NodeToolCall, NodeToolDoor } f
 import type { SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { TOOL } from "@nivo-lite/blocks-core"
 import { AgentViewScopeService } from "@modules/domain/agents"
+import { LOCKED_ARGUMENTS, isLockedContextRead } from "@modules/domain/context-sources"
 import { ChatConversationsService } from "@modules/domain/chat-records"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { InjectLogger } from "@modules/platform/logging"
@@ -19,7 +20,7 @@ import { callWordsOf } from "./connector-call.policy"
 import { gatewayArgumentsSchema } from "./gateway-tools.schema"
 import { runOfClaims } from "./gateway-run.policy"
 import type { StepClaims } from "./gateway-run.policy"
-import type { GatewayCallResult, GatewayCaller } from "./mcp-gateway.contracts"
+import type { GatewayArgument, GatewayCallResult, GatewayCaller } from "./mcp-gateway.contracts"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import { McpGatewayService } from "./mcp-gateway.service"
 import { isAbilityTool, isChannelBound } from "./provider-abilities.policy"
@@ -44,6 +45,35 @@ const STEWARDS_MAX = 50
  */
 const askedArgsOf = (args: unknown): string =>
     JSON.stringify(Object.fromEntries(callWordsOf(args).map((word) => [word.name, word.value])))
+
+/** The checked arguments of a call. */
+type GatewayArguments = Readonly<Record<string, GatewayArgument>>
+
+/** The arguments a call runs with after the hard lock of a context read, or why the lock refused it. */
+type LockedArguments =
+    | { readonly kind: "ok"; readonly args: GatewayArguments }
+    | { readonly kind: "refused"; readonly reason: "other_conversation" | "other_lead" }
+
+/**
+ * The hard lock of the context reads (`nivo.conversation.*`, `nivo.lead.*`): they take no conversation or customer id from the model.
+ * A call that names one other than the run's own (from the run token: its conversation, its customer) is refused here, before the
+ * gateway and its executor; the run's own ids are then filled in from the token, never from what the call says. Any other tool runs
+ * with its arguments as given.
+ */
+const lockedArgumentsOf = (tool: string, claims: StepClaims, args: GatewayArguments): LockedArguments => {
+    if (!isLockedContextRead(tool)) return { kind: "ok", args }
+    const own = { conversationId: claims.conversationId, leadId: claims.leadId ?? null }
+    for (const name of LOCKED_ARGUMENTS) {
+        const named = args[name]
+        if (named !== undefined && named !== own[name]) {
+            return { kind: "refused", reason: name === "conversationId" ? "other_conversation" : "other_lead" }
+        }
+    }
+    const filled = Object.fromEntries(
+        Object.entries(own).filter((entry): entry is [string, string] => entry[1] !== null),
+    )
+    return { kind: "ok", args: { ...args, ...filled } }
+}
 
 /** The typed error of a gateway answer that is not a value. */
 const failureOf = (
@@ -206,6 +236,17 @@ export class NodeToolDoorService implements NodeToolDoor {
                 }),
             )
         }
+        const locked = lockedArgumentsOf(call.tool, claims, checked.data)
+        if (locked.kind === "refused") {
+            throw this.failed(
+                call.tool,
+                claims,
+                new GraphNodesError({
+                    code: GraphNodesErrorCode.ToolNotGranted,
+                    params: { tool: call.tool, reason: locked.reason },
+                }),
+            )
+        }
         const fingerprint = toolFingerprintOf(call.tool, checked.data)
         const approvedBy = call.approval?.fingerprint === fingerprint ? call.approval.by : undefined
         if (approvedBy === undefined && !(await this.memberMayCall(claims))) {
@@ -219,7 +260,7 @@ export class NodeToolDoorService implements NodeToolDoor {
             )
         }
         const caller = await this.callerOf(claims, call.key, approvedBy)
-        const result = await this.gateway.call(caller, call.tool, checked.data)
+        const result = await this.gateway.call(caller, call.tool, locked.args)
         if (result.ok) return result.value
         const error = failureOf(call.tool, fingerprint, result, checked.data)
         if (error.code === GraphNodesErrorCode.ToolApprovalRequired) throw error

@@ -1,7 +1,7 @@
 import * as facts from "@tests/fixtures/builders/brain-facts.builder"
 
 import { Test } from "@nestjs/testing"
-import { FakeClock, fakeTransaction, mockEntityManager } from "@starci/jest-preset"
+import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { IsNull } from "typeorm"
 import { CLOCK } from "@modules/platform/clock"
@@ -13,8 +13,13 @@ import { evaluatedCalls, evaluatedValues } from "@tests/fixtures/builders/evalua
 import { BrainFactsMaintenanceService } from "./brain-facts-maintenance.service"
 import { BrainFactsReadService } from "./brain-facts-read.service"
 import { BrainFactsService } from "./brain-facts.service"
+import { BrainFactRelationsService } from "./brain-fact-relations.service"
 import { BrainFactsErrorCode } from "./errors/brain-facts.error"
+import { SUPERSEDE } from "./fact-write.policy"
 import { BrainFactEntity } from "./persistence/entities"
+
+/** The relations store of the service: a double, so a replacement can be seen carrying the edges. */
+const relationsDouble = mock<BrainFactRelationsService>()
 
 const parts = async (em: MockEntityManager) => {
     const moduleRef = await Test.createTestingModule({
@@ -22,6 +27,7 @@ const parts = async (em: MockEntityManager) => {
             BrainFactsService,
             BrainFactsReadService,
             BrainFactsMaintenanceService,
+            { provide: BrainFactRelationsService, useValue: relationsDouble },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
             { provide: CLOCK, useValue: new FakeClock(facts.AT) },
         ],
@@ -227,18 +233,13 @@ const registerApply = () => {
             decidedAt: "now()",
             decisionNote: current ? "approved" : null,
             validFrom: "coalesce(valid_from, now())",
+            validTo: "coalesce(valid_to, coalesce(valid_from, now()) + interval '1 year')",
+            version: 1,
         })
-        expect(evaluatedCalls(tx.em.update.mock.calls, 2)).toEqual(
-            current
-                ? [
-                      [
-                          "BrainFactEntity",
-                          { workspaceId: facts.WS, id: "old", status: "active" },
-                          { status: "superseded", validTo: "coalesce(valid_to, now())" },
-                      ],
-                  ]
-                : [],
-        )
+        const superseded = ["BrainFactEntity", { workspaceId: facts.WS, id: "old", status: "active" }, evaluatedValues(SUPERSEDE)]
+        expect(evaluatedCalls(tx.em.update.mock.calls, 2)).toEqual(current ? [superseded] : [])
+        expect(relationsDouble.carry.mock.calls.map((call) => call.slice(1))).toEqual(current ? [[facts.WS, "old", "f1"]] : [])
+        relationsDouble.carry.mockClear()
         expect(tx.commits).toBe(1)
     })
 
@@ -468,7 +469,7 @@ const registerUpkeep = () => {
         await expect(service.forView(facts.WS, "customer", "chatbot", null, 5)).resolves.toBe(listed)
         await expect(service.search(facts.WS, "internal", "sales", "i1", "hours", 3)).resolves.toBe(listed)
         await expect(service.withdrawSource(facts.WS, "doc-1", "Removed")).resolves.toEqual(["orphan"])
-        await expect(service.withdrawChanged(facts.WS, "d", "n", "t")).resolves.toMatchObject({ withdrawn: 1 })
+        await expect(service.withdrawChanged(facts.WS, "d", "n", { hashes: [], folded: "t" })).resolves.toMatchObject({ withdrawn: 1 })
         await expect(service.maintain(facts.WS)).resolves.toBe(done)
         expect(reads.list).toHaveBeenCalledWith(facts.WS, { statuses: ["active"] })
         expect(reads.forView).toHaveBeenCalledWith(facts.WS, "customer", "chatbot", null, 5)

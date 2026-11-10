@@ -16,4 +16,4 @@ export const toAgentConnectionCandidatesRequest = (
 export const toAgentConnectionCandidatesType = (
     candidates: ReadonlyArray<ConnectionCandidate>,
 ): Array<AgentConnectionCandidateType> =>
-    candidates.map((candidate) => ({ ...candidate, access: candidate.bound ? "auto" : null }))
+    candidates.map((candidate) => ({ ...candidate }))

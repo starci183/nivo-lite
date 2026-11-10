@@ -123,7 +123,7 @@ export const stepPlaceOf = (key: string): StepPlace | null => {
 /** The read of the ledger records of one run step, oldest first, served by the ledger's `run_step` index (run, step, id). */
 export const stepLedgerQueryOf = (place: StepPlace): Query => ({
     from: LEDGER_ENTITY,
-    select: ["effectId", "args"],
+    select: ["effectId", "args", "subjectEntity", "undoneAt"],
     where: {
         op: "and",
         of: [
@@ -226,3 +226,25 @@ export const alreadySentOf = (lines: ReadonlyArray<SentLine>): ReadonlyArray<Sen
         })
     return [...first.values()].slice(-ALREADY_SENT_MAX)
 }
+
+/** The subject kinds a ledger record keeps for a call that did NOT act: a refusal, and an act whose outcome is unknown. */
+const NOT_DONE_SUBJECTS: ReadonlySet<string> = new Set(["refused", "outcome-unknown"])
+
+/**
+ * The effects a run step already did, from its own ledger records (D-W8-1): each effect id once, in name order, of the records that
+ * acted and were not taken back. A refusal, an act whose outcome is unknown and an undone act did nothing that a `requires` may count.
+ */
+export const doneEffectsOf = (rows: ReadonlyArray<LedgerRow>): ReadonlyArray<string> =>
+    [
+        ...new Set(
+            rows.flatMap((row) => {
+                const { effectId, subjectEntity, undoneAt } = row.data
+                const acted =
+                    typeof effectId === "string" &&
+                    effectId !== "" &&
+                    !(typeof subjectEntity === "string" && NOT_DONE_SUBJECTS.has(subjectEntity)) &&
+                    (undoneAt === null || undoneAt === undefined)
+                return acted ? [effectId] : []
+            }),
+        ),
+    ].toSorted()

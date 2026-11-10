@@ -10,7 +10,6 @@ import {
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { KnowledgeSourcesService } from "@modules/domain/knowledge-sources"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { InjectIds } from "@modules/platform/ids"
@@ -21,16 +20,15 @@ import { eachInOrder } from "@modules/platform/primitives"
 import type { BulkApplied, BulkUndone } from "./brain.contracts"
 import { BrainLogEvent } from "./brain.log-events"
 import { BrainError, BrainErrorCode } from "./errors/brain.error"
-
-/** Who may change the brain of a workspace. */
-const MANAGERS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
+import { FactEmbeddingsService } from "./fact-embeddings.service"
+import { FOUNDER } from "./founder.policy"
 
 /** The most facts one read answers: a document gives at most 200, and the read may hold other waiting ones. */
 const GROUP_MAX = 2000
 
 @Injectable()
 /**
- * The safe path through a pile of waiting facts: the facts a document of the owner's own proposed, applied together by document with
+ * The founder's safe path through a pile of waiting facts (only the founder puts truths in force or takes a batch back): the facts a document of the owner's own proposed, applied together by document with
  * one undo. Only facts the policy calls safe go (internal, quoted by the document, disagreeing with nothing in force, none waiting
  * against it); everything else stays for a person. A public document is refused, so nothing is ever published this way.
  */
@@ -44,6 +42,7 @@ export class BrainBulkService {
         private readonly facts: BrainFactsService,
         private readonly reads: BrainFactsReadService,
         private readonly batches: BrainFactBatchService,
+        private readonly vectors: FactEmbeddingsService,
     ) {}
 
     /**
@@ -51,7 +50,7 @@ export class BrainBulkService {
      * since, or that has another waiting value or a value in force by now, is left for a person.
      */
     async applyDocument(userId: string, workspaceId: string, sourceId: string): Promise<BulkApplied> {
-        const me = await this.members.require(userId, workspaceId, MANAGERS)
+        const me = await this.members.require(userId, workspaceId, FOUNDER)
         const source = await this.sources.detail(userId, workspaceId, sourceId)
         if (source.visibility !== "internal") throw new BrainError({ code: BrainErrorCode.BulkNeedsInternal })
         const waiting = await this.reads.ofSources(workspaceId, [sourceId], ["proposed"], GROUP_MAX)
@@ -63,12 +62,13 @@ export class BrainBulkService {
         await eachInOrder(safe, async (fact) => {
             if (await this.applyOne(workspaceId, fact, me.displayName, note)) state.applied += 1
         })
+        if (state.applied > 0) await this.vectors.refresh(workspaceId)
         return { batchId, applied: state.applied, skipped: waiting.length - state.applied }
     }
 
     /** Takes a batch back: its facts wait for review again. A fact changed since stays as it is. */
     async undoBatch(userId: string, workspaceId: string, batchId: string): Promise<BulkUndone> {
-        await this.members.require(userId, workspaceId, MANAGERS)
+        await this.members.require(userId, workspaceId, FOUNDER)
         const active = await this.reads.list(workspaceId, { statuses: ["active"], limit: GROUP_MAX })
         const batch = active.filter((fact) => batchIdOf(fact.decisionNote) === batchId)
         const state = { restored: 0 }

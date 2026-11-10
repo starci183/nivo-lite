@@ -2,13 +2,11 @@ import type { ReactNode } from "react"
 import { EmptyNotice, Pane, PaneGrid, PaneSection } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PaneBody } from "@/components/frames/PaneBody"
+import { AgentRunAiCalls, type AgentRunAiCallsProps } from "@/components/composites/AgentRunAiCalls"
 import { AgentRunCanvas } from "@/components/composites/AgentRunCanvas"
-import { AgentRunHead } from "@/components/composites/AgentRunHead"
-import type { AgentRunHeadCopy } from "@/components/composites/AgentRunHead"
-import { AgentRunDecisionCard } from "@/components/composites/AgentRunDecisionCard"
-import type { AgentRunDecisionCopy } from "@/components/composites/AgentRunDecisionCard"
-import { AgentRunStepParams } from "@/components/frames/AgentRunStepParams"
-import type { AgentRunStepParamsCopy } from "@/components/frames/AgentRunStepParams"
+import { AgentRunHead, type AgentRunHeadCopy } from "@/components/composites/AgentRunHead"
+import { AgentRunDecisionCard, type AgentRunDecisionCopy } from "@/components/composites/AgentRunDecisionCard"
+import { AgentRunStepParams, type AgentRunStepParamsCopy } from "@/components/frames/AgentRunStepParams"
 import { AgentRunStepsCard } from "@/components/composites/AgentRunStepsCard"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type {
@@ -52,6 +50,8 @@ export interface AgentRunPanesBaseProps {
         /** The head of the aside: the step the person pressed, and its kind. */
         readonly asideHead: { readonly title: string; readonly description: string }
         readonly grid: PaneGridLayout
+        /** The AI calls of the run under its graph; left out while there is none (not read yet, not on the back end, or no call). */
+        readonly aiCalls: AgentRunAiCallsProps
     }
     readonly on: {
         readonly select: (nodeKey: string) => void
@@ -72,7 +72,7 @@ interface RunCardsProps {
     readonly isLoading: boolean
 }
 
-/** The main pane, stacked: the head, the map (the steps on a phone) and the decision the run waits on. */
+/** The main pane, stacked: the head, the map (the steps on a phone), the decision the run waits on and the AI calls. */
 const RunCards = (props: RunCardsProps) => {
     const { copy, isPhone, isResuming, isCancelling, isDeciding } = props.page.props
     const { view, isLoading } = props
@@ -109,6 +109,7 @@ const RunCards = (props: RunCardsProps) => {
                     on={{ decide: on.decide }}
                 />
             )}
+            {props.page.props.aiCalls.rows.length === 0 ? null : <AgentRunAiCalls {...props.page.props.aiCalls} />}
         </>
     )
 }

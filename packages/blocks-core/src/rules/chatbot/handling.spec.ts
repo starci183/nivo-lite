@@ -1,13 +1,12 @@
-import { AGENT_HOLDER, handlingChangeOf, isHeldByPerson, mayHandle, noticeOf } from "./handling"
+import { handlingChangeOf, isHeldByPerson, mayHandle, noticeOf } from "./handling"
 import type { HandlingMember } from "./handling"
 
 const STAFF: HandlingMember = { displayName: "Ha", isManager: false }
 const MANAGER: HandlingMember = { displayName: "Lan", isManager: true }
 
 describe("isHeldByPerson", () => {
-    it("is false for nobody and for the agent runtime, true for a person", () => {
+    it("is false for nobody, true for a person", () => {
         expect(isHeldByPerson(null)).toBe(false)
-        expect(isHeldByPerson(AGENT_HOLDER)).toBe(false)
         expect(isHeldByPerson("Ha")).toBe(true)
     })
 })
@@ -15,7 +14,6 @@ describe("isHeldByPerson", () => {
 describe("mayHandle", () => {
     it("lets staff act on a free conversation or one they hold", () => {
         expect(mayHandle(STAFF, null)).toBe(true)
-        expect(mayHandle(STAFF, AGENT_HOLDER)).toBe(true)
         expect(mayHandle(STAFF, "Ha")).toBe(true)
     })
 

@@ -119,7 +119,7 @@ describe("agent-runs/kill-before-reply: the API dies between the tool's result a
         expect(script().calls.get("reply")).toBe(2)
     })
 })
-describe("agent-runs/runtime-down: OpenClaw stops while the turn runs", () => {
+describe("agent-runs/runtime-down: the agent runtime stops while the turn runs", () => {
     it("agent-runs/runtime-down: the held step retries after a backoff and the chain finishes once, and the stopped runtime's late answer changes nothing", async () => {
         const { runId, wakeId } = await scene.newRun("runtime-down")
         const hang = script().hangOnce("turn", "before")

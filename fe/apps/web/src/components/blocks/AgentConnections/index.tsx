@@ -2,10 +2,12 @@
 
 import { useLocale, useTranslations } from "next-intl"
 import { useAgentInstallation } from "@/hooks/agentSettings"
+import { useAgentTools } from "@/hooks/agentTools"
 import { useProviderDialogs, useProviderRights } from "@/hooks/providerRights"
-import { AUTOMATION_ROUTES, workspaceHref } from "@/modules/routes"
+import { AUTOMATION_ROUTES, brainTabHref, workspaceHref } from "@/modules/routes"
 import { AgentConnectionsBase } from "./component"
 import type { AgentConnectionsBaseProps } from "./types"
+import { toolsOf } from "./tools"
 import { accountNameOf, detachOf, drawerOf, groupsOf } from "./view"
 
 /** What the route hands the tab: the workspace and the installed agent of the url. */
@@ -19,7 +21,9 @@ interface AgentConnectionsProps {
  * The rights tab of an installed agent (route `/connections`, tab label "Permissions"): a card per connected ACCOUNT it holds
  * ("SePay · MB ••••5252"), with what it may do through each (a write ability also automatic or ask), grouped by kind; "attach more
  * accounts" opens the drawer of the connected accounts it does not hold. The rights come from
- * the `providerRights` read and its mutations, keyed by `connectionId`.
+ * the `providerRights` read and its mutations, keyed by `connectionId`. Under them the NIVO tools it may call (`agentTools`), grouped by
+ * where each comes from; the owner's grant of its own "acts" tools is set there (`setMcpToolGrant`). The section is left out while the
+ * tools are not read (no such query on the back end yet, or not owner or manager).
  */
 export const AgentConnections = (props: AgentConnectionsProps) => {
     const t = useTranslations("agentRights")
@@ -28,6 +32,7 @@ export const AgentConnections = (props: AgentConnectionsProps) => {
     const view = "items" in agent ? agent.items : undefined
     const agentName = view?.name ?? ""
     const rights = useProviderRights(view?.agentId ?? "", props.module)
+    const tools = useAgentTools(view?.agentId ?? null)
     const locale = useLocale()
     const dialogs = useProviderDialogs()
     const detaching = rights.attached.find((one) => one.account.connectionId === dialogs.detachKey)
@@ -46,6 +51,14 @@ export const AgentConnections = (props: AgentConnectionsProps) => {
         emptyLabel: t("empty", { agent: agentName }),
         drawer: drawerOf(t, locale, rights.attachable, { isOpen: dialogs.isDrawerOpen, agentName }),
         detach: detachOf(t, detaching === undefined ? null : accountNameOf(detaching, locale), agentName),
+        tools: toolsOf(t, tools.tools, {
+            locale,
+            agentName,
+            linkHref: workspaceHref(props.workspaceId, brainTabHref("facts")),
+            accounts: [...rights.attached, ...rights.attachable],
+            isSaving: tools.isSaving,
+            setGrant: tools.setGrant,
+        }),
     }
     return (
         <AgentConnectionsBase

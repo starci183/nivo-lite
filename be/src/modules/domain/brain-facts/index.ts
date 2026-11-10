@@ -15,3 +15,25 @@ export { SUBJECT_TYPES } from "./brain-facts.contracts"
 export type { FactInput } from "./brain-facts.contracts"
 export { batchIdOf, bulkNoteOf, isBulkSafe } from "./bulk-apply.policy"
 export type { FactSource, FactProposalKind } from "./brain-facts.contracts"
+export { BrainFactRelationsService } from "./brain-fact-relations.service"
+export { BrainChangeRequestsService } from "./brain-change-requests.service"
+export { DEFAULT_VALIDITY } from "./fact-write.policy"
+export { NOTHING_STANDS } from "./fact-evidence.policy"
+export type { UnchangedPassages } from "./fact-evidence.policy"
+export { RELATION_KINDS } from "./brain-facts.contracts"
+export type {
+    ChangeFiled,
+    ChangeRequest,
+    FactRelation,
+    RelationInput,
+    RelationKind,
+    FactAudience,
+    InstallationScope,
+} from "./brain-facts.contracts"
+export { isRelationKind, otherEnd } from "./fact-relation.policy"
+export type { EmbeddableFact } from "./embedding-standard.policy"
+export { BrainFactEmbeddingsService } from "./brain-fact-embeddings.service"
+export type { FactEmbeddingState, NearFact } from "./brain-fact-embeddings.service"
+export { factEmbedHashOf, factEmbedTextOf, needsEmbedding, sameIdentity } from "./embedding-standard.policy"
+export type { EmbeddingIdentity, StoredEmbedding } from "./embedding-standard.policy"
+export { BrainFactsError, BrainFactsErrorCode } from "./errors/brain-facts.error"

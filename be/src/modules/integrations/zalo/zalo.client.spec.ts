@@ -206,6 +206,38 @@ describe("ZaloClient / userDisplayName", () => {
     })
 })
 
+describe("ZaloClient / oaProfile", () => {
+    it("asks Zalo for the OA's own profile with the token and answers its trimmed id and name", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({
+            status: 200,
+            body: { error: 0, data: { oa_id: 4318000000000001, name: " Tiệm hoa NIVO ", avatar: "https://zalo.test/oa.png" } },
+        })
+
+        await expect(client.oaProfile("access")).resolves.toEqual({ oaId: "4318000000000001", name: "Tiệm hoa NIVO" })
+
+        expect(http.request).toHaveBeenCalledWith(
+            objectLike({ method: "GET", url: "https://api.test/v2.0/oa/getoa", headers: { access_token: "access" } }),
+        )
+    })
+
+    it("answers empty texts for what Zalo does not give", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValueOnce({ status: 200, body: { error: 0, data: { name: 7 } } })
+        http.request.mockResolvedValueOnce({ status: 200, body: {} })
+
+        await expect(client.oaProfile("access")).resolves.toEqual({ oaId: "", name: "" })
+        await expect(client.oaProfile("access")).resolves.toEqual({ oaId: "", name: "" })
+    })
+
+    it("fails like any other call when Zalo refuses", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({ status: 200, body: { error: -216, message: "Access token is invalid" } })
+
+        await expect(client.oaProfile("access")).rejects.toBeDefined()
+    })
+})
+
 describe("ZaloClient / userProfile", () => {
     it("asks for the user detail and answers the trimmed name and picture link", async () => {
         const { client, http } = await build()

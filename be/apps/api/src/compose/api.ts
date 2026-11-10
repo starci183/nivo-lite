@@ -16,6 +16,7 @@ import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
 import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
 import { KnowledgeGraphqlModule } from "@features/api/knowledge"
+import { BrainGraphGraphqlModule } from "@features/api/brain-graph"
 import { PublicDocumentsGraphqlModule } from "@features/api/public-documents"
 import { DossierReviewGraphqlModule } from "@features/api/dossier-review"
 import { EvidenceGraphqlModule } from "@features/api/evidence"
@@ -55,6 +56,7 @@ export const apiModules = (): Array<DynamicModule> => [
     ChattypingGraphqlModule.register({}),
     ChatFilesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
     KnowledgeGraphqlModule.register({}),
+    BrainGraphGraphqlModule.register({}),
     PublicDocumentsGraphqlModule.register({}),
     DossierReviewGraphqlModule.register({}),
     EvidenceGraphqlModule.register({}),

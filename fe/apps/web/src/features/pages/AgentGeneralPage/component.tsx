@@ -5,7 +5,6 @@ import { AgentActivityCard } from "@/components/blocks/AgentActivityCard"
 import { AgentModeCard } from "@/components/blocks/AgentModeCard"
 import { AgentProfileOwner } from "@/components/blocks/AgentProfileOwner"
 import { AgentRemoveCard } from "@/components/blocks/AgentRemoveCard"
-import { AgentSyncCard } from "@/components/blocks/AgentSyncCard"
 import type { ModuleKey } from "@/modules/catalog"
 import type { ModuleIconName } from "@/modules/types"
 
@@ -44,7 +43,6 @@ export const AgentGeneralPageBase = (props: AgentGeneralPageBaseProps) => {
                     <AgentProfileOwner installationId={installationId} />
                     <AgentActivityCard installationId={installationId} module={module} answersCustomers={props.props.answersCustomers} />
                     <AgentModeCard installationId={installationId} module={module} />
-                    <AgentSyncCard installationId={installationId} />
                     <AgentRemoveCard installationId={installationId} module={module} />
                 </PaneSection>
             </Pane>

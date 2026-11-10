@@ -2,7 +2,7 @@
 
 A module is data, not hard-coded. The module list, the setup steps (gates), the authority actions, the base knowledge and the labels are all read from one typed catalogue in the back end; the web reads it through the GraphQL API. Chatbot, Lead generation, Sales, Accounting, Shifts, Booking, Inventory, Loyalty, Video, Content and Hiring all go through it.
 
-Standing conventions: everything is industry-neutral (a spa is only an example); the only AI voice is OpenClaw (the `generate-with-agent` and `run-chat-turn` jobs); everything that reaches a customer or touches money goes through the authority gate (`work_items` / `decisions`); credentials are encrypted (`connection_secrets`); the UI follows plain language and the grammar renderers of `@starci/grammar`.
+Standing conventions: everything is industry-neutral (a spa is only an example); the only AI voice is the NIVO engine (a workflow step's agent, or an owner-facing generation job; OpenClaw was removed 2026-11-11); everything that reaches a customer or touches money goes through the authority gate (`work_items` / `decisions`); credentials are encrypted (`connection_secrets`); the UI follows plain language and the grammar renderers of `@starci/grammar`.
 
 ## 1. Data flow
 
@@ -30,7 +30,7 @@ be/src/modules/domain/modules/<key>.contracts.ts   (ModuleDefinition)
 | `knowledgeFolder`                                                                       | the folder of the base knowledge templates (`<key>`)                                                                       |
 | `workbench`, `settingsExtras`                                                           | the key of the module's workbench / extra settings page in the web app, or `null`                                          |
 | `requires`, `connectionProviders`                                                       | capabilities and connections the workspace should have, and the providers the agent can use                                |
-| `agent`                                                                                 | name, handle, persona, capabilities, role and instructions of the OpenClaw agent                                           |
+| `agent`                                                                                 | name, handle, persona, capabilities, role and instructions of the agent                                           |
 | `gates`                                                                                 | the setup steps (a `tone` gate is advised: the agent's soul file takes its tone from it)                                   |
 | `authorityActions`                                                                      | the authority actions that can be granted (section 4); `accepts` lists the commands other agents may ask the module to run |
 
@@ -41,7 +41,7 @@ be/src/modules/domain/modules/<key>.contracts.ts   (ModuleDefinition)
 3. The GraphQL surface when the module has its own operations: a feature `be/src/features/api/<feature>/{application,transport/graphql}` (one resolver per action, one command or query bus call, no response envelope; copy an existing feature such as `features/api/modules`).
 4. The web: a page `fe/apps/web/src/features/pages/<Key>WorkbenchPage/{index.tsx,component.tsx,classNames.ts}`, its hooks under `hooks/swr/api/graphql` and `hooks/<domain>`, and i18n messages in the `workbench<Key>` namespace of `modules/i18n/messages/{en,vi}.json` (keep both catalogs in lockstep).
 5. A migration only when the module has its own tables (section 5).
-6. Background work and the OpenClaw agent (sections 6 and 7).
+6. Background work and the agent (sections 6 and 7).
 
 ## 4. Authority
 
@@ -60,11 +60,14 @@ Forward-only, in `db/migrations/`, with a fresh timestamp after the newest migra
 
 Heavy or long work (rendering a video, scanning applications) runs as a job: a queue under `be/src/modules/queues/<queue>` (contracts, typed producer, module), a processor with steps under `be/src/features/jobs/<job>` and, for a recurring tick, a scheduler registered in the scheduler list of `be/apps/api/src/compose/schedulers.ts`. Enqueue it from the application handler in the same transaction as the business row. Design and operation: `be/docs/guides/jobs.md`. A result never writes straight into a customer's channel: it passes the authority gate like any other input.
 
-AI text: only through the OpenClaw jobs (`generate-with-agent`, `run-chat-turn`).
+AI text: only through the engine's AI layer (`be/src/modules/domain/ai-tasks/`, metered in `ai_usage_events`); a workflow step through its agent ([engine-threads.md](engine-threads.md)).
 
-## 7. OpenClaw
+## 7. The agent
 
-Agent sync (`sync-agents` job, every 5 minutes and on install) runs for every installed module: the agent rules file holds the base rules (the module's knowledge folder and `core`), the approved context (gates), the persona and the business knowledge (filtered by `audience`); the soul file takes its tone from the `tone` gate and the `tone` knowledge. Installing a module queues a sync at once; the setup chat runs through the `run-setup-turn` job with the module's `purpose`. `OPENCLAW_MANAGE_AGENTS=true` lets the api create the agents itself.
+The agent of a module is data (`agent` in the module declaration: name, handle, persona, tool set, policy) and runs in the NIVO engine: no
+agent sync, no `sync-agents` job, no five-minute tick (OpenClaw removed 2026-11-11). Its rights are the provider abilities ticked per
+connected account and its declared NIVO tool set; its workflows are graphs in blocks-core. The setup chat runs through the
+`run-setup-turn` job with the module's `purpose`.
 
 ## 8. Checklist for adding or finishing a module
 

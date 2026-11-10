@@ -53,6 +53,8 @@ export const salesModule: ModuleDeclaration = defineModule({
             TOOL.careSchedule,
             TOOL.leadEnsure,
             TOOL.brainSearch,
+            TOOL.brainChangePropose,
+            TOOL.leadOrderList,
             TOOL.leadUpdate,
             TOOL.leadStageUpdate,
             TOOL.orderRecord,

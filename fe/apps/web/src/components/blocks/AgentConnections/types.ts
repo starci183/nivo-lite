@@ -36,7 +36,47 @@ export interface DetachView {
     readonly cancel: string
 }
 
-/** The rights tab of one agent: the accounts it holds with what it may do through each. */
+/** The owner's grant on one of the agent's own "acts" tools: automatic, ask, or blocked. */
+export interface ToolGrantView {
+    readonly label: string
+    readonly value: string
+    readonly options: readonly [
+        { readonly id: string; readonly label: string },
+        { readonly id: string; readonly label: string },
+        { readonly id: string; readonly label: string },
+    ]
+    readonly isDisabled: boolean
+    readonly onChange: (value: string) => void
+}
+
+/** One tool the agent may call: its name, the 12 line under it (what it does, the accounts it goes through, or why it is not usable), "acts"/"reads", and the grant. */
+export interface ToolRowView {
+    readonly id: string
+    readonly title: string
+    readonly subtitle: string
+    readonly chip: string
+    readonly isReady: boolean
+    readonly grant: ToolGrantView | undefined
+}
+
+/** One origin group of tools under its small label. */
+export interface ToolGroupView {
+    readonly id: string
+    readonly label: string
+    readonly rows: ReadonlyArray<ToolRowView>
+}
+
+/** The "NIVO tools" section: its label with the count, the head link to the rules in the Second Brain, the groups. */
+export interface NivoToolsView {
+    readonly title: string
+    readonly count: number
+    readonly linkLabel: string
+    readonly linkHref: string
+    readonly groups: ReadonlyArray<ToolGroupView>
+    readonly emptyLabel: string
+}
+
+/** The rights tab of one agent: the accounts it holds with what it may do through each, then the NIVO tools it may call. */
 export interface AgentConnectionsBaseProps {
     readonly props: {
         readonly paneLabel: string
@@ -46,6 +86,8 @@ export interface AgentConnectionsBaseProps {
         readonly emptyLabel: string
         readonly drawer: AttachDrawerView
         readonly detach: DetachView
+        /** Undefined while the tools are read, when the read failed, or when the agent has none: the section is left out. */
+        readonly tools: NivoToolsView | undefined
     }
     readonly on: {
         readonly openDrawer: () => void

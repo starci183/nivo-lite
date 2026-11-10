@@ -72,6 +72,8 @@ export const agentLeadMemoryEntity: EntityDefinition<LeadMemoryFields> = defineE
         { name: "conversation", on: ["conversationId", "id"] },
         { name: "run_node", on: ["runId", "nodeKey", "id"] },
         { name: "expires", on: ["expiresAt", "id"] },
+        // One entry by its key, as a node's data port reads it (newest first): the customer's facts entry for care.
+        { name: "entry_recent", on: ["entryKey", { desc: "createdAt" }, { desc: "id" }] },
     ],
     constraints: [{ kind: "unique", name: "entry_key", on: ["entryKey"], refusal: "lead-memory-entry-taken" }],
     matchKeys: [{ name: "entry", on: ["entryKey"] }],

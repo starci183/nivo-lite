@@ -35,6 +35,7 @@ export const RETURNED: string = [
     'decided_at AS "decidedAt"',
     'decision_note AS "decisionNote"',
     'proposal_kind AS "proposalKind"',
+    "version",
 ].join(", ")
 
 /** True when a RETURNING row names the key of a stored fact, the shape the returned columns give it. */

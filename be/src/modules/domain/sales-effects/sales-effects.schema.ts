@@ -137,21 +137,21 @@ const factValue: z.ZodType<JsonValue> = z.lazy(() =>
     ]),
 )
 
-/** What `lead.update` carries: the customer, and the consult stage and facts to write. */
+/** What `lead.update` carries: the customer, the consult stage for the record, and the facts for the customer's lead memory. */
 export interface LeadUpdate {
     /** The customer. */
     readonly leadId: string
     /** The consult stage, or undefined to keep it. */
     readonly consultStage?: z.infer<typeof consultStageSchema> | undefined
-    /** The consult facts, or undefined to keep them. */
-    readonly consultFacts?: { readonly [member: string]: JsonValue } | undefined
+    /** What the consult found out, as lead facts laid over the customer's lead memory, or undefined to keep it. */
+    readonly facts?: { readonly [fact: string]: JsonValue } | undefined
 }
 
 /** What `lead.update` carries: the customer and the consult stage and facts to write; a member left out is kept. */
 export const updateSchema: z.ZodType<LeadUpdate> = z.object({
     leadId: z.string().min(1).max(ID_MAX),
     consultStage: consultStageSchema.optional(),
-    consultFacts: z
+    facts: z
         .record(z.string().max(ID_MAX), factValue)
         .refine((facts) => Object.keys(facts).length <= FACTS_MAX)
         .optional(),

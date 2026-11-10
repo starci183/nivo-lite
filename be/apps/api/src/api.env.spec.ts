@@ -23,7 +23,7 @@ describe("the API environment and the engine on LangGraph", () => {
     )
 
     it("refuses to boot with an engine flag that names a workflow not cleared for threads", () => {
-        expect(bootStopOf({ AGENT_ENGINE_LANGGRAPH: "sales.consult" })).toBe(AgentThreadsErrorCode.FlagInvalid)
+        expect(bootStopOf({ AGENT_ENGINE_LANGGRAPH: "sales.ghost" })).toBe(AgentThreadsErrorCode.FlagInvalid)
     })
 
     it("passes the guard and the flag with neither set, and with the front desk named: the boot stops on a later key", () => {

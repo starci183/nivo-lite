@@ -1,5 +1,12 @@
-import { agentCardOf, daysAgoOf, groupPositionsOf, withPendingTaps } from "@/modules/teamChat"
-import type { GroupPosition } from "@/modules/teamChat"
+import {
+    agentCardOf,
+    chatMarkOf,
+    daysAgoOf,
+    groupPositionsOf,
+    stopCardViewOf,
+    withPendingTaps,
+    type GroupPosition,
+} from "@/modules/teamChat"
 import type {
     ChatParty,
     TeamChatApprovalStatus,
@@ -7,8 +14,7 @@ import type {
     TeamChatMessageRow,
     TeamChatReactionView,
 } from "@/modules/types"
-import { partyOf } from "./teamChat.shared"
-import type { ChatMessageNode, ChatRowWords } from "./teamChat.shared"
+import { partyOf, type ChatMessageNode, type ChatRowWords } from "./teamChat.shared"
 
 /** The status of a decision from the door's enum; anything unknown reads as pending (the decide door judges it again). */
 const approvalStatusOf = (status: string): TeamChatApprovalStatus => {
@@ -140,7 +146,11 @@ const messageRowOf = (
         forwardedFrom: message.forwardedFrom,
         groupPosition: extra.groupPosition,
     }
-    return { ...row, card: agentCardOf({ ...row, agentMessage: agentMessageOf(message) }, words.copy, words.hrefOf) }
+    const carded: TeamChatMessageRow = {
+        ...row,
+        card: agentCardOf({ ...row, agentMessage: agentMessageOf(message) }, words.copy, words.hrefOf),
+    }
+    return message.stop === null ? carded : { ...carded, stop: stopCardViewOf(message.stop, words.stop, chatMarkOf(carded)) }
 }
 
 /**

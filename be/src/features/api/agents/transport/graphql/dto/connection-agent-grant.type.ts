@@ -22,8 +22,4 @@ export class ConnectionAgentGrantType {
     /** What the agent uses the connection for. */
     @Field()
     purpose!: string
-
-    /** Deprecated: always `auto` for a bound pair (rights live in the agent's attachments). */
-    @Field({ deprecationReason: "Rights live in the agent's attachments (tab Quyền); a binding has no level. Always \"auto\" for a bound pair; removed next release." })
-    access!: string
 }

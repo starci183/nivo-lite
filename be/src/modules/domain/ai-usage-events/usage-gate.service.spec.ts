@@ -99,7 +99,7 @@ describe("UsageGateService", () => {
                         workspaceId: "ws-1",
                         kind: "brain",
                         module: "brain",
-                        model: "openclaw",
+                        model: "unknown",
                         usage: null,
                         promptChars: 0,
                         completionChars: 3,

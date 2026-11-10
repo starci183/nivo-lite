@@ -41,7 +41,18 @@ describe("GraphNodeRunTokensService", () => {
             memberId: null,
             scope: "workspace",
             expiresAt: NOW + 300_000,
+            leadId: null,
         })
+    })
+
+    it("signs the customer the run is about when the turn's subject is one, and no step allow-list (no gateway effect runs)", async () => {
+        const { tokens } = await build()
+        const claims = tokens.verify(tokens.mint({ ...TURN, subject: { kind: "sales-lead", id: "lead-1" } }))
+
+        expect(claims).toMatchObject({ leadId: "lead-1" })
+        expect(claims).not.toHaveProperty("stepTools")
+        expect(claims).not.toHaveProperty("locale")
+        expect(tokens.verify(tokens.mint({ ...TURN, subject: { kind: "order", id: "o-1" } }))).toMatchObject({ leadId: null })
     })
 
     it("keeps a customer's run to public knowledge and names the member behind a person's turn", async () => {

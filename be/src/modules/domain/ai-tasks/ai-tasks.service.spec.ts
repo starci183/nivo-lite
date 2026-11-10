@@ -763,3 +763,145 @@ describe("AiTasksService the turns of a node's agent loop", () => {
         expect(client.nodeAgentTurns(scope, { ...ASK, reasoning: "medium" }).toolChoice).toBe("auto")
     })
 })
+
+describe("AiTasksService the model of a node's call (model per node, Auto by rule)", () => {
+    const ASK = { purpose: "accounting.match-payment:agent", instructions: "i", input: {} }
+    const BOTH = { providers: { anthropic: true, openrouter: true } }
+    const SONNET = "claude-sonnet-5-5"
+    const DEEPSEEK = "deepseek/deepseek-v4.1-flash"
+    const answered = (model: string) => ({
+        ok: true as const,
+        answer: { ...ANSWER, text: JSON.stringify(COMBO_ORDER), model, usage: USAGE },
+    })
+    const targetsOf = (ai: Awaited<ReturnType<typeof build>>["ai"]) =>
+        ai.attempt.mock.calls.map(([request]) => request.target?.name ?? null)
+
+    it("key absent: the default resolves to the cheap model and the metering says why (boot unchanged)", async () => {
+        const { client, ai, meter } = await build(1, true)
+        ai.attempt.mockResolvedValueOnce(answered(DEEPSEEK))
+
+        await client.nodeJson({ ...scope, model: { model: SONNET, weight: "heavy", source: "default" } }, ASK, ORDER_SCHEMA)
+
+        expect(targetsOf(ai)).toEqual(["deepseek"])
+        expect(meter.record.mock.calls[0]?.[0].call).toMatchObject({
+            declaredModel: SONNET,
+            modelProvider: "openrouter",
+            modelReason: "default-no-key",
+        })
+    })
+
+    it("key present: the default is Sonnet, sent without a temperature or the upstream's own fields", async () => {
+        const { client, ai, meter } = await build(1, true, BOTH)
+        ai.attempt.mockResolvedValueOnce(answered(SONNET))
+
+        await client.nodeJson({ ...scope, model: { model: SONNET, weight: "light", source: "default" } }, ASK, ORDER_SCHEMA)
+
+        expect(ai.attempt.mock.calls[0]?.[0].target).toEqual({
+            name: "sonnet",
+            sampling: false,
+            forcedToolChoice: false,
+            upstreamFields: false,
+        })
+        expect(meter.record.mock.calls[0]?.[0]).toMatchObject({
+            usage: { model: SONNET },
+            call: { declaredModel: SONNET, modelProvider: "anthropic", modelReason: "default" },
+        })
+    })
+
+    it("an explicit model whose provider is down fails loudly after three tries, every try on that model, never switching", async () => {
+        const { client, ai, meter } = await build(1, true, BOTH)
+        ai.attempt.mockResolvedValue({ ok: false, failure: "provider" })
+
+        await expect(
+            client.nodeJson({ ...scope, model: { model: SONNET, weight: "light", source: "node" } }, ASK, ORDER_SCHEMA),
+        ).rejects.toMatchObject({ code: AiTasksErrorCode.Unavailable, params: { tries: 3 } })
+
+        expect(targetsOf(ai)).toEqual(["sonnet", "sonnet", "sonnet"])
+        expect(meter.record).not.toHaveBeenCalled()
+    })
+
+    it("an explicit model with no key fails loudly before any call", async () => {
+        const { client, ai } = await build(1, true)
+
+        await expect(
+            client.nodeText({ ...scope, model: { model: SONNET, weight: "light", source: "node" } }, ASK),
+        ).rejects.toMatchObject({ code: AiTasksErrorCode.Unavailable, params: { tries: 0, failures: `model_not_configured:${SONNET}` } })
+
+        expect(ai.attempt).not.toHaveBeenCalled()
+    })
+
+    it("Auto: a light step asks the cheap model and steps up to Sonnet after a failed try; a heavy step asks Sonnet first", async () => {
+        const light = await build(1, true, BOTH)
+        light.ai.attempt.mockResolvedValueOnce({ ok: false, failure: "timeout" }).mockResolvedValueOnce(answered(SONNET))
+
+        await light.client.nodeJson({ ...scope, model: { model: "auto", weight: "light", source: "declared" } }, ASK, ORDER_SCHEMA)
+
+        expect(targetsOf(light.ai)).toEqual(["auto-light", "auto-heavy"])
+        expect(light.meter.record.mock.calls[0]?.[0].call).toMatchObject({ tryNumber: 2, modelReason: "auto-step-up" })
+
+        const heavy = await build(1, true, BOTH)
+        heavy.ai.attempt.mockResolvedValueOnce(answered(DEEPSEEK))
+
+        await heavy.client.nodeJson({ ...scope, model: { model: "auto", weight: "heavy", source: "declared" } }, ASK, ORDER_SCHEMA)
+
+        expect(targetsOf(heavy.ai)).toEqual(["auto-heavy"])
+        // The router served the cheap model on Auto's heavy profile: Anthropic had no usable lane.
+        expect(heavy.meter.record.mock.calls[0]?.[0].call).toMatchObject({ modelProvider: "openrouter", modelReason: "auto-failover" })
+    })
+
+    it("a fixed task of the app names no model: the endpoint's chat profile, as before", async () => {
+        const { client, ai, meter } = await build(1, true, BOTH)
+        ai.attempt.mockResolvedValueOnce({ ok: true, answer: { ...ANSWER, text: "- who", model: "work", usage: USAGE } })
+
+        await client.summarizeContext(scope, lead, [])
+
+        expect(ai.attempt.mock.calls[0]?.[0]).not.toHaveProperty("target")
+        expect(meter.record.mock.calls[0]?.[0].call).not.toHaveProperty("modelReason")
+    })
+
+    it("level 2: every turn of one step's agent loop gets the model of its first answer (the cache is per model)", async () => {
+        const { client, ai, meter } = await build(1, true, { ...BOTH, nodeReasoning: "off" })
+        ai.turnModel.mockReturnValue({} as never)
+        ai.failureOfThrow.mockReturnValue("timeout")
+        const read = (model: string) => ({ ok: true as const, model, usage: USAGE, textChars: 0, toolCalls: 1 })
+        ai.readTurn.mockReturnValueOnce(read(SONNET)).mockReturnValueOnce(read(SONNET)).mockReturnValueOnce(read(SONNET))
+        const attempt = jest
+            .fn<Promise<unknown>, [unknown, number]>()
+            .mockRejectedValueOnce(new Error("deadline"))
+            .mockResolvedValue({ message: "turn" })
+        const turns = client.nodeAgentTurns(
+            { ...scope, model: { model: "auto", weight: "light", source: "declared" } },
+            { purpose: ASK.purpose },
+        )
+
+        // An Auto step may land on Sonnet, which refuses a forced tool call: the step's tool choice stays free.
+        expect(turns.toolChoice).toBe("auto")
+        await turns.turn(attempt)
+        await turns.turn(attempt)
+        await turns.turn(attempt)
+
+        // Turn 1: the cheap model fails, Auto steps up to Sonnet; turns 2 and 3 stay on Sonnet's own profile.
+        expect(ai.turnModel.mock.calls.map(([request]) => request.target?.name)).toEqual([
+            "auto-light",
+            "auto-heavy",
+            "sonnet",
+            "sonnet",
+        ])
+        expect(meter.record.mock.calls.map(([entry]) => entry.call?.modelReason)).toEqual([
+            "auto-step-up",
+            "step-pinned",
+            "step-pinned",
+        ])
+    })
+
+    it("level 2: a step on the cheap model alone keeps the forced tool call of a step without reasoning", async () => {
+        const { client } = await build(1, true, { ...BOTH, nodeReasoning: "off" })
+
+        const turns = client.nodeAgentTurns(
+            { ...scope, model: { model: DEEPSEEK, weight: "light", source: "declared" } },
+            { purpose: ASK.purpose },
+        )
+
+        expect(turns.toolChoice).toBe("required")
+    })
+})

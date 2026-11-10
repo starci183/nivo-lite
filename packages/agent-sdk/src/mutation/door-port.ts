@@ -8,22 +8,33 @@ export const DOOR_PORT_ID = "engine.door"
 
 /**
  * A door tool: a domain tool `<group>.<action>` (`chat.send`, `ledger.append`), whose provider the door resolves from the workspace's
- * connection, or a provider-qualified `<group>.<provider>.<action>` (`ai.agent.turn`, `chat.zalo.send`).
+ * connection, or a provider-qualified `<group>.<provider>.<action>` (`ai.agent.turn`, `chat.zalo.send`). NIVO's own tools after the
+ * rename are domain tools too, three or four parts under `nivo.` (`nivo.chat.send`, `nivo.ledger.entry.append`): the door resolves
+ * them by the full id a connector declares as its `domain`, never by dropping a part.
  */
 export type DoorTool = `${string}.${string}`
+
+/** A NIVO tool after the rename: `nivo.<domain>.<verb>` or `nivo.<domain>.<object>.<verb>`. */
+const NIVO_TOOL = /^nivo(\.[a-z][a-z0-9-]*){1,2}\.[a-z][a-zA-Z0-9-]*$/
 
 const DOOR_TOOL = /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)?\.[a-z][a-zA-Z0-9-]*$/
 
 const DOMAIN_TOOL = /^[a-z][a-z0-9-]*\.[a-z][a-zA-Z0-9-]*$/
 
 /** The zod schema of a door tool name. */
-export const doorToolSchema: z.ZodType<string> = z.string().max(120).regex(DOOR_TOOL)
+export const doorToolSchema: z.ZodType<string> = z
+    .string()
+    .max(120)
+    .refine((tool) => DOOR_TOOL.test(tool) || NIVO_TOOL.test(tool))
 
 /** Whether a string is a well-formed door tool name. */
 export const isDoorTool = (tool: string): tool is DoorTool => doorToolSchema.safeParse(tool).success
 
-/** Whether a door tool is a domain tool `<group>.<action>`: the door, not the caller, picks the provider that plays it. */
-export const isDomainTool = (tool: string): boolean => DOMAIN_TOOL.test(tool)
+/**
+ * Whether a door tool is a domain tool `<group>.<action>` or a NIVO tool `nivo.…`: the door, not the caller, picks the provider that
+ * plays it, by the full id.
+ */
+export const isDomainTool = (tool: string): boolean => DOMAIN_TOOL.test(tool) || NIVO_TOOL.test(tool)
 
 /** Why a door call did not return output: the tool is unknown, the input invalid, the call not allowed, or the provider failed (transient is retried). */
 export type DoorFailure = "unknown_tool" | "invalid" | "forbidden" | "transient" | "failed"

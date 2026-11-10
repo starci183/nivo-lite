@@ -6,6 +6,7 @@ import type { SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
 import type { ScopedTx } from "@modules/domain/entity-engine"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import { LeadMemoryService } from "@modules/domain/lead-memory"
 import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
 import { LeadEffectsService } from "./lead-effects.service"
 
@@ -59,6 +60,7 @@ const build = async () => {
     const engine = mock<EntityEngineService>()
     const ports = mock<EntityPortsService>()
     const registry = mock<GraphNodeRegistryService>()
+    const memory = mock<LeadMemoryService>()
     const api = mock<EntitiesApi>()
     const tx = mock<ScopedTx>()
     engine.scoped.mockImplementation((_workspace, work) => work(tx))
@@ -71,6 +73,7 @@ const build = async () => {
             { provide: EntityEngineService, useValue: engine },
             { provide: EntityPortsService, useValue: ports },
             { provide: GraphNodeRegistryService, useValue: registry },
+            { provide: LeadMemoryService, useValue: memory },
         ],
     }).compile()
     moduleRef.get(LeadEffectsService).onModuleInit()
@@ -79,7 +82,7 @@ const build = async () => {
     assert(executor !== undefined && resolver !== undefined, "The service must register an executor and a resolver")
     const updater = registry.addExecutor.mock.calls[1]?.[0]
     assert(updater !== undefined, "The service must register the executor of lead.update")
-    return { engine, registry, api, executor, resolver, updater }
+    return { engine, registry, api, executor, resolver, updater, memory }
 }
 
 const ensure = (executor: NodeEffectExecutor, payload: Readonly<Record<string, unknown>>): Promise<SubjectRef> =>
@@ -252,23 +255,34 @@ describe("LeadEffectsService the subject of a turn", () => {
 })
 
 describe("LeadEffectsService lead.update writes the consult", () => {
-    it("writes the consult stage and facts under the version it read and answers the customer", async () => {
-        const { updater, api } = await build()
+    it("writes the consult stage on the record under the version it read, the facts into lead memory, and answers the customer", async () => {
+        const { updater, api, memory } = await build()
         api.get.mockResolvedValue(recordOf(LEAD, { contactName: "Lan" }))
         api.update.mockResolvedValue(written(LEAD, false))
-        const facts = { recipient: "mother", budgetVnd: 500_000 }
+        const facts = { recipientName: "mother", careOptOut: false }
 
         expect(updater.effect).toBe("lead.update")
-        await expect(
-            updater.execute(TURN, { leadId: LEAD, consultStage: "recommend", consultFacts: facts }, CALL),
-        ).resolves.toEqual({
+        await expect(updater.execute(TURN, { leadId: LEAD, consultStage: "recommend", facts }, CALL)).resolves.toEqual({
             kind: "sales-lead",
             id: LEAD,
         })
-        expect(api.update).toHaveBeenCalledWith("sales.lead", LEAD, "1", {
-            consultStage: "recommend",
-            consultFacts: facts,
-        })
+        expect(api.update).toHaveBeenCalledWith("sales.lead", LEAD, "1", { consultStage: "recommend" })
+        expect(memory.remember).toHaveBeenCalledWith(
+            WORKSPACE,
+            { key: `lead:${LEAD}`, leadId: LEAD, conversationId: CONVERSATION },
+            facts,
+        )
+    })
+
+    it("writes facts alone without touching the record, and nothing into memory when none are named", async () => {
+        const { updater, api, memory } = await build()
+        api.get.mockResolvedValue(recordOf(LEAD, { contactName: "Lan" }))
+
+        await updater.execute(TURN, { leadId: LEAD, facts: { careOptOut: true } }, CALL)
+        await updater.execute(TURN, { leadId: LEAD }, CALL)
+
+        expect(api.update).not.toHaveBeenCalled()
+        expect(memory.remember).toHaveBeenCalledTimes(1)
     })
 
     it("refuses a customer the workspace does not hold, a lost write, and a stage the consult does not know", async () => {

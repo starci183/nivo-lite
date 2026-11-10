@@ -1,7 +1,8 @@
 export { AGENT_THREADS_ERROR_KINDS, AgentThreadsError, AgentThreadsErrorCode } from "./errors/agent-threads.error"
 export { AgentThreadsModule } from "./agent-threads.module"
-export { THREAD_FLAG, parseAgentThreadsConfig } from "./agent-threads.config"
-export { THREAD_READY_WORKFLOWS } from "./thread-flag.policy"
+export { ENGINE_DEFAULT_FLAG, THREAD_FLAG, parseAgentThreadsConfig } from "./agent-threads.config"
+export { DEFAULT_ENGINE, THREAD_READY_WORKFLOWS, engineDefaultOf, threadWorkflowsOf } from "./thread-flag.policy"
+export type { EngineDefaultRead, EngineDefaultText, ThreadEngine } from "./thread-flag.policy"
 export { AGENT_THREADS_OPTIONS } from "./agent-threads.decorators"
 export type { AgentThreadsOptions } from "./agent-threads.options"
 export {
@@ -43,7 +44,9 @@ export type {
 } from "./thread-projection.contracts"
 export { FREEZE_NODE, THREAD_STATE_KEYS, compileTemplate, stepExitOf } from "./template-compiler.policy"
 export type {
+    CompileOptions,
     CompiledFreeze,
+    CompiledLoop,
     CompiledStep,
     CompiledTemplate,
     StepExit,
@@ -53,6 +56,35 @@ export type {
     TemplateProblemCode,
     TemplateSource,
 } from "./template-compiler.policy"
+export {
+    isLoopNode,
+    iterationEnded,
+    iterationInputOf,
+    loopFrameOf,
+    loopProblemsOf,
+    loopShapesOf,
+    loopStarted,
+    loopStepKeyOf,
+    loopSummaryOf,
+    loopVisitOf,
+} from "./compiler-loop.policy"
+export type {
+    IterationEnd,
+    IterationInput,
+    LoopItem,
+    LoopProblem,
+    LoopProblemCode,
+    LoopShapes,
+    LoopVisit,
+    OptionalLoopBody,
+    OptionalLoopNode,
+    OptionalThreadLoopFrame,
+    ThreadLoopFailure,
+    ThreadLoopFrame,
+    ThreadLoopJoin,
+    ThreadLoopMove,
+    ThreadLoopSummary,
+} from "./compiler-loop.policy"
 export { RUN_STOPS_ERROR_KINDS, RunStopsError, RunStopsErrorCode, RunStopsService } from "./stops"
 export type {
     FounderAnswerJson,

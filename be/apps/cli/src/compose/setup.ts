@@ -1,22 +1,19 @@
 import type { DynamicModule } from "@nestjs/common"
-import { AGENTS_SYNC_FRESH_MS, AgentsModule } from "@modules/domain/agents"
+import { AgentsModule } from "@modules/domain/agents"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
 import { ModuleProfilesService } from "@modules/domain/agent-knowledge"
 import { BrainFactsModule } from "@modules/domain/brain-facts"
 import { KnowledgeGapsModule } from "@modules/domain/knowledge-gaps"
 import { InstallationDirectoryService, MODULE_CATALOG, MODULE_CATEGORIES, ModulesModule } from "@modules/domain/modules"
-import { OPENCLAW_RELOAD_SETTLE_MS, OpenclawAgentSyncModule } from "@modules/domain/openclaw-agent-sync"
-import { OpenclawModule } from "@modules/integrations/openclaw"
 import { ChatRoomDirectoryModule, ChatRoomDirectoryService } from "@modules/domain/chat-room-directory"
 import { teamChatEntities } from "@modules/domain/team-chat"
 import type { CliAppOptions } from "../cli.options"
 
 /**
- * The setup path the workspace seed applies an agent's setup through (the setup chat, the readiness check, the agent texts and the
- * queued OpenClaw sync), in the setup-only modes: no knowledge lens, no engine status, no setup turn and no install flow.
+ * The setup path the workspace seed applies an agent's setup through (the setup chat, the readiness check and the agent texts), in
+ * the setup-only modes: no knowledge lens, no setup turn and no install flow.
  */
-export const cliSetupModules = (options: CliAppOptions): Array<DynamicModule> => [
-    OpenclawModule.register({ isGlobal: true, ...options.openclaw }),
+export const cliSetupModules = (_options: CliAppOptions): Array<DynamicModule> => [
     AgentsModule.register({
         isGlobal: true,
         setupOnly: true,
@@ -26,10 +23,8 @@ export const cliSetupModules = (options: CliAppOptions): Array<DynamicModule> =>
             connections: AgentBindingsService,
             rooms: ChatRoomDirectoryService,
         },
-        syncFreshMs: AGENTS_SYNC_FRESH_MS,
     }),
     ChatRoomDirectoryModule.register({ isGlobal: true, rooms: teamChatEntities[0], seats: teamChatEntities[1] }),
-    OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
     BrainFactsModule.register({ isGlobal: true }),
     KnowledgeGapsModule.register({ isGlobal: true }),
     ModulesModule.register({

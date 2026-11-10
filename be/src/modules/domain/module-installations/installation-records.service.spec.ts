@@ -156,28 +156,6 @@ describe("InstallationRecordsService", () => {
     })
 })
 
-describe("InstallationRecordsService", () => {
-    it("lists OpenClaw installations within the requested workspace and limit", async () => {
-        const installations = [{ id: "inst-1", workspaceId: "ws-1" }]
-        const em = mockEntityManager()
-        const scoped = fakeQueryBuilder({ getRawMany: installations })
-        const everywhere = fakeQueryBuilder({ getRawMany: installations })
-        answerQueryBuilders(em, scoped, everywhere)
-        const service = await build(em)
-
-        await expect(service.onOpenclaw("ws-1", 20)).resolves.toEqual(installations)
-        await expect(service.onOpenclaw(null, 100)).resolves.toEqual(installations)
-
-        expect(scoped.argsOf("andWhere")).toEqual([
-            ["COALESCE(i.settings ->> 'processor', '') <> 'nivo'"],
-            ["i.workspaceId = :workspaceId", { workspaceId: "ws-1" }],
-        ])
-        expect(scoped.argsOf("limit")).toEqual([[20]])
-        expect(everywhere.argsOf("andWhere")).toEqual([["COALESCE(i.settings ->> 'processor', '') <> 'nivo'"]])
-        expect(everywhere.argsOf("limit")).toEqual([[100]])
-    })
-})
-
 describe("InstallationRecordsService / find", () => {
     it("answers the row or null", async () => {
         const em = mockEntityManager({

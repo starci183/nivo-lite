@@ -10,6 +10,7 @@ import { ConfirmAgentGraphProposalHandler } from "./application/confirm-agent-gr
 import { GetAgentGraphRunHandler } from "./application/get-agent-graph-run.handler"
 import { ListAgentGraphRunsHandler } from "./application/list-agent-graph-runs.handler"
 import { ListAgentGraphCoverageHandler } from "./application/list-agent-graph-coverage.handler"
+import { GetAiModelPickerHandler } from "./application/get-ai-model-picker.handler"
 import { ConfigurableModuleClass } from "./agent-graphs.module-definition"
 
 @Module({
@@ -25,6 +26,7 @@ import { ConfigurableModuleClass } from "./agent-graphs.module-definition"
         RestoreAgentGraphVersionHandler,
         SetAgentGraphModeHandler,
         DeclineAgentGraphProposalHandler,
+        GetAiModelPickerHandler,
     ],
 })
 /** The agent graph feature: the editor of the flow each agent follows. */

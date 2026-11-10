@@ -25,7 +25,6 @@ const ThreadContent = (room: TeamChatRoomBaseProps) => (
         label={room.props.copy.threadLabel}
         placement={room.props.threadAlign === "center" ? "middle" : "foot"}
         isWaiting={room.props.isWaiting}
-        tone="surface"
     >
         <SlotView
             slot={room.props.threadSlot}
@@ -47,6 +46,7 @@ const ThreadContent = (room: TeamChatRoomBaseProps) => (
                     onOlder={room.on.older}
                     onPin={room.on.pin}
                     onDecide={room.on.decide}
+                    stops={{ ...room.props.stops, onAction: room.on.stop }}
                     onReact={room.on.react}
                     onReply={room.on.reply}
                     onShare={room.on.share}
@@ -83,6 +83,7 @@ const PinnedDrawer = (room: TeamChatRoomBaseProps) => (
                     onOlder={room.on.older}
                     onPin={room.on.pin}
                     onDecide={room.on.decide}
+                    stops={{ ...room.props.stops, onAction: room.on.stop }}
                     onReact={room.on.react}
                     onReply={room.on.reply}
                     onShare={room.on.share}

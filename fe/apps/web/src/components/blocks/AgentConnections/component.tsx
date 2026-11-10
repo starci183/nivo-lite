@@ -3,6 +3,7 @@ import {
     Button,
     Drawer,
     EmptyNotice,
+    Link,
     Pane,
     PaneGrid,
     PaneSection,
@@ -10,9 +11,12 @@ import {
     Stack,
     Sublabel,
     SurfaceCard,
+    Tabs,
+    Text,
+    type ListRowData,
 } from "@starci/grammar/common"
 import { ProviderRightsCard } from "@/components/composites/ProviderRightsCard"
-import type { AgentConnectionsBaseProps, AttachDrawerView } from "./types"
+import type { AgentConnectionsBaseProps, AttachDrawerView, NivoToolsView, ToolGrantView, ToolRowView } from "./types"
 
 export type { AgentConnectionsBaseProps } from "./types"
 
@@ -81,6 +85,80 @@ const AttachDrawer = ({ view, on }: DrawerInput) => (
     </Drawer>
 )
 
+/** The input of the tools section. */
+interface ToolsInput {
+    readonly view: NivoToolsView
+}
+
+/** One tool as a list row: its name over the 12 muted line, the "acts"/"reads" chip at the end; muted when not usable. */
+const plainToolItemOf = (row: ToolRowView): ListRowData => ({
+    id: row.id,
+    title: row.title,
+    // A node line is drawn at 12 muted under the name (a string line would be 14).
+    ...(row.subtitle === ""
+        ? {}
+        : {
+              description: (
+                  <Text as="span" size="xs" tone="muted">
+                      {row.subtitle}
+                  </Text>
+              ),
+          }),
+    badges: [{ label: row.chip }],
+    ...(row.isReady ? {} : { state: "unavailable" as const }),
+})
+
+/** One of the agent's own "acts" tools: the row, and its grant as the row's control (the primary Tabs pill, as on the account cards). */
+const grantToolItemOf = (row: ToolRowView, grant: ToolGrantView): ListRowData => ({
+    ...plainToolItemOf(row),
+    actionPlacement: "end",
+    control: (
+        <Tabs
+            appearance="primary"
+            label={grant.label}
+            selectedKey={grant.value}
+            onSelect={grant.onChange}
+            items={[
+                { ...grant.options[0], isDisabled: grant.isDisabled },
+                { ...grant.options[1], isDisabled: grant.isDisabled },
+                { ...grant.options[2], isDisabled: grant.isDisabled },
+            ]}
+        />
+    ),
+})
+
+/** One tool as a list row, with its grant control when it has one. */
+const toolItemOf = (row: ToolRowView): ListRowData =>
+    row.grant === undefined ? plainToolItemOf(row) : grantToolItemOf(row, row.grant)
+
+/** The NIVO tools the agent may call: the label with its count and the head link to the rules, then one card per origin under its small label. */
+const ToolsSection = ({ view }: ToolsInput) => (
+    <Section
+        kind="region"
+        title={view.title}
+        count={view.count}
+        headingLevel={2}
+        action={
+            <Link variant="head" href={view.linkHref}>
+                {view.linkLabel}
+            </Link>
+        }
+    >
+        <Stack gap="inline">
+            {view.groups.flatMap((group) => [
+                <Sublabel key={`label-${group.id}`}>{group.label}</Sublabel>,
+                <SurfaceCard
+                    key={group.id}
+                    kind="list"
+                    ariaLabel={group.label}
+                    empty={<EmptyNotice message={view.emptyLabel} />}
+                    items={group.rows.map((row) => toolItemOf(row))}
+                />,
+            ])}
+        </Stack>
+    </Section>
+)
+
 /** The section of the attached accounts: its label with the count chip and, at the end of the head, the neutral small "attach more" button; then the groups. */
 const ProvidersSection = ({ view, on }: PartInput) => (
     <Section
@@ -98,7 +176,7 @@ const ProvidersSection = ({ view, on }: PartInput) => (
     </Section>
 )
 
-/** Draws the rights tab of an agent as one well: the accounts it holds (grouped by kind); the attach drawer and the detach confirm open over it. */
+/** Draws the rights tab of an agent as one well: the accounts it holds (grouped by kind), then the NIVO tools it may call; the attach drawer and the detach confirm open over it. */
 export const AgentConnectionsBase = (props: AgentConnectionsBaseProps) => {
     const { props: view, on } = props
     return (
@@ -107,6 +185,7 @@ export const AgentConnectionsBase = (props: AgentConnectionsBaseProps) => {
                 <Pane area="well" scroll label={view.paneLabel}>
                     <PaneSection gap="section">
                         <ProvidersSection view={view} on={on} />
+                        {view.tools === undefined ? null : <ToolsSection view={view.tools} />}
                     </PaneSection>
                 </Pane>
             </PaneGrid>

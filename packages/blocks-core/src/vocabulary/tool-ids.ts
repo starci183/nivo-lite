@@ -54,6 +54,23 @@ export const TOOL = {
     bankTransactions: "bank.transactions",
     /** Searches what the business knows for a question: the facts in force and the passages of its documents the caller may read: a NIVO MCP tool. */
     brainSearch: "brain.search",
+    /** One truth in force of the truth graph with its evidence, validity and version: a NIVO MCP tool. */
+    brainFactGet: "brain.facts.get",
+    /** The truths in force the truth graph links to one truth, with the relation: a NIVO MCP tool. */
+    brainFactRelated: "brain.fact.related",
+    /** Files a change to a truth said in a private or the common chat, for the founder; never puts anything in force: a NIVO MCP tool. */
+    brainChangePropose: "brain.change.propose",
+    /**
+     * The thread of the conversation the run serves, newest lines first: a NIVO context read, born with its final name. It takes no
+     * conversation id: the door fills the run's own and refuses any other.
+     */
+    conversationMessageList: "nivo.conversation.message.list",
+    /** The customer the run serves: the record and what the shop's workflows remember of them. A context read locked to the run's customer. */
+    leadProfileGet: "nivo.lead.profile.get",
+    /** The latest orders of the customer the run serves, newest first. A context read locked to the run's customer. */
+    leadOrderList: "nivo.lead.order.list",
+    /** What the shop's workflows wrote down about the customer the run serves, newest first. A context read locked to the run's customer. */
+    leadNoteList: "nivo.lead.note.list",
 } as const
 
 /** The id of one action a step's agent may call. */

@@ -148,6 +148,8 @@ export const partyKeyOf = (party: ChatParty): string => `${party.kind}:${party.i
 export const partyOfKey = (key: string, parties: ReadonlyArray<ChatParty>): ChatParty | undefined =>
     parties.find((party) => partyKeyOf(party) === key)
 export { agentCardOf } from "./agentCard"
+export { stopCardViewOf } from "./stopCard"
+export type { StopCardWords } from "./stopCard"
 export { GROUP_GAP_MS, groupPositionsOf } from "./grouping"
 export type { GroupItem, GroupPosition } from "./grouping"
 export {

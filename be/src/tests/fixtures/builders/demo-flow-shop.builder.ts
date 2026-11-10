@@ -351,5 +351,5 @@ export const closingShop = (): Shop => shopOf(closingStore())
 /** The records of a shop whose customer can settle the order with the next message. */
 export const closingStore = (): Store => ({
     ...baseStore(),
-    "sales-lead": [{ id: "lead-1", contactName: words.customerName, consultStage: "close", consultFacts: {} }],
+    "sales-lead": [{ id: "lead-1", contactName: words.customerName, consultStage: "close" }],
 })

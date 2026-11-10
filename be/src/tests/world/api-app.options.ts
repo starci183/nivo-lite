@@ -22,15 +22,6 @@ const SITE = "https://site.invalid"
 
 /** The providers of the api, every one at an address nothing answers. */
 const providerOptions = () => ({
-    openclaw: {
-        gateway: null,
-        turnTimeoutMs: 1000,
-        settleMs: 100,
-        configDir: undefined,
-        gatewayStateDir: "world-proof",
-        manageAgents: false,
-        toolSecret: null,
-    },
     agentTurns: { bridgeSecret: null },
     aiTasks: {
         jsonRetries: 1,
@@ -87,7 +78,7 @@ const localMail: ApiOptions["mail"] = {
 /** An AI pool with no keys: no router and no gateway are registered, so the api boots and its AI callers fall back without a provider call. */
 const keylessAiGateway: ApiOptions["aiGateway"] = {
     providers: [],
-    models: { work: "world-chat", embed: "world-embedding" },
+    models: { work: "world-chat", embed: "world-embedding", strong: "world-strong" },
     gateway: null,
 }
 

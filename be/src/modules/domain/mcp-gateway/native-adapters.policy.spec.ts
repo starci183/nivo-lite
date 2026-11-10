@@ -82,15 +82,15 @@ const CALLER = { agentId: "agent-1", conversationId: null }
 describe("native-adapters.policy withEffectTools", () => {
     it("joins an effect domain to the native connector of its key, each tool run by the adapter declaring it", async () => {
         const subject = await build()
-        const native = toolsAdapter("agent", ["turn", "history"], "openclaw")
+        const native = toolsAdapter("agent", ["turn", "history"], "runtime")
         const effects = toolsAdapter("agent", ["tag"], "effects", 15_000)
 
         const [agent] = subject.withEffectTools([native], [effects])
 
-        expect(agent?.manifest).toMatchObject({ key: "agent", name: "openclaw", timeoutMs: 15_000 })
+        expect(agent?.manifest).toMatchObject({ key: "agent", name: "runtime", timeoutMs: 15_000 })
         expect(agent?.manifest.tools.map((spec) => spec.name)).toEqual(["turn", "history", "tag"])
         await expect(agent?.invoke("ws-1", "tag", {}, CALLER)).resolves.toEqual({ by: "effects", tool: "tag" })
-        await expect(agent?.invoke("ws-1", "turn", {}, CALLER)).resolves.toEqual({ by: "openclaw", tool: "turn" })
+        await expect(agent?.invoke("ws-1", "turn", {}, CALLER)).resolves.toEqual({ by: "runtime", tool: "turn" })
     })
 
     it("adds every other effect domain as a connector of its own after the natives", async () => {
@@ -105,7 +105,7 @@ describe("native-adapters.policy withEffectTools", () => {
         const subject = await build()
 
         expect(() =>
-            subject.withEffectTools([toolsAdapter("agent", ["tag"], "openclaw")], [toolsAdapter("agent", ["tag"], "effects")]),
+            subject.withEffectTools([toolsAdapter("agent", ["tag"], "runtime")], [toolsAdapter("agent", ["tag"], "effects")]),
         ).toThrow(McpGatewayError)
     })
 })

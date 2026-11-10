@@ -35,7 +35,7 @@ export class ModuleInstallationEntity extends UuidAbstractEntity {
     activeContextVersionId!: string | null
 
     /** The settings of the instance. */
-    @Column({ name: "settings", type: "jsonb", default: () => `'{"processor": "openclaw"}'::jsonb` })
+    @Column({ name: "settings", type: "jsonb", default: () => "'{}'::jsonb" })
     settings!: InstallationSettings
 
     /** The label of the instance. */

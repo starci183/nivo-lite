@@ -62,15 +62,7 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `N8N_ALLOWED_HOSTS` | Hosts the n8n client may call; a stack setting, default `n8n`. |
 | `N8N_PROTOCOL` | The protocol n8n serves its editor and webhooks on behind the proxy; a stack setting, `https` in production. |
 | `N8N_SECURE_COOKIE` | Whether n8n marks its session cookie secure; a stack setting, `true` in production. |
-| `OPENCLAW_GATEWAY_URL` | Gateway URL (`ws://nivo-openclaw:18790`), set by the deploy block; absent or without credentials = the gateway is off, and `cli prune-workspaces` and `cli cleanup-workspaces` refuse to delete. Both run inside `nivo-api`, the service that holds this key, the token and the `agents` network. |
-| `OPENCLAW_GATEWAY_TOKEN` | Gateway token, granted to the api and to openclaw from the sealed `openclaw`/`n8n` member. |
-| `OPENCLAW_GATEWAY_PASSWORD` | Alternative gateway credential when no token exists; not used in production. |
 | `BACKUP_RUN_ONCE` | Stack environment of `nivo-postgres-backup`: `1` takes one backup now and exits (tests and the manual run); unset keeps the daily schedule. |
-| `OPENCLAW_TOOL_SECRET` | Sealed `api`, read only through `OPENCLAW_TOOL_SECRET_FILE`: signs the per-turn tool token OpenClaw calls the api back with. Without it no token is minted, so a turn of an agent holding connector grants fails closed (`tools_not_configured`); other agents answer without tools. |
-| `OPENCLAW_BRIDGE_SECRET` | Sealed `openclaw`, granted to the api and to nivo-openclaw (the api reads it through `OPENCLAW_BRIDGE_SECRET_FILE`): the nivo-bridge plugin signs each `nivo_call` with it and the api finds the running turn from the signed agent and session. Without it on the api every bridge call is refused; without it on openclaw the plugin registers no tool. Adding it to the sealed member is a deploy step for the owner. |
-| `OPENCLAW_BRIDGE_URL` | Where the plugin posts a tool call (`http://nivo-api:8787/agent-tools`); set on nivo-openclaw by `stack.yaml`, not read by the api. |
-| `OPENCLAW_SKIP_CRON` | `1` on nivo-openclaw (`stack.yaml`): OpenClaw's own cron scheduler stays off, because NIVO owns every schedule. |
-| `OPENCLAW_MANAGE_AGENTS` | `true` or `false`; granted from the sealed `openclaw`/`n8n` member. |
 | `META_APP_ID` | The Meta app credentials (both or none); the Meta channels are off while absent. |
 | `META_APP_SECRET` | The Meta app credentials (both or none); the Meta channels are off while absent. |
 | `META_WEBHOOK_VERIFY_TOKEN` | The verify token of the Meta webhook subscription. |
@@ -80,8 +72,8 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `ZALO_APP_SECRET` | Zalo app secret the channel provisioning cli (`connect-channel zalo`) seals into the new connection; read only through `ZALO_APP_SECRET_FILE` on the operator machine for that run, optional, and granted to no service. |
 | `ZALO_OA_SECRET` | Zalo Official Account secret key the same cli seals beside the app secret; read only through `ZALO_OA_SECRET_FILE`, optional, and granted to no service. |
 | `HTTP_SECURITY_TRUSTED_PROXY_HOPS` | `0`, `1` or `2`: trusted proxy hops before the api; optional. |
-| `AI_BASE_URL` | The AI gateway base URL (`http://ai-router:8788/v1`), a stack value of the api and openclaw; the port is the declared `port` of the `ai-router` component. |
-| `STARCI_AI_KEY` | The one virtual key of the AI gateway (`sk-starci-nivo-...`), sealed in `ai`, read through `STARCI_AI_KEY_FILE` by the api and exported by the entrypoint wrapper for openclaw. |
+| `AI_BASE_URL` | The AI gateway base URL (`http://ai-router:8788/v1`), a stack value of the api; the port is the declared `port` of the `ai-router` component. |
+| `STARCI_AI_KEY` | The one virtual key of the AI gateway (`sk-starci-nivo-...`), sealed in `ai`, read through `STARCI_AI_KEY_FILE` by the api. |
 | `AI_CHAT_MODEL` | Profile the chat calls use (default `work`; stack value). |
 | `AI_EMBEDDING_MODEL` | Profile the embedding calls use (default `embed`; stack value). |
 | `APP_BUILD_ID` | The name of the running build (the release tag or git sha), set per release; a run parked under an older build is run again when a newer one starts. Absent = the empty build, so parked runs are resumed only by the sweep. |
@@ -114,11 +106,10 @@ The gateway reads only these keys (`be/apps/mcp/src/mcp.env.ts`). Its secrets co
 | `MCP_GATEWAY_TIMEOUT_MS` | not set | Per-call timeout, default 4000. |
 | `MCP_CLIENT_NAME` | not set | Client name announced to remote MCP servers, default `nivo-mcp-gateway`. |
 
-## Stack settings (sealed `openclaw`/`n8n`, read at render time)
+## Stack settings (sealed `n8n`, read at render time)
 
 | Key | Semantics |
 | --- | --- |
-| `OPENCLAW_MODEL` | The model the openclaw service runs (default `nivo-ai/work`, the openclaw provider that points at the AI gateway). |
 | `JOBS_FAILED_ALERT` | Becomes the api `JOBS_ALERT_FAILED_MAX` (default 20). |
 | `JOBS_STALE_SECONDS` | Becomes the api `JOBS_ALERT_STALE_SECONDS` (default 300). |
 | `N8N_ENCRYPTION_KEY` | Swarm secret of the n8n service (`N8N_ENCRYPTION_KEY_FILE`). |
@@ -169,7 +160,7 @@ The api hosts the gateway through `AiRouterGatewayModule`; it listens on `AI_ROU
 | `AI_ROUTER_PORT` | api stack value | The gateway listener (`8788`); declared on the `nivo-api` component. |
 | `AI_ROUTER_KEYS_PATH` | api stack value | SQLite key store (`/var/lib/ai-router/keys.sqlite`) on the volume `nivo-engine_ai-router-data`. |
 | `OPENROUTER_API_KEY` | `ai` (granted in `application-stacks.yaml`) | The single upstream key (OpenRouter). |
-| `STARCI_AI_KEY` | its sealed member (granted in `application-stacks.yaml`) | The one gateway virtual key (`nivo`), shared by the api and openclaw; openclaw holds no OpenRouter key. Mounted by the gateway from this secret at boot (no key is issued by hand); it must start with `sk-starci-nivo-`. |
+| `STARCI_AI_KEY` | its sealed member (granted in `application-stacks.yaml`) | The one gateway virtual key (`nivo`), used by the api. Mounted by the gateway from this secret at boot (no key is issued by hand); it must start with `sk-starci-nivo-`. |
 
 ## Self-hosted cutover (sh-cutover)
 

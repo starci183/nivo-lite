@@ -26,7 +26,7 @@ export const installationRecordOf: (overrides?: Partial<InstallationRecord>) => 
         operatingMode: "assist",
         liveEnabled: false,
         activeContextVersionId: "version-1",
-        settings: { openclawTimeoutSec: 30 },
+        settings: { holdingMessage: "Please wait." },
         createdAt: "2026-10-01T00:00:00.000Z",
     })
 

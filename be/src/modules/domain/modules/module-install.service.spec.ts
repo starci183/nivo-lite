@@ -24,7 +24,6 @@ import {
 import {
     INSTALL_VIEWED as VIEWED,
     installRequestOf as requestOf,
-    SYNCED_AGENT_COPY,
 } from "@tests/fixtures/builders/module-install-service.builder"
 
 const build = async () => {
@@ -308,7 +307,7 @@ describe("ModuleInstallService > renameAgent and saveSetting", () => {
     it("refuses a setting out of its range", async () => {
         const { service } = await build()
 
-        await expect(service.saveSetting("u1", "ws-1", "inst-1", "openclawTimeoutSec", 999)).rejects.toMatchObject({
+        await expect(service.saveSetting("u1", "ws-1", "inst-1", "holdingMessage", 999)).rejects.toMatchObject({
             code: ModulesErrorCode.SettingInvalid,
         })
     })
@@ -320,21 +319,11 @@ describe("ModuleInstallService > renameAgent and saveSetting", () => {
 
         await service.saveSetting("u1", "ws-1", "inst-1", "holdingMessage", " One moment ")
 
-        expect(installations.saveSettings).toHaveBeenCalledWith("ws-1", "inst-1", {
-            openclawTimeoutSec: 30,
-            holdingMessage: "One moment",
-        })
+        expect(installations.saveSettings).toHaveBeenCalledWith("ws-1", "inst-1", { holdingMessage: "One moment" })
     })
 })
 
-describe("ModuleInstallService > syncStatus", () => {
-    it("answers the status of the copy", async () => {
-        const { service, facts } = await build()
-        facts.syncStatus.mockResolvedValue(SYNCED_AGENT_COPY)
-
-        await expect(service.syncStatus("u1", "ws-1", "inst-1")).resolves.toEqual(SYNCED_AGENT_COPY)
-    })
-
+describe("ModuleInstallService > reads", () => {
     it("answers the installations of the workspace to any member", async () => {
         const { service, installations, members } = await build()
         installations.list.mockResolvedValue([recordOf()])
@@ -343,18 +332,13 @@ describe("ModuleInstallService > syncStatus", () => {
         expect(members.require).toHaveBeenCalledWith("u1", "ws-1")
     })
 
-    it.each([
-        [
-            "the sync status of an installation of another workspace",
-            (service: ModuleInstallService) => service.syncStatus("u1", "ws-1", "inst-1"),
-        ],
-        ["a missing installation", (service: ModuleInstallService) => service.get("u1", "ws-1", "inst-1")],
-    ])("refuses %s", async (_case, read) => {
-        const { service, facts, installations } = await build()
-        facts.syncStatus.mockResolvedValue(null)
+    it("refuses a missing installation", async () => {
+        const { service, installations } = await build()
         installations.find.mockResolvedValue(null)
 
-        await expect(read(service)).rejects.toMatchObject({ code: ModulesErrorCode.InstallationNotFound })
+        await expect(service.get("u1", "ws-1", "inst-1")).rejects.toMatchObject({
+            code: ModulesErrorCode.InstallationNotFound,
+        })
     })
 })
 

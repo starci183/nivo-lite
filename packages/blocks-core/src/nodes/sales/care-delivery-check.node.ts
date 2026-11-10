@@ -8,7 +8,7 @@ import { TOOL } from "../../vocabulary/tool-ids"
 import { itemsTextOf, orderLinesOf } from "../payment/payment-request.policy"
 import { nodeGoalOf } from "../node-ui"
 import type { NodeLocale, NodeSchema } from "../node-schema.types"
-import { CARE_RIGHTS, careFactsOfLead, careLeadOf, careOrderOf, shippedAtOf } from "./care.data"
+import { CARE_RIGHTS, careFactsOfLead, careLeadOf, careMemoryRowOf, careOrderOf, shippedAtOf } from "./care.data"
 import type { CareOrder } from "./care.data"
 import {
     SHIP_WAITS_MAX,
@@ -94,7 +94,7 @@ const ORDER = {
 
 const STORE = {
     order: [ORDER],
-    "sales-lead": [{ id: "l1", contactName: "An", consultFacts: {} }],
+    "sales-lead": [{ id: "l1", contactName: "An" }],
 }
 
 const DUE = { orderId: "o1", suffix: null, dueAt: "1970-01-01T00:00:00.000Z", locale: "en" } as const
@@ -125,7 +125,8 @@ export const salesCareDeliveryCheckNode: NodeDefinition<typeof input, typeof out
         const order = await careOrderOf(context, given.orderId)
         if (order === undefined || paymentStateOf(order.status) !== "paid") return closed
         const lead = await careLeadOf(context, order.leadId)
-        if (careFactsOfLead(lead).optedOut) return closed
+        const facts = await careFactsOfLead(context, order.leadId)
+        if (facts.optedOut) return closed
         const attempt = shipAttemptOf(suffix)
         const waiting = shipWaitOf(order, attempt)
         if (waiting.kind === "gone") return closed
@@ -152,7 +153,7 @@ export const salesCareDeliveryCheckNode: NodeDefinition<typeof input, typeof out
                 customer:
                     lead === undefined
                         ? null
-                        : { leadId: lead.id, name: lead.contactName, recipient: careFactsOfLead(lead).recipient },
+                        : { leadId: lead.id, name: lead.contactName, recipient: facts.recipient },
                 careKind: "delivery-check",
             },
             output,
@@ -222,7 +223,7 @@ export const salesCareDeliveryCheckNode: NodeDefinition<typeof input, typeof out
             output: { orderId: "o1", result: "closed" },
             grant: EXAMPLE_GRANT,
             effects: [],
-            store: { ...STORE, "sales-lead": [{ id: "l1", contactName: "An", consultFacts: { careOptOut: true } }] },
+            store: { ...STORE, "agent-lead-memory": [careMemoryRowOf("l1", { careOptOut: true })] },
         },
     ],
 })

@@ -1,4 +1,4 @@
-import { Field, ID, Int, ObjectType } from "@nestjs/graphql"
+import { Field, Float, ID, Int, ObjectType } from "@nestjs/graphql"
 import { AgentRunDecisionType } from "./agent-run-decision.type"
 import { AgentRunRowType } from "./agent-run.type"
 
@@ -119,6 +119,74 @@ export class AgentRunItemType {
 }
 
 @ObjectType()
+/** The model calls of a run of one call kind, summed. */
+export class AgentRunAiCallType {
+    /** The call kind: a node's `<node id>:<tag>` (`accounting.match-payment:agent`), or the usage kind of a fixed task. */
+    @Field()
+    purpose!: string
+
+    /** The calls of this kind that answered (a failed try is never booked). */
+    @Field(() => Int)
+    calls!: number
+
+    /** The highest try number among them (above 1: a try failed before one answered); null when not recorded. */
+    @Field(() => Int, { nullable: true })
+    maxTry!: number | null
+
+    /** Prompt tokens of all the calls, cached ones included. */
+    @Field(() => Int)
+    promptTokens!: number
+
+    /** Prompt tokens served from the provider's prompt cache. */
+    @Field(() => Int)
+    cachedTokens!: number
+
+    /** Completion tokens, reasoning included. */
+    @Field(() => Int)
+    completionTokens!: number
+
+    /** The part of the completion tokens that was hidden reasoning. */
+    @Field(() => Int)
+    reasoningTokens!: number
+
+    /** The wall time of all the calls together, milliseconds. */
+    @Field(() => Int)
+    durationMs!: number
+
+    /** The slowest call, milliseconds; null when none was measured. */
+    @Field(() => Int, { nullable: true })
+    slowestMs!: number | null
+
+    /** The cost of the calls in USD. */
+    @Field(() => Float)
+    costUsd!: number
+
+    /** The upstreams that served them, sorted, without repeats. */
+    @Field(() => [String])
+    upstreams!: Array<string>
+
+    /** Why the model stopped, sorted, without repeats. */
+    @Field(() => [String])
+    finishReasons!: Array<string>
+
+    /** The models that served the calls, sorted, without repeats. */
+    @Field(() => [String])
+    models!: Array<string>
+
+    /** What the node declared (`auto` or a model id), sorted, without repeats; empty for a fixed task. */
+    @Field(() => [String])
+    declaredModels!: Array<string>
+
+    /** The providers of the models that served them, sorted, without repeats. */
+    @Field(() => [String])
+    modelProviders!: Array<string>
+
+    /** Why the calls went to those models, sorted, without repeats. */
+    @Field(() => [String])
+    modelReasons!: Array<string>
+}
+
+@ObjectType()
 /** One run with its steps and the work item it is about. */
 export class AgentRunDetailType {
     /** The run as the list draws it. */
@@ -144,4 +212,8 @@ export class AgentRunDetailType {
     /** The decision the run waits on, or null when it waits on none. */
     @Field(() => AgentRunDecisionType, { nullable: true })
     decision!: AgentRunDecisionType | null
+
+    /** Its model calls per call kind, in the order of their first call. */
+    @Field(() => [AgentRunAiCallType])
+    aiCalls!: Array<AgentRunAiCallType>
 }

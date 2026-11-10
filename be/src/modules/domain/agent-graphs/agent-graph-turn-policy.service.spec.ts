@@ -5,6 +5,7 @@ import type { PageRow } from "@nivo-lite/agent-sdk/entity/port"
 import { queryProblems } from "@nivo-lite/agent-sdk/query"
 import type { Query } from "@nivo-lite/agent-sdk/query"
 import { FLOW_F_ENTITIES, agentNodeEffectEntity, agentRunStopEntity, conversationEntity } from "@nivo-lite/blocks-core/entities"
+import { TOOL } from "@nivo-lite/blocks-core"
 import { MODULE_DECLARATIONS, agentGuidanceOf } from "@nivo-lite/blocks-core/modules"
 import { EntityEngineService } from "@modules/domain/entity-engine"
 import type { ScopedTx } from "@modules/domain/entity-engine"
@@ -364,5 +365,64 @@ describe("AgentGraphTurnPolicyService: what the customer was already told, from 
             expect.objectContaining({ from: "agent.run-stop" }),
             expect.anything(),
         )
+    })
+})
+
+describe("AgentGraphTurnPolicyService: what THIS run step already did before its stop (D-W8-1, `alreadyDone`)", () => {
+    const AT_SEND = "2026-11-10T03:01:00.000Z"
+
+    it("after the founder's answer, lists the effects the step's own ledger records acted, each once", async () => {
+        const { policy } = await told({
+            ledger: {
+                [`${RUN}:check`]: [
+                    sendOf("e-1", CHECKING, "c-1", AT_SEND),
+                    sendOf("e-2", OUTCOME, "c-1", AT_SEND),
+                    rowOf("e-3", { effectId: "customer.care.schedule", subjectEntity: "agent-task" }),
+                ],
+            },
+        })
+
+        const turn = await policy.toldOf(ANSWERED, "sales", `${RUN}:check`)
+
+        expect(turn.alreadyDone).toEqual(["customer.care.schedule", "customer.message.send"])
+    })
+
+    it("leaves out a refused call, an act of unknown outcome and an undone act", async () => {
+        const { policy } = await told({
+            ledger: {
+                [`${RUN}:check`]: [
+                    rowOf("e-1", { effectId: "customer.message.send", subjectEntity: "refused" }),
+                    rowOf("e-2", { effectId: "order.create", subjectEntity: "outcome-unknown" }),
+                    rowOf("e-3", { effectId: "order.cancel", subjectEntity: "sales.order", undoneAt: AT_SEND }),
+                ],
+            },
+        })
+
+        expect((await policy.toldOf(ANSWERED, "sales", `${RUN}:check`)).alreadyDone).toBeUndefined()
+    })
+
+    it("is absent on a first try, for another step of the run, and never filled from another run's stop", async () => {
+        const ledger = { [`${RUN}:check`]: [sendOf("e-1", CHECKING, "c-1", AT_SEND)] }
+        const { policy } = await told({ ledger })
+
+        expect((await policy.toldOf(TURN, "sales", `${RUN}:check`)).alreadyDone).toBeUndefined()
+        expect((await policy.toldOf(ANSWERED, "sales", `${RUN}:thanks`)).alreadyDone).toBeUndefined()
+        expect((await policy.toldOf(ANSWERED, "sales", `other-run:check`)).alreadyDone).toBeUndefined()
+    })
+})
+
+describe("AgentGraphTurnPolicyService: the agent's tool set holds the default reads", () => {
+    it("shows every agent its declared tools and the context reads, an agent with no declared search included", async () => {
+        const { policy } = await build(null)
+
+        const accounting = await policy.toldOf(TURN, "accounting", "run-1:match")
+        const sales = await policy.toldOf(TURN, "sales", "run-1:consult")
+
+        for (const id of [TOOL.brainSearch, TOOL.conversationMessageList, TOOL.leadOrderList]) {
+            expect(accounting.agentTools).toContain(id)
+            expect(sales.agentTools).toContain(id)
+        }
+        expect(sales.agentTools).toContain(TOOL.customerMessageSend)
+        expect(new Set(sales.agentTools).size).toBe(sales.agentTools?.length)
     })
 })

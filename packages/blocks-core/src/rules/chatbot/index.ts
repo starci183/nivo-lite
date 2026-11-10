@@ -6,7 +6,7 @@ export { INBOX_STATUSES, inboxStatusOf, unansweredOf } from "./conversation-stat
 export type { ConversationFacts, InboxStatus } from "./conversation-status"
 export { EMPTY_TAIL, TAIL_TEXT_MAX, tailAfter } from "./conversation-tail"
 export type { ConversationTail, TailLine } from "./conversation-tail"
-export { AGENT_HOLDER, handlingChangeOf, isHeldByPerson, mayHandle, noticeOf } from "./handling"
+export { handlingChangeOf, isHeldByPerson, mayHandle, noticeOf } from "./handling"
 export type { HandlingChange, HandlingMember } from "./handling"
 export { firstResponseMinutes, medianOf, responseMedianOf, vietnamDayStart } from "./metrics"
 export type { TimedLine } from "./metrics"

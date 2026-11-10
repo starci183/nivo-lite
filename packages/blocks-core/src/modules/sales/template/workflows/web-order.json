@@ -103,8 +103,7 @@
                             "access": "write",
                             "scope": "turn",
                             "fields": [
-                                "consultStage",
-                                "consultFacts"
+                                "consultStage"
                             ]
                         }
                     ],

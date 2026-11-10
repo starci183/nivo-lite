@@ -11,22 +11,19 @@ const MAX_HOLDING = 400
 
 type SettingsFields = {
     readonly scope: FieldDef<"text", false>
-    readonly openclawTimeoutSec: FieldDef<"int", false>
     readonly holdingMessage: FieldDef<"text", false>
     readonly updatedBy: FieldDef<"text", true>
 }
 
 const settingsFields: SettingsFields = {
     scope: field.text({ maxLength: MAX_ID }),
-    openclawTimeoutSec: field.int({}),
     holdingMessage: field.text({ maxLength: MAX_HOLDING }),
     updatedBy: field.text({ maxLength: MAX_LINE, nullable: true }),
 }
 
 /**
- * The rules of a workspace's Chatbot: how long it waits for the AI's reply before it sends the holding message (5 to 120 seconds,
- * checked by the module's rules), and what that message says (up to 400 characters). One record per workspace, found by its `scope`
- * (the module settings pattern: `<module>.settings`).
+ * The rules of a workspace's Chatbot: what it tells a customer while the AI is still working (up to 400 characters). One record per
+ * workspace, found by its `scope` (the module settings pattern: `<module>.settings`).
  */
 export const chatSettingsEntity: EntityDefinition<SettingsFields> = defineEntity({
     name: "chat.settings",

@@ -80,15 +80,6 @@ const options = {
     channelProvisioning: { telegramToken: undefined, print: refuseWiringOperation },
     workspaceSeed: { input: undefined, profileInput: undefined },
     mcpGateway: { remote: { clientName: "nivo-mcp-gateway" }, defaultTimeoutMs: 1000 },
-    openclaw: {
-        gateway: null,
-        turnTimeoutMs: 90_000,
-        settleMs: 3000,
-        configDir: undefined,
-        gatewayStateDir: "/wiring",
-        manageAgents: false,
-        toolSecret: null,
-    },
 }
 
 /** Explicit doubles for the private resource tokens of the real registered modules. */
@@ -161,16 +152,6 @@ const resourceOverrides = (): Array<{ token: InjectionToken; value: unknown }> =
 type BuildWiringProofResultOverridesShape = {
     token: InjectionToken
     value: unknown
-}
-
-type BuildWiringProofResultOptionsOpenclawShape = {
-    gateway: null
-    turnTimeoutMs: number
-    settleMs: number
-    configDir: undefined
-    gatewayStateDir: string
-    manageAgents: boolean
-    toolSecret: null
 }
 
 type BuildWiringProofResultOptionsMcpGatewayRemoteShape = {
@@ -283,7 +264,6 @@ type BuildWiringProofResultOptionsShape = {
     channelProvisioning: BuildWiringProofResultOptionsChannelProvisioningShape
     workspaceSeed: BuildWiringProofResultOptionsWorkspaceSeedShape
     mcpGateway: BuildWiringProofResultOptionsMcpGatewayShape
-    openclaw: BuildWiringProofResultOptionsOpenclawShape
 }
 
 type BuildWiringProofResultShape = {

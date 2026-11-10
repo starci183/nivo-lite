@@ -6,6 +6,7 @@ import { MODULE_DECLARATIONS, agentGuidanceOf } from "@nivo-lite/blocks-core/mod
 import { EntityEngineService } from "@modules/domain/entity-engine"
 import { GraphNodeRegistryService, type NodeTurn } from "@modules/domain/graph-nodes"
 import { InjectClock, type Clock } from "@modules/platform/clock"
+import { withDefaultReads } from "./policies/agent-tools.policy"
 import {
     CONVERSATION_ENTITY,
     LEAD_KIND,
@@ -13,6 +14,7 @@ import {
     SENT_LINES_LOOKED_AT,
     STOP_ENTITY,
     alreadySentOf,
+    doneEffectsOf,
     leadStopsQueryOf,
     ledgerLinesOf,
     policyValuesOf,
@@ -24,6 +26,7 @@ import {
     stepPlaceOf,
     stopCounts,
     stopToldOf,
+    type LedgerRow,
     type PolicyValues,
     type SentLine,
     type StepPlace,
@@ -66,15 +69,16 @@ export class AgentGraphTurnPolicyService {
         const guidance = agentGuidanceOf(moduleKey, turn.locale)
         const agent = MODULE_DECLARATIONS.find((module) => module.key === moduleKey)?.agent
         const defaults = agent?.policy.limits ?? {}
-        const agentTools = agent?.tools ?? []
+        const agentTools = agent === undefined ? [] : withDefaultReads(agent.tools)
         const policy = await this.valuesOf(turn.workspaceId, moduleKey, defaults)
-        const sent = await this.sentOf(turn, stepKey)
+        const { sent, done } = await this.toldBefore(turn, stepKey)
         return {
             ...turn,
             ...(guidance === "" ? {} : { guidance }),
             ...(Object.keys(policy).length === 0 ? {} : { policy }),
             ...(agentTools.length === 0 ? {} : { agentTools }),
             ...(sent.length === 0 ? {} : { alreadySent: sent }),
+            ...(done.length === 0 ? {} : { alreadyDone: done }),
         }
     }
 
@@ -101,18 +105,26 @@ export class AgentGraphTurnPolicyService {
     }
 
     /**
-     * What the customer of the turn was already told, as `alreadySent` carries it: the step's own earlier lines when it runs again after
+     * What the step did and the customer was told before (`alreadyDone`, `alreadySent`). `alreadyDone` is read only after the founder's
+     * answer, from THIS run step's own ledger records (D-W8-1). What the customer of the turn was already told, as `alreadySent` carries it: the step's own earlier lines when it runs again after
      * the founder's answer, and the lines of the customer's stops. None on a first try of a customer with no stop.
      */
-    private async sentOf(turn: NodeTurn, stepKey: string): Promise<ReadonlyArray<SentLine>> {
+    private async toldBefore(
+        turn: NodeTurn,
+        stepKey: string,
+    ): Promise<{ readonly sent: ReadonlyArray<SentLine>; readonly done: ReadonlyArray<string> }> {
         const place = stepPlaceOf(stepKey)
         const again = (turn.founderAnswers ?? []).length > 0
-        const [ledger, conversation, stops] = await Promise.all([
-            again && place !== null ? this.ledgerLinesOf(turn.workspaceId, place) : Promise.resolve([]),
+        const [own, conversation, stops] = await Promise.all([
+            again && place !== null ? this.ledgerRowsOf(turn.workspaceId, place) : Promise.resolve([]),
             again ? this.conversationLinesOf(turn, stepKey) : Promise.resolve([]),
             this.stopLinesOf(turn, place),
         ])
-        return alreadySentOf([...ledger, ...conversation, ...stops])
+        return {
+            sent: alreadySentOf([...ledgerLinesOf(own, CUSTOMER_LINE_EFFECTS), ...conversation, ...stops]),
+            // D-W8-1: what THIS run + step already did before its stop, from its own ledger records only (never another run's).
+            done: doneEffectsOf(own),
+        }
     }
 
     /**
@@ -120,14 +132,16 @@ export class AgentGraphTurnPolicyService {
      * its own, a line sent to another conversation). None when the app holds no ledger.
      */
     private async ledgerLinesOf(workspaceId: string, place: StepPlace): Promise<ReadonlyArray<SentLine>> {
+        return ledgerLinesOf(await this.ledgerRowsOf(workspaceId, place), CUSTOMER_LINE_EFFECTS)
+    }
+
+    /** The ledger records of one run step (every attempt, every conversation); none when the app holds no ledger. */
+    private async ledgerRowsOf(workspaceId: string, place: StepPlace): Promise<ReadonlyArray<LedgerRow>> {
         if (this.definitionOf(LEDGER_ENTITY) === null) return []
         const page = await this.engine.scoped(workspaceId, (tx) =>
             this.engine.list(tx, stepLedgerQueryOf(place), TOLD_SCOPE),
         )
-        return ledgerLinesOf(
-            page.rows.map(({ row }) => ({ data: row.data, createdAt: row.createdAt })),
-            CUSTOMER_LINE_EFFECTS,
-        )
+        return page.rows.map(({ row }) => ({ data: row.data, createdAt: row.createdAt }))
     }
 
     /**

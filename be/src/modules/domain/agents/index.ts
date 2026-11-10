@@ -4,10 +4,8 @@ export { AgentDeletionPauseService } from "./agent-deletion-pause.service"
 export { AgentViewScopeService } from "./agent-view-scope.service"
 export { AGENTS_ERROR_KINDS } from "./errors/agents.error"
 export { AGENTS_MESSAGES } from "./messages/agents.messages"
-export { AgentBundleService } from "./agent-bundle.service"
 export { AGENTS_INSTALLATIONS, AGENTS_ROOMS, InjectInstallations } from "./agents.decorators"
 export { AgentsModule } from "./agents.module"
-export { AGENTS_SYNC_FRESH_MS } from "./agents.options"
 export type {
     BaseRule,
     Installation,
@@ -28,11 +26,8 @@ export { AgentIdentityService } from "./agent-identity.service"
 export { AGENT_IDENTITY_RULES } from "./agent-name.policy"
 export { AgentOwnershipService } from "./agent-ownership.service"
 export { AgentRecordsService } from "./agent-records.service"
-export { EngineStatusService } from "./engine-status.service"
-export { processorFromSettings, replyTimeoutSec } from "./engine-status.policy"
 export { PauseClient } from "./pause.client"
 export type {
-    AgentBundle,
     AgentDashboardData,
     AgentSummary,
     AgentAudience,
@@ -43,7 +38,6 @@ export type {
     OptionalOpenGaps,
     OptionalAgentText,
     AgentTexts,
-    EngineStatus,
     AgentProfile,
     AgentOwnership,
     Region,

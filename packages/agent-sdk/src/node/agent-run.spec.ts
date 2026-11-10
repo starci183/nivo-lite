@@ -7,6 +7,7 @@ import { callDigestOf, runNode } from "./host"
 import type { NodeHostPorts } from "./host.types"
 import { isNodeConfused } from "./memory"
 import { defineNode } from "./node"
+import type { TurnRef } from "./node.types"
 
 /**
  * THE FAKE SHAPE OF AN AGENT RUN (read this, do not guess). `fakeNodePorts({ model: [...] })` scripts the agent one turn per entry,
@@ -71,7 +72,7 @@ const settleNode = defineNode({
     ],
 })
 
-const run = (options: FakeNodePortsOptions, override: Partial<NodeHostPorts> = {}) => {
+const run = (options: FakeNodePortsOptions, override: Partial<NodeHostPorts> = {}, turn: TurnRef = EXAMPLE_TURN) => {
     const fake = scriptedNodePorts(options)
     const ports = { ...fake.ports, ...override }
     const json = jest.spyOn(ports.model, "json")
@@ -80,7 +81,7 @@ const run = (options: FakeNodePortsOptions, override: Partial<NodeHostPorts> = {
             node: settleNode,
             params: {},
             input: { orderId: "o-1", transactionId: "tx-1" },
-            turn: EXAMPLE_TURN,
+            turn,
             grant: { rights: [] },
             effects: new Map([markPaid, tellTeam].map((effect) => [effect.id, effect])),
             tools: new Map(),
@@ -247,6 +248,36 @@ describe("context.agent.run", () => {
             expect(isNodeConfused(cause)).toBe(true)
             expect(json.mock.calls[2]?.[1].input).toMatchObject({
                 calls: [{ ok: false }, { done: "refused", refused: { code: "REQUIRED_CALL_MISSING" } }],
+            })
+        }
+    })
+
+    it("takes a required call this run + step already did before its stop (`alreadyDone`) as met: the output stands with no call made again", async () => {
+        const answered: TurnRef = {
+            ...EXAMPLE_TURN,
+            founderAnswers: [{ text: "Da bao khach roi, ket thuc", at: "2026-11-10T05:00:00.000Z" }],
+            alreadyDone: ["payment.order.settle"],
+        }
+        for (const agentLoop of [false, true]) {
+            const { ran, fake } = run({ model: [DONE], agentLoop }, {}, answered)
+
+            await expect(ran).resolves.toEqual({ output: { result: "paid", orderId: "o-1" }, effects: [] })
+            expect(fake.executed).toHaveLength(0)
+        }
+    })
+
+    it("with nothing done before (no `alreadyDone`, or another id) the requirement still stands: the early output is refused", async () => {
+        const stuck = { confused: { reason: "Chua lam", question: null } }
+        for (const turn of [EXAMPLE_TURN, { ...EXAMPLE_TURN, alreadyDone: ["agent-message.post"] }]) {
+            const { ran, json } = run({ model: [DONE, stuck] }, {}, turn)
+            const cause = await ran.then(
+                () => null,
+                (failure: unknown) => failure,
+            )
+
+            expect(isNodeConfused(cause)).toBe(true)
+            expect(json.mock.calls[1]?.[1].input).toMatchObject({
+                calls: [{ done: "refused", refused: { code: "REQUIRED_CALL_MISSING", message: "payment.order.settle" } }],
             })
         }
     })

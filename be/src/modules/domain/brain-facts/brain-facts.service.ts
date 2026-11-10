@@ -9,6 +9,7 @@ import { BrainFactsReadService } from "./brain-facts-read.service"
 import { BrainFactsError, BrainFactsErrorCode } from "./errors/brain-facts.error"
 import { toFactRecord } from "./fact-record.mapper"
 import { normalFact, mergeEvidence } from "./fact-input.policy"
+import type { UnchangedPassages } from "./fact-evidence.policy"
 import { AUTO_APPLY_TRUST, TRUST, sameValue } from "./fact-key.policy"
 import type {
     Evidence,
@@ -16,6 +17,7 @@ import type {
     FactFilter,
     FactInput,
     FactRecord,
+    FactSource,
     FactStatus,
     InstallationScope,
     MaintenanceResult,
@@ -25,7 +27,8 @@ import type {
 } from "./brain-facts.contracts"
 import { RETURNED, factKeyOf, returnedFacts } from "./fact-columns.policy"
 import type { FactChanges, NewFact } from "./fact-columns.policy"
-import { SUPERSEDE, activateChanges, decisionOf, scheduleChanges } from "./fact-write.policy"
+import { SUPERSEDE, activateChanges, decisionOf, nextVersion, scheduleChanges } from "./fact-write.policy"
+import { BrainFactRelationsService } from "./brain-fact-relations.service"
 import { BrainFactEntity } from "./persistence/entities"
 
 /** Who acts for the brain itself when no person decides. */
@@ -43,6 +46,7 @@ export class BrainFactsService {
         @InjectClock() private readonly clock: Clock,
         private readonly reads: BrainFactsReadService,
         private readonly maintenance: BrainFactsMaintenanceService,
+        private readonly relations: BrainFactRelationsService,
     ) {}
 
     /** One fact of the workspace. */
@@ -156,8 +160,10 @@ export class BrainFactsService {
     }
 
     /**
-     * Approves a proposal. Valid from now (or undated) it becomes the active fact and the current one is superseded; valid from a later
-     * date it is scheduled and the current value stays in force until then. Approving a proposal to stop using a fact retires that fact.
+     * Approves a proposal. Valid from now (or undated) it becomes the active fact, the next version of its key, holding for one year
+     * unless its end was stated; the current one is superseded and its relations are carried to the new value. Valid from a later date
+     * it is scheduled and the current value stays in force until then. Approving a proposal to stop using a fact retires that fact.
+     * Who may approve is the caller's to check: the Second Brain page lets the founder alone.
      */
     apply(workspaceId: string, id: string, decidedBy: string, note?: string): Promise<FactRecord> {
         return this.entityManager.transaction(async (tx) => {
@@ -195,12 +201,14 @@ export class BrainFactsService {
             if (current !== undefined) {
                 await tx.update(BrainFactEntity, { workspaceId, id: current.id, status: "active" }, SUPERSEDE)
             }
-            return this.changed(
+            const activated = await this.changed(
                 tx,
                 { workspaceId, id, status: "proposed" },
-                activateChanges(current?.id ?? null, decidedBy, reason),
+                activateChanges(current?.id ?? null, decidedBy, reason, nextVersion(current)),
                 BrainFactsErrorCode.NotProposed,
             )
+            if (current !== undefined) await this.relations.carry(tx, workspaceId, current.id, id)
+            return activated
         })
     }
 
@@ -289,8 +297,17 @@ export class BrainFactsService {
         return fact
     }
 
-    /** Files a proposal to stop using an active fact; one waiting proposal per fact. Answers whether one was filed. */
-    async proposeRetire(workspaceId: string, active: FactRecord, why: Evidence, proposedBy: string): Promise<boolean> {
+    /**
+     * Files a proposal to stop using an active fact; one waiting proposal per fact. Answers whether one was filed. A document that no
+     * longer says it files as `document`; a chat change request names its own source.
+     */
+    async proposeRetire(
+        workspaceId: string,
+        active: FactRecord,
+        why: Evidence,
+        proposedBy: string,
+        sourceKind: FactSource = "document",
+    ): Promise<boolean> {
         const waiting = await this.byKey(
             workspaceId,
             active.subjectKey,
@@ -311,8 +328,8 @@ export class BrainFactsService {
             unit: active.unit,
             scope: active.scope,
             modules: [...active.modules],
-            sourceKind: "document",
-            trust: TRUST.document,
+            sourceKind,
+            trust: TRUST[sourceKind],
             validFrom: null,
             validTo: null,
             conflictWith: active.id,
@@ -329,8 +346,13 @@ export class BrainFactsService {
         return this.maintenance.withdrawSource(workspaceId, sourceId, note)
     }
 
-    /** Takes back what a changed document no longer says; a fact resting on its unchanged text stays. */
-    withdrawChanged(workspaceId: string, sourceId: string, note: string, unchanged: string): Promise<WithdrawnFacts> {
+    /** Takes back what a changed document no longer says, chunk by chunk; a fact born from an unchanged passage is not touched. */
+    withdrawChanged(
+        workspaceId: string,
+        sourceId: string,
+        note: string,
+        unchanged: UnchangedPassages,
+    ): Promise<WithdrawnFacts> {
         return this.maintenance.withdrawChanged(workspaceId, sourceId, note, unchanged)
     }
 

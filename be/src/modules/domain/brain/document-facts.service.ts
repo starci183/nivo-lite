@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import { BrainExtractionsService, ExtractionNote } from "@modules/domain/brain-extractions"
 import type { MaybeExtraction } from "@modules/domain/brain-extractions"
-import { BrainFactsService } from "@modules/domain/brain-facts"
+import { BrainFactsService, foldedText } from "@modules/domain/brain-facts"
 import type { Evidence } from "@modules/domain/brain-facts"
 import { DOC_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeIndexingService, UsageMeterService } from "@modules/domain/knowledge"
@@ -13,6 +13,7 @@ import type { AiBudget, AiChatAnswer, AiService } from "@modules/integrations/ai
 import { InjectLogger } from "@modules/platform/logging"
 import { concurrencyGateOf, eachInOrder } from "@modules/platform/primitives"
 import type { Logger } from "@modules/platform/logging"
+import { DocumentRelationsService } from "./document-relations.service"
 import { DocumentReviewService } from "./document-review.service"
 import { ModelJsonService } from "./model-json.service"
 import { sourcePayloadOf } from "./brain-payload.policy"
@@ -21,6 +22,8 @@ import type { ExtractedFact } from "./extraction.policy"
 import { MAX_FACTS_PER_DOC, PROMPT_VERSION, SYSTEM_PROMPT, parseFacts, userPrompt } from "./extraction.policy"
 import type { FactsOutcome, ReadingPlan } from "./brain.contracts"
 import { readingPlanOf } from "./reading-plan.policy"
+import { chunkHashOf, foldedPassagesOf } from "./chunk-provenance.policy"
+import type { FoldedPassage } from "./chunk-provenance.policy"
 import { BrainLogEvent } from "./brain.log-events"
 
 /** How many windows in a row may fail before the reading is given up. */
@@ -61,6 +64,7 @@ export class DocumentFactsService {
         private readonly usage: UsageMeterService,
         private readonly json: ModelJsonService,
         private readonly reviews: DocumentReviewService,
+        private readonly links: DocumentRelationsService,
     ) {}
 
     /** Reads the facts of the source a facts job names; a payload of another shape is logged and dropped. */
@@ -110,6 +114,7 @@ export class DocumentFactsService {
         return this.window(source, plan.windows, {
             partial: plan.partial,
             passages: plan.hashes,
+            chunks: foldedPassagesOf(plan.passages),
             changed: resume?.factsChanged ?? false,
             done: resume?.windowsDone ?? 0,
             filed: resume?.factsProposed ?? 0,
@@ -120,7 +125,10 @@ export class DocumentFactsService {
         })
     }
 
-    /** The text changed: what it no longer says is withdrawn, facts resting on unchanged passages stay, and a new reading starts. */
+    /**
+     * The text changed: what it no longer says is withdrawn chunk by chunk (a fact born from an unchanged passage is not touched), and
+     * a new reading of the changed passages starts.
+     */
     private async restart(
         source: SourceRecord,
         hash: string,
@@ -131,7 +139,10 @@ export class DocumentFactsService {
         const taken =
             known === null
                 ? { orphans: [], withdrawn: 0 }
-                : await this.facts.withdrawChanged(workspaceId, source.id, "source changed", plan.unchangedText)
+                : await this.facts.withdrawChanged(workspaceId, source.id, "source changed", {
+                      hashes: plan.unchangedHashes,
+                      folded: foldedText(plan.unchangedText),
+                  })
         await this.extractions.start({
             workspaceId,
             sourceId: source.id,
@@ -189,7 +200,7 @@ export class DocumentFactsService {
             await progress("running", note, attempts)
             throw new BrainError({ code: BrainErrorCode.ModelUnavailable })
         }
-        const filed = await this.file(source, parsed.facts, MAX_FACTS_PER_DOC - state.filed)
+        const filed = await this.file(source, parsed.facts, MAX_FACTS_PER_DOC - state.filed, state.chunks)
         const next = {
             ...state,
             done: state.done + 1,
@@ -231,8 +242,13 @@ export class DocumentFactsService {
         )
     }
 
-    /** Files the facts of one window as proposals; answers how many were filed. */
-    private async file(source: SourceRecord, found: ReadonlyArray<ExtractedFact>, room: number): Promise<number> {
+    /** Files the facts of one window as proposals, each naming the passage it was read from; answers how many were filed. */
+    private async file(
+        source: SourceRecord,
+        found: ReadonlyArray<ExtractedFact>,
+        room: number,
+        chunks: ReadonlyArray<FoldedPassage>,
+    ): Promise<number> {
         let filed = 0
         await eachInOrder(found.slice(0, room), async (fact) => {
             try {
@@ -251,7 +267,9 @@ export class DocumentFactsService {
                     // A document kept for one agent instance proposes facts for that instance only.
                     installationId: source.installationId,
                     proposedBy: source.title.slice(0, 80),
-                    evidence: [this.documentEvidence(source, fact.quote)],
+                    evidence: [
+                        this.documentEvidence(source, fact.quote, chunkHashOf(fact.quote ?? fact.value, chunks)),
+                    ],
                 })
                 filed += 1
             } catch (cause) {
@@ -261,7 +279,7 @@ export class DocumentFactsService {
         return filed
     }
 
-    /** The document is read: facts that lost their evidence are proposed for retirement, the gaps it covers are answered, the source is ready, and its dossier is reviewed again when the facts changed or the whole document was read. */
+    /** The document is read: new facts are linked into the truth graph, facts that lost their evidence are proposed for retirement, the gaps it covers are answered, the source is ready, and its dossier is reviewed again when the facts changed or the whole document was read. */
     private async finish(source: SourceRecord, state: Reading): Promise<FactsOutcome> {
         const workspaceId = source.workspaceId
         await this.facts.finalizeOrphans(
@@ -270,6 +288,8 @@ export class DocumentFactsService {
             this.goneEvidence(source.id, source.title, "changed"),
         )
         await this.extractions.finish(workspaceId, source.id, state.model, state.passages)
+        // New facts were filed: link them into the truth graph (one cheap call over the facts, not the document).
+        if (state.filed > 0) await this.links.link(source)
         if (source.visibility === "public") {
             try {
                 await this.gaps.resolve(workspaceId, {
@@ -288,8 +308,8 @@ export class DocumentFactsService {
         return "done"
     }
 
-    /** The evidence a fact carries about the document it was read from. */
-    private documentEvidence(source: SourceRecord, quote: string | null): Evidence {
+    /** The evidence a fact carries about the document it was read from, with the hash of its passage when one holds the quote. */
+    private documentEvidence(source: SourceRecord, quote: string | null, chunkHash: string | null): Evidence {
         return {
             kind: "document",
             ref: source.id,
@@ -298,6 +318,7 @@ export class DocumentFactsService {
             at: source.updatedAt,
             sourceId: source.id,
             title: source.title,
+            ...(chunkHash === null ? {} : { chunkHash }),
         }
     }
 
@@ -317,6 +338,8 @@ interface Reading {
     readonly partial: boolean
     /** The hashes of every passage of the document. */
     readonly passages: ReadonlyArray<string>
+    /** Every passage of the document, folded, to name the chunk a fact was read from. */
+    readonly chunks: ReadonlyArray<FoldedPassage>
     /** Whether this reading already withdrew facts. */
     readonly changed: boolean
     /** Windows read. */

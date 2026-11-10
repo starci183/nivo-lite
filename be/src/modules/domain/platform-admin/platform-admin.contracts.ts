@@ -192,20 +192,6 @@ export interface AdminBillingEvent {
     readonly createdAt: string
 }
 
-/** The OpenClaw copy of an agent's context. */
-export interface AdminAgentSync {
-    /** The agent id. */
-    readonly agentId: string
-    /** The context version. */
-    readonly contextVersion: number | null
-    /** The checked at. */
-    readonly checkedAt: string
-    /** The status. */
-    readonly status: string
-    /** The error. */
-    readonly error: string | null
-}
-
 /** One agent installation of the workspace. */
 export interface AdminModule {
     /** The id. */
@@ -218,14 +204,10 @@ export interface AdminModule {
     readonly operatingMode: string
     /** The live. */
     readonly live: boolean
-    /** The processor. */
-    readonly processor: string
     /** The context version. */
     readonly contextVersion: number | null
     /** The context applied at. */
     readonly contextAppliedAt: string | null
-    /** The sync. */
-    readonly sync: AdminAgentSync | null
 }
 
 /** One connection of the workspace. */

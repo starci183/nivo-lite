@@ -1,5 +1,6 @@
 import type { GraphSpecGrant } from "@nivo-lite/agent-sdk/graph"
 import type { DataRight } from "@nivo-lite/agent-sdk/rights"
+import { withDefaultReads } from "./agent-tools.policy"
 
 /** A grant that holds nothing: what an agent with no running graph holds, so a workflow of it reaches nothing. */
 export const EMPTY_GRANT: GraphSpecGrant = { rights: [], tools: [], effects: [] }
@@ -21,14 +22,15 @@ export interface RunGrant {
  * What a run of a workflow other than the agent's own graph may reach: what its OWN graph declares, with its effects and NIVO MCP tools
  * bounded by the tool set the agent's module declares (`agent.tools` in blocks-core), the hard right "a step's tools ⊂ the workflow's
  * grant ⊂ the agent's tool set". The data rights are the workflow's own as declared (checked when it is saved). A tool the agent may
- * never use is never reached, whatever the workflow declares; the agent's primary workflow does not bound another workflow.
+ * never use is never reached, whatever the workflow declares (the default reads of the context sources are held by every agent and
+ * join every run's tools: `withDefaultReads`); the agent's primary workflow does not bound another workflow.
  * `agentTools` null (the module declares no agent) reaches no tool and no effect. Pure.
  */
 export const workflowRunGrantOf = (own: GraphSpecGrant, agentTools: ReadonlyArray<string> | null): RunGrant => {
     const held = new Set(agentTools ?? [])
     return {
         rights: own.rights,
-        tools: own.tools.filter((tool) => held.has(tool)),
+        tools: agentTools === null ? [] : withDefaultReads(own.tools.filter((tool) => held.has(tool))),
         effects: own.effects.filter((effect) => held.has(effect)),
     }
 }
@@ -36,7 +38,7 @@ export const workflowRunGrantOf = (own: GraphSpecGrant, agentTools: ReadonlyArra
 /** What a run of the agent's own graph may reach: its grant as it stands, its effects bounded as before. */
 export const ownRunGrantOf = (grant: GraphSpecGrant): RunGrant => ({
     rights: grant.rights,
-    tools: grant.tools,
+    tools: withDefaultReads(grant.tools),
     effects: null,
 })
 

@@ -6,7 +6,7 @@ import type { Logger } from "@modules/platform/logging"
 import { RenameAgentCommand } from "./rename-agent.command"
 
 @CommandHandler(RenameAgentCommand)
-/** Renames the agent and queues the sync of its OpenClaw copy. */
+/** Renames the agent through the rename service. */
 export class RenameAgentHandler extends ICQRSHandler<RenameAgentCommand, void> {
     constructor(
         @InjectLogger() logger: Logger,

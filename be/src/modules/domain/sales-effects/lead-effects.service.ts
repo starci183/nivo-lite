@@ -9,6 +9,7 @@ import type { EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { q } from "@nivo-lite/agent-sdk/query"
 import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import { LeadMemoryService, leadMemorySubjectOf } from "@modules/domain/lead-memory"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { SalesEffectsError, SalesEffectsErrorCode } from "./errors/sales-effects.error"
 import { isRecordId, payloadOf } from "./sales-effects.policy"
@@ -39,6 +40,7 @@ export class LeadEffectsService implements OnModuleInit {
         private readonly engine: EntityEngineService,
         private readonly ports: EntityPortsService,
         @Optional() private readonly registry?: GraphNodeRegistryService,
+        @Optional() private readonly memory?: LeadMemoryService,
     ) {}
 
     /** Registers the executors and the resolver when the app hosts graph nodes; otherwise there is nothing to serve. */
@@ -77,23 +79,24 @@ export class LeadEffectsService implements OnModuleInit {
     }
 
     /**
-     * `lead.update`: writes the consult stage and facts the payload names on the customer, under the version just read; a customer the
-     * workspace does not hold, or a write another writer beat, is refused so the step is tried again.
+     * `lead.update`: writes the consult stage the payload names on the customer, under the version just read, and lays the facts it
+     * names over the customer's lead memory (their one home: the record keeps no copy); a customer the workspace does not hold, or a
+     * write another writer beat, is refused so the step is tried again. An app with no lead memory keeps the stage only.
      */
     private async update(turn: NodeTurn, payload: EffectPayload): Promise<SubjectRef> {
-        const { leadId, consultStage, consultFacts } = payloadOf(updateSchema, payload)
-        return await this.engine.scoped(turn.workspaceId, async (tx) => {
+        const { leadId, consultStage, facts } = payloadOf(updateSchema, payload)
+        await this.engine.scoped(turn.workspaceId, async (tx) => {
             const api = this.ports.entitiesApi((use) => use(tx), "action")
             const lead = isRecordId(leadId) ? await api.get(LEAD, leadId) : null
             if (lead === null) throw new SalesEffectsError({ code: SalesEffectsErrorCode.LeadNotFound })
-            const values = {
-                ...(consultStage === undefined ? {} : { consultStage }),
-                ...(consultFacts === undefined ? {} : { consultFacts }),
-            }
-            const written = await api.update(LEAD, leadId, lead.version, values)
+            if (consultStage === undefined) return
+            const written = await api.update(LEAD, leadId, lead.version, { consultStage })
             if (!written.ok) throw new SalesEffectsError({ code: SalesEffectsErrorCode.WriteRefused })
-            return { kind: "sales-lead", id: leadId }
         })
+        if (facts !== undefined && Object.keys(facts).length > 0) {
+            await this.memory?.remember(turn.workspaceId, leadMemorySubjectOf(leadId, turn.conversationId), facts)
+        }
+        return { kind: "sales-lead", id: leadId }
     }
 
     /**

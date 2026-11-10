@@ -69,6 +69,12 @@ export interface GraphSpecNode {
     readonly group?: string | undefined
     /** What the node waits for, for the graph view: the customer's reply, a payment or something else, with its timeout and reminder. */
     readonly wait?: GraphSpecWait | undefined
+    /**
+     * The model the node's AI calls use: `auto` (the host picks per call by the step's weight) or a model id of the host's
+     * vocabulary. The template declares it; the shop may change it per node. Absent: the host's declaration for the node's step.
+     * The host checks the id against its vocabulary; this schema only bounds its form.
+     */
+    readonly model?: string | undefined
 }
 
 /** What a waiting node waits for and how long, as durations like "2h" or "30m". */

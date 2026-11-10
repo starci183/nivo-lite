@@ -136,20 +136,18 @@ export const leadFactsOf = (joined: JoinedRecord | null): LeadFacts | null => {
 
 /** The declared fields of a `chat.settings` record. */
 const settingsData = z.object({
-    openclawTimeoutSec: z.number().int(),
     holdingMessage: z.string().max(MAX_BODY),
     updatedBy: nullableText(MAX_LINE),
 })
 
 /** The fields a query for the saved rules selects. */
-export const SETTINGS_FIELDS: ReadonlyArray<string> = ["scope", "openclawTimeoutSec", "holdingMessage", "updatedBy"]
+export const SETTINGS_FIELDS: ReadonlyArray<string> = ["scope", "holdingMessage", "updatedBy"]
 
 /** The rules a `chat.settings` record holds, with who saved them; null when its fields are not those of the rules. */
 export const settingsOf = (record: RecordRow): (ChatbotSettings & { readonly updatedBy: string }) | null => {
     const parsed = settingsData.safeParse(record.data)
     return parsed.success
         ? {
-              openclawTimeoutSec: parsed.data.openclawTimeoutSec,
               holdingMessage: parsed.data.holdingMessage,
               updatedBy: parsed.data.updatedBy ?? "",
           }

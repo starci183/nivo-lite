@@ -332,6 +332,8 @@ export class ThreadStepService {
                 turn: told,
                 grant: { rights: grant.rights, tools: grant.tools },
                 key: `${view.runId}:${view.stepKey}`,
+                // The model the graph's node names (the shop's choice); absent, the host takes blocks-core's for the step.
+                ...(node.model === undefined ? {} : { model: node.model }),
                 replay: replayed.replay,
                 record: replayed.record,
                 ...(approval === null ? {} : { approval }),

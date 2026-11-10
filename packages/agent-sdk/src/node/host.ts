@@ -484,7 +484,8 @@ const agentRun = async <S extends z.ZodType>(
     const required = node.requires ?? []
     // The stable part of every turn of this step: the same text from the first turn to the last.
     const frame = { tools: own, required, outputSchema: withoutDialect(jsonSchemaOf(asked.output)) }
-    const succeeded = new Set<string>()
+    // What this run + step already did before its stop (the engine's `alreadyDone`, from the ledger) is met already: never asked twice.
+    const succeeded = new Set<string>(request.turn.alreadyDone ?? [])
     const turns = Math.max(1, Math.min(Math.trunc(asked.maxTurns ?? AGENT_TURNS), AGENT_TURNS_MAX))
     const dispatch = async (
         name: string,

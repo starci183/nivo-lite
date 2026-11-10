@@ -13,6 +13,10 @@ const ROW = {
     cost_usd: 0.0041,
     upstreams: ["Wafer", null, "DigitalOcean", "Wafer"],
     finish_reasons: ["stop", null],
+    models: ["claude-sonnet-5-5", "deepseek/deepseek-v4.1-flash"],
+    declared_models: ["auto"],
+    model_providers: ["openrouter", "anthropic"],
+    model_reasons: ["auto-step-up", "auto-light", null],
 }
 
 describe("toRunCallKind", () => {
@@ -30,6 +34,10 @@ describe("toRunCallKind", () => {
             costUsd: 0.0041,
             upstreams: ["DigitalOcean", "Wafer"],
             finishReasons: ["stop"],
+            models: ["claude-sonnet-5-5", "deepseek/deepseek-v4.1-flash"],
+            declaredModels: ["auto"],
+            modelProviders: ["anthropic", "openrouter"],
+            modelReasons: ["auto-light", "auto-step-up"],
         })
     })
 

@@ -47,7 +47,7 @@ import type {
 } from "./mcp-gateway.contracts"
 import type { McpGatewayOptions } from "./mcp-gateway.options"
 import { McpGatewayService } from "./mcp-gateway.service"
-import { addressOf, fullNameOf } from "./tool-name.policy"
+import { addressOf, toolNameOf } from "./tool-name.policy"
 
 const KEY = /^[a-z][a-z0-9-]{1,30}$/u
 const WILDCARD = /^[a-z][a-z0-9-]{1,30}\.\*$/u
@@ -87,7 +87,7 @@ const viewOf = (connector: WorkspaceConnector): ConnectorView => ({
     checkedAt: connector.checkedAt,
     tools: connector.manifest.tools.map((spec) => ({
         approved: connector.approvedTools === null || connector.approvedTools.has(spec.name),
-        name: fullNameOf(connector.manifest.key, spec.name),
+        name: toolNameOf(connector.manifest, spec.name),
         scope: spec.scope,
         description: spec.description,
     })),

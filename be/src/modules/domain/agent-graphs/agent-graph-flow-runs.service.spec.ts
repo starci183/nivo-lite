@@ -9,6 +9,8 @@ import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { AgentRunsService } from "@modules/domain/agent-runs"
 import { AgentWorkHandlersService } from "@modules/domain/agent-work"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { EnvSource } from "@modules/platform/config"
+import { THREAD_READY_WORKFLOWS, parseAgentThreadsConfig } from "@modules/domain/agent-threads"
 import { runViewOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { agentTurnViewOf } from "@tests/fixtures/builders/agent-work.builder"
 import { stateOf } from "@tests/fixtures/builders/agent-graph.builder"
@@ -282,6 +284,42 @@ describe("AgentGraphFlowRunsService and the thread runs", () => {
         await thread.flows.run(again)
         expect(thread.runs.append).not.toHaveBeenCalled()
         expect(off.started).toHaveBeenCalledTimes(1)
+    })
+
+    it("with LangGraph as the default engine engages the nine cleared workflows only, and a legacy run stays legacy", async () => {
+        const { workflows } = parseAgentThreadsConfig(new EnvSource({ AGENT_ENGINE_DEFAULT: "langgraph" }))
+        expect(workflows).toEqual(THREAD_READY_WORKFLOWS)
+
+        // A run of a cleared workflow tried again after it started on the old engine: the old engine keeps it.
+        const again = agentTurnViewOf({ ...TURN, attempts: 2 })
+        const legacy = await build(stateWith(FLOW))
+        const stays = threadsOf([...workflows, "sales.main"], { engineOfWake: jest.fn().mockResolvedValue("legacy") })
+        legacy.flows.setThreads(stays)
+        await legacy.flows.run(again)
+        expect(legacy.runs.append).toHaveBeenCalledTimes(1)
+        expect(stays.started).not.toHaveBeenCalled()
+
+        // A graph no template made (here the agent's own, `sales.main`) is not cleared: its new runs stay on the old engine.
+        const own = await build(stateWith(FLOW))
+        const on = threadsOf(workflows)
+        own.flows.setThreads(on)
+        await own.flows.run(TURN)
+        expect(own.runs.append).toHaveBeenCalledTimes(1)
+        expect(on.started).not.toHaveBeenCalled()
+    })
+
+    it("asks nothing of the thread runs for a first try when the flag is unset: no read, the old engine as before", async () => {
+        const { workflows } = parseAgentThreadsConfig(new EnvSource({}))
+        const { flows, runs } = await build(stateWith(FLOW))
+        const off = threadsOf(workflows)
+        flows.setThreads(off)
+
+        await flows.run(TURN)
+
+        expect(workflows).toEqual([])
+        expect(off.engineOfWake).not.toHaveBeenCalled()
+        expect(off.opened).not.toHaveBeenCalled()
+        expect(runs.append).toHaveBeenCalledTimes(1)
     })
 
     it("takes a wake the thread runs own and hands it over before anything else", async () => {

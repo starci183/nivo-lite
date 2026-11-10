@@ -98,8 +98,9 @@ const build = async () => {
         Promise.resolve({ conversationId: asked.conversationId, text: asked.text }),
     )
     media.of.mockResolvedValue({})
-    leads.read.mockResolvedValue([{ consultFacts: {} }])
+    leads.read.mockResolvedValue([{ output: { value: {} } }])
     registry.portOf.mockReturnValue(leads)
+    registry.optionalPortOf.mockReturnValue(leads)
     team.execute.mockResolvedValue({ kind: "chat-message", id: "team-1" })
     registry.optionalExecutorOf.mockImplementation((effect) => (effect === TOOL.teamMessagePost ? team : undefined))
     access.judge.mockResolvedValue({ kind: "allow", provider: "telegram", ability: "customer.send", connectionId: "k1" })
@@ -335,7 +336,7 @@ describe("ChannelSendExecutorService addressed by the customer", () => {
     it("refuses an unprompted message to a customer who opted out", async () => {
         const { executor, conversations, leads, messages } = await build()
         conversations.ofLeads.mockResolvedValue([human("c1", "telegram")])
-        leads.read.mockResolvedValue([{ consultFacts: { careOptOut: true } }])
+        leads.read.mockResolvedValue([{ output: { value: { careOptOut: true } } }])
 
         await expect(executor.execute(TURN, { leadId: "l1", text: "Hi" }, CALL)).resolves.toMatchObject({
             id: "customer_opted_out",

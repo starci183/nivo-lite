@@ -1,5 +1,4 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
 import type { ChatMessagesQuery, ChatMessagesQueryVariables } from "../__generated__/graphql"
@@ -49,6 +48,57 @@ const query1: Document = gql`
                     canDecide
                 }
                 agentMessage
+                stop {
+                    stopId
+                    runId
+                    stepKey
+                    stepTitle
+                    workflowTitle
+                    moduleKey
+                    leadId
+                    conversationId
+                    kind
+                    by
+                    state
+                    headline
+                    message
+                    question
+                    suggestions {
+                        text
+                        handledBy
+                    }
+                    facts {
+                        name
+                        value
+                    }
+                    needs {
+                        answer
+                        decisions
+                        verdicts
+                    }
+                    replies {
+                        kind
+                        text
+                        by
+                        byName
+                        at
+                    }
+                    repeats
+                    firstAt
+                    stoppedAt
+                    resolvedAt
+                    approval {
+                        workItemId
+                        tool
+                        account
+                        ability
+                        args {
+                            name
+                            value
+                        }
+                    }
+                    revision
+                }
                 reactions {
                     emoji
                     count

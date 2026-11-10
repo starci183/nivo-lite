@@ -384,3 +384,59 @@ describe("AiClient gateway fetch", () => {
         expect(sentOf(http, 0).text).toBe("")
     })
 })
+
+describe("AiClient chat, the model a call targets", () => {
+    const BUDGET = { effort: "low" as const, maxTokens: 4000 }
+
+    it("asks the gateway for the target's profile with the body every provider it can reach accepts", async () => {
+        const { client, http } = await build()
+
+        await client.chat({
+            ...ASK,
+            budget: BUDGET,
+            affinity: "ws-1",
+            routing: { order: ["together"] },
+            target: { name: "sonnet", sampling: false, forcedToolChoice: false, upstreamFields: false },
+        })
+
+        const sent = JSON.parse(sentOf(http, 0).text) as Record<string, unknown>
+        expect(sent.model).toBe("sonnet")
+        expect(sent.max_tokens).toBe(4000)
+        for (const field of ["temperature", "reasoning", "session_id", "provider"]) expect(sent).not.toHaveProperty(field)
+    })
+
+    it("keeps the upstream's own fields for a profile an OpenAI-compatible upstream can serve, without a temperature when another cannot", async () => {
+        const { client, http } = await build()
+
+        await client.chat({
+            ...ASK,
+            budget: BUDGET,
+            affinity: "ws-1",
+            target: { name: "auto-light", sampling: false, forcedToolChoice: false, upstreamFields: true },
+        })
+
+        const sent = JSON.parse(sentOf(http, 0).text) as Record<string, unknown>
+        expect(sent.model).toBe("auto-light")
+        expect(sent).not.toHaveProperty("temperature")
+        expect(sent).toMatchObject({ reasoning: { effort: "low", exclude: true } })
+        expect(sent).toHaveProperty("session_id")
+    })
+
+    it("sends today's body when the call names no target: the endpoint's profile at temperature 0", async () => {
+        const { client, http } = await build()
+
+        await client.chat({ ...ASK, budget: BUDGET })
+
+        const sent = JSON.parse(sentOf(http, 0).text) as Record<string, unknown>
+        expect(sent).toMatchObject({ model: "work", temperature: 0, reasoning: { effort: "low", exclude: true } })
+    })
+
+    it("sends a marked message as plain text while breakpoints are off the wire", async () => {
+        const { client, http } = await build()
+
+        await client.chat({ ...ASK, messages: [{ role: "system", content: "stable", cacheMark: true }, ASK.messages[1]!] })
+
+        const sent = JSON.parse(sentOf(http, 0).text) as { messages: ReadonlyArray<{ content: unknown }> }
+        expect(sent.messages[0]?.content).toBe("stable")
+    })
+})

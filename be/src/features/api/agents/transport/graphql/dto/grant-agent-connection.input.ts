@@ -20,9 +20,4 @@ export class GrantAgentConnectionInput {
     @Field()
     @IsIn(["inbound_chat", "outbound_chat", "bank_feed", "data_source", "tool", "lead_source"])
     purpose!: "inbound_chat" | "outbound_chat" | "bank_feed" | "data_source" | "tool" | "lead_source"
-
-    /** Ignored: a binding has no level any more (rights live in the agent's attachments). Removed next release. */
-    @Field({ description: "Ignored: a binding has no level any more (rights live in the agent's attachments). Removed next release." })
-    @IsIn(["read", "ask", "auto"])
-    access!: "read" | "ask" | "auto"
 }

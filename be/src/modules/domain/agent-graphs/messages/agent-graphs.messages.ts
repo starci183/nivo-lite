@@ -10,6 +10,8 @@ export const AGENT_GRAPHS_MESSAGES: MessageBundle = {
         "errors.AGENT_GRAPHS_PUBLISH_REFUSED": "Sơ đồ còn chỗ chưa ổn, chưa thể áp dụng.",
         "errors.AGENT_GRAPHS_REFS_REFUSED":
             "Chưa lưu được: quy trình còn {{count}} chỗ lấy dữ liệu chưa đúng. Đầu tiên: {{first}}",
+        "errors.AGENT_GRAPHS_MODEL_REFUSED":
+            "Chưa lưu được: {{count}} bước chọn model không có trong danh sách (hoặc bước đó không gọi AI). Đầu tiên: bước {{first}}",
         "errors.AGENT_GRAPHS_CONTRACT_REFUSED":
             "Chưa lưu được: quy trình còn {{count}} chỗ chưa khớp đầu vào, kết quả hoặc bước chuyển tiếp. Đầu tiên: {{first}}",
         "errors.AGENT_GRAPHS_WIDENS_NEEDS_OWNER": "Thay đổi này cho agent thêm quyền, chỉ chủ shop mới được áp dụng.",
@@ -119,6 +121,8 @@ export const AGENT_GRAPHS_MESSAGES: MessageBundle = {
         "errors.AGENT_GRAPHS_DRAFT_CONFLICT": "Someone just saved this draft. Reload it and edit again.",
         "errors.AGENT_GRAPHS_PUBLISH_REFUSED": "The graph still has problems, so it cannot be applied yet.",
         "errors.AGENT_GRAPHS_REFS_REFUSED": "Not saved: the workflow has {{count}} broken data refs. First: {{first}}",
+        "errors.AGENT_GRAPHS_MODEL_REFUSED":
+            "Not saved: {{count}} steps name a model that is not in the list (or call no AI). First: step {{first}}",
         "errors.AGENT_GRAPHS_CONTRACT_REFUSED":
             "Not saved: the workflow has {{count}} mismatches in its inputs, outcomes or hand-offs. First: {{first}}",
         "errors.AGENT_GRAPHS_WIDENS_NEEDS_OWNER":

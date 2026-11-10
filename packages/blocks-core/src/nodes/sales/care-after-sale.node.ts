@@ -8,7 +8,7 @@ import { TOOL } from "../../vocabulary/tool-ids"
 import { itemsTextOf, orderLinesOf } from "../payment/payment-request.policy"
 import { nodeGoalOf } from "../node-ui"
 import type { NodeLocale, NodeSchema } from "../node-schema.types"
-import { DELIVERY_CARE_RIGHTS, careDeliveryOf, careFactsOfLead, careLeadOf, careOrderOf } from "./care.data"
+import { DELIVERY_CARE_RIGHTS, careDeliveryOf, careFactsOfLead, careLeadOf, careMemoryRowOf, careOrderOf } from "./care.data"
 import { CARE_VOICE, agentAnswer } from "./care.steps"
 
 const ID = "sales.after-sale"
@@ -67,7 +67,7 @@ const EXAMPLE_GRANT: RightsGrant = {
     rights: [
         ...DELIVERY_CARE_RIGHTS,
         { kind: "message", access: "write", scope: "turn", fields: ["body"] },
-        { kind: "sales-lead", access: "write", scope: "turn", fields: ["consultStage", "consultFacts"] },
+        { kind: "sales-lead", access: "write", scope: "turn", fields: ["consultStage"] },
     ],
 }
 
@@ -95,7 +95,7 @@ export const salesAfterSaleNode: NodeDefinition<typeof input, typeof output, typ
         const order = await careOrderOf(context, given.orderId)
         const leadId = order?.leadId ?? null
         const lead = await careLeadOf(context, leadId)
-        const facts = careFactsOfLead(lead)
+        const facts = await careFactsOfLead(context, leadId)
         if (facts.optedOut) return { orderId: given.orderId, sent: false }
         const delivery = await careDeliveryOf(context, given.orderId)
         return agentAnswer(context, {
@@ -149,9 +149,8 @@ export const salesAfterSaleNode: NodeDefinition<typeof input, typeof output, typ
             ],
             store: {
                 order: [PAID_ORDER],
-                "sales-lead": [
-                    { id: "l1", contactName: "An", consultFacts: { address: "57 Thạch Hãn", deliveryAt: "ngày mốt" } },
-                ],
+                "sales-lead": [{ id: "l1", contactName: "An" }],
+                "agent-lead-memory": [careMemoryRowOf("l1", { address: "57 Thạch Hãn", deliveryAt: "ngày mốt" })],
             },
         },
         {
@@ -175,7 +174,8 @@ export const salesAfterSaleNode: NodeDefinition<typeof input, typeof output, typ
             effects: [TOOL.customerMessageSend],
             store: {
                 order: [{ ...PAID_ORDER, deliveryAt: null }],
-                "sales-lead": [{ id: "l1", contactName: "An", consultFacts: { address: "25 Nguyễn Huệ", deliveryAt: "chiều mai" } }],
+                "sales-lead": [{ id: "l1", contactName: "An" }],
+                "agent-lead-memory": [careMemoryRowOf("l1", { address: "25 Nguyễn Huệ", deliveryAt: "chiều mai" })],
             },
         },
         {
@@ -187,7 +187,8 @@ export const salesAfterSaleNode: NodeDefinition<typeof input, typeof output, typ
             effects: [],
             store: {
                 order: [PAID_ORDER],
-                "sales-lead": [{ id: "l1", contactName: "An", consultFacts: { careOptOut: true } }],
+                "sales-lead": [{ id: "l1", contactName: "An" }],
+                "agent-lead-memory": [careMemoryRowOf("l1", { careOptOut: true })],
             },
         },
     ],

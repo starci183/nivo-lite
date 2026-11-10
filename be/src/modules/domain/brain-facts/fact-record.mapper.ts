@@ -63,6 +63,8 @@ export interface StoredFact {
     readonly decidedAt: Instant | null
     /** The decision note. */
     readonly decisionNote: string | null
+    /** Which value of its key it is; null or absent until it was in force. */
+    readonly version?: number | null | undefined
 }
 
 /** An instant as ISO text, whether the driver gave a Date or text. */
@@ -99,4 +101,5 @@ export const toFactRecord = (row: StoredFact): FactRecord => ({
     decidedBy: row.decidedBy,
     decidedAt: maybeIso(row.decidedAt),
     decisionNote: row.decisionNote,
+    ...(row.version === null || row.version === undefined ? {} : { version: Number(row.version) }),
 })

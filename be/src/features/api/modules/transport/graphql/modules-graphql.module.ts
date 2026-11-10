@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common"
 import { ModulesApiModule } from "../../modules.module"
-import { AgentSyncStatusResolver } from "./agent-sync-status.resolver"
 import { ApplySetupResolver } from "./apply-setup.resolver"
 import { ContextNotesResolver } from "./context-notes.resolver"
 import { CreateAgentInstallationResolver } from "./create-agent-installation.resolver"
@@ -19,7 +18,6 @@ import { RenameInstallationAgentResolver } from "./rename-installation-agent.res
 import { RenameModuleInstallationResolver } from "./rename-module-installation.resolver"
 import { SaveHoldingMessageResolver } from "./save-holding-message.resolver"
 import { SaveWorkingHoursResolver } from "./save-working-hours.resolver"
-import { SaveReplyTimeoutResolver } from "./save-reply-timeout.resolver"
 import { RemoveAgentResolver } from "./remove-agent.resolver"
 import { SetModuleLiveResolver } from "./set-module-live.resolver"
 import { SetOperatingModeResolver } from "./set-operating-mode.resolver"
@@ -34,7 +32,6 @@ import { SetupVersionsResolver } from "./setup-versions.resolver"
         ModuleDefinitionResolver,
         ModuleInstallationsResolver,
         ModuleInstallationResolver,
-        AgentSyncStatusResolver,
         ModuleRequirementFactsResolver,
         InstallModuleResolver,
         CreateAgentInstallationResolver,
@@ -44,7 +41,6 @@ import { SetupVersionsResolver } from "./setup-versions.resolver"
         SetOperatingModeResolver,
         SetModuleLiveResolver,
         RemoveAgentResolver,
-        SaveReplyTimeoutResolver,
         SaveHoldingMessageResolver,
         SaveWorkingHoursResolver,
         SetupStateResolver,

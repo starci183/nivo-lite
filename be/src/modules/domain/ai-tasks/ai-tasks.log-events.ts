@@ -8,4 +8,6 @@ export enum AiTasksLogEvent {
     ImagesDropped = "ai_tasks.images_dropped",
     /** One picture of a model call could not be read from the store (network failure or timeout); it is left out. */
     ImageUnreadable = "ai_tasks.image_unreadable",
+    /** A node names an explicit model whose provider holds no key: the call fails loudly before any try, it never switches model. */
+    ModelNotConfigured = "ai_tasks.model_not_configured",
 }

@@ -80,26 +80,6 @@ export interface NewInstallation {
     readonly operatingMode: InstallationMode
 }
 
-/** Where the OpenClaw copy of the agent of an installation stands. */
-export type AgentSyncState = "none" | "ok" | "error"
-
-/** The OpenClaw copy of an agent against the context version that is active. */
-export interface AgentSyncStatus {
-    /** Where the copy stands. */
-    readonly state: AgentSyncState
-    /** The context version OpenClaw holds; null when there is no copy. */
-    readonly syncedVersion: number | null
-    /** The context version that is active in the database. */
-    readonly activeVersion: number | null
-    /** When the copy was last checked, ISO 8601. */
-    readonly checkedAt: string | null
-    /** The last failure, when the last sync failed. */
-    readonly error: string | null
-}
-
-/** A sync status, or null when the installation is not of the workspace. */
-export type OptionalAgentSyncStatus = AgentSyncStatus | null
-
 /** What a workspace has, as far as the requirements of a module are concerned. */
 export interface RequirementFacts {
     /** The connection providers that are connected. */
@@ -116,12 +96,4 @@ export interface RequirementFacts {
 export interface RecordInstallation {
     /** The owning installation, or null when the record names none. */
     readonly installationId: string | null
-}
-
-/** An installation that runs on OpenClaw. */
-export interface OpenclawInstallation {
-    /** The installation. */
-    readonly id: string
-    /** The workspace. */
-    readonly workspaceId: string
 }

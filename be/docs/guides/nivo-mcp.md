@@ -7,8 +7,10 @@ documented in [mcp-gateway.md](mcp-gateway.md); this page adds to it and never r
 
 - NIVO MCP is a proxy behind one door. Built-in integrations are native tools NIVO builds. Knowledge is read from NIVO's own
   Brain. A third party with an MCP server is plugged in through `registerMcpConnector` and `approveMcpConnector`.
-- OpenClaw stays on its HTTP tool bridge. Its `tool.call` runs the gateway in process, so a tool added to the gateway reaches
-  OpenClaw and outside clients alike.
+- ~~OpenClaw stays on its HTTP tool bridge.~~ Superseded 2026-11-10 (owner: "chốt bỏ openclaw"): the bridge
+  (`AgentToolsService`) is deleted; workflow steps reach the gateway in process through the node door
+  (`be/src/modules/domain/mcp-gateway/node-tool-door.service.ts`), outside clients through `apps/mcp`. Engine side:
+  [engine-threads.md](engine-threads.md).
 - Providers now: Google Drive, SePay, Zalo OA, Telegram. Calendar later. Gmail out.
 - Drive disconnect is owner only, like Zalo and SePay.
 - The setup chat reads the Brain facts in force, so a conflict shows while chatting and not only when a card is written.
@@ -45,7 +47,7 @@ Two import facts decide where code lives. `agent-knowledge` and `google-connecti
 ```
 outside client ── POST /mcp/:ws ──> apps/mcp ──┐
                                                ├─> McpGatewayService.call
-OpenClaw ── tool bridge (AgentToolsService) ───┘      schema, grant, approval, breaker, limit, audit
+engine step ── node door (NodeToolDoorService) ┘      schema, grant, approval, breaker, limit, audit
                                                        ├─ native: brain dossier drive telegram zalo sepay einvoice
                                                        └─ remote: servers a workspace registered and approved
 ```
@@ -175,7 +177,7 @@ Writes come later and follow one form: `scope: "write"`, `defaultMode: "ask"`, `
 `apps/api` already holds these modules and only passes `natives`.
 
 Grants: nothing is granted by itself. An owner or manager turns tools on per agent with `setMcpToolGrant`; the console, read-only
-today, gets the switch (W5). OpenClaw keeps `knowledge.search` as it is.
+today, gets the switch (W5).
 
 ## 6. Drive and Telegram
 

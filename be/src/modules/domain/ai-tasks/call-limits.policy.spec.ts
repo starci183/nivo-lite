@@ -18,6 +18,7 @@ const envOf = (values: Readonly<Record<string, string>>) =>
         int: (key: string, fallback: number) => (values[key] === undefined ? fallback : Number(values[key])),
         duration: (key: string, fallback: number) => (values[key] === undefined ? fallback : Number(values[key])),
         optional: (key: string) => values[key],
+        has: (key: string) => (values[key] ?? "") !== "",
     }) as unknown as Parameters<typeof parseAiTasksConfig>[0]
 
 const ENDPOINT = { gatewayUrl: null, virtualKey: null, chatModel: "work", embeddingModel: "embed" }
@@ -193,5 +194,16 @@ describe("the node call settings of the environment", () => {
         expect(none).not.toHaveProperty("nodeReasoningMaxTokens")
         expect(policy.parseAiTasksConfig(envOf({}), ENDPOINT)).not.toHaveProperty("nodeMaxTokens")
         expect(set).toMatchObject({ nodeMaxTokens: 4000, nodeReasoningMaxTokens: 1024 })
+    })
+})
+
+describe("the providers of the pool, from the environment", () => {
+    it("names the upstream alone without an Anthropic key, and both with one; Anthropic never alone", () => {
+        expect(parseAiTasksConfig(envOf({ OPENROUTER_API_KEY: "k" }), ENDPOINT).providers).toEqual({ openrouter: true, anthropic: false })
+        expect(parseAiTasksConfig(envOf({ LLM_API_KEY: "k", ANTHROPIC_API_KEY: "a" }), ENDPOINT).providers).toEqual({
+            openrouter: true,
+            anthropic: true,
+        })
+        expect(parseAiTasksConfig(envOf({ ANTHROPIC_API_KEY: "a" }), ENDPOINT).providers).toEqual({ openrouter: false, anthropic: false })
     })
 })

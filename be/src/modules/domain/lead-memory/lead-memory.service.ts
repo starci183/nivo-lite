@@ -138,6 +138,19 @@ export class LeadMemoryService implements LeadMemoryStore {
         })
     }
 
+    /**
+     * Lays facts over the customer's facts entry, outside any step (what `lead.update` says the consult learned): only lead facts are
+     * kept (`LEAD_FACTS`), the newest value wins, another writer is waited out a few times.
+     */
+    async remember(
+        workspaceId: string,
+        subject: MemorySubject,
+        facts: Readonly<Record<string, JsonValue>>,
+    ): Promise<void> {
+        if (Object.keys(facts).length === 0) return
+        await this.engine.scoped(workspaceId, (tx) => this.mergeFacts(tx, subject, facts, WRITE_TRIES))
+    }
+
     /** Writes one step's outcome, the run's trigger under its workflow, and the facts it proves; a repeat writes the same values again. */
     async write(workspaceId: string, write: MemoryWrite): Promise<void> {
         const now = this.clock.now()

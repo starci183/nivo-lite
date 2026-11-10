@@ -208,22 +208,6 @@ describe("defaultRulesOf", () => {
 })
 
 describe("settingOf", () => {
-    it("keeps a reply timeout inside 5 to 120 seconds", async () => {
-        const { subject } = await buildSubject()
-
-        expect(subject.settingOf("openclawTimeoutSec", 5)).toEqual({ name: "openclawTimeoutSec", value: 5 })
-        expect(subject.settingOf("openclawTimeoutSec", "120.4")).toEqual({ name: "openclawTimeoutSec", value: 120 })
-    })
-
-    it("rejects a reply timeout outside the range", async () => {
-        const { subject } = await buildSubject()
-
-        expect(subject.settingOf("openclawTimeoutSec", 4)).toBeNull()
-        expect(subject.settingOf("openclawTimeoutSec", 121)).toBeNull()
-        expect(subject.settingOf("openclawTimeoutSec", "nope")).toBeNull()
-        expect(subject.settingOf("openclawTimeoutSec", null)).toBeNull()
-    })
-
     it("keeps the working hours as the web stores them, normalized, removes them on an empty text and refuses another shape", async () => {
         const { subject } = await buildSubject()
         const days = [[["13:00", "20:00"], ["08:00", "13:00"]], [], [], [], [], [], []]
@@ -276,18 +260,18 @@ describe("withSetting", () => {
 
         expect(
             subject.withSetting(
-                { openclawTimeoutSec: 10, holdingMessage: "hi", other: 1 },
+                { workingHours: "[]", holdingMessage: "hi", other: 1 },
                 { name: "holdingMessage", value: null },
             ),
-        ).toEqual({ openclawTimeoutSec: 10, other: 1 })
+        ).toEqual({ workingHours: "[]", other: 1 })
     })
 
     it("writes a new value", async () => {
         const { subject } = await buildSubject()
 
-        expect(subject.withSetting({ other: 1 }, { name: "openclawTimeoutSec", value: 30 })).toEqual({
+        expect(subject.withSetting({ other: 1 }, { name: "holdingMessage", value: "Wait" })).toEqual({
             other: 1,
-            openclawTimeoutSec: 30,
+            holdingMessage: "Wait",
         })
     })
 })

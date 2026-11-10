@@ -8,7 +8,6 @@ import {
     AgentBindingsService,
     AgentConnectionsModule,
 } from "@modules/domain/agent-connections"
-import { AGENT_TOOLS_ERROR_KINDS, AGENT_TOOLS_MESSAGES } from "@modules/domain/agent-tools"
 import { AGENT_PROFILE_ERROR_KINDS, AGENT_PROFILE_MESSAGES, AgentProfileModule } from "@modules/domain/agent-profile"
 import {
     AGENT_INSTANCES_ERROR_KINDS,
@@ -17,7 +16,7 @@ import {
     ConversationOwnersService,
 } from "@modules/domain/agent-instances"
 import { McpCallLogModule } from "@modules/domain/mcp-call-log"
-import { AGENTS_SYNC_FRESH_MS, AgentDirectoryService, AgentOwnershipService, AgentsModule, AgentsService } from "@modules/domain/agents"
+import { AgentDirectoryService, AgentOwnershipService, AgentsModule, AgentsService } from "@modules/domain/agents"
 import {
     AI_GENERATIONS_ERROR_KINDS,
     AI_GENERATIONS_MESSAGES,
@@ -29,14 +28,7 @@ import { ApprovalRequestsModule } from "@modules/domain/approval-requests"
 import { ChatRoomDirectoryModule, ChatRoomDirectoryService } from "@modules/domain/chat-room-directory"
 import { teamChatEntities } from "@modules/domain/team-chat"
 import { DECISIONS_ERROR_KINDS, DECISIONS_MESSAGES, DecisionsModule } from "@modules/domain/decisions"
-import {
-    OPENCLAW_AGENT_SYNC_ERROR_KINDS,
-    OPENCLAW_AGENT_SYNC_MESSAGES,
-    OPENCLAW_RELOAD_SETTLE_MS,
-    OpenclawAgentSyncModule,
-} from "@modules/domain/openclaw-agent-sync"
 import { AiTasksModule } from "@modules/domain/ai-tasks"
-import { OPENCLAW_ERROR_KINDS, OPENCLAW_MESSAGES, OpenclawModule } from "@modules/integrations/openclaw"
 import { REMOTE_FILES_ERROR_KINDS, REMOTE_FILES_MESSAGES, RemoteFilesModule } from "@modules/integrations/remote-files"
 import { DECISIONS_PORTS } from "../api.options"
 import type { ApiOptions } from "../api.options"
@@ -44,7 +36,6 @@ import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
 /** The agents area of the API, in registration order. */
 export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
-    OpenclawModule.register({ isGlobal: true, ...options.openclaw }),
     RemoteFilesModule.register({ isGlobal: true, ...options.remoteFiles }),
     AiTasksModule.register({
         isGlobal: true,
@@ -63,7 +54,6 @@ export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
             modules: ModuleProfilesService,
             channelOwners: ConversationOwnersService,
         },
-        syncFreshMs: AGENTS_SYNC_FRESH_MS,
     }),
     ChatRoomDirectoryModule.register({ isGlobal: true, rooms: teamChatEntities[0], seats: teamChatEntities[1] }),
     AgentProfileModule.register({ isGlobal: true }),
@@ -77,7 +67,6 @@ export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
         usage: UsageGateService,
         pollMs: AI_GENERATIONS_POLL_MS,
     }),
-    OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
     McpCallLogModule.register({ isGlobal: true }),
     DecisionsModule.register({ isGlobal: true, ports: DECISIONS_PORTS }),
     ApprovalRequestsModule.register({
@@ -90,10 +79,7 @@ export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
 export const agentsErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
     DECISIONS_ERROR_KINDS,
     AGENT_CONNECTIONS_ERROR_KINDS,
-    AGENT_TOOLS_ERROR_KINDS,
     AI_GENERATIONS_ERROR_KINDS,
-    OPENCLAW_AGENT_SYNC_ERROR_KINDS,
-    OPENCLAW_ERROR_KINDS,
     REMOTE_FILES_ERROR_KINDS,
     MODULES_ERROR_KINDS,
     AGENT_PROFILE_ERROR_KINDS,
@@ -104,11 +90,8 @@ export const agentsErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>
 export const agentsMessages: ReadonlyArray<MessageBundle> = [
     DECISIONS_MESSAGES,
     AGENT_CONNECTIONS_MESSAGES,
-    AGENT_TOOLS_MESSAGES,
     AI_GENERATIONS_MESSAGES,
     AI_USAGE_EVENTS_MESSAGES,
-    OPENCLAW_AGENT_SYNC_MESSAGES,
-    OPENCLAW_MESSAGES,
     REMOTE_FILES_MESSAGES,
     MODULES_MESSAGES,
     AGENT_PROFILE_MESSAGES,

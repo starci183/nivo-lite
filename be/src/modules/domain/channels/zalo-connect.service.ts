@@ -3,7 +3,8 @@ import type { StartZaloInput, ZaloWizardConnection } from "@modules/domain/chann
 import { ConnectionSecretsService, randomSecret } from "@modules/domain/connection-secrets"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
-import { isZaloRefusal } from "@modules/integrations/zalo"
+import { InjectZalo, isZaloRefusal } from "@modules/integrations/zalo"
+import type { ZaloClient } from "@modules/integrations/zalo"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { OptionalZnsRenewal, ZaloAuthorization, ZaloReturn, ZnsRenewalSettings } from "./channels.contracts"
@@ -37,6 +38,7 @@ export class ZaloConnectService {
         private readonly connections: ConnectionsService,
         private readonly secrets: ConnectionSecretsService,
         private readonly credentials: ZaloCredentialsService,
+        @InjectZalo() private readonly zalo: ZaloClient,
     ) {}
 
     /** Creates the pending connection with the Zalo app keys sealed (owner). */
@@ -79,10 +81,17 @@ export class ZaloConnectService {
         return this.viewOf(await this.connections.get(actor.workspaceId, connection.id))
     }
 
-    /** The wizard view of a Zalo connection (owner or manager). */
+    /**
+     * The wizard view of a Zalo connection (owner or manager). An authorized connection that has no OA name yet (connected before the
+     * name was kept, or the first read failed) starts reading it in the background; the view never waits for Zalo.
+     */
     async view(actor: ConnectionActor, connectionId: string): Promise<ZaloWizardConnection> {
         await this.connections.authorize(actor, MANAGER)
-        return this.viewOf(await this.zaloOf(actor, connectionId))
+        const connection = await this.zaloOf(actor, connectionId)
+        if (flag(connection.meta, "authorized") && (connection.meta.oa_name ?? "").trim() === "") {
+            this.rememberOaNameLater(connection.id)
+        }
+        return this.viewOf(connection)
     }
 
     /** Starts the Zalo sign-in of the OA: the permission page to open (owner). */
@@ -109,7 +118,36 @@ export class ZaloConnectService {
                 }
                 throw cause
             })
+        this.rememberOaNameLater(connectionId)
         return this.viewOf(await this.connections.get(actor.workspaceId, connectionId))
+    }
+
+    /**
+     * Starts `rememberOaName` without waiting for it: the connect, the authorization and the view never wait for Zalo's answer (or its
+     * time limit), and nothing it meets can fail them.
+     */
+    rememberOaNameLater(connectionId: string): void {
+        void this.rememberOaName(connectionId)
+    }
+
+    /**
+     * Reads the OA's display name from Zalo once (one `getoa` call with the connection's token) and keeps it among the public facts,
+     * so the account reads "Tiệm hoa NIVO" instead of the connection name with the OA id. Best effort, and it never rejects: an answer
+     * with no name (a missing or renamed field) stores nothing and logs `ZaloOaNameUnread` with reason `no_name`; an error answer, a
+     * time-out or a failed store logs the same event with its cause; never the token. The next view of an authorized connection
+     * without a name tries again.
+     */
+    async rememberOaName(connectionId: string): Promise<void> {
+        try {
+            const profile = await this.zalo.oaProfile(await this.credentials.accessToken(connectionId))
+            if (profile.name === "") {
+                this.logger.warn(ChannelsLogEvent.ZaloOaNameUnread, { connectionId, reason: "no_name" })
+                return
+            }
+            await this.connections.applyZaloOaName(connectionId, profile.name)
+        } catch (cause: unknown) {
+            this.logger.error(ChannelsLogEvent.ZaloOaNameUnread, cause, { connectionId })
+        }
     }
 
     /**

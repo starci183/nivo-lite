@@ -517,3 +517,27 @@ describe("ThreadStepService.run: a call that asks the owner first (an `ask` abil
         expect(JSON.stringify(core.decide.mock.calls[0])).toContain("tool_approval_refused")
     })
 })
+
+describe("ThreadStepService.run: the model of the node (model per node)", () => {
+    it("hands the host the model the graph's node names, the shop's choice over blocks-core's table", async () => {
+        const { steps, host } = await build()
+        host.run.mockResolvedValue({ output: { orderId: "o-1" }, effects: [] })
+        const chosen = {
+            ...FLOW,
+            nodes: FLOW.nodes.map((node) => (node.key === "match" ? { ...node, model: "deepseek/deepseek-v4.1-flash" } : node)),
+        }
+
+        await steps.run({ ...AT, flow: chosen }, stateOf(), scopeOf())
+
+        expect(hostInputOf(host)?.model).toBe("deepseek/deepseek-v4.1-flash")
+    })
+
+    it("names no model for a node that names none, so the host takes blocks-core's for the step", async () => {
+        const { steps, host } = await build()
+        host.run.mockResolvedValue({ output: { orderId: "o-1" }, effects: [] })
+
+        await steps.run(AT, stateOf(), scopeOf())
+
+        expect(hostInputOf(host)).not.toHaveProperty("model")
+    })
+})

@@ -4,7 +4,7 @@ import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition, NodeIndex } from "@nivo-lite/agent-sdk/node"
 import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
 import { MODULE_DECLARATIONS, WORKFLOW_TEMPLATES } from "@nivo-lite/blocks-core/modules"
-import { toolsOutsideAgent } from "./agent-tools.policy"
+import { toolsOutsideAgent, withDefaultReads } from "./agent-tools.policy"
 
 const indexOf = (nodes: ReadonlyArray<Partial<NodeDefinition> & { readonly id: string }>): NodeIndex =>
     mock<NodeIndex>({ nodes: new Map(nodes.map((node) => [node.id, mock<NodeDefinition>(node)])) })
@@ -51,5 +51,22 @@ describe("the workflow templates NIVO ships", () => {
             )
         })
         expect(outside).toEqual([])
+    })
+})
+
+describe("toolsOutsideAgent: the default reads", () => {
+    it("holds every default context read, so a step reading the run's customer is never outside its agent", () => {
+        const installed = indexOf([{ id: "sales.consult-turn", effects: [], tools: ["nivo.lead.order.list", "brain.search"] }])
+        const flow = flowOf([{ key: "consult", step: "sales.consult-turn" }])
+
+        expect(toolsOutsideAgent(flow, installed, ["customer.message.send"])).toEqual([])
+        expect(withDefaultReads(["customer.message.send", "brain.search"])).toEqual([
+            "customer.message.send",
+            "brain.search",
+            "nivo.conversation.message.list",
+            "nivo.lead.note.list",
+            "nivo.lead.order.list",
+            "nivo.lead.profile.get",
+        ])
     })
 })

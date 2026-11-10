@@ -245,3 +245,34 @@ describe("usage cost policy > figuresOf", () => {
         })
     })
 })
+
+describe("usage cost policy > Claude Sonnet 5.5 (no cost reported through the router)", () => {
+    it("prices Sonnet at $2 in and $10 out, a cached prompt token at $0.10", () => {
+        expect(realPriceOf("claude-sonnet-5-5", 1_000_000, 0)).toBeCloseTo(2, 8)
+        expect(realPriceOf("claude-sonnet-5-5", 0, 1_000_000)).toBeCloseTo(10, 8)
+        expect(realPriceOf("claude-sonnet-5-5", 1_000_000, 0, 800_000)).toBeCloseTo(0.4 + 0.08, 8)
+    })
+
+    it("keeps every other model's cached tokens at its full input price, as before", () => {
+        expect(realPriceOf("deepseek/deepseek-v4.1-flash", 1_000_000, 0, 900_000)).toBeCloseTo(0.14, 8)
+    })
+
+    it("prices a call whose reported cost is zero for used tokens from the table, so Sonnet never books free", () => {
+        const figures = realFiguresOf(
+            { model: "claude-sonnet-5-5", promptChars: 0, completionChars: 0 },
+            { prompt_tokens: 10_000, completion_tokens: 1_000, cached_tokens: 8_000, cost: 0 },
+        )
+
+        expect(figures.costUsd).toBeCloseTo((2_000 * 2 + 8_000 * 0.1 + 1_000 * 10) / 1_000_000, 8)
+        expect(figures.cachedTokens).toBe(8_000)
+    })
+
+    it("keeps a reported cost above zero as the provider's word", () => {
+        expect(
+            realFiguresOf(
+                { model: "deepseek/deepseek-v4.1-flash", promptChars: 0, completionChars: 0 },
+                { prompt_tokens: 10, completion_tokens: 1, cost: 0.5 },
+            ).costUsd,
+        ).toBe(0.5)
+    })
+})

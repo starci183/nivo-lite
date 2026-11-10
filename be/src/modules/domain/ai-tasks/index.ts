@@ -16,3 +16,4 @@ export { authorityBrief } from "./prompts.policy"
 
 export { AI_TASKS, InjectAiTasks } from "./ai-tasks.decorators"
 export type { LeadTurnInput } from "./lead-turn-prompt.policy"
+export type { ModelPicker, ModelPickerChoice, ModelPickerNode } from "./model-picker.mapper"

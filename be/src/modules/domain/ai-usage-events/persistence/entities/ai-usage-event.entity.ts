@@ -67,4 +67,16 @@ export class AiUsageEventEntity extends UuidAbstractEntity {
     /** Why the model stopped (`stop`, `tool_calls`); null when it did not say. */
     @Column({ name: "finish_reason", type: "text", nullable: true })
     finishReason!: string | null
+
+    /** What a graph node's call declared: `auto` or a model id; null for a fixed task of the app. */
+    @Column({ name: "declared_model", type: "text", nullable: true })
+    declaredModel!: string | null
+
+    /** The provider of the model that served the call (`anthropic`, `openrouter`); null when not known. */
+    @Column({ name: "model_provider", type: "text", nullable: true })
+    modelProvider!: string | null
+
+    /** Why the call went to the model it went to (`auto-heavy`, `default-no-key`, ...); null for a fixed task. */
+    @Column({ name: "model_reason", type: "text", nullable: true })
+    modelReason!: string | null
 }

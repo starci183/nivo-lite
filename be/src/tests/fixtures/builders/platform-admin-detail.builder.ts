@@ -55,7 +55,6 @@ const workspaceDetailConnections = (change: Record<string, unknown>): Stubs["que
                 operating_mode: "autopilot",
                 live_enabled: true,
                 active_context_version_id: "v-1",
-                processor: "openclaw",
             },
             {
                 id: "m-2",
@@ -64,24 +63,10 @@ const workspaceDetailConnections = (change: Record<string, unknown>): Stubs["que
                 operating_mode: "suggest",
                 live_enabled: false,
                 active_context_version_id: null,
-                processor: null,
             },
         ],
     ],
     [READ.contextVersions, [{ id: "v-1", version: 2, applied_at: AT }]],
-    [
-        READ.agentSync,
-        [
-            {
-                installation_id: "m-1",
-                agent_id: "agent-1",
-                context_version: 2,
-                checked_at: AT,
-                status: "ok",
-                error: null,
-            },
-        ],
-    ],
     [
         READ.connections,
         [

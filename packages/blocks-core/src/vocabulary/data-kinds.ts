@@ -55,7 +55,6 @@ export const salesLeadKind: DataKindDefinition = defineDataKind({
         email: nullableText,
         contextSummary: nullableText,
         consultStage: nullableText,
-        consultFacts: boundedRecord.nullable(),
     }),
 })
 
@@ -147,6 +146,16 @@ export const authorityRuleKind: DataKindDefinition = defineDataKind({
     fields: z.object({ id, action: text, mode: z.enum(["auto", "ask", "never"]) }),
 })
 
+/**
+ * One entry of a customer's lead memory, as care reads it: the facts entry (`<subject>|$lead|$facts`) holds what the consult learned
+ * (`careOptOut`, `occasions`, `recipientName`, `deliveryAt`, `address`) under `output.value`. Read by its key only.
+ */
+export const leadMemoryKind: DataKindDefinition = defineDataKind({
+    kind: "agent-lead-memory",
+    title: { vi: "Trí nhớ khách", en: "Customer memory" },
+    fields: z.object({ id, entryKey: text, leadId: id.nullable(), kind: text, output: boundedRecord }),
+})
+
 /** Every data kind the core nodes may hold rights over; the back end registers a data port for each. */
 export const coreDataKinds: ReadonlyArray<DataKindDefinition> = [
     orderKind,
@@ -158,4 +167,5 @@ export const coreDataKinds: ReadonlyArray<DataKindDefinition> = [
     messageKind,
     knowledgeDocumentKind,
     authorityRuleKind,
+    leadMemoryKind,
 ]

@@ -8,7 +8,7 @@ import { TOOL } from "../../vocabulary/tool-ids"
 import { itemsTextOf, orderLinesOf } from "../payment/payment-request.policy"
 import { nodeGoalOf } from "../node-ui"
 import type { NodeLocale, NodeSchema } from "../node-schema.types"
-import { CARE_RIGHTS, careFactsOfLead, careLeadOf, carePaidOrdersOf } from "./care.data"
+import { CARE_RIGHTS, careFactsOfLead, careLeadOf, careMemoryRowOf, carePaidOrdersOf } from "./care.data"
 import { nextOccurrenceOf, occasionOfSuffix, occasionStandingOf } from "./care.policy"
 import type { CareOccasion } from "./care.policy"
 import { CARE_VOICE, agentAnswer, arm } from "./care.steps"
@@ -106,7 +106,7 @@ export const salesCareOccasionNode: NodeDefinition<typeof input, typeof output, 
         const closed: CareOccasionOutput = { leadId: given.leadId, result: "closed" }
         const suffix = given.suffix ?? ""
         const lead = await careLeadOf(context, given.leadId)
-        const facts = careFactsOfLead(lead)
+        const facts = await careFactsOfLead(context, lead?.id)
         const occasion = occasionOfSuffix(facts.occasions, suffix)
         if (lead === undefined || occasion === undefined || facts.optedOut) return closed
         const { occasionLeadDays } = context.params
@@ -155,9 +155,8 @@ export const salesCareOccasionNode: NodeDefinition<typeof input, typeof output, 
             ],
             store: {
                 order: [ORDER],
-                "sales-lead": [
-                    { ...LEAD, consultFacts: { recipient: "her", occasions: [{ label: "birthday", date: "01-05" }] } },
-                ],
+                "sales-lead": [LEAD],
+                "agent-lead-memory": [careMemoryRowOf("l1", { recipientName: "her", occasions: [{ label: "birthday", date: "01-05" }] })],
             },
         },
         {
@@ -172,7 +171,7 @@ export const salesCareOccasionNode: NodeDefinition<typeof input, typeof output, 
                     payload: { kind: "occasion", ref: "l1", dueAt: "1970-05-24T17:00:00.000Z", suffix: "birthday-6-1" },
                 },
             ],
-            store: { "sales-lead": [{ ...LEAD, consultFacts: { occasions: [{ label: "birthday", date: "06-01" }] } }] },
+            store: { "sales-lead": [LEAD], "agent-lead-memory": [careMemoryRowOf("l1", { occasions: [{ label: "birthday", date: "06-01" }] })] },
         },
         {
             name: "a customer who asked to be left alone gets no suggestion",
@@ -182,9 +181,8 @@ export const salesCareOccasionNode: NodeDefinition<typeof input, typeof output, 
             grant: EXAMPLE_GRANT,
             effects: [],
             store: {
-                "sales-lead": [
-                    { ...LEAD, consultFacts: { careOptOut: true, occasions: [{ label: "birthday", date: "01-05" }] } },
-                ],
+                "sales-lead": [LEAD],
+                "agent-lead-memory": [careMemoryRowOf("l1", { careOptOut: true, occasions: [{ label: "birthday", date: "01-05" }] })],
             },
         },
         {
@@ -196,7 +194,7 @@ export const salesCareOccasionNode: NodeDefinition<typeof input, typeof output, 
             effects: [],
             store: {
                 order: [],
-                "sales-lead": [{ ...LEAD, consultFacts: { occasions: [{ label: "birthday", date: "01-05" }] } }],
+                "sales-lead": [LEAD], "agent-lead-memory": [careMemoryRowOf("l1", { occasions: [{ label: "birthday", date: "01-05" }] })],
             },
         },
     ],

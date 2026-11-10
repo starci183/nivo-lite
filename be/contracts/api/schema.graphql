@@ -54,14 +54,6 @@ type AdminActivityType {
   openDecisions: Int!
 }
 
-type AdminAgentSyncType {
-  agentId: ID!
-  checkedAt: String!
-  contextVersion: Int
-  error: String
-  status: String!
-}
-
 type AdminAuditType {
   action: String!
   actorEmail: String!
@@ -168,9 +160,7 @@ type AdminModuleType {
   key: String!
   live: Boolean!
   operatingMode: String!
-  processor: String!
   status: String!
-  sync: AdminAgentSyncType
 }
 
 type AdminOrderType {
@@ -363,7 +353,6 @@ type AgentCatalogEntryType {
 }
 
 type AgentCatalogGrantType {
-  access: String! @deprecated(reason: "Rights live in the agent's attachments (tab Quyền); a binding has no level. Always \"auto\" for a bound pair; removed next release.")
   accountMasked: String
   botUsername: String
   connectionId: ID!
@@ -397,7 +386,6 @@ input AgentChannelChoicesInput {
 }
 
 type AgentConnectionCandidateType {
-  access: String @deprecated(reason: "Rights live in the agent's attachments (tab Quyền); a binding has no level. Always \"auto\" for a bound pair; removed next release.")
   accountMasked: String
   botUsername: String
   bound: Boolean!
@@ -413,7 +401,6 @@ input AgentConnectionCandidatesInput {
 }
 
 type AgentConnectionType {
-  access: String! @deprecated(reason: "Rights live in the agent's attachments (tab Quyền); a binding has no level. Always \"auto\" for a bound pair; removed next release.")
   accountMasked: String
   botUsername: String
   id: ID!
@@ -505,13 +492,6 @@ type AgentDashboardWaitingRegionType {
 type AgentDashboardWaitingType {
   items: [AgentDashboardItemType!]!
   total: Int!
-}
-
-type AgentEngineStatusType {
-  gatewayConfigured: Boolean!
-  lastSyncCheckAt: String
-  syncFresh: Boolean!
-  workspaceWritable: Boolean!
 }
 
 input AgentGenMessageInput {
@@ -787,6 +767,25 @@ type AgentRulesRegionType {
   ok: Boolean!
 }
 
+type AgentRunAiCallType {
+  cachedTokens: Int!
+  calls: Int!
+  completionTokens: Int!
+  costUsd: Float!
+  declaredModels: [String!]!
+  durationMs: Int!
+  finishReasons: [String!]!
+  maxTry: Int
+  modelProviders: [String!]!
+  modelReasons: [String!]!
+  models: [String!]!
+  promptTokens: Int!
+  purpose: String!
+  reasoningTokens: Int!
+  slowestMs: Int
+  upstreams: [String!]!
+}
+
 type AgentRunCallType {
   failure: String
   ok: Boolean!
@@ -813,6 +812,7 @@ enum AgentRunDecisionVerdict {
 }
 
 type AgentRunDetailType {
+  aiCalls: [AgentRunAiCallType!]!
   canCancel: Boolean!
   canResume: Boolean!
   decision: AgentRunDecisionType
@@ -924,14 +924,6 @@ type AgentSummaryType {
   status: String!
 }
 
-type AgentSyncStatusType {
-  activeVersion: Int
-  checkedAt: String
-  error: String
-  state: String!
-  syncedVersion: Int
-}
-
 type AgentTagTargetType {
   id: ID!
   module: String!
@@ -953,6 +945,30 @@ type AgentTaskType {
 input AgentTextsInput {
   instructions: String! @inputBounds(maxLength: 20000)
   knowledge: String! @inputBounds(maxLength: 50000)
+}
+
+type AgentToolAccountType {
+  ability: String!
+  accountLabel: String!
+  connectionId: ID!
+  mode: String!
+  provider: String!
+}
+
+type AgentToolTextType {
+  en: String!
+  vi: String!
+}
+
+type AgentToolType {
+  accounts: [AgentToolAccountType!]!
+  grant: String
+  id: String!
+  kind: String!
+  origin: String!
+  ready: Boolean!
+  summary: AgentToolTextType!
+  title: AgentToolTextType!
 }
 
 type AgentTriggerType {
@@ -1155,6 +1171,27 @@ type AgentWorkflowVersionType {
 input AgentWorkflowsInput {
   installationId: ID! @inputBounds(maxLength: 36)
   locale: String @inputBounds(maxLength: 2)
+}
+
+type AiModelChoiceType {
+  available: Boolean!
+  hint: String!
+  id: String!
+  label: String!
+  provider: String
+  providerLabel: String
+}
+
+type AiModelPickerType {
+  choices: [AiModelChoiceType!]!
+  defaultModel: String!
+  nodes: [AiNodeModelType!]!
+}
+
+type AiNodeModelType {
+  model: String!
+  nodeId: String!
+  weight: String!
 }
 
 type ApiKeyType {
@@ -1741,6 +1778,111 @@ type BrainGapType {
   topic: String
 }
 
+type BrainGraphEdgeType {
+  createdAt: String!
+  createdBy: String!
+  fromFactId: ID!
+  id: ID!
+  kind: String!
+  label: String
+  toFactId: ID!
+}
+
+input BrainGraphInput {
+  cursor: String @inputBounds(maxLength: 120)
+  limit: Int @inputBounds(min: 1, max: 100)
+  query: String @inputBounds(maxLength: 200)
+  subjectKey: String @inputBounds(maxLength: 120)
+}
+
+type BrainGraphNodeType {
+  attributeLabel: String!
+  changedAt: String
+  id: ID!
+  installationId: ID
+  modules: [String!]!
+  neighbor: Boolean!
+  origin: BrainGraphOriginType!
+  pendingCount: Int!
+  previous: BrainGraphPreviousType
+  recentlyChanged: Boolean!
+  scope: String!
+  status: String!
+  subjectKey: String!
+  subjectLabel: String!
+  subjectType: String!
+  unit: String
+  validFrom: String
+  validTo: String
+  value: String!
+  version: Int
+}
+
+type BrainGraphOriginType {
+  chunkHash: String
+  kind: String!
+  label: String!
+  messageId: ID
+  quote: String
+  sourceId: ID
+}
+
+type BrainGraphPendingType {
+  attributeLabel: String!
+  currentFactId: ID
+  currentValue: String
+  currentVersion: Int
+  id: ID!
+  origin: BrainGraphOriginType!
+  proposalKind: String!
+  proposedAt: String!
+  proposedBy: String!
+  sourceKind: String!
+  subjectKey: String!
+  subjectLabel: String!
+  unit: String
+  validFrom: String
+  validTo: String
+  value: String!
+}
+
+type BrainGraphPreviousType {
+  id: ID!
+  value: String!
+  version: Int
+}
+
+type BrainGraphReadingType {
+  factsProposed: Int!
+  status: String!
+  windowsDone: Int!
+  windowsTotal: Int!
+}
+
+type BrainGraphSourceType {
+  lastChangedAt: String
+  nodeCount: Int!
+  reading: BrainGraphReadingType
+  sourceId: ID!
+  title: String!
+}
+
+type BrainGraphTotalsType {
+  nodes: Int!
+  pending: Int!
+  recentlyChanged: Int!
+  relations: Int!
+}
+
+type BrainGraphType {
+  edges: [BrainGraphEdgeType!]!
+  nextCursor: String
+  nodes: [BrainGraphNodeType!]!
+  pending: [BrainGraphPendingType!]!
+  sources: [BrainGraphSourceType!]!
+  totals: BrainGraphTotalsType!
+}
+
 type BrainLensType {
   audience: String!
   module: String!
@@ -2315,7 +2457,6 @@ input ConnectTelegramInput {
 }
 
 type ConnectionAgentGrantType {
-  access: String! @deprecated(reason: "Rights live in the agent's attachments (tab Quyền); a binding has no level. Always \"auto\" for a bound pair; removed next release.")
   agentId: ID!
   agentName: String!
   connectionId: ID!
@@ -2339,7 +2480,6 @@ type ConnectionCheckType {
 }
 
 type ConnectionGrantType {
-  access: String! @deprecated(reason: "Rights live in the agent's attachments (tab Quyền); a binding has no level. Always \"auto\" for a bound pair; removed next release.")
   agentId: ID!
 }
 
@@ -2369,10 +2509,6 @@ type ConnectionType {
 }
 
 input ConnectionWishInput {
-  """
-  Ignored: a binding has no level any more (rights live in the agent's attachments). Removed next release.
-  """
-  access: String @inputBounds(maxLength: 8)
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
@@ -3217,6 +3353,10 @@ input GetAgentGraphRunInput {
   workItemId: String! @inputBounds(maxLength: 36)
 }
 
+input GetAiModelPickerInput {
+  locale: String @inputBounds(maxLength: 2)
+}
+
 input GetConnectionFirstEventInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
@@ -3273,20 +3413,12 @@ type GoogleStateType {
 }
 
 input GrantAgentConnectionInput {
-  """
-  Ignored: a binding has no level any more (rights live in the agent's attachments). Removed next release.
-  """
-  access: String!
   agentId: ID! @inputBounds(maxLength: 36)
   connectionId: ID! @inputBounds(maxLength: 36)
   purpose: String!
 }
 
 input GrantWishInput {
-  """
-  Ignored: a binding has no level any more (rights live in the agent's attachments). Removed next release.
-  """
-  access: String @inputBounds(maxLength: 8)
   agentId: ID! @inputBounds(maxLength: 64)
 }
 
@@ -3942,6 +4074,13 @@ type LikenessGrantType {
   verified: Boolean!
 }
 
+input LinkBrainFactsInput {
+  fromFactId: ID! @inputBounds(maxLength: 36)
+  kind: String! @inputBounds(maxLength: 40)
+  label: String @inputBounds(maxLength: 80)
+  toFactId: ID! @inputBounds(maxLength: 36)
+}
+
 type LinkStaffType {
   staffId: ID!
 }
@@ -4508,6 +4647,7 @@ type Mutation {
   joinInvite(input: InviteRefInput!): AcceptInviteType!
   keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
   leaveWorkspace: Boolean!
+  linkBrainFacts(input: LinkBrainFactsInput!): BrainGraphEdgeType!
   linkHiringStaff(input: HiringCandidateRefInput!): LinkStaffType!
   logoutOtherSessions: Boolean!
   maintainBrain: Boolean!
@@ -4549,7 +4689,6 @@ type Mutation {
   reopenDossierFinding(input: DossierFindingRefInput!): DossierFindingType!
   requestAgentAvatarUpload(input: RequestAgentAvatarUploadInput!): AgentAvatarUploadType!
   requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
-  requestAgentSync(input: RequestAgentSyncInput!): AgentAckType!
   requestChatFileUpload(input: RequestChatFileUploadInput!): ChatFileUploadPayloadType!
   requestContentDraft(input: RequestContentDraftInput!): ContentAiRequestedType!
   requestContentMediaUpload(input: RequestContentMediaUploadInput!): ContentMediaUploadType!
@@ -4615,7 +4754,6 @@ type Mutation {
   saveMemberGrants(input: SaveMemberGrantsInput!): [MemberGrantType!]!
   saveOpenApiConnection(input: SaveOpenApiConnectionInput!): ID!
   saveProviderKeys(input: SaveProviderKeysInput!): ProviderKeysResultType!
-  saveReplyTimeout(input: SaveReplyTimeoutInput!): ModuleInstallationType!
   saveStaff(input: SaveStaffInput!): StaffOptionType!
   saveTelegramUserSetup(input: SaveTelegramUserSetupInput!): Boolean!
   saveVideoBrand(input: SaveVideoBrandInput!): VideoBrandType!
@@ -4676,6 +4814,7 @@ type Mutation {
   testWebhookConnection(input: TestWebhookConnectionInput!): WebhookTestResultType!
   toggleHiringOnboarding(input: ToggleHiringOnboardingInput!): Boolean!
   undoBrainFactBatch(input: UndoBrainFactBatchInput!): BrainBulkUndoneType!
+  unlinkBrainFacts(input: UnlinkBrainFactsInput!): Boolean!
   unpinChatMessage(input: ChatPinInput!): ChatMessagePayloadType!
   updateAuthority(input: UpdateAuthorityInput!): AuthorityProfileType!
   updateKnowledgeSource(input: UpdateKnowledgeSourceInput!): Boolean!
@@ -5115,7 +5254,6 @@ type Query {
   agentConnectionCandidates(input: AgentConnectionCandidatesInput!): [AgentConnectionCandidateType!]!
   agentConnections(input: AgentIdInput!): [AgentConnectionType!]!
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
-  agentEngineStatus: AgentEngineStatusType!
   agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
   agentGraphCoverage(input: ListAgentGraphCoverageInput!): [AgentGraphCoverageType!]!
   agentGraphLayout(input: AgentGraphLayoutInput!): AgentGraphLayoutType!
@@ -5127,8 +5265,8 @@ type Query {
   agentRun(input: AgentRunInput!): AgentRunDetailType
   agentRunWorkflows(input: AgentRunWorkflowsInput!): [AgentRunWorkflowPinType!]!
   agentRuns(input: AgentWorkInstanceInput!): AgentRunsType!
-  agentSyncStatus(input: ModuleInstallationIdInput!): AgentSyncStatusType!
   agentTemplatePreview(input: PackageAgentTemplateInput!): PackagePreviewType!
+  agentTools(input: AgentIdInput!): [AgentToolType!]!
   agentWork(input: AgentWorkInstanceInput!): AgentWorkType!
   agentWorkLog(input: AgentWorkInstanceInput!): [AgentWorkLogLineType!]!
   agentWorkflow(input: AgentWorkflowInput!): AgentWorkflowDetailType!
@@ -5137,6 +5275,7 @@ type Query {
   agentWorkflowTemplatePreview(input: AgentWorkflowTemplatePreviewInput!): AgentWorkflowTemplatePreviewType!
   agentWorkflows(input: AgentWorkflowsInput!): [AgentWorkflowType!]!
   agents(input: ListAgentsInput!): [AgentSummaryType!]!
+  aiModelPicker(input: GetAiModelPickerInput!): AiModelPickerType!
   apiKeys: [ApiKeyType!]!
   approverDirectory: [ApproverMemberType!]!
   askKnowledge(input: AskKnowledgeInput!): [RetrievedPassageType!]!
@@ -5152,6 +5291,7 @@ type Query {
   bookingBoard(input: BookingBoardInput): BookingBoardType!
   brain: BrainType!
   brainDossiers: [BrainDossierType!]!
+  brainGraph(input: BrainGraphInput): BrainGraphType!
   brainTodo: BrainTodoType!
   brandProposals(input: BrandProposalsInput!): [BrandProposalType!]!
   chatMessages(input: ChatMessagesInput!): ChatMessagePageType!
@@ -5420,11 +5560,6 @@ input RequestAgentGenerationInput {
   purpose: String! @inputBounds(maxLength: 60)
   responseFormat: String!
   timeoutMs: Int @inputBounds(min: 5000, max: 120000)
-}
-
-input RequestAgentSyncInput {
-  force: Boolean
-  installationId: ID @inputBounds(maxLength: 36)
 }
 
 input RequestChatFileUploadInput {
@@ -5925,11 +6060,6 @@ input SaveProviderKeysInput {
   values: ProviderKeysInput!
 }
 
-input SaveReplyTimeoutInput {
-  installationId: ID! @inputBounds(maxLength: 36)
-  value: Int! @inputBounds(min: 5, max: 120)
-}
-
 input SaveStaffInput {
   active: Boolean
   email: String @inputBounds(maxLength: 254)
@@ -6159,8 +6289,8 @@ input SetConnectionAgentsInput {
 }
 
 input SetConnectionGrantInput {
-  access: String @inputBounds(maxLength: 8)
   agentId: ID! @inputBounds(maxLength: 64)
+  bound: Boolean!
   connectionId: ID! @inputBounds(maxLength: 64)
 }
 
@@ -6644,6 +6774,10 @@ input ToggleHiringOnboardingInput {
 
 input UndoBrainFactBatchInput {
   batchId: String! @inputBounds(maxLength: 64)
+}
+
+input UnlinkBrainFactsInput {
+  id: ID! @inputBounds(maxLength: 36)
 }
 
 input UpdateAuthorityInput {

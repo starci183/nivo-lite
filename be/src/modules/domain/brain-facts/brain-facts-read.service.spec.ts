@@ -188,3 +188,34 @@ describe("BrainFactsReadService ofInstance", () => {
         ])
     })
 })
+
+describe("BrainFactsReadService truth graph reads", () => {
+    it("reads the facts born from one chunk of a document in one containment read on the evidence index", async () => {
+        const em = mockEntityManager()
+        const [read] = queueQueryBuilders(em, [{ getMany: [facts.rowOf({ id: "ship" })] }])
+        const service = await build(em)
+
+        await expect(service.bornFrom(facts.WS, "doc-1", "h-ship", ["active", "proposed"])).resolves.toMatchObject([
+            { id: "ship" },
+        ])
+        const [condition, parameters] = read?.callsOf("where")[0] ?? []
+        expect(condition).toBe(
+            "f.workspaceId = :workspaceId AND f.status IN (:...statuses) AND f.evidence @> :pattern::jsonb",
+        )
+        expect(parameters).toEqual({
+            workspaceId: facts.WS,
+            statuses: ["active", "proposed"],
+            pattern: JSON.stringify([{ kind: "document", ref: "doc-1", chunkHash: "h-ship" }]),
+        })
+    })
+
+    it("reads facts by id inside the workspace only, each id once, and nothing for none", async () => {
+        const em = mockEntityManager({ find: [BrainFactEntity, [facts.rowOf()]] })
+        const service = await build(em)
+
+        await expect(service.byIds(facts.WS, [])).resolves.toEqual([])
+        await service.byIds(facts.WS, ["f1", "f1", "f2"])
+
+        expect(em.find.mock.calls[0]?.[1]).toEqual({ where: { workspaceId: facts.WS, id: In(["f1", "f2"]) }, take: 2 })
+    })
+})

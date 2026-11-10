@@ -200,6 +200,7 @@ const GUIDANCE = [
     "Answer `ready` only when the customer agreed to the LAST summary in `thread` and that summary carries the final address, recipient, " +
         "phone and time of your answer. When anything changed after it, or no summary of yours is in `thread` (a turn tried again), send the " +
         "summary now and answer `asked`.",
+    `When the customer asks about their own orders (what they bought, its status, when it comes) and \`recentOrders\` does not answer it, call ${TOOL.leadOrderList} (it reads only this customer's orders, newest first) and answer only from what it returns.`,
     "Payment is a bank transfer by the QR the shop sends right after the order: never offer cash on delivery or another account.",
     "A question neither the knowledge search nor `catalogue` answers (a custom order, a discount, stock): tell the customer you " +
         "will check with the shop owner, then answer confused with the question for the owner; never guess.",
@@ -224,8 +225,11 @@ const TURN = { conversationId: "conv-1", channel: "zalo", locale: "en" } as cons
 /** The effects the agent of the step may call: its whole reach. */
 const EFFECTS = [TOOL.customerMessageSend, TOOL.leadEnsure]
 
-/** The knowledge search of the second brain: read only, so the agent may call it as often as the question needs. */
-const TOOLS = [TOOL.brainSearch]
+/**
+ * The knowledge search of the second brain and the customer's own orders (a context read locked to the run's customer): read only, so
+ * the agent may call them as often as the question needs.
+ */
+const TOOLS = [TOOL.brainSearch, TOOL.leadOrderList]
 
 const GRANT = { ...exampleGrantOf(RIGHTS, EFFECTS), tools: TOOLS }
 

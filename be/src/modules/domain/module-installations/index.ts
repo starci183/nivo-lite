@@ -1,6 +1,4 @@
 export type {
-    AgentSyncState,
-    AgentSyncStatus,
     InstallationLifecycle,
     InstallationMode,
     InstallationRecord,
@@ -8,7 +6,6 @@ export type {
     InstallationStatus,
     RecordInstallation,
     OptionalRowId,
-    OptionalAgentSyncStatus,
     OptionalInstallationRecord,
     RequirementFacts,
 } from "./module-installations.contracts"

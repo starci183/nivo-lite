@@ -1,9 +1,15 @@
+import type { HashedPassage } from "./chunk-provenance.policy"
+
 /** What a reading of a document must do. */
 export interface ReadingPlan {
     /** True when some passages are unchanged, so only the others are read. */
     readonly partial: boolean
     /** The hashes of every passage of the document. */
     readonly hashes: ReadonlyArray<string>
+    /** Every passage of the document with its hash: what a filed fact names as the chunk it was read from. */
+    readonly passages: ReadonlyArray<HashedPassage>
+    /** The hashes of the passages that did not change. */
+    readonly unchangedHashes: ReadonlyArray<string>
     /** The unchanged passages, as one text. */
     readonly unchangedText: string
     /** What the model reads. */
@@ -18,7 +24,7 @@ export interface InboxClaim {
     readonly dedupeKey: string
 }
 
-import type { BrainSubjectType, Scope } from "@modules/domain/brain-facts"
+import type { BrainSubjectType, FactRelation, Scope } from "@modules/domain/brain-facts"
 
 /** One correction the owner made of an agent's work, as the decisions record keeps it. */
 export interface Correction {
@@ -172,4 +178,176 @@ export interface BulkUndone {
     readonly restored: number
     /** How many stay as they are because they were changed since (retired, replaced or decided again). */
     readonly kept: number
+}
+
+/** Which part of the truth graph one read answers: one page of subjects, optionally one subject or the truths that match words. */
+export interface BrainGraphFilter {
+    /** Only this subject (its key). */
+    readonly subjectKey?: string | undefined
+    /** Only truths whose subject, attribute or value hold every one of these words. */
+    readonly query?: string | undefined
+    /** The subject key the previous page ended at. */
+    readonly cursor?: string | undefined
+    /** How many subjects one page holds, 1 to 100; 30 when absent. */
+    readonly limit?: number | undefined
+}
+
+/** Where a truth or a change request comes from, as the graph shows it. */
+export interface BrainGraphOrigin {
+    /** A document's passage, a chat message, a person on the page, or anything else. */
+    readonly kind: "document" | "chat" | "manual" | "other"
+    /** The document title, or the label of the evidence. */
+    readonly label: string
+    /** The words it rests on, verbatim, or null. */
+    readonly quote: string | null
+    /** The document, for a document origin. */
+    readonly sourceId: string | null
+    /** The passage of the document it was read from, or null (read before chunk hashes). */
+    readonly chunkHash: string | null
+    /** The team-chat message, for a chat origin. */
+    readonly messageId: string | null
+}
+
+/** One node of the truth graph: one short truth with its source, version and validity. */
+export interface BrainGraphNode {
+    /** The fact id. */
+    readonly id: string
+    /** The subject key (nodes of one subject group together). */
+    readonly subjectKey: string
+    /** The subject as people write it. */
+    readonly subjectLabel: string
+    /** What the subject is. */
+    readonly subjectType: BrainSubjectType
+    /** The attribute as people write it. */
+    readonly attributeLabel: string
+    /** The value. */
+    readonly value: string
+    /** The unit, or null. */
+    readonly unit: string | null
+    /** `active` or `scheduled`. */
+    readonly status: string
+    /** Which value of its key this is, or null (never versioned). */
+    readonly version: number | null
+    /** From when it holds. */
+    readonly validFrom: string | null
+    /** Until when it holds (one year after it started unless stated). */
+    readonly validTo: string | null
+    /** Who may read it: public, internal or restricted. */
+    readonly scope: Scope
+    /** The modules that read a restricted truth. */
+    readonly modules: ReadonlyArray<string>
+    /** The agent instance it is kept for, or null for every instance. */
+    readonly installationId: string | null
+    /** Where it comes from. */
+    readonly origin: BrainGraphOrigin
+    /** The value it replaced, or null. */
+    readonly previous: BrainGraphPrevious | null
+    /** When it was put in force. */
+    readonly changedAt: string | null
+    /** Put in force in the last seven days. */
+    readonly recentlyChanged: boolean
+    /** How many change requests wait for its key. */
+    readonly pendingCount: number
+    /** True for a truth of another subject shown because an edge of the page reaches it. */
+    readonly neighbor: boolean
+}
+
+/** One waiting change request (a proposal), as the aside lists it. */
+export interface BrainGraphPending {
+    /** The proposal id: the id `decideBrainFact` takes. */
+    readonly id: string
+    /** The subject key. */
+    readonly subjectKey: string
+    /** The subject. */
+    readonly subjectLabel: string
+    /** The attribute. */
+    readonly attributeLabel: string
+    /** The proposed value (for `retire`: the value it would stop). */
+    readonly value: string
+    /** The unit, or null. */
+    readonly unit: string | null
+    /** `set` a value or `retire` the one in force. */
+    readonly proposalKind: string
+    /** The truth in force it would replace, or null. */
+    readonly currentFactId: string | null
+    /** Its value, or null. */
+    readonly currentValue: string | null
+    /** Its version, or null. */
+    readonly currentVersion: number | null
+    /** Who proposed it (an agent's module, a document title, a person). */
+    readonly proposedBy: string
+    /** When. */
+    readonly proposedAt: string
+    /** The source kind it files under. */
+    readonly sourceKind: string
+    /** Where it comes from. */
+    readonly origin: BrainGraphOrigin
+    /** From when it would hold, when stated. */
+    readonly validFrom: string | null
+    /** Until when it would hold, when stated (else one year from approval). */
+    readonly validTo: string | null
+}
+
+/** One document the graph was built from. */
+export interface BrainGraphSource {
+    /** The knowledge source. */
+    readonly sourceId: string
+    /** Its title. */
+    readonly title: string
+    /** How many truths in force (or scheduled) it supports. */
+    readonly nodeCount: number
+    /** When the newest of them was put in force. */
+    readonly lastChangedAt: string | null
+    /** How far its reading got, or null when it was never read. */
+    readonly reading: BrainGraphReading | null
+}
+
+/** How far the reading of one source document got. */
+export interface BrainGraphReading {
+    /** Where the reading stands. */
+    readonly status: string
+    /** Windows read. */
+    readonly windowsDone: number
+    /** Windows of this reading (only the changed passages on a re-read). */
+    readonly windowsTotal: number
+    /** Facts filed by the reading. */
+    readonly factsProposed: number
+}
+
+/** One page of the truth graph. */
+export interface BrainGraph {
+    /** The truths of the page's subjects, then their neighbours. */
+    readonly nodes: ReadonlyArray<BrainGraphNode>
+    /** The edges among the nodes. */
+    readonly edges: ReadonlyArray<FactRelation>
+    /** Every change request waiting for the founder. */
+    readonly pending: ReadonlyArray<BrainGraphPending>
+    /** The source documents. */
+    readonly sources: ReadonlyArray<BrainGraphSource>
+    /** Totals of the whole graph ("19 nut - 23 quan he - 1 nut vua doi"). */
+    readonly totals: BrainGraphTotals
+    /** The cursor of the next page of subjects, or null. */
+    readonly nextCursor: string | null
+}
+
+/** The value a truth replaced. */
+export interface BrainGraphPrevious {
+    /** The replaced fact. */
+    readonly id: string
+    /** Its value. */
+    readonly value: string
+    /** Its version. */
+    readonly version: number | null
+}
+
+/** Totals of the whole graph. */
+export interface BrainGraphTotals {
+    /** Truths in force or scheduled. */
+    readonly nodes: number
+    /** Edges among them. */
+    readonly relations: number
+    /** Truths put in force in the last seven days. */
+    readonly recentlyChanged: number
+    /** Change requests waiting. */
+    readonly pending: number
 }

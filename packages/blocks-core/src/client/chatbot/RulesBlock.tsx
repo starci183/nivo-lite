@@ -1,16 +1,16 @@
 import { useState, type ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
-import { Button, Form, Cluster, NumberField, Stack, Text, Textarea } from "@starci/grammar/common"
+import { Button, Form, Cluster, Stack, Text, Textarea } from "@starci/grammar/common"
 import type { rulesBlock } from "../../blocks/chatbot/rules.block"
 import { draftOf, rulesErrorsOf, valuesOf, type RulesDraft } from "../../rows/chatbot/rules-form"
-import { HOLDING_MESSAGE_MAX, TIMEOUT_MAX_SEC, TIMEOUT_MIN_SEC } from "../../rules/chatbot/settings"
+import { HOLDING_MESSAGE_MAX } from "../../rules/chatbot/settings"
 import { textOf, valueAt } from "../../slots/paths"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
 type RulesProps = RenderOf<typeof rulesBlock>
 
-/** What the two fields of the settings are given. */
+/** What the field of the settings is given. */
 interface RulesFieldsProps {
     /** The values being typed. */
     readonly draft: RulesDraft
@@ -24,41 +24,23 @@ interface RulesFieldsProps {
     readonly errorOf: (field: string) => { readonly errorMessage?: string }
 }
 
-/** The fields of the settings: how long the model may take, and what a customer is told while it does. */
+/** The field of the settings: what a customer is told while the model works. */
 const RulesFields = (props: RulesFieldsProps): ReactNode => {
     const words = useBlockWords()
     return (
-        <>
-            <NumberField
-                id="openclawTimeoutSec"
-                name="openclawTimeoutSec"
-                label={words({ key: "rules_timeout_label" })}
-                description={words({ key: "rules_timeout_hint" })}
-                isLoading={props.isLoading}
-                isReadOnly={props.isLocked}
-                minValue={TIMEOUT_MIN_SEC}
-                maxValue={TIMEOUT_MAX_SEC}
-                formatOptions={{ style: "unit", unit: "second", unitDisplay: "long" }}
-                value={props.draft.openclawTimeoutSec ?? Number.NaN}
-                onValueChange={(reported) =>
-                    props.onDraft({ ...props.draft, openclawTimeoutSec: Number.isNaN(reported) ? null : reported })
-                }
-                {...props.errorOf("openclawTimeoutSec")}
-            />
-            <Textarea
-                id="holdingMessage"
-                name="holdingMessage"
-                label={words({ key: "rules_holding_label" })}
-                description={words({ key: "rules_holding_hint" })}
-                isLoading={props.isLoading}
-                isReadOnly={props.isLocked}
-                rows={3}
-                maxLength={HOLDING_MESSAGE_MAX}
-                value={props.draft.holdingMessage}
-                onValueChange={(holdingMessage) => props.onDraft({ ...props.draft, holdingMessage })}
-                {...props.errorOf("holdingMessage")}
-            />
-        </>
+        <Textarea
+            id="holdingMessage"
+            name="holdingMessage"
+            label={words({ key: "rules_holding_label" })}
+            description={words({ key: "rules_holding_hint" })}
+            isLoading={props.isLoading}
+            isReadOnly={props.isLocked}
+            rows={3}
+            maxLength={HOLDING_MESSAGE_MAX}
+            value={props.draft.holdingMessage}
+            onValueChange={(holdingMessage) => props.onDraft({ ...props.draft, holdingMessage })}
+            {...props.errorOf("holdingMessage")}
+        />
     )
 }
 

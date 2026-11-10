@@ -185,8 +185,8 @@ export const stepMemoryOfRow = (row: RecordRow): StepMemory | null => {
 
 /**
  * The facts of a customer the lead record itself holds: the name, the phone, the email and the channel. The delivery details (address,
- * recipient, time) are NOT read from the record's `consultFacts`: an order is the one home of how a delivery goes, and the facts a
- * consult proves live in this memory; a copy kept on the record went stale and was handed to the next consult as if it were true.
+ * recipient, time) and what care needs (`careOptOut`, `occasions`) live in this memory only (`lead.update` writes them here): an order is
+ * the one home of how a delivery goes; the record keeps no copy (its old copy went stale and was dropped).
  */
 export const factsOfLead = (lead: RecordRow | null): Readonly<Partial<Record<LeadFact, JsonValue>>> => {
     if (lead === null) return {}

@@ -56,4 +56,4 @@ The old Review and Unanswered tabs redirect to To do. Details of the queue and t
 1. Source profiles UI (confirm field meanings per data hub connection) and extraction of facts from data hub rows and Office notes ("@nivo remember") as proposals.
 2. Full-text / vector index over `data_records` (the data hub will switch `searchRecordsForAgent` to it).
 3. Replay `brain_eval_cases` before applying a lesson; quality metrics per agent (edit rate, ask rate, citation rate).
-4. Read back what OpenClaw agents write to their own memory as proposals.
+4. ~~Read back what OpenClaw agents write to their own memory as proposals.~~ Dropped: OpenClaw is removed (2026-11-11); what an agent learns reaches the brain as a change request ([engine-threads.md](engine-threads.md), concept `truth-graph`).

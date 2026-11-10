@@ -4,7 +4,8 @@ import { Test } from "@nestjs/testing"
 import { ConnectionSecretsService } from "@modules/domain/connection-secrets"
 import { ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionRecord } from "@modules/domain/connections"
-import { ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
+import { ZALO, ZaloError, ZaloErrorCode } from "@modules/integrations/zalo"
+import type { ZaloClient } from "@modules/integrations/zalo"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ok, refused } from "@modules/platform/primitives"
@@ -65,6 +66,10 @@ const build = async () => {
     credentials.load.mockResolvedValue(ok({ secret: stored, expiresAt: null, workspaceId: "ws-1" }))
     credentials.beginAuthorization.mockResolvedValue(authorization)
     credentials.completeAuthorization.mockResolvedValue("c-1")
+    credentials.accessToken.mockResolvedValue("access-1")
+    connections.applyZaloOaName.mockResolvedValue(undefined)
+    const zalo = mock<ZaloClient>()
+    zalo.oaProfile.mockResolvedValue({ oaId: "oa-9", name: "Tiệm hoa NIVO" })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ZaloConnectService,
@@ -72,10 +77,14 @@ const build = async () => {
             { provide: ConnectionsService, useValue: connections },
             { provide: ConnectionSecretsService, useValue: secrets },
             { provide: ZaloCredentialsService, useValue: credentials },
+            { provide: ZALO, useValue: zalo },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloConnectService), logger, connections, secrets, credentials }
+    return { service: moduleRef.get(ZaloConnectService), logger, connections, secrets, credentials, zalo }
 }
+
+/** Lets the name read started in the background settle. */
+const flush = (): Promise<void> => new Promise((resolve) => setImmediate(resolve))
 
 const createdOf = (connections: MockOf<ConnectionsService>) => connections.create.mock.calls[0]?.[0]
 
@@ -245,7 +254,7 @@ describe("ZaloConnectService", () => {
             const firstEvent = { amount: 150000, content: "ACB", at: "2026-10-12T10:00:00.000Z" }
             connections.get.mockResolvedValue(
                 connection({
-                    meta: { authorized: "true", oa_secret_saved: "false", oa_id: "oa-9" },
+                    meta: { authorized: "true", oa_secret_saved: "false", oa_id: "oa-9", oa_name: "Tiệm hoa NIVO" },
                     status: "connected",
                     firstEvent,
                 }),
@@ -266,6 +275,33 @@ describe("ZaloConnectService", () => {
 
             expect(connections.authorize.mock.calls).toEqual([[actor, ["owner", "manager"]]])
             expect(connections.agentIds.mock.calls).toEqual([["ws-1", "c-1"]])
+        })
+
+        it("starts reading the OA name for an authorized connection that has none, without waiting for Zalo", async () => {
+            const { service, connections, credentials, zalo } = await build()
+            zalo.oaProfile.mockReturnValue(new Promise(() => undefined))
+            connections.get.mockResolvedValue(connection({ meta: { authorized: "true", oa_id: "oa-9" }, status: "connected" }))
+
+            await expect(service.view(actor, "c-1")).resolves.toMatchObject({ id: "c-1", authorized: true })
+            await flush()
+
+            expect(credentials.accessToken.mock.calls).toEqual([["c-1"]])
+            expect(zalo.oaProfile.mock.calls).toEqual([["access-1"]])
+            expect(connections.applyZaloOaName).not.toHaveBeenCalled()
+            expect(connections.get).toHaveBeenCalledTimes(1)
+        })
+
+        it("asks Zalo nothing for a connection not authorized yet or one that holds its name", async () => {
+            const { service, connections, zalo } = await build()
+            connections.get.mockResolvedValueOnce(connection({ meta: { authorized: "false" } }))
+            connections.get.mockResolvedValueOnce(connection({ meta: { authorized: "true", oa_name: "Tiệm hoa NIVO" } }))
+
+            await service.view(actor, "c-1")
+            await service.view(actor, "c-1")
+            await flush()
+
+            expect(zalo.oaProfile).not.toHaveBeenCalled()
+            expect(connections.applyZaloOaName).not.toHaveBeenCalled()
         })
 
         it("refuses a connection that is not a Zalo OA", async () => {
@@ -318,6 +354,8 @@ describe("ZaloConnectService", () => {
             expect(connections.authorize.mock.calls).toEqual([[actor, ["owner", "manager"]]])
             expect(credentials.completeAuthorization.mock.calls).toEqual([["ws-1", returned("c-done.nonce-1")]])
             expect(connections.get.mock.calls).toEqual([["ws-1", "c-done"]])
+            await flush()
+            expect(connections.applyZaloOaName.mock.calls).toEqual([["c-done", "Tiệm hoa NIVO"]])
             expect(logger.error).not.toHaveBeenCalled()
             expect(connections.markFailing).not.toHaveBeenCalled()
         })
@@ -491,6 +529,66 @@ describe("ZaloConnectService", () => {
             const { service } = await build()
 
             await expect(service.znsRenewal(actor, "c-1")).resolves.toBeNull()
+        })
+    })
+})
+
+describe("ZaloConnectService", () => {
+    describe("rememberOaName (best effort: never fails or delays the connect)", () => {
+        it("stores the name Zalo reported", async () => {
+            const { service, connections, logger } = await build()
+
+            await expect(service.rememberOaName("c-1")).resolves.toBeUndefined()
+
+            expect(connections.applyZaloOaName.mock.calls).toEqual([["c-1", "Tiệm hoa NIVO"]])
+            expect(logger.warn).not.toHaveBeenCalled()
+            expect(logger.error).not.toHaveBeenCalled()
+        })
+
+        it("stores nothing and logs no_name when the answer has no name (a missing or renamed field)", async () => {
+            const { service, connections, logger, zalo } = await build()
+            zalo.oaProfile.mockResolvedValue({ oaId: "oa-9", name: "" })
+
+            await expect(service.rememberOaName("c-1")).resolves.toBeUndefined()
+
+            expect(connections.applyZaloOaName).not.toHaveBeenCalled()
+            expect(logger.warn.mock.calls).toEqual([[ChannelsLogEvent.ZaloOaNameUnread, { connectionId: "c-1", reason: "no_name" }]])
+        })
+
+        it.each([
+            ["an error answer", new ZaloError({ code: ZaloErrorCode.Rejected, params: { zaloCode: -216 } })],
+            ["a time-out", new ZaloError({ code: ZaloErrorCode.Unavailable })],
+        ])("logs %s with its cause, never the token, and resolves", async (_case, cause) => {
+            const { service, connections, logger, zalo } = await build()
+            zalo.oaProfile.mockRejectedValue(cause)
+
+            await expect(service.rememberOaName("c-1")).resolves.toBeUndefined()
+
+            expect(connections.applyZaloOaName).not.toHaveBeenCalled()
+            expect(logger.error.mock.calls).toEqual([[ChannelsLogEvent.ZaloOaNameUnread, cause, { connectionId: "c-1" }]])
+            expect(JSON.stringify(logger.error.mock.calls)).not.toContain("access-1")
+        })
+
+        it("resolves when the token cannot be had or the store fails", async () => {
+            const { service, connections, credentials, logger } = await build()
+            credentials.accessToken.mockRejectedValueOnce(new Error("no token"))
+            connections.applyZaloOaName.mockRejectedValueOnce(new Error("db down"))
+
+            await expect(service.rememberOaName("c-1")).resolves.toBeUndefined()
+            await expect(service.rememberOaName("c-1")).resolves.toBeUndefined()
+
+            expect(logger.error).toHaveBeenCalledTimes(2)
+        })
+
+        it("finishes the authorization while Zalo has not answered, and when it fails", async () => {
+            const { service, zalo } = await build()
+            zalo.oaProfile.mockReturnValueOnce(new Promise(() => undefined))
+            zalo.oaProfile.mockRejectedValueOnce(new ZaloError({ code: ZaloErrorCode.Unavailable }))
+            const returned: ZaloReturn = { state: "c-1.nonce-1", code: "code-1", oaId: "oa-9" }
+
+            await expect(service.finishAuthorization(actor, returned)).resolves.toMatchObject({ id: "c-1" })
+            await expect(service.finishAuthorization(actor, returned)).resolves.toMatchObject({ id: "c-1" })
+            await flush()
         })
     })
 })

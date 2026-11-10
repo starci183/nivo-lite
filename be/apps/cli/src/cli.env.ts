@@ -6,7 +6,6 @@ import { parseMcpGatewayConfig } from "@modules/domain/mcp-gateway"
 import { parseMcpConfig } from "@modules/integrations/mcp"
 import { parseConnectionsConfig } from "@modules/domain/connections"
 import { parseChannelSetupConfig } from "@modules/integrations/channel-setup"
-import { parseOpenclawConfig } from "@modules/integrations/openclaw"
 import { parseObjectStorageConfig } from "@modules/integrations/object-storage"
 import { parseIdentityAuthConfig } from "@modules/domain/identity"
 import { parseMailConfig } from "@modules/integrations/mail"
@@ -38,11 +37,6 @@ export interface CliAppOptions {
     readonly channelSetup: ReturnType<typeof parseChannelSetupConfig>
     /** The secrets and output of the connect-channel command. */
     readonly channelProvisioning: ReturnType<typeof parseChannelProvisioningConfig>
-    /**
-     * The OpenClaw settings the agent sync is composed with. Applying a setup only queues the sync of the agent (the api worker
-     * writes it), so every key is optional here. Deleting a workspace does need the gateway: prune and cleanup refuse without its address and credential.
-     */
-    readonly openclaw: ReturnType<typeof parseOpenclawConfig>
     /** The key that signs the cursors of the entity engine, which holds the graph of each agent. */
     readonly entityEngine: ReturnType<typeof parseEntityEngineConfig>
 }
@@ -65,6 +59,5 @@ export const readCliEnv = (env: EnvSource): CliAppOptions => ({
     channelProvisioning: parseChannelProvisioningConfig(env, (line) => {
         process.stdout.write(`${line}\n`)
     }),
-    openclaw: parseOpenclawConfig(env),
     entityEngine: parseEntityEngineConfig(env),
 })

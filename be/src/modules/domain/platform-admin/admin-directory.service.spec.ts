@@ -252,10 +252,8 @@ describe("AdminDirectoryService", () => {
                     status: "live",
                     operatingMode: "autopilot",
                     live: true,
-                    processor: "openclaw",
                     contextVersion: 2,
                     contextAppliedAt: AT,
-                    sync: { agentId: "agent-1", contextVersion: 2, checkedAt: AT, status: "ok", error: null },
                 },
                 {
                     id: "m-2",
@@ -263,10 +261,8 @@ describe("AdminDirectoryService", () => {
                     status: "setup",
                     operatingMode: "suggest",
                     live: false,
-                    processor: "nivo",
                     contextVersion: null,
                     contextAppliedAt: null,
-                    sync: null,
                 },
             ])
             expect(detail.connections[0]).toMatchObject({ environment: "live", health: "ok" })

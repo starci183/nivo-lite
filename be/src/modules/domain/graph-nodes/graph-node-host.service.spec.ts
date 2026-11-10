@@ -159,6 +159,11 @@ const readingPort = (): NodeDataPort => ({ kind: "record", read: () => Promise.r
 /** The key of the probe's one effect call: the step, then the digest of the effect and its arguments. */
 const PING_KEY = `run-1:node:${callDigestOf("core.ping", { n: 1 })}`
 
+/** The model of the probe node: blocks-core declares nothing for it, so the default (a node the table does not know weighs heavy). */
+const PROBE_MODEL = { model: "claude-sonnet-5-5", weight: "heavy", source: "default" }
+/** The model of the engine's own decision (the AI core), as blocks-core declares it. */
+const CORE_MODEL = { model: "auto", weight: "heavy", source: "declared" }
+
 describe("GraphNodeHostService", () => {
     it("runs a node through the registered port, the ledgered executor, the model and the tool door", async () => {
         const port = mock<NodeDataPort>({ kind: "record" })
@@ -175,7 +180,7 @@ describe("GraphNodeHostService", () => {
         ])
         expect(executor.execute).toHaveBeenCalledWith(INPUT.turn, { n: 1 }, { key: PING_KEY, dedupeKey: null })
         expect(ai.nodeText).toHaveBeenCalledWith(
-            { workspaceId: "ws-1", locale: "vi" },
+            { workspaceId: "ws-1", locale: "vi", model: PROBE_MODEL },
             { purpose: "core.probe:say", instructions: "", input: null },
         )
         expect(tools.call).toHaveBeenCalledWith({
@@ -427,7 +432,7 @@ describe("GraphNodeHostService AGENT_LOOP", () => {
 
         await expect(ports?.agent?.(loop)).resolves.toEqual({ turns: 1 })
 
-        const scope = { workspaceId: "ws-1", locale: "vi" }
+        const scope = { workspaceId: "ws-1", locale: "vi", model: PROBE_MODEL }
         expect(ai.nodeImages).toHaveBeenCalledWith(scope, ["https://x/p.png"])
         expect(ai.nodeAgentTurns).toHaveBeenCalledWith(scope, { purpose: "core.probe:agent", reasoning: "off" })
         expect(loops.run).toHaveBeenCalledWith(
@@ -445,7 +450,7 @@ describe("GraphNodeHostService AGENT_LOOP", () => {
         await ports?.agent?.(loop)
 
         expect(ai.nodeImages).not.toHaveBeenCalled()
-        expect(ai.nodeAgentTurns).toHaveBeenCalledWith({ workspaceId: "ws-1", locale: "vi" }, { purpose: "core.probe:agent" })
+        expect(ai.nodeAgentTurns).toHaveBeenCalledWith({ workspaceId: "ws-1", locale: "vi", model: PROBE_MODEL }, { purpose: "core.probe:agent" })
         expect(loops.run).toHaveBeenCalledWith(loop, { toolChoice: "auto" }, {})
     })
 
@@ -581,7 +586,7 @@ describe("GraphNodeHostService.core", () => {
         await expect(host.core(turn, ASK, z.object({ n: z.number() }))).resolves.toEqual({ n: 7 })
 
         const [scope, asked] = ai.nodeJson.mock.calls[0] ?? []
-        expect(scope).toEqual({ workspaceId: "ws-1", locale: "vi" })
+        expect(scope).toEqual({ workspaceId: "ws-1", locale: "vi", model: CORE_MODEL })
         expect(asked?.instructions.startsWith("CHÍNH SÁCH: hỏi chủ tiệm.\n\n")).toBe(true)
         expect(asked?.instructions).toContain('{"approvalThresholdVnd":3000000}')
         expect(asked?.instructions.endsWith("\n\nDecide once.")).toBe(true)
@@ -593,6 +598,20 @@ describe("GraphNodeHostService.core", () => {
 
         await host.core(INPUT.turn, ASK, z.object({ n: z.number() }))
 
-        expect(ai.nodeJson).toHaveBeenCalledWith({ workspaceId: "ws-1", locale: "vi" }, ASK, expect.anything())
+        expect(ai.nodeJson).toHaveBeenCalledWith({ workspaceId: "ws-1", locale: "vi", model: CORE_MODEL }, ASK, expect.anything())
+    })
+})
+
+describe("GraphNodeHostService the model of a node's calls", () => {
+    it("hands the model door the model the graph's node names, with blocks-core's weight for its step", async () => {
+        const { host, ai } = await build(readingPort())
+
+        await host.run({ ...INPUT, model: "deepseek/deepseek-v4.1-flash" })
+
+        expect(ai.nodeText.mock.calls[0]?.[0]).toEqual({
+            workspaceId: "ws-1",
+            locale: "vi",
+            model: { model: "deepseek/deepseek-v4.1-flash", weight: "heavy", source: "node" },
+        })
     })
 })

@@ -8,7 +8,6 @@ import { ConnectionsAdminReadService } from "@modules/domain/connections"
 import { KnowledgeSourcesAdminReadService } from "@modules/domain/knowledge-sources"
 import { ContextVersionsAdminReadService } from "@modules/domain/module-context-versions"
 import { ModuleInstallationsAdminReadService } from "@modules/domain/module-installations"
-import { AgentSyncAdminReadService } from "@modules/domain/openclaw-agent-sync"
 import { PaymentOrdersService } from "@modules/domain/payment-orders"
 import type { PaymentOrder } from "@modules/domain/payment-orders"
 import { SepayTransactionsAdminReadService } from "@modules/domain/sepay-transactions"
@@ -37,7 +36,6 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
     const orders = mock<PaymentOrdersService>()
     const billingEvents = mock<BillingEventsReadService>()
     const contextVersions = mock<ContextVersionsAdminReadService>()
-    const agentSync = mock<AgentSyncAdminReadService>()
     const knowledge = mock<KnowledgeSourcesAdminReadService>()
     const transfers = mock<SepayTransactionsAdminReadService>()
     const quota = mock<AiQuotaOverridesAdminReadService>()
@@ -54,7 +52,6 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
             { provide: PaymentOrdersService, useValue: orders },
             { provide: BillingEventsReadService, useValue: billingEvents },
             { provide: ContextVersionsAdminReadService, useValue: contextVersions },
-            { provide: AgentSyncAdminReadService, useValue: agentSync },
             { provide: KnowledgeSourcesAdminReadService, useValue: knowledge },
             { provide: SepayTransactionsAdminReadService, useValue: transfers },
             { provide: AiQuotaOverridesAdminReadService, useValue: quota },
@@ -62,7 +59,7 @@ const build = async (entityManager: MockEntityManager = mockEntityManager()) => 
     }).compile()
     const service = moduleRef.get(AdminDirectoryReadsService)
     const owners = { workspaces, installations, connections, appErrors, roster, invites, orders }
-    return { service, ...owners, billingEvents, contextVersions, agentSync, knowledge, transfers, quota }
+    return { service, ...owners, billingEvents, contextVersions, knowledge, transfers, quota }
 }
 
 const WORKSPACE_ROW = {
@@ -149,7 +146,6 @@ describe("AdminDirectoryReadsService installations and connections", () => {
                 operatingMode: "assist",
                 liveEnabled: false,
                 activeContextVersionId: "cv-1",
-                processor: "openclaw",
             },
         ])
 
@@ -161,7 +157,6 @@ describe("AdminDirectoryReadsService installations and connections", () => {
                 operating_mode: "assist",
                 live_enabled: false,
                 active_context_version_id: "cv-1",
-                processor: "openclaw",
             },
         ])
         expect(installations.ofWorkspace).toHaveBeenCalledWith("ws-1", 50)
@@ -323,39 +318,13 @@ describe("AdminDirectoryReadsService workspace detail", () => {
     })
 })
 
-describe("AdminDirectoryReadsService workspace detail: context and sync", () => {
+describe("AdminDirectoryReadsService workspace detail: context and knowledge", () => {
     it("reads the context versions, bounded at 500", async () => {
         const { service, contextVersions } = await build()
         contextVersions.ofWorkspace.mockResolvedValue([{ id: "v-1", version: 3, appliedAt: AT }])
 
         await expect(service.contextVersions("ws-1")).resolves.toEqual([{ id: "v-1", version: 3, applied_at: ISO }])
         expect(contextVersions.ofWorkspace).toHaveBeenCalledWith("ws-1", 500)
-    })
-
-    it("reads the agent sync state, bounded at 50", async () => {
-        const { service, agentSync } = await build()
-        agentSync.ofWorkspace.mockResolvedValue([
-            {
-                installationId: "in-1",
-                agentId: "ag-1",
-                contextVersion: 2,
-                checkedAt: AT,
-                status: "ok",
-                error: null,
-            },
-        ])
-
-        await expect(service.agentSync("ws-1")).resolves.toEqual([
-            {
-                installation_id: "in-1",
-                agent_id: "ag-1",
-                context_version: 2,
-                checked_at: ISO,
-                status: "ok",
-                error: null,
-            },
-        ])
-        expect(agentSync.ofWorkspace).toHaveBeenCalledWith("ws-1", 50)
     })
 
     it("reads the knowledge sources, bounded at 5000", async () => {

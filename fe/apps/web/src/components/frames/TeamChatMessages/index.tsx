@@ -4,7 +4,9 @@ import { ChatNoticeGroup } from "@/components/composites/ChatNoticeGroup"
 import { ChatSystemLine } from "@/components/composites/ChatSystemLine"
 import { TeamChatAgentCard } from "@/components/composites/TeamChatAgentCard"
 import { TeamChatBubble } from "@/components/composites/TeamChatBubble"
-import type { TeamChatMessageRow, TeamChatMessagesCopy } from "@/modules/types"
+import { TeamChatStopCard } from "@/components/composites/TeamChatStopCard"
+import type { TeamChatMessageRow, TeamChatMessagesCopy, TeamChatStopHandlers } from "@/modules/types"
+import { itemsOf } from "./items"
 
 /** The messages of the open room and what a person may do with them. */
 interface TeamChatMessagesProps {
@@ -25,6 +27,8 @@ interface TeamChatMessagesProps {
     /** Pins a message; a thread with nothing to pin (the setup chat) draws no pin. */
     readonly onPin?: (messageId: string, pinned: boolean) => void
     readonly onDecide: (decisionId: string, verdict: "approved" | "refused") => void
+    /** The typed stop cards of runs and what is done with them; a thread that has none (the setup chat) passes none and draws them inert. */
+    readonly stops?: TeamChatStopHandlers
     /** React to, reply to and forward a message; a thread that cannot (the setup chat) passes none and draws no toolbar. */
     readonly onReact?: (messageId: string, emoji: string) => void
     readonly onReply?: (messageId: string) => void
@@ -42,6 +46,7 @@ interface MessageRowProps {
     readonly decidingId: string | null
     readonly onPin: TeamChatMessagesProps["onPin"]
     readonly onDecide: TeamChatMessagesProps["onDecide"]
+    readonly stops: TeamChatMessagesProps["stops"]
     readonly onReact: TeamChatMessagesProps["onReact"]
     readonly onReply: TeamChatMessagesProps["onReply"]
     readonly onShare: TeamChatMessagesProps["onShare"]
@@ -52,6 +57,19 @@ const MessageRow = (props: MessageRowProps) => {
     const { row } = props
     if (row.kind === "system") {
         return <ChatSystemLine text={row.body} />
+    }
+    if (row.stop != null) {
+        return (
+            <TeamChatStopCard
+                row={row}
+                card={row.stop}
+                copy={props.copy}
+                stops={props.stops}
+                onReact={props.onReact}
+                onReply={props.onReply}
+                onShare={props.onShare}
+            />
+        )
     }
     if (row.card !== null) {
         return (
@@ -77,37 +95,6 @@ const MessageRow = (props: MessageRowProps) => {
             onShare={props.onShare}
         />
     )
-}
-
-/** One thing the thread draws: its first message, and the identical notices folded into it (the one message when nothing folded). */
-interface ThreadItem {
-    readonly first: TeamChatMessageRow
-    readonly rows: ReadonlyArray<TeamChatMessageRow>
-}
-
-/** A notice an agent or the system repeats: a line of theirs with nothing else on it (no card, no file, no answer to another). */
-const isNotice = (row: TeamChatMessageRow): boolean =>
-    row.side === "incoming" &&
-    row.card === null &&
-    row.files.length === 0 &&
-    row.replyTo === null &&
-    row.forwardedFrom === null &&
-    (row.kind === "system" || row.author?.kind === "agent")
-
-const repeats = (first: TeamChatMessageRow, row: TeamChatMessageRow): boolean =>
-    isNotice(row) && row.dayLabel === null && row.authorName === first.authorName && row.body === first.body
-
-const itemsOf = (rows: ReadonlyArray<TeamChatMessageRow>, canFold: boolean): ReadonlyArray<ThreadItem> => {
-    const items: ThreadItem[] = []
-    for (const row of rows) {
-        const last = items.at(-1)
-        if (canFold && last !== undefined && isNotice(last.first) && repeats(last.first, row)) {
-            items[items.length - 1] = { first: last.first, rows: [...last.rows, row] }
-        } else {
-            items.push({ first: row, rows: [row] })
-        }
-    }
-    return items
 }
 
 const NOTICE_SEPARATOR = " \u00b7 "
@@ -155,6 +142,7 @@ export const TeamChatMessages = (props: TeamChatMessagesProps) => {
         decidingId: props.decidingId,
         onPin: props.onPin,
         onDecide: props.onDecide,
+        stops: props.stops,
         onReact: props.onReact,
         onReply: props.onReply,
         onShare: props.onShare,

@@ -15,7 +15,6 @@ import { ReembedKnowledgeQueueModule } from "@features/jobs/reembed-knowledge"
 import { EmitWebhookEventQueueModule } from "@features/jobs/emit-webhook-event"
 import { RunSetupTurnQueueModule } from "@features/jobs/run-setup-turn"
 import { GenerateWithAgentQueueModule } from "@features/jobs/generate-with-agent"
-import { SyncAgentsQueueModule } from "@features/jobs/sync-agents"
 import { ExpireApprovalsQueueModule } from "@features/jobs/expire-approvals"
 import { WatchAgentGraphsQueueModule } from "@features/jobs/watch-agent-graphs"
 import { CheckConnectionHealthQueueModule } from "@features/jobs/check-connection-health"
@@ -68,7 +67,6 @@ export const API_JOB_QUEUES: Array<DynamicModule> = [
     EmitWebhookEventQueueModule.register({}),
     RunSetupTurnQueueModule.register({}),
     GenerateWithAgentQueueModule.register({}),
-    SyncAgentsQueueModule.register({}),
     ExpireApprovalsQueueModule.register({}),
     WatchAgentGraphsQueueModule.register({}),
     CheckConnectionHealthQueueModule.register({}),

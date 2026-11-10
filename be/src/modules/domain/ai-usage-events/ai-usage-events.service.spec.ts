@@ -201,6 +201,9 @@ const BOOKED = (overrides: Record<string, unknown> = {}) => ({
     tryNumber: null,
     upstream: null,
     finishReason: null,
+    declaredModel: null,
+    modelProvider: null,
+    modelReason: null,
     ...overrides,
 })
 
@@ -507,6 +510,10 @@ describe("AiUsageEventsService > callKindsByRun", () => {
                     cost_usd: 0.0012,
                     upstreams: ["Parasail"],
                     finish_reasons: ["stop"],
+                    models: ["claude-sonnet-5-5"],
+                    declared_models: ["auto"],
+                    model_providers: ["anthropic"],
+                    model_reasons: ["auto-heavy"],
                 },
             ],
         })
@@ -527,6 +534,10 @@ describe("AiUsageEventsService > callKindsByRun", () => {
                 costUsd: 0.0012,
                 upstreams: ["Parasail"],
                 finishReasons: ["stop"],
+                models: ["claude-sonnet-5-5"],
+                declaredModels: ["auto"],
+                modelProviders: ["anthropic"],
+                modelReasons: ["auto-heavy"],
             },
         ])
         expect(em.createQueryBuilder).toHaveBeenCalledWith(AiUsageEventEntity, "u")

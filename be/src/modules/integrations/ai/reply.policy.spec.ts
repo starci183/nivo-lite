@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { NOTES_HEADING, notesBlock, withNotes } from "./reply.policy"
+import { NOTES_HEADING, notesBlock, usageOf, withNotes } from "./reply.policy"
 
 const SUBJECT = Symbol("reply.policy")
 
@@ -80,5 +80,14 @@ describe("withNotes", () => {
             { role: "system", content: "NOTES" },
             { role: "user", content: "hi" },
         ])
+    })
+})
+
+describe("usageOf, prompt-cache writes", () => {
+    it("reads the tokens written to the cache when the endpoint says, and adds no field when it does not", () => {
+        expect(usageOf({ input_tokens: 10, output_tokens: 1, input_token_details: { cache_creation: 7 } }, {})).toMatchObject({
+            cacheWriteTokens: 7,
+        })
+        expect(usageOf({ input_tokens: 10, output_tokens: 1 }, {})).not.toHaveProperty("cacheWriteTokens")
     })
 })

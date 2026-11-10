@@ -1,3 +1,4 @@
+import { isLockedContextRead } from "@modules/domain/context-sources"
 import type {
     DataKind,
     DataRight,
@@ -35,6 +36,8 @@ export const dataKindOfTool = (tool: string): OptionalDataKind => KIND_OF_CONNEC
  */
 export const judgeDataRight = (rights: OptionalDataRights, tool: string, caller: GatewayCaller): DataRightVerdict => {
     if (rights === null) return { kind: "open" }
+    // A context read is locked to the run's own conversation and customer by the door: narrower than any right, so no kind judges it.
+    if (isLockedContextRead(tool)) return { kind: "open" }
     const kind = dataKindOfTool(tool)
     if (kind === null) return { kind: "deny", reason: "no_kind" }
     const right = rights.find((entry) => entry.kind === kind)

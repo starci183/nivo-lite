@@ -225,6 +225,17 @@ export type { HiringWorkbenchCopy } from "./hiring-model-workbench-copy"
 export type { ChatParty, ChatPartyKind, TeamChatApprovalStatus, TeamChatApprovalView } from "./team-chat"
 export type { TeamChatMessageRow, TeamChatRoomRow, TeamChatVerdict } from "./team-chat"
 export type {
+    TeamChatStop,
+    TeamChatStopAction,
+    TeamChatStopCardView,
+    TeamChatStopChipTone,
+    TeamChatStopHandlers,
+    TeamChatStopLabels,
+    TeamChatStopLineView,
+    TeamChatStopReplyKind,
+    TeamChatStopReplyView,
+} from "./team-chat-stop"
+export type {
     BubbleReactionLabels,
     BubbleReactionProps,
     MessageReactionActions,

@@ -4,6 +4,7 @@ import { coreNodes } from "@nivo-lite/blocks-core"
 import { WORKFLOW_TEMPLATES, latestTemplateVersion } from "@nivo-lite/blocks-core/modules"
 import { THREAD_END } from "@modules/integrations/langgraph/langgraph.port"
 import { FREEZE_NODE, compileTemplate, stepExitOf } from "./template-compiler.policy"
+import { THREAD_READY_WORKFLOWS } from "./thread-flag.policy"
 import type { CompiledTemplate, CompiledStep, TemplatePin, TemplateProblem } from "./template-compiler.policy"
 
 const SUBJECT = Symbol("template-compiler.policy")
@@ -95,6 +96,14 @@ describe("compileTemplate on every blocks-core template", () => {
         )
     })
 
+    it.each(VERSIONS)("compiles %s the same with for-each cycles on: no template draws a for-each", async (_label, templateId, version) => {
+        const subject = await build()
+        const source = { pin: pinOf(templateId, version.version), spec: version.graph }
+
+        expect(version.graph.nodes.filter((node) => node.step === "core.for-each")).toEqual([])
+        expect(subject.compileTemplate(source, INSTALLED, { loops: true })).toEqual(subject.compileTemplate(source, INSTALLED))
+    })
+
     it.each(VERSIONS)("keeps every route of %s inside the graph and pins the version", async (_label, templateId, version) => {
         const subject = await build()
         const pin = pinOf(templateId, version.version)
@@ -125,6 +134,17 @@ describe("compileTemplate on every blocks-core template", () => {
         expect(nodeNamed(graph, "to-consult")?.exit).toEqual({ kind: "next", to: THREAD_END })
         expect(nodeNamed(graph, "complaint")?.ends).toEqual(["to-owner", FREEZE_NODE])
         expect(nodeNamed(graph, "to-owner")?.step).toBe("core.outcome")
+    })
+
+    it.each(THREAD_READY_WORKFLOWS)("compiles the newest version of %s, a workflow cleared for threads", async (name) => {
+        const subject = await build()
+        const template = WORKFLOW_TEMPLATES.find((candidate) => candidate.id === name)
+        const version = template === undefined ? null : latestTemplateVersion(template)
+
+        const problems =
+            version === null ? "no template" : problemsOf(subject, { pin: pinOf(name, version.version), spec: version.graph })
+
+        expect(problems).toEqual([])
     })
 
     it.each(FRONT_DESK)("gives the same description for the same version", async (sample) => {

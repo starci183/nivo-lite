@@ -7,6 +7,8 @@ export type NativeRefusalReason =
     | "internal_only"
     | "connection_refused"
     | "ledger_key_unavailable"
+    | "other_conversation"
+    | "other_lead"
 
 /**
  * The refusal a native tool throws for an expected case; the gateway turns it into a `tool_error` answer. The failure that led to it,

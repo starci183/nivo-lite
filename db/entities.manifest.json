@@ -277,6 +277,7 @@
       "indexes": [
         "records_agent_lead_memory_conversation",
         "records_agent_lead_memory_entry_key",
+        "records_agent_lead_memory_entry_recent",
         "records_agent_lead_memory_expires",
         "records_agent_lead_memory_lead",
         "records_agent_lead_memory_run_node",
@@ -427,20 +428,6 @@
       ]
     },
     {
-      "entity": "agent.turn",
-      "partition": "records_agent_turn",
-      "checks": [
-        "records_agent_turn_agent_key_chk",
-        "records_agent_turn_at_chk",
-        "records_agent_turn_role_chk",
-        "records_agent_turn_session_key_chk",
-        "records_agent_turn_text_chk",
-        "records_agent_turn_tool_calls_chk",
-        "records_agent_turn_turn_index_chk"
-      ],
-      "indexes": ["records_agent_turn_recent", "records_agent_turn_session_turn_key"]
-    },
-    {
       "entity": "agent.workflow",
       "partition": "records_agent_workflow",
       "view": "v_records_agent_workflow",
@@ -564,7 +551,6 @@
       "partition": "records_chat_settings",
       "checks": [
         "records_chat_settings_holding_message_chk",
-        "records_chat_settings_openclaw_timeout_sec_chk",
         "records_chat_settings_scope_chk",
         "records_chat_settings_updated_by_chk"
       ],
@@ -769,7 +755,6 @@
         "records_sales_lead_channel_chk",
         "records_sales_lead_closed_reason_chk",
         "records_sales_lead_company_chk",
-        "records_sales_lead_consult_facts_chk",
         "records_sales_lead_consult_stage_chk",
         "records_sales_lead_contact_name_chk",
         "records_sales_lead_context_summary_chk",

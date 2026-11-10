@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { DOC_AT, DOC_CONTENT, DOC_SOURCE, DOC_WS, docSourceOf } from "@tests/fixtures/builders/document-facts.builder"
 import { BrainExtractionsService, ExtractionNote } from "@modules/domain/brain-extractions"
-import { BrainFactsService } from "@modules/domain/brain-facts"
+import { BrainFactsService, foldedText } from "@modules/domain/brain-facts"
 import { passageTextHashOf } from "@modules/domain/knowledge-chunks"
 import { DOC_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeIndexingService, UsageMeterService } from "@modules/domain/knowledge"
@@ -15,6 +15,7 @@ import { BrainLogEvent } from "./brain.log-events"
 import { DocumentFactsService } from "./document-facts.service"
 import { BrainErrorCode } from "./errors/brain.error"
 import { MAX_FACTS_PER_DOC, PROMPT_VERSION, SYSTEM_PROMPT } from "./extraction.policy"
+import { DocumentRelationsService } from "./document-relations.service"
 import { DocumentReviewService } from "./document-review.service"
 import { ModelJsonService } from "./model-json.service"
 
@@ -77,6 +78,7 @@ const build = async (source = sourceOf()) => {
     const usage = mock<UsageMeterService>()
     const json = mock<ModelJsonService>()
     const reviews = mock<DocumentReviewService>()
+    const links = mock<DocumentRelationsService>()
     indexing.sourceForFacts.mockResolvedValue(source)
     extractions.get.mockResolvedValue(extractionOf())
     usage.blockedBy.mockResolvedValue(false)
@@ -95,10 +97,11 @@ const build = async (source = sourceOf()) => {
             { provide: UsageMeterService, useValue: usage },
             { provide: ModelJsonService, useValue: json },
             { provide: DocumentReviewService, useValue: reviews },
+            { provide: DocumentRelationsService, useValue: links },
         ],
     }).compile()
     const service = moduleRef.get(DocumentFactsService)
-    return { service, ai, logger, facts, gaps, extractions, indexing, sources, usage, json, reviews }
+    return { service, ai, logger, facts, gaps, extractions, indexing, sources, usage, json, reviews, links }
 }
 
 describe("DocumentFactsService", () => {
@@ -193,7 +196,7 @@ describe("DocumentFactsService", () => {
 
         await expect(service.run(PAYLOAD)).resolves.toBe("blocked")
 
-        expect(facts.withdrawChanged).toHaveBeenCalledWith(WS, SOURCE, "source changed", "")
+        expect(facts.withdrawChanged).toHaveBeenCalledWith(WS, SOURCE, "source changed", { hashes: [], folded: "" })
         expect(extractions.start).toHaveBeenCalledWith(
             startOf({ orphanFactIds: ["f1", "f2", "f3"], factsChanged: true }),
         )
@@ -314,7 +317,7 @@ describe("DocumentFactsService", () => {
 })
 describe("DocumentFactsService", () => {
     it("files public facts with document evidence and preserves owner review and instance scope", async () => {
-        const { service, json, facts, extractions, gaps, sources } = await build()
+        const { service, json, facts, extractions, gaps, sources, links } = await build()
         extractions.get.mockResolvedValue(extractionOf({ attempts: 2 }))
         json.jsonOf.mockReturnValue({
             facts: [
@@ -354,6 +357,7 @@ describe("DocumentFactsService", () => {
                     at: AT,
                     sourceId: SOURCE,
                     title: "Hours",
+                    chunkHash: passageTextHashOf(CONTENT),
                 },
             ],
         })
@@ -366,6 +370,7 @@ describe("DocumentFactsService", () => {
             by: `document:${SOURCE}`,
         })
         expect(sources.settle).toHaveBeenCalledWith(WS, SOURCE, CONTENT)
+        expect(links.link).toHaveBeenCalledTimes(1)
     })
 })
 describe("DocumentFactsService", () => {
@@ -402,6 +407,7 @@ describe("DocumentFactsService", () => {
                     at: AT,
                     sourceId: SOURCE,
                     title: "Hours",
+                    chunkHash: passageTextHashOf(CONTENT),
                 },
             ],
         })
@@ -483,7 +489,10 @@ describe("DocumentFactsService an edited document", () => {
             )
             facts.withdrawChanged.mockResolvedValue({ orphans: [], withdrawn })
             await expect(service.run(PAYLOAD)).resolves.toBe("done")
-            expect(facts.withdrawChanged).toHaveBeenCalledWith(WS, SOURCE, "source changed", "## Hours\nOpen 8.")
+            expect(facts.withdrawChanged).toHaveBeenCalledWith(WS, SOURCE, "source changed", {
+                hashes: [passageTextHashOf("## Hours\nOpen 8.")],
+                folded: foldedText("## Hours\nOpen 8."),
+            })
             expect(ai.chat.mock.calls[0]?.[0].messages[1]?.content).not.toContain("Open 8.")
             expect(reviews.requestForSource).toHaveBeenCalledTimes(reviewed ? 1 : 0)
         },

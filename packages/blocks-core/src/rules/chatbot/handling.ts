@@ -1,6 +1,3 @@
-/** The holder name the previous agent runtime writes while the AI answers; it counts as nobody holding the conversation. */
-export const AGENT_HOLDER = "OpenClaw"
-
 /** A member of the workspace, as far as handling a conversation cares. */
 export interface HandlingMember {
     /** The name the member is shown under; it is also what a held conversation stores as its holder. */
@@ -9,8 +6,8 @@ export interface HandlingMember {
     readonly isManager: boolean
 }
 
-/** Whether a person holds the conversation: a holder that is neither empty nor the agent runtime. */
-export const isHeldByPerson = (holder: string | null): boolean => holder !== null && holder !== AGENT_HOLDER
+/** Whether a person holds the conversation: any holder at all (the engine never writes one). */
+export const isHeldByPerson = (holder: string | null): boolean => holder !== null
 
 /** Whether the member may act on the conversation: managers may reassign a held one, staff act only when it is free or theirs. */
 export const mayHandle = (member: HandlingMember, holder: string | null): boolean =>

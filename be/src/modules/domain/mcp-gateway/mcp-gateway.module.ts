@@ -11,6 +11,7 @@ import { ProviderAbilitiesService } from "./provider-abilities.service"
 import { SepayNativeService } from "./adapters/sepay-native.service"
 import { GatewaySurfaceService } from "./gateway-surface.service"
 import { withEffectTools, withoutShadowed } from "./native-adapters.policy"
+import { withUniqueNames } from "./tool-name.policy"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { McpGatewayAdminService } from "./mcp-gateway-admin.service"
 import type { NativeAdapter } from "./mcp-gateway.contracts"
@@ -50,7 +51,7 @@ export class McpGatewayModule extends ConfigurableModuleClass {
                 {
                     provide: NATIVE_ADAPTERS,
                     useFactory: (effectTools: EffectToolsService, ...adapters: ReadonlyArray<NativeAdapter>) =>
-                        withEffectTools(withoutShadowed(adapters), effectTools.adapters()),
+                        withUniqueNames(withEffectTools(withoutShadowed(adapters), effectTools.adapters())),
                     inject: [EffectToolsService, SepayNativeService, EinvoiceNativeService, ...(options.natives ?? [])],
                 },
                 McpConnectorCredentialService,

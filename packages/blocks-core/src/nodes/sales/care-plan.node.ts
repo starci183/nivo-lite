@@ -6,7 +6,7 @@ import { MAX_ID } from "../../bounds"
 import { bilingualOf } from "../../messages/catalog"
 import { TOOL } from "../../vocabulary/tool-ids"
 import type { NodeSchema } from "../node-schema.types"
-import { DELIVERY_CARE_RIGHTS, careDeliveryOf, careFactsOfLead, careLeadOf, careOrderOf, shippedAtOf } from "./care.data"
+import { DELIVERY_CARE_RIGHTS, careDeliveryOf, careFactsOfLead, careMemoryRowOf, careOrderOf, shippedAtOf } from "./care.data"
 import type { CareOrder } from "./care.data"
 import {
     afterMinutes,
@@ -127,7 +127,7 @@ export const salesCarePlanNode: NodeDefinition<typeof input, typeof output, type
         const none: CarePlanOutput = { orderId: given.orderId, checkAt: null, occasions: 0 }
         const order = await careOrderOf(context, given.orderId)
         if (order === undefined) return none
-        const facts = careFactsOfLead(await careLeadOf(context, order.leadId))
+        const facts = await careFactsOfLead(context, order.leadId)
         if (facts.optedOut) return none
         const check = await deliveryCheckOf(context, order)
         await arm(context, { kind: "delivery-check", ref: order.id, suffix: check.known ? "" : shipSuffixOf(0), dueAt: check.dueAt })
@@ -157,7 +157,7 @@ export const salesCarePlanNode: NodeDefinition<typeof input, typeof output, type
             ],
             store: {
                 order: [{ ...ORDER, deliveryAt: "tomorrow afternoon" }],
-                "sales-lead": [{ id: "l1", contactName: "An", consultFacts: { deliveryAt: "next week" } }],
+                "sales-lead": [{ id: "l1", contactName: "An" }], "agent-lead-memory": [careMemoryRowOf("l1", { deliveryAt: "next week" })],
             },
         },
         {
@@ -178,9 +178,7 @@ export const salesCarePlanNode: NodeDefinition<typeof input, typeof output, type
             ],
             store: {
                 order: [ORDER],
-                "sales-lead": [
-                    { id: "l1", contactName: "An", consultFacts: { occasions: [{ label: "birthday", date: "02-01" }] } },
-                ],
+                "sales-lead": [{ id: "l1", contactName: "An" }], "agent-lead-memory": [careMemoryRowOf("l1", { occasions: [{ label: "birthday", date: "02-01" }] })],
             },
         },
         {
@@ -190,7 +188,7 @@ export const salesCarePlanNode: NodeDefinition<typeof input, typeof output, type
             output: { orderId: "o1", checkAt: null, occasions: 0 },
             grant: EXAMPLE_GRANT,
             effects: [],
-            store: { order: [ORDER], "sales-lead": [{ id: "l1", contactName: "An", consultFacts: { careOptOut: true } }] },
+            store: { order: [ORDER], "sales-lead": [{ id: "l1", contactName: "An" }], "agent-lead-memory": [careMemoryRowOf("l1", { careOptOut: true })] },
         },
     ],
 })

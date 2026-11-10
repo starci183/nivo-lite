@@ -14,6 +14,7 @@ import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { eachInOrder, isRecord } from "@modules/platform/primitives"
 import { GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error"
+import { coreModelOf, declaredModelOf } from "./node-model.policy"
 import { GraphNodeEffectsService } from "./graph-node-effects.service"
 import { GraphNodeRegistryService } from "./graph-node-registry.service"
 import { GraphNodeRunTokensService } from "./graph-node-run-tokens.service"
@@ -95,8 +96,14 @@ export class GraphNodeHostService implements OnModuleInit {
         const turn = await this.withSubject(input.turn)
         const asks: Array<GraphNodesError> = []
         const attempt: Attempt = { step: input.key, startedAt: this.clock.now().toISOString() }
-        const own = this.portsOf(turn, input.approval ?? null, asks, attempt)
-        const ports = this.takesTurns(input.nodeId) ? { ...own, agent: this.agentOf(turn, input.record) } : own
+        // The model of every AI call of this node: the graph's node's own, else blocks-core's for its step, else the default.
+        const scope: NodeModelScope = {
+            workspaceId: turn.workspaceId,
+            locale: turn.locale,
+            model: declaredModelOf(input.nodeId, input.model),
+        }
+        const own = this.portsOf(turn, scope, input.approval ?? null, asks, attempt)
+        const ports = this.takesTurns(input.nodeId) ? { ...own, agent: this.agentOf(scope, input.record) } : own
         const ran = await runNode(
             {
                 node,
@@ -151,7 +158,7 @@ export class GraphNodeHostService implements OnModuleInit {
      * it, so nothing it answers acts on the world.
      */
     async core<T>(turn: NodeTurn, ask: NodeModelRequest, schema: ZodType<T>): Promise<T> {
-        const scope: NodeModelScope = { workspaceId: turn.workspaceId, locale: turn.locale }
+        const scope: NodeModelScope = { workspaceId: turn.workspaceId, locale: turn.locale, model: coreModelOf() }
         const { effects, tools } = this.registry.installed()
         return schema.parse(
             await this.ai.nodeJson(
@@ -204,8 +211,7 @@ export class GraphNodeHostService implements OnModuleInit {
      * gave one. Everything a turn DOES still goes through the runner's closures of `loop` (`call`, `done`, `confused`), so the door,
      * the rights per connected account, the send guard and the effect ledger are exactly those of the JSON loop.
      */
-    private agentOf(turn: NodeTurn, record: NodeTurnRecord | undefined): NonNullable<NodeHostPorts["agent"]> {
-        const scope: NodeModelScope = { workspaceId: turn.workspaceId, locale: turn.locale }
+    private agentOf(scope: NodeModelScope, record: NodeTurnRecord | undefined): NonNullable<NodeHostPorts["agent"]> {
         return async (loop) => {
             const { agentLoops, ai } = this
             if (agentLoops === undefined || ai.nodeAgentTurns === undefined)
@@ -244,11 +250,11 @@ export class GraphNodeHostService implements OnModuleInit {
 
     private portsOf(
         turn: NodeTurn,
+        scope: NodeModelScope,
         approval: NodeToolApproval | null,
         asks: Array<GraphNodesError>,
         attempt: Attempt,
     ): NodeHostPorts {
-        const scope: NodeModelScope = { workspaceId: turn.workspaceId, locale: turn.locale }
         return {
             read: (kind, query, rightScope) => this.registry.portOf(kind).read(turn, query, rightScope),
             write: (kind, record) => {

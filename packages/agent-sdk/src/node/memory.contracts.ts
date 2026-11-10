@@ -153,7 +153,11 @@ export interface NodeOutcomeDeclaration<O extends z.ZodType = z.ZodType, F exten
     readonly sensitive?: Readonly<Record<string, Sensitivity>> | undefined
 }
 
-/** The facts of a lead that memory keeps across workflows. A closed list, so `lead.<field>` refs are validated at save. */
+/**
+ * The facts of a lead that memory keeps across workflows. A closed list, so `lead.<field>` refs are validated at save. `careOptOut`
+ * (the customer asked to be left alone) and `occasions` (the dates they care about) are what the consult learned for care: memory is
+ * their one home (the lead record keeps no copy).
+ */
 export const LEAD_FACTS: readonly [
     "name",
     "phone",
@@ -167,6 +171,8 @@ export const LEAD_FACTS: readonly [
     "lastOrderId",
     "lastOrderCode",
     "lastPaymentId",
+    "careOptOut",
+    "occasions",
 ] = [
     "name",
     "phone",
@@ -180,6 +186,8 @@ export const LEAD_FACTS: readonly [
     "lastOrderId",
     "lastOrderCode",
     "lastPaymentId",
+    "careOptOut",
+    "occasions",
 ]
 
 /** One fact of a lead. */

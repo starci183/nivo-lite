@@ -1,8 +1,4 @@
-import type { SyncFile } from "@modules/integrations/openclaw"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
-
-/** Whether the agent engine can run a generation right now. */
-export type EngineAvailability = "ready" | "not_configured" | "offline"
 
 /** An agent as the instance list shows it. */
 export interface AgentSummary {
@@ -254,41 +250,6 @@ export interface DashboardQuery {
     readonly module: string
     /** The instance whose dashboard it is; the type's first installation when absent. */
     readonly installationId?: string | null
-}
-
-/** The OpenClaw copy of one agent, built only from the NIVO database. */
-export interface AgentBundle {
-    /** The installation. */
-    readonly installationId: string
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The module. */
-    readonly module: string
-    /** The OpenClaw agent id. */
-    readonly agentId: string
-    /** The display name. */
-    readonly agentName: string
-    /** The active context version, or null. */
-    readonly contextVersion: number | null
-    /** Who the agent talks to. */
-    readonly audience: AgentAudience
-    /** AGENTS.md and SOUL.md. */
-    readonly files: ReadonlyArray<SyncFile>
-}
-
-/** Who answers a module's customers. */
-export type Processor = "nivo" | "openclaw"
-
-/** Whether the agent engine is usable, for the Agents page. */
-export interface EngineStatus {
-    /** True when a gateway address and credential are configured. */
-    readonly gatewayConfigured: boolean
-    /** True when the agent workspaces can be written. */
-    readonly workspaceWritable: boolean
-    /** The last time a sync of the workspace ran, or null when none ever did. */
-    readonly lastSyncCheckAt: string | null
-    /** True when the last sync check is younger than the freshness window. */
-    readonly syncFresh: boolean
 }
 
 /** The values that fill the `{{name}}` placeholders of a message. */

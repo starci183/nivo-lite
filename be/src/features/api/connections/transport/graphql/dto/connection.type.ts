@@ -70,7 +70,7 @@ export class ConnectionType {
     @Field(() => [ID])
     agentIds!: ReadonlyArray<string>
 
-    /** Each agent access level through it. */
+    /** Each agent bound to it. */
     @Field(() => [ConnectionGrantType])
     grants!: ReadonlyArray<ConnectionGrantType>
 }

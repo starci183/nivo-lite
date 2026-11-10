@@ -1,3 +1,5 @@
+export { aiCallRowsOf } from "./agentRuns.aiCalls"
+export type { AiCallRowView } from "./agentRuns.aiCalls"
 export { runDetailViewOf } from "./agentRuns.detail"
 export type { RunDetailContext } from "./agentRuns.detail"
 export { humanLabelOf, runGraphOf } from "./agentRuns.graph"

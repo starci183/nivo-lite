@@ -17,7 +17,7 @@ import { AgentConnectionCandidatesInput } from "./dto/agent-connection-candidate
 export class AgentConnectionCandidatesResolver {
     constructor(@InjectQueryBus() private readonly queryBus: QueryBus) {}
 
-    /** Every connection this agent is allowed to use, with the access it already has; any member may look. */
+    /** Every connection this agent is allowed to use, and whether it is bound to it; any member may look. */
     @Query(() => [AgentConnectionCandidateType], { name: "agentConnectionCandidates" })
     async agentConnectionCandidates(
         @CurrentPrincipal() principal: Principal,

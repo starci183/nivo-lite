@@ -147,7 +147,7 @@ describe("PaymentQrEffectsService", () => {
                 transferContent: "DH202611100001",
                 qrUrl: QR,
                 connectionId: "k1",
-                bankName: "MBBANK",
+                bankName: "MB Bank",
                 accountLast4: "9999",
             },
         })
@@ -171,7 +171,7 @@ describe("PaymentQrEffectsService", () => {
             [
                 "Your order is confirmed: 2 x tea boxes · 300.000 VND.",
                 "Please transfer with these details:",
-                "Bank: MBBANK",
+                "Bank: MB Bank",
                 "Account number: 525209999",
                 "Account holder: NGUYEN VAN A",
                 "Transfer content (type exactly): DH202611100001",

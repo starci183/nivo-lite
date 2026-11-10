@@ -14,7 +14,7 @@ import { toModuleInstallationType, toRenameInstallationAgentRequest } from "./mo
 export class RenameInstallationAgentResolver {
     constructor(@InjectCommandBus() private readonly commandBus: CommandBus) {}
 
-    /** Renames the agent of an installation (the name the team sees in Office and on cards) and queues its OpenClaw sync. */
+    /** Renames the agent of an installation (the name the team sees in Office and on cards). */
     @Mutation(() => ModuleInstallationType, { name: "renameInstallationAgent" })
     async renameInstallationAgent(
         @CurrentPrincipal() principal: Principal,

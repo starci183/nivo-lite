@@ -6,14 +6,13 @@ import type {
     SetupState,
     SetupVersions,
 } from "@modules/domain/modules"
-import type { AgentSyncStatus, RequirementFacts } from "@modules/domain/module-installations"
+import type { RequirementFacts } from "@modules/domain/module-installations"
 import type { SetupMessageRecord } from "@modules/domain/module-setup-messages"
 import type { SetupSessionRecord } from "@modules/domain/module-setup-sessions"
 import type { CardRecord } from "@modules/domain/module-setup-writes"
 import type { Locale } from "@modules/platform/i18n"
 import type { ApplySetupRequest } from "../../application/apply-setup.contracts"
 import type { DecideSetupCardRequest } from "../../application/decide-setup-card.contracts"
-import type { GetAgentSyncStatusRequest } from "../../application/get-agent-sync-status.contracts"
 import type { GetCatalogRequest } from "../../application/get-catalog.contracts"
 import type { GetInstallationRequest } from "../../application/get-installation.contracts"
 import type { GetModuleRequest } from "../../application/get-module.contracts"
@@ -30,7 +29,6 @@ import type { RemoveAgentRequest } from "../../application/remove-agent.contract
 import type { SetModuleLiveRequest } from "../../application/set-module-live.contracts"
 import type { SetOperatingModeRequest } from "../../application/set-operating-mode.contracts"
 import type { SetSetupGateRequest } from "../../application/set-setup-gate.contracts"
-import type { AgentSyncStatusType } from "./dto/agent-sync-status.type"
 import type { DecideSetupCardInput } from "./dto/decide-setup-card.input"
 import type { InstallModuleInput } from "./dto/install-module.input"
 import type { ModuleDefinitionType } from "./dto/module-definition.type"
@@ -45,7 +43,6 @@ import type { RenameInstallationAgentInput } from "./dto/rename-installation-age
 import type { RenameModuleInstallationInput } from "./dto/rename-module-installation.input"
 import type { SaveHoldingMessageInput } from "./dto/save-holding-message.input"
 import type { SaveWorkingHoursInput } from "./dto/save-working-hours.input"
-import type { SaveReplyTimeoutInput } from "./dto/save-reply-timeout.input"
 import type { SetModuleLiveInput } from "./dto/set-module-live.input"
 import type { SetOperatingModeInput } from "./dto/set-operating-mode.input"
 import type { SetSetupGateInput } from "./dto/set-setup-gate.input"
@@ -84,12 +81,6 @@ export const toGetInstallationRequest = (
 export const toModuleInstallationsType = (records: ReadonlyArray<InstallationView>): Array<ModuleInstallationType> =>
     records.map(toModuleInstallationType)
 
-/** Maps the installation of the GraphQL input, with the workspace it names, to the sync status request. */
-export const toGetAgentSyncStatusRequest = (
-    workspaceId: string,
-    input: ModuleInstallationIdInput,
-): GetAgentSyncStatusRequest => ({ workspaceId, ...input })
-
 /** Maps what installing answered to the GraphQL type. */
 export const toModuleInstallResultType = (result: InstallResult): ModuleInstallResultType => ({ ...result })
 
@@ -99,9 +90,6 @@ export const toInstallModuleRequest = (
     input: InstallModuleInput,
     locale: Locale,
 ): InstallModuleRequest => ({ workspaceId, locale, ...input })
-
-/** Maps the sync status of an agent to the GraphQL type. */
-export const toAgentSyncStatusType = (status: AgentSyncStatus): AgentSyncStatusType => ({ ...status })
 
 /** Maps the rename of the GraphQL input, with the workspace it names, to the command request. */
 export const toRenameInstallationRequest = (
@@ -147,17 +135,6 @@ export const toRemoveAgentRequest = (workspaceId: string, input: ModuleInstallat
 
 /** Maps a setup session to the GraphQL type. */
 export const toSetupSessionType = (session: SetupSessionRecord): SetupSessionType => ({ ...session })
-
-/** Maps the reply timeout of the GraphQL input, with the workspace it names, to the setting command request. */
-export const toSaveReplyTimeoutRequest = (
-    workspaceId: string,
-    input: SaveReplyTimeoutInput,
-): SaveInstallationSettingRequest => ({
-    workspaceId,
-    installationId: input.installationId,
-    name: "openclawTimeoutSec",
-    value: input.value,
-})
 
 /** Maps the number of an applied version to the GraphQL type. */
 export const toSetupApplyResultType = (version: number): SetupApplyResultType => ({ version })

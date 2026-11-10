@@ -16,7 +16,7 @@ export type MeteredGeneration = GenerationUsageRecord & {
 }
 
 /** The model name booked when a run reports none. */
-const DEFAULT_MODEL = "openclaw"
+const DEFAULT_MODEL = "unknown"
 
 @Injectable()
 /** The plan allowance and the usage meter the text generations run through: the usage capability behind the generations port. */

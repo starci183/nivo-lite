@@ -20,7 +20,7 @@ const GOVERNORS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
  * Removes an installed agent (the uninstall): terminal and soft. Its conversations, messages, context versions and knowledge stay for
  * history; it stops at once (no customer turns, its agent is paused, its own authority grants are switched off, its attachments to
  * the shop's connected accounts are deleted), leaves every list,
- * and goes from OpenClaw on the sync that `installation_changed` starts. Installing the role again makes a new installation. Owners and managers only.
+ * and `installation_changed` tells the other capabilities. Installing the role again makes a new installation. Owners and managers only.
  */
 export class AgentRemovalService {
     constructor(

@@ -64,6 +64,3 @@ export interface DashboardLine {
 
 /** An instant as ISO text, or null when there is none. */
 export type OptionalInstant = string | null
-
-/** Reads when the agent copies were last checked. */
-export type SyncCheckReader = () => Promise<OptionalInstant>

@@ -9,6 +9,8 @@ export const BRAIN_FACTS_MESSAGES: MessageBundle = {
         "errors.BRAIN_FACTS_NOT_A_VALUE": "Chỉ một giá trị được đề xuất mới chọn hoặc tách được.",
         "errors.BRAIN_FACTS_NOT_ACTIVE": "Sự thật này không còn hiệu lực.",
         "errors.BRAIN_FACTS_SITUATION_REQUIRED": "Hãy nêu hoàn cảnh mà giá trị mới áp dụng.",
+        "errors.BRAIN_FACTS_RELATION_INVALID": "Một quan hệ nối hai sự thật khác nhau, đúng loại, nhãn ngắn.",
+        "errors.BRAIN_FACTS_RELATION_NOT_FOUND": "Không tìm thấy quan hệ này.",
     },
     en: {
         "errors.BRAIN_FACTS_INCOMPLETE": "A fact needs a subject, an attribute and a value.",
@@ -17,5 +19,7 @@ export const BRAIN_FACTS_MESSAGES: MessageBundle = {
         "errors.BRAIN_FACTS_NOT_A_VALUE": "Only a proposed value can be chosen or split.",
         "errors.BRAIN_FACTS_NOT_ACTIVE": "This fact is no longer in force.",
         "errors.BRAIN_FACTS_SITUATION_REQUIRED": "Name the situation the new value is for.",
+        "errors.BRAIN_FACTS_RELATION_INVALID": "A relation joins two different facts, with a known kind and a short label.",
+        "errors.BRAIN_FACTS_RELATION_NOT_FOUND": "This relation was not found.",
     },
 }

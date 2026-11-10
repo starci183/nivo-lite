@@ -10,8 +10,10 @@ export interface AiGatewayKey {
 
 /** One OpenAI-compatible upstream endpoint of the pool: where it is and the keys that reach it. */
 export interface AiGatewayProvider {
-    /** The provider id in the router: `upstream` or `embeddings`. */
+    /** The provider id in the router: `upstream`, `embeddings` or `anthropic`. */
     readonly id: string
+    /** The protocol of the router's provider: `anthropic` (the Messages API through its adapter); absent, OpenAI-compatible. */
+    readonly kind?: "anthropic" | undefined
     /** The base URL the OpenAI paths hang from, without a trailing slash. */
     readonly baseUrl: string
     /** The keys; never empty for a provider that is kept. */
@@ -24,6 +26,8 @@ export interface AiGatewayModels {
     readonly work: string
     /** The model behind the `embed` profile (embeddings). */
     readonly embed: string
+    /** The strong model on Anthropic, behind the `sonnet` profile and Auto's heavy steps. */
+    readonly strong: string
 }
 
 /** A virtual key mounted from a sealed secret: the gateway keeps only its hash, nothing is written to the key store. */
